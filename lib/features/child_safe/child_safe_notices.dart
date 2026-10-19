@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/router.dart' show routerProvider;
+import '../../l10n/l10n.dart';
 import '../../notify/central_inbox.dart' show CentralNotice;
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import 'child_safe_providers.dart';
@@ -22,12 +23,13 @@ Future<void> handleChildSafeNotices(Ref ref, List<CentralNotice> notices) async 
   await ref.read(childSafeProvider.notifier).onNotification('child_safe');
   final isChild = wasChild || ref.read(childSafeProvider).value?.managed == true;
   final latest = notices.last;
-  final more = notices.length > 1 ? '(ほか ${notices.length - 1} 件)' : '';
+  final l = appL10n;
+  final more = notices.length > 1 ? l.childSafeNoticeMore(notices.length - 1) : '';
   final messenger = ref.read(rootMessengerKeyProvider).currentState;
   if (isChild) {
     messenger
       ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(key: const ValueKey('childSafe.notice'), content: Text('${latest.title.isEmpty ? 'チャイルドセーフ: 保護者の設定を取り直しました' : latest.title}$more')));
+      ..showSnackBar(SnackBar(key: const ValueKey('childSafe.notice'), content: Text('${latest.title.isEmpty ? l.childSafeNoticeRefreshed : latest.title}$more')));
     return;
   }
   ref.invalidate(childSafeGuardianProvider);
@@ -37,6 +39,6 @@ Future<void> handleChildSafeNotices(Ref ref, List<CentralNotice> notices) async 
     ..showSnackBar(SnackBar(
       key: const ValueKey('childSafe.guardianNotice'),
       content: Text([latest.title, if (latest.body.isNotEmpty) latest.body].join('\n') + more),
-      action: SnackBarAction(label: '見る', onPressed: () => ref.read(routerProvider).push('/child-safe/guardian')),
+      action: SnackBarAction(label: l.childSafeNoticeView, onPressed: () => ref.read(routerProvider).push('/child-safe/guardian')),
     ));
 }

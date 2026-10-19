@@ -1,5 +1,915 @@
 {
   "@@locale": "ja",
+  "childSafeLevelStrict": "きびしめ",
+  "@childSafeLevelStrict": {
+    "description": "見守りの判定の強さ(プリセット / タイムライン / 投稿の強さの選択肢)"
+  },
+  "childSafeLevelStandard": "ふつう",
+  "@childSafeLevelStandard": {
+    "description": "見守りの判定の強さ"
+  },
+  "childSafeLevelMild": "ゆるめ",
+  "@childSafeLevelMild": {
+    "description": "見守りの判定の強さ"
+  },
+  "childSafeTopicModeAllow": "ホワイトリスト",
+  "@childSafeTopicModeAllow": {
+    "description": "話題の一覧の見方: どれかの話題に当たるものだけ通す"
+  },
+  "childSafeTopicModeDeny": "ブラックリスト",
+  "@childSafeTopicModeDeny": {
+    "description": "話題の一覧の見方: 当たるものを止める"
+  },
+  "childSafeInstallNone": "入れられない",
+  "@childSafeInstallNone": {
+    "description": "子のプラグインのインストールの範囲の選択肢"
+  },
+  "childSafeInstallListed": "選んだものだけ",
+  "@childSafeInstallListed": {
+    "description": "子のプラグインのインストールの範囲の選択肢(保護者が名前で選んだものだけ)"
+  },
+  "childSafeInstallAny": "自由",
+  "@childSafeInstallAny": {
+    "description": "子のプラグインのインストールの範囲の選択肢"
+  },
+  "childSafeInstallExamples": "例に近いもの",
+  "@childSafeInstallExamples": {
+    "description": "子のプラグインのインストールの範囲の選択肢(許す例に近いもの)"
+  },
+  "childSafeEmptyWhitelistError": "ホワイトリストが空です。話題を 1 つ以上入れるか、ブラックリストにしてください",
+  "@childSafeEmptyWhitelistError": {
+    "description": "保護者の設定の保存の前の確かめ: 有効な面の話題のホワイトリストが空"
+  },
+  "childSafeMethodJpki": "マイナンバーカード (JPKI)",
+  "@childSafeMethodJpki": {
+    "description": "保護者の確認の方法"
+  },
+  "childSafeMethodSelfDeclared": "自己申告",
+  "@childSafeMethodSelfDeclared": {
+    "description": "保護者の確認の方法"
+  },
+  "childSafeErrorCodeInvalid": "コードが違うか、期限が切れています",
+  "@childSafeErrorCodeInvalid": {
+    "description": "つなぐ / ログインのコードが見つからない(サーバーの 404)"
+  },
+  "childSafeErrorHandleTaken": "そのハンドルは使われています",
+  "@childSafeErrorHandleTaken": {
+    "description": "子のアカウントを作るときのハンドルの重複"
+  },
+  "childSafeErrorAlreadyLinked": "もう見守られている(か、だれかを見守っている)アカウントです",
+  "@childSafeErrorAlreadyLinked": {
+    "description": "つなげないアカウント(サーバーの 409)"
+  },
+  "childSafeErrorCodeGone": "コードの期限が切れたか、もう使われています。保護者に出し直してもらってください",
+  "@childSafeErrorCodeGone": {
+    "description": "コードが使えない(サーバーの 410)"
+  },
+  "childSafeErrorDevice": "この端末ではログインできません",
+  "@childSafeErrorDevice": {
+    "description": "子のログインを端末の理由で断られた"
+  },
+  "childSafeErrorTooMany": "試行が多すぎます。しばらく待ってから、やり直してください",
+  "@childSafeErrorTooMany": {
+    "description": "試行の回数の上限(サーバーの 429)"
+  },
+  "childSafeNoServer": "RASQ サーバーの接続先が未設定です",
+  "@childSafeNoServer": {
+    "description": "RASQ サーバー(Central)の接続先が無いときの誤り"
+  },
+  "childSafeNoticeMore": "{count, plural, other{(ほか {count} 件)}}",
+  "@childSafeNoticeMore": {
+    "description": "チャイルドセーフの知らせのトーストの末尾。count はほかに届いた知らせの数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "childSafeNoticeRefreshed": "チャイルドセーフ: 保護者の設定を取り直しました",
+  "@childSafeNoticeRefreshed": {
+    "description": "子の端末の知らせのトースト(知らせに題が無いとき)"
+  },
+  "childSafeNoticeView": "見る",
+  "@childSafeNoticeView": {
+    "description": "保護者への知らせのトーストのボタン(保護者の画面を開く)"
+  },
+  "childSafeBlocked": "保護者が止めています",
+  "@childSafeBlocked": {
+    "description": "保護者が止めている機能を使おうとしたときの決まり文句"
+  },
+  "childSafeBlockedWith": "保護者が止めています({label})",
+  "@childSafeBlockedWith": {
+    "description": "保護者が止めている機能。label は機能の名前(RAi の関数のときは関数の名前)",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeTimeRange": "{start}〜{end}",
+  "@childSafeTimeRange": {
+    "description": "見守りの時間の範囲。start / end は HH:MM",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeLockedUntilSetup": "保護者が設定を決めるまで使えません",
+  "@childSafeLockedUntilSetup": {
+    "description": "保護者が設定を決める前の子の端末"
+  },
+  "childSafeWindowNoDm": "見守りの時間({window})は DM を使えません",
+  "@childSafeWindowNoDm": {
+    "description": "window は見守りの時間の範囲(21:00〜06:00 など)",
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeBlockedAstell": "保護者が ASTell を止めています",
+  "childSafeWindowNoAstell": "見守りの時間({window})は ASTell を使えません",
+  "@childSafeWindowNoAstell": {
+    "description": "window は見守りの時間の範囲",
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeBlockedDm": "保護者が DM を止めています",
+  "childSafeWindowNoNotifications": "見守りの時間({window})は通知を見られません",
+  "@childSafeWindowNoNotifications": {
+    "description": "window は見守りの時間の範囲",
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeBlockedRai": "保護者が RAi を止めています",
+  "childSafeBlockedStore": "保護者がプラグインストアを止めています",
+  "childSafeBlockedSearch": "保護者が検索を止めています",
+  "childSafeBlockedAddAccount": "保護者が SNS アカウントの追加を止めています",
+  "childSafeBlockedCustomPlugins": "保護者がカスタムプラグインを止めています",
+  "childSafeBlockedPlugins": "保護者がプラグインを止めています",
+  "childSafeWindowNoPostDetail": "見守りの時間({window})は投稿の詳細を開けません",
+  "@childSafeWindowNoPostDetail": {
+    "description": "window は見守りの時間の範囲",
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafePostHidden": "この投稿は表示できません",
+  "@childSafePostHidden": {
+    "description": "見守りの判定で隠した投稿の詳細を開こうとした"
+  },
+  "childSafeListSeparator": "・",
+  "@childSafeListSeparator": {
+    "description": "話題・機能などを並べるときの区切り"
+  },
+  "childSafeBullet": "・{text}",
+  "@childSafeBullet": {
+    "description": "箇条書きの 1 行",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeTopicsEtc": "{topics} など",
+  "@childSafeTopicsEtc": {
+    "description": "話題が多くて一部だけ見せるとき。topics は並べた話題",
+    "placeholders": {
+      "topics": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeComposeNoTopicsAllowed": "保護者の設定により、いまは投稿を送れません",
+  "@childSafeComposeNoTopicsAllowed": {
+    "description": "投稿の話題のホワイトリストが空のとき"
+  },
+  "childSafeComposeTopicsOnly": "保護者の設定により、決められた話題({topics})の投稿だけ送れます。話題に合うように書いてください",
+  "@childSafeComposeTopicsOnly": {
+    "description": "投稿の話題のホワイトリストに当たらない。topics は話題(5 つまで)",
+    "placeholders": {
+      "topics": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeComposeTopicDenied": "保護者の設定により、「{topic}」の話題の投稿は送れません。書き換えてください",
+  "@childSafeComposeTopicDenied": {
+    "description": "投稿の話題のブラックリストに当たった。topic は当たった話題",
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeQuoted": "「{text}」",
+  "@childSafeQuoted": {
+    "description": "本文から引いた語",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeComposeStimulus": "保護者の設定({level})により、この表現{word}は送れません。言い換えてください",
+  "@childSafeComposeStimulus": {
+    "description": "強い言葉で止めた。level は判定の強さ、word は当たった語(「…」の形。無ければ空)",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeBlockedThisPlugin": "保護者がこのプラグインを止めています",
+  "childSafeDevPreviewUnknown": "保護者が選んだプラグインだけ動かせます(この読み込み方では、どのプラグインか確かめられません)",
+  "@childSafeDevPreviewUnknown": {
+    "description": "どのプラグインか分からない読み込み方(素の .wasm など)で動かそうとした"
+  },
+  "childSafeBlockedInstall": "保護者がプラグインのインストールを止めています",
+  "childSafeNearDenyPlugin": "保護者が止めている例に近いプラグインです",
+  "childSafeInstallListedOnly": "保護者が選んだプラグインだけ入れられます",
+  "childSafeInstallExamplesOnly": "保護者が選んだプラグインと、許す例に近いものだけ入れられます",
+  "childSafeCacheUnverified": "控えた制限の署名を確かめられません。オンラインで取り直してください",
+  "@childSafeCacheUnverified": {
+    "description": "端末に控えた保護者の設定の署名が合わない"
+  },
+  "childSafeNewSettingsUnverified": "保護者の新しい設定の署名を確かめられませんでした(前の設定のまま)",
+  "childSafeComposeLocked": "保護者が設定を決めるまで送れません",
+  "childSafeComposeDailyLimit": "{count, plural, other{今日はもう {count} 件送りました(保護者が決めた 1 日の数)。また明日}}",
+  "@childSafeComposeDailyLimit": {
+    "description": "1 日に送れる投稿の数に達した。count はその数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "childSafeComposeAfterTransform": "{message}(送る前の加工のあとの本文)",
+  "@childSafeComposeAfterTransform": {
+    "description": "送る前の加工(テキスト加工プラグイン)のあとの本文で止めた。message は止めた理由",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeStatePending": "設定待ち",
+  "@childSafeStatePending": {
+    "description": "見守りの状態: 保護者が設定を決める前"
+  },
+  "childSafeWatchAsGuardian": "見守る(保護者)",
+  "@childSafeWatchAsGuardian": {
+    "description": "保護者の画面の見出し / 入口の行"
+  },
+  "childSafeLoginWithCode": "保護者からのコードでログイン",
+  "@childSafeLoginWithCode": {
+    "description": "保護者が作った子のアカウントへログインする画面の見出し / 入口"
+  },
+  "childSafeChildMode": "チャイルドモード",
+  "@childSafeChildMode": {
+    "description": "子の端末で保護者のコードでつなぐ画面の見出し / 入口"
+  },
+  "childSafeGuardianStateApplied": "見守り中(端末に届いています)",
+  "@childSafeGuardianStateApplied": {
+    "description": "見守っている子の状態: 最新の設定が子の端末に届いている"
+  },
+  "childSafeGuardianStateNotApplied": "見守り中(設定 {revision} はまだ端末に届いていません)",
+  "@childSafeGuardianStateNotApplied": {
+    "description": "revision は保護者の設定の版の番号",
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "childSafeGuardianPledgeTitle": "保護者の誓約(版 {version})",
+  "@childSafeGuardianPledgeTitle": {
+    "description": "version は誓約の版(日付)",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianPledgeMessage": "{pledge}\n\n同意すると、マイナンバーカード(デジタル認証アプリ)での確認に進みます(日本にお住まいの方)。",
+  "@childSafeGuardianPledgeMessage": {
+    "description": "pledge は誓約の文(箇条書き)",
+    "placeholders": {
+      "pledge": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianPledgeConfirm": "同意して進む",
+  "childSafeGuardianCancel": "キャンセル",
+  "childSafeGuardianLoadError": "読み込めませんでした",
+  "childSafeGuardianReload": "再読み込み",
+  "childSafeGuardianVerifySection": "保護者の確認",
+  "childSafeGuardianVerified": "確認済み",
+  "childSafeGuardianNotVerified": "まだ確認していません",
+  "childSafeGuardianVerifyIntro": "子のアカウントを作る / つなぐ前に、保護者の確認をします(日本はマイナンバーカード)。",
+  "childSafeGuardianVerifyIntroDetail": "子のアカウントを作る / つなぐ前に、保護者の確認をします(日本はマイナンバーカード (JPKI)、ほかの国は Web コンソールでの自己申告)。",
+  "childSafeGuardianVerifyJpki": "マイナンバーカードで確認する",
+  "childSafeGuardianVerifyJpkiSubtitle": "日本にお住まいの方。誓約に同意してから、外のブラウザで開きます",
+  "childSafeGuardianVerifyWeb": "Web コンソールで確認する",
+  "childSafeGuardianOpensInBrowser": "外のブラウザで開きます",
+  "childSafeGuardianChildrenSection": "{count, plural, other{見守っている子({count} / {max})}}",
+  "@childSafeGuardianChildrenSection": {
+    "description": "count は見守っている子の数、max は上限",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "childSafeGuardianNoChildren": "まだいません。",
+  "childSafeGuardianCreatedByGuardian": "・保護者が作成",
+  "@childSafeGuardianCreatedByGuardian": {
+    "description": "子の行の末尾(保護者が作った子のアカウント)"
+  },
+  "childSafeGuardianAddSection": "子を足す",
+  "childSafeGuardianCreate": "子のアカウントを作る",
+  "childSafeGuardianCreateSubtitle": "ハンドル / 名前 / 年齢の帯を決めると、子の端末でログインするためのコードが 1 度だけ出ます",
+  "childSafeGuardianHandleHint": "ハンドル(英数字)",
+  "childSafeGuardianNameHint": "表示名",
+  "childSafeGuardianCreateButton": "作る",
+  "childSafeGuardianNewLoginCodeTitle": "@{handle} のログインのコード(子の端末の「保護者からのコードでログイン」に入れるか、子の端末のカメラで QR を読む)",
+  "@childSafeGuardianNewLoginCodeTitle": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianPair": "コードでつなぐ",
+  "childSafeGuardianPairSubtitle": "子がもう持っている RASQ アカウントを、子の端末の「チャイルドモード」でつなぎます(10 分・1 回だけ)",
+  "childSafeGuardianPairCodeTitle": "つなぐコード(子の端末の「チャイルドモード」に入れるか、子の端末のカメラで QR を読む)",
+  "childSafeGuardianCodeExpires": "{time} まで。この画面を閉じると、もう出せません(出し直すと前のコードは使えなくなります)。",
+  "@childSafeGuardianCodeExpires": {
+    "description": "time はコードの期限(月/日 時:分)",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianCodeQr": "コードの QR",
+  "childSafeGuardianCopy": "コピー",
+  "childSafeGuardianCopyLink": "リンクをコピー",
+  "childSafeGuardianClose": "閉じる",
+  "childSafeGuardianPageTimeline": "TL",
+  "@childSafeGuardianPageTimeline": {
+    "description": "保護者の設定のページのタブ(タイムライン)"
+  },
+  "childSafeGuardianPageComposer": "投稿",
+  "childSafeGuardianPageAstell": "ASTell",
+  "childSafeGuardianPagePlugins": "プラグイン",
+  "childSafeGuardianPageSns": "SNS",
+  "childSafeGuardianPageScreenTime": "スクリーンタイム",
+  "childSafeGuardianPageOther": "その他",
+  "childSafeGuardianTimeFormatError": "時刻は HH:MM で入れてください",
+  "childSafeGuardianConfirmTitle": "この設定を送る",
+  "childSafeGuardianConfirmSend": "送る",
+  "childSafeGuardianConfirmIntro": "@{handle} の端末に、この設定が届きます。",
+  "@childSafeGuardianConfirmIntro": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianConfirmIntroDetail": "@{handle} の端末には、Central が署名した設定が届きます(端末で確かめてから当てはめます)。",
+  "@childSafeGuardianConfirmIntroDetail": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianSaved": "保存しました(設定 {revision})。子の端末に届くと「届いています」になります",
+  "@childSafeGuardianSaved": {
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "childSafeGuardianImportPreset": "{band} の既定を読み込む",
+  "@childSafeGuardianImportPreset": {
+    "description": "band は年齢の帯(13-15 など)",
+    "placeholders": {
+      "band": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianImportCopy": "ほかの子の設定をコピー",
+  "childSafeGuardianImportedPreset": "{band} の既定を読み込みました",
+  "@childSafeGuardianImportedPreset": {
+    "placeholders": {
+      "band": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianCopyWhich": "どの子の設定をコピーしますか",
+  "childSafeGuardianNotSetUp": "@{handle} は、まだ設定が済んでいません",
+  "@childSafeGuardianNotSetUp": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianCopied": "@{handle} の設定をコピーしました",
+  "@childSafeGuardianCopied": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianNotSavedYet": "{what}(まだ保存していません)",
+  "@childSafeGuardianNotSavedYet": {
+    "description": "what は読み込んだ / コピーした知らせ",
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianEnd": "見守りを終える",
+  "childSafeGuardianEndMessage": "@{handle} の制限をすべて外します。子の端末は、次につながったときに外れます。元に戻すには、もう一度つなぎます。",
+  "@childSafeGuardianEndMessage": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianEndMessageDetail": "@{handle} の制限をすべて外します。子の端末は、次に Central に届いたときに外れます。元に戻すには、もう一度つなぎます。",
+  "@childSafeGuardianEndMessageDetail": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianEndConfirm": "終える",
+  "childSafeGuardianEndSubtitle": "制限をすべて外します",
+  "childSafeGuardianSummarySection": "最近の発信内容の要約(14 日)",
+  "childSafeGuardianLoginSection": "子の端末のログイン",
+  "childSafeGuardianReissue": "コードを出し直す",
+  "childSafeGuardianReissueSubtitle": "子の端末の「保護者からのコードでログイン」に入れるコード(10 分・1 回だけ。前のコードは使えなくなります)",
+  "childSafeGuardianLoginCodeTitle": "@{handle} のログインのコード",
+  "@childSafeGuardianLoginCodeTitle": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianSaveButton": "保存して子の端末へ送る",
+  "childSafeGuardianImportTooltip": "設定をインポート",
+  "childSafeGuardianPresetCaption": "強さを選ぶと、タイムラインと投稿の判定の強さがそろいます。右の丸いボタンで、{band} の既定やほかの子の設定を読み込めます。",
+  "@childSafeGuardianPresetCaption": {
+    "placeholders": {
+      "band": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianSummaryEmpty": "まだ報告はありません(子の端末は、終わった日の数を 1 日 1 回送ります)。",
+  "childSafeGuardianSummaryCaption": "送った数 / 止めた数 / 止めた種類だけです(投稿の本文や話題は届きません。送る前の判定はお子さんの端末で行います)。",
+  "childSafeGuardianSummaryDay": "送った {posts}・止めた {blocked}{trips}",
+  "@childSafeGuardianSummaryDay": {
+    "description": "1 日の要約。trips は止めた種類ごとの数の注記(無ければ空)",
+    "placeholders": {
+      "posts": {
+        "type": "int"
+      },
+      "blocked": {
+        "type": "int"
+      },
+      "trips": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianSummaryTrips": "({list})",
+  "@childSafeGuardianSummaryTrips": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianSummaryTripsSeparator": "、",
+  "childSafeGuardianTimelineEnabled": "タイムラインを絞る",
+  "childSafeGuardianTimelineEnabledSubtitle": "強い言葉の投稿を見せず、話題で絞ります",
+  "childSafeGuardianTimelineLevel": "タイムラインの強さ",
+  "childSafeGuardianTimelineTopics": "タイムラインの話題",
+  "childSafeGuardianTimelineAllowHint": "流す話題(語やタグを「,」で区切る)",
+  "childSafeGuardianTimelineDenyHint": "見せない話題(語やタグを「,」で区切る)",
+  "childSafeGuardianTimelineAllowNote": "ホワイトリスト: どれかの話題に当たる投稿だけが、タイムラインに流れます。",
+  "childSafeGuardianTimelineDenyNote": "ブラックリスト: 当たる投稿を見せません(空 = 話題では絞りません)。",
+  "childSafeGuardianComposerEnabled": "投稿を判定する",
+  "childSafeGuardianComposerEnabledSubtitle": "強い言葉と話題で、送る前に止めます(当たった語に印を付けて止める)",
+  "childSafeGuardianComposerLevel": "投稿の強さ",
+  "childSafeGuardianPostsPerDayHint": "1 日に送れる投稿の数(空 = 決めない、0〜1000)",
+  "childSafeGuardianComposerTopics": "投稿の話題",
+  "childSafeGuardianComposerAllowHint": "送れる話題(語やタグを「,」で区切る)",
+  "childSafeGuardianComposerDenyHint": "送れない話題(語やタグを「,」で区切る)",
+  "childSafeGuardianComposerAllowNote": "ホワイトリスト: どれかの話題に当たる投稿だけ送れます(DM には当てません)。",
+  "childSafeGuardianComposerDenyNote": "ブラックリスト: 当たる投稿は送れません(空 = 話題では止めません。DM には当てません)。",
+  "childSafeGuardianAstellCaption": "ASTell(ルームの通話・チャット・共有)で、子ができること。",
+  "childSafeGuardianInstallSection": "インストール",
+  "childSafeGuardianInstallCaption": "子が自分で入れられる範囲。プラグインは増えていくので、ひとつずつではなく、下の「例」で大まかに決めます。",
+  "childSafeGuardianNamedSection": "名前で許しているプラグイン",
+  "childSafeGuardianNamedNone": "ありません。",
+  "childSafeGuardianNamedCaption": "ここにあるものは、止める例に近くても使えます(✕ で外す)。",
+  "childSafeGuardianRemove": "外す",
+  "childSafeGuardianAddIdHint": "id で足す(例: jp.example.quiz)",
+  "childSafeGuardianAddIdButton": "足す",
+  "childSafeGuardianIdShapeError": "プラグインの id の形ではありません(英小文字・数字・「.」「_」「-」、例: jp.example.quiz)",
+  "childSafeGuardianSnsCaption": "子が使ってよい SNS の種類とサーバー(あなたのバンドルから)。サーバーを選ばなければ、その種類ならどこでも。保護者の SNS のログインは貸しません。",
+  "childSafeGuardianSnsAdd": "子が SNS アカウントを足せる",
+  "childSafeGuardianTimeEnabled": "見守りの時間",
+  "childSafeGuardianTimeEnabledSubtitle": "その間は、1 本のタイムラインになります(子の端末の時計)",
+  "childSafeGuardianTimeStartHint": "始まり 21:00",
+  "childSafeGuardianTimeEndHint": "終わり 06:00",
+  "childSafeGuardianTimeRangeSeparator": "〜",
+  "childSafeGuardianTimeLegacyNote": "いまの設定は、以前の形の「その間は何も流さない」です。この形は新しく保存できないので、流す話題を入れるか、ブラックリストにしてから保存してください。",
+  "childSafeGuardianTimeTopics": "その間の話題",
+  "childSafeGuardianTimeAllowHint": "その間に流す話題(語やタグを「,」で区切る)",
+  "childSafeGuardianTimeDenyHint": "その間に流さない話題(語やタグを「,」で区切る)",
+  "childSafeGuardianTimeAllowNote": "ホワイトリスト: その間は、どれかの話題に当たる投稿だけが流れます。",
+  "childSafeGuardianTimeDenyNote": "ブラックリスト: その間は、当たる投稿を流しません(空 = 話題では絞りません)。",
+  "childSafeGuardianHideNotifications": "通知を隠す",
+  "childSafeGuardianHidePostDetail": "投稿の詳細を開かせない",
+  "childSafeGuardianHideDm": "DM を隠す",
+  "childSafeGuardianRaiEnabled": "RAi を使える",
+  "childSafeGuardianRaiComingSoon": "準備中(いまは効きません)",
+  "@childSafeGuardianRaiComingSoon": {
+    "description": "まだ効かない RAi の関数のまとまりの補足"
+  },
+  "childSafeGuardianRaiAutomation": "関数での自動化",
+  "childSafeGuardianRaiAutomationSubtitle": "オフなら、案内(指差し)だけで進めます",
+  "childSafeGuardianSearchSection": "検索",
+  "childSafeGuardianFeaturesSection": "機能",
+  "childSafeGuardianExamplesTitlePlugins": "例で決める(プラグイン)",
+  "childSafeGuardianExamplesTitleTl": "例で決める(クリップ / リスト)",
+  "childSafeGuardianExamplesCaptionPlugins": "「こういうプラグインは許す / 止める」を例で選びます。子の端末は、プラグインの名前・説明が例に近いかで決めます。止める例に近いものは「自由」でも使えません。「例に近いもの」にすると、名前で許したものと、許す例に近いものを使えます。",
+  "childSafeGuardianExamplesCaptionTl": "「こういうものは許す / 止める」を、あなたの最近のアクション / クリップ / リストから選びます。子のクリップ / リストのうち、中身が止める例に近いものは、一覧にもタイムラインにも出ません。",
+  "childSafeGuardianPickPlugins": "例を選ぶ(プラグイン / ストア)",
+  "childSafeGuardianPickTl": "例を選ぶ(最近のアクション / クリップ / リスト)",
+  "childSafeGuardianPickCounts": "許す例 {allow} / 止める例 {deny}",
+  "@childSafeGuardianPickCounts": {
+    "placeholders": {
+      "allow": {
+        "type": "int"
+      },
+      "deny": {
+        "type": "int"
+      }
+    }
+  },
+  "childSafeGuardianPickTitlePlugins": "プラグインの例(@{handle})",
+  "@childSafeGuardianPickTitlePlugins": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianPickTitleTl": "TL の例(@{handle})",
+  "@childSafeGuardianPickTitleTl": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeGuardianAllowLabel": "許す例",
+  "childSafeGuardianDenyLabel": "止める例",
+  "childSafeGuardianPickIntroPlugins": "中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、新しいプラグインを例との近さで分けます。",
+  "childSafeGuardianPickIntroTl": "中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、クリップ / リストを例との近さで分けます。",
+  "childSafeScreensBadge": "見守り中",
+  "@childSafeScreensBadge": {
+    "description": "見守られているアカウントの印"
+  },
+  "childSafeScreensWindowBanner": "見守りの時間({window})です。{detail}",
+  "@childSafeScreensWindowBanner": {
+    "description": "見守りの時間の帯(シェルの上)。window は時間の範囲、detail は流れる話題の説明(無ければ空)",
+    "placeholders": {
+      "window": {
+        "type": "String"
+      },
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensWindowNothing": "投稿は流れません",
+  "childSafeScreensWindowAllowOnly": "「{topics}」の話題だけが流れます",
+  "@childSafeScreensWindowAllowOnly": {
+    "placeholders": {
+      "topics": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensWindowDenied": "「{topics}」の話題は流れません",
+  "@childSafeScreensWindowDenied": {
+    "placeholders": {
+      "topics": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensBlockedHint": "見守りの設定は保護者が決めています",
+  "@childSafeScreensBlockedHint": {
+    "description": "止めている画面の代わりに出す表示の補足"
+  },
+  "childSafeScreensHubTitle": "チャイルドセーフ",
+  "childSafeScreensHubIntro": "保護者が、子のアカウントの使い方を決めます。保護者に届くのは数と止めた種類だけで、投稿の本文は送りません。",
+  "childSafeScreensHubIntroDetail": "保護者の RASQ アカウントが、子の RASQ アカウントの使い方を決めます。投稿の判定はこの端末の中で行い、保護者に届くのは、送った数と止めた数と、送る前に止めた種類だけです(投稿の本文や話題は送りません)。",
+  "childSafeScreensHubManagedSection": "見守られています",
+  "childSafeScreensHubParent": "保護者",
+  "childSafeScreensHubState": "状態",
+  "childSafeScreensHubStateActive": "見守り中(設定 {revision})",
+  "@childSafeScreensHubStateActive": {
+    "description": "revision は保護者の設定の版の番号",
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "childSafeScreensHubOffline": "いまはサーバーに届きません。前の設定のまま見守ります。",
+  "childSafeScreensHubRefresh": "保護者の設定を取り直す",
+  "childSafeScreensHubAsGuardian": "保護者として",
+  "childSafeScreensHubGuardianVerified": "確認済み({method})。子のアカウントを作る / つなぐ / 設定",
+  "@childSafeScreensHubGuardianVerified": {
+    "description": "method は保護者の確認の方法",
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensHubGuardianUnverified": "保護者の確認は Web コンソールで(日本はマイナンバーカード、ほかは自己申告)",
+  "childSafeScreensHubAsChild": "子として",
+  "childSafeScreensHubChildModeLogin": "保護者からのコードでログインします",
+  "childSafeScreensHubChildModePair": "このアカウントを、保護者のコードでつなぎます",
+  "childSafeScreensHubLoginSubtitle": "保護者が作った子のアカウントに入ります",
+  "childSafeScreensHubThisDevice": "この端末",
+  "childSafeScreensHubSafety": "プライバシーとセーフモード",
+  "childSafeScreensHubSafetyManaged": "見守り中は、閲覧注意のメディアを必ず隠します(変えられません)",
+  "childSafeScreensHubSafetyNormal": "閲覧注意メディアの扱い",
+  "childSafeScreensTopicsNote": "({label}: {topics})",
+  "@childSafeScreensTopicsNote": {
+    "description": "見守りの要約の行の話題の注記。label は「流す話題」など、topics は並べた話題",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "topics": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensTopicsNone": "なし",
+  "childSafeScreensTopicsShown": "流す話題",
+  "childSafeScreensTopicsHidden": "見せない話題",
+  "childSafeScreensTopicsSendable": "送れる話題",
+  "childSafeScreensTopicsUnsendable": "送れない話題",
+  "childSafeScreensTopicsNotShown": "流さない話題",
+  "childSafeScreensSummaryTimeline": "タイムライン: {level}{note}",
+  "@childSafeScreensSummaryTimeline": {
+    "description": "見守りの要約の行。level は判定の強さ、note は話題の注記(無ければ空)",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensSummaryComposer": "投稿の判定: {level}{note}",
+  "@childSafeScreensSummaryComposer": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensSummaryPostsPerDay": "{count, plural, other{1 日に送れる投稿: {count} 件}}",
+  "@childSafeScreensSummaryPostsPerDay": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "childSafeScreensSummaryTime": "見守りの時間: {window}{note}",
+  "@childSafeScreensSummaryTime": {
+    "description": "window は時間の範囲、note は話題の注記",
+    "placeholders": {
+      "window": {
+        "type": "String"
+      },
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensSummaryTimeNothing": "(投稿は流れません)",
+  "childSafeScreensSummarySns": "使える SNS: {kinds}{servers}{noAdd}",
+  "@childSafeScreensSummarySns": {
+    "description": "kinds は SNS の種類(または「どれでも」)、servers はサーバーの注記、noAdd は追加できないときの注記",
+    "placeholders": {
+      "kinds": {
+        "type": "String"
+      },
+      "servers": {
+        "type": "String"
+      },
+      "noAdd": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensSummaryAny": "どれでも",
+  "childSafeScreensSummarySnsServers": "({servers})",
+  "@childSafeScreensSummarySnsServers": {
+    "placeholders": {
+      "servers": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensSummarySnsNoAdd": "、追加はできません",
+  "childSafeScreensSummaryFeaturesOff": "止めている機能: {list}",
+  "@childSafeScreensSummaryFeaturesOff": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensSummarySearchOff": "止めている検索: {list}",
+  "@childSafeScreensSummarySearchOff": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensSummaryPlugins": "プラグイン: {scope}・インストールは{install}",
+  "@childSafeScreensSummaryPlugins": {
+    "description": "scope は使えるプラグインの範囲、install はインストールの範囲",
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      },
+      "install": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensSummaryPluginsExamples": "{count, plural, other{選んだ {count} 個と、許す例に近いもの}}",
+  "@childSafeScreensSummaryPluginsExamples": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "childSafeScreensSummaryPluginsListed": "{count, plural, other{選んだ {count} 個だけ}}",
+  "@childSafeScreensSummaryPluginsListed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "childSafeScreensSummaryExamples": "例: 許す例 {allow} / 止める例 {deny}(止める例に近いプラグイン / クリップ / リストは出ません)",
+  "@childSafeScreensSummaryExamples": {
+    "placeholders": {
+      "allow": {
+        "type": "int"
+      },
+      "deny": {
+        "type": "int"
+      }
+    }
+  },
+  "childSafeScreensSummaryRai": "{count, plural, other{RAi: {count} 種類の関数{noAuto}}}",
+  "@childSafeScreensSummaryRai": {
+    "description": "count は使える関数のまとまりの数、noAuto は自動化なしの注記(無ければ空)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "noAuto": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensSummaryRaiNoAuto": "(自動化なし)",
+  "childSafeScreensSummaryRaiOff": "RAi: 使えません",
+  "childSafeScreensFromLink": "リンク(QR)からコードを入れました。自分の保護者から受け取ったものか確かめてから「{action}」を押してください。知らない人のリンクなら、押さずに閉じてください。",
+  "@childSafeScreensFromLink": {
+    "description": "リンクから開いたときの注意。action は押すボタンの名前",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensPaired": "保護者とつなぎました。保護者が設定を決めるまで待ってください",
+  "childSafeScreensPairNotLoggedIn": "RASQ アカウントにログインしていません。保護者が作ったアカウントなら、保護者からのコードでログインします。",
+  "childSafeScreensPairExistingLogin": "既存の RASQ アカウントにログイン",
+  "childSafeScreensPairIntro": "@{handle} を保護者の見守りにつなぎます。保護者の画面に出ているコード(8 字)を入れてください。つないだら、保護者が設定を決めるまで使えません。",
+  "@childSafeScreensPairIntro": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensPairIntroDetail": "@{handle} を、保護者の見守りにつなぎます。保護者の画面(アプリか Web コンソール)に出ているコード(8 字、例 ABCD-EFGH)を入れてください。つないだら、保護者が設定を決めるまでアプリは使えません。",
+  "@childSafeScreensPairIntroDetail": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensPairButton": "つなぐ",
+  "childSafeScreensPairQrHint": "保護者の画面の QR を、この端末のカメラアプリで読んでもつなげます。",
+  "childSafeScreensPairQrHintDetail": "保護者の画面の QR は、この端末のカメラアプリで読むと、コードが入った状態でこの画面が開きます。リンク(rasq://child-safe/pair?code=…)を貼り付けても、つなげます。",
+  "childSafeScreensPairNoQr": "この端末では QR を読めません。コードを入れてください。",
+  "childSafeScreensPairNoQrDetail": "この端末では QR を読めません。コードを入れるか、リンク(rasq://child-safe/pair?code=…)を貼り付けてください。",
+  "childSafeScreensLoginFailed": "ログインできませんでした",
+  "childSafeScreensLoggedIn": "@{handle} にログインしました({device})",
+  "@childSafeScreensLoggedIn": {
+    "description": "device は端末の名前",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      },
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensLoginIntro": "保護者がアプリで子のアカウントを作ると、1 度だけ使えるコードが出ます。そのコードを入れると、この端末がそのアカウントになります。この端末の SNS アカウントは引き継ぎません。",
+  "childSafeScreensLoginCodeHint": "ログインのコード",
+  "childSafeScreensLoginButton": "ログイン",
+  "childSafeScreensPendingUnverifiedTitle": "保護者の設定を確かめられません",
+  "childSafeScreensPendingTitle": "保護者が設定を決めるまで待ってください",
+  "childSafeScreensPendingSignatureMismatch": "設定の署名が合いません。",
+  "childSafeScreensPendingBody": "{parent} と見守りでつながっています。{parent} が使い方を決めると、使えるようになります。",
+  "@childSafeScreensPendingBody": {
+    "description": "parent は保護者の名前か @ハンドル",
+    "placeholders": {
+      "parent": {
+        "type": "String"
+      }
+    }
+  },
+  "childSafeScreensPendingParent": "保護者",
+  "@childSafeScreensPendingParent": {
+    "description": "保護者の名前が分からないときの呼び方"
+  },
+  "childSafeScreensPendingOffline": "いまはサーバーに届きません。",
+  "childSafeScreensPendingRefresh": "更新",
+  "childSafeScreensPendingLogout": "ログアウト",
+  "childSafeScreensPendingRasqLogin": "RASQ アカウントにログイン",
   "composeTargetNormalTitle": "ノートの作成",
   "@composeTargetNormalTitle": {
     "description": "コンポーザーの題(新しい投稿)"

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
+import '../../l10n/l10n.dart';
 import '../../session/session_storage.dart';
 import 'child_gate.dart';
 import 'child_safe_api.dart';
@@ -91,7 +92,7 @@ class ChildSafeController extends AsyncNotifier<ChildSafeState> {
         policy = ChildSafePolicy.fromJson(settings.cast<String, Object?>());
       } else {
         state = 'unverified';
-        error ??= '控えた制限の署名を確かめられません。オンラインで取り直してください';
+        error ??= appL10n.childSafeCacheUnverified;
       }
     }
     final parent = c['parent'] is Map ? (c['parent'] as Map).cast<String, Object?>() : const <String, Object?>{};
@@ -224,7 +225,7 @@ class ChildSafeController extends AsyncNotifier<ChildSafeState> {
         await _writeCache({...base, 'state': 'active', 'revision': revision, 'settings': settings, 'signature': signature, 'issuedAt': issuedAt, 'storeKey': key});
       } else {
         // 確かめられない制限は当てはめない(前の制限のまま。無ければ使わせない)。
-        error = '保護者の新しい設定の署名を確かめられませんでした(前の設定のまま)';
+        error = appL10n.childSafeNewSettingsUnverified;
         await _writeCache(prevSettings is Map ? {..._cache!, ...base} : {...base, 'state': 'unverified', 'revision': revision});
       }
     }
@@ -257,7 +258,7 @@ class ChildSafeController extends AsyncNotifier<ChildSafeState> {
   /// 既にある子のアカウントを、保護者のコードでつなぐ(`POST /me/child-safe/pair`)。
   Future<void> pair(String code) async {
     final api = ref.read(childSafeApiProvider);
-    if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
+    if (api == null) throw StateError(appL10n.childSafeNoServer);
     await api.pair(code.trim().toUpperCase());
     await refresh();
   }
@@ -415,17 +416,17 @@ Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDai
   ChildComposeVerdict? v;
   final feature = (dm || direct ? gate.blockedMessage('dm') : null) ?? (!dm && media ? gate.blockedMessage('post.media') : null);
   if (gate.locked) {
-    v = const ChildComposeVerdict('保護者が設定を決めるまで送れません');
+    v = ChildComposeVerdict(appL10n.childSafeComposeLocked);
   } else if (feature != null) {
     v = ChildComposeVerdict(feature);
   } else if (gate.postsPerDay != null && await daily.postsOn(ChildSafeDaily.dateOf(now)) >= gate.postsPerDay!) {
-    v = ChildComposeVerdict('今日はもう ${gate.postsPerDay} 件送りました(保護者が決めた 1 日の数)。また明日');
+    v = ChildComposeVerdict(appL10n.childSafeComposeDailyLimit(gate.postsPerDay!));
   } else {
     v = gate.judgeText(text, dm: dm);
     for (final t in sentTexts) {
       if (v != null) break;
       if (t.trim() == text.trim()) continue;
-      if (gate.judgeText(t, dm: dm) case final w?) v = ChildComposeVerdict('${w.message}(送る前の加工のあとの本文)', type: w.type);
+      if (gate.judgeText(t, dm: dm) case final w?) v = ChildComposeVerdict(appL10n.childSafeComposeAfterTransform(w.message), type: w.type);
     }
   }
   if (v != null) await daily.recordBlocked(now: now);

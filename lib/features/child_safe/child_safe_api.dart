@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../backend/orgate_client.dart';
+import '../../l10n/l10n.dart';
 import 'child_safe_policy.dart';
 
 /// チャイルドセーフ v2 の Central の口 (D-307)。基点は `/api/v1`、Bearer(`POST /auth/child-login` だけ無し)。
@@ -25,7 +26,7 @@ class ChildSafeGuardianStatus {
         country: j['country'] as String?,
         verifiedAt: DateTime.tryParse('${j['verifiedAt'] ?? ''}'),
       );
-  String get methodLabel => switch (method) { 'jpki' => 'マイナンバーカード (JPKI)', 'self_declared' => '自己申告', null => '—', final m => m };
+  String get methodLabel => switch (method) { 'jpki' => appL10n.childSafeMethodJpki, 'self_declared' => appL10n.childSafeMethodSelfDeclared, null => '—', final m => m };
 }
 
 /// 見守っている子の 1 行(`GET /me/child-safe/guardian` の `children[]`)。
@@ -204,12 +205,14 @@ class ChildSafeApi {
 
 /// 保護者の誓約(Central の Web コンソール `/console/child/verify` と同じ文。版は [childSafePledgeVersion])。
 /// Central の `pledgeVersion` がこの版と違えば、アプリでは同意を取らず Web コンソールへ回す(古い文で同意させない)。
+/// 文は Central の Web コンソールと版ごとに同じにしておくものなので、ARB には入れない(D-496。訳すなら Central と揃えて、
+/// 版ごとに言語の文を持つ)。
 const childSafePledgeVersion = '2026-09-24';
 const childSafePledge = [
-  '私は、見守るお子さんの親権者、またはそれに準じる保護者です。',
-  '見守りは、お子さんの安全のために使い、お子さんの年齢と成長に合わせて見直します。',
-  'お子さんの投稿の中身は RASQ Central に送られず(送る前の判定はお子さんの端末で行います)、見られるのは日ごとの数と、送る前に止めた種類だけであることを理解しています。',
-  '申告が事実と違うとわかったときは、確認を取り消されることがあります。',
+  '私は、見守るお子さんの親権者、またはそれに準じる保護者です。', // l10n-ignore
+  '見守りは、お子さんの安全のために使い、お子さんの年齢と成長に合わせて見直します。', // l10n-ignore
+  'お子さんの投稿の中身は RASQ Central に送られず(送る前の判定はお子さんの端末で行います)、見られるのは日ごとの数と、送る前に止めた種類だけであることを理解しています。', // l10n-ignore
+  '申告が事実と違うとわかったときは、確認を取り消されることがあります。', // l10n-ignore
 ];
 
 final childSafeApiProvider = Provider<ChildSafeApi?>((ref) {
@@ -221,12 +224,13 @@ final childSafeApiProvider = Provider<ChildSafeApi?>((ref) {
 String childSafeErrorMessage(Object e) {
   if (e is! OrgateException) return '$e';
   return switch (e.code.code) {
-    '404' when e.message.isEmpty || e.message == 'not found' => 'コードが違うか、期限が切れています',
-    '409' when e.message.contains('taken') || e.message.contains('handle') || e.message.contains('ハンドル') => 'そのハンドルは使われています',
-    '409' when e.message.isEmpty => 'もう見守られている(か、だれかを見守っている)アカウントです',
-    '410' => 'コードの期限が切れたか、もう使われています。保護者に出し直してもらってください',
-    '403' when e.message.contains('device') => 'この端末ではログインできません',
-    '429' => '試行が多すぎます。しばらく待ってから、やり直してください',
+    '404' when e.message.isEmpty || e.message == 'not found' => appL10n.childSafeErrorCodeInvalid,
+    // 「ハンドル」は Central の日本語のメッセージとの照合(訳さない)。
+    '409' when e.message.contains('taken') || e.message.contains('handle') || e.message.contains('ハンドル') => appL10n.childSafeErrorHandleTaken, // l10n-ignore
+    '409' when e.message.isEmpty => appL10n.childSafeErrorAlreadyLinked,
+    '410' => appL10n.childSafeErrorCodeGone,
+    '403' when e.message.contains('device') => appL10n.childSafeErrorDevice,
+    '429' => appL10n.childSafeErrorTooMany,
     _ => e.message,
   };
 }

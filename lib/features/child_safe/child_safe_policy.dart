@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart' show sha512;
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../l10n/l10n.dart';
 import '../trend/example_match.dart';
 
 /// チャイルドセーフ v2 の制限(ポリシー)と、その署名 (D-307)。
@@ -18,13 +19,17 @@ import '../trend/example_match.dart';
 
 /// 判定の強さ。タイムラインは [stimulusThreshold] 以上の刺激性(強い言葉)を落とし、コンポーザーは送らない。
 enum ChildSafeLevel {
-  strict('strict', 'きびしめ', 0.3),
-  standard('standard', 'ふつう', 0.5),
-  mild('mild', 'ゆるめ', 0.8);
+  strict('strict', 0.3),
+  standard('standard', 0.5),
+  mild('mild', 0.8);
 
-  const ChildSafeLevel(this.wire, this.label, this.stimulusThreshold);
+  const ChildSafeLevel(this.wire, this.stimulusThreshold);
   final String wire;
-  final String label;
+  String get label => switch (this) {
+        strict => appL10n.childSafeLevelStrict,
+        standard => appL10n.childSafeLevelStandard,
+        mild => appL10n.childSafeLevelMild,
+      };
 
   /// [TendencyScorer.stimulusPenaltyOf] と比べる閾値(以上なら止める)。
   final double stimulusThreshold;
@@ -47,12 +52,15 @@ Map<String, Object?> _map(Object? v) => v is Map ? v.cast<String, Object?>() : c
 
 /// 話題の一覧の見方 (D-315): ホワイトリスト(どれかの話題に当たるものだけ)/ ブラックリスト(当たるものを止める)。
 enum ChildSafeTopicMode {
-  allow('allow', 'ホワイトリスト'),
-  deny('deny', 'ブラックリスト');
+  allow('allow'),
+  deny('deny');
 
-  const ChildSafeTopicMode(this.wire, this.label);
+  const ChildSafeTopicMode(this.wire);
   final String wire;
-  final String label;
+  String get label => switch (this) {
+        allow => appL10n.childSafeTopicModeAllow,
+        deny => appL10n.childSafeTopicModeDeny,
+      };
   static ChildSafeTopicMode? fromWire(Object? w) => values.where((m) => m.wire == w).firstOrNull;
 }
 
@@ -213,14 +221,19 @@ class ChildSafeSnsAllow {
 /// プラグインのインストール: `none`(入れられない)/ `listed`(`ids` のものだけ)/ `any` /
 /// `examples`(`ids` のものと、許す例に近く止める例に近くないもの。D-314)。
 enum ChildSafeInstall {
-  none('none', '入れられない'),
-  listed('listed', '選んだものだけ'),
-  any('any', '自由'),
-  examples('examples', '例に近いもの');
+  none('none'),
+  listed('listed'),
+  any('any'),
+  examples('examples');
 
-  const ChildSafeInstall(this.wire, this.label);
+  const ChildSafeInstall(this.wire);
   final String wire;
-  final String label;
+  String get label => switch (this) {
+        none => appL10n.childSafeInstallNone,
+        listed => appL10n.childSafeInstallListed,
+        any => appL10n.childSafeInstallAny,
+        examples => appL10n.childSafeInstallExamples,
+      };
   static ChildSafeInstall fromWire(Object? w) => values.where((v) => v.wire == w).firstOrNull ?? none;
 }
 
@@ -414,44 +427,45 @@ class ChildSafeCatalog {
 
   /// サーバーから取れないとき(オフライン / 古い Central)の控え。**Central の `policy::catalog()` と同じ値**
   /// (`test/fixtures/child_safe_catalog.json` と突き合わせている。Central を変えたら、ここと fixture も)。
+  /// ラベルは Central が返すものと同じ文(Central のカタログはまだ言語を見ない)なので ARB には入れない(D-496)。
   static final fallback = ChildSafeCatalog(
     version: 1,
     features: const [
-      ChildSafeCatalogItem('astell.join', 'ASTell への参加'),
-      ChildSafeCatalogItem('astell.create', 'ASTell ルームの作成'),
-      ChildSafeCatalogItem('astell.share', 'ASTell での共有・チャット'),
-      ChildSafeCatalogItem('astell.stream', 'ASTell の画面共有・配信'),
-      ChildSafeCatalogItem('store.review', 'ストアのレビュー投稿'),
-      ChildSafeCatalogItem('account.follow', 'RASQ アカウントのフォロー'),
-      ChildSafeCatalogItem('post', '投稿'),
-      ChildSafeCatalogItem('post.media', '画像・動画つきの投稿'),
-      ChildSafeCatalogItem('dm', 'ダイレクトメッセージ'),
-      ChildSafeCatalogItem('reaction', 'リアクション'),
-      ChildSafeCatalogItem('relational', 'つながりの表示(フォロー / フォロワー)'),
-      ChildSafeCatalogItem('trend', 'トレンド'),
-      ChildSafeCatalogItem('lists', 'リスト'),
-      ChildSafeCatalogItem('notifications', '通知'),
-      ChildSafeCatalogItem('store.install', 'プラグインのインストール'),
-      ChildSafeCatalogItem('sns.addAccount', 'SNS アカウントの追加'),
+      ChildSafeCatalogItem('astell.join', 'ASTell への参加'), // l10n-ignore
+      ChildSafeCatalogItem('astell.create', 'ASTell ルームの作成'), // l10n-ignore
+      ChildSafeCatalogItem('astell.share', 'ASTell での共有・チャット'), // l10n-ignore
+      ChildSafeCatalogItem('astell.stream', 'ASTell の画面共有・配信'), // l10n-ignore
+      ChildSafeCatalogItem('store.review', 'ストアのレビュー投稿'), // l10n-ignore
+      ChildSafeCatalogItem('account.follow', 'RASQ アカウントのフォロー'), // l10n-ignore
+      ChildSafeCatalogItem('post', '投稿'), // l10n-ignore
+      ChildSafeCatalogItem('post.media', '画像・動画つきの投稿'), // l10n-ignore
+      ChildSafeCatalogItem('dm', 'ダイレクトメッセージ'), // l10n-ignore
+      ChildSafeCatalogItem('reaction', 'リアクション'), // l10n-ignore
+      ChildSafeCatalogItem('relational', 'つながりの表示(フォロー / フォロワー)'), // l10n-ignore
+      ChildSafeCatalogItem('trend', 'トレンド'), // l10n-ignore
+      ChildSafeCatalogItem('lists', 'リスト'), // l10n-ignore
+      ChildSafeCatalogItem('notifications', '通知'), // l10n-ignore
+      ChildSafeCatalogItem('store.install', 'プラグインのインストール'), // l10n-ignore
+      ChildSafeCatalogItem('sns.addAccount', 'SNS アカウントの追加'), // l10n-ignore
     ],
     search: const [
-      ChildSafeCatalogItem('posts', '投稿の検索'),
-      ChildSafeCatalogItem('users', 'ユーザーの検索'),
-      ChildSafeCatalogItem('trend', 'トレンドの検索'),
-      ChildSafeCatalogItem('store', 'ストアの検索'),
-      ChildSafeCatalogItem('web', 'Web の検索'),
+      ChildSafeCatalogItem('posts', '投稿の検索'), // l10n-ignore
+      ChildSafeCatalogItem('users', 'ユーザーの検索'), // l10n-ignore
+      ChildSafeCatalogItem('trend', 'トレンドの検索'), // l10n-ignore
+      ChildSafeCatalogItem('store', 'ストアの検索'), // l10n-ignore
+      ChildSafeCatalogItem('web', 'Web の検索'), // l10n-ignore
     ],
     raiGroups: const [
-      ChildSafeCatalogItem('rai.guide', '使い方の案内'),
-      ChildSafeCatalogItem('rai.read', '読む(要約・翻訳)'),
-      ChildSafeCatalogItem('rai.compose', '書く手伝い'),
-      ChildSafeCatalogItem('rai.act', '操作の代行'),
-      ChildSafeCatalogItem('rai.settings', '設定の変更'),
-      ChildSafeCatalogItem('rai.astell', 'ASTell の手伝い'),
-      ChildSafeCatalogItem('rai.web', 'Web の調べもの'),
-      ChildSafeCatalogItem('rai.assistant', 'アシスタント', phase: 2),
-      ChildSafeCatalogItem('rai.macro', 'マクロ', phase: 2),
-      ChildSafeCatalogItem('rai.automation', '自動化', phase: 2),
+      ChildSafeCatalogItem('rai.guide', '使い方の案内'), // l10n-ignore
+      ChildSafeCatalogItem('rai.read', '読む(要約・翻訳)'), // l10n-ignore
+      ChildSafeCatalogItem('rai.compose', '書く手伝い'), // l10n-ignore
+      ChildSafeCatalogItem('rai.act', '操作の代行'), // l10n-ignore
+      ChildSafeCatalogItem('rai.settings', '設定の変更'), // l10n-ignore
+      ChildSafeCatalogItem('rai.astell', 'ASTell の手伝い'), // l10n-ignore
+      ChildSafeCatalogItem('rai.web', 'Web の調べもの'), // l10n-ignore
+      ChildSafeCatalogItem('rai.assistant', 'アシスタント', phase: 2), // l10n-ignore
+      ChildSafeCatalogItem('rai.macro', 'マクロ', phase: 2), // l10n-ignore
+      ChildSafeCatalogItem('rai.automation', '自動化', phase: 2), // l10n-ignore
     ],
     presets: {'13-15': childSafePresets['strict']!, '16-17': childSafePresets['standard']!, '18+': childSafePresets['mild']!},
   );
@@ -538,7 +552,7 @@ Map<String, String> childSafeTopicErrors(ChildSafePolicy p) => {
       if (p.time.enabled && p.time.topics.isEmptyWhitelist) 'time': childSafeEmptyWhitelistText,
     };
 
-const childSafeEmptyWhitelistText = 'ホワイトリストが空です。話題を 1 つ以上入れるか、ブラックリストにしてください';
+String get childSafeEmptyWhitelistText => appL10n.childSafeEmptyWhitelistError;
 
 // ── RAi の関数のまとまり ─────────────────────────────────────────────────
 
@@ -690,7 +704,7 @@ void _writeCanonical(Object? v, StringBuffer out) {
     case Map m:
       final keys = [
         for (final k in m.keys)
-          if (k is String) k else throw ArgumentError.value(k, 'key', 'canonical JSON のキーは文字列だけです'),
+          if (k is String) k else throw ArgumentError.value(k, 'key', 'canonical JSON のキーは文字列だけです'), // l10n-ignore
       ]..sort(_compareUtf8);
       out.write('{');
       for (var i = 0; i < keys.length; i++) {
@@ -708,7 +722,7 @@ void _writeCanonical(Object? v, StringBuffer out) {
       }
       out.write(']');
     default:
-      throw ArgumentError.value(v, 'value', 'canonical JSON にできない値です');
+      throw ArgumentError.value(v, 'value', 'canonical JSON にできない値です'); // l10n-ignore
   }
 }
 
@@ -729,7 +743,7 @@ void _writeCanonicalString(String s, StringBuffer out) {
       out.writeCharCode(c);
       out.writeCharCode(units[++i]);
     } else if (c >= 0xd800 && c <= 0xdfff) {
-      throw ArgumentError.value(s, 'string', '対になっていないサロゲートがあります');
+      throw ArgumentError.value(s, 'string', '対になっていないサロゲートがあります'); // l10n-ignore
     } else {
       out.writeCharCode(c);
     }
