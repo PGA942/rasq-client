@@ -105,9 +105,10 @@ class RasqPostTileView extends ConsumerWidget {
     return central == null ? null : post.permalink(central);
   }
 
-  Future<void> _more(BuildContext context, WidgetRef ref, Rect anchor, bool isMine) async {
+  /// [tethered] = TL のタイルの右上の「…」から(ボタンにつながった形、D-513)。全画面の重ねたボタンからは false。
+  Future<void> _more(BuildContext context, WidgetRef ref, Rect anchor, bool isMine, {bool tethered = false}) async {
     final l10n = context.l10n;
-    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.more', anchor: anchor, dense: true, items: [
+    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.more', anchor: anchor, dense: true, tetherAnchorChild: tethered ? const Icon(Icons.more_horiz, size: 20) : null, items: [
       RasqDropdownItem(l10n.profilePostMenuReactions, 'reactions'),
       RasqDropdownItem(l10n.profilePostMenuCopyLink, 'copy'),
       RasqDropdownItem(l10n.profilePostMenuOpenBrowser, 'open'),
@@ -207,7 +208,8 @@ class RasqPostTileView extends ConsumerWidget {
 
   /// リブロードのバンドル (D-276): ふつうのタイルでは「リブロード / 引用」(リブロードは何度でも)。
   /// 自分のリブロードとして出ているタイルでは「リブロードを取り消す / 引用」(その 1 回だけを取り消す)。
-  Future<void> _rebroadBundle(BuildContext context, WidgetRef ref, Rect anchor, {required bool myRebroad}) async {
+  /// [holding] = ボタンの長押しで開いた(指を滑らせて離して選ぶ、D-512)。
+  Future<void> _rebroadBundle(BuildContext context, WidgetRef ref, Rect anchor, {required bool myRebroad, bool holding = false}) async {
     final l10n = context.l10n;
     if (ref.read(orgateAccountProvider).value == null) return _toast(context, l10n.profilePostLoginToRebroad);
     // SNS のリノートと同じく、ドロップダウンではなくバンドル FOW で出す (D-277)。
@@ -217,6 +219,8 @@ class RasqPostTileView extends ConsumerWidget {
       title: l10n.profilePostRebroad,
       anchor: anchor,
       column: fowColumnOf(context),
+      holding: holding,
+      anchorChild: Icon(Icons.repeat, size: 20, color: myRebroad ? RasqTokens.of(context).link : null),
       items: [
         if (myRebroad) BundleMenuItem(value: 'undo', label: l10n.profilePostRebroadUndo, icon: Icons.repeat, destructive: true) else BundleMenuItem(value: 'rebroad', label: l10n.profilePostRebroad, icon: Icons.repeat),
         BundleMenuItem(value: 'quote', label: l10n.profilePostQuote, icon: Icons.format_quote),
@@ -362,6 +366,8 @@ class RasqPostTileView extends ConsumerWidget {
               doneColor: tokens.link,
               count: post.rebroadCount + post.quoteCount,
               onAnchorTap: (r) => perform(a, r),
+              // 長押しで、指を滑らせて離して選ぶ (D-512)。
+              onAnchorLongPress: (r) => _rebroadBundle(context, ref, r, myRebroad: myRebroad, holding: true),
             ),
           rasqQueueActionId => RasqActionBarItem(
               id: 'queue',
@@ -393,7 +399,7 @@ class RasqPostTileView extends ConsumerWidget {
         onTap: onOpen,
         onAuthorTap: author == null ? null : () => context.pushRasqAccount(author.handle),
         // … = ほかの SNS の投稿と同じドロップダウン(削除はこの中)。
-        onMore: (anchor) => _more(context, ref, anchor, isMine),
+        onMore: (anchor) => _more(context, ref, anchor, isMine, tethered: true),
         content: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           // 注釈 (CW) つきは、注釈だけ見せて、中身は押すまで畳む(SNS の投稿と同じ)。
           if (post.cw.isNotEmpty) _CwFold(cw: post.cw, child: _body(context, ref))
@@ -438,16 +444,19 @@ class RasqPostTileView extends ConsumerWidget {
                       iconUrl: bundleIconUrlOf(e.list),
                       showCount: false,
                       onAnchorTap: (anchor) => showActionBundleMenuFow(ref, anchor: anchor, entry: e, column: fowColumnOf(context), onPick: (a) => perform(a, anchor)),
+                      onAnchorLongPress: (anchor) => showActionBundleMenuFow(ref, anchor: anchor, entry: e, column: fowColumnOf(context), holding: true, onPick: (a) => perform(a, anchor)),
                     ),
                 },
             ],
             trailing: [
-              RasqActionButton.icon(
-                key: ValueKey('rasqPost.${post.id}.share'),
-                icon: Icons.ios_share,
-                tooltip: l10n.profilePostShare,
-                // SNS の投稿と同じ共有 FOW (D-279。リンク / 内容のコピー、引用、DM、共有プラグイン)。
-                onTap: () => showPostShareFow(ref, post.toPost(central: ref.read(centralBaseUrlProvider)), column: fowColumnOf(context)),
+              Builder(
+                builder: (bctx) => RasqActionButton.icon(
+                  key: ValueKey('rasqPost.${post.id}.share'),
+                  icon: Icons.ios_share,
+                  tooltip: l10n.profilePostShare,
+                  // SNS の投稿と同じ共有 FOW (D-279。リンク / 内容のコピー、引用、DM、共有プラグイン)。ボタンにつながった形 (D-513)。
+                  onTap: () => showPostShareFow(ref, post.toPost(central: ref.read(centralBaseUrlProvider)), column: fowColumnOf(context), anchor: anchorRectOf(bctx)),
+                ),
               ),
             ],
           ),

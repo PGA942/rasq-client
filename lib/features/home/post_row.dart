@@ -18,6 +18,7 @@ import '../../text/inline_spans.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../compose/emoji_picker_fow.dart';
+import '../compose/quick_emoji_picker.dart';
 import 'reaction_history.dart';
 import 'reaction_mode.dart';
 import '../post/post_menu.dart';
@@ -351,14 +352,17 @@ class _PostRowState extends ConsumerState<PostRow> {
                     }
                   },
                 ),
-              if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.homePostShare, onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context)))]),
+              if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [
+                // 共有の FOW はボタンにつながった形で (D-513)。
+                Builder(builder: (bctx) => RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.homePostShare, onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context), anchor: anchorRectOf(bctx)))),
+              ]),
             ]),
       // ↓ で別アカウントを選んでいる間は、そのコピーで以降の画面を開く (D-155)。
       onTap: _actAs != null && widget.onActAs == null ? () => context.pushPost(_actAs!) : widget.onTap,
       // 作者の id は投稿を引いたサーバーのもの (D-469): 作者自身のアカウント(`post.author.account`)ではなく、
       // 投稿が流れてきたアカウント(↓ で選んだコピーならそのアカウント)のセッションでページを引く。
       onAuthorTap: widget.onAuthorTap ?? () => context.pushUser(post.author, account: post.account.key),
-      onMore: (anchor) => showPostMenu(context, ref, post, anchor, pin: widget.menuPin),
+      onMore: (anchor) => showPostMenu(context, ref, post, anchor, pin: widget.menuPin, tetherIcon: const Icon(Icons.more_horiz, size: 20)),
       // アカウント選択 (D-110/D-111): 複数アカウントに流れてきた同一投稿は
       // 1 枚に畳まれる — ヘッダー右上(… の左)の ↓ でどのアカウントとして
       // 見る/反応するかを選ぶ(アクションバーはずらさない)。
@@ -462,7 +466,13 @@ class _PostRowState extends ConsumerState<PostRow> {
       // ピッカーは**実物のリアクションボタンにアンカー**する (D-065:
       // 基本下付き・余白不足で上付き。D-055 の複製バーは置かない)。
       // 絵文字でリアクションできない投稿 (D-321: Mastodon / Bluesky / mixi2、Misskey の「いいねのみ」)では、長押ししてもピッカーを開かない。
-      onAnchorLongPress: isReaction && reactionMode == PostReactionMode.emoji ? (anchor) => _openReactionPicker(a, anchor) : null,
+      // 長押し (D-512): リアクションはボタンにつながった**すぐ選べる絵文字**(指を滑らせて離すと付く。ピッカー全体は「その他」から)、
+      // リノートはバンドル(リノート / 引用 / 別のアカウントで)を同じ選び方で。
+      onAnchorLongPress: isRepost
+          ? (anchor) => _repostBundle(a, st, anchor, holding: true)
+          : isReaction && reactionMode == PostReactionMode.emoji
+              ? (anchor) => _openQuickReaction(a, anchor, glyph: iconText != null ? Text(iconText, style: const TextStyle(fontSize: 17)) : iconUrl != null ? rasqIconImage(iconUrl, size: 20, fallback: icon) : Icon(icon, size: 20))
+              : null,
     );
   }
 
@@ -519,6 +529,26 @@ class _PostRowState extends ConsumerState<PostRow> {
     });
   }
 
+  /// リアクションのボタンの長押し (D-512): すぐ選べる絵文字(設定のプリセット + 最近使ったもの)をボタンにつながったパネルに並べ、
+  /// 指を滑らせて離した絵文字で付ける。「その他」でピッカー全体([_openReactionPicker])。実行先は開いた時点で掴む (D-282)。
+  void _openQuickReaction(ActionDescriptor a, Rect anchor, {required Widget glyph}) {
+    final target = post;
+    final handler = _onAction;
+    final history = ref.read(reactionHistoryProvider.notifier);
+    openQuickEmojiPicker(
+      ref,
+      id: 'actionbar.reaction.quick.${post.key}',
+      anchor: anchor,
+      accountKey: target.account.key,
+      column: fowColumnOf(context),
+      anchorChild: glyph,
+      onPick: (e) => handler(a, args: {'reaction': e}).then((_) => history.record(e)).catchError((_) {}),
+      onMore: () {
+        if (mounted && post.key == target.key) _openReactionPicker(a, anchor);
+      },
+    );
+  }
+
   ActionDescriptor? get _repostAction => widget.actions.where((a) => a.genreTag == 'Repost').firstOrNull;
 
   /// この投稿が**自分のリノート**として流れてきているか (D-276)。ここでだけ、リノートのバンドルが「リノートを取り消す」になる。
@@ -543,7 +573,7 @@ class _PostRowState extends ConsumerState<PostRow> {
   }
 
   /// リノート/引用ノートの組み込みバンドル (D-039)。
-  Future<void> _repostBundle(ActionDescriptor a, ActionState st, Rect anchor) async {
+  Future<void> _repostBundle(ActionDescriptor a, ActionState st, Rect anchor, {bool holding = false}) async {
     // ドロップダウンはやめて、バンドル FOW に統一 (D-277)。
     // ボタンは入り切りにしない (D-274 → D-276): ふつうの投稿では、いつ押しても「リノート」(何度でも)。
     // 自分のリノートとして流れてきたタイルでだけ、1 つ目が「リノートを取り消す」になる。
@@ -561,6 +591,8 @@ class _PostRowState extends ConsumerState<PostRow> {
       title: a.label,
       anchor: anchor,
       column: fowColumnOf(context),
+      holding: holding,
+      anchorChild: RasqSkinIcon(PostRow.iconFor(a.icon, Icons.repeat), size: 20, color: st.done ? RasqTokens.of(context).live : null),
       items: [
         if (_canUndoRepost) BundleMenuItem(value: 'undo', label: context.l10n.homePostUndoRepost, icon: Icons.repeat, destructive: true) else BundleMenuItem(value: 'renote', label: '$renoteLabel$via', icon: Icons.repeat),
         BundleMenuItem(value: 'quote', label: '$quoteLabel$via', icon: Icons.format_quote),
@@ -586,6 +618,8 @@ class _PostRowState extends ConsumerState<PostRow> {
         iconUrl: bundleIconUrlOf(entry.list),
         showCount: false,
         onAnchorTap: (anchor) => showActionBundleMenuFow(ref, anchor: anchor, entry: entry, column: fowColumnOf(context), onPick: (a) => _run(a).catchError((_) {})),
+        // 長押しで、指を滑らせて離して選ぶ (D-512)。
+        onAnchorLongPress: (anchor) => showActionBundleMenuFow(ref, anchor: anchor, entry: entry, column: fowColumnOf(context), holding: true, onPick: (a) => _run(a).catchError((_) {})),
       );
 
 

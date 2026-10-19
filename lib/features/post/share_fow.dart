@@ -36,7 +36,15 @@ bool isPrivatePost(Post p) => p.isDirect || p.visibility == 'followers' || p.loc
 /// コピーする「内容」= CW + 本文。
 String postShareContent(Post p) => (p.contentWarning != null && p.contentWarning!.isNotEmpty) ? '[${p.contentWarning}] ${p.body}' : p.body;
 
-Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0, MediaItem? media}) async {
+/// ボタンのグローバルな矩形(ボタンにつながった FOW のアンカー、D-513)。
+Rect anchorRectOf(BuildContext context) {
+  final box = context.findRenderObject() as RenderBox;
+  return box.localToGlobal(Offset.zero) & box.size;
+}
+
+/// [anchor] = 押した共有のボタンの矩形。渡すと**ボタンにつながった形**(D-513)で出す(アクションバーの共有のボタン)。
+/// 「…」のメニューの「共有」からは渡さない(ボタンが無いので、ふつうの FOW)。
+Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0, MediaItem? media, Rect? anchor}) async {
   final manager = ref.read(overlayManagerProvider);
   final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
   final candidates = isPrivatePost(post) ? [for (final s in sessions) if (s.account == post.account) s] : sessions;
@@ -63,7 +71,10 @@ Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0, MediaIt
 
   final spec = FowSpec(
     type: FowPanelType.widget,
-    initialHeightFactor: 0.6,
+    // ボタンにつながった形では、ボタンの下(上)の空いているぶんに収まる高さから。
+    initialHeightFactor: anchor == null ? 0.6 : 0.5,
+    anchor: anchor,
+    tether: anchor == null ? null : const FowTether(anchorChild: Icon(Icons.ios_share, size: 20), width: 380),
     minHeightFactor: 0.3,
     maxHeightFactor: 0.92,
     dockAboveFooter: true,
@@ -101,6 +112,8 @@ Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0, MediaIt
     await manager.showFow<void>(
       id: postShareFowId,
       spec: spec,
+      // ボタンにつながった形は、外を押すと閉じる(ボタンから出たメニューと同じ)。
+      barrierBehavior: anchor == null ? null : OverlayBarrierBehavior.dismiss,
       semanticsLabel: '共有',
       builder: (ctx, handle) => _ShareBody(post: post, link: link, selected: selected, column: column, onComposer: openComposer, onDm: openDm, media: media),
     );

@@ -234,6 +234,7 @@ class TetheredPanel extends StatelessWidget {
     this.strokeWidth = kFowRimWidth,
     this.margin = 8,
     this.progress = 1,
+    this.bounds,
   });
 
   final Rect anchor;
@@ -268,6 +269,10 @@ class TetheredPanel extends StatelessWidget {
   /// 出てくる途中(0〜1)。ボタンの中心から広がる。
   final double progress;
 
+  /// 置いてよい範囲(グローバル座標)。null = 画面全体。FOW のカラム (D-481) に収めるとき(D-513)は、そのカラムの矩形。
+  /// 画面の余白([margin] / ノッチ / キーボード)はこれと重ねて引く。
+  final Rect? bounds;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -285,6 +290,7 @@ class TetheredPanel extends StatelessWidget {
         neckAngle: neckAngle,
         neckFlare: neckFlare,
         insets: EdgeInsets.fromLTRB(mq.padding.left + margin, mq.padding.top + margin, mq.padding.right + margin, math.max(mq.padding.bottom, mq.viewInsets.bottom) + margin),
+        bounds: bounds,
       ),
       children: [
         LayoutId(
@@ -297,10 +303,11 @@ class TetheredPanel extends StatelessWidget {
         ),
         LayoutId(
           id: _TetherSlot.panel,
-          child: Material(type: MaterialType.transparency, child: child),
+          child: Material(key: kTetherPanelKey, type: MaterialType.transparency, child: child),
         ),
         // 首の中のボタンの見た目(ボタンの中心)と、押せる範囲(パネルと反対の側へずらす、[tetherHitRect])は別に置く。
-        LayoutId(id: _TetherSlot.head, child: IgnorePointer(child: Center(child: anchorChild))),
+        // 首の中は Material の外なので、文字(絵文字のアイコン)の既定の書式をここで与える(無いと赤字に黄色の下線)。
+        LayoutId(id: _TetherSlot.head, child: IgnorePointer(child: Material(type: MaterialType.transparency, child: Center(child: anchorChild)))),
         LayoutId(
           id: _TetherSlot.hit,
           child: GestureDetector(key: const ValueKey('rasqOverlay.tether.hit'), behavior: HitTestBehavior.opaque, onTap: onAnchorTap),
@@ -325,13 +332,16 @@ class TetheredPanel extends StatelessWidget {
 
 enum _TetherSlot { paint, panel, head, hit }
 
+/// [TetheredPanel] の中身を包む [Material] のキー(テストがパネルの中身の矩形を探す口)。
+const kTetherPanelKey = ValueKey<String>('rasqOverlay.tether.panel');
+
 /// レイアウトで決まった形を、描画へ渡す入れ物(描画はレイアウトのあと)。
 class _TetherHolder {
   TetherOutline? outline;
 }
 
 class _TetherDelegate extends MultiChildLayoutDelegate {
-  _TetherDelegate({required this.holder, required this.anchor, required this.width, required this.preferred, required this.offset, required this.clearance, required this.reach, required this.neckAngle, required this.neckFlare, required this.insets});
+  _TetherDelegate({required this.holder, required this.anchor, required this.width, required this.preferred, required this.offset, required this.clearance, required this.reach, required this.neckAngle, required this.neckFlare, required this.insets, this.bounds});
   final _TetherHolder holder;
   final Rect anchor;
   final double width;
@@ -342,11 +352,16 @@ class _TetherDelegate extends MultiChildLayoutDelegate {
   final double neckAngle;
   final double neckFlare;
   final EdgeInsets insets;
+  final Rect? bounds;
 
   @override
   void performLayout(Size size) {
     final buttonRadius = math.min(anchor.width, anchor.height) / 2;
-    final area = insets.deflateRect(Offset.zero & size);
+    final screen = insets.deflateRect(Offset.zero & size);
+    final b = bounds;
+    // カラムに収める (D-513): 画面の余白と重ねる。重ならない(カラムが画面の外)なら画面全体。
+    final within = b == null ? screen : screen.intersect(Rect.fromLTRB(b.left + 4, b.top, b.right - 4, b.bottom));
+    final area = within.width > 0 && within.height > 0 ? within : screen;
     final place = tetherPlacement(anchor: anchor, area: area, width: width, reach: reach, preferred: preferred);
     final w = math.min(width, area.width);
     final panel = layoutChild(_TetherSlot.panel, BoxConstraints(minWidth: w - 2 * offset, maxWidth: w - 2 * offset, maxHeight: math.max(0.0, place.maxHeight - 2 * offset)));
@@ -370,7 +385,7 @@ class _TetherDelegate extends MultiChildLayoutDelegate {
       old.anchor != anchor || old.width != width || old.preferred != preferred || old.offset != offset || old.clearance != clearance ||
       old.reach != reach ||
       old.neckAngle != neckAngle ||
-      old.neckFlare != neckFlare || old.insets != insets || old.holder != holder;
+      old.neckFlare != neckFlare || old.insets != insets || old.bounds != bounds || old.holder != holder;
 }
 
 class _TetherPainter extends CustomPainter {

@@ -14,3 +14,4 @@ export 'src/overlay_host.dart';
 export 'src/overlay_scope.dart';
 export 'src/presets.dart';
 export 'src/tethered_panel.dart';
+export 'src/hold_slide_picker.dart';

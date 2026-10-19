@@ -620,7 +620,7 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
     // (ルーム / Swing のセッションはそこにいる人だけのもの)。
     final invitable = d != null && d.isShared && !c.temporary && c.plugin?.storePluginId != null && (s == null || s.scopeKind == 'link' || s.scopeKind == 'profile');
     final l10n = context.l10n;
-    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'custom.page.menu', anchor: anchor, items: [
+    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'custom.page.menu', anchor: anchor, tetherAnchorChild: const Icon(Icons.more_horiz, size: 22), items: [
       if (invitable) RasqDropdownItem(l10n.customPageMenuInvite, 'invite'),
       if (s?.inviteCode != null) RasqDropdownItem(l10n.customPageMenuCopyCode, 'copy'),
       // 招待リンク (D-456): Central のページから Web クライアント / アプリで開ける。

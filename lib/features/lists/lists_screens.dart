@@ -251,6 +251,10 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
       title: 'リストを作成',
       anchor: anchor,
       column: fowColumnOf(context),
+      // ボタンにつながった形 (D-513)。右下の ＋ なので上に開く。
+      preferredSide: TetherSide.above,
+      anchorChild: const Icon(Icons.add),
+      iconExtent: 24,
       keyOf: (v) => v,
       items: [
         for (final s in sessions) BundleMenuItem(value: s.account.key, label: '${s.account} のリスト', icon: Icons.list_alt_outlined),
