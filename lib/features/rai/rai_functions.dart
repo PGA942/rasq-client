@@ -28,6 +28,7 @@ import '../vc/astell_providers.dart';
 import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
 import 'rai_web_search.dart';
+import '../../l10n/l10n.dart';
 
 /// RAi が呼べる関数 (D-221): LLM の返事の `[[call:<関数>|引数=値|…]]` を実行する。
 ///
@@ -129,7 +130,7 @@ bool raiCanAutomate(ActionDescriptor a) => a.automation == AutomationPolicy.allo
 
 /// 設定ページのノードに付ける「操作禁止」タグ (D-225): `p.tags` に入っていれば RAi は書かない。
 /// プラグインの設定ページ(`rasq.settings-page/1`)は JSON なので、`"p": {"tags": ["操作禁止"]}` で宣言する。
-const raiNoAutomationTag = '操作禁止';
+const raiNoAutomationTag = '操作禁止'; // l10n-ignore
 
 /// ホスト(既定)の設定でパスワードが要るキーの印 (D-225): `"p": {"password": true}`。
 /// 現状の静的ページには無く、`web.open`(web 版へ逃がす)のタイルは defaults にキーが無いので元から書けない。
@@ -140,13 +141,13 @@ const raiPasswordProp = 'password';
 /// `settings.set` で書くタイルが 1 つ以上あり、かつどのタイルにも [raiPasswordProp] / [raiNoAutomationTag] が
 /// 無いこと。理由文は拒否のときだけ。
 ({bool ok, String reason}) raiSettingsWritable(SettingsPageSpec spec, String key) {
-  if (!spec.defaults.containsKey(key)) return (ok: false, reason: '「${spec.area}」に「$key」という設定はありません(ある: ${spec.defaults.keys.join(', ')})');
+  if (!spec.defaults.containsKey(key)) return (ok: false, reason: appL10n.raiFunctionsSettingMissing(spec.area, key, spec.defaults.keys.join(', ')));
   final nodes = raiSettingsNodesFor(spec.root, key);
-  if (!nodes.any((n) => n.on['change'] == 'settings.set')) return (ok: false, reason: '「$key」は画面から書ける設定ではありません');
+  if (!nodes.any((n) => n.on['change'] == 'settings.set')) return (ok: false, reason: appL10n.raiFunctionsSettingNotWritable(key));
   for (final n in nodes) {
-    if (n.p[raiPasswordProp] == true) return (ok: false, reason: '「$key」はパスワードが要るので RAi からは書きません');
+    if (n.p[raiPasswordProp] == true) return (ok: false, reason: appL10n.raiFunctionsSettingNeedsPassword(key));
     final tags = n.p['tags'];
-    if (tags is List && tags.contains(raiNoAutomationTag)) return (ok: false, reason: '「$key」は操作禁止タグが付いているので RAi からは書きません');
+    if (tags is List && tags.contains(raiNoAutomationTag)) return (ok: false, reason: appL10n.raiFunctionsSettingLocked(key));
   }
   return (ok: true, reason: '');
 }
@@ -172,7 +173,7 @@ Object? raiCoerceSettingValue(SettingsPageSpec spec, String key, String raw) {
     return null;
   }
   if (current is bool) {
-    return switch (v.toLowerCase()) { 'true' || 'on' || 'yes' || '1' || 'オン' || 'はい' => true, 'false' || 'off' || 'no' || '0' || 'オフ' || 'いいえ' => false, _ => null };
+    return switch (v.toLowerCase()) { 'true' || 'on' || 'yes' || '1' || 'オン' || 'はい' => true, 'false' || 'off' || 'no' || '0' || 'オフ' || 'いいえ' => false, _ => null }; // l10n-ignore
   }
   if (current is num) {
     final n = num.tryParse(v.replaceAll('%', ''));
@@ -191,7 +192,7 @@ Object? raiCoerceSettingValue(SettingsPageSpec spec, String key, String raw) {
 /// 一覧の行を予算まで積む共有ヘルパー (D-223): [head] の後に「N 件中 M 件」を添え、収まらない分は落とす
 /// (最初の 1 行も入らなければ切り詰めて 1 行だけ残す)。空なら「該当なし」。
 String raiFoldLines(List<String> lines, int budget, {required String head}) {
-  if (lines.isEmpty) return '$head: 該当なし';
+  if (lines.isEmpty) return appL10n.raiFunctionsFoldEmpty(head);
   final out = <String>[];
   var used = 0;
   for (final l in lines) {
@@ -202,7 +203,7 @@ String raiFoldLines(List<String> lines, int budget, {required String head}) {
     out.add(l);
     used += l.length + 1;
   }
-  return '$head ${lines.length} 件中 ${out.length} 件:\n${out.join('\n')}';
+  return '${appL10n.raiFunctionsFoldHead(head, lines.length, out.length)}\n${out.join('\n')}';
 }
 
 /// 非対応の日本語化ガード (D-223): Dart 実装の非対応は [UnsupportedError]、wasm 側は
@@ -213,10 +214,10 @@ Future<RaiFunctionResult> raiGuard(String name, Future<RaiFunctionResult> Functi
   try {
     return await body();
   } on UnsupportedError {
-    return RaiFunctionResult(name: name, text: 'この SNS では使えません($name)', ok: false);
+    return RaiFunctionResult(name: name, text: appL10n.raiFunctionsUnsupported(name), ok: false);
   } on SnsApiException catch (e) {
     if (e.code.code != 'C01') rethrow;
-    return RaiFunctionResult(name: name, text: 'この SNS では使えません($name)', ok: false);
+    return RaiFunctionResult(name: name, text: appL10n.raiFunctionsUnsupported(name), ok: false);
   } on StateError catch (e) {
     return RaiFunctionResult(name: name, text: e.message, ok: false);
   }
@@ -225,36 +226,36 @@ Future<RaiFunctionResult> raiGuard(String name, Future<RaiFunctionResult> Functi
 /// 関数の一覧(system に出す 1 行ずつ)。呼べる範囲は関連する関数をまとめて 1 行にし、system の
 /// 肥大化(D-220 の 2500 文字上限)を抑える。
 const raiFunctionUsage = <String>[
-  'posts.fetch(kind=home|search, keyword, sort=new|reactions, limit)・page.read(filter, tag): 投稿本文/いま開いている画面の表示データを取る',
-  'reference.get(id=操作か関数の id): リファレンスの詳細を取る',
-  'post.compose(text)・post.reply(post, text)・post.quote(post, text)・dm.compose(room, text): 送らずにコンポーザーへ下書きを入れる(送信は自動化不可 = ユーザーが押す)',
-  'post.action(action=アクション id, post=投稿 id): 投稿にアクション(自動化が許可されたものだけ)',
-  'astell.rooms(): ASTell のルーム一覧を取る',
-  'astell.create(title=題名): ASTell のルームを作る',
-  'timeline.list(kind=home|social|local|global|featured|tag:語|list:id, limit)・post.get(id)・post.thread(post, limit): TL/投稿の本文を取る',
-  'post.reactions(post, limit)・post.reposters(post, limit)・post.quotes(post, limit): 投稿への反応を取る',
-  'favorites.list(limit)・reacted.list(limit): お気に入り/リアクション済みの投稿を取る',
-  'me.get()・user.get(id=|handle=@名前)・user.posts(user, filter=posts|replies|media|quotes, limit)・user.search(keyword, limit)・user.follows(user, direction=followers|following, limit)・user.relation(user): ユーザーの情報を取る',
-  'moderation.list(kind=muted|blocked|requests): ミュート/ブロック/フォロー申請の一覧を取る',
-  'notifications.list(kind=all|reaction|reply|follow|mention, limit)・notifications.read(): 通知を取る/既読にする',
-  'trends.tags(limit): トレンドのタグを取る',
-  'lists.list()・lists.members(list): リストとメンバーを取る',
-  'clips.list(user=)・clips.notes(clip, limit): クリップを取る(Misskey)',
-  'feeds.list(keyword=)・feed.save(feed=uri|語, on)・rasqLists.search(keyword=): フィード(Bluesky、keyword 無し=保存済み)/RASQ リストを探す・フィードを保存',
-  'timeline.addFeed(feed=uri|語)・timeline.addRasqList(list=id|語)・timeline.filterWord(word, mode=include|exclude)・tendency.seed(source=feed:uri|語): ホーム TL へフィード/RASQ リストを取り込む・語で通す/除外・特徴語を指向性へ',
-  'dm.rooms(): DM ルーム一覧を取る',
-  'emoji.find(keyword, limit): カスタム絵文字を探す',
-  'follow.set(user, on=true|false): フォローする/外す',
-  'list.edit(list, user, add=true|false)・list.create(name): リストにユーザーを足す/外す・作る',
-  'clip.edit(clip, post, add=true|false)・clip.create(name): クリップに投稿を足す/外す・作る(Misskey)',
-  'settings.get(area, key)・settings.set(area, key, value): 設定を読む/書く(設定ページのキーのみ。書けるのはパスワード不要・操作禁止タグ無し)',
-  'app.actions(): この SNS で自動化できる投稿アクション一覧を取る',
+  'posts.fetch(kind=home|search, keyword, sort=new|reactions, limit)・page.read(filter, tag): 投稿本文/いま開いている画面の表示データを取る', // l10n-ignore
+  'reference.get(id=操作か関数の id): リファレンスの詳細を取る', // l10n-ignore
+  'post.compose(text)・post.reply(post, text)・post.quote(post, text)・dm.compose(room, text): 送らずにコンポーザーへ下書きを入れる(送信は自動化不可 = ユーザーが押す)', // l10n-ignore
+  'post.action(action=アクション id, post=投稿 id): 投稿にアクション(自動化が許可されたものだけ)', // l10n-ignore
+  'astell.rooms(): ASTell のルーム一覧を取る', // l10n-ignore
+  'astell.create(title=題名): ASTell のルームを作る', // l10n-ignore
+  'timeline.list(kind=home|social|local|global|featured|tag:語|list:id, limit)・post.get(id)・post.thread(post, limit): TL/投稿の本文を取る', // l10n-ignore
+  'post.reactions(post, limit)・post.reposters(post, limit)・post.quotes(post, limit): 投稿への反応を取る', // l10n-ignore
+  'favorites.list(limit)・reacted.list(limit): お気に入り/リアクション済みの投稿を取る', // l10n-ignore
+  'me.get()・user.get(id=|handle=@名前)・user.posts(user, filter=posts|replies|media|quotes, limit)・user.search(keyword, limit)・user.follows(user, direction=followers|following, limit)・user.relation(user): ユーザーの情報を取る', // l10n-ignore
+  'moderation.list(kind=muted|blocked|requests): ミュート/ブロック/フォロー申請の一覧を取る', // l10n-ignore
+  'notifications.list(kind=all|reaction|reply|follow|mention, limit)・notifications.read(): 通知を取る/既読にする', // l10n-ignore
+  'trends.tags(limit): トレンドのタグを取る', // l10n-ignore
+  'lists.list()・lists.members(list): リストとメンバーを取る', // l10n-ignore
+  'clips.list(user=)・clips.notes(clip, limit): クリップを取る(Misskey)', // l10n-ignore
+  'feeds.list(keyword=)・feed.save(feed=uri|語, on)・rasqLists.search(keyword=): フィード(Bluesky、keyword 無し=保存済み)/RASQ リストを探す・フィードを保存', // l10n-ignore
+  'timeline.addFeed(feed=uri|語)・timeline.addRasqList(list=id|語)・timeline.filterWord(word, mode=include|exclude)・tendency.seed(source=feed:uri|語): ホーム TL へフィード/RASQ リストを取り込む・語で通す/除外・特徴語を指向性へ', // l10n-ignore
+  'dm.rooms(): DM ルーム一覧を取る', // l10n-ignore
+  'emoji.find(keyword, limit): カスタム絵文字を探す', // l10n-ignore
+  'follow.set(user, on=true|false): フォローする/外す', // l10n-ignore
+  'list.edit(list, user, add=true|false)・list.create(name): リストにユーザーを足す/外す・作る', // l10n-ignore
+  'clip.edit(clip, post, add=true|false)・clip.create(name): クリップに投稿を足す/外す・作る(Misskey)', // l10n-ignore
+  'settings.get(area, key)・settings.set(area, key, value): 設定を読む/書く(設定ページのキーのみ。書けるのはパスワード不要・操作禁止タグ無し)', // l10n-ignore
+  'app.actions(): この SNS で自動化できる投稿アクション一覧を取る', // l10n-ignore
 ];
 
 /// 見守り中 (D-307) に system へ出す関数の一覧: 行の関数が**全部**呼べる行だけ。
 List<String> raiFunctionUsageFor(ChildGate gate) {
   if (!gate.supervised) return raiFunctionUsage;
-  final name = RegExp(r'(?:^|・)([a-z][\w.]*)\(');
+  final name = RegExp(r'(?:^|・)([a-z][\w.]*)\('); // l10n-ignore
   return [
     for (final u in raiFunctionUsage)
       if (name.allMatches(u.split(': ').first).every((m) => gate.raiBlockReason(m.group(1)!) == null)) u,
@@ -262,7 +263,7 @@ List<String> raiFunctionUsageFor(ChildGate gate) {
 }
 
 /// web 検索の行 (D-228): 使えるとき([RaiWebSearch.available])だけ system の一覧に足す。
-const raiWebSearchUsage = 'web.search(q=語や質問, count=数): web を検索して答えや上位の題名 / URL / 説明を取る(アプリの外の知識が要るとき)';
+const raiWebSearchUsage = 'web.search(q=語や質問, count=数): web を検索して答えや上位の題名 / URL / 説明を取る(アプリの外の知識が要るとき)'; // l10n-ignore
 
 /// 自動化不可の関数 (D-237): 送信 / 返信 / DM の送信はユーザーが押す。呼ばれたらエラーにして、代替
 /// (コンポーザーのオートフィル)を代わりに実行して知らせる。
@@ -287,7 +288,7 @@ class RaiFunctionRunner {
     final alt = raiNonAutomatable[c.name];
     if (alt != null) {
       final r = await run(RaiFunctionCall(name: alt, args: c.args));
-      return RaiFunctionResult(name: c.name, text: '${c.name} は自動化不可です(送信はユーザーが押します)。代わりに $alt: ${r.text}', ok: false);
+      return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsNotAutomatable(c.name, alt, r.text), ok: false);
     }
     try {
       switch (c.name) {
@@ -390,15 +391,15 @@ class RaiFunctionRunner {
         case 'app.actions':
           return await _appActions(c);
       }
-      return RaiFunctionResult(name: c.name, text: '知らない関数です: ${c.name}', ok: false);
+      return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsUnknown(c.name), ok: false);
     } catch (e) {
-      return RaiFunctionResult(name: c.name, text: '${c.name} に失敗: $e', ok: false);
+      return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsFailed(c.name, '$e'), ok: false);
     }
   }
 
   SnsSession _session() {
     final s = ref.read(currentSnsSessionProvider);
-    if (s == null) throw StateError('SNS にログインしていません');
+    if (s == null) throw StateError(appL10n.raiFunctionsNotLoggedInSns);
     return s;
   }
 
@@ -412,7 +413,7 @@ class RaiFunctionRunner {
   static String _line(Post p) {
     final body = p.body.replaceAll(RegExp(r'\s+'), ' ').trim();
     final n = p.reactions.values.fold(0, (a, b) => a + b);
-    return '@${p.author.account.handle}: $body${n > 0 ? '(反応 $n)' : ''} [${p.id}]';
+    return '@${p.author.account.handle}: $body${n > 0 ? appL10n.raiFunctionsLineReactions(n) : ''} [${p.id}]';
   }
 
   /// ソート / 絞り込み (D-221): kind=home(既定)| search(keyword で検索)、keyword で本文を絞る、
@@ -428,7 +429,7 @@ class RaiFunctionRunner {
       posts.sort((a, b) => b.reactions.values.fold(0, (x, y) => x + y).compareTo(a.reactions.values.fold(0, (x, y) => x + y)));
     }
     posts = posts.take(limit.clamp(1, 20)).toList();
-    if (posts.isEmpty) return RaiFunctionResult(name: c.name, text: '該当する投稿はありませんでした', fetched: true);
+    if (posts.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsPostsNone, fetched: true);
     final lines = <String>[];
     var used = 0;
     for (final p in posts) {
@@ -440,7 +441,7 @@ class RaiFunctionRunner {
       lines.add(l);
       used += l.length + 1;
     }
-    return RaiFunctionResult(name: c.name, text: '投稿 ${lines.length} 件(${posts.length} 件中):\n${lines.join('\n')}', fetched: true);
+    return RaiFunctionResult(name: c.name, text: '${appL10n.raiFunctionsPostsHead(lines.length, posts.length)}\n${lines.join('\n')}', fetched: true);
   }
 
   Future<RaiFunctionResult> _referenceGet(RaiFunctionCall c) async {
@@ -449,13 +450,13 @@ class RaiFunctionRunner {
     final op = index.operation(id);
     if (op != null) {
       final steps = index.expand(op);
-      return RaiFunctionResult(name: c.name, text: raiTruncate('操作「${op.index}」(${op.id}): ${[for (final (i, s) in steps.indexed) '${i + 1}. ${s.text}'].join(' / ')}', budget), fetched: true);
+      return RaiFunctionResult(name: c.name, text: raiTruncate(appL10n.raiFunctionsReferenceOperation(op.index, op.id, [for (final (i, s) in steps.indexed) '${i + 1}. ${s.text}'].join(' / ')), budget), fetched: true);
     }
     final fn = index.function(id);
     if (fn != null) {
-      return RaiFunctionResult(name: c.name, text: raiTruncate('関数 ${fn.id}: ${fn.does}${fn.params.isEmpty ? '' : ' 引数: ${fn.params.map((p) => '${p.label}(${p.isInput ? '入力' : '固定=${p.value}'})').join(', ')}'}', budget), fetched: true);
+      return RaiFunctionResult(name: c.name, text: raiTruncate('${appL10n.raiFunctionsReferenceFunction(fn.id, fn.does)}${fn.params.isEmpty ? '' : appL10n.raiFunctionsReferenceParams(fn.params.map((p) => '${p.label}(${p.isInput ? appL10n.raiFunctionsReferenceParamInput : appL10n.raiFunctionsReferenceParamFixed('${p.value}')})').join(', '))}', budget), fetched: true);
     }
-    return RaiFunctionResult(name: c.name, text: 'リファレンスに $id はありません', fetched: true, ok: false);
+    return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsReferenceMissing(id), fetched: true, ok: false);
   }
 
   Future<RaiFunctionResult> _postAction(RaiFunctionCall c) async {
@@ -463,26 +464,26 @@ class RaiFunctionRunner {
     final actionId = c.arg('action').trim();
     final postId = c.arg('post').trim();
     final a = s.actions.where((x) => x.id == actionId).firstOrNull;
-    if (a == null) return RaiFunctionResult(name: c.name, text: 'アクション $actionId はありません', ok: false);
-    if (!raiCanAutomate(a)) return RaiFunctionResult(name: c.name, text: '「${a.label}」は自動化が許可されていません(RAi からは実行しません)。代わりに案内(この手順で案内)で進めるか、ユーザーが押してください', ok: false);
+    if (a == null) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsActionMissing(actionId), ok: false);
+    if (!raiCanAutomate(a)) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsActionNotAllowed(a.label), ok: false);
     final r = await s.performAction(actionId, postId);
-    return RaiFunctionResult(name: c.name, text: '${a.label} を実行しました(${r.done ? '済' : '未'})');
+    return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsActionDone(a.label, r.done ? appL10n.raiFunctionsActionDoneYes : appL10n.raiFunctionsActionDoneNo));
   }
 
   Future<RaiFunctionResult> _astellRooms() async {
     final home = await ref.read(astellClientProvider).home();
     final rooms = [...home.following, ...home.recommended, ...home.trending];
-    if (rooms.isEmpty) return const RaiFunctionResult(name: 'astell.rooms', text: 'ASTell のルームはありません', fetched: true);
+    if (rooms.isEmpty) return RaiFunctionResult(name: 'astell.rooms', text: appL10n.raiFunctionsAstellNoRooms, fetched: true);
     final seen = <String>{};
     final lines = [for (final r in rooms) if (seen.add(r.id)) '${r.title} [${r.id}]'];
-    return RaiFunctionResult(name: 'astell.rooms', text: raiTruncate('ASTell のルーム: ${lines.join(' / ')}', budget), fetched: true);
+    return RaiFunctionResult(name: 'astell.rooms', text: raiTruncate(appL10n.raiFunctionsAstellRooms(lines.join(' / ')), budget), fetched: true);
   }
 
   Future<RaiFunctionResult> _astellCreate(RaiFunctionCall c) async {
     final title = c.arg('title').trim();
-    if (title.isEmpty) return RaiFunctionResult(name: c.name, text: '題名がありません', ok: false);
+    if (title.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsAstellNoTitle, ok: false);
     final room = await ref.read(astellClientProvider).createRoom(NewAstellRoom(title: title));
-    return RaiFunctionResult(name: c.name, text: 'ASTell「${room.title}」を作りました [${room.id}]');
+    return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsAstellCreated(room.title, room.id));
   }
 
   // --- ここから D-223: 既存 SNS プラグイン関数のラップ(第一弾) ---
@@ -512,22 +513,22 @@ class RaiFunctionRunner {
   static String _notificationLine(NotificationItem n) {
     final who = n.actors.isEmpty ? '' : '@${n.actors.first.handle}';
     final what = switch (n.kind) {
-      NotificationKind.reaction => '$who がリアクション${n.reaction == null ? '' : '(${n.reaction})'}',
-      NotificationKind.repost => '$who がリノート',
-      NotificationKind.quote => '$who が引用',
-      NotificationKind.reply => '$who が返信',
-      NotificationKind.mention => '$who がメンション',
-      NotificationKind.follow => '$who がフォロー',
-      NotificationKind.followRequest => '$who がフォロー申請',
-      NotificationKind.followAccepted => '$who がフォロー承認',
-      NotificationKind.listAdded => '$who がリストに追加',
-      NotificationKind.pollEnded => 'アンケート終了',
-      NotificationKind.timer => 'タイマー通知',
-      NotificationKind.vc => 'ASTell 通知',
-      NotificationKind.system => n.title ?? 'システム通知',
-      NotificationKind.other => 'その他の通知',
+      NotificationKind.reaction => appL10n.raiFunctionsNotifReaction(who, n.reaction == null ? '' : '(${n.reaction})'),
+      NotificationKind.repost => appL10n.raiFunctionsNotifRepost(who),
+      NotificationKind.quote => appL10n.raiFunctionsNotifQuote(who),
+      NotificationKind.reply => appL10n.raiFunctionsNotifReply(who),
+      NotificationKind.mention => appL10n.raiFunctionsNotifMention(who),
+      NotificationKind.follow => appL10n.raiFunctionsNotifFollow(who),
+      NotificationKind.followRequest => appL10n.raiFunctionsNotifFollowRequest(who),
+      NotificationKind.followAccepted => appL10n.raiFunctionsNotifFollowAccepted(who),
+      NotificationKind.listAdded => appL10n.raiFunctionsNotifListAdded(who),
+      NotificationKind.pollEnded => appL10n.raiFunctionsNotifPollEnded,
+      NotificationKind.timer => appL10n.raiFunctionsNotifTimer,
+      NotificationKind.vc => appL10n.raiFunctionsNotifVc,
+      NotificationKind.system => n.title ?? appL10n.raiFunctionsNotifSystem,
+      NotificationKind.other => appL10n.raiFunctionsNotifOther,
     };
-    return '$what${n.read ? '' : '(未読)'} [${n.id}]';
+    return '$what${n.read ? '' : appL10n.raiFunctionsUnreadMark} [${n.id}]';
   }
 
   /// timeline.list(kind, limit): TL を取る (D-223)。
@@ -544,7 +545,7 @@ class RaiFunctionRunner {
   /// post.get(id): 投稿 1 件の本文を取る (D-223)。
   Future<RaiFunctionResult> _postGet(RaiFunctionCall c) => raiGuard(c.name, () async {
         final id = c.arg('id').trim();
-        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: '投稿 id (id=) がありません', ok: false);
+        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingPostId, ok: false);
         final p = await _session().post(id);
         final blocked = _detailBlocked(p);
         if (blocked != null) return RaiFunctionResult(name: c.name, text: blocked, ok: false);
@@ -554,65 +555,65 @@ class RaiFunctionRunner {
   /// post.thread(post, limit): 投稿とその返信を取る (D-223)。
   Future<RaiFunctionResult> _postThread(RaiFunctionCall c) => raiGuard(c.name, () async {
         final id = c.arg('post').trim();
-        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: '投稿 id (post=) がありません', ok: false);
+        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingPostArg, ok: false);
         final limit = _limitOf(c);
         final t = await _session().thread(id);
         final blocked = _detailBlocked(t.post);
         if (blocked != null) return RaiFunctionResult(name: c.name, text: blocked, ok: false);
-        final lines = [_line(t.post), for (final p in _shown(t.descendants).take(limit)) '返信: ${_line(p)}'];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'スレッド'), budget), fetched: true);
+        final lines = [_line(t.post), for (final p in _shown(t.descendants).take(limit)) appL10n.raiFunctionsThreadReply(_line(p))];
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadThread), budget), fetched: true);
       });
 
   /// post.reactions(post, limit): 誰がどう反応したかを絵文字ごとに集計する (D-223)。
   Future<RaiFunctionResult> _postReactions(RaiFunctionCall c) => raiGuard(c.name, () async {
         final id = c.arg('post').trim();
-        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: '投稿 id (post=) がありません', ok: false);
+        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingPostArg, ok: false);
         final page = await _session().reactions(id, limit: _limitOf(c, fallback: 30, max: 100));
         final byReaction = <String, int>{};
         for (final r in page.items) {
           byReaction[r.reaction] = (byReaction[r.reaction] ?? 0) + 1;
         }
         final lines = [for (final e in byReaction.entries) '${e.key} × ${e.value}'];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: '反応'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadReactions), budget), fetched: true);
       });
 
   /// post.reposters(post, limit): リノートした人を取る (D-223)。
   Future<RaiFunctionResult> _postReposters(RaiFunctionCall c) => raiGuard(c.name, () async {
         final id = c.arg('post').trim();
-        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: '投稿 id (post=) がありません', ok: false);
+        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingPostArg, ok: false);
         final page = await _session().reposters(id, limit: _limitOf(c));
         final lines = [for (final u in page.items) _userLine(u)];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'リノートした人'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadReposters), budget), fetched: true);
       });
 
   /// post.quotes(post, limit): 引用した投稿を取る (D-223)。
   Future<RaiFunctionResult> _postQuotes(RaiFunctionCall c) => raiGuard(c.name, () async {
         final id = c.arg('post').trim();
-        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: '投稿 id (post=) がありません', ok: false);
+        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingPostArg, ok: false);
         final page = await _session().quotes(id, limit: _limitOf(c));
         final lines = [for (final p in _shown(page.items)) _line(p)];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: '引用'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadQuotes), budget), fetched: true);
       });
 
   /// favorites.list(limit): ブックマーク/お気に入りを取る (D-223)。
   Future<RaiFunctionResult> _favoritesList(RaiFunctionCall c) => raiGuard(c.name, () async {
         final page = await _session().favorites(limit: _limitOf(c));
         final lines = [for (final p in _shown(page.items)) _line(p)];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'お気に入り'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadFavorites), budget), fetched: true);
       });
 
   /// reacted.list(limit): 自分がリアクションした投稿を取る (D-223)。
   Future<RaiFunctionResult> _reactedList(RaiFunctionCall c) => raiGuard(c.name, () async {
         final page = await _session().reactedPosts(limit: _limitOf(c));
         final lines = [for (final p in _shown(page.items)) _line(p)];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'リアクション済み'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadReacted), budget), fetched: true);
       });
 
   /// me.get(): 今のアカウントを取る (D-223)。
   Future<RaiFunctionResult> _meGet(RaiFunctionCall c) => raiGuard(c.name, () async {
         final s = _session();
         final me = await s.me();
-        return RaiFunctionResult(name: c.name, text: raiTruncate('自分: ${_userLine(me)} プラグイン=${s.pluginId}', budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(appL10n.raiFunctionsMe(_userLine(me), s.pluginId), budget), fetched: true);
       });
 
   /// user.get(id=|handle=@名前): プロフィールを取る (D-223)。
@@ -626,19 +627,19 @@ class RaiFunctionRunner {
         } else if (handle.isNotEmpty) {
           profile = await s.userByHandle(handle.replaceFirst('@', ''));
         } else {
-          return RaiFunctionResult(name: c.name, text: 'id= か handle= を指定してください', ok: false);
+          return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsUserIdOrHandle, ok: false);
         }
-        if (profile == null) return RaiFunctionResult(name: c.name, text: '見つかりませんでした', ok: false, fetched: true);
+        if (profile == null) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsNotFound, ok: false, fetched: true);
         final u = profile.summary;
         final text = '${_userLine(u)}${profile.description == null || profile.description!.isEmpty ? '' : ' — ${profile.description}'}'
-            ' フォロワー${profile.followersCount ?? '?'} フォロー${profile.followingCount ?? '?'}';
+            '${appL10n.raiFunctionsUserCounts('${profile.followersCount ?? '?'}', '${profile.followingCount ?? '?'}')}';
         return RaiFunctionResult(name: c.name, text: raiTruncate(text, budget), fetched: true);
       });
 
   /// user.posts(user, filter, limit): ユーザーの投稿を取る (D-223)。
   Future<RaiFunctionResult> _userPosts(RaiFunctionCall c) => raiGuard(c.name, () async {
         final id = c.arg('user').trim();
-        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: 'user id (user=) がありません', ok: false);
+        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingUser, ok: false);
         final filterArg = c.arg('filter', 'posts');
         UserPostsFilter filter;
         try {
@@ -648,43 +649,43 @@ class RaiFunctionRunner {
         }
         final page = await _session().userPosts(id, limit: _limitOf(c), filter: filter);
         final lines = [for (final p in _shown(page.items)) _line(p)];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: '投稿($filterArg)'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadUserPosts(filterArg)), budget), fetched: true);
       });
 
   /// user.search(keyword, limit): ユーザーを検索する (D-223)。
   Future<RaiFunctionResult> _userSearch(RaiFunctionCall c) => raiGuard(c.name, () async {
         final keyword = c.arg('keyword').trim();
-        if (keyword.isEmpty) return RaiFunctionResult(name: c.name, text: 'keyword がありません', ok: false);
+        if (keyword.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingKeyword, ok: false);
         final page = await _session().searchUsers(keyword, limit: _limitOf(c));
         final lines = [for (final u in page.items) _userLine(u)];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'ユーザー検索「$keyword」'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadUserSearch(keyword)), budget), fetched: true);
       });
 
   /// user.follows(user, direction, limit): フォロワー/フォロー中を取る (D-223)。
   Future<RaiFunctionResult> _userFollows(RaiFunctionCall c) => raiGuard(c.name, () async {
         final id = c.arg('user').trim();
-        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: 'user id (user=) がありません', ok: false);
+        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingUser, ok: false);
         final dir = c.arg('direction', 'followers');
         final s = _session();
         final page = dir == 'following' ? await s.following(id, limit: _limitOf(c)) : await s.followers(id, limit: _limitOf(c));
         final lines = [for (final u in page.items) _userLine(u)];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: dir == 'following' ? 'フォロー中' : 'フォロワー'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: dir == 'following' ? appL10n.raiFunctionsHeadFollowing : appL10n.raiFunctionsHeadFollowers), budget), fetched: true);
       });
 
   /// user.relation(user): 自分との関係を取る (D-223)。
   Future<RaiFunctionResult> _userRelation(RaiFunctionCall c) => raiGuard(c.name, () async {
         final id = c.arg('user').trim();
-        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: 'user id (user=) がありません', ok: false);
+        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingUser, ok: false);
         final r = await _session().relationship(id);
         final flags = [
-          if (r.following) 'フォロー中',
-          if (r.followedBy) 'フォローされています',
-          if (r.requested) '申請中',
-          if (r.muted) 'ミュート中',
-          if (r.blocked) 'ブロック中',
-          if (r.blockedBy) 'ブロックされています',
+          if (r.following) appL10n.raiFunctionsRelFollowing,
+          if (r.followedBy) appL10n.raiFunctionsRelFollowedBy,
+          if (r.requested) appL10n.raiFunctionsRelRequested,
+          if (r.muted) appL10n.raiFunctionsRelMuted,
+          if (r.blocked) appL10n.raiFunctionsRelBlocked,
+          if (r.blockedBy) appL10n.raiFunctionsRelBlockedBy,
         ];
-        return RaiFunctionResult(name: c.name, text: raiTruncate('関係: ${flags.isEmpty ? 'なし' : flags.join(' / ')}', budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(appL10n.raiFunctionsRelation(flags.isEmpty ? appL10n.raiFunctionsRelNone : flags.join(' / ')), budget), fetched: true);
       });
 
   /// moderation.list(kind=muted|blocked|requests): ミュート/ブロック/フォロー申請の一覧を取る (D-223)。
@@ -698,9 +699,9 @@ class RaiFunctionRunner {
           case 'blocked':
             lines = [for (final u in (await s.blockedUsers(limit: _limitOf(c, fallback: 30, max: 100))).items) _userLine(u)];
           default:
-            lines = [for (final r in await s.followRequests()) '${_userLine(r.user)} [申請 ${r.id}]'];
+            lines = [for (final r in await s.followRequests()) appL10n.raiFunctionsRequestLine(_userLine(r.user), r.id)];
         }
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'モデレーション($kind)'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadModeration(kind)), budget), fetched: true);
       });
 
   /// notifications.list(kind, limit): 通知を取る (D-223)。kind=all(既定)で絞り込まない。
@@ -720,53 +721,53 @@ class RaiFunctionRunner {
         items = items.take(_limitOf(c)).toList();
         final unread = items.where((n) => !n.read).length;
         final lines = [for (final n in items) _notificationLine(n)];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: '通知(未読 $unread 件)'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadNotifications(unread)), budget), fetched: true);
       });
 
   /// notifications.read(): 通知をまとめて既読にする (D-223)。
   Future<RaiFunctionResult> _notificationsRead(RaiFunctionCall c) => raiGuard(c.name, () async {
         await _session().markNotificationsRead();
-        return RaiFunctionResult(name: c.name, text: '通知を既読にしました');
+        return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsNotificationsRead);
       });
 
   /// trends.tags(limit): トレンドのタグを取る (D-223)。
   Future<RaiFunctionResult> _trendsTags(RaiFunctionCall c) => raiGuard(c.name, () async {
         final tags = await _session().trendingTags();
-        final lines = [for (final t in tags.take(_limitOf(c))) '#${t.tag}(${t.usersCount ?? 0} 人)'];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'トレンド'), budget), fetched: true);
+        final lines = [for (final t in tags.take(_limitOf(c))) '#${appL10n.raiFunctionsTrendLine(t.tag, t.usersCount ?? 0)}'];
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadTrends), budget), fetched: true);
       });
 
   /// lists.list(): リスト一覧を取る (D-223)。
   Future<RaiFunctionResult> _listsList(RaiFunctionCall c) => raiGuard(c.name, () async {
         final lists = await _session().lists();
-        final lines = [for (final l in lists) '${l.name} [${l.id}](${l.memberIds.length} 人)'];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'リスト'), budget), fetched: true);
+        final lines = [for (final l in lists) appL10n.raiFunctionsListLine(l.name, l.id, l.memberIds.length)];
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadLists), budget), fetched: true);
       });
 
   /// lists.members(list): リストのメンバーを取る (D-223)。
   Future<RaiFunctionResult> _listsMembers(RaiFunctionCall c) => raiGuard(c.name, () async {
         final id = c.arg('list').trim();
-        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: 'list id (list=) がありません', ok: false);
+        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingList, ok: false);
         final members = await _session().listMembers(id);
         final lines = [for (final u in members) _userLine(u)];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'リストのメンバー'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadListMembers), budget), fetched: true);
       });
 
   /// clips.list(user=): クリップ一覧を取る (D-223、Misskey のみ)。
   Future<RaiFunctionResult> _clipsList(RaiFunctionCall c) => raiGuard(c.name, () async {
         final userId = c.arg('user').trim();
         final clips = await _session().clips(userId: userId.isEmpty ? null : userId);
-        final lines = [for (final cl in clips) '${cl.name} [${cl.id}]${cl.notesCount == null ? '' : '(${cl.notesCount} 件)'}'];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'クリップ'), budget), fetched: true);
+        final lines = [for (final cl in clips) '${cl.name} [${cl.id}]${cl.notesCount == null ? '' : appL10n.raiFunctionsClipCount(cl.notesCount!)}'];
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadClips), budget), fetched: true);
       });
 
   /// clips.notes(clip, limit): クリップの中身を取る (D-223、Misskey のみ)。
   Future<RaiFunctionResult> _clipsNotes(RaiFunctionCall c) => raiGuard(c.name, () async {
         final id = c.arg('clip').trim();
-        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: 'clip id (clip=) がありません', ok: false);
+        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingClip, ok: false);
         final page = await _session().clipNotes(id, limit: _limitOf(c));
         final lines = [for (final p in _shown(page.items)) _line(p)];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'クリップの中身'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadClipNotes), budget), fetched: true);
       });
 
   /// feeds.list(keyword=): カスタムフィードを取る (D-223、Bluesky のみ)。keyword 無しは保存済み。
@@ -776,37 +777,37 @@ class RaiFunctionRunner {
         final feeds = keyword.isEmpty ? await s.savedFeeds() : await s.searchFeeds(keyword, limit: _limitOf(c));
         // uri を添える (D-227): feed.save / timeline.addFeed の feed= に渡せるように。候補 (D-229) は自動化の選択肢に。
         final lines = [for (final f in feeds) '${f.name}${f.description == null || f.description!.isEmpty ? '' : ' — ${f.description}'} [${f.uri}]'];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'フィード'), budget), fetched: true, items: [for (final f in feeds) RaiFunctionItem(id: f.uri, label: f.name)]);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadFeeds), budget), fetched: true, items: [for (final f in feeds) RaiFunctionItem(id: f.uri, label: f.name)]);
       });
 
   /// dm.rooms(): DM ルーム一覧を取る (D-223)。
   Future<RaiFunctionResult> _dmRooms(RaiFunctionCall c) => raiGuard(c.name, () async {
         final rooms = await _session().dmRooms();
-        final lines = [for (final r in rooms) '${r.displayTitle}${r.unreadCount > 0 ? '(未読 ${r.unreadCount})' : ''} [${r.id}]'];
+        final lines = [for (final r in rooms) '${r.displayTitle}${r.unreadCount > 0 ? appL10n.raiFunctionsDmUnread(r.unreadCount) : ''} [${r.id}]'];
         return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'DM'), budget), fetched: true);
       });
 
   /// emoji.find(keyword, limit): keyword を含むカスタム絵文字を探す (D-223)。
   Future<RaiFunctionResult> _emojiFind(RaiFunctionCall c) => raiGuard(c.name, () async {
         final keyword = c.arg('keyword').trim();
-        if (keyword.isEmpty) return RaiFunctionResult(name: c.name, text: 'keyword がありません', ok: false);
+        if (keyword.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingKeyword, ok: false);
         final all = await _session().customEmojis();
         final matched = [for (final e in all) if (e.name.contains(keyword) || e.aliases.any((a) => a.contains(keyword))) e];
         final lines = [for (final e in matched.take(_limitOf(c))) ':${e.name}:'];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: '絵文字「$keyword」'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadEmoji(keyword)), budget), fetched: true);
       });
 
   /// follow.set(user, on=true|false): フォローする/外す (D-223、実行系)。
   Future<RaiFunctionResult> _followSet(RaiFunctionCall c) => raiGuard(c.name, () async {
         final id = c.arg('user').trim();
-        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: 'user id (user=) がありません', ok: false);
+        if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingUser, ok: false);
         final on = c.arg('on', 'true') != 'false';
         final r = await _session().setFollowing(id, on);
         final text = !on
-            ? 'フォローを外しました'
+            ? appL10n.raiFunctionsUnfollowed
             : r.requested
-                ? 'フォロー申請しました'
-                : 'フォローしました';
+                ? appL10n.raiFunctionsFollowRequested
+                : appL10n.raiFunctionsFollowed;
         return RaiFunctionResult(name: c.name, text: text);
       });
 
@@ -814,7 +815,7 @@ class RaiFunctionRunner {
   Future<RaiFunctionResult> _listEdit(RaiFunctionCall c) => raiGuard(c.name, () async {
         final listId = c.arg('list').trim();
         final userId = c.arg('user').trim();
-        if (listId.isEmpty || userId.isEmpty) return RaiFunctionResult(name: c.name, text: 'list= と user= を指定してください', ok: false);
+        if (listId.isEmpty || userId.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsListUserArgs, ok: false);
         final add = c.arg('add', 'true') != 'false';
         final s = _session();
         if (add) {
@@ -822,22 +823,22 @@ class RaiFunctionRunner {
         } else {
           await s.removeFromList(listId, userId);
         }
-        return RaiFunctionResult(name: c.name, text: add ? 'リストに追加しました' : 'リストから外しました');
+        return RaiFunctionResult(name: c.name, text: add ? appL10n.raiFunctionsListAdded : appL10n.raiFunctionsListRemoved);
       });
 
   /// list.create(name): リストを作る (D-223、実行系)。
   Future<RaiFunctionResult> _listCreate(RaiFunctionCall c) => raiGuard(c.name, () async {
         final name = c.arg('name').trim();
-        if (name.isEmpty) return RaiFunctionResult(name: c.name, text: '名前 (name=) がありません', ok: false);
+        if (name.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingName, ok: false);
         final l = await _session().createList(name);
-        return RaiFunctionResult(name: c.name, text: 'リスト「${l.name}」を作りました [${l.id}]');
+        return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsListCreated(l.name, l.id));
       });
 
   /// clip.edit(clip, post, add=true|false): クリップに投稿を足す/外す (D-223、Misskey のみ、実行系)。
   Future<RaiFunctionResult> _clipEdit(RaiFunctionCall c) => raiGuard(c.name, () async {
         final clipId = c.arg('clip').trim();
         final postId = c.arg('post').trim();
-        if (clipId.isEmpty || postId.isEmpty) return RaiFunctionResult(name: c.name, text: 'clip= と post= を指定してください', ok: false);
+        if (clipId.isEmpty || postId.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsClipPostArgs, ok: false);
         final add = c.arg('add', 'true') != 'false';
         final s = _session();
         if (add) {
@@ -845,15 +846,15 @@ class RaiFunctionRunner {
         } else {
           await s.removeFromClip(clipId, postId);
         }
-        return RaiFunctionResult(name: c.name, text: add ? 'クリップに追加しました' : 'クリップから外しました');
+        return RaiFunctionResult(name: c.name, text: add ? appL10n.raiFunctionsClipAdded : appL10n.raiFunctionsClipRemoved);
       });
 
   /// clip.create(name): クリップを作る (D-223、Misskey のみ、実行系)。
   Future<RaiFunctionResult> _clipCreate(RaiFunctionCall c) => raiGuard(c.name, () async {
         final name = c.arg('name').trim();
-        if (name.isEmpty) return RaiFunctionResult(name: c.name, text: '名前 (name=) がありません', ok: false);
+        if (name.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingName, ok: false);
         final cl = await _session().createClip(name);
-        return RaiFunctionResult(name: c.name, text: 'クリップ「${cl.name}」を作りました [${cl.id}]');
+        return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsClipCreated(cl.name, cl.id));
       });
 
   /// settings.get(area, key): アプリの設定値を読む (D-223、読み取り専用)。ホストの静的ページ
@@ -862,15 +863,15 @@ class RaiFunctionRunner {
   Future<RaiFunctionResult> _settingsGet(RaiFunctionCall c) async {
     final area = c.arg('area').trim();
     final key = c.arg('key').trim();
-    if (area.isEmpty || key.isEmpty) return RaiFunctionResult(name: c.name, text: 'area= と key= を指定してください', ok: false);
+    if (area.isEmpty || key.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsAreaKeyArgs, ok: false);
     final SettingsPageSpec spec;
     try {
       spec = await ref.read(settingsPageSpecProvider(area).future);
     } catch (e) {
-      return RaiFunctionResult(name: c.name, text: '設定ページ「$area」はありません', ok: false);
+      return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsSettingsPageMissing(area), ok: false);
     }
     if (!spec.defaults.containsKey(key)) {
-      return RaiFunctionResult(name: c.name, text: '「$area」に「$key」という設定はありません(ある: ${spec.defaults.keys.join(', ')})', ok: false);
+      return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsSettingMissing(area, key, spec.defaults.keys.join(', ')), ok: false);
     }
     final values = spec.isRemote ? await ref.read(remoteSettingsProvider(spec.area).future) : await ref.read(settingsAreaProvider(area).future);
     final value = values[key] ?? spec.defaults[key];
@@ -885,23 +886,23 @@ class RaiFunctionRunner {
     final area = c.arg('area').trim();
     final key = c.arg('key').trim();
     final raw = c.arg('value');
-    if (area.isEmpty || key.isEmpty || raw.trim().isEmpty) return RaiFunctionResult(name: c.name, text: 'area= と key= と value= を指定してください', ok: false);
+    if (area.isEmpty || key.isEmpty || raw.trim().isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsAreaKeyValueArgs, ok: false);
     final SettingsPageSpec spec;
     try {
       spec = await ref.read(settingsPageSpecProvider(area).future);
     } catch (e) {
-      return RaiFunctionResult(name: c.name, text: '設定ページ「$area」はありません', ok: false);
+      return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsSettingsPageMissing(area), ok: false);
     }
     final gate = raiSettingsWritable(spec, key);
     if (!gate.ok) return RaiFunctionResult(name: c.name, text: gate.reason, ok: false);
     final value = raiCoerceSettingValue(spec, key, raw);
-    if (value == null) return RaiFunctionResult(name: c.name, text: '「$key」に「${raw.trim()}」は入れられません(今の値: ${spec.defaults[key]})', ok: false);
+    if (value == null) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsSettingBadValue(key, raw.trim(), '${spec.defaults[key]}'), ok: false);
     if (spec.isRemote) {
       await ref.read(remoteSettingsProvider(spec.area).notifier).set(key, value);
     } else {
       await ref.read(settingsAreaProvider(area).notifier).set(key, value);
     }
-    return RaiFunctionResult(name: c.name, text: '$area.$key を $value にしました');
+    return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsSettingSet(area, key, '$value'));
   }
 
   /// post.compose(text) / post.reply(post, text) / post.quote(post, text) / dm.compose(room, text):
@@ -909,27 +910,27 @@ class RaiFunctionRunner {
   /// 送るかどうかはユーザーが決める。開いたコンポーザーは待たない(閉じるまで答えが止まらないように)。
   Future<RaiFunctionResult> _composeFill(RaiFunctionCall c) => raiGuard(c.name, () async {
         final text = c.arg('text').trim();
-        if (text.isEmpty) return RaiFunctionResult(name: c.name, text: '本文(text=)がありません', ok: false);
+        if (text.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingText, ok: false);
         final s = _session();
         final ComposeTarget target;
         switch (c.name) {
           case 'post.reply':
           case 'post.quote':
             final id = c.arg('post').trim();
-            if (id.isEmpty) return RaiFunctionResult(name: c.name, text: '投稿 id (post=) がありません', ok: false);
+            if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingPostArg, ok: false);
             final p = await s.post(id);
             target = c.name == 'post.reply' ? ComposeReply(p) : ComposeQuote(p);
           case 'dm.compose':
             final id = c.arg('room').trim();
-            if (id.isEmpty) return RaiFunctionResult(name: c.name, text: 'ルーム id (room=) がありません', ok: false);
+            if (id.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingRoom, ok: false);
             final room = (await s.dmRooms()).where((r) => r.id == id).firstOrNull;
-            if (room == null) return RaiFunctionResult(name: c.name, text: 'DM ルーム $id はありません', ok: false);
+            if (room == null) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsDmRoomMissing(id), ok: false);
             target = ComposeDm(room);
           default:
             target = const ComposeNormal();
         }
         unawaited(showComposerWith(target, manager: ref.read(overlayManagerProvider), router: ref.read(routerProvider), initialText: text));
-        return RaiFunctionResult(name: c.name, text: '${target.title}の下書きをコンポーザーに入れました(送信はしていません)');
+        return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsComposeFilled(target.title));
       });
 
   /// feed= を解く (D-227): at:// / bsky.app の URL ならそのまま(検索で 1 件に解決)、語なら検索の先頭。
@@ -975,31 +976,31 @@ class RaiFunctionRunner {
   Future<RaiFunctionResult> _feedSave(RaiFunctionCall c) => raiGuard(c.name, () async {
         final s = _session();
         final f = await _resolveFeed(s, c.arg('feed'));
-        if (f == null) return RaiFunctionResult(name: c.name, text: 'フィード「${c.arg('feed')}」が見つかりません', ok: false);
+        if (f == null) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsFeedNotFound(c.arg('feed')), ok: false);
         final on = c.arg('on', 'true').toLowerCase() != 'false';
         final saved = await s.saveFeed(f.uri, on: on);
-        return RaiFunctionResult(name: c.name, text: '「${f.name}」を${on ? '保存しました' : '保存から外しました'}(保存済み ${saved.length} 件)');
+        return RaiFunctionResult(name: c.name, text: on ? appL10n.raiFunctionsFeedSaved(f.name, saved.length) : appL10n.raiFunctionsFeedUnsaved(f.name, saved.length));
       });
 
   /// timeline.addFeed(feed, account): ホームの TL カスタマイズにカスタムフィードを取り込み元として足す (D-227)。
   /// 画面(TL カスタマイズ → タイムラインを追加 → カスタムフィード)を通らずに、同じ保存先へ書く。
   Future<RaiFunctionResult> _timelineAddFeed(RaiFunctionCall c) => raiGuard(c.name, () async {
         final picked = _blueskySession(c.arg('account'));
-        if (picked == null) return RaiFunctionResult(name: c.name, text: 'Bluesky のアカウントがありません(カスタムフィードは Bluesky のみ)', ok: false);
+        if (picked == null) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsNoBluesky, ok: false);
         final (acc, s) = picked;
         final f = await _resolveFeed(s, c.arg('feed'));
-        if (f == null) return RaiFunctionResult(name: c.name, text: 'フィード「${c.arg('feed')}」が見つかりません', ok: false);
+        if (f == null) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsFeedNotFound(c.arg('feed')), ok: false);
         final owner = ref.read(currentAccountSessionProvider)?.account.key ?? acc.account.key;
         final added = await addTlSource(ref.container, owner, 'tl.home', TlSourceComponent(tl: 'feed:${f.uri}', account: '${acc.account}', label: f.name));
-        if (!added) return RaiFunctionResult(name: c.name, text: '「${f.name}」はもうホームのタイムラインに入っています');
+        if (!added) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsFeedAlreadyHome(f.name));
         ref.invalidate(timelineProvider(TimelineKind.home));
-        return RaiFunctionResult(name: c.name, text: '「${f.name}」(${acc.account})をホームのタイムラインに取り込みました');
+        return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsFeedAddedHome(f.name, '${acc.account}'));
       });
 
   /// RASQ リストの候補 (D-348): keyword 無し = 自分のリスト + フォロー中、あれば公開リストの検索。
   Future<List<RasqCollection>> _rasqListCandidates(String keyword) async {
     final api = ref.read(rasqCollectionsApiProvider);
-    if (api == null || ref.read(orgateAccountProvider).value == null) throw StateError('RASQ アカウントにログインしていません');
+    if (api == null || ref.read(orgateAccountProvider).value == null) throw StateError(appL10n.raiFunctionsNotLoggedInRasq);
     if (keyword.isEmpty) {
       final mine = await api.mine(RasqCollectionKind.list);
       final following = [for (final c in await api.following()) if (c.kind == RasqCollectionKind.list && !mine.any((m) => m.id == c.id)) c];
@@ -1011,23 +1012,23 @@ class RaiFunctionRunner {
   /// rasqLists.search(keyword=): RASQ リストを探す (D-348)。id を添える(timeline.addRasqList の list= に渡せるように)。
   Future<RaiFunctionResult> _rasqListsSearch(RaiFunctionCall c) => raiGuard(c.name, () async {
         final lists = await _rasqListCandidates(c.arg('keyword').trim());
-        String state(RasqCollection l) => l.isOwner ? '自分' : (l.canFetch == false && l.canFetchChecked ? '取り込めない' : (l.following ? 'フォロー中' : '@${l.owner.handle}'));
-        final lines = [for (final l in lists) '${l.name}(${l.itemCount}人・${state(l)})${l.description == null ? '' : ' — ${l.description}'} [${l.id}]'];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'RASQ リスト'), budget), fetched: true, items: [for (final l in lists) if (!(l.canFetch == false && l.canFetchChecked)) RaiFunctionItem(id: l.id, label: l.name)]);
+        String state(RasqCollection l) => l.isOwner ? appL10n.raiFunctionsRasqListMine : (l.canFetch == false && l.canFetchChecked ? appL10n.raiFunctionsRasqListUnfetchable : (l.following ? appL10n.raiFunctionsRasqListFollowing : '@${l.owner.handle}'));
+        final lines = [for (final l in lists) '${appL10n.raiFunctionsRasqListLine(l.name, l.itemCount, state(l))}${l.description == null ? '' : ' — ${l.description}'} [${l.id}]'];
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadRasqLists), budget), fetched: true, items: [for (final l in lists) if (!(l.canFetch == false && l.canFetchChecked)) RaiFunctionItem(id: l.id, label: l.name)]);
       });
 
   /// timeline.addRasqList(list=id|語): RASQ リストをホームの TL に取り込む (D-348)。取り込めるのはリスト内の人の情報を取れるものだけ
   /// (画面の「タイムラインに取り込む」D-347 と同じ。作った人でもフォロー中でもなければフォローもする)。
   Future<RaiFunctionResult> _timelineAddRasqList(RaiFunctionCall c) => raiGuard(c.name, () async {
         final q = c.arg('list').trim();
-        if (q.isEmpty) return RaiFunctionResult(name: c.name, text: 'リスト(list=)がありません', ok: false);
+        if (q.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingListArg, ok: false);
         final own = await _rasqListCandidates('');
         final hit = own.where((l) => l.id == q || l.code == q || l.name == q).firstOrNull ??
             own.where((l) => l.name.contains(q)).firstOrNull ??
             (await _rasqListCandidates(q)).firstOrNull;
-        if (hit == null) return RaiFunctionResult(name: c.name, text: 'RASQ リスト「$q」が見つかりません', ok: false);
+        if (hit == null) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsRasqListNotFound(q), ok: false);
         final (msg, added) = await importRasqListToHomeWith(ref.container, hit);
-        final ok = added || msg.contains('もう');
+        final ok = added || msg.contains('もう'); // l10n-ignore
         return RaiFunctionResult(name: c.name, text: msg, ok: ok);
       });
 
@@ -1035,15 +1036,15 @@ class RaiFunctionRunner {
   /// excludeWord は mode=exclude の別名。include はそのワードを含む投稿だけ通す。
   Future<RaiFunctionResult> _timelineFilterWord(RaiFunctionCall c) => raiGuard(c.name, () async {
         final word = c.arg('word').trim();
-        if (word.isEmpty) return RaiFunctionResult(name: c.name, text: 'ワード(word=)がありません', ok: false);
+        if (word.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingWord, ok: false);
         final exclude = c.name == 'timeline.excludeWord' || c.arg('mode', 'exclude').trim() != 'include';
         final scope = switch (c.arg('scope', 'home').trim()) { 'social' => 'tl.social', 'local' => 'tl.local', 'global' => 'tl.global', _ => 'tl.home' };
         final owner = ref.read(currentAccountSessionProvider)?.account.key;
-        if (owner == null) return RaiFunctionResult(name: c.name, text: 'ログインしていません', ok: false);
+        if (owner == null) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsNotLoggedIn, ok: false);
         final added = await addTlAlgorithm(ref.container, owner, scope, TlAlgorithmComponent(type: 'queryfilter', query: word, exclude: exclude));
-        if (!added) return RaiFunctionResult(name: c.name, text: '「$word」の${exclude ? '除外' : '絞り込み'}はもう入っています');
+        if (!added) return RaiFunctionResult(name: c.name, text: exclude ? appL10n.raiFunctionsWordExcludeAlready(word) : appL10n.raiFunctionsWordIncludeAlready(word));
         ref.invalidate(timelineProvider(TimelineKind.home));
-        return RaiFunctionResult(name: c.name, text: exclude ? '「$word」を含む投稿を ${scope.substring(3)} のタイムラインから除外するようにしました' : '「$word」を含む投稿だけを ${scope.substring(3)} のタイムラインに通すようにしました');
+        return RaiFunctionResult(name: c.name, text: exclude ? appL10n.raiFunctionsWordExcluded(word, scope.substring(3)) : appL10n.raiFunctionsWordIncluded(word, scope.substring(3)));
       });
 
   /// page.read(filter, tag): いま開いている画面の表示データを取る (D-229: 自動化は画面を押さず、ページへ直接行って
@@ -1065,22 +1066,22 @@ class RaiFunctionRunner {
         List<RaiFunctionItem> items = const [];
         if (loc.startsWith('/feeds/')) {
           final uri = Uri.decodeComponent(loc.substring('/feeds/'.length).split('?').first);
-          final page = await _session().timeline(TimelineKind('feed:$uri', 'フィード'), limit: 20);
+          final page = await _session().timeline(TimelineKind('feed:$uri', appL10n.raiFunctionsFeedKindLabel), limit: 20);
           lines = [for (final p in _shown(page.items)) if (keep(p.body)) _line(p)];
-          head = 'フィード TL';
+          head = appL10n.raiFunctionsHeadFeedTimeline;
         } else if (loc.startsWith(Routes.lists)) {
           final lists = await ref.read(listsProvider.future);
           List<FeedInfo> feeds = const [];
           try {
             feeds = await ref.read(savedFeedsProvider.future);
           } catch (_) {}
-          lines = [for (final l in lists) if (keep(l.name)) 'リスト ${l.name} [${l.id}]', for (final f in feeds) if (keep(f.name)) 'フィード ${f.name} [${f.uri}]'];
+          lines = [for (final l in lists) if (keep(l.name)) appL10n.raiFunctionsPageList(l.name, l.id), for (final f in feeds) if (keep(f.name)) appL10n.raiFunctionsPageFeed(f.name, f.uri)];
           items = [for (final f in feeds) if (keep(f.name)) RaiFunctionItem(id: f.uri, label: f.name)];
-          head = 'リストページ';
+          head = appL10n.raiFunctionsHeadListsPage;
         } else if (loc.startsWith(Routes.notifications)) {
           final page = await _session().notifications();
           lines = [for (final n in ref.read(childGateProvider).filterNotifications(page.items)) if (keep('${n.kind.name} ${n.post?.body ?? ''}')) '${n.kind.name}: ${n.actors.map((a) => '@${a.handle}').join(', ')}${n.post == null ? '' : ' — ${raiTruncate(n.post!.body, 60)}'}'];
-          head = '通知';
+          head = appL10n.raiFunctionsHeadNotificationsPage;
         } else if (loc.startsWith(Routes.dm)) {
           final rooms = await _session().dmRooms();
           lines = [for (final r in rooms) if (keep(r.displayTitle)) '${r.displayTitle} [${r.id}]'];
@@ -1089,7 +1090,7 @@ class RaiFunctionRunner {
           final st = ref.read(timelineProvider(TimelineKind.home)).value;
           final posts = st?.posts ?? (await _session().timeline(TimelineKind.home, limit: 20)).items;
           lines = [for (final p in _shown(posts)) if (keep(p.body)) _line(p)];
-          head = 'ホーム TL';
+          head = appL10n.raiFunctionsHeadHomeTimeline;
         }
         return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: '$head($loc)'), budget), fetched: true, items: items);
       });
@@ -1098,12 +1099,12 @@ class RaiFunctionRunner {
   /// source = `feed:<uri>` / `list:<id>` / `tag:<語>` / フィード名(検索して先頭)。
   Future<RaiFunctionResult> _tendencySeed(RaiFunctionCall c) => raiGuard(c.name, () async {
         var source = c.arg('source').trim();
-        if (source.isEmpty) return RaiFunctionResult(name: c.name, text: '取り込み元(source=)がありません', ok: false);
+        if (source.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingSource, ok: false);
         final s = _session();
         String label = source;
         if (!source.startsWith('feed:') && !source.startsWith('list:') && !source.startsWith('tag:')) {
           final f = await _resolveFeed(s, source);
-          if (f == null) return RaiFunctionResult(name: c.name, text: 'フィード「$source」が見つかりません', ok: false);
+          if (f == null) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsFeedNotFound(source), ok: false);
           source = 'feed:${f.uri}';
           label = f.name;
         } else if (source.startsWith('feed:')) {
@@ -1111,25 +1112,25 @@ class RaiFunctionRunner {
         }
         final kind = source.startsWith('feed:') ? TimelineKind(source, label) : _timelineKindOf(source);
         final items = _shown((await s.timeline(kind, limit: 40)).items);
-        if (items.isEmpty) return RaiFunctionResult(name: c.name, text: '「$label」に投稿が無いので特徴語を取れません', ok: false);
+        if (items.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsSeedNoPosts(label), ok: false);
         final topics = topicsOf(items, top: 4);
         final words = <String>{for (final t in topics) ...t.genres.take(3)}.take(8).toList();
-        if (words.isEmpty) return RaiFunctionResult(name: c.name, text: '「$label」から特徴語を取れませんでした', ok: false);
+        if (words.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsSeedNoWords(label), ok: false);
         final profile = await ref.read(tendencyProfileProvider.future);
         final merged = {...profile.genres, ...words}.toList();
         await saveTendencyProfile(ref, profile.copyWith(genres: merged, enabled: true));
-        return RaiFunctionResult(name: c.name, text: '「$label」の特徴語(${words.join('、')})をトレンドの指向性(好きなジャンル)に足しました');
+        return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsSeedAdded(label, words.join(appL10n.raiFunctionsSeedWordSeparator)));
       });
 
   /// web.search(q, count): Brave Search (D-228)。第一期では無効(有効化と鍵は [RaiWebSearch] 参照)。
   Future<RaiFunctionResult> _webSearch(RaiFunctionCall c) async {
     final q = c.arg('q', c.arg('query')).trim();
-    if (q.isEmpty) return RaiFunctionResult(name: c.name, text: '検索語(q=)がありません', ok: false);
+    if (q.isEmpty) return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsMissingQuery, ok: false);
     final ws = ref.read(raiWebSearchProvider);
     try {
       final hits = await ws.query(q, count: int.tryParse(c.arg('count', '5')) ?? 5);
       final lines = [for (final h in hits) '${h.title}${h.description.isEmpty ? '' : ' — ${raiTruncate(h.description, ws.mode == RaiWebMode.answers ? budget : 120)}'}${h.url == null ? '' : ' [${h.url}]'}'];
-      return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'web「$q」'), budget), fetched: true);
+      return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadWeb(q)), budget), fetched: true);
     } on RaiWebSearchException catch (e) {
       return RaiFunctionResult(name: c.name, text: e.message, ok: false);
     }
@@ -1139,7 +1140,7 @@ class RaiFunctionRunner {
   /// action= を当てられるようにする(費用対効果が高い、報告書 §2-4 参照)。
   Future<RaiFunctionResult> _appActions(RaiFunctionCall c) => raiGuard(c.name, () async {
         final s = _session();
-        final lines = [for (final a in s.actions) '${a.id}: ${a.label}${raiCanAutomate(a) ? '' : '(自動化不可)'}'];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'アクション'), budget), fetched: true);
+        final lines = [for (final a in s.actions) '${a.id}: ${a.label}${raiCanAutomate(a) ? '' : appL10n.raiFunctionsNotAutomatableMark}'];
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: appL10n.raiFunctionsHeadActions), budget), fetched: true);
       });
 }

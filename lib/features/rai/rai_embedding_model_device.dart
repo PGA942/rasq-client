@@ -10,6 +10,7 @@ import 'rai_minilm_tokenizer.dart';
 import 'rai_onnx_embedder.dart';
 import 'rai_reference.dart';
 import 'rai_siglip_tokenizer.dart';
+import '../../l10n/l10n.dart';
 
 /// 端末側の埋め込みモデル (D-190): `ApplicationSupport/rai_models/siglip2/` に ONNX を流し込み、
 /// 同梱のトークナイザーと合わせて [OnnxRaiEmbedder] を作る。
@@ -68,7 +69,7 @@ class DeviceRaiEmbeddingModel implements RaiEmbeddingModel {
     try {
       _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.downloading, progress: 0));
       final url = spec.downloadUrl(central?.call());
-      if (url == null) throw const RaiEmbeddingException('RASQ サーバーの接続先が未設定です');
+      if (url == null) throw RaiEmbeddingException(appL10n.raiModelsCentralNotConfigured);
       final req = http.Request('GET', url);
       if (spec.centralPath == null && hfToken != null && hfToken.isNotEmpty) req.headers['Authorization'] = 'Bearer $hfToken';
       final res = await client.send(req).timeout(const Duration(seconds: 60));
@@ -95,8 +96,8 @@ class DeviceRaiEmbeddingModel implements RaiEmbeddingModel {
       try {
         if (await tmp.exists()) await tmp.delete();
       } catch (_) {}
-      _set(RaiEmbeddingStatus(RaiEmbeddingPhase.notInstalled, message: 'ダウンロードに失敗しました: $e'));
-      throw RaiEmbeddingException('ダウンロードに失敗しました: $e');
+      _set(RaiEmbeddingStatus(RaiEmbeddingPhase.notInstalled, message: appL10n.raiModelsDownloadFailed('$e')));
+      throw RaiEmbeddingException(appL10n.raiModelsDownloadFailed('$e'));
     } finally {
       _download = null;
       client.close();
@@ -141,7 +142,7 @@ class DeviceRaiEmbeddingModel implements RaiEmbeddingModel {
         _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.ready));
         return _embedder;
       } catch (e) {
-        _set(RaiEmbeddingStatus(RaiEmbeddingPhase.error, message: 'モデルを読み込めません(onnxruntime): $e'));
+        _set(RaiEmbeddingStatus(RaiEmbeddingPhase.error, message: appL10n.raiModelsLoadFailedOnnx('$e')));
         return null;
       } finally {
         _loading = null;

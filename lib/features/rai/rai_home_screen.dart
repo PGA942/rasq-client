@@ -15,6 +15,7 @@ import 'rai_overlay.dart';
 import 'rai_providers.dart';
 import 'rai_stats.dart';
 import 'rai_widgets.dart';
+import '../../l10n/l10n.dart';
 
 /// スタンバイの枠 (D-199): 自分のグローバル矩形を [raiStandbySlotProvider] に報告する。3D では枠だけ、2D では薄い RAi。
 class _StandbySlot extends ConsumerStatefulWidget {
@@ -166,7 +167,7 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
         // サイドバーのボタン (D-214): ← の右に RAi のアイコン。
         leading: Semantics(
           button: true,
-          label: 'RAi サイドバー',
+          label: context.l10n.raiHomeSidebarSemantics,
           toggled: s.sidebarOpen,
           child: InkResponse(
             key: const ValueKey('rai.sidebar.toggle'),
@@ -258,7 +259,7 @@ class RaiSidebar extends ConsumerWidget {
                 const RaiIcon(size: 28),
                 const SizedBox(width: RasqSpacing.xs),
                 Expanded(child: Text('RAi', style: RasqTypography.title)),
-                RasqIconButton(key: const ValueKey('rai.sidebar.close'), icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: () => n.toggleSidebar(open: false)),
+                RasqIconButton(key: const ValueKey('rai.sidebar.close'), icon: Icons.close, size: 20, tooltip: context.l10n.raiHomeClose, onPressed: () => n.toggleSidebar(open: false)),
               ]),
             ),
             Padding(
@@ -267,15 +268,15 @@ class RaiSidebar extends ConsumerWidget {
                 key: const ValueKey('rai.sidebar.new'),
                 onPressed: n.newConversation,
                 icon: const Icon(Icons.add_comment_outlined, size: 18),
-                label: const Text('新しい会話'),
+                label: Text(context.l10n.raiHomeNewConversation),
               ),
             ),
-            const RasqSectionHeader(title: '会話の履歴'),
+            RasqSectionHeader(title: context.l10n.raiHomeHistory),
             if (s.log.isNotEmpty)
               RasqListTile(
                 key: const ValueKey('rai.sidebar.conv.current'),
                 title: s.log.last.query ?? s.log.last.text,
-                subtitle: 'いまの会話 · ${s.log.length} 件',
+                subtitle: context.l10n.raiHomeCurrentConversation(s.log.length),
                 leading: Icon(Icons.chat_bubble, size: 20, color: RasqColors.accent),
                 chevron: false,
                 onTap: () {
@@ -288,23 +289,23 @@ class RaiSidebar extends ConsumerWidget {
                 RasqListTile(
                   key: ValueKey('rai.sidebar.conv.${c.id}'),
                   title: c.title,
-                  subtitle: '${_when(c.startedAt)} · ${c.log.length} 件',
+                  subtitle: context.l10n.raiHomeConversationSubtitle(_when(c.startedAt), c.log.length),
                   leading: Icon(Icons.chat_bubble_outline, size: 20, color: scheme.onSurfaceVariant),
-                  trailing: RasqIconButton(key: ValueKey('rai.sidebar.conv.delete.${c.id}'), icon: Icons.delete_outline, size: 18, tooltip: '削除', onPressed: () => ref.read(raiConversationsProvider.notifier).remove(c.id)),
+                  trailing: RasqIconButton(key: ValueKey('rai.sidebar.conv.delete.${c.id}'), icon: Icons.delete_outline, size: 18, tooltip: context.l10n.raiHomeDelete, onPressed: () => ref.read(raiConversationsProvider.notifier).remove(c.id)),
                   chevron: false,
                   onTap: () => n.openConversation(c),
                 ),
             if (s.log.isEmpty && conversations.where((c) => c.id != s.conversationId).isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
-                child: Text('まだありません。質問すると、ここに会話が残ります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                child: Text(context.l10n.raiHomeHistoryEmpty, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               ),
-            const RasqSectionHeader(title: 'その他'),
+            RasqSectionHeader(title: context.l10n.raiHomeOther),
             // アチーブメントはページ (D-215)。マクロはまだ遷移しない(第二期)。
             RasqListTile(
               key: const ValueKey('rai.sidebar.achievements'),
-              title: 'アチーブメント',
-              subtitle: '$unlocked / ${progress.length} 達成',
+              title: context.l10n.raiAchievementsTitle,
+              subtitle: context.l10n.raiAchievementsProgress(unlocked, progress.length),
               leading: Icon(Icons.emoji_events_outlined, size: 20, color: unlocked > 0 ? RasqColors.yellow : scheme.onSurfaceVariant),
               onTap: () {
                 n.toggleSidebar(open: false);
@@ -313,8 +314,8 @@ class RaiSidebar extends ConsumerWidget {
             ),
             RasqListTile(
               key: const ValueKey('rai.sidebar.macros'),
-              title: 'マクロ',
-              subtitle: '準備中',
+              title: context.l10n.raiHomeMacro,
+              subtitle: context.l10n.raiHomeMacroSoon,
               leading: Icon(Icons.auto_awesome_outlined, size: 20, color: scheme.onSurfaceVariant),
               chevron: false,
               enabled: false,

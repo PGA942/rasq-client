@@ -10,6 +10,7 @@ import '../ads/export_ad.dart';
 
 import 'rai_mascot_3d.dart';
 import 'rai_providers.dart';
+import '../../l10n/l10n.dart';
 
 /// RAi のマスコット (D-179): ワイヤーフレーム p.4 の RAi ホーム(頭 = 耳付きの板 + 目、
 /// 体 = コーン)を 2D で。gltf / three.js 相当のモーションは第一期では簡易(位置の
@@ -141,7 +142,7 @@ class RaiModeToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     final instruction = mode == RaiMode.instruction;
     return Semantics(
-      label: 'RAi モード',
+      label: context.l10n.raiModeSemantics,
       value: mode.label,
       toggled: instruction,
       button: true,
@@ -280,7 +281,7 @@ class RaiAskButton extends StatelessWidget {
   Widget build(BuildContext context) => FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(backgroundColor: RasqColors.link, foregroundColor: Colors.white, minimumSize: const Size(0, 34), padding: const EdgeInsets.symmetric(horizontal: 14), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-        child: const Text('質問する'),
+        child: Text(context.l10n.raiAskButton),
       );
 }
 
@@ -298,7 +299,7 @@ class RaiPromptBar extends StatelessWidget {
     required this.modelLabel,
     this.busy = false,
     this.error = false,
-    this.hint = '困ったとき、お手伝いします！',
+    this.hint,
     this.maxLength,
     this.inputKey,
     this.sendKey,
@@ -309,7 +310,7 @@ class RaiPromptBar extends StatelessWidget {
   final String modelLabel;
   final bool busy;
   final bool error;
-  final String hint;
+  final String? hint;
   final int? maxLength;
   final Key? inputKey;
   final Key? sendKey;
@@ -336,7 +337,7 @@ class RaiPromptBar extends StatelessWidget {
             maxLines: 4,
             maxLength: maxLength,
             decoration: InputDecoration(
-              hintText: hint,
+              hintText: hint ?? context.l10n.raiInputHint,
               hintStyle: RasqTypography.bodySmall.copyWith(color: scheme.onSurface),
               hintMaxLines: 1,
               isDense: true,
@@ -443,13 +444,13 @@ class _RaiBarState extends State<RaiBar> {
   /// 入力のたびに候補を引く。末尾に半角 / 全角スペースが入ったら候補で確定する。
   /// 空の入力欄でスペースを打つと、予測([RaiBar.onPredict])で埋める (D-376)。
   void _onChanged(String text) {
-    if ((text == ' ' || text == '　') && _predicted != null) {
+    if ((text == ' ' || text == '　') && _predicted != null) { // l10n-ignore
       final p = _predicted!;
       _input.value = TextEditingValue(text: p, selection: TextSelection.collapsed(offset: p.length));
       setState(() => _ghost = null);
       return;
     }
-    if (_ghost != null && (text.endsWith(' ') || text.endsWith('　')) && _ghost!.startsWith(text.substring(0, text.length - 1))) {
+    if (_ghost != null && (text.endsWith(' ') || text.endsWith('　')) && _ghost!.startsWith(text.substring(0, text.length - 1))) { // l10n-ignore
       final g = _ghost!;
       _input.value = TextEditingValue(text: g, selection: TextSelection.collapsed(offset: g.length));
       setState(() => _ghost = null);
@@ -478,7 +479,7 @@ class _RaiBarState extends State<RaiBar> {
     final s = widget.state;
     // 入力欄は前の質問で埋めない (D-376): 空のときは予測を薄く出し、スペースで入れる。予測が無ければ既定のヒント。
     _predicted = _input.text.isEmpty ? widget.onPredict?.call() : null;
-    final hint = _predicted != null ? '$_predicted(スペースで入力)' : '困ったとき、お手伝いします！';
+    final hint = _predicted != null ? context.l10n.raiInputPredicted(_predicted!) : context.l10n.raiInputHint;
     // 掴んで移動 (D-233 → D-236): FOW と同じく**タイル全体**が移動判定(掴み手は無し)。入力欄やボタンは
     // 自分のジェスチャを優先する。
     return GestureDetector(
@@ -507,7 +508,7 @@ class _RaiBarState extends State<RaiBar> {
           SizedBox(
             height: 40,
             child: Row(children: [
-              RasqIconButton(key: const ValueKey('rai.headline'), icon: s.expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 22, tooltip: s.expanded ? '畳む' : '広げる', onPressed: widget.onToggleExpanded),
+              RasqIconButton(key: const ValueKey('rai.headline'), icon: s.expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 22, tooltip: s.expanded ? context.l10n.raiCollapse : context.l10n.raiExpand, onPressed: widget.onToggleExpanded),
               Expanded(
                 child: Stack(children: [
                   // 薄い補完 (D-194): 入力の後ろに候補の見出しを薄く敷く。
@@ -546,10 +547,10 @@ class _RaiBarState extends State<RaiBar> {
                   key: const ValueKey('rai.askMore'),
                   onPressed: widget.onAskMore,
                   style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8), tapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: VisualDensity.compact),
-                  child: Text('さらに尋ねる', style: RasqTypography.bodySmall.copyWith(color: RasqColors.link, fontWeight: FontWeight.w600)),
+                  child: Text(context.l10n.raiAskMore, style: RasqTypography.bodySmall.copyWith(color: RasqColors.link, fontWeight: FontWeight.w600)),
                 ),
-              RasqIconButton(key: const ValueKey('rai.history'), icon: s.historyOpen ? Icons.expand_more : Icons.history, size: 20, tooltip: s.historyOpen ? '履歴を閉じる' : '発言の履歴', onPressed: widget.onHistoryToggle),
-              RasqIconButton(icon: Icons.close, size: 18, tooltip: 'RAi を閉じる', onPressed: widget.onClose),
+              RasqIconButton(key: const ValueKey('rai.history'), icon: s.historyOpen ? Icons.expand_more : Icons.history, size: 20, tooltip: s.historyOpen ? context.l10n.raiHistoryClose : context.l10n.raiHistory, onPressed: widget.onHistoryToggle),
+              RasqIconButton(icon: Icons.close, size: 18, tooltip: context.l10n.raiClose, onPressed: widget.onClose),
             ]),
           ),
           if (s.expanded)
@@ -587,7 +588,7 @@ List<String> splitSpeechLines(String text) {
     final buf = StringBuffer();
     for (final ch in para.split('')) {
       buf.write(ch);
-      if ('。！？!?'.contains(ch)) {
+      if ('。！？!?'.contains(ch)) { // l10n-ignore
         final t = buf.toString().trim();
         if (t.isNotEmpty) out.add(t);
         buf.clear();
@@ -644,9 +645,9 @@ class RaiSpeech extends StatelessWidget {
             ),
           ),
           if (count > 1 || streaming) Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: Text(streaming ? '${index + 1}/$count…' : '${index + 1}/$count', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
-          RasqIconButton(key: const ValueKey('rai.speech.history'), icon: Icons.arrow_upward, size: 20, tooltip: '発言の履歴', onPressed: onHistory),
-          RasqIconButton(key: const ValueKey('rai.next'), icon: hasMore ? Icons.play_arrow : Icons.check, size: 22, tooltip: hasMore ? '次へ' : '了解(閉じる)', onPressed: onNext),
-          RasqIconButton(key: const ValueKey('rai.speech.close'), icon: Icons.close, size: 18, tooltip: '閉じる', onPressed: onClose),
+          RasqIconButton(key: const ValueKey('rai.speech.history'), icon: Icons.arrow_upward, size: 20, tooltip: context.l10n.raiHistory, onPressed: onHistory),
+          RasqIconButton(key: const ValueKey('rai.next'), icon: hasMore ? Icons.play_arrow : Icons.check, size: 22, tooltip: hasMore ? context.l10n.raiNext : context.l10n.raiDone, onPressed: onNext),
+          RasqIconButton(key: const ValueKey('rai.speech.close'), icon: Icons.close, size: 18, tooltip: context.l10n.raiSpeechClose, onPressed: onClose),
         ]),
       ),
     );
@@ -707,7 +708,7 @@ class RaiHistoryList extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     if (log.isEmpty) {
-      return Padding(padding: const EdgeInsets.all(RasqSpacing.md), child: Text('まだ発言はありません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)));
+      return Padding(padding: const EdgeInsets.all(RasqSpacing.md), child: Text(context.l10n.raiHistoryEmpty, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)));
     }
     return ListView.builder(
       key: const ValueKey('rai.history.list'),
@@ -735,10 +736,10 @@ class RaiHistoryList extends StatelessWidget {
               key: ValueKey('rai.history.copy.$i'),
               icon: Icons.copy,
               size: 18,
-              tooltip: 'コピー',
+              tooltip: context.l10n.raiCopy,
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: u.text));
-                if (context.mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(content: Text('コピーしました')));
+                if (context.mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(context.l10n.raiCopied)));
               },
             ),
           ]),

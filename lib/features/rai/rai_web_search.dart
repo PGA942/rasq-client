@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../settings/settings_dsl.dart';
 import 'rai_llm.dart' show raiSettingsArea;
+import '../../l10n/l10n.dart';
 
 /// web 検索 (D-228): Brave Search API。RAi の関数 `web.search` から使う。
 ///
@@ -45,8 +46,8 @@ class RaiWebSearch {
   bool get available => enabled && token.trim().isNotEmpty;
 
   void _check() {
-    if (!enabled) throw const RaiWebSearchException('web 検索はまだ使えません');
-    if (token.trim().isEmpty) throw const RaiWebSearchException('Brave Search の鍵が設定されていません');
+    if (!enabled) throw RaiWebSearchException(appL10n.raiModelsWebDisabled);
+    if (token.trim().isEmpty) throw RaiWebSearchException(appL10n.raiModelsWebNoKey);
   }
 
   /// 口に合わせて検索する: answers なら答え 1 件([RaiWebHit.description] に本文、URL は本文から拾えた最初のもの)、
@@ -56,7 +57,7 @@ class RaiWebSearch {
     final a = await answer(q);
     if (a.isEmpty) return const [];
     final url = RegExp(r'https?://[^\s)\]>]+').firstMatch(a)?.group(0);
-    return [RaiWebHit(title: 'web の答え', url: url == null ? null : Uri.tryParse(url), description: a)];
+    return [RaiWebHit(title: appL10n.raiModelsWebAnswerTitle, url: url == null ? null : Uri.tryParse(url), description: a)];
   }
 
   /// Answers API (D-228): `POST /chat/completions`(OpenAI 互換)。検索に基づく短い答え(日本語)を返す。
@@ -75,7 +76,7 @@ class RaiWebSearch {
               'stream': false,
               // Answers API は messages を 1 件しか受けない(system 不可)ので、指示は質問に添える。
               'messages': [
-                {'role': 'user', 'content': '$q\n\n(検索結果に基づいて日本語で簡潔に、200 文字以内で答えてください。根拠の URL があれば末尾に添えてください)'},
+                {'role': 'user', 'content': '$q\n\n(検索結果に基づいて日本語で簡潔に、200 文字以内で答えてください。根拠の URL があれば末尾に添えてください)'}, // l10n-ignore
               ],
             }),
           )
@@ -88,7 +89,7 @@ class RaiWebSearch {
     } on RaiWebSearchException {
       rethrow;
     } catch (e) {
-      throw RaiWebSearchException('検索に失敗: $e');
+      throw RaiWebSearchException(appL10n.raiModelsWebFailed('$e'));
     } finally {
       if (client == null) c.close();
     }
@@ -114,7 +115,7 @@ class RaiWebSearch {
     } on RaiWebSearchException {
       rethrow;
     } catch (e) {
-      throw RaiWebSearchException('検索に失敗: $e');
+      throw RaiWebSearchException(appL10n.raiModelsWebFailed('$e'));
     } finally {
       if (client == null) c.close();
     }

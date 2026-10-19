@@ -14,6 +14,7 @@ import '../settings/settings_dsl.dart';
 import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
 import 'rai_widgets.dart';
+import '../../l10n/l10n.dart';
 
 /// RAi ホームのチャット (D-218): 発言の履歴を AI チャットボットの形式で並べる。背景は RAi(層側で描く)。
 ///
@@ -46,21 +47,21 @@ class RaiChatList extends ConsumerWidget {
             child: Row(children: [
               const Icon(Icons.pause_circle_outline, size: 20),
               const SizedBox(width: RasqSpacing.xs),
-              Expanded(child: Text('案内を一時停止中(${s.suspended!.stepIndex + 1} / ${s.suspended!.steps.length} 手順目)。戻ると続きます。', style: RasqTypography.bodySmall)),
-              TextButton(key: const ValueKey('rai.chat.resume'), onPressed: () => Navigator.of(context).maybePop(), child: const Text('続きへ')),
+              Expanded(child: Text(context.l10n.raiChatSuspended(s.suspended!.stepIndex + 1, s.suspended!.steps.length), style: RasqTypography.bodySmall)),
+              TextButton(key: const ValueKey('rai.chat.resume'), onPressed: () => Navigator.of(context).maybePop(), child: Text(context.l10n.raiChatResume)),
             ]),
           );
     if (log.isEmpty && !live) {
       return ListView(key: const ValueKey('rai.chat.empty'), padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xl, RasqSpacing.page, bottomPadding), children: [
         ?suspended,
-        Text('マクロとか、お任せください！', textAlign: TextAlign.center, style: RasqTypography.title),
+        Text(context.l10n.raiChatHeadline, textAlign: TextAlign.center, style: RasqTypography.title),
         const SizedBox(height: RasqSpacing.xs),
         Text(
-            rasqDetail(context, '操作を聞くと、RAi がボタンを指差して教えます。', 'インストラクション: 操作を聞くと RAi がボタンまで移動して指差します。\nアシスタント: 端末内モデルで答えます。モデルはバーのチップから選べます(マクロは第二期)。'),
+            rasqDetail(context, context.l10n.raiChatIntro, context.l10n.raiChatIntroDetail),
             textAlign: TextAlign.center,
             style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         if (s.history.isNotEmpty) ...[
-          const RasqSectionHeader(title: '最近の質問', topMargin: RasqSpacing.xl),
+          RasqSectionHeader(title: context.l10n.raiChatRecent, topMargin: RasqSpacing.xl),
           for (final h in s.history)
             RasqListTile(
               title: h,
@@ -195,7 +196,7 @@ class _RaiRow extends ConsumerWidget {
           if (latest)
             Padding(
               padding: const EdgeInsets.only(top: RasqSpacing.xs),
-              child: RasqIconButton(key: ValueKey('rai.chat.reject.$rowIndex'), icon: Icons.close, size: 18, tooltip: 'これじゃない(候補を外して答え直す)', onPressed: () => n.rejectCandidates([for (final (c, _) in candidates) c.id])),
+              child: RasqIconButton(key: ValueKey('rai.chat.reject.$rowIndex'), icon: Icons.close, size: 18, tooltip: context.l10n.raiChatRejectCandidates, onPressed: () => n.rejectCandidates([for (final (c, _) in candidates) c.id])),
             ),
         ]),
       if (choices.isNotEmpty)
@@ -273,12 +274,12 @@ class _ProposalTile extends StatelessWidget {
         Row(children: [
           const Icon(Icons.route_outlined, size: 20),
           const SizedBox(width: RasqSpacing.xs),
-          Expanded(child: Text('$title · $steps 手順', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600))),
+          Expanded(child: Text(context.l10n.raiChatProposalTitle(title, steps), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600))),
         ]),
         Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-          TextButton(key: ValueKey('rai.chat.skip.$id'), onPressed: onSkip, style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)), child: const Text('スキップ')),
+          TextButton(key: ValueKey('rai.chat.skip.$id'), onPressed: onSkip, style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)), child: Text(context.l10n.raiChatSkip)),
           const SizedBox(width: RasqSpacing.xs),
-          FilledButton(key: ValueKey('rai.chat.guide.$id'), onPressed: onGuide, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: const Text('この手順で案内')),
+          FilledButton(key: ValueKey('rai.chat.guide.$id'), onPressed: onGuide, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: Text(context.l10n.raiChatGuide)),
         ]),
       ]),
     );
@@ -307,7 +308,7 @@ class _InstructionTile extends StatelessWidget {
                 if (title != null)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.xs, RasqSpacing.md, 2),
-                    child: Text('案内「$title」', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+                    child: Text(context.l10n.raiChatGuideTitle(title!), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
                   ),
                 for (final (k, u) in steps.indexed)
                   Container(
@@ -354,7 +355,7 @@ class _TraceTileState extends ConsumerState<_TraceTile> {
       padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
       decoration: BoxDecoration(color: scheme.surfaceContainerHighest.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('工程', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        Text(context.l10n.raiChatTrace, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         for (final s in steps)
           Padding(
             padding: const EdgeInsets.only(top: 2),
@@ -391,7 +392,7 @@ class _TraceTileState extends ConsumerState<_TraceTile> {
               onPressed: () => setState(() => _showGraph = true),
               style: TextButton.styleFrom(minimumSize: const Size(0, 28), padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
               icon: const Icon(Icons.account_tree_outlined, size: 16),
-              label: Text('グラフビューで表示', style: RasqTypography.caption),
+              label: Text(context.l10n.raiChatShowGraph, style: RasqTypography.caption),
             ),
           ),
       ]),
@@ -417,9 +418,9 @@ class _ApprovalTile extends StatelessWidget {
       child: Row(children: [
         const Icon(Icons.auto_awesome, size: 20),
         const SizedBox(width: RasqSpacing.xs),
-        Expanded(child: Text(opId.startsWith(raiHeldCallsPrefix) ? 'この操作を実行しますか？(取得した情報から出た操作です)' : 'RAi に任せますか？', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurface))),
-        TextButton(key: ValueKey('rai.chat.decline.$opId'), onPressed: enabled ? onDecline : null, style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)), child: const Text('やめる')),
-        FilledButton(key: ValueKey('rai.chat.approve.$opId'), onPressed: enabled ? onApprove : null, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: const Text('実行する')),
+        Expanded(child: Text(opId.startsWith(raiHeldCallsPrefix) ? context.l10n.raiChatApproveHeld : context.l10n.raiChatApprove, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurface))),
+        TextButton(key: ValueKey('rai.chat.decline.$opId'), onPressed: enabled ? onDecline : null, style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)), child: Text(context.l10n.raiChatDecline)),
+        FilledButton(key: ValueKey('rai.chat.approve.$opId'), onPressed: enabled ? onApprove : null, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: Text(context.l10n.raiChatRun)),
       ]),
     );
   }

@@ -4,6 +4,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import 'rai_automation.dart';
 import 'rai_layout.dart';
+import '../../l10n/l10n.dart';
 
 /// 選択肢タイル (D-229): 自動化の途中で足りない入力(フィード / ワード / 本文 / 取り込み先)を、入力タイルの上の
 /// FOW で聞く。候補はチップ、自由入力があれば欄 + 「決定」。「やめる」= null。
@@ -13,7 +14,7 @@ Future<String?> showRaiAskFow(OverlayManager manager, RaiAutoAsk ask, {Rect? anc
   if (manager.contains(raiAskFowId)) manager.close(raiAskFowId);
   return manager.showFow<String>(
     id: raiAskFowId,
-    spec: FowSpec(title: ask.question, cancelText: 'やめる', initialHeightFactor: ask.allowFree ? 0.42 : 0.32, maxHeightFactor: 0.8, columnIndex: 0, maxWidth: maxWidth)
+    spec: FowSpec(title: ask.question, cancelText: appL10n.raiAskCancel, initialHeightFactor: ask.allowFree ? 0.42 : 0.32, maxHeightFactor: 0.8, columnIndex: 0, maxWidth: maxWidth)
       ..anchor = anchor
       ..anchorBelow = raiAnchorBelow(anchor),
     builder: (_, handle) => RaiAskBody(ask: ask, onPick: (v) => handle.close(result: v)),
@@ -58,7 +59,7 @@ class _RaiAskBodyState extends State<RaiAskBody> {
                 key: const ValueKey('rai.ask.text'),
                 controller: _text,
                 style: RasqTypography.bodySmall,
-                decoration: InputDecoration(hintText: ask.options.isEmpty ? '${ask.label}を入れる' : 'ほかの${ask.label}を入れる', isDense: true),
+                decoration: InputDecoration(hintText: ask.options.isEmpty ? context.l10n.raiAskInputHint(ask.label) : context.l10n.raiAskInputOtherHint(ask.label), isDense: true),
                 onSubmitted: (v) {
                   if (v.trim().isNotEmpty) widget.onPick(v.trim());
                 },
@@ -70,7 +71,7 @@ class _RaiAskBodyState extends State<RaiAskBody> {
               onPressed: () {
                 if (_text.text.trim().isNotEmpty) widget.onPick(_text.text.trim());
               },
-              child: const Text('決定'),
+              child: Text(context.l10n.raiAskDone),
             ),
           ]),
         ),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import 'rai_providers.dart';
+import '../../l10n/l10n.dart';
 
 /// RAi の実績と会話の履歴 (D-214、RAi サイドバー)。
 ///
@@ -79,17 +80,17 @@ class RaiAchievement {
   final int Function(RaiStats s) count;
 }
 
-/// 実績の一覧(表示順)。
-final raiAchievements = <RaiAchievement>[
-  RaiAchievement(id: 'ask1', title: 'はじめての質問', description: 'インストラクションを 1 回聞いた', threshold: 1, count: (s) => s.instructionsAsked),
-  RaiAchievement(id: 'ask10', title: '聞き上手', description: 'インストラクションを 10 回聞いた', threshold: 10, count: (s) => s.instructionsAsked),
-  RaiAchievement(id: 'ask50', title: 'RAi の常連', description: 'インストラクションを 50 回聞いた', threshold: 50, count: (s) => s.instructionsAsked),
-  RaiAchievement(id: 'app5', title: 'アプリ通', description: 'アシスタントとアプリについて 5 回話した', threshold: 5, count: (s) => s.assistantAppAsked),
-  RaiAchievement(id: 'chat20', title: 'おしゃべり', description: 'アシスタントに 20 回話しかけた', threshold: 20, count: (s) => s.assistantAsked),
-  RaiAchievement(id: 'done1', title: '一発で完走', description: '案内を最後の手順まで進めた', threshold: 1, count: (s) => s.instructionsCompleted),
-  RaiAchievement(id: 'done10', title: '完走マスター', description: '案内を 10 回最後まで進めた', threshold: 10, count: (s) => s.instructionsCompleted),
-  RaiAchievement(id: 'again3', title: '復習中', description: '同じ操作を 3 回聞き直した', threshold: 3, count: (s) => s.repeatedAsks),
-  RaiAchievement(id: 'auto1', title: 'おまかせ', description: '「スキップ」で RAi に任せた', threshold: 1, count: (s) => s.automations),
+/// 実績の一覧(表示順)。名前と説明はいまの表示の言語。
+List<RaiAchievement> get raiAchievements => <RaiAchievement>[
+  RaiAchievement(id: 'ask1', title: appL10n.raiAchievementAsk1Title, description: appL10n.raiAchievementAsk1Description, threshold: 1, count: (s) => s.instructionsAsked),
+  RaiAchievement(id: 'ask10', title: appL10n.raiAchievementAsk10Title, description: appL10n.raiAchievementAsk10Description, threshold: 10, count: (s) => s.instructionsAsked),
+  RaiAchievement(id: 'ask50', title: appL10n.raiAchievementAsk50Title, description: appL10n.raiAchievementAsk50Description, threshold: 50, count: (s) => s.instructionsAsked),
+  RaiAchievement(id: 'app5', title: appL10n.raiAchievementApp5Title, description: appL10n.raiAchievementApp5Description, threshold: 5, count: (s) => s.assistantAppAsked),
+  RaiAchievement(id: 'chat20', title: appL10n.raiAchievementChat20Title, description: appL10n.raiAchievementChat20Description, threshold: 20, count: (s) => s.assistantAsked),
+  RaiAchievement(id: 'done1', title: appL10n.raiAchievementDone1Title, description: appL10n.raiAchievementDone1Description, threshold: 1, count: (s) => s.instructionsCompleted),
+  RaiAchievement(id: 'done10', title: appL10n.raiAchievementDone10Title, description: appL10n.raiAchievementDone10Description, threshold: 10, count: (s) => s.instructionsCompleted),
+  RaiAchievement(id: 'again3', title: appL10n.raiAchievementAgain3Title, description: appL10n.raiAchievementAgain3Description, threshold: 3, count: (s) => s.repeatedAsks),
+  RaiAchievement(id: 'auto1', title: appL10n.raiAchievementAuto1Title, description: appL10n.raiAchievementAuto1Description, threshold: 1, count: (s) => s.automations),
 ];
 
 @immutable

@@ -43,7 +43,7 @@ class RaiRichText extends StatelessWidget {
     ]);
   }
 
-  static final _inlineRe = RegExp(r'\*\*(.+?)\*\*|`([^`]+)`|(https?://[^\s)\]」』>]+)');
+  static final _inlineRe = RegExp(r'\*\*(.+?)\*\*|`([^`]+)`|(https?://[^\s)\]」』>]+)'); // l10n-ignore
 
   TextSpan _inline(String s, TextStyle base, ColorScheme scheme) {
     final spans = <InlineSpan>[];
@@ -55,7 +55,7 @@ class RaiRichText extends StatelessWidget {
       } else if (m.group(2) != null) {
         spans.add(TextSpan(text: m.group(2), style: TextStyle(fontFamily: 'monospace', backgroundColor: scheme.surfaceContainerHighest)));
       } else {
-        final url = m.group(3)!.replaceAll(RegExp(r'[.,。、]+$'), '');
+        final url = m.group(3)!.replaceAll(RegExp(r'[.,。、]+$'), ''); // l10n-ignore
         final uri = Uri.tryParse(url);
         spans.add(TextSpan(
           text: url,
@@ -118,14 +118,14 @@ List<RaiBlock> raiParseBlocks(String text) {
       i++;
       continue;
     }
-    final b = RegExp(r'^\s*(?:[-*・•]|[‐–])\s+(.*)$').firstMatch(line);
+    final b = RegExp(r'^\s*(?:[-*・•]|[‐–])\s+(.*)$').firstMatch(line); // l10n-ignore
     if (b != null) {
       flush();
       out.add(RaiBlock(RaiBlockKind.bullet, b.group(1)!));
       i++;
       continue;
     }
-    final n = RegExp(r'^\s*(\d{1,2})[.．)]\s*(.*)$').firstMatch(line);
+    final n = RegExp(r'^\s*(\d{1,2})[.．)]\s*(.*)$').firstMatch(line); // l10n-ignore
     if (n != null && n.group(2)!.isNotEmpty) {
       flush();
       out.add(RaiBlock(RaiBlockKind.numbered, n.group(2)!, number: int.parse(n.group(1)!)));

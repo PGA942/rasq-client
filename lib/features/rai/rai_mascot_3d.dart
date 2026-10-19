@@ -263,7 +263,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       rim.position.setValues(0, 2, -3);
       _three.scene.add(rim);
       final gltf = await three.GLTFLoader().fromAsset(widget.asset);
-      if (gltf == null) throw StateError('glb を読めません');
+      if (gltf == null) throw StateError('glb を読めません'); // l10n-ignore
       final model = gltf.scene;
       // 環境マップ無しの metalness=1 は真っ黒に見えるので、金属材質は少し下げて粗さを上げる。
       model.traverse((o) {

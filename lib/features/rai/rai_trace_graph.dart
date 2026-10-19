@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../nodeprog/inline_node_graph.dart';
 import '../nodeprog/node_graph.dart';
 import 'rai_automation.dart';
+import '../../l10n/l10n.dart';
 
 /// 工程グラフ (D-236): 自動化の工程([RaiAutoStep] の列)をノードにして描く。手順 = ノード(見出しに番号と
 /// 状態の印、値ボックスに 関数 / 結果)、順に「工程」型の辺で繋ぐ。配置は [tidyGraph](左から右)。
@@ -26,12 +27,12 @@ NodeGraph raiTraceToGraph(List<RaiAutoStep> trace) {
       x: i * 250.0,
       y: 0,
       inputs: [
-        const NodePort(label: '前', dataType: '工程'),
-        NodePort(label: '状態', value: raiAutoStatusLabel(s.status), dataType: '設定'),
-        if (s.binding != null) NodePort(label: '関数', value: s.binding!.call, dataType: '設定'),
-        if (s.detail.isNotEmpty) NodePort(label: '結果', value: s.detail.length > 40 ? '${s.detail.substring(0, 40)}…' : s.detail, dataType: '設定'),
+        NodePort(label: appL10n.raiTracePortPrev, dataType: '工程'), // l10n-ignore
+        NodePort(label: appL10n.raiTracePortState, value: raiAutoStatusLabel(s.status), dataType: '設定'), // l10n-ignore
+        if (s.binding != null) NodePort(label: appL10n.raiTracePortFunction, value: s.binding!.call, dataType: '設定'), // l10n-ignore
+        if (s.detail.isNotEmpty) NodePort(label: appL10n.raiTracePortResult, value: s.detail.length > 40 ? '${s.detail.substring(0, 40)}…' : s.detail, dataType: '設定'), // l10n-ignore
       ],
-      outputs: const [NodePort(label: '次', dataType: '工程')],
+      outputs: [NodePort(label: appL10n.raiTracePortNext, dataType: '工程')], // l10n-ignore
     ));
     if (i > 0) edges.add(GraphEdge(from: 's${trace[i - 1].index}', fromPort: 0, to: 's${s.index}', toPort: 0));
   }
@@ -39,13 +40,13 @@ NodeGraph raiTraceToGraph(List<RaiAutoStep> trace) {
 }
 
 String raiAutoStatusLabel(RaiAutoStatus s) => switch (s) {
-      RaiAutoStatus.done => '関数で済',
-      RaiAutoStatus.skipped => '畳んだ',
-      RaiAutoStatus.guide => '案内へ',
-      RaiAutoStatus.failed => '失敗',
-      RaiAutoStatus.asking => '選択待ち',
-      RaiAutoStatus.running => '実行中',
-      RaiAutoStatus.pending => '未実行',
+      RaiAutoStatus.done => appL10n.raiTraceStatusDone,
+      RaiAutoStatus.skipped => appL10n.raiTraceStatusSkipped,
+      RaiAutoStatus.guide => appL10n.raiTraceStatusGuide,
+      RaiAutoStatus.failed => appL10n.raiTraceStatusFailed,
+      RaiAutoStatus.asking => appL10n.raiTraceStatusAsking,
+      RaiAutoStatus.running => appL10n.raiTraceStatusRunning,
+      RaiAutoStatus.pending => appL10n.raiTraceStatusPending,
     };
 
 IconData raiTraceIcon(GraphNode n) {
@@ -62,5 +63,5 @@ class RaiTraceGraph extends StatelessWidget {
   const RaiTraceGraph({super.key, required this.trace});
   final List<RaiAutoStep> trace;
   @override
-  Widget build(BuildContext context) => InlineNodeGraph(graph: raiTraceToGraph(trace), iconOf: raiTraceIcon, caption: '工程 ${trace.length} 手順');
+  Widget build(BuildContext context) => InlineNodeGraph(graph: raiTraceToGraph(trace), iconOf: raiTraceIcon, caption: context.l10n.raiTraceCaption(trace.length));
 }

@@ -2960,6 +2960,1470 @@ class AppLocalizationsJa extends AppLocalizations {
   String get onboardingTourRaiBubble => 'TL にリストを足したい';
 
   @override
+  String get raiModeInstruction => 'インストラクション';
+
+  @override
+  String get raiModeAssistant => 'アシスタント';
+
+  @override
+  String get raiGuideDefaultTitle => '案内';
+
+  @override
+  String raiHeldDeclined(String calls) {
+    return '実行しませんでした($calls)';
+  }
+
+  @override
+  String raiAutoDeclined(String title) {
+    return 'わかりました。「$title」は案内で進めるときに「この手順で案内」を押してください';
+  }
+
+  @override
+  String raiAutoProgress(int step, int total, String text) {
+    return '自動で進めています($step / $total): $text';
+  }
+
+  @override
+  String raiAutoAskingDetail(String label) {
+    return '$label を選ぶ';
+  }
+
+  @override
+  String raiAutoAskDestination(String title) {
+    return '「$title」の取り込み先はどれにしますか？';
+  }
+
+  @override
+  String raiAutoAskWhich(String label) {
+    return '$label はどれにしますか？';
+  }
+
+  @override
+  String get raiAutoAskHint => '候補から選ぶか、ほかの語を入れてください';
+
+  @override
+  String raiAutoNotFoundDetail(String label) {
+    return '$label が見つからない';
+  }
+
+  @override
+  String raiAutoNotFoundAsk(String label) {
+    return '$label が見つかりません。別の $label で探しますか？';
+  }
+
+  @override
+  String raiAutoAskWhichCount(String label, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$label はどれにしますか？($count 件)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String raiAutoCancelled(String title) {
+    return '「$title」の自動化をやめました';
+  }
+
+  @override
+  String raiAutoFailedAt(String title, int step, String detail) {
+    return '「$title」の $step 手順目で止まりました: $detail';
+  }
+
+  @override
+  String raiAutoPartlyDone(int done, int step, String text) {
+    String _temp0 = intl.Intl.pluralLogic(
+      done,
+      locale: localeName,
+      other: '$done 手順を関数で進めました。$step 手順目「$text」からは押す部品があるので案内します',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String raiAutoDone(String title) {
+    return '「$title」を関数で進めました';
+  }
+
+  @override
+  String get raiInstructionUnknown =>
+      'まだ覚えていない操作です。「投稿」「ログイン」「共有」などで聞いてみてください。';
+
+  @override
+  String get raiAskChoice => 'どれのことですか？ 上の選択肢から選んでください';
+
+  @override
+  String get raiNoReply => '返事がありませんでした';
+
+  @override
+  String raiFailureDevice(String message) {
+    return '端末内モデル: $message';
+  }
+
+  @override
+  String raiFailureFallUp(String message) {
+    return 'フォールアップ: $message';
+  }
+
+  @override
+  String raiProposalReady(String title) {
+    return '案内「$title」を用意しました(下のタイルから始められます)';
+  }
+
+  @override
+  String raiProposalReadyStopAt(String title, int step) {
+    return '案内「$title」を $step 手順目まで進める用意をしました(下のタイルから)';
+  }
+
+  @override
+  String raiHeldNote(String calls) {
+    return '(取得した情報をもとにした操作は、確かめてから実行します: $calls)';
+  }
+
+  @override
+  String get raiNoReplyParen => '(返事がありませんでした)';
+
+  @override
+  String raiRestartInjecting(String keys) {
+    return '取得した情報($keys)を注入してモデルを再始動します';
+  }
+
+  @override
+  String get raiAutoDetailReplaced => '関数で代替';
+
+  @override
+  String get raiAutoDetailNoFunction => '関数の対応が無い';
+
+  @override
+  String get raiAutoDetailGuideParts => '押す部品は案内で';
+
+  @override
+  String get raiAutoDetailExplanationOnly => '説明だけ';
+
+  @override
+  String raiAutoDescribeNoBound(String title) {
+    return '「$title」は関数で代わりにできる手順が無いので、案内(指差し)で進めます。';
+  }
+
+  @override
+  String raiAutoDescribeHead(String title) {
+    return '「$title」は案内を出さずに私が関数でやります:';
+  }
+
+  @override
+  String raiAutoDescribeGuideMark(String detail) {
+    return '(ここからは案内: $detail)';
+  }
+
+  @override
+  String get raiListSeparator => '、';
+
+  @override
+  String raiAutoDescribeFromQuestion(String inputs) {
+    return '質問から: $inputs';
+  }
+
+  @override
+  String raiAutoDescribeEntrusted(String labels) {
+    return '$labels は候補の先頭で進めます(任されているので)';
+  }
+
+  @override
+  String raiAutoDescribeAskLater(String labels) {
+    return '$labels は実行の途中で選んでもらいます';
+  }
+
+  @override
+  String get raiAutoDescribeConfirm => 'よければ「実行する」を押してください。';
+
+  @override
+  String raiProposalHead(String title, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '「$title」なら、この順で進めます($count 手順)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String raiProposalFunction(String function) {
+    return '〔$function〕';
+  }
+
+  @override
+  String raiProposalInputs(String inputs) {
+    return ' 入力: $inputs';
+  }
+
+  @override
+  String raiProposalPresets(String presets) {
+    return ' 固定: $presets';
+  }
+
+  @override
+  String get raiModeSemantics => 'RAi モード';
+
+  @override
+  String get raiAskButton => '質問する';
+
+  @override
+  String get raiInputHint => '困ったとき、お手伝いします！';
+
+  @override
+  String raiInputPredicted(String prediction) {
+    return '$prediction(スペースで入力)';
+  }
+
+  @override
+  String get raiCollapse => '畳む';
+
+  @override
+  String get raiExpand => '広げる';
+
+  @override
+  String get raiAskMore => 'さらに尋ねる';
+
+  @override
+  String get raiHistoryClose => '履歴を閉じる';
+
+  @override
+  String get raiHistory => '発言の履歴';
+
+  @override
+  String get raiClose => 'RAi を閉じる';
+
+  @override
+  String get raiNext => '次へ';
+
+  @override
+  String get raiDone => '了解(閉じる)';
+
+  @override
+  String get raiSpeechClose => '閉じる';
+
+  @override
+  String get raiHistoryEmpty => 'まだ発言はありません';
+
+  @override
+  String get raiCopy => 'コピー';
+
+  @override
+  String get raiCopied => 'コピーしました';
+
+  @override
+  String raiChatSuspended(int step, int total) {
+    return '案内を一時停止中($step / $total 手順目)。戻ると続きます。';
+  }
+
+  @override
+  String get raiChatResume => '続きへ';
+
+  @override
+  String get raiChatHeadline => 'マクロとか、お任せください！';
+
+  @override
+  String get raiChatIntro => '操作を聞くと、RAi がボタンを指差して教えます。';
+
+  @override
+  String get raiChatIntroDetail =>
+      'インストラクション: 操作を聞くと RAi がボタンまで移動して指差します。\nアシスタント: 端末内モデルで答えます。モデルはバーのチップから選べます(マクロは第二期)。';
+
+  @override
+  String get raiChatRecent => '最近の質問';
+
+  @override
+  String get raiChatRejectCandidates => 'これじゃない(候補を外して答え直す)';
+
+  @override
+  String raiChatProposalTitle(String title, int steps) {
+    String _temp0 = intl.Intl.pluralLogic(
+      steps,
+      locale: localeName,
+      other: '$title · $steps 手順',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get raiChatSkip => 'スキップ';
+
+  @override
+  String get raiChatGuide => 'この手順で案内';
+
+  @override
+  String raiChatGuideTitle(String title) {
+    return '案内「$title」';
+  }
+
+  @override
+  String get raiChatTrace => '工程';
+
+  @override
+  String get raiChatShowGraph => 'グラフビューで表示';
+
+  @override
+  String get raiChatApproveHeld => 'この操作を実行しますか？(取得した情報から出た操作です)';
+
+  @override
+  String get raiChatApprove => 'RAi に任せますか？';
+
+  @override
+  String get raiChatDecline => 'やめる';
+
+  @override
+  String get raiChatRun => '実行する';
+
+  @override
+  String get raiHomeSidebarSemantics => 'RAi サイドバー';
+
+  @override
+  String get raiHomeClose => '閉じる';
+
+  @override
+  String get raiHomeNewConversation => '新しい会話';
+
+  @override
+  String get raiHomeHistory => '会話の履歴';
+
+  @override
+  String raiHomeCurrentConversation(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'いまの会話 · $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String raiHomeConversationSubtitle(String when, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$when · $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get raiHomeDelete => '削除';
+
+  @override
+  String get raiHomeHistoryEmpty => 'まだありません。質問すると、ここに会話が残ります。';
+
+  @override
+  String get raiHomeOther => 'その他';
+
+  @override
+  String get raiAchievementsTitle => 'アチーブメント';
+
+  @override
+  String raiAchievementsProgress(int unlocked, int total) {
+    return '$unlocked / $total 達成';
+  }
+
+  @override
+  String get raiHomeMacro => 'マクロ';
+
+  @override
+  String get raiHomeMacroSoon => '準備中';
+
+  @override
+  String get raiBarSemantics => 'RAi バー';
+
+  @override
+  String get raiAskCancel => 'やめる';
+
+  @override
+  String raiAskInputHint(String label) {
+    return '$labelを入れる';
+  }
+
+  @override
+  String raiAskInputOtherHint(String label) {
+    return 'ほかの$labelを入れる';
+  }
+
+  @override
+  String get raiAskDone => '決定';
+
+  @override
+  String raiAchievementsStats(
+    int instructions,
+    int assistant,
+    int app,
+    int completed,
+    int repeated,
+  ) {
+    return 'インストラクション $instructions 回 · アシスタント $assistant 回(アプリの話 $app 回)· 完走 $completed 回 · 聞き直し $repeated 回';
+  }
+
+  @override
+  String get raiAchievementAsk1Title => 'はじめての質問';
+
+  @override
+  String get raiAchievementAsk1Description => 'インストラクションを 1 回聞いた';
+
+  @override
+  String get raiAchievementAsk10Title => '聞き上手';
+
+  @override
+  String get raiAchievementAsk10Description => 'インストラクションを 10 回聞いた';
+
+  @override
+  String get raiAchievementAsk50Title => 'RAi の常連';
+
+  @override
+  String get raiAchievementAsk50Description => 'インストラクションを 50 回聞いた';
+
+  @override
+  String get raiAchievementApp5Title => 'アプリ通';
+
+  @override
+  String get raiAchievementApp5Description => 'アシスタントとアプリについて 5 回話した';
+
+  @override
+  String get raiAchievementChat20Title => 'おしゃべり';
+
+  @override
+  String get raiAchievementChat20Description => 'アシスタントに 20 回話しかけた';
+
+  @override
+  String get raiAchievementDone1Title => '一発で完走';
+
+  @override
+  String get raiAchievementDone1Description => '案内を最後の手順まで進めた';
+
+  @override
+  String get raiAchievementDone10Title => '完走マスター';
+
+  @override
+  String get raiAchievementDone10Description => '案内を 10 回最後まで進めた';
+
+  @override
+  String get raiAchievementAgain3Title => '復習中';
+
+  @override
+  String get raiAchievementAgain3Description => '同じ操作を 3 回聞き直した';
+
+  @override
+  String get raiAchievementAuto1Title => 'おまかせ';
+
+  @override
+  String get raiAchievementAuto1Description => '「スキップ」で RAi に任せた';
+
+  @override
+  String get raiTracePortPrev => '前';
+
+  @override
+  String get raiTracePortState => '状態';
+
+  @override
+  String get raiTracePortFunction => '関数';
+
+  @override
+  String get raiTracePortResult => '結果';
+
+  @override
+  String get raiTracePortNext => '次';
+
+  @override
+  String get raiTraceStatusDone => '関数で済';
+
+  @override
+  String get raiTraceStatusSkipped => '畳んだ';
+
+  @override
+  String get raiTraceStatusGuide => '案内へ';
+
+  @override
+  String get raiTraceStatusFailed => '失敗';
+
+  @override
+  String get raiTraceStatusAsking => '選択待ち';
+
+  @override
+  String get raiTraceStatusRunning => '実行中';
+
+  @override
+  String get raiTraceStatusPending => '未実行';
+
+  @override
+  String raiTraceCaption(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '工程 $count 手順',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String raiFunctionsSettingMissing(String area, String key, String keys) {
+    return '「$area」に「$key」という設定はありません(ある: $keys)';
+  }
+
+  @override
+  String raiFunctionsSettingNotWritable(String key) {
+    return '「$key」は画面から書ける設定ではありません';
+  }
+
+  @override
+  String raiFunctionsSettingNeedsPassword(String key) {
+    return '「$key」はパスワードが要るので RAi からは書きません';
+  }
+
+  @override
+  String raiFunctionsSettingLocked(String key) {
+    return '「$key」は操作禁止タグが付いているので RAi からは書きません';
+  }
+
+  @override
+  String raiFunctionsFoldEmpty(String head) {
+    return '$head: 該当なし';
+  }
+
+  @override
+  String raiFunctionsFoldHead(String head, int total, int shown) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$head $total 件中 $shown 件:',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String raiFunctionsUnsupported(String name) {
+    return 'この SNS では使えません($name)';
+  }
+
+  @override
+  String raiFunctionsNotAutomatable(String name, String alt, String result) {
+    return '$name は自動化不可です(送信はユーザーが押します)。代わりに $alt: $result';
+  }
+
+  @override
+  String raiFunctionsUnknown(String name) {
+    return '知らない関数です: $name';
+  }
+
+  @override
+  String raiFunctionsFailed(String name, String error) {
+    return '$name に失敗: $error';
+  }
+
+  @override
+  String get raiFunctionsNotLoggedInSns => 'SNS にログインしていません';
+
+  @override
+  String raiFunctionsLineReactions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '(反応 $count)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get raiFunctionsPostsNone => '該当する投稿はありませんでした';
+
+  @override
+  String raiFunctionsPostsHead(int count, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '投稿 $count 件($total 件中):',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String raiFunctionsReferenceOperation(String title, String id, String steps) {
+    return '操作「$title」($id): $steps';
+  }
+
+  @override
+  String raiFunctionsReferenceFunction(String id, String does) {
+    return '関数 $id: $does';
+  }
+
+  @override
+  String raiFunctionsReferenceParams(String params) {
+    return ' 引数: $params';
+  }
+
+  @override
+  String get raiFunctionsReferenceParamInput => '入力';
+
+  @override
+  String raiFunctionsReferenceParamFixed(String value) {
+    return '固定=$value';
+  }
+
+  @override
+  String raiFunctionsReferenceMissing(String id) {
+    return 'リファレンスに $id はありません';
+  }
+
+  @override
+  String raiFunctionsActionMissing(String id) {
+    return 'アクション $id はありません';
+  }
+
+  @override
+  String raiFunctionsActionNotAllowed(String label) {
+    return '「$label」は自動化が許可されていません(RAi からは実行しません)。代わりに案内(この手順で案内)で進めるか、ユーザーが押してください';
+  }
+
+  @override
+  String raiFunctionsActionDone(String label, String state) {
+    return '$label を実行しました($state)';
+  }
+
+  @override
+  String get raiFunctionsActionDoneYes => '済';
+
+  @override
+  String get raiFunctionsActionDoneNo => '未';
+
+  @override
+  String get raiFunctionsAstellNoRooms => 'ASTell のルームはありません';
+
+  @override
+  String raiFunctionsAstellRooms(String rooms) {
+    return 'ASTell のルーム: $rooms';
+  }
+
+  @override
+  String get raiFunctionsAstellNoTitle => '題名がありません';
+
+  @override
+  String raiFunctionsAstellCreated(String title, String id) {
+    return 'ASTell「$title」を作りました [$id]';
+  }
+
+  @override
+  String raiFunctionsNotifReaction(String who, String reaction) {
+    return '$who がリアクション$reaction';
+  }
+
+  @override
+  String raiFunctionsNotifRepost(String who) {
+    return '$who がリノート';
+  }
+
+  @override
+  String raiFunctionsNotifQuote(String who) {
+    return '$who が引用';
+  }
+
+  @override
+  String raiFunctionsNotifReply(String who) {
+    return '$who が返信';
+  }
+
+  @override
+  String raiFunctionsNotifMention(String who) {
+    return '$who がメンション';
+  }
+
+  @override
+  String raiFunctionsNotifFollow(String who) {
+    return '$who がフォロー';
+  }
+
+  @override
+  String raiFunctionsNotifFollowRequest(String who) {
+    return '$who がフォロー申請';
+  }
+
+  @override
+  String raiFunctionsNotifFollowAccepted(String who) {
+    return '$who がフォロー承認';
+  }
+
+  @override
+  String raiFunctionsNotifListAdded(String who) {
+    return '$who がリストに追加';
+  }
+
+  @override
+  String get raiFunctionsNotifPollEnded => 'アンケート終了';
+
+  @override
+  String get raiFunctionsNotifTimer => 'タイマー通知';
+
+  @override
+  String get raiFunctionsNotifVc => 'ASTell 通知';
+
+  @override
+  String get raiFunctionsNotifSystem => 'システム通知';
+
+  @override
+  String get raiFunctionsNotifOther => 'その他の通知';
+
+  @override
+  String get raiFunctionsUnreadMark => '(未読)';
+
+  @override
+  String get raiFunctionsMissingPostId => '投稿 id (id=) がありません';
+
+  @override
+  String get raiFunctionsMissingPostArg => '投稿 id (post=) がありません';
+
+  @override
+  String raiFunctionsThreadReply(String line) {
+    return '返信: $line';
+  }
+
+  @override
+  String get raiFunctionsHeadThread => 'スレッド';
+
+  @override
+  String get raiFunctionsHeadReactions => '反応';
+
+  @override
+  String get raiFunctionsHeadReposters => 'リノートした人';
+
+  @override
+  String get raiFunctionsHeadQuotes => '引用';
+
+  @override
+  String get raiFunctionsHeadFavorites => 'お気に入り';
+
+  @override
+  String get raiFunctionsHeadReacted => 'リアクション済み';
+
+  @override
+  String raiFunctionsMe(String user, String plugin) {
+    return '自分: $user プラグイン=$plugin';
+  }
+
+  @override
+  String get raiFunctionsUserIdOrHandle => 'id= か handle= を指定してください';
+
+  @override
+  String get raiFunctionsNotFound => '見つかりませんでした';
+
+  @override
+  String raiFunctionsUserCounts(String followers, String following) {
+    return ' フォロワー$followers フォロー$following';
+  }
+
+  @override
+  String get raiFunctionsMissingUser => 'user id (user=) がありません';
+
+  @override
+  String raiFunctionsHeadUserPosts(String filter) {
+    return '投稿($filter)';
+  }
+
+  @override
+  String get raiFunctionsMissingKeyword => 'keyword がありません';
+
+  @override
+  String raiFunctionsHeadUserSearch(String keyword) {
+    return 'ユーザー検索「$keyword」';
+  }
+
+  @override
+  String get raiFunctionsHeadFollowing => 'フォロー中';
+
+  @override
+  String get raiFunctionsHeadFollowers => 'フォロワー';
+
+  @override
+  String get raiFunctionsRelFollowing => 'フォロー中';
+
+  @override
+  String get raiFunctionsRelFollowedBy => 'フォローされています';
+
+  @override
+  String get raiFunctionsRelRequested => '申請中';
+
+  @override
+  String get raiFunctionsRelMuted => 'ミュート中';
+
+  @override
+  String get raiFunctionsRelBlocked => 'ブロック中';
+
+  @override
+  String get raiFunctionsRelBlockedBy => 'ブロックされています';
+
+  @override
+  String get raiFunctionsRelNone => 'なし';
+
+  @override
+  String raiFunctionsRelation(String flags) {
+    return '関係: $flags';
+  }
+
+  @override
+  String raiFunctionsRequestLine(String user, String id) {
+    return '$user [申請 $id]';
+  }
+
+  @override
+  String raiFunctionsHeadModeration(String kind) {
+    return 'モデレーション($kind)';
+  }
+
+  @override
+  String raiFunctionsHeadNotifications(int unread) {
+    String _temp0 = intl.Intl.pluralLogic(
+      unread,
+      locale: localeName,
+      other: '通知(未読 $unread 件)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get raiFunctionsNotificationsRead => '通知を既読にしました';
+
+  @override
+  String raiFunctionsTrendLine(String tag, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$tag($count 人)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get raiFunctionsHeadTrends => 'トレンド';
+
+  @override
+  String raiFunctionsListLine(String name, String id, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$name [$id]($count 人)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get raiFunctionsHeadLists => 'リスト';
+
+  @override
+  String get raiFunctionsMissingList => 'list id (list=) がありません';
+
+  @override
+  String get raiFunctionsHeadListMembers => 'リストのメンバー';
+
+  @override
+  String raiFunctionsClipCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '($count 件)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get raiFunctionsHeadClips => 'クリップ';
+
+  @override
+  String get raiFunctionsMissingClip => 'clip id (clip=) がありません';
+
+  @override
+  String get raiFunctionsHeadClipNotes => 'クリップの中身';
+
+  @override
+  String get raiFunctionsHeadFeeds => 'フィード';
+
+  @override
+  String raiFunctionsDmUnread(int count) {
+    return '(未読 $count)';
+  }
+
+  @override
+  String raiFunctionsHeadEmoji(String keyword) {
+    return '絵文字「$keyword」';
+  }
+
+  @override
+  String get raiFunctionsUnfollowed => 'フォローを外しました';
+
+  @override
+  String get raiFunctionsFollowRequested => 'フォロー申請しました';
+
+  @override
+  String get raiFunctionsFollowed => 'フォローしました';
+
+  @override
+  String get raiFunctionsListUserArgs => 'list= と user= を指定してください';
+
+  @override
+  String get raiFunctionsListAdded => 'リストに追加しました';
+
+  @override
+  String get raiFunctionsListRemoved => 'リストから外しました';
+
+  @override
+  String get raiFunctionsMissingName => '名前 (name=) がありません';
+
+  @override
+  String raiFunctionsListCreated(String name, String id) {
+    return 'リスト「$name」を作りました [$id]';
+  }
+
+  @override
+  String get raiFunctionsClipPostArgs => 'clip= と post= を指定してください';
+
+  @override
+  String get raiFunctionsClipAdded => 'クリップに追加しました';
+
+  @override
+  String get raiFunctionsClipRemoved => 'クリップから外しました';
+
+  @override
+  String raiFunctionsClipCreated(String name, String id) {
+    return 'クリップ「$name」を作りました [$id]';
+  }
+
+  @override
+  String get raiFunctionsAreaKeyArgs => 'area= と key= を指定してください';
+
+  @override
+  String raiFunctionsSettingsPageMissing(String area) {
+    return '設定ページ「$area」はありません';
+  }
+
+  @override
+  String get raiFunctionsAreaKeyValueArgs => 'area= と key= と value= を指定してください';
+
+  @override
+  String raiFunctionsSettingBadValue(String key, String value, String current) {
+    return '「$key」に「$value」は入れられません(今の値: $current)';
+  }
+
+  @override
+  String raiFunctionsSettingSet(String area, String key, String value) {
+    return '$area.$key を $value にしました';
+  }
+
+  @override
+  String get raiFunctionsMissingText => '本文(text=)がありません';
+
+  @override
+  String get raiFunctionsMissingRoom => 'ルーム id (room=) がありません';
+
+  @override
+  String raiFunctionsDmRoomMissing(String id) {
+    return 'DM ルーム $id はありません';
+  }
+
+  @override
+  String raiFunctionsComposeFilled(String target) {
+    return '$targetの下書きをコンポーザーに入れました(送信はしていません)';
+  }
+
+  @override
+  String raiFunctionsFeedNotFound(String feed) {
+    return 'フィード「$feed」が見つかりません';
+  }
+
+  @override
+  String raiFunctionsFeedSaved(String name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '「$name」を保存しました(保存済み $count 件)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String raiFunctionsFeedUnsaved(String name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '「$name」を保存から外しました(保存済み $count 件)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get raiFunctionsNoBluesky =>
+      'Bluesky のアカウントがありません(カスタムフィードは Bluesky のみ)';
+
+  @override
+  String raiFunctionsFeedAlreadyHome(String name) {
+    return '「$name」はもうホームのタイムラインに入っています';
+  }
+
+  @override
+  String raiFunctionsFeedAddedHome(String name, String account) {
+    return '「$name」($account)をホームのタイムラインに取り込みました';
+  }
+
+  @override
+  String get raiFunctionsNotLoggedInRasq => 'RASQ アカウントにログインしていません';
+
+  @override
+  String get raiFunctionsRasqListMine => '自分';
+
+  @override
+  String get raiFunctionsRasqListUnfetchable => '取り込めない';
+
+  @override
+  String get raiFunctionsRasqListFollowing => 'フォロー中';
+
+  @override
+  String raiFunctionsRasqListLine(String name, int count, String state) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$name($count人・$state)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get raiFunctionsHeadRasqLists => 'RASQ リスト';
+
+  @override
+  String get raiFunctionsMissingListArg => 'リスト(list=)がありません';
+
+  @override
+  String raiFunctionsRasqListNotFound(String query) {
+    return 'RASQ リスト「$query」が見つかりません';
+  }
+
+  @override
+  String get raiFunctionsMissingWord => 'ワード(word=)がありません';
+
+  @override
+  String get raiFunctionsNotLoggedIn => 'ログインしていません';
+
+  @override
+  String raiFunctionsWordExcludeAlready(String word) {
+    return '「$word」の除外はもう入っています';
+  }
+
+  @override
+  String raiFunctionsWordIncludeAlready(String word) {
+    return '「$word」の絞り込みはもう入っています';
+  }
+
+  @override
+  String raiFunctionsWordExcluded(String word, String scope) {
+    return '「$word」を含む投稿を $scope のタイムラインから除外するようにしました';
+  }
+
+  @override
+  String raiFunctionsWordIncluded(String word, String scope) {
+    return '「$word」を含む投稿だけを $scope のタイムラインに通すようにしました';
+  }
+
+  @override
+  String get raiFunctionsFeedKindLabel => 'フィード';
+
+  @override
+  String get raiFunctionsHeadFeedTimeline => 'フィード TL';
+
+  @override
+  String raiFunctionsPageList(String name, String id) {
+    return 'リスト $name [$id]';
+  }
+
+  @override
+  String raiFunctionsPageFeed(String name, String uri) {
+    return 'フィード $name [$uri]';
+  }
+
+  @override
+  String get raiFunctionsHeadListsPage => 'リストページ';
+
+  @override
+  String get raiFunctionsHeadNotificationsPage => '通知';
+
+  @override
+  String get raiFunctionsHeadHomeTimeline => 'ホーム TL';
+
+  @override
+  String get raiFunctionsMissingSource => '取り込み元(source=)がありません';
+
+  @override
+  String raiFunctionsSeedNoPosts(String label) {
+    return '「$label」に投稿が無いので特徴語を取れません';
+  }
+
+  @override
+  String raiFunctionsSeedNoWords(String label) {
+    return '「$label」から特徴語を取れませんでした';
+  }
+
+  @override
+  String get raiFunctionsSeedWordSeparator => '、';
+
+  @override
+  String raiFunctionsSeedAdded(String label, String words) {
+    return '「$label」の特徴語($words)をトレンドの指向性(好きなジャンル)に足しました';
+  }
+
+  @override
+  String get raiFunctionsMissingQuery => '検索語(q=)がありません';
+
+  @override
+  String raiFunctionsHeadWeb(String query) {
+    return 'web「$query」';
+  }
+
+  @override
+  String get raiFunctionsNotAutomatableMark => '(自動化不可)';
+
+  @override
+  String get raiFunctionsHeadActions => 'アクション';
+
+  @override
+  String get raiModelsTitle => 'モデル';
+
+  @override
+  String get raiModelsClose => '閉じる';
+
+  @override
+  String get raiModelsRamUnknown => 'RAM: 不明';
+
+  @override
+  String raiModelsRamFree(String gb) {
+    return '(空き $gb GB)';
+  }
+
+  @override
+  String raiModelsCaption(String codename, String ram) {
+    return '$codename = この端末で動くモデル。$ram';
+  }
+
+  @override
+  String raiModelsCaptionDetail(String codename, String label, String ram) {
+    return '$codename = 端末内で動くモデル($label)。$ram';
+  }
+
+  @override
+  String get raiModelsSectionLocal => 'ローカル';
+
+  @override
+  String get raiModelsSectionEmbedding => 'RAi の検索と投稿の埋め込み';
+
+  @override
+  String get raiModelsPostVisionReady => '関連 TL と TL のアルゴリズムで、投稿の画像も比べます';
+
+  @override
+  String get raiModelsPostVisionIdle =>
+      '関連 TL と TL のアルゴリズムで、投稿の本文に加えて画像も比べられるようになります(文のモデルも入れてください)';
+
+  @override
+  String get raiModelsSectionEmoji => '絵文字の画像検索(2 つとも要ります)';
+
+  @override
+  String get raiModelsEmojiTextReady => '打った文で、絵文字の絵を探せます';
+
+  @override
+  String get raiModelsEmojiTextIdle => '絵文字の絵を、意味で探せるようになります(画像側も入れてください)';
+
+  @override
+  String get raiModelsEmojiVisionReady => '絵文字の絵を、裏で少しずつ読み込みます(サーバーごとに 1 回)';
+
+  @override
+  String get raiModelsEmojiVisionIdle => '名前が意味を持たない絵文字も、絵の中身で探せるようになります';
+
+  @override
+  String get raiModelsSectionCloud => 'クラウド(端末で答えられないとき)';
+
+  @override
+  String get raiModelsCompletionCaption => '完遂率 = 案内や返答が最後までうまくいった割合です。';
+
+  @override
+  String get raiModelsCompletionCaptionDetail =>
+      '完遂率 = 操作の案内 / 返答が最後まで成立した割合の集計(35B 未満のモデルだけ集計、デモでは「-%」)。';
+
+  @override
+  String get raiModelsRateExcluded => '集計外';
+
+  @override
+  String get raiModelsNotConnected => '未接続';
+
+  @override
+  String get raiModelsPhaseNotInstalled => '未ダウンロード';
+
+  @override
+  String raiModelsPhaseDownloading(int percent) {
+    return 'ダウンロード中 $percent%';
+  }
+
+  @override
+  String get raiModelsPhaseReady => '準備完了';
+
+  @override
+  String get raiModelsPhaseLoading => '読み込み中';
+
+  @override
+  String get raiModelsPhaseGenerating => '生成中';
+
+  @override
+  String get raiModelsPhaseUnavailable => '使えません';
+
+  @override
+  String get raiModelsPillCloud => 'クラウド';
+
+  @override
+  String get raiModelsPillLocal => 'ローカル';
+
+  @override
+  String raiModelsCloudLine(String label, String params) {
+    return '$label · ${params}B · クラウド';
+  }
+
+  @override
+  String raiModelsCompletionRate(String rate) {
+    return '完遂率 $rate';
+  }
+
+  @override
+  String get raiModelsMemoryNotNeeded => 'メモリ: 端末不要';
+
+  @override
+  String raiModelsMemory(String verdict) {
+    return 'メモリ: $verdict';
+  }
+
+  @override
+  String get raiModelsUse => '使う';
+
+  @override
+  String get raiModelsExtract => '展開(同梱)';
+
+  @override
+  String get raiModelsDownload => 'ダウンロード';
+
+  @override
+  String get raiModelsRelease => 'メモリを解放';
+
+  @override
+  String get raiModelsDeleteTitle => 'モデルを削除しますか';
+
+  @override
+  String raiModelsDeleteMessage(String file) {
+    return '$file を端末から消します。';
+  }
+
+  @override
+  String get raiModelsDelete => '削除';
+
+  @override
+  String get raiModelsCancel => 'キャンセル';
+
+  @override
+  String raiModelsEmbeddingLine(String file, int size, int dims) {
+    return 'onnxruntime · $file · 約 $size MB · $dims 次元';
+  }
+
+  @override
+  String get raiModelsSearchSemantic => '意味の近さで探します';
+
+  @override
+  String raiModelsSearchSemanticDetail(String label) {
+    return '検索: $label(意味で引く)';
+  }
+
+  @override
+  String get raiModelsSearchNgram => 'いまは語の一致で探します。ダウンロードすると言い換えにも強くなります';
+
+  @override
+  String get raiModelsSearchNgramDetail =>
+      '検索: n-gram 代替(語の一致で引く。ダウンロードすると言い換えにも強くなる)';
+
+  @override
+  String get raiModelsServerTitle => 'ローカル推論サーバー';
+
+  @override
+  String get raiModelsServerConfigured => '接続先あり';
+
+  @override
+  String get raiModelsServerNotConfigured => '未設定';
+
+  @override
+  String get raiModelsServerCaption => '端末のモデルが答えられないとき、ここに聞きます。';
+
+  @override
+  String get raiModelsServerCaptionDetail =>
+      'OpenAI 互換のチャット API(llama-server / vLLM など)。端末内モデルが失敗 / 無応答のとき、質問と近かったリファレンスを添えて渡します。';
+
+  @override
+  String get raiModelsServerModelHint => 'モデル名(省略可)';
+
+  @override
+  String get raiModelsRamOk => '動作可';
+
+  @override
+  String get raiModelsRamTight => 'ぎりぎり';
+
+  @override
+  String get raiModelsRamNo => 'メモリ不足';
+
+  @override
+  String get raiModelsRamUnknownVerdict => '不明';
+
+  @override
+  String get raiModelsFallUpNotConnected => 'フォールアップ先(サーバー側)が未接続です';
+
+  @override
+  String raiModelsServerHttpError(int status) {
+    return '推論サーバー HTTP $status';
+  }
+
+  @override
+  String get raiModelsServerNoReply => '推論サーバーから返事がありませんでした';
+
+  @override
+  String raiModelsServerUnreachable(String error) {
+    return '推論サーバーに届きません: $error';
+  }
+
+  @override
+  String get raiModelsLlmUnavailableHere => 'この環境では端末内モデルを使えません';
+
+  @override
+  String raiModelsLlamaFetching(String tag) {
+    return 'llama.cpp のランタイム($tag)を取得中';
+  }
+
+  @override
+  String get raiModelsLlamaMissingIos =>
+      'llama.cpp が組み込まれていません(Runner に llama.xcframework を追加)';
+
+  @override
+  String get raiModelsLlamaMissing => 'llama.cpp のライブラリがありません';
+
+  @override
+  String raiModelsLlamaFetchFailed(int status) {
+    return 'llama.cpp のランタイムを取得できません(HTTP $status)';
+  }
+
+  @override
+  String raiModelsStateCheckFailed(String error) {
+    return 'モデルの状態を確認できません: $error';
+  }
+
+  @override
+  String get raiModelsExtracting => '同梱モデルを展開中';
+
+  @override
+  String get raiModelsExtractTooLarge => 'この端末では同梱モデルを展開できません(ダウンロードしてください)';
+
+  @override
+  String raiModelsExtractFailed(String error) {
+    return '展開に失敗しました: $error';
+  }
+
+  @override
+  String raiModelsDownloadFailed(String error) {
+    return 'ダウンロードに失敗しました: $error';
+  }
+
+  @override
+  String raiModelsNotDownloaded(String codename) {
+    return '端末内モデル($codename)がまだダウンロードされていません';
+  }
+
+  @override
+  String get raiModelsDeviceUnavailable => '端末内モデルを使えません';
+
+  @override
+  String raiModelsFileMissing(String path) {
+    return 'モデルファイルがありません: $path';
+  }
+
+  @override
+  String get raiModelsTimeoutFirstToken => '端末内モデルが 30 秒返事をしませんでした';
+
+  @override
+  String get raiModelsTimeoutOverall => '端末内モデルの返事が長すぎるので打ち切りました';
+
+  @override
+  String get raiModelsOnlyThinking => '端末内モデルから返事がありませんでした(思考だけで終わった可能性)';
+
+  @override
+  String raiModelsGenerateFailed(String error) {
+    return '生成に失敗しました: $error';
+  }
+
+  @override
+  String get raiModelsHintSystemPolicy =>
+      '「system policy」= サンドボックス / ライブラリ検証で拒否。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください';
+
+  @override
+  String get raiModelsHintGatekeeper =>
+      'Gatekeeper に止められた場合: 「システム設定 > プライバシーとセキュリティ」で許可するか、Application Support/llama_cpp の dylib に xattr -dr com.apple.quarantine を実行してください';
+
+  @override
+  String raiModelsLoadFailedLlama(String error) {
+    return 'モデルを読み込めません(llama.cpp): $error';
+  }
+
+  @override
+  String raiModelsLoadFailed(String error) {
+    return 'モデルを読み込めません: $error';
+  }
+
+  @override
+  String get raiModelsEmbeddingRasqText => 'RASQ MiniLM(文)';
+
+  @override
+  String get raiModelsEmbeddingMiniLmL12 => 'MiniLM-L12 多言語(paraphrase, int8)';
+
+  @override
+  String get raiModelsEmbeddingRasqVision => 'RASQ MobileNet(投稿の画像)';
+
+  @override
+  String get raiModelsEmbeddingSiglipText => 'SigLIP2 base(テキスト塔・int8)';
+
+  @override
+  String get raiModelsEmbeddingSiglipVision => 'SigLIP2 base(画像側・int8)';
+
+  @override
+  String raiModelsEmbeddingFailed(String message) {
+    return '失敗: $message';
+  }
+
+  @override
+  String get raiModelsEmbeddingUnavailableHere => 'この環境では端末内の埋め込みモデルを使えません';
+
+  @override
+  String get raiModelsCentralNotConfigured => 'RASQ サーバーの接続先が未設定です';
+
+  @override
+  String raiModelsLoadFailedOnnx(String error) {
+    return 'モデルを読み込めません(onnxruntime): $error';
+  }
+
+  @override
+  String get raiModelsWebDisabled => 'web 検索はまだ使えません';
+
+  @override
+  String get raiModelsWebNoKey => 'Brave Search の鍵が設定されていません';
+
+  @override
+  String get raiModelsWebAnswerTitle => 'web の答え';
+
+  @override
+  String raiModelsWebFailed(String error) {
+    return '検索に失敗: $error';
+  }
+
+  @override
+  String get raiModelsNoteNotInstalled => '未DL';
+
+  @override
   String get settingsActionBarTitle => 'プラグインボタン';
 
   @override

@@ -6,6 +6,7 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../../shell/headers.dart';
 import 'rai_stats.dart';
+import '../../l10n/l10n.dart';
 
 /// RAi のアチーブメント (D-215): サイドバーの「アチーブメント」タイルから開くページ。
 /// 上に達成数、下に実績ごとの進み具合(達成は金のトロフィー)。
@@ -19,7 +20,7 @@ class RaiAchievementsScreen extends ConsumerWidget {
     final progress = raiAchievementProgress(stats);
     final unlocked = progress.where((p) => p.unlocked).length;
     return Scaffold(
-      appBar: RasqPageHeader(title: 'アチーブメント', onBack: () => Navigator.of(context).maybePop()),
+      appBar: RasqPageHeader(title: context.l10n.raiAchievementsTitle, onBack: () => Navigator.of(context).maybePop()),
       body: ListView(key: const ValueKey('rai.achievements'), padding: const EdgeInsets.only(bottom: RasqSpacing.xl), children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, RasqSpacing.xs),
@@ -28,8 +29,8 @@ class RaiAchievementsScreen extends ConsumerWidget {
             const SizedBox(width: RasqSpacing.sm),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('$unlocked / ${progress.length} 達成', key: const ValueKey('rai.achievements.summary'), style: RasqTypography.title),
-                Text('インストラクション ${stats.instructionsAsked} 回 · アシスタント ${stats.assistantAsked} 回(アプリの話 ${stats.assistantAppAsked} 回)· 完走 ${stats.instructionsCompleted} 回 · 聞き直し ${stats.repeatedAsks} 回', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                Text(context.l10n.raiAchievementsProgress(unlocked, progress.length), key: const ValueKey('rai.achievements.summary'), style: RasqTypography.title),
+                Text(context.l10n.raiAchievementsStats(stats.instructionsAsked, stats.assistantAsked, stats.assistantAppAsked, stats.instructionsCompleted, stats.repeatedAsks), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               ]),
             ),
           ]),

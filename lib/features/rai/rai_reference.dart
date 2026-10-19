@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import '../../l10n/l10n.dart';
 
 /// RAi のリファレンス関数 (D-179 → D-189)。
 ///
@@ -263,7 +264,7 @@ double diceSimilarity(String a, String b) {
 /// 落として、活用の違いで外さないようにする(SigLIP 側は不要だがキーワード側は素の文字一致なので)。
 String stemJa(String s) {
   var t = s.trim().toLowerCase();
-  const tails = ['したいです', 'したいんだけど', 'したい', 'するには', 'する方法', 'の方法', 'のやり方', 'はどこ', 'ですか', 'ますか', 'には', 'たい', 'して', 'する', 'できる', '方法', 'やり方', '？', '?', '。'];
+  const tails = ['したいです', 'したいんだけど', 'したい', 'するには', 'する方法', 'の方法', 'のやり方', 'はどこ', 'ですか', 'ますか', 'には', 'たい', 'して', 'する', 'できる', '方法', 'やり方', '？', '?', '。']; // l10n-ignore
   var changed = true;
   while (changed) {
     changed = false;
@@ -280,7 +281,7 @@ String stemJa(String s) {
 /// タグの語幹と、それが動詞(終止形)だったか。動詞は「何をしたいか」を担うので、当たったときの覆いに下限を置く。
 ({String stem, bool verb}) _stemKey(String k) {
   final t = k.trim().toLowerCase();
-  if (t.length >= 2 && RegExp(r'[うくぐすつぬぶむる]$').hasMatch(t)) return (stem: t.substring(0, t.length - 1), verb: true);
+  if (t.length >= 2 && RegExp(r'[うくぐすつぬぶむる]$').hasMatch(t)) return (stem: t.substring(0, t.length - 1), verb: true); // l10n-ignore
   return (stem: t, verb: false);
 }
 
@@ -497,14 +498,14 @@ class RaiReferenceIndex {
 /// アシスタント向けの提案文: 操作リファレンスの手順を「関数の検索手順」として並べる
 /// (関数 / できること / 入力するもの / 決まっているもの)。1 行 = 1 発言 (D-182 の行割りに合わせて `\n`)。
 List<String> proposalLines(RaiOperation op, List<RaiStep> steps) {
-  final lines = <String>['「${op.index}」なら、この順で進めます(${steps.length} 手順)'];
+  final lines = <String>[appL10n.raiProposalHead(op.index, steps.length)];
   for (var i = 0; i < steps.length; i++) {
     final s = steps[i];
     final b = StringBuffer('${i + 1}. ${s.text}');
     if (s.fn != null) {
-      b.write('〔${s.fn}〕');
-      if (s.inputs.isNotEmpty) b.write(' 入力: ${s.inputs.join('、')}');
-      if (s.presets.isNotEmpty) b.write(' 固定: ${s.presets.entries.map((e) => '${e.key}=${e.value}').join(' ')}');
+      b.write(appL10n.raiProposalFunction(s.fn!));
+      if (s.inputs.isNotEmpty) b.write(appL10n.raiProposalInputs(s.inputs.join(appL10n.raiListSeparator)));
+      if (s.presets.isNotEmpty) b.write(appL10n.raiProposalPresets(s.presets.entries.map((e) => '${e.key}=${e.value}').join(' ')));
     }
     lines.add(b.toString());
   }
@@ -512,4 +513,4 @@ List<String> proposalLines(RaiOperation op, List<RaiStep> steps) {
 }
 
 /// LLM に「シチュエーション」の一文を作らせるときの指示(入力そのままでは引けない言い回しを補う)。
-const raiSituationSystem = 'ユーザーの発言を、SNS ブラウザ RASQ で何をしたい状況かを表す日本語の一文に言い換えてください。一文だけ、20 文字程度で。';
+const raiSituationSystem = 'ユーザーの発言を、SNS ブラウザ RASQ で何をしたい状況かを表す日本語の一文に言い換えてください。一文だけ、20 文字程度で。'; // l10n-ignore
