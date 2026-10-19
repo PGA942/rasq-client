@@ -7987,6 +7987,40 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get raiDiagTitle => '診断(開発者モード)';
+
+  @override
+  String get raiDiag3dOn => '3D の RAi: 使う';
+
+  @override
+  String get raiDiag3dOff => '3D の RAi: 使わない(2D で表示)';
+
+  @override
+  String get raiDiag3dOffAndroid =>
+      '3D の RAi: 使わない(Android は既定で 2D。開発者モードの「3D の RAi を試す(Android)」でオン)';
+
+  @override
+  String raiDiag3dFailed(String reason) {
+    return '3D の RAi: 失敗したので 2D に切り替えました($reason)';
+  }
+
+  @override
+  String raiDiagLlm(String phase, String message) {
+    return '端末内 LLM: $phase($message)';
+  }
+
+  @override
+  String raiDiagEmbedding(String phase, String message) {
+    return '埋め込みモデル: $phase($message)';
+  }
+
+  @override
+  String get raiDiagEmpty => '記録された失敗はありません';
+
+  @override
+  String get raiDiagRetry3d => '3D をもう一度試す';
+
+  @override
   String raiFunctionsSettingMissing(String area, String key, String keys) {
     return '「$area」に「$key」という設定はありません(ある: $keys)';
   }

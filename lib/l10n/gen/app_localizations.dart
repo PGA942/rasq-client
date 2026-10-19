@@ -13274,6 +13274,60 @@ abstract class AppLocalizations {
   /// **'{count, plural, other{工程 {count} 手順}}'**
   String raiTraceCaption(int count);
 
+  /// No description provided for @raiDiagTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'診断(開発者モード)'**
+  String get raiDiagTitle;
+
+  /// No description provided for @raiDiag3dOn.
+  ///
+  /// In ja, this message translates to:
+  /// **'3D の RAi: 使う'**
+  String get raiDiag3dOn;
+
+  /// No description provided for @raiDiag3dOff.
+  ///
+  /// In ja, this message translates to:
+  /// **'3D の RAi: 使わない(2D で表示)'**
+  String get raiDiag3dOff;
+
+  /// No description provided for @raiDiag3dOffAndroid.
+  ///
+  /// In ja, this message translates to:
+  /// **'3D の RAi: 使わない(Android は既定で 2D。開発者モードの「3D の RAi を試す(Android)」でオン)'**
+  String get raiDiag3dOffAndroid;
+
+  /// reason は失敗の理由(英語のログの文のまま)
+  ///
+  /// In ja, this message translates to:
+  /// **'3D の RAi: 失敗したので 2D に切り替えました({reason})'**
+  String raiDiag3dFailed(String reason);
+
+  /// phase は状態の名前(notInstalled など、そのまま)、message は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'端末内 LLM: {phase}({message})'**
+  String raiDiagLlm(String phase, String message);
+
+  /// phase は状態の名前(ready など、そのまま)、message は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'埋め込みモデル: {phase}({message})'**
+  String raiDiagEmbedding(String phase, String message);
+
+  /// No description provided for @raiDiagEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'記録された失敗はありません'**
+  String get raiDiagEmpty;
+
+  /// No description provided for @raiDiagRetry3d.
+  ///
+  /// In ja, this message translates to:
+  /// **'3D をもう一度試す'**
+  String get raiDiagRetry3d;
+
   /// RAi の関数 settings.get / set の結果(ユーザーにも注記で見える)。keys は「, 」区切りのある設定のキー
   ///
   /// In ja, this message translates to:

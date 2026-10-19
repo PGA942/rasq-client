@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../settings/settings_dsl.dart';
 import '../../l10n/l10n.dart';
 import 'prompts/rai_prompts.dart';
+import 'rai_diagnostics.dart';
 
 /// 端末内 LLM(ワイヤーフレームの「Agents-A1-4B」)の配線 (D-181)。
 ///
@@ -268,7 +269,10 @@ final raiLlmProvider = Provider<RaiLlm>((ref) => UnavailableRaiLlm());
 final raiLlmStatusProvider = StreamProvider<RaiLlmStatus>((ref) async* {
   final llm = ref.watch(raiLlmProvider);
   yield llm.current;
-  unawaited(llm.refresh());
+  // 状態の確かめの失敗で RAi を開けなくしない (D-516): 記録だけして、いまの状態のまま出す。
+  unawaited(Future.sync(llm.refresh).catchError((Object e) {
+    if (ref.mounted) ref.read(raiDiagnosticsProvider.notifier).add('llm', 'refresh: $e');
+  }));
   yield* llm.statuses;
 });
 

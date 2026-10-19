@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +9,10 @@ import 'package:rasq_design/rasq_design.dart';
 import '../../app/router.dart';
 import '../../shell/headers.dart';
 import 'rai_chat.dart';
+import 'rai_diagnostics.dart';
+import 'rai_embedding_model.dart';
 import 'rai_layout.dart';
+import 'rai_llm.dart';
 import 'rai_mascot_3d.dart';
 import 'rai_motion.dart';
 import 'rai_overlay.dart';
@@ -136,7 +140,13 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
     super.initState();
     _rai; // ignore: unnecessary_statements, dispose では ref を使えないので先に解決しておく
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) showRai(ref, mode: RaiMode.assistant, asking: widget.ask);
+      if (!mounted) return;
+      // バー / マスコットの層を出せなくても、ホーム(チャットの列とサイドバー)は出したままにする (D-516)。
+      try {
+        showRai(ref, mode: RaiMode.assistant, asking: widget.ask);
+      } catch (e, st) {
+        ref.read(raiDiagnosticsProvider.notifier).add('open', '$e\n$st');
+      }
     });
   }
 
@@ -312,6 +322,8 @@ class RaiSidebar extends ConsumerWidget {
                 GoRouter.of(context).push(Routes.raiAchievements);
               },
             ),
+            // 診断 (D-516、開発者モードだけ): 3D / 端末内モデルの状態と、記録された失敗。
+            if (RasqDeveloperMode.of(context)) const RaiDiagnosticsSection(),
             RasqListTile(
               key: const ValueKey('rai.sidebar.macros'),
               title: context.l10n.raiHomeMacro,
@@ -323,6 +335,65 @@ class RaiSidebar extends ConsumerWidget {
           ]),
         ),
       ),
+    );
+  }
+}
+
+/// RAi の診断 (D-516、開発者モードのサイドバー): 3D のマスコット・端末内 LLM・埋め込みの状態と、記録された失敗。
+/// 実機で「RAi が開かない」などを調べるときの手がかり(同じ内容は `adb logcat -s flutter` の `RAi diag` にも出る)。
+class RaiDiagnosticsSection extends ConsumerWidget {
+  const RaiDiagnosticsSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final supported = ref.watch(raiMascot3dSupportedProvider);
+    final fallback = ref.watch(raiMascot3dFallbackProvider);
+    final String mascot;
+    if (fallback != null) {
+      mascot = l.raiDiag3dFailed(fallback);
+    } else if (supported) {
+      mascot = l.raiDiag3dOn;
+    } else {
+      mascot = defaultTargetPlatform == TargetPlatform.android && !kIsWeb ? l.raiDiag3dOffAndroid : l.raiDiag3dOff;
+    }
+    final llm = ref.watch(raiLlmStatusProvider).value ?? ref.read(raiLlmProvider).current;
+    final emb = ref.watch(raiEmbeddingStatusProvider).value ?? ref.read(raiEmbeddingModelProvider).current;
+    final log = ref.watch(raiDiagnosticsProvider);
+    final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
+    String when(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}:${d.second.toString().padLeft(2, '0')}';
+    return Column(
+      key: const ValueKey('rai.sidebar.diagnostics'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        RasqSectionHeader(title: l.raiDiagTitle),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
+          child: SelectableText(
+            [
+              mascot,
+              l.raiDiagLlm(llm.phase.name, llm.message ?? '-'),
+              l.raiDiagEmbedding(emb.phase.name, emb.message ?? '-'),
+              if (log.isEmpty) l.raiDiagEmpty,
+              for (final d in log.reversed) '${when(d.at)} [${d.area}] ${d.message}',
+            ].join('\n'),
+            style: caption,
+          ),
+        ),
+        if (fallback != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+              child: TextButton(
+                key: const ValueKey('rai.sidebar.diagnostics.retry3d'),
+                onPressed: () => ref.read(raiMascot3dFallbackProvider.notifier).reset(),
+                child: Text(l.raiDiagRetry3d),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

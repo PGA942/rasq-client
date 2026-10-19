@@ -10,6 +10,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:three_js/three_js.dart' as three;
 
 import '../../platform/web_gl_bindings.dart';
+import '../settings/developer_mode.dart';
+import '../settings/settings_dsl.dart' show settingsAreaProvider;
+import 'rai_diagnostics.dart';
 import 'rai_face.dart';
 import 'rai_motion.dart';
 import 'rai_space.dart';
@@ -22,7 +25,60 @@ import 'rai_space.dart';
 // Web 版 (D-300 → D-303 → D-304): three_js の土台 (flutter_angle) は、Web では `gles_bindings.js`(index.html で読み込む。
 // `web/vendor/flutter_angle/`)の関数を呼ぶ。**読み込まれていないと最初のフレームが返らず、アプリごと起動しなくなる**ので、
 // あるときだけ 3D、無ければ 2D([RaiMascot] の painter)。`Platform` は Web では触れないので、先に kIsWeb を見る。
-final raiMascot3dProvider = Provider<bool>((_) => kIsWeb ? webGlBindingsLoaded() : !Platform.environment.containsKey('FLUTTER_TEST'));
+//
+// Android (D-516): 3D の土台 flutter_angle は Android では ANGLE(arm64-v8a だけ同梱)/ 端末の GLES を切り替えて使い、
+// 実機で RAi が開かなくなった(初期化が失敗 / 止まると、three_js の読み込み中の表示 = 画面いっぱいの不透明な面が
+// RAi のバーとホームの上に残る)。Android は既定で 2D。開発者モードの「3D の RAi を試す(Android)」でだけ 3D を試す。
+// どの端末でも、3D が失敗したら [raiMascot3dFallbackProvider] に理由を残して 2D に切り替える。
+final raiMascot3dProvider = Provider<bool>((ref) => ref.watch(raiMascot3dSupportedProvider) && ref.watch(raiMascot3dFallbackProvider) == null);
+
+/// この端末で 3D を使ってよいか(失敗の切り替えは含まない)。
+final raiMascot3dSupportedProvider = Provider<bool>((ref) {
+  if (kIsWeb) return webGlBindingsLoaded();
+  return raiMascot3dAllowed(
+    test: Platform.environment.containsKey('FLUTTER_TEST'),
+    android: Platform.isAndroid,
+    androidOptIn: ref.watch(developerModeProvider) && ref.watch(settingsAreaProvider(developerModeArea)).value?[raiAndroid3dKey] == true,
+  );
+});
+
+/// 開発者モードの設定(`about.developer`)の「3D の RAi を試す(Android)」の項目 (D-516)。
+const raiAndroid3dKey = 'raiAndroid3d';
+
+/// 端末(Web 以外)で 3D を使うか (D-516)。テストでは使わない。Android は開発者モードで試すときだけ。
+bool raiMascot3dAllowed({required bool test, required bool android, required bool androidOptIn}) {
+  if (test) return false;
+  if (android) return androidOptIn;
+  return true;
+}
+
+/// 3D の初期化が失敗したら理由を持つ (D-516)。null = 失敗していない。持っている間は 2D で描く(このセッションの間)。
+class RaiMascot3dFallback extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void fail(String reason) {
+    if (!ref.mounted || state != null) return;
+    ref.read(raiDiagnosticsProvider.notifier).add('3d', reason);
+    state = reason;
+  }
+
+  /// 試し直す(開発者モードの診断から)。
+  void reset() => state = null;
+}
+
+final raiMascot3dFallbackProvider = NotifierProvider<RaiMascot3dFallback, String?>(RaiMascot3dFallback.new);
+
+/// 3D が出るまで待つ長さ (D-516)。過ぎたら失敗とみなして 2D に切り替える(GL の初期化の例外は three_js の中で
+/// 握られず、こちらには届かないため)。
+const raiMascot3dTimeout = Duration(seconds: 20);
+
+/// three_js の描画の土台を作る関数 (D-516)。テストは作るときの失敗 / 準備の終わらない土台に差し替える。
+typedef RaiThreeFactory = three.ThreeJS Function({required void Function() onSetupComplete, required Future<void> Function() setup, Widget? loadingWidget, Size? size, three.Settings? settings});
+
+final raiThreeFactoryProvider = Provider<RaiThreeFactory>(
+  (_) => ({required onSetupComplete, required setup, loadingWidget, size, settings}) => three.ThreeJS(onSetupComplete: onSetupComplete, setup: setup, loadingWidget: loadingWidget, size: size, settings: settings),
+);
 
 /// RAi のマスコット(3D / 2D の代わりの絵)を画面に描かない (D-466)。位置・大きさ・腕・向きの計算
 /// ([RaiMascot3dController])と、指す部品の枠はそのまま。rasq-central のホームページのシーン(tool/preview/homescenes_test.dart)は
@@ -129,7 +185,7 @@ class RaiMascot3dController extends ChangeNotifier {
   bool get loop => _plan == null ? true : _plan!.at(_progress).loop;
 }
 
-class RaiMascot3d extends StatefulWidget {
+class RaiMascot3d extends ConsumerStatefulWidget {
   const RaiMascot3d({super.key, required this.size, this.controller, this.asset = 'assets/models/rai.glb', this.outline, this.opacity = 1}) : projector = null;
 
   /// 空間モード (D-197): 画面いっぱいの固定ウィジェット。カメラは原点で −Z を向き、モデルは
@@ -150,11 +206,14 @@ class RaiMascot3d extends StatefulWidget {
   static const renderHeight = 500.0;
 
   @override
-  State<RaiMascot3d> createState() => _RaiMascot3dState();
+  ConsumerState<RaiMascot3d> createState() => _RaiMascot3dState();
 }
 
-class _RaiMascot3dState extends State<RaiMascot3d> {
+class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
   late three.ThreeJS _three;
+
+  /// 土台を作れたか (D-516: 作るときに投げたら破棄もしない)。
+  bool _created = false;
   three.AnimationMixer? _mixer;
   three.Group? _root;
 
@@ -168,6 +227,23 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   String? _currentName;
   bool _failed = false;
   bool _ready = false;
+
+  /// 出るまでの見張り (D-516)。[raiMascot3dTimeout] までに準備が終わらなければ失敗にする。
+  Timer? _watchdog;
+
+  /// 3D を諦めて 2D に切り替える (D-516)。理由は [raiMascot3dFallbackProvider] と診断に残す。
+  /// build の中からも呼ばれるので、状態の変更は次のフレームで。
+  void _fail(String reason) {
+    _watchdog?.cancel();
+    debugPrint('RAi 3D: falling back to 2D: $reason');
+    if (_failed) return;
+    _failed = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {});
+      ref.read(raiMascot3dFallbackProvider.notifier).fail(reason);
+    });
+  }
 
   /// 描画ループ 1 周ごとに増える (D-215): Flutter 側に再合成させるためのカウンター。実機(macOS)では
   /// スタンバイのように Flutter の木が動かないと、ANGLE のテクスチャの新しい絵が画面に出なかった
@@ -200,17 +276,30 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       debugPrint('RAi 3D: $liveInstances three_js instances alive — the shared ANGLE context distorts the scene (D-202). scene=${widget.isScene} under: ${chain.join(' < ')}');
     }
     final proj = widget.projector;
-    _three = three.ThreeJS(
-      onSetupComplete: () {
-        if (mounted) setState(() => _ready = true);
-      },
-      setup: _setup,
-      // 空間モード (D-198): サイズは three_js に任せる(MediaQuery の大きさ。固定サイズだとウィンドウの
-      // アスペクト比が変わったときにテクスチャが引き伸ばされ、位置も向きもずれる)。リサイズ時は
-      // three_js がテクスチャとカメラの aspect を更新する。
-      size: proj == null ? const Size(RaiMascot3d.renderWidth, RaiMascot3d.renderHeight) : null,
-      settings: three.Settings(alpha: true, clearAlpha: 0, clearColor: 0x000000, animate: true, antialias: true, enableShadowMap: false),
-    );
+    // 準備が終わらない(GL の初期化の例外は three_js の中の Future.delayed で捨てられる)ときの見張り (D-516)。
+    _watchdog = Timer(raiMascot3dTimeout, () {
+      if (mounted && !_ready && !_failed) _fail('not ready after ${raiMascot3dTimeout.inSeconds}s (GL / glb init did not finish; see FlutterAnglePlugin / flutter logs)');
+    });
+    try {
+      _three = ref.read(raiThreeFactoryProvider)(
+        onSetupComplete: () {
+          _watchdog?.cancel();
+          if (mounted && !_failed) setState(() => _ready = true);
+        },
+        setup: _setup,
+        // 読み込み中は何も出さない (D-516): 既定は画面いっぱいの不透明な面(canvasColor)+ くるくるで、空間モードでは
+        // RAi のバーとホームの上に被さる。初期化が失敗すると、それが残り続けて RAi が開かないように見えた(Android)。
+        loadingWidget: const SizedBox.shrink(),
+        // 空間モード (D-198): サイズは three_js に任せる(MediaQuery の大きさ。固定サイズだとウィンドウの
+        // アスペクト比が変わったときにテクスチャが引き伸ばされ、位置も向きもずれる)。リサイズ時は
+        // three_js がテクスチャとカメラの aspect を更新する。
+        size: proj == null ? const Size(RaiMascot3d.renderWidth, RaiMascot3d.renderHeight) : null,
+        settings: three.Settings(alpha: true, clearAlpha: 0, clearColor: 0x000000, animate: true, antialias: true, enableShadowMap: false),
+      );
+      _created = true;
+    } catch (e) {
+      _fail('create: $e');
+    }
     _ctrl.addListener(_sync);
   }
 
@@ -232,6 +321,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       return;
     }
     liveInstances--;
+    _watchdog?.cancel();
     _oneShotTimer?.cancel();
     _ctrl.removeListener(_sync);
     _fallback.dispose();
@@ -239,7 +329,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
     // flutter_angle の破棄は EGL の状態次第で例外を投げる(実機: eglMakeCurrent の null check、D-202)。
     // 破棄の失敗でフレームを落とさない。
     try {
-      _three.dispose();
+      if (_created) _three.dispose();
     } catch (e) {
       debugPrint('RAi 3D: dispose failed: $e');
     }
@@ -247,6 +337,8 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   }
 
   Future<void> _setup() async {
+    // 見張りで諦めたあとに準備が追いついたときは何もしない (D-516)。
+    if (!mounted || _failed) return;
     try {
       _three.scene = three.Scene();
       final proj = widget.projector;
@@ -346,7 +438,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       _sync();
     } catch (e) {
       debugPrint('RAi 3D: $e');
-      if (mounted) setState(() => _failed = true);
+      if (mounted) _fail('setup: $e');
     }
   }
 
@@ -496,6 +588,16 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   @override
   Widget build(BuildContext context) {
     if (_failed) return const SizedBox.shrink();
+    try {
+      return _build3d(context);
+    } catch (e) {
+      // 描画の組み立ての失敗で RAi の層ごと落とさない (D-516)。
+      _fail('build: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+  Widget _build3d(BuildContext context) {
     final tex = _three.texture;
     final outline = widget.outline;
     // 縁取り (D-192): 同じテクスチャを一色に塗って 8 方向へずらし、本体の下に敷く。Web 版 (D-300) には Texture が無いので、縁取りなしで出す。
