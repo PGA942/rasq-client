@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../settings/settings_dsl.dart';
@@ -27,7 +28,7 @@ class _PluginUpdateSettingsScreenState extends ConsumerState<PluginUpdateSetting
     final container = ProviderScope.containerOf(context);
     try {
       final entries = await runPluginUpdates(container);
-      messenger?.showSnackBar(SnackBar(content: Text(entries.isEmpty ? '自動で入れる更新はありませんでした' : [for (final e in entries) '${e.name}: ${e.summary}'].join('\n'))));
+      messenger?.showSnackBar(SnackBar(content: Text(entries.isEmpty ? appL10n.storeUpdatesNoneApplied : [for (final e in entries) '${e.name}: ${e.summary}'].join('\n'))));
     } finally {
       if (mounted) setState(() => _checking = false);
     }
@@ -41,7 +42,7 @@ class _PluginUpdateSettingsScreenState extends ConsumerState<PluginUpdateSetting
       length: PluginUpdateGroup.values.length,
       child: Scaffold(
         appBar: RasqPageHeader(
-          title: 'アップデート/デプロイの設定',
+          title: context.l10n.storeUpdateSettingsTitle,
           showMore: false,
           bottom: RasqTabs(items: [for (final g in PluginUpdateGroup.values) RasqTabItem(g.label, id: g.wire, chevron: false)], showChevron: false),
         ),
@@ -51,7 +52,7 @@ class _PluginUpdateSettingsScreenState extends ConsumerState<PluginUpdateSetting
             child: TabBarView(children: [
               for (final g in PluginUpdateGroup.values)
                 ListView(key: ValueKey('store.updates.tab.${g.wire}'), children: [
-                  const RasqSectionHeader(title: 'アップデート/デプロイ', topMargin: 0),
+                  RasqSectionHeader(title: context.l10n.storeUpdateSettingsModeHeader, topMargin: 0),
                   for (final m in PluginUpdateMode.values)
                     RadioListTile<PluginUpdateMode>(
                       key: ValueKey('store.updates.${g.wire}.${m.wire}'),
@@ -71,11 +72,11 @@ class _PluginUpdateSettingsScreenState extends ConsumerState<PluginUpdateSetting
           const Divider(height: 1),
           RasqSwitchListTile(
             key: const ValueKey('store.updates.popup'),
-            title: 'アップデート後の起動時にポップアップを表示',
+            title: context.l10n.storeUpdateSettingsPopup,
             value: popup,
             onChanged: (v) => store.set('popup', v),
           ),
-          RasqListTile(key: const ValueKey('store.updates.log'), title: '更新ログ', leading: const Icon(Icons.history), onTap: () => context.push(Routes.storeUpdateLog)),
+          RasqListTile(key: const ValueKey('store.updates.log'), title: context.l10n.storeUpdateLogTitle, leading: const Icon(Icons.history), onTap: () => context.push(Routes.storeUpdateLog)),
           Padding(
             padding: const EdgeInsets.all(RasqSpacing.page),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -83,12 +84,12 @@ class _PluginUpdateSettingsScreenState extends ConsumerState<PluginUpdateSetting
                 key: const ValueKey('store.updates.checkNow'),
                 onPressed: _checking ? null : _checkNow,
                 icon: _checking ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.system_update_alt),
-                label: const Text('いま確かめる'),
+                label: Text(context.l10n.storeUpdateSettingsCheckNow),
               ),
               const SizedBox(height: RasqSpacing.xs),
-              const RasqCaption(
-                '許可した内容が広がる版と有料の版は、自動では入りません',
-                detail: '最後に許可した内容より権限・接続先・使う場所・用途が広がる版(確かめられない版も)と、買っていない有料の版は、どのモードでも自動では使い始めません(更新ログに理由が残ります)。起動するたびに 1 回確かめます。',
+              RasqCaption(
+                context.l10n.storeUpdateSettingsCaption,
+                detail: context.l10n.storeUpdateSettingsCaptionDetail,
                 padding: EdgeInsets.zero,
               ),
             ]),
@@ -109,9 +110,9 @@ class PluginUpdateLogScreen extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     String date(DateTime d) => '${d.year}/${d.month}/${d.day} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     return Scaffold(
-      appBar: const RasqPageHeader(title: '更新ログ', showMore: false),
+      appBar: RasqPageHeader(title: context.l10n.storeUpdateLogTitle, showMore: false),
       body: log.isEmpty
-          ? const RasqEmptyView(title: 'まだありません', hint: 'アップデートすると、ここに残ります')
+          ? RasqEmptyView(title: context.l10n.storeUpdateLogEmpty, hint: context.l10n.storeUpdateLogEmptyHint)
           : ListView.separated(
               itemCount: log.length,
               separatorBuilder: (_, _) => const Divider(height: 1),

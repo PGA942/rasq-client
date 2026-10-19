@@ -6,6 +6,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
 
@@ -224,7 +225,7 @@ class StoreFrameCard extends StatelessWidget {
                   builder: (ctx) => RasqIconButton(
                     icon: Icons.more_horiz,
                     size: 18,
-                    tooltip: 'メニュー',
+                    tooltip: context.l10n.storeMenu,
                     onPressed: () {
                       final box = ctx.findRenderObject() as RenderBox;
                       onMore!(box.localToGlobal(Offset.zero) & box.size);
@@ -287,7 +288,7 @@ String starsText(int rating) => '★' * rating.clamp(0, 5);
 /// 「3人が役に立ったと考えました。」(自分の 👍 は足して見せる)。
 String helpfulSummary(StoreReview r, ReviewVote mine) {
   final n = r.helpfulCount + (mine == ReviewVote.up ? 1 : 0);
-  return n == 0 ? 'まだ評価がありません' : '$n人が役に立ったと考えました。';
+  return n == 0 ? appL10n.storeReviewNoVotes : appL10n.storeReviewHelpfulCount(n);
 }
 
 /// レビュー共有用のリンク(アプリ内ディープリンク。Web 版は M4 後段)。
@@ -330,17 +331,17 @@ class ReviewActionBar extends ConsumerWidget {
         items: [
           RasqActionBarItem(
             id: 'share',
-            label: '共有',
+            label: context.l10n.storeShare,
             icon: Icons.shortcut,
             showCount: false,
             onTap: () async {
               await Clipboard.setData(ClipboardData(text: reviewShareLink(pluginId, review.id)));
-              if (context.mounted) toast('レビューのリンクをコピーしました');
+              if (context.mounted) toast(context.l10n.storeReviewLinkCopied);
             },
           ),
           RasqActionBarItem(
             id: 'helpful',
-            label: '参考になった',
+            label: context.l10n.storeReviewHelpful,
             icon: Icons.thumb_up_outlined,
             doneIcon: Icons.thumb_up,
             done: mine == ReviewVote.up,
@@ -349,7 +350,7 @@ class ReviewActionBar extends ConsumerWidget {
           ),
           RasqActionBarItem(
             id: 'not_helpful',
-            label: '参考にならなかった',
+            label: context.l10n.storeReviewNotHelpful,
             icon: Icons.thumb_down_outlined,
             doneIcon: Icons.thumb_down,
             done: mine == ReviewVote.down,
@@ -374,7 +375,7 @@ UserSummary reviewAuthorOf(StoreReview r) {
   return UserSummary(
     id: 'rasq:$handle',
     account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: handle),
-    displayName: r.authorName.isEmpty ? '匿名' : r.authorName,
+    displayName: r.authorName.isEmpty ? appL10n.storeReviewAnonymous : r.authorName,
     avatarUrl: r.authorAvatarUrl,
   );
 }
@@ -397,9 +398,9 @@ class StoreReviewTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final r = review;
     final meta = [
-      if (r.verifiedUse) '実利用済み',
+      if (r.verifiedUse) context.l10n.storeReviewVerifiedUse,
       if (r.usedVersion.isNotEmpty) 'v${r.usedVersion}',
-    ].join(' ・ ');
+    ].join(context.l10n.storeDotSeparator);
     return RasqPostTile(
       author: reviewAuthorOf(r),
       createdAt: r.createdAt,
@@ -425,7 +426,7 @@ class StoreReviewTile extends StatelessWidget {
             margin: const EdgeInsets.only(top: RasqSpacing.sm),
             padding: const EdgeInsets.all(RasqSpacing.sm),
             decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
-            child: Text('開発者の返信: ${r.developerReply}', style: RasqTypography.caption),
+            child: Text(context.l10n.storeReviewDeveloperReply('${r.developerReply}'), style: RasqTypography.caption),
           ),
       ]),
       actionBar: ReviewActionBar(pluginId: pluginId, review: r),
@@ -455,7 +456,7 @@ class StoreReviewFrame extends StatelessWidget {
         Expanded(child: Text(review.headline, style: RasqTypography.listTile, maxLines: 1, overflow: TextOverflow.ellipsis)),
       ]),
       headerTrailing: RasqTimestamp(review.createdAt, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-      body: Text(review.body.isEmpty ? '(本文なし)' : review.body, style: RasqTypography.caption.copyWith(height: 1.5), maxLines: 3, overflow: TextOverflow.ellipsis),
+      body: Text(review.body.isEmpty ? context.l10n.storeReviewNoBody : review.body, style: RasqTypography.caption.copyWith(height: 1.5), maxLines: 3, overflow: TextOverflow.ellipsis),
       footer: Padding(padding: const EdgeInsets.symmetric(vertical: RasqSpacing.xs), child: ReviewHelpfulSummary(pluginId: pluginId, review: review)),
     );
   }
@@ -472,8 +473,8 @@ Future<void> openReviewComposer(BuildContext context, WidgetRef ref, {required S
   var rating = 0;
   final ok = await manager.showBottomSheet<bool>(
     id: 'store.review.create',
-    title: 'レビューの作成',
-    confirmText: '送信',
+    title: appL10n.storeReviewComposeTitle,
+    confirmText: appL10n.storeReviewSend,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setSheet) {
         final scheme = Theme.of(ctx).colorScheme;
@@ -481,7 +482,7 @@ Future<void> openReviewComposer(BuildContext context, WidgetRef ref, {required S
           padding: const EdgeInsets.all(RasqSpacing.page),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
-              Text('評価', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              Text(ctx.l10n.storeRatingLabel, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               const SizedBox(width: RasqSpacing.sm),
               for (var i = 1; i <= 5; i++)
                 IconButton(
@@ -491,13 +492,13 @@ Future<void> openReviewComposer(BuildContext context, WidgetRef ref, {required S
                   onPressed: () => setSheet(() => rating = i),
                 ),
             ]),
-            RasqInput(controller: title, hintText: '見出し(任意)'),
+            RasqInput(controller: title, hintText: ctx.l10n.storeReviewTitleHint),
             const SizedBox(height: RasqSpacing.sm),
-            RasqInput(controller: body, hintText: '使用感や気になった点を入力してください', maxLines: 5, autofocus: true),
+            RasqInput(controller: body, hintText: ctx.l10n.storeReviewBodyHint, maxLines: 5, autofocus: true),
             if (installed != null)
               Padding(
                 padding: const EdgeInsets.only(top: RasqSpacing.xs),
-                child: Text('利用バージョン: v${installed.version}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                child: Text(ctx.l10n.storeReviewUsedVersion(installed.version), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               ),
           ]),
         );
@@ -506,15 +507,15 @@ Future<void> openReviewComposer(BuildContext context, WidgetRef ref, {required S
   );
   if (ok != true || !context.mounted) return;
   if (rating == 0) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('★ を選んでください')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.storeReviewPickRating)));
     return;
   }
   try {
     await ref.read(storeClientProvider).createReview(detail.id, rating: rating, title: title.text.trim(), body: body.text.trim(), usedVersion: installed?.version);
     ref.invalidate(storeReviewsProvider(detail.id));
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('レビューを送信しました')));
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.storeReviewSent)));
   } catch (e) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('レビューを送信できませんでした: $e')));
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.storeReviewSendFailed('$e'))));
   }
 }
 
@@ -630,7 +631,7 @@ class SafetyDetail extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-      if (safety.permissions.isEmpty) Padding(padding: const EdgeInsets.only(top: RasqSpacing.md), child: Text('必要な権限: なし', style: RasqTypography.bodySmall)),
+      if (safety.permissions.isEmpty) Padding(padding: const EdgeInsets.only(top: RasqSpacing.md), child: Text(context.l10n.storeSafetyNoPermissions, style: RasqTypography.bodySmall)),
       for (final g in PermissionKind.group(safety.permissions)) ...[
         Padding(
           padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs),
@@ -646,18 +647,18 @@ class SafetyDetail extends StatelessWidget {
             ]),
           ),
       ],
-      Padding(padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs), child: Text('外部通信とデータ', style: RasqTypography.listTile)),
-      Text(safety.externalHosts.isEmpty ? '外部通信先: なし' : '外部通信先: ${safety.externalHosts.join('、')}', style: RasqTypography.bodySmall),
-      if (safety.dataHandling.isNotEmpty) Text('データの扱い: ${safety.dataHandling}', style: RasqTypography.bodySmall),
-      if (safety.externalSdks.isNotEmpty) Text('外部 SDK: ${safety.externalSdks.join('、')}', style: RasqTypography.bodySmall),
-      Padding(padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs), child: Text('実行環境', style: RasqTypography.listTile)),
+      Padding(padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs), child: Text(context.l10n.storeSafetyExternalHeader, style: RasqTypography.listTile)),
+      Text(safety.externalHosts.isEmpty ? context.l10n.storeSafetyNoHosts : context.l10n.storeSafetyHosts(safety.externalHosts.join(context.l10n.storeListSeparator)), style: RasqTypography.bodySmall),
+      if (safety.dataHandling.isNotEmpty) Text(context.l10n.storeSafetyDataHandling(safety.dataHandling), style: RasqTypography.bodySmall),
+      if (safety.externalSdks.isNotEmpty) Text(context.l10n.storeSafetySdks(safety.externalSdks.join(context.l10n.storeListSeparator)), style: RasqTypography.bodySmall),
+      Padding(padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs), child: Text(context.l10n.storeSafetyRuntimeHeader, style: RasqTypography.listTile)),
       Text(
         [
-          if (safety.crashFreeRate != null) '正常起動率 ${(safety.crashFreeRate! * 100).toStringAsFixed(1)}%',
-          safety.backgroundExecution ? 'バックグラウンド実行あり' : 'バックグラウンド実行なし',
-          safety.usesGpu ? 'GPU 使用' : 'GPU 不使用',
-          safety.adPlacements.isEmpty ? '広告なし' : '広告あり(${safety.adPlacements.join('、')})',
-        ].join(' ・ '),
+          if (safety.crashFreeRate != null) context.l10n.storeSafetyCrashFree((safety.crashFreeRate! * 100).toStringAsFixed(1)),
+          safety.backgroundExecution ? context.l10n.storeSafetyBackground : context.l10n.storeSafetyNoBackground,
+          safety.usesGpu ? context.l10n.storeSafetyGpu : context.l10n.storeSafetyNoGpu,
+          safety.adPlacements.isEmpty ? context.l10n.storeSafetyNoAds : context.l10n.storeSafetyAds(safety.adPlacements.join(context.l10n.storeListSeparator)),
+        ].join(context.l10n.storeDotSeparator),
         style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
       ),
     ]);

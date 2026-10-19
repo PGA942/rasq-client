@@ -5,6 +5,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import 'store_install.dart';
@@ -25,7 +26,7 @@ class PluginVersionsScreen extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final record = ref.watch(installedPluginsProvider).where((p) => p.id == pluginId).firstOrNull;
     if (record == null) {
-      return Scaffold(appBar: const RasqPageHeader(title: 'アカウントごとにバージョンを設定', showMore: false), body: const RasqEmptyView(title: 'インストールされていません'));
+      return Scaffold(appBar: RasqPageHeader(title: context.l10n.storeAccountVersionsTitle, showMore: false), body: RasqEmptyView(title: context.l10n.storeNotInstalled));
     }
     final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
     final releases = ref.watch(storeReleasesProvider(pluginId)).value ?? const <ReleaseNote>[];
@@ -40,7 +41,7 @@ class PluginVersionsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: RasqPageHeader(title: record.name.isEmpty ? record.id : record.name, showMore: false),
       body: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
-        const RasqSectionHeader(title: '入っている版', topMargin: 0),
+        RasqSectionHeader(title: context.l10n.storeVersionsInstalledHeader, topMargin: 0),
         for (final v in record.allVersions)
           Builder(builder: (ctx) {
             final isDefault = v.version == record.version;
@@ -50,34 +51,34 @@ class PluginVersionsScreen extends ConsumerWidget {
               leading: Icon(isDefault ? Icons.radio_button_checked : Icons.radio_button_off, color: isDefault ? RasqColors.link : null),
               title: label(v),
               subtitle: [
-                if (isDefault) '既定の版',
-                if (users > 0) '$users アカウントが使用中',
-                '入れた日 ${v.installedAt.year}/${v.installedAt.month}/${v.installedAt.day}',
-              ].join(' ・ '),
+                if (isDefault) context.l10n.storeVersionsDefault,
+                if (users > 0) context.l10n.storeVersionsUsers(users),
+                context.l10n.storeVersionsInstalledOn(v.installedAt.year, v.installedAt.month, v.installedAt.day),
+              ].join(context.l10n.storeDotSeparator),
               chevron: false,
               trailing: RasqIconButton(
                 key: ValueKey('store.versions.menu.${v.version}'),
                 icon: Icons.more_horiz,
                 size: 20,
-                tooltip: 'メニュー',
+                tooltip: context.l10n.storeMenu,
                 onPressed: () async {
                   final box = ctx.findRenderObject() as RenderBox?;
                   final anchor = box == null ? const Rect.fromLTWH(0, 0, 1, 1) : Rect.fromLTWH(box.localToGlobal(Offset.zero).dx + box.size.width - 48, box.localToGlobal(Offset.zero).dy, 40, box.size.height);
                   final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'store.versions.menu', anchor: anchor, items: [
-                    RasqDropdownItem('既定の版にする', 'default', enabled: !isDefault),
-                    RasqDropdownItem('この版を消す', 'remove', destructive: true, enabled: !record.usedVersions.contains(v.version)),
+                    RasqDropdownItem(context.l10n.storeVersionsMakeDefault, 'default', enabled: !isDefault),
+                    RasqDropdownItem(context.l10n.storeVersionsRemove, 'remove', destructive: true, enabled: !record.usedVersions.contains(v.version)),
                   ]);
                   if (pick == 'default') {
                     final ok = await confirmVersionScope(ref.read(overlayManagerProvider), notifier, pluginId, v.version);
-                    if (ok != null) report(await notifier.setDefaultVersion(pluginId, v.version, consent: ok.consent), '${v.version} を既定の版にしました');
+                    if (ok != null) report(await notifier.setDefaultVersion(pluginId, v.version, consent: ok.consent), appL10n.storeVersionMadeDefault(v.version));
                   }
-                  if (pick == 'remove') report(await notifier.removeVersion(pluginId, v.version), '${v.version} を消しました');
+                  if (pick == 'remove') report(await notifier.removeVersion(pluginId, v.version), appL10n.storeVersionsRemoved(v.version));
                 },
               ),
             );
           }),
         if (notInstalled.isNotEmpty) ...[
-          const RasqSectionHeader(title: 'ほかの版を入れる'),
+          RasqSectionHeader(title: context.l10n.storeVersionsOthersHeader),
           for (final r in notInstalled)
             RasqListTile(
               key: ValueKey('store.versions.release.${r.version}'),
@@ -85,28 +86,28 @@ class PluginVersionsScreen extends ConsumerWidget {
               title: '${r.version}${r.channel != 'stable' ? ' (Pre)' : ''}',
               subtitle: [
                 if (r.notes.isNotEmpty) r.notes.split('\n').first,
-                if (r.permissionsAdded.isNotEmpty) '権限が増えます',
-              ].join(' ・ '),
+                if (r.permissionsAdded.isNotEmpty) context.l10n.storeVersionsMorePermissions,
+              ].join(context.l10n.storeDotSeparator),
               chevron: false,
               trailing: TextButton(
                 key: ValueKey('store.versions.install.${r.version}'),
                 onPressed: () async {
                   final d = await ref.read(storeClientProvider).plugin(pluginId);
-                  if (d == null) return report('このプラグインは見つかりませんでした', '');
+                  if (d == null) return report(appL10n.storePluginNotFound, '');
                   if (!context.mounted) return;
                   final msg = await confirmAndInstallPlugin(ref, d, version: r.version, activate: false);
                   if (msg != null) report(null, msg);
                 },
-                child: const Text('入れる'),
+                child: Text(context.l10n.storeVersionsInstall),
               ),
             ),
         ],
         if (!isPack) ...[
-          const RasqSectionHeader(title: 'アカウントごと'),
-          const RasqCaption(
-            'アカウントごとに、使う版を選べます',
-            detail: 'そのアカウントを使っている間、スロットプラグインとノードの並べ替えは、ここで選んだ版で動きます。',
-            padding: EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+          RasqSectionHeader(title: context.l10n.storeVersionsPerAccountHeader),
+          RasqCaption(
+            context.l10n.storeVersionsPerAccountCaption,
+            detail: context.l10n.storeVersionsPerAccountDetail,
+            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           ),
           for (final s in sessions)
             Builder(builder: (ctx) {
@@ -123,22 +124,22 @@ class PluginVersionsScreen extends ConsumerWidget {
                     final box = ctx.findRenderObject() as RenderBox?;
                     final anchor = box == null ? const Rect.fromLTWH(0, 0, 1, 1) : Rect.fromLTWH(box.localToGlobal(Offset.zero).dx + box.size.width - 160, box.localToGlobal(Offset.zero).dy, 150, box.size.height);
                     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'store.versions.account', anchor: anchor, items: [
-                      RasqDropdownItem('既定に従う(${record.version})', '', checked: chosen == null),
+                      RasqDropdownItem(context.l10n.storeVersionsFollowDefault(record.version), '', checked: chosen == null),
                       for (final v in record.allVersions) RasqDropdownItem(label(v), v.version, checked: chosen == v.version),
                     ]);
                     if (pick == null) return;
                     final ok = pick.isEmpty ? (consent: null) : await confirmVersionScope(ref.read(overlayManagerProvider), notifier, pluginId, pick);
                     if (ok == null) return;
-                    report(await notifier.setAccountVersion(pluginId, s.account.key, pick.isEmpty ? null : pick, consent: ok.consent), pick.isEmpty ? '${s.account} は既定の版に従います' : '${s.account} は $pick を使います');
+                    report(await notifier.setAccountVersion(pluginId, s.account.key, pick.isEmpty ? null : pick, consent: ok.consent), pick.isEmpty ? appL10n.storeVersionsAccountFollows('${s.account}') : appL10n.storeVersionsAccountUses('${s.account}', pick));
                   },
-                  child: Text(chosen ?? '既定(${record.version})'),
+                  child: Text(chosen ?? context.l10n.storeVersionsDefaultShort(record.version)),
                 ),
               );
             }),
         ] else
           Padding(
             padding: const EdgeInsets.all(RasqSpacing.page),
-            child: Text('着せ替え / ステッカー・素材は端末全体で 1 つの版を使います(既定の版)。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            child: Text(context.l10n.storeVersionsPackNote, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
       ]),
     );

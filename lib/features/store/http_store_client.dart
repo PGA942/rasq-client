@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:rasq_models/rasq_models.dart' show ErrorCode;
 
 import '../../backend/orgate_client.dart';
+import '../../l10n/l10n.dart';
 import '../../backend/payments_api.dart';
 import 'store_client.dart';
 import 'store_models.dart';
@@ -37,7 +38,7 @@ class HttpStoreClient implements StoreClient {
   }
 
   OrgateClient _orgate(String what) =>
-      payments ?? (throw OrgateException(ErrorCode.http(503), '$whatは ORGATE-Server につなぐと使えます(接続先が設定されていません)'));
+      payments ?? (throw OrgateException(ErrorCode.http(503), appL10n.storeNeedsOrgate(what)));
 
   static List<StorePluginCard> _cards(Object? v) => [
         for (final c in (v as List? ?? const []))
@@ -86,7 +87,7 @@ class HttpStoreClient implements StoreClient {
     final id = Uri.encodeComponent(pluginId);
     final m = InstallManifest.fromJson(await _client.getJson('/plugins/$id/manifest', {'version': ?version, 'session': sessionId}));
     final bundle = m.bundle;
-    if (bundle == null) throw StateError('配布物がありません');
+    if (bundle == null) throw StateError(appL10n.storeNoBundle);
     final bytes = await _client.getBytes('/plugins/$id/artifacts/${Uri.encodeComponent(bundle.id)}', {'version': m.version, 'session': sessionId});
     return verifySessionPackage(pluginId: pluginId, version: version, manifest: m, bytes: bytes);
   }
@@ -136,13 +137,13 @@ class HttpStoreClient implements StoreClient {
   /// 購入は ORGATE (D-401)。
   @override
   Future<StorePurchaseResult> purchase(String pluginId) => _paid(() async {
-        final j = await _orgate('購入').postJson('/plugins/${Uri.encodeComponent(pluginId)}/purchase', const {});
+        final j = await _orgate(appL10n.storeFeaturePurchase).postJson('/plugins/${Uri.encodeComponent(pluginId)}/purchase', const {});
         return (purchased: j['purchased'] == true, pointsSpent: (j['pointsSpent'] as num?)?.toInt() ?? 0, balance: (j['balance'] as num?)?.toInt() ?? 0);
       });
 
   /// ポイントの残高は ORGATE (D-401)。
   @override
-  Future<StorePoints> points() => _paid(() async => StorePoints.fromJson(await _orgate('ポイント').getJson('/me/points')));
+  Future<StorePoints> points() => _paid(() async => StorePoints.fromJson(await _orgate(appL10n.storeFeaturePoints).getJson('/me/points')));
 }
 
 /// 共有セッションの一時実行で受け取った配布物の検証 (D-407、セキュリティ指摘 #11)。登録元は `store:`(審査済み = フル機能)
@@ -157,10 +158,10 @@ Future<Uint8List> verifySessionPackage({
   required Uint8List bytes,
   String pinnedKey = pinnedStorePublicKey,
 }) async {
-  if (manifest.pluginId != pluginId) throw StateError('構成のプラグイン (${manifest.pluginId}) が頼んだもの ($pluginId) と違います');
-  if (version != null && manifest.version != version) throw StateError('構成の版 (${manifest.version}) が頼んだ版 ($version) と違います');
+  if (manifest.pluginId != pluginId) throw StateError(appL10n.storeSessionPluginMismatch(manifest.pluginId, pluginId));
+  if (version != null && manifest.version != version) throw StateError(appL10n.storeSessionVersionMismatch(manifest.version, version));
   final bundle = manifest.bundle;
-  if (bundle == null) throw StateError('配布物がありません');
+  if (bundle == null) throw StateError(appL10n.storeNoBundle);
   final verified = await verifyArtifact(bytes: bytes, artifact: bundle, storePublicKey: manifest.storePublicKey, pinnedKey: pinnedKey);
   if (!verified.ok) throw StateError(verified.message);
   return bytes;

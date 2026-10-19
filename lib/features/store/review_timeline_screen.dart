@@ -7,6 +7,7 @@ import '../../app/navigation.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
@@ -43,11 +44,11 @@ class _ReviewTimelineScreenState extends ConsumerState<ReviewTimelineScreen> {
       length: 2,
       child: Scaffold(
         appBar: RasqPageHeader(
-          title: 'レビュー',
+          title: context.l10n.storeReviewsTitle,
           leadingAvatar: me,
           onMore: () {},
           bottom: RasqTabs(
-            items: [RasqTabItem(_leftSort.label), const RasqTabItem('最新')],
+            items: [RasqTabItem(_leftSort.label), RasqTabItem(context.l10n.storeReviewSortRecent)],
             mode: RasqTabsMode.fixed,
             onSelectedTabTap: (i, rect) async {
               if (i != 0) return;
@@ -60,7 +61,7 @@ class _ReviewTimelineScreenState extends ConsumerState<ReviewTimelineScreen> {
         ),
         body: reviews.when(
           loading: () => const RasqLoading(),
-          error: (e, _) => RasqEmptyView(title: 'レビューを取得できませんでした', hint: '$e'),
+          error: (e, _) => RasqEmptyView(title: context.l10n.storeReviewsLoadFailed, hint: '$e'),
           data: (all) => TabBarView(children: [
             _ReviewList(pluginId: widget.pluginId, reviews: StoreReview.sorted(all, _leftSort)),
             _ReviewList(pluginId: widget.pluginId, reviews: StoreReview.sorted(all, ReviewSort.recent)),
@@ -71,7 +72,7 @@ class _ReviewTimelineScreenState extends ConsumerState<ReviewTimelineScreen> {
             : FloatingActionButton(
         // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
         heroTag: 'fab.store.review',
-                tooltip: 'レビューを書く',
+                tooltip: context.l10n.storeReviewWrite,
                 onPressed: () => openReviewComposer(context, ref, detail: detail),
                 child: const Icon(Icons.add),
               ),
@@ -87,7 +88,7 @@ class _ReviewList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (reviews.isEmpty) return const RasqEmptyView(title: 'まだレビューがありません', hint: '右下の + から最初のレビューを書けます');
+    if (reviews.isEmpty) return RasqEmptyView(title: context.l10n.storeReviewsEmpty, hint: context.l10n.storeReviewsEmptyHint);
     final manager = ref.read(overlayManagerProvider);
     return ListView.separated(
       itemCount: reviews.length,
@@ -100,18 +101,18 @@ class _ReviewList extends ConsumerWidget {
           // 著者 → RASQ アカウントページ (D-270)。ハンドルの無いレビュー(匿名 / 同梱のサンプル)は行き先が無い。
           onAuthorTap: r.authorHandle.isEmpty ? null : () => context.pushRasqAccount(r.authorHandle),
           onMore: (rect) async {
-            final pick = await manager.showDropdown<String>(id: 'store.review.more', anchor: rect, items: const [
-              RasqDropdownItem('リンクをコピー', 'copy'),
-              RasqDropdownItem('レビューを報告', 'report', destructive: true),
+            final pick = await manager.showDropdown<String>(id: 'store.review.more', anchor: rect, items: [
+              RasqDropdownItem(context.l10n.storeCopyLink, 'copy'),
+              RasqDropdownItem(context.l10n.storeReviewReport, 'report', destructive: true),
             ]);
             if (!context.mounted) return;
             switch (pick) {
               case 'copy':
                 await Clipboard.setData(ClipboardData(text: reviewShareLink(pluginId, r.id)));
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('レビューのリンクをコピーしました')));
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.storeReviewLinkCopied)));
               case 'report':
                 // 通報 API は store.yaml 未定義(レビュー信頼性「通報」は M4 後段)。
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('レビューの報告は準備中です')));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.storeReviewReportUnavailable)));
               default:
                 break;
             }

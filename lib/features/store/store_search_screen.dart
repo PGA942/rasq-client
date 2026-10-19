@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
@@ -62,7 +63,7 @@ class _StoreSearchScreenState extends ConsumerState<StoreSearchScreen> {
     try {
       next = await ref.read(storeClientProvider).search(key.q, filters: {for (final f in StoreFilter.values) if (_filters.contains(f)) f});
     } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text('読み直せませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(appL10n.storeReloadFailed('$e'))));
       return;
     }
     if (!mounted) return;
@@ -72,7 +73,7 @@ class _StoreSearchScreenState extends ConsumerState<StoreSearchScreen> {
       _known.addAll(m.added);
       _fresh.addAll(m.added);
     });
-    messenger?.showSnackBar(SnackBar(content: Text(m.added.isEmpty ? '新しく公開されたプラグインはありません' : '新しく公開されたプラグインを ${m.added.length} 件追加しました')));
+    messenger?.showSnackBar(SnackBar(content: Text(m.added.isEmpty ? appL10n.storeNoNewPlugins : appL10n.storeNewPluginsAdded(m.added.length))));
   }
 
   @override
@@ -99,7 +100,7 @@ class _StoreSearchScreenState extends ConsumerState<StoreSearchScreen> {
     final key = (q: _query, filters: [for (final f in StoreFilter.values) if (_filters.contains(f)) f.wire].join(','));
     final results = ref.watch(storeFilteredSearchProvider(key));
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'プラグインを検索', showMore: false),
+      appBar: RasqPageHeader(title: context.l10n.storeSearchTitle, showMore: false),
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.xs),
@@ -108,10 +109,10 @@ class _StoreSearchScreenState extends ConsumerState<StoreSearchScreen> {
             expanded: _filtersOpen || _filters.isNotEmpty,
             controller: _controller,
             focusNode: _focus,
-            hintText: 'プラグインを検索',
+            hintText: context.l10n.storeSearchTitle,
             onDropdownTap: () => setState(() => _filtersOpen = !_filtersOpen),
             filterChips: [
-              RasqFilterChipItem(label: '最近の投稿内容から選出', selected: _recentPick, onTap: () => setState(() => _recentPick = !_recentPick)),
+              RasqFilterChipItem(label: context.l10n.storeSearchRecentPick, selected: _recentPick, onTap: () => setState(() => _recentPick = !_recentPick)),
               for (final f in StoreFilter.values)
                 RasqFilterChipItem(
                   label: f.label,
@@ -124,7 +125,7 @@ class _StoreSearchScreenState extends ConsumerState<StoreSearchScreen> {
         Expanded(
           child: results.when(
             loading: () => const RasqLoading(),
-            error: (e, _) => RasqEmptyView(title: '検索できませんでした', hint: '$e'),
+            error: (e, _) => RasqEmptyView(title: context.l10n.storeSearchFailed, hint: '$e'),
             data: (data) {
               _sync('${key.q}\u0000${key.filters}', data);
               var items = _shown;
@@ -134,18 +135,18 @@ class _StoreSearchScreenState extends ConsumerState<StoreSearchScreen> {
                 if (!posts.hasValue) return const RasqLoading();
                 final texts = posts.value!;
                 if (texts.isEmpty) {
-                  return const RasqEmptyView(key: ValueKey('store.search.recent.noPosts'), title: '最近の投稿が見つかりませんでした', hint: 'SNS アカウントで投稿すると、その内容に近いプラグインを選びます');
+                  return RasqEmptyView(key: const ValueKey('store.search.recent.noPosts'), title: context.l10n.storeSearchNoRecentPosts, hint: context.l10n.storeSearchNoRecentPostsHint);
                 }
                 items = pickByRecentPosts(items, texts);
-                caption = '最近の投稿 ${texts.length} 件の内容に近い順(端末の中で選んでいます)';
+                caption = context.l10n.storeSearchRecentCaption(texts.length);
               }
               return RefreshIndicator(
                 onRefresh: () => _refresh(key),
                 child: items.isEmpty
                     ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
                         _recentPick
-                            ? const RasqEmptyView(title: '最近の投稿に近いプラグインは見つかりませんでした', hint: 'ワードや絞り込みを変えてみてください')
-                            : const RasqEmptyView(title: '見つかりませんでした', hint: 'ワードや絞り込みを変えてみてください'),
+                            ? RasqEmptyView(title: context.l10n.storeSearchNoRecentMatches, hint: context.l10n.storeSearchNoResultsHint)
+                            : RasqEmptyView(title: context.l10n.storeSearchNoResults, hint: context.l10n.storeSearchNoResultsHint),
                       ])
                     : CustomScrollView(
                         key: const ValueKey('store.search.grid'),

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:plugin_runtime/plugin_runtime.dart' show fetchHostPermitted;
 
+import '../../l10n/l10n.dart';
+
 /// プラグインに許す内容 (セキュリティ確認 2026-10-09 の [8] / [14]): 選んだ版の**マニフェストそのもの**から読む
 /// 権限・接続先・アクセスできるデータ(差し込む面 = 受け取る入力)・目的(権限ごとの用途理由とデータの扱い)。
 /// `.rasqpkg` は root と子を全部合わせる(子にだけ足した権限も見落とさない)。
@@ -62,14 +64,14 @@ class PluginScope {
   List<String> wideningOver(PluginScope? approved) {
     final a = approved ?? const PluginScope();
     return [
-      for (final p in permissions.difference(a.permissions)) '権限 $p',
-      for (final h in hosts) if (!_hostCovered(h, a.hosts)) '接続先 $h',
-      if (instance && !a.instance) '接続先 ログイン先のインスタンス',
-      for (final s in slots.difference(a.slots)) '使う場所 $s',
+      for (final p in permissions.difference(a.permissions)) appL10n.storeScopePermission(p),
+      for (final h in hosts) if (!_hostCovered(h, a.hosts)) appL10n.storeScopeHost(h),
+      if (instance && !a.instance) appL10n.storeScopeInstance,
+      for (final s in slots.difference(a.slots)) appL10n.storeScopeSlot(s),
       // 目的: 許していた権限の用途理由が変わったら(広がったかは文からは決められないので、変わったら確かめ直す)。
       for (final e in reasons.entries)
-        if (a.permissions.contains(e.key) && a.reasons[e.key] != e.value) '用途 ${e.key} — ${e.value}',
-      if (dataHandling.isNotEmpty && dataHandling != a.dataHandling) 'データの扱い — ${dataHandling.length > 80 ? '${dataHandling.substring(0, 80)}…' : dataHandling}',
+        if (a.permissions.contains(e.key) && a.reasons[e.key] != e.value) appL10n.storeScopeReason(e.key, e.value),
+      if (dataHandling.isNotEmpty && dataHandling != a.dataHandling) appL10n.storeScopeDataHandling(dataHandling.length > 80 ? '${dataHandling.substring(0, 80)}…' : dataHandling),
     ];
   }
 

@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import 'store_models.dart';
 
 /// リリースノートの FOW (D-137: 「アップデートとバージョン」のフレームを
@@ -29,14 +30,14 @@ Future<void> openReleaseFow(
     minHeightFactor: 0.3,
     maxHeightFactor: 0.9,
     title: '${detail.name} ${release.version}',
-    cancelText: '閉じる',
+    cancelText: appL10n.storeClose,
     dockAboveFooter: true,
     columnIndex: column,
   );
   await manager.showFow<void>(
     id: releaseFowId,
     spec: spec,
-    semanticsLabel: 'リリースノート ${release.version}',
+    semanticsLabel: appL10n.storeReleaseNotesSemantics(release.version),
     barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
     builder: (ctx, handle) => ReleaseNoteBody(
       detail: detail,
@@ -67,15 +68,15 @@ class ReleaseNoteBody extends StatelessWidget {
     final blocked = detail.status.isCaution && detail.status != PluginStatus.warning;
     final date = release.publishedAt;
     final meta = [
-      release.channel == 'beta' ? 'プレビュー版 (β)' : '安定版',
-      '${date.year}/${date.month}/${date.day} 公開',
-      if (detail.version == release.version) '現在の掲載版',
-      if (isCurrent) 'インストール中',
-    ].join(' ・ ');
+      release.channel == 'beta' ? context.l10n.storeReleaseBeta : context.l10n.storeReleaseStable,
+      context.l10n.storeReleasePublishedOn(date.year, date.month, date.day),
+      if (detail.version == release.version) context.l10n.storeReleaseCurrentListing,
+      if (isCurrent) context.l10n.storeReleaseInstalled,
+    ].join(context.l10n.storeDotSeparator);
     return ListView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.page), children: [
       Text(meta, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
       const SizedBox(height: RasqSpacing.sm),
-      Text(release.notes.isEmpty ? 'この版のリリースノートはありません。' : release.notes, style: RasqTypography.body),
+      Text(release.notes.isEmpty ? context.l10n.storeReleaseNoNotes : release.notes, style: RasqTypography.body),
       if (release.permissionsAdded.isNotEmpty) ...[
         const SizedBox(height: RasqSpacing.md),
         Container(
@@ -85,7 +86,7 @@ class ReleaseNoteBody extends StatelessWidget {
             Row(children: [
               Icon(Icons.key_outlined, size: 16, color: tokens.danger),
               const SizedBox(width: 6),
-              Text('この版で増えた権限', style: RasqTypography.bodySmall.copyWith(color: tokens.danger, fontWeight: FontWeight.w700)),
+              Text(context.l10n.storeReleasePermissionsAdded, style: RasqTypography.bodySmall.copyWith(color: tokens.danger, fontWeight: FontWeight.w700)),
             ]),
             const SizedBox(height: RasqSpacing.xs),
             for (final p in release.permissionsAdded)
@@ -94,7 +95,7 @@ class ReleaseNoteBody extends StatelessWidget {
                 child: Text('${p.kind.label}: ${p.permission} — ${p.reason}', style: RasqTypography.bodySmall),
               ),
             const SizedBox(height: RasqSpacing.xs),
-            Text('権限が増える更新は自動アップデートの対象外です。内容を確認してから入れてください。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(context.l10n.storeReleasePermissionsNote, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ]),
         ),
       ],
@@ -103,16 +104,16 @@ class ReleaseNoteBody extends StatelessWidget {
         onPressed: isCurrent || blocked ? null : onInstall,
         child: Text(
           isCurrent
-              ? 'Ver.${release.version} はインストール済み'
+              ? context.l10n.storeReleaseAlreadyInstalled(release.version)
               : blocked
-                  ? '${detail.status.label}のためインストールできません'
-                  : 'Ver.${release.version} をインストール',
+                  ? context.l10n.storeReleaseBlocked(detail.status.label)
+                  : context.l10n.storeReleaseInstall(release.version),
         ),
       ),
       if (installed != null && !isCurrent)
         Padding(
           padding: const EdgeInsets.only(top: RasqSpacing.xs),
-          child: Text('現在 v${installed!.version} が入っています。この版に置き換わります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
+          child: Text(context.l10n.storeReleaseReplaces(installed!.version), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
         ),
     ]);
   }

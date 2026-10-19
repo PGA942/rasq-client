@@ -5,6 +5,7 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart' show centralClientProvider;
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../settings/settings_dsl.dart';
 import 'store_client.dart' show StoreHomeSections;
@@ -63,7 +64,7 @@ class _StoreHomeScreenState extends ConsumerState<StoreHomeScreen> {
     try {
       next = await ref.read(storeClientProvider).home();
     } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text('読み直せませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(appL10n.storeReloadFailed('$e'))));
       return;
     }
     if (!mounted) return;
@@ -77,7 +78,7 @@ class _StoreHomeScreenState extends ConsumerState<StoreHomeScreen> {
       _known.addAll({...t.added, ...r.added, for (final c in next.bookmarks) c.id});
     });
     final n = t.added.length + r.added.length;
-    messenger?.showSnackBar(SnackBar(content: Text(n == 0 ? '新しく公開されたプラグインはありません' : '新しく公開されたプラグインを $n 件追加しました')));
+    messenger?.showSnackBar(SnackBar(content: Text(n == 0 ? appL10n.storeNoNewPlugins : appL10n.storeNewPluginsAdded(n))));
   }
 
   @override
@@ -95,11 +96,11 @@ class _StoreHomeScreenState extends ConsumerState<StoreHomeScreen> {
 
     return Scaffold(
       appBar: RasqPageHeader(
-        title: 'プラグインストア',
+        title: context.l10n.storeHomeTitle,
         // … の代わりに歯車 (D-353)。
         showMore: false,
         actions: [
-          RasqIconButton(key: const ValueKey('store.home.manage'), icon: Icons.settings_outlined, tooltip: 'プラグインを管理', onPressed: () => context.push(Routes.storeManage)),
+          RasqIconButton(key: const ValueKey('store.home.manage'), icon: Icons.settings_outlined, tooltip: context.l10n.storeManageTitle, onPressed: () => context.push(Routes.storeManage)),
         ],
       ),
       body: Column(children: [
@@ -110,14 +111,14 @@ class _StoreHomeScreenState extends ConsumerState<StoreHomeScreen> {
             key: const ValueKey('store.home.search'),
             expanded: false,
             readOnly: true,
-            hintText: 'プラグインを検索',
+            hintText: context.l10n.storeSearchTitle,
             onTap: () => context.push(Routes.storeSearch()),
           ),
         ),
         Expanded(
           child: home.when(
             loading: () => const RasqLoading(),
-            error: (e, _) => RasqEmptyView(title: 'ストアに接続できませんでした', hint: '$e'),
+            error: (e, _) => RasqEmptyView(title: context.l10n.storeConnectFailed, hint: '$e'),
             data: (h) {
               _seed(h);
               return RefreshIndicator(
@@ -125,18 +126,18 @@ class _StoreHomeScreenState extends ConsumerState<StoreHomeScreen> {
                 child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
                   // RASQ サーバーにつないでいない (D-393): アプリ同梱のプラグインだけを出していると伝える(作り物の掲載は出さない)。
                   if (ref.watch(centralClientProvider) == null)
-                    const RasqNotice(
-                      key: ValueKey('store.home.offline'),
-                      margin: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-                      text: 'RASQ サーバーにつながっていません。アプリに入っているプラグインだけを表示しています',
-                      detail: 'Central 未接続: 同梱の実物(Misskey コネクタとスロットのサンプル)だけ。評価 / ダウンロード数 / レビュー / 購入はサーバーにつなぐと出ます。',
+                    RasqNotice(
+                      key: const ValueKey('store.home.offline'),
+                      margin: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+                      text: context.l10n.storeHomeOffline,
+                      detail: context.l10n.storeHomeOfflineDetail,
                     ),
-                  if (_trending!.isNotEmpty) StoreTileRow(key: const ValueKey('store.home.trending'), title: '今週のトレンド', cards: pick(_trending!), installed: installed, fresh: _fresh),
-                  StoreTileRow(key: const ValueKey('store.home.recent'), title: '新着', cards: pick(_recent!), installed: installed, fresh: _fresh),
-                  const RasqNotice(
-                    margin: EdgeInsets.all(RasqSpacing.page),
-                    text: '掲載されるのは審査済みのプラグインだけです',
-                    detail: '開発中のプラグインは、開発者モードで右上の歯車 → プラグインを管理 →「プラグインのインポート」から入れられます。',
+                  if (_trending!.isNotEmpty) StoreTileRow(key: const ValueKey('store.home.trending'), title: context.l10n.storeHomeTrending, cards: pick(_trending!), installed: installed, fresh: _fresh),
+                  StoreTileRow(key: const ValueKey('store.home.recent'), title: context.l10n.storeHomeRecent, cards: pick(_recent!), installed: installed, fresh: _fresh),
+                  RasqNotice(
+                    margin: const EdgeInsets.all(RasqSpacing.page),
+                    text: context.l10n.storeHomeReviewedOnly,
+                    detail: context.l10n.storeHomeReviewedOnlyDetail,
                   ),
                 ]),
               );
@@ -171,7 +172,7 @@ class StoreTileRow extends StatelessWidget {
       if (cards.isEmpty)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
-          child: Text('いまは表示できるプラグインがありません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text(context.l10n.storeRowEmpty, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         )
       else
         SizedBox(
