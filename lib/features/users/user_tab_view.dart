@@ -9,6 +9,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/providers.dart';
 import '../../l10n/l10n.dart';
 import '../settings/settings_dsl.dart' show settingsAreaProvider;
+import '../trend/tendency_controls.dart';
 import '../trend/tendency_profile.dart';
 import 'user_providers.dart';
 
@@ -16,8 +17,9 @@ import 'user_providers.dart';
 ///
 /// 選んでいるタブをもう一度押すと、そのタブにつながったパネル([showTetheredPanel])で開く。中身は
 /// - 検索: 読み込んだこの人の投稿を本文で絞る(端末の中で。SNS の口にはユーザーを指定した投稿の検索が無い)
-/// - 指向性 / 刺激性: トレンドの傾向 FOW (D-153 / D-470) と同じ採点([tendencyScorer])。指向性は好きなジャンル / 好きな例
-///   (トレンドの設定のもの)への近さのしきい値、刺激性はレーダーの各感情の上限(超える投稿を隠す)
+/// - 指向性 / 刺激性: トレンドの傾向 FOW (D-153 / D-470) と同じ採点([tendencyScorer])と同じ部品([TendencyControls]、D-518)。
+///   指向性は好きなジャンル / 好きな例(トレンドの設定のもの)への近さのしきい値、刺激性はレーダーの各感情の上限。隠すのは
+///   TL と同じく**上限を超えたぶんの合計**が [tendencyStimulusHideAt] 以上の投稿(D-514 では 1 つでも超えたら隠していた)
 /// - 表示: ピン留め / リノート / 引用ノート / ダイジェスト(小表示、D-156 のインラインフレーム)
 /// - 並べ替え: 新しい順(SNS の並び)/ 古い順 / リアクション数(返信欄の D-070 と同じ)/ 傾向に合う順(TL の `tendency` と同じ適合度)
 ///
@@ -70,7 +72,8 @@ class UserTabView {
   /// 指向性 0(狭い)〜1(広い = 絞らない)。[TendencyProfile.directionality] と同じ向き。
   final double directionality;
 
-  /// 刺激性: 感情 → 上限 0〜1(無い = 1 = 制限なし)。トレンドの既定 (D-470) とは違い、ここの既定は制限なし。
+  /// 刺激性: 感情 → 上限 0〜1(無い = 1 = 制限なし)。トレンドの既定 (D-470) とは違い、ここの既定は制限なし
+  /// (人のページは自分で見に行くもの。隠す基準は TL と同じ、D-518)。
   final Map<String, double> stimulus;
 
   static const defaults = UserTabView();
@@ -151,8 +154,9 @@ List<Post> applyUserTabView(List<Post> posts, UserTabView v, {String query = '',
     if (!v.renotes && p.repostedBy != null) return false;
     if (!v.quotes && p.quote != null) return false;
     if (!userPostMatches(p, query)) return false;
-    // 刺激性: どれか 1 つの感情でも上限を超えたら隠す(TL の既定適用は超過の合計 0.75 以上だが、ここは自分で決めた上限なので厳しく)。
-    if (v.limitsStimulus && tendencyScorer.stimulusPenaltyOf(p, profile!) > 0) return false;
+    // 刺激性: 上限を超えたぶんの合計が TL と同じ境目以上なら隠す (D-518。D-514 では 1 つでも超えたら隠していたが、トレンドの
+    // 指向性 / 刺激性と同じ部品にしたので、同じレーダーの形が同じ投稿を隠すように揃えた)。
+    if (v.limitsStimulus && tendencyScorer.stimulusPenaltyOf(p, profile!) >= tendencyStimulusHideAt) return false;
     // 指向性: 好きなジャンル / 例が無ければ落とさない(TL と同じ)。好きではないものも落とす。
     if (v.limitsDirection && (tendencyScorer.isDisliked(p, profile!) || (profile.hasDirection && tendencyScorer.directionOf(p, profile) < profile.directionThreshold))) return false;
     return true;
@@ -191,6 +195,10 @@ const userTabViewPanelId = 'user.tabView';
 /// タブにつながった並べ替え・絞り込みのパネル (D-514)。変えたらすぐ一覧に効く(保存もすぐ)。閉じる / 外のタップ / タブ
 /// (首)のタップで閉じる。[anchor] = タブの名前の矩形(グローバル座標)。[query] = このページのこのタブの検索の語。
 /// [chartHeld] = 指が指向性 / 刺激性の欄に触れている間 true(ページはその間、横のスワイプと戻るジェスチャーを止める)。
+///
+/// 見た目 (D-517 / D-518): 「このタイムラインから探す」(タイムラインの一時変更 FOW、D-338)と同じ並び = 太字の見出し →
+/// 検索欄(検索画面と同じ丸い枠)→ 太い下線の節(並べ替え / 表示 / 指向性・刺激性)。下は FOW の標準のフッター
+/// ([FowFooter]: 件数 + リセット / 閉じる)。幅は広い画面なら [userTabViewPanelWidth] まで広げ、指向性 / 刺激性を横に並べる。
 Future<void> showUserTabViewPanel(
   BuildContext ctx,
   WidgetRef ref, {
@@ -220,11 +228,13 @@ Future<void> showUserTabViewPanel(
     await manager.showTetheredPanel<void>(
       id: userTabViewPanelId,
       anchor: neck,
-      width: 340,
+      width: userTabViewPanelWidth,
       iconExtent: 22,
       title: ctx.l10n.userPageViewTitle(tabLabel),
+      // 見出しの字は「このタイムラインから探す」と同じ大きさ。閉じるはフッターへ (D-517)。
+      titleStyle: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
       cancelText: null,
-      confirmText: ctx.l10n.userPageViewClose,
+      confirmText: null,
       anchorChild: OverflowBox(
         maxWidth: double.infinity,
         child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -233,6 +243,7 @@ Future<void> showUserTabViewPanel(
         ]),
       ),
       builder: (_) => UserTabViewPanelBody(tab: tab, tabLabel: tabLabel, search: search, query: query, chartHeld: chartHeld, postsKey: postsKey, hasPinned: hasPinned),
+      footer: (_, handle) => UserTabViewPanelFooter(tab: tab, search: search, query: query, postsKey: postsKey, onClose: handle.close),
     );
   } finally {
     chartHeld.value = false;
@@ -240,6 +251,9 @@ Future<void> showUserTabViewPanel(
     search.dispose();
   }
 }
+
+/// パネルの幅の上限。スマホではタブのカラムの幅(-余白)まで縮み、指向性 / 刺激性は縦に積む([tendencyStackBreakpoint])。
+const userTabViewPanelWidth = 560.0;
 
 /// パネルの中身(テストとプレビューからも組める)。
 class UserTabViewPanelBody extends ConsumerWidget {
@@ -259,122 +273,109 @@ class UserTabViewPanelBody extends ConsumerWidget {
     final v = watchUserTabView(ref, tab);
     final base = ref.watch(tendencyProfileProvider).value;
     void set(UserTabView next) => saveUserTabView(ref, tab, next);
-    Widget label(String text) => Padding(
-          padding: const EdgeInsets.only(top: RasqSpacing.sm, bottom: RasqSpacing.xs),
-          child: Text(text, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-        );
     Widget chip(String key, String text, bool selected, VoidCallback onTap) => RasqFilterChip(key: ValueKey('user.tabView.$key'), item: RasqFilterChipItem(label: text, selected: selected, onTap: onTap));
-    final dirLabel = v.directionality <= 0.25 ? l.trendProfileDirNarrow : v.directionality >= 0.75 ? l.trendProfileDirWide : l.trendProfileDirNormal;
+    Widget chips(List<Widget> children) => Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+          child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: children),
+        );
     final noDirection = !(base?.hasDirection ?? false);
-    final tendency = Listener(
-      // 指が触れている間、ページの横のスワイプ(タブの切り替え / 戻る)を止める。レーダーの軸とスライダーのつまみを横に動かせるように。
-      key: const ValueKey('user.tabView.chart'),
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (_) => chartHeld.value = true,
-      onPointerUp: (_) => chartHeld.value = false,
-      onPointerCancel: (_) => chartHeld.value = false,
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            label(l.userPageViewDirectivityTitle),
-            Row(children: [
-              Text(l.trendProfileDirNarrow, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-              Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(overlayShape: const RoundSliderOverlayShape(overlayRadius: 14)),
-                  child: Slider(
-                    key: const ValueKey('user.tabView.directivity'),
-                    value: v.directionality,
-                    divisions: 10,
-                    label: dirLabel,
-                    onChanged: (x) => set(v.copyWith(directionality: x)),
-                  ),
-                ),
-              ),
-              Text(l.trendProfileDirWide, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-            ]),
-            if (noDirection) Text(l.userPageViewDirectivityNoGenres, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-            label(l.userPageViewStimulusTitle),
-            Text(l.userPageViewStimulusCaption, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-          ]),
-        ),
-        const SizedBox(width: RasqSpacing.xs),
-        RasqRadarChart(
-          key: const ValueKey('user.tabView.radar'),
-          size: 148,
-          claimDrag: true,
-          axes: TendencyProfile.emotions,
-          values: {for (final e in TendencyProfile.emotions) e: v.stimulusCap(e)},
-          labels: TendencyProfile.emotionLabels,
-          onChanged: (axis, x) => set(v.copyWith(stimulus: {...v.stimulus, axis: x})),
-        ),
-      ]),
-    );
-    final posts = ref.watch(userPostsProvider(postsKey)).value?.items;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(RasqSpacing.md, 0, RasqSpacing.md, 0),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        SizedBox(
-          height: 36,
+    // 検索欄: 検索画面 / 「このタイムラインから探す」と同じ丸い枠(onSurface の線)。
+    final border = OutlineInputBorder(borderRadius: BorderRadius.circular(RasqSizes.searchBarHeight), borderSide: BorderSide(color: scheme.onSurface, width: 1.2));
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.xs),
+        child: SizedBox(
+          height: RasqSizes.searchBarHeight,
           child: TextField(
             key: const ValueKey('user.tabView.search'),
             controller: search,
-            style: RasqTypography.bodySmall,
+            style: Theme.of(context).textTheme.bodySmall,
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
               isDense: true,
               hintText: l.userPageViewSearchHint(tabLabel),
-              prefixIcon: const Icon(Icons.search, size: 18),
-              prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              prefixIcon: Icon(Icons.search, size: 20, color: scheme.onSurface),
+              prefixIconConstraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.searchBarHeight),
               suffixIcon: ValueListenableBuilder<String>(
                 valueListenable: query,
                 builder: (_, q, _) => q.isEmpty ? const SizedBox.shrink() : IconButton(key: const ValueKey('user.tabView.search.clear'), iconSize: 16, visualDensity: VisualDensity.compact, onPressed: search.clear, icon: const Icon(Icons.close)),
               ),
               contentPadding: const EdgeInsets.symmetric(vertical: 8),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: scheme.outline)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: scheme.outline)),
+              border: border,
+              enabledBorder: border,
+              focusedBorder: border.copyWith(borderSide: BorderSide(color: scheme.primary, width: 1.5)),
             ),
           ),
         ),
-        label(l.userPageViewSortLabel),
-        Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
-          for (final s in UserTabSort.values) chip('sort.${s.name}', s.label(l), v.sort == s, () => set(v.copyWith(sort: s))),
-        ]),
-        label(l.userPageViewShowLabel),
-        Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
-          if (hasPinned) chip('pinned', l.userPageViewShowPinned, v.pinned, () => set(v.copyWith(pinned: !v.pinned))),
-          chip('renotes', l.userPageViewShowRenotes, v.renotes, () => set(v.copyWith(renotes: !v.renotes))),
-          // 引用のタブは全部が引用ノートなので出さない。
-          if (tab != UserPostsFilter.quotes) chip('quotes', l.userPageViewShowQuotes, v.quotes, () => set(v.copyWith(quotes: !v.quotes))),
-          chip('digest', l.userPageViewShowDigest, v.digest, () => set(v.copyWith(digest: !v.digest))),
-        ]),
-        tendency,
-        Row(children: [
-          Expanded(
-            child: ValueListenableBuilder<String>(
-              valueListenable: query,
-              builder: (_, q, _) {
-                if (posts == null) return const SizedBox.shrink();
-                final shown = applyUserTabView(posts, v, query: q, base: base, sorted: false).length;
-                return Text(l.userPageViewCount(shown, posts.length), key: const ValueKey('user.tabView.count'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant));
-              },
-            ),
-          ),
-          ValueListenableBuilder<String>(
-            valueListenable: query,
-            builder: (_, q, _) => TextButton(
-              key: const ValueKey('user.tabView.reset'),
-              onPressed: v.isDefault && q.isEmpty
-                  ? null
-                  : () {
-                      search.clear();
-                      set(UserTabView.defaults);
-                    },
-              child: Text(l.userPageViewReset),
-            ),
-          ),
-        ]),
+      ),
+      RasqSectionHeader(title: l.userPageViewSortLabel, topMargin: RasqSpacing.xs),
+      chips([
+        for (final s in UserTabSort.values) chip('sort.${s.name}', s.label(l), v.sort == s, () => set(v.copyWith(sort: s))),
       ]),
+      RasqSectionHeader(title: l.userPageViewShowLabel, topMargin: RasqSpacing.sm),
+      chips([
+        if (hasPinned) chip('pinned', l.userPageViewShowPinned, v.pinned, () => set(v.copyWith(pinned: !v.pinned))),
+        chip('renotes', l.userPageViewShowRenotes, v.renotes, () => set(v.copyWith(renotes: !v.renotes))),
+        // 引用のタブは全部が引用ノートなので出さない。
+        if (tab != UserPostsFilter.quotes) chip('quotes', l.userPageViewShowQuotes, v.quotes, () => set(v.copyWith(quotes: !v.quotes))),
+        chip('digest', l.userPageViewShowDigest, v.digest, () => set(v.copyWith(digest: !v.digest))),
+      ]),
+      RasqSectionHeader(title: l.userPageViewTendencyLabel, topMargin: RasqSpacing.sm),
+      // トレンドの指向性 / 刺激性と同じ部品 (D-518)。指が触れている間、ページの横のスワイプ(タブの切り替え / 戻る)を止める
+      // (レーダーの軸とスライダーのつまみを横に動かせるように、D-514)。
+      TendencyControls(
+        key: const ValueKey('user.tabView.chart'),
+        keyPrefix: 'user.tabView.tendency',
+        radarKey: const ValueKey('user.tabView.radar'),
+        directionality: v.directionality,
+        onDirectionality: (x) => set(v.copyWith(directionality: x)),
+        stimulusCap: v.stimulusCap,
+        onStimulus: (axis, x) => set(v.copyWith(stimulus: {...v.stimulus, axis: x})),
+        directivityTitle: l.userPageViewDirectivityTitle,
+        directivitySubtitle: noDirection ? l.userPageViewDirectivityNoGenres : l.trendProfileDirectivitySubtitle,
+        stimulusTitle: l.userPageViewStimulusTitle,
+        // ここの既定は制限なし。
+        onStimulusReset: v.limitsStimulus ? () => set(v.copyWith(stimulus: const {})) : null,
+        onHold: (held) => chartHeld.value = held,
+      ),
+      const SizedBox(height: RasqSpacing.xs),
+    ]);
+  }
+}
+
+/// パネルのフッター (D-517): 件数(読み込んだうち表示している数)+ リセット / 閉じる。FOW の標準のフッター([FowFooter])。
+class UserTabViewPanelFooter extends ConsumerWidget {
+  const UserTabViewPanelFooter({super.key, required this.tab, required this.search, required this.query, required this.postsKey, required this.onClose});
+  final UserPostsFilter tab;
+  final TextEditingController search;
+  final ValueNotifier<String> query;
+  final ({String id, UserPostsFilter filter, String? account}) postsKey;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l10n;
+    final v = watchUserTabView(ref, tab);
+    final base = ref.watch(tendencyProfileProvider).value;
+    final posts = ref.watch(userPostsProvider(postsKey)).value?.items;
+    return ValueListenableBuilder<String>(
+      valueListenable: query,
+      builder: (_, q, _) => FowFooter(
+        leading: posts == null ? null : Text(l.userPageViewCount(applyUserTabView(posts, v, query: q, base: base, sorted: false).length, posts.length), key: const ValueKey('user.tabView.count')),
+        actions: [
+          TextButton(
+            key: const ValueKey('user.tabView.reset'),
+            onPressed: v.isDefault && q.isEmpty
+                ? null
+                : () {
+                    search.clear();
+                    saveUserTabView(ref, tab, UserTabView.defaults);
+                  },
+            child: Text(l.userPageViewReset),
+          ),
+          TextButton(key: const ValueKey('user.tabView.close'), onPressed: onClose, child: Text(l.userPageViewClose, style: const TextStyle(fontWeight: FontWeight.w700))),
+        ],
+      ),
     );
   }
 }

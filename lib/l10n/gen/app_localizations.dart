@@ -23740,29 +23740,29 @@ abstract class AppLocalizations {
   /// **'ダイジェスト'**
   String get userPageViewShowDigest;
 
+  /// パネルの指向性 / 刺激性の欄の見出し(トレンドの指向性 / 刺激性と同じ部品)
+  ///
+  /// In ja, this message translates to:
+  /// **'指向性 / 刺激性'**
+  String get userPageViewTendencyLabel;
+
   /// 好きなジャンルへの近さで絞るスライダーの見出し(トレンドの指向性と同じ考え方)
   ///
   /// In ja, this message translates to:
   /// **'指向性'**
   String get userPageViewDirectivityTitle;
 
-  /// トレンドの設定で好きなジャンル / 好きな例を決めていないとき、指向性の下に出す注意
+  /// トレンドの設定で好きなジャンル / 好きな例を決めていないとき、指向性のスライダーの説明の代わりに出す注意
   ///
   /// In ja, this message translates to:
   /// **'好きなジャンルを決めると効きます'**
   String get userPageViewDirectivityNoGenres;
 
-  /// 8 つの感情の上限を決めるレーダーの見出し。上限を超える投稿を隠す
+  /// 8 つの感情の上限を決めるレーダーの見出し。上限を超えたぶんの合計が大きい投稿を隠す(トレンドと同じ)
   ///
   /// In ja, this message translates to:
   /// **'刺激性'**
   String get userPageViewStimulusTitle;
-
-  /// No description provided for @userPageViewStimulusCaption.
-  ///
-  /// In ja, this message translates to:
-  /// **'中心に寄せた感情の強い投稿を隠します'**
-  String get userPageViewStimulusCaption;
 
   /// No description provided for @userPageViewReset.
   ///

@@ -14439,6 +14439,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get userPageViewShowDigest => 'ダイジェスト';
 
   @override
+  String get userPageViewTendencyLabel => '指向性 / 刺激性';
+
+  @override
   String get userPageViewDirectivityTitle => '指向性';
 
   @override
@@ -14446,9 +14449,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get userPageViewStimulusTitle => '刺激性';
-
-  @override
-  String get userPageViewStimulusCaption => '中心に寄せた感情の強い投稿を隠します';
 
   @override
   String get userPageViewReset => 'リセット';

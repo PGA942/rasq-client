@@ -286,7 +286,7 @@ class TendencyScorer {
       final s = score(p, profile);
       if (s.disliked) continue;
       if (profile.hasDirection && s.direction < profile.directionThreshold) continue;
-      if (s.stimulusPenalty >= 0.75) continue;
+      if (s.stimulusPenalty >= tendencyStimulusHideAt) continue;
       scored.add((p, s.value));
     }
     final indexed = scored.indexed.toList()..sort((a, b) => b.$2.$2.compareTo(a.$2.$2) != 0 ? b.$2.$2.compareTo(a.$2.$2) : a.$1.compareTo(b.$1));
@@ -295,6 +295,10 @@ class TendencyScorer {
 }
 
 const tendencyScorer = TendencyScorer();
+
+/// 刺激性で投稿を隠す境目 (D-470 / D-518): 各感情の上限を超えたぶんの合計([TendencyScorer.stimulusPenaltyOf])がこれ以上。
+/// TL の既定適用とユーザーページの「ノートの表示」で同じ。
+const tendencyStimulusHideAt = 0.75;
 
 // ── 保存(storage.safe のスロット)────────────────────────────────
 

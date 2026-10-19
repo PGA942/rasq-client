@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +12,10 @@ import '../nodeprog/node_executor.dart';
 import '../relational/relational_engine.dart';
 import 'example_picker.dart';
 import 'example_sources.dart';
+import 'tendency_controls.dart';
 import 'tendency_profile.dart';
+
+export 'tendency_controls.dart' show TendencyControls, TendencyStimulusChip, tendencyStackBreakpoint, tendencyNarrowSplit, tendencyWideSplit, tendencyWideBreakpoint;
 
 /// トレンドプロファイル設定 (D-153、ワイヤーフレーム p.2 中段下): 検索ホーム/
 /// トレンド TL の ⚙ から。好きなジャンル/方向性のチップ、⚠ 指向性/刺激性、
@@ -67,7 +68,7 @@ Future<void> showTrendProfileSheet(BuildContext context, WidgetRef ref) async {
   );
 }
 
-String _dirLabel(double v) => v <= 0.25 ? appL10n.trendProfileDirNarrow : v >= 0.75 ? appL10n.trendProfileDirWide : appL10n.trendProfileDirNormal;
+String _dirLabel(double v) => TendencyControls.directionLabel(v);
 String _stimLabel(TendencyProfile p) {
   final labels = TendencyProfile.emotionLabels;
   final capped = [for (final e in TendencyProfile.emotions) if (p.stimulusCap(e) < 1.0) labels[e]!];
@@ -84,8 +85,10 @@ Widget _label(BuildContext context, String text) => Padding(
 /// 決定で保存、キャンセルで捨てる。
 ///
 /// **2 カラム (D-470)**: 指向性と刺激性を横に並べる(左右のスワイプで行き来しない。どちらも 1 つの縦スクロールの中)。
-/// 刺激性のほうを細く: 狭い画面は [tendencyNarrowSplit](62 / 38)、幅 [tendencyWideBreakpoint] 以上は 60 / 40 で
-/// レーダーを大きく。「設定を共有」(前の「端末側で適用する」= TL の既定適用のオン / オフ)は指向性のカラムに置く。
+/// 刺激性のほうを細く: [tendencyNarrowSplit](62 / 38)、幅 [tendencyWideBreakpoint] 以上は 60 / 40 でレーダーを大きく。
+/// **D-518**: 欄は共通の部品 [TendencyControls](ユーザーページの「ノートの表示」と同じ)。幅が [tendencyStackBreakpoint]
+/// 未満(スマホ)なら横に並べず、指向性の下に刺激性を積む。「設定を共有」(前の「端末側で適用する」= TL の既定適用の
+/// オン / オフ)は指向性の欄に置く。
 Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
   final manager = ref.read(overlayManagerProvider);
   var draft = ref.read(tendencyProfileProvider).value ?? const TendencyProfile();
@@ -95,74 +98,32 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
     confirmText: context.l10n.trendProfileDecide,
     onConfirm: () => saveTendencyProfileFrom(ref, draft),
     builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
-      final emotionLabels = TendencyProfile.emotionLabels;
-      final directivity = Column(key: const Key('trend.tendency.directivity'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        RasqSliderListTile(
-          title: ctx.l10n.trendProfileDirectivityTitle,
-          subtitle: ctx.l10n.trendProfileDirectivitySubtitle,
-          detail: ctx.l10n.trendProfileDirectivityDetail,
-          value: draft.directionality,
-          min: 0,
-          max: 1,
-          divisions: 10,
-          valueLabel: _dirLabel(draft.directionality),
-          onChanged: (v) => setSheet(() => draft = draft.copyWith(directionality: v)),
-        ),
-        // 設定を共有 (D-470、前の「端末側で適用する」): オフにすると、おすすめ / トレンド / 関連 TL の既定適用を止める。
-        RasqSwitchListTile(
-          key: const Key('trend.tendency.share'),
-          title: ctx.l10n.trendProfileShareTitle,
-          subtitle: ctx.l10n.trendProfileShareSubtitle,
-          detail: ctx.l10n.trendProfileShareDetail,
-          value: draft.enabled,
-          onChanged: (v) => setSheet(() => draft = draft.copyWith(enabled: v)),
-        ),
-      ]);
-      Widget stimulus(double width) {
-        final scheme = Theme.of(ctx).colorScheme;
-        return Container(
-          key: const Key('trend.tendency.stimulus'),
-          decoration: BoxDecoration(border: Border(left: BorderSide(color: scheme.outlineVariant))),
-          padding: const EdgeInsets.only(left: RasqSpacing.xs, right: RasqSpacing.xs),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: const EdgeInsets.only(top: RasqSpacing.sm),
-              child: Text(ctx.l10n.trendProfileStimulusTitle, style: RasqTypography.listTile),
-            ),
-            Text(ctx.l10n.trendProfileStimulusCaption, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-            const SizedBox(height: RasqSpacing.xs),
-            Center(
-              child: RasqRadarChart(
-                key: const Key('trend.stimulus.radar'),
-                size: math.max(96, math.min(width - RasqSpacing.xs * 2, 240)),
-                axes: TendencyProfile.emotions,
-                values: {for (final e in TendencyProfile.emotions) e: draft.stimulusCap(e)},
-                labels: emotionLabels,
-                onChanged: (axis, v) => setSheet(() => draft = draft.copyWith(stimulus: {...draft.stimulus, axis: v})),
-              ),
-            ),
-            const SizedBox(height: RasqSpacing.xs),
-            Wrap(spacing: 4, runSpacing: 4, children: [
-              for (final e in TendencyProfile.emotions) _StimulusChip(label: emotionLabels[e]!, cap: draft.stimulusCap(e)),
-            ]),
-            Align(
-              alignment: Alignment.centerRight,
-              // 既定(恐れ / 嫌悪 / 怒り 45%、D-470)へ戻す。細いカラムでは折り返さずに縮める。
-              child: TextButton(onPressed: () => setSheet(() => draft = draft.copyWith(stimulus: TendencyProfile.defaultStimulus)), child: FittedBox(fit: BoxFit.scaleDown, child: Text(ctx.l10n.trendProfileStimulusReset, maxLines: 1))),
-            ),
-          ]),
-        );
-      }
-
       return ListView(shrinkWrap: true, children: [
         RasqNotice.warning(text: ctx.l10n.trendProfileEchoChamberWarning, margin: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0)),
-        LayoutBuilder(builder: (ctx, c) {
-          final split = c.maxWidth >= tendencyWideBreakpoint ? tendencyWideSplit : tendencyNarrowSplit;
-          return Row(key: const Key('trend.tendency.columns'), crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(flex: split.$1, child: directivity),
-            Expanded(flex: split.$2, child: stimulus(c.maxWidth * split.$2 / (split.$1 + split.$2))),
-          ]);
-        }),
+        // 指向性 / 刺激性の欄はユーザーページの「ノートの表示」と同じ部品 (D-518)。幅が狭ければ縦に積む。
+        TendencyControls(
+          directionality: draft.directionality,
+          onDirectionality: (v) => setSheet(() => draft = draft.copyWith(directionality: v)),
+          stimulusCap: draft.stimulusCap,
+          onStimulus: (axis, v) => setSheet(() => draft = draft.copyWith(stimulus: {...draft.stimulus, axis: v})),
+          directivityTitle: ctx.l10n.trendProfileDirectivityTitle,
+          directivitySubtitle: ctx.l10n.trendProfileDirectivitySubtitle,
+          directivityDetail: ctx.l10n.trendProfileDirectivityDetail,
+          stimulusTitle: ctx.l10n.trendProfileStimulusTitle,
+          // 既定(恐れ / 嫌悪 / 怒り 45%、D-470)へ戻す。
+          onStimulusReset: () => setSheet(() => draft = draft.copyWith(stimulus: TendencyProfile.defaultStimulus)),
+          directivityExtra: [
+            // 設定を共有 (D-470、前の「端末側で適用する」): オフにすると、おすすめ / トレンド / 関連 TL の既定適用を止める。
+            RasqSwitchListTile(
+              key: const Key('trend.tendency.share'),
+              title: ctx.l10n.trendProfileShareTitle,
+              subtitle: ctx.l10n.trendProfileShareSubtitle,
+              detail: ctx.l10n.trendProfileShareDetail,
+              value: draft.enabled,
+              onChanged: (v) => setSheet(() => draft = draft.copyWith(enabled: v)),
+            ),
+          ],
+        ),
         RasqCaption(
           ctx.l10n.trendProfileStimulusEstimate,
           detail: ctx.l10n.trendProfileStimulusEstimateDetail,
@@ -172,31 +133,6 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
     }),
   );
   if (saved == true && context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.trendProfileTendencySaved)));
-}
-
-/// 指向性 / 刺激性のカラムの幅の比 (D-470)。狭い画面(スマホ)でも両方が入るように刺激性を細く。
-const tendencyNarrowSplit = (62, 38);
-const tendencyWideSplit = (60, 40);
-
-/// これ以上の幅なら、刺激性のカラムを広げてレーダーを大きく。
-const tendencyWideBreakpoint = 600.0;
-
-/// 刺激性の 1 感情の上限(細いカラムに入るよう小さく。抑えているものは赤)。
-class _StimulusChip extends StatelessWidget {
-  const _StimulusChip({required this.label, required this.cap});
-  final String label;
-  final double cap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final limited = cap < 1;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: limited ? RasqColors.danger : scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(10)),
-      child: Text('$label ${(cap * 100).round()}%', style: RasqTypography.caption.copyWith(fontSize: 11, color: limited ? Colors.white : scheme.onSurface)),
-    );
-  }
 }
 
 /// 好きなジャンル/方向性 FOW (D-153、p.2 中段): SNS 側の設定に任せる /
