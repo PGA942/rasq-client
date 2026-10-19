@@ -10747,6 +10747,350 @@
   },
   "storePkgKindTheme": "着せ替え",
   "storePkgKindAssets": "アセットパック",
+  "trendTitle": "トレンド",
+  "trendTabNotes": "ノート",
+  "trendTabFollowing": "フォロー中",
+  "trendTabUsers": "ユーザー",
+  "trendBackToHome": "トレンドホームへ戻る",
+  "trendSourceAccountMark": "トレンドに出したアカウント",
+  "@trendSourceAccountMark": {
+    "description": "アカウントの選択で、このトレンドを出したアカウントに付ける印の説明"
+  },
+  "trendSettingsTooltip": "トレンド設定",
+  "trendCustomizeTooltip": "トレンド TL をカスタマイズ",
+  "trendReload": "再読み込み",
+  "trendEmptyTitle": "なんにもないようです",
+  "trendEmptyHint": "ワードやフィルタを変えると見つかるかもしれません",
+  "trendFollowingEmptyTitle": "フォロー中の投稿はありません",
+  "trendFollowingEmptyHint": "このワードについてフォロイーはまだ投稿していません",
+  "trendUsersBlocked": "保護者がユーザーの検索を止めています",
+  "trendUsersEmpty": "ユーザーはいません",
+  "trendUserReactions": "リアクション {count}",
+  "@trendUserReactions": {
+    "description": "トレンドのユーザーの一覧の行の補足。count はリアクションの合計",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trendMenuOpenAs": "別のアカウントで開く",
+  "trendMenuReport": "通報",
+  "trendMenuAccountSourced": "{account}(トレンドに出したアカウント)",
+  "@trendMenuAccountSourced": {
+    "description": "account は SNS アカウント(@名前@サーバー)",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "trendReportTitle": "通報",
+  "trendReportMessage": "トレンド「{tag}」を通報します。RASQ の審査で確認します。通報したトレンドは、トレンドの一覧に出なくなります。",
+  "@trendReportMessage": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "trendReportMessageWithServer": "トレンド「{tag}」({server})を通報します。RASQ の審査で確認します。通報したトレンドは、トレンドの一覧に出なくなります。",
+  "@trendReportMessageWithServer": {
+    "description": "server はトレンドを出したサーバー",
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "trendReportNoteHint": "補足(任意)",
+  "trendReportSend": "通報する",
+  "trendReportSent": "通報しました。RASQ の審査で確認します",
+  "trendReportStored": "この端末に控えました。RASQ アカウントに繋がったら送ります",
+  "trendReportFailed": "送れなかったので、この端末に控えました(あとで送り直します)",
+  "trendReportUnhide": "表示に戻す",
+  "trendPluginFallbackName": "トレンドプラグイン",
+  "@trendPluginFallbackName": {
+    "description": "ノードの見出しで、プラグインが 1 つに決まらないときの名前"
+  },
+  "trendPluginLoadFailed": "読み込めませんでした",
+  "trendPluginNoWords": "候補のワードはまだありません",
+  "trendPluginWordQuoted": "「{word}」",
+  "@trendPluginWordQuoted": {
+    "description": "Today のノードで、候補のワードを 1 つずつかぎかっこで囲む",
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "trendPluginTodayEmpty": "{words}の投稿はまだありません",
+  "@trendPluginTodayEmpty": {
+    "description": "words は trendPluginWordQuoted を並べたもの",
+    "placeholders": {
+      "words": {
+        "type": "String"
+      }
+    }
+  },
+  "trendPluginTodayHeading": "{words}の投稿",
+  "@trendPluginTodayHeading": {
+    "description": "words は trendPluginWordQuoted を並べたもの",
+    "placeholders": {
+      "words": {
+        "type": "String"
+      }
+    }
+  },
+  "trendEmotionJoy": "喜び",
+  "@trendEmotionJoy": {
+    "description": "刺激性の 8 つの感情の名前"
+  },
+  "trendEmotionTrust": "信頼",
+  "trendEmotionFear": "恐れ",
+  "trendEmotionSurprise": "驚き",
+  "trendEmotionSadness": "悲しみ",
+  "trendEmotionDisgust": "嫌悪",
+  "trendEmotionAnger": "怒り",
+  "trendEmotionAnticipation": "期待",
+  "trendExamplesNoCandidates": "候補がありません",
+  "trendExamplesAllow": "好き",
+  "trendExamplesDeny": "好きではない",
+  "trendExamplesDecide": "決定",
+  "trendExamplesLoadFailed": "{source}を読み込めませんでした: {error}",
+  "@trendExamplesLoadFailed": {
+    "description": "source は出どころの名前(最近のアクション / プラグインなど)",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "trendExamplesAllSeen": "全部見ました",
+  "trendExamplesAllSeenHint": "{allowLabel} {allow} / {denyLabel} {deny}。決定で保存します",
+  "@trendExamplesAllSeenHint": {
+    "description": "allowLabel / denyLabel はボタンの名前(好き / 好きではない など)、allow / deny はその数",
+    "placeholders": {
+      "allowLabel": {
+        "type": "String"
+      },
+      "allow": {
+        "type": "int"
+      },
+      "denyLabel": {
+        "type": "String"
+      },
+      "deny": {
+        "type": "int"
+      }
+    }
+  },
+  "trendExamplesIntro": "中身を見て、下の「{allowLabel}」/「{denyLabel}」(右 / 左スワイプでも)で例にします。新しいものは、例との近さで分けます。",
+  "@trendExamplesIntro": {
+    "placeholders": {
+      "allowLabel": {
+        "type": "String"
+      },
+      "denyLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "trendExamplesSummary": "{intro}({allowLabel} {allow} / {denyLabel} {deny}・残り {remaining, plural, other{{remaining} 件}})",
+  "@trendExamplesSummary": {
+    "description": "intro は説明の文(trendExamplesIntro など)",
+    "placeholders": {
+      "intro": {
+        "type": "String"
+      },
+      "allowLabel": {
+        "type": "String"
+      },
+      "allow": {
+        "type": "int"
+      },
+      "denyLabel": {
+        "type": "String"
+      },
+      "deny": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "trendExamplesSearch": "探す",
+  "trendExamplesSkip": "とばす",
+  "trendExamplesMorePosts": "+{count, plural, other{{count} 件}}",
+  "@trendExamplesMorePosts": {
+    "description": "話題のカードの右上の、ほかの投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trendExamplesPostsUnreadable": "投稿を読めませんでした(名前と説明で比べます)",
+  "trendExamplesOthers": "ほか {count, plural, other{{count} 件}}",
+  "@trendExamplesOthers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trendExamplesSourceActions": "最近のアクション",
+  "trendExamplesSourceActionsEmpty": "最近のアクションがありません",
+  "trendExamplesSourceActionsEmptyHint": "リアクションやブックマークをすると、ここから選べます",
+  "trendExamplesSourcePlugins": "プラグイン",
+  "trendExamplesSourcePluginsEmpty": "入れているプラグインはありません",
+  "trendExamplesSourceClips": "クリップ",
+  "trendExamplesSourceClipsEmpty": "クリップはありません",
+  "trendExamplesSourceLists": "リスト",
+  "trendExamplesSourceListsEmpty": "リストはありません",
+  "trendExamplesSourceStore": "ストア",
+  "trendExamplesSourceStoreHint": "ストアを探す(空 = 一覧)",
+  "trendExamplesSourceStoreEmpty": "見つかりませんでした",
+  "trendExamplesKindPlugin": "プラグイン",
+  "@trendExamplesKindPlugin": {
+    "description": "例の種類の札"
+  },
+  "trendExamplesKindClip": "クリップ",
+  "trendExamplesKindList": "リスト",
+  "trendExamplesKindPost": "投稿",
+  "trendExamplesKindText": "ことば",
+  "trendProfileSheetTitle": "トレンドプロファイル設定",
+  "trendProfileClose": "閉じる",
+  "trendProfileDecide": "決定",
+  "trendProfileGenres": "好きなジャンル/方向性",
+  "trendProfileGenresSnsDefault": "好きなジャンル/方向性(SNS 側の設定に任せる)",
+  "trendProfileGenresAuto": "好きなジャンル/方向性(アクションから自動抽出)",
+  "trendProfileAddGenrePill": "+ ジャンルを追加",
+  "trendProfileEdit": "編集",
+  "trendProfileTendencyTitle": "トレンドの指向性/刺激性",
+  "trendProfileTendencySummary": "指向性 {directivity} ・ 刺激性 {stimulus}",
+  "@trendProfileTendencySummary": {
+    "description": "directivity は trendProfileDirNarrow などの語、stimulus は trendProfileStimNone か trendProfileStimCapped",
+    "placeholders": {
+      "directivity": {
+        "type": "String"
+      },
+      "stimulus": {
+        "type": "String"
+      }
+    }
+  },
+  "trendProfilePluginsTitle": "トレンドプラグインの設定",
+  "trendProfilePluginsSubtitle": "TL のノード / 検索の候補",
+  "trendProfilePluginsDetail": "trend.suggest のプラグイン。TL のカスタマイズのノード(トレンドを取得 / Today / カスタム)と検索の候補で出します",
+  "@trendProfilePluginsDetail": {
+    "description": "開発者モードの詳しい説明。trend.suggest はスロットの id(訳さない)"
+  },
+  "trendProfileCacheNetworkTitle": "キャッシュネットワークの設定",
+  "trendProfileComingSoon": "準備中",
+  "trendProfileAlgorithmTitle": "アルゴリズム(ノード)を編集",
+  "trendProfileAlgorithmSubtitle": "トレンドの集め方・並べ方を編集します",
+  "trendProfileAlgorithmDetail": "トレンドの取得・並べ替えの鎖(ml.tendency ノードでこのプロファイルを使えます)",
+  "@trendProfileAlgorithmDetail": {
+    "description": "開発者モードの詳しい説明。ml.tendency はノードの id(訳さない)"
+  },
+  "trendProfileSharedCaption": "この設定は、おすすめ / トレンド / 関連 TL で共通です。",
+  "trendProfileSharedCaptionDetail": "このプロファイルは storage.safe(trend.profile)に保存され、おすすめ / トレンド / 関連 TL の既定と、ノードエディタの「指向性/刺激性」ノードが共通で読みます。",
+  "@trendProfileSharedCaptionDetail": {
+    "description": "開発者モードの詳しい説明。storage.safe / trend.profile は保存先の名前(訳さない)"
+  },
+  "trendProfileDirNarrow": "狭い",
+  "trendProfileDirWide": "広い",
+  "trendProfileDirNormal": "ふつう",
+  "trendProfileStimNone": "制限なし",
+  "trendProfileStimCapped": "{emotions}を抑える",
+  "@trendProfileStimCapped": {
+    "description": "emotions は感情の名前(最大 3 つ)を trendProfileListSeparator でつないだもの",
+    "placeholders": {
+      "emotions": {
+        "type": "String"
+      }
+    }
+  },
+  "trendProfileListSeparator": "・",
+  "@trendProfileListSeparator": {
+    "description": "感情の名前を並べるときの区切り"
+  },
+  "trendProfileDirectivityTitle": "トレンドの指向性",
+  "trendProfileDirectivitySubtitle": "狭いほど、好きなジャンルから外れた投稿を出しません。",
+  "trendProfileDirectivityDetail": "好きなジャンル/方向性への近さのしきい値(狭い ⇄ 広い)。狭いほど外れた投稿を落とします。",
+  "trendProfileShareTitle": "設定を共有",
+  "trendProfileShareSubtitle": "おすすめ / トレンド / 関連 TL にこの設定を使います",
+  "trendProfileShareDetail": "オフにすると TL の既定適用を止めます(ノードで明示した分は効きます)",
+  "trendProfileStimulusTitle": "トレンドの刺激性",
+  "trendProfileStimulusCaption": "各感情の上限。中心に寄せるほど抑えます",
+  "trendProfileStimulusReset": "刺激性をリセット",
+  "trendProfileEchoChamberWarning": "トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。",
+  "trendProfileStimulusEstimate": "刺激性は、いまは言葉の傾向から推定しています。",
+  "trendProfileStimulusEstimateDetail": "刺激性は語彙ルールで推定しています。",
+  "@trendProfileStimulusEstimateDetail": {
+    "description": "開発者モードの詳しい説明"
+  },
+  "trendProfileTendencySaved": "トレンドの指向性/刺激性を保存しました",
+  "trendProfileSnsDefaultTitle": "SNS 側の設定に任せる",
+  "trendProfileSnsDefaultSubtitle": "オンの間は端末側で絞りません",
+  "trendProfileAutoGenreTitle": "あなたのアクションから自動抽出",
+  "trendProfileAutoGenreSubtitle": "リアクションした投稿の特徴語を好きなジャンルに足します",
+  "trendProfilePickFromActions": "最近のアクションから好きなものを選択",
+  "trendProfileGenresTapToRemove": "好きなジャンル/方向性(タップで外す)",
+  "trendProfileNoneYet": "まだありません",
+  "trendProfileAddGenreHint": "ジャンル/キーワードを追加",
+  "trendProfileAddGenre": "ジャンルを追加",
+  "trendProfileExamplesLabel": "例(好き {allow} / 好きではない {deny}。タップで外す)",
+  "@trendProfileExamplesLabel": {
+    "description": "allow / deny は好きな例 / 好きではない例の数",
+    "placeholders": {
+      "allow": {
+        "type": "int"
+      },
+      "deny": {
+        "type": "int"
+      }
+    }
+  },
+  "trendProfileExampleAllow": "好き: {label}",
+  "@trendProfileExampleAllow": {
+    "description": "好きな例のチップ。label は例の短い名前",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "trendProfileExampleDeny": "好きではない: {label}",
+  "@trendProfileExampleDeny": {
+    "description": "好きではない例のチップ。label は例の短い名前",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "trendProfileDislikedTapToRemove": "好きではない(タップで外す)",
+  "trendProfileGenresSaved": "好きなジャンル/方向性を保存しました",
+  "trendProfilePickTitle": "アクションからジャンルを選択",
+  "trendProfilePickIntro": "最近のアクションを話題ごとに出しています。カードを選んで「好き」/「好きではない」へ(右/左スワイプでも)。",
+  "trendProfilePickIntroDetail": "最近のアクションを類似した話題でまとめ、話題性の強いものから {perPage, plural, other{{perPage} 件}}ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。",
+  "@trendProfilePickIntroDetail": {
+    "description": "開発者モードの詳しい説明。perPage は 1 ページのカードの数",
+    "placeholders": {
+      "perPage": {
+        "type": "int"
+      }
+    }
+  },
   "vcSectionInvited": "招待",
   "@vcSectionInvited": {
     "description": "VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)"

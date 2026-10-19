@@ -9,6 +9,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../nodeprog/node_executor.dart';
 import '../relational/relational_engine.dart';
 import 'example_picker.dart';
@@ -22,53 +23,55 @@ Future<void> showTrendProfileSheet(BuildContext context, WidgetRef ref) async {
   final manager = ref.read(overlayManagerProvider);
   await manager.showBottomSheet<void>(
     id: 'trend.profile',
-    title: 'トレンドプロファイル設定',
-    cancelText: '閉じる',
+    title: context.l10n.trendProfileSheetTitle,
+    cancelText: context.l10n.trendProfileClose,
     builder: (ctx) => Consumer(builder: (ctx, ref, _) {
+      final l = ctx.l10n;
       final profile = ref.watch(tendencyProfileProvider).value ?? const TendencyProfile();
       return ListView(shrinkWrap: true, children: [
-        _label(ctx, '好きなジャンル/方向性${profile.snsDefault ? '(SNS 側の設定に任せる)' : profile.autoGenre ? '(アクションから自動抽出)' : ''}'),
+        _label(ctx, profile.snsDefault ? l.trendProfileGenresSnsDefault : profile.autoGenre ? l.trendProfileGenresAuto : l.trendProfileGenres),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
             for (final (i, g) in profile.genres.indexed) RasqTogglePillButton(label: g.startsWith('#') ? g : '#$g', activeLabel: g.startsWith('#') ? g : '#$g', active: i == 0, onPressed: () => openGenreFow(ctx, ref)),
-            RasqTogglePillButton(label: profile.genres.isEmpty ? '+ ジャンルを追加' : '編集', active: false, onPressed: () => openGenreFow(ctx, ref)),
+            RasqTogglePillButton(label: profile.genres.isEmpty ? l.trendProfileAddGenrePill : l.trendProfileEdit, active: false, onPressed: () => openGenreFow(ctx, ref)),
           ]),
         ),
         const SizedBox(height: RasqSpacing.xs),
-        RasqWarningListTile(title: 'トレンドの指向性/刺激性', subtitle: '指向性 ${_dirLabel(profile.directionality)} ・ 刺激性 ${_stimLabel(profile)}', onTap: () => openTendencyFow(ctx, ref)),
+        RasqWarningListTile(title: l.trendProfileTendencyTitle, subtitle: l.trendProfileTendencySummary(_dirLabel(profile.directionality), _stimLabel(profile)), onTap: () => openTendencyFow(ctx, ref)),
         // 設定ページへ (D-238): トレンドプラグインの有効 / 無効、キャッシュネットワークの状態。
-        RasqListTile(title: 'トレンドプラグインの設定', subtitle: 'TL のノード / 検索の候補', detail: 'trend.suggest のプラグイン。TL のカスタマイズのノード(トレンドを取得 / Today / カスタム)と検索の候補で出します (D-470)', onTap: () {
+        RasqListTile(title: l.trendProfilePluginsTitle, subtitle: l.trendProfilePluginsSubtitle, detail: l.trendProfilePluginsDetail, onTap: () {
           manager.close('trend.profile');
           ref.read(routerProvider).push('/settings/dsl/plugins.trend');
         }),
-        RasqListTile(title: 'キャッシュネットワークの設定', subtitle: '準備中', detail: '未提供(第二期)', onTap: () {
+        RasqListTile(title: l.trendProfileCacheNetworkTitle, subtitle: l.trendProfileComingSoon, onTap: () {
           manager.close('trend.profile');
           ref.read(routerProvider).push('/settings/dsl/trend.cdn');
         }),
         RasqListTile(
-          title: 'アルゴリズム(ノード)を編集',
-          subtitle: 'トレンドの集め方・並べ方を編集します',
-          detail: 'トレンドの取得・並べ替えの鎖(ml.tendency ノードでこのプロファイルを使えます)',
+          title: l.trendProfileAlgorithmTitle,
+          subtitle: l.trendProfileAlgorithmSubtitle,
+          detail: l.trendProfileAlgorithmDetail,
           onTap: () {
             manager.close('trend.profile');
             context.push(Routes.tlConfig('trend'));
           },
         ),
-        const RasqCaption(
-          'この設定は、おすすめ / トレンド / 関連 TL で共通です。',
-          detail: 'このプロファイルは storage.safe(trend.profile)に保存され、おすすめ / トレンド / 関連 TL の既定と、ノードエディタの「指向性/刺激性」ノードが共通で読みます。',
-          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
+        RasqCaption(
+          l.trendProfileSharedCaption,
+          detail: l.trendProfileSharedCaptionDetail,
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
         ),
       ]);
     }),
   );
 }
 
-String _dirLabel(double v) => v <= 0.25 ? '狭い' : v >= 0.75 ? '広い' : 'ふつう';
+String _dirLabel(double v) => v <= 0.25 ? appL10n.trendProfileDirNarrow : v >= 0.75 ? appL10n.trendProfileDirWide : appL10n.trendProfileDirNormal;
 String _stimLabel(TendencyProfile p) {
-  final capped = [for (final e in TendencyProfile.emotions) if (p.stimulusCap(e) < 1.0) TendencyProfile.emotionLabels[e]!];
-  return capped.isEmpty ? '制限なし' : '${capped.take(3).join('・')}を抑える';
+  final labels = TendencyProfile.emotionLabels;
+  final capped = [for (final e in TendencyProfile.emotions) if (p.stimulusCap(e) < 1.0) labels[e]!];
+  return capped.isEmpty ? appL10n.trendProfileStimNone : appL10n.trendProfileStimCapped(capped.take(3).join(appL10n.trendProfileListSeparator));
 }
 
 Widget _label(BuildContext context, String text) => Padding(
@@ -88,15 +91,16 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
   var draft = ref.read(tendencyProfileProvider).value ?? const TendencyProfile();
   final saved = await manager.showBottomSheet<bool>(
     id: 'trend.tendency',
-    title: 'トレンドの指向性/刺激性',
-    confirmText: '決定',
+    title: context.l10n.trendProfileTendencyTitle,
+    confirmText: context.l10n.trendProfileDecide,
     onConfirm: () => saveTendencyProfileFrom(ref, draft),
     builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
+      final emotionLabels = TendencyProfile.emotionLabels;
       final directivity = Column(key: const Key('trend.tendency.directivity'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         RasqSliderListTile(
-          title: 'トレンドの指向性',
-          subtitle: '狭いほど、好きなジャンルから外れた投稿を出しません。',
-          detail: '好きなジャンル/方向性への近さのしきい値(狭い ⇄ 広い)。狭いほど外れた投稿を落とします。',
+          title: ctx.l10n.trendProfileDirectivityTitle,
+          subtitle: ctx.l10n.trendProfileDirectivitySubtitle,
+          detail: ctx.l10n.trendProfileDirectivityDetail,
           value: draft.directionality,
           min: 0,
           max: 1,
@@ -107,9 +111,9 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
         // 設定を共有 (D-470、前の「端末側で適用する」): オフにすると、おすすめ / トレンド / 関連 TL の既定適用を止める。
         RasqSwitchListTile(
           key: const Key('trend.tendency.share'),
-          title: '設定を共有',
-          subtitle: 'おすすめ / トレンド / 関連 TL にこの設定を使います',
-          detail: 'オフにすると TL の既定適用を止めます(ノードで明示した分は効きます)',
+          title: ctx.l10n.trendProfileShareTitle,
+          subtitle: ctx.l10n.trendProfileShareSubtitle,
+          detail: ctx.l10n.trendProfileShareDetail,
           value: draft.enabled,
           onChanged: (v) => setSheet(() => draft = draft.copyWith(enabled: v)),
         ),
@@ -123,9 +127,9 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Padding(
               padding: const EdgeInsets.only(top: RasqSpacing.sm),
-              child: Text('トレンドの刺激性', style: RasqTypography.listTile),
+              child: Text(ctx.l10n.trendProfileStimulusTitle, style: RasqTypography.listTile),
             ),
-            Text('各感情の上限。中心に寄せるほど抑えます', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(ctx.l10n.trendProfileStimulusCaption, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: RasqSpacing.xs),
             Center(
               child: RasqRadarChart(
@@ -133,25 +137,25 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
                 size: math.max(96, math.min(width - RasqSpacing.xs * 2, 240)),
                 axes: TendencyProfile.emotions,
                 values: {for (final e in TendencyProfile.emotions) e: draft.stimulusCap(e)},
-                labels: TendencyProfile.emotionLabels,
+                labels: emotionLabels,
                 onChanged: (axis, v) => setSheet(() => draft = draft.copyWith(stimulus: {...draft.stimulus, axis: v})),
               ),
             ),
             const SizedBox(height: RasqSpacing.xs),
             Wrap(spacing: 4, runSpacing: 4, children: [
-              for (final e in TendencyProfile.emotions) _StimulusChip(label: TendencyProfile.emotionLabels[e]!, cap: draft.stimulusCap(e)),
+              for (final e in TendencyProfile.emotions) _StimulusChip(label: emotionLabels[e]!, cap: draft.stimulusCap(e)),
             ]),
             Align(
               alignment: Alignment.centerRight,
               // 既定(恐れ / 嫌悪 / 怒り 45%、D-470)へ戻す。細いカラムでは折り返さずに縮める。
-              child: TextButton(onPressed: () => setSheet(() => draft = draft.copyWith(stimulus: TendencyProfile.defaultStimulus)), child: const FittedBox(fit: BoxFit.scaleDown, child: Text('刺激性をリセット', maxLines: 1))),
+              child: TextButton(onPressed: () => setSheet(() => draft = draft.copyWith(stimulus: TendencyProfile.defaultStimulus)), child: FittedBox(fit: BoxFit.scaleDown, child: Text(ctx.l10n.trendProfileStimulusReset, maxLines: 1))),
             ),
           ]),
         );
       }
 
       return ListView(shrinkWrap: true, children: [
-        const RasqNotice.warning(text: 'トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。', margin: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0)),
+        RasqNotice.warning(text: ctx.l10n.trendProfileEchoChamberWarning, margin: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0)),
         LayoutBuilder(builder: (ctx, c) {
           final split = c.maxWidth >= tendencyWideBreakpoint ? tendencyWideSplit : tendencyNarrowSplit;
           return Row(key: const Key('trend.tendency.columns'), crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -159,15 +163,15 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
             Expanded(flex: split.$2, child: stimulus(c.maxWidth * split.$2 / (split.$1 + split.$2))),
           ]);
         }),
-        const RasqCaption(
-          '刺激性は、いまは言葉の傾向から推定しています。',
-          detail: '刺激性は語彙ルールで推定しています(emotion8 / GRU の端末推論は ml.infer 配線後に差し替え)。',
-          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
+        RasqCaption(
+          ctx.l10n.trendProfileStimulusEstimate,
+          detail: ctx.l10n.trendProfileStimulusEstimateDetail,
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
         ),
       ]);
     }),
   );
-  if (saved == true && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('トレンドの指向性/刺激性を保存しました')));
+  if (saved == true && context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.trendProfileTendencySaved)));
 }
 
 /// 指向性 / 刺激性のカラムの幅の比 (D-470)。狭い画面(スマホ)でも両方が入るように刺激性を細く。
@@ -204,8 +208,8 @@ Future<void> openGenreFow(BuildContext context, WidgetRef ref) async {
   final input = TextEditingController();
   final saved = await manager.showBottomSheet<bool>(
     id: 'trend.genres',
-    title: '好きなジャンル/方向性',
-    confirmText: '決定',
+    title: context.l10n.trendProfileGenres,
+    confirmText: context.l10n.trendProfileDecide,
     onConfirm: () => saveTendencyProfileFrom(ref, draft),
     builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
       final scheme = Theme.of(ctx).colorScheme;
@@ -217,33 +221,33 @@ Future<void> openGenreFow(BuildContext context, WidgetRef ref) async {
       }
 
       return ListView(shrinkWrap: true, children: [
-        RasqSwitchListTile(title: 'SNS 側の設定に任せる', subtitle: 'オンの間は端末側で絞りません', value: draft.snsDefault, onChanged: (v) => setSheet(() => draft = draft.copyWith(snsDefault: v))),
-        RasqSwitchListTile(title: 'あなたのアクションから自動抽出', subtitle: 'リアクションした投稿の特徴語(GLiNER)を好きなジャンルに足します', value: draft.autoGenre, onChanged: (v) => setSheet(() => draft = draft.copyWith(autoGenre: v))),
+        RasqSwitchListTile(title: ctx.l10n.trendProfileSnsDefaultTitle, subtitle: ctx.l10n.trendProfileSnsDefaultSubtitle, value: draft.snsDefault, onChanged: (v) => setSheet(() => draft = draft.copyWith(snsDefault: v))),
+        RasqSwitchListTile(title: ctx.l10n.trendProfileAutoGenreTitle, subtitle: ctx.l10n.trendProfileAutoGenreSubtitle, value: draft.autoGenre, onChanged: (v) => setSheet(() => draft = draft.copyWith(autoGenre: v))),
         RasqListTile(
-          title: '最近のアクションから好きなものを選択',
+          title: ctx.l10n.trendProfilePickFromActions,
           onTap: () async {
             final picked = await openGenrePickFow(ctx, ref, base: draft);
             if (picked != null) setSheet(() => draft = picked);
           },
         ),
-        _label(ctx, '好きなジャンル/方向性(タップで外す)'),
+        _label(ctx, ctx.l10n.trendProfileGenresTapToRemove),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
-            if (draft.genres.isEmpty) Text('まだありません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            if (draft.genres.isEmpty) Text(ctx.l10n.trendProfileNoneYet, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             for (final g in draft.genres) RasqTogglePillButton(label: '#$g', activeLabel: '#$g ✕', active: true, onPressed: () => setSheet(() => draft = draft.copyWith(genres: [for (final x in draft.genres) if (x != g) x]))),
           ]),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
           child: Row(children: [
-            Expanded(child: RasqInput(controller: input, hintText: 'ジャンル/キーワードを追加', onSubmitted: add)),
+            Expanded(child: RasqInput(controller: input, hintText: ctx.l10n.trendProfileAddGenreHint, onSubmitted: add)),
             const SizedBox(width: RasqSpacing.xs),
-            RasqIconButton(icon: Icons.add, tooltip: 'ジャンルを追加', onPressed: () => add(input.text)),
+            RasqIconButton(icon: Icons.add, tooltip: ctx.l10n.trendProfileAddGenre, onPressed: () => add(input.text)),
           ]),
         ),
         if (draft.examples.isNotEmpty) ...[
-          _label(ctx, '例(好き ${draft.examples.allow.length} / 好きではない ${draft.examples.deny.length}。タップで外す)'),
+          _label(ctx, ctx.l10n.trendProfileExamplesLabel(draft.examples.allow.length, draft.examples.deny.length)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
             child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
@@ -251,8 +255,8 @@ Future<void> openGenreFow(BuildContext context, WidgetRef ref) async {
                 for (final e in side)
                   RasqTogglePillButton(
                     key: ValueKey('trend.example.${allow ? 'allow' : 'deny'}.${e.key}'),
-                    label: '${allow ? '好き' : '好きではない'}: ${e.shortLabel}',
-                    activeLabel: '${allow ? '好き' : '好きではない'}: ${e.shortLabel} ✕',
+                    label: allow ? ctx.l10n.trendProfileExampleAllow(e.shortLabel) : ctx.l10n.trendProfileExampleDeny(e.shortLabel),
+                    activeLabel: '${allow ? ctx.l10n.trendProfileExampleAllow(e.shortLabel) : ctx.l10n.trendProfileExampleDeny(e.shortLabel)} ✕',
                     active: allow,
                     onPressed: () => setSheet(() => draft = draft.copyWith(examples: draft.examples.without(e))),
                   ),
@@ -260,7 +264,7 @@ Future<void> openGenreFow(BuildContext context, WidgetRef ref) async {
           ),
         ],
         if (draft.disliked.isNotEmpty) ...[
-          _label(ctx, '好きではない(タップで外す)'),
+          _label(ctx, ctx.l10n.trendProfileDislikedTapToRemove),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
             child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
@@ -273,7 +277,7 @@ Future<void> openGenreFow(BuildContext context, WidgetRef ref) async {
     }),
   );
   input.dispose();
-  if (saved == true && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('好きなジャンル/方向性を保存しました')));
+  if (saved == true && context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.trendProfileGenresSaved)));
 }
 
 // ── アクションからジャンルを選択 (D-154、p.2 右下) ──────────────────
@@ -288,7 +292,7 @@ List<String> genreCandidatesOf(Post p, {int max = 6}) {
     if (g.length >= 2 && !RegExp(r'^\d+$').hasMatch(g) && !out.contains(g)) out.add(g);
   }
 
-  for (final m in RegExp(r'#([^\s#＃]+)').allMatches('${p.body} ${p.quote?.body ?? ''}')) {
+  for (final m in RegExp(r'#([^\s#＃]+)').allMatches('${p.body} ${p.quote?.body ?? ''}')) { // l10n-ignore: ハッシュタグの照合(全角の＃)
     add(m.group(1)!);
   }
   final features = extractFeatures(p).toList()..sort((a, b) => b.length.compareTo(a.length));
@@ -332,14 +336,14 @@ Future<TendencyProfile?> openGenrePickFow(BuildContext context, WidgetRef ref, {
     context,
     ref,
     id: 'trend.genres.pick',
-    title: 'アクションからジャンルを選択',
+    title: context.l10n.trendProfilePickTitle,
     sources: sources,
     initial: base.examples,
     perPage: perPage,
     intro: rasqDetail(
       context,
-      '最近のアクションを話題ごとに出しています。カードを選んで「好き」/「好きではない」へ(右/左スワイプでも)。',
-      '最近のアクションを類似した話題でまとめ、話題性の強いものから $perPage 件ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。',
+      context.l10n.trendProfilePickIntro,
+      context.l10n.trendProfilePickIntroDetail(perPage),
     ),
   );
   return decisions == null ? null : applyTrendDecisions(base, decisions);

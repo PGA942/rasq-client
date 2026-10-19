@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 
 import '../relational/relational_engine.dart';
 
+import '../../l10n/l10n.dart';
+
 /// 例で決める (D-314、ユーザー決定 2026-09-24): id の許す / 止める一覧は規模が大きくなると追いつかないので、
 /// **「こういうものは許す(好き)/ 止める(好きではない)」を例で選び**、新しいものは例との近さで分ける。
 ///
@@ -20,14 +22,20 @@ import '../relational/relational_engine.dart';
 
 /// 例の種類(Central `allow.examples` の `kind`)。
 enum ExampleKind {
-  plugin('プラグイン'),
-  clip('クリップ'),
-  list('リスト'),
-  post('投稿'),
-  text('ことば');
+  plugin,
+  clip,
+  list,
+  post,
+  text;
 
-  const ExampleKind(this.label);
-  final String label;
+  /// 画面に出す名前(表示の言語)。
+  String get label => switch (this) {
+        ExampleKind.plugin => appL10n.trendExamplesKindPlugin,
+        ExampleKind.clip => appL10n.trendExamplesKindClip,
+        ExampleKind.list => appL10n.trendExamplesKindList,
+        ExampleKind.post => appL10n.trendExamplesKindPost,
+        ExampleKind.text => appL10n.trendExamplesKindText,
+      };
   static ExampleKind? fromWire(Object? w) => values.where((k) => k.name == w).firstOrNull;
 }
 
@@ -187,7 +195,7 @@ _TextProfile _profileOf(String text) {
   final hit = _profiles[text];
   if (hit != null) return hit;
   if (_profiles.length > 1024) _profiles.clear();
-  final tags = {for (final m in RegExp(r'[#＃]([^\s#＃]+)').allMatches(text)) m.group(1)!.toLowerCase()};
+  final tags = {for (final m in RegExp(r'[#＃]([^\s#＃]+)').allMatches(text)) m.group(1)!.toLowerCase()}; // l10n-ignore: ハッシュタグの照合(全角の＃)
   final features = {for (final f in extractFeaturesText(text)) f: _featureWeight(f)};
   return _profiles[text] = _TextProfile(charNgramProfile(text.replaceAll(_identifierInText, ' ')), features, features.values.fold(0.0, (a, b) => a + b), tags);
 }

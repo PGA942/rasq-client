@@ -12439,6 +12439,470 @@ class AppLocalizationsJa extends AppLocalizations {
   String get storePkgKindAssets => 'アセットパック';
 
   @override
+  String get trendTitle => 'トレンド';
+
+  @override
+  String get trendTabNotes => 'ノート';
+
+  @override
+  String get trendTabFollowing => 'フォロー中';
+
+  @override
+  String get trendTabUsers => 'ユーザー';
+
+  @override
+  String get trendBackToHome => 'トレンドホームへ戻る';
+
+  @override
+  String get trendSourceAccountMark => 'トレンドに出したアカウント';
+
+  @override
+  String get trendSettingsTooltip => 'トレンド設定';
+
+  @override
+  String get trendCustomizeTooltip => 'トレンド TL をカスタマイズ';
+
+  @override
+  String get trendReload => '再読み込み';
+
+  @override
+  String get trendEmptyTitle => 'なんにもないようです';
+
+  @override
+  String get trendEmptyHint => 'ワードやフィルタを変えると見つかるかもしれません';
+
+  @override
+  String get trendFollowingEmptyTitle => 'フォロー中の投稿はありません';
+
+  @override
+  String get trendFollowingEmptyHint => 'このワードについてフォロイーはまだ投稿していません';
+
+  @override
+  String get trendUsersBlocked => '保護者がユーザーの検索を止めています';
+
+  @override
+  String get trendUsersEmpty => 'ユーザーはいません';
+
+  @override
+  String trendUserReactions(int count) {
+    return 'リアクション $count';
+  }
+
+  @override
+  String get trendMenuOpenAs => '別のアカウントで開く';
+
+  @override
+  String get trendMenuReport => '通報';
+
+  @override
+  String trendMenuAccountSourced(String account) {
+    return '$account(トレンドに出したアカウント)';
+  }
+
+  @override
+  String get trendReportTitle => '通報';
+
+  @override
+  String trendReportMessage(String tag) {
+    return 'トレンド「$tag」を通報します。RASQ の審査で確認します。通報したトレンドは、トレンドの一覧に出なくなります。';
+  }
+
+  @override
+  String trendReportMessageWithServer(String tag, String server) {
+    return 'トレンド「$tag」($server)を通報します。RASQ の審査で確認します。通報したトレンドは、トレンドの一覧に出なくなります。';
+  }
+
+  @override
+  String get trendReportNoteHint => '補足(任意)';
+
+  @override
+  String get trendReportSend => '通報する';
+
+  @override
+  String get trendReportSent => '通報しました。RASQ の審査で確認します';
+
+  @override
+  String get trendReportStored => 'この端末に控えました。RASQ アカウントに繋がったら送ります';
+
+  @override
+  String get trendReportFailed => '送れなかったので、この端末に控えました(あとで送り直します)';
+
+  @override
+  String get trendReportUnhide => '表示に戻す';
+
+  @override
+  String get trendPluginFallbackName => 'トレンドプラグイン';
+
+  @override
+  String get trendPluginLoadFailed => '読み込めませんでした';
+
+  @override
+  String get trendPluginNoWords => '候補のワードはまだありません';
+
+  @override
+  String trendPluginWordQuoted(String word) {
+    return '「$word」';
+  }
+
+  @override
+  String trendPluginTodayEmpty(String words) {
+    return '$wordsの投稿はまだありません';
+  }
+
+  @override
+  String trendPluginTodayHeading(String words) {
+    return '$wordsの投稿';
+  }
+
+  @override
+  String get trendEmotionJoy => '喜び';
+
+  @override
+  String get trendEmotionTrust => '信頼';
+
+  @override
+  String get trendEmotionFear => '恐れ';
+
+  @override
+  String get trendEmotionSurprise => '驚き';
+
+  @override
+  String get trendEmotionSadness => '悲しみ';
+
+  @override
+  String get trendEmotionDisgust => '嫌悪';
+
+  @override
+  String get trendEmotionAnger => '怒り';
+
+  @override
+  String get trendEmotionAnticipation => '期待';
+
+  @override
+  String get trendExamplesNoCandidates => '候補がありません';
+
+  @override
+  String get trendExamplesAllow => '好き';
+
+  @override
+  String get trendExamplesDeny => '好きではない';
+
+  @override
+  String get trendExamplesDecide => '決定';
+
+  @override
+  String trendExamplesLoadFailed(String source, String error) {
+    return '$sourceを読み込めませんでした: $error';
+  }
+
+  @override
+  String get trendExamplesAllSeen => '全部見ました';
+
+  @override
+  String trendExamplesAllSeenHint(
+    String allowLabel,
+    int allow,
+    String denyLabel,
+    int deny,
+  ) {
+    return '$allowLabel $allow / $denyLabel $deny。決定で保存します';
+  }
+
+  @override
+  String trendExamplesIntro(String allowLabel, String denyLabel) {
+    return '中身を見て、下の「$allowLabel」/「$denyLabel」(右 / 左スワイプでも)で例にします。新しいものは、例との近さで分けます。';
+  }
+
+  @override
+  String trendExamplesSummary(
+    String intro,
+    String allowLabel,
+    int allow,
+    String denyLabel,
+    int deny,
+    int remaining,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '$remaining 件',
+    );
+    return '$intro($allowLabel $allow / $denyLabel $deny・残り $_temp0)';
+  }
+
+  @override
+  String get trendExamplesSearch => '探す';
+
+  @override
+  String get trendExamplesSkip => 'とばす';
+
+  @override
+  String trendExamplesMorePosts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '+$_temp0';
+  }
+
+  @override
+  String get trendExamplesPostsUnreadable => '投稿を読めませんでした(名前と説明で比べます)';
+
+  @override
+  String trendExamplesOthers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return 'ほか $_temp0';
+  }
+
+  @override
+  String get trendExamplesSourceActions => '最近のアクション';
+
+  @override
+  String get trendExamplesSourceActionsEmpty => '最近のアクションがありません';
+
+  @override
+  String get trendExamplesSourceActionsEmptyHint =>
+      'リアクションやブックマークをすると、ここから選べます';
+
+  @override
+  String get trendExamplesSourcePlugins => 'プラグイン';
+
+  @override
+  String get trendExamplesSourcePluginsEmpty => '入れているプラグインはありません';
+
+  @override
+  String get trendExamplesSourceClips => 'クリップ';
+
+  @override
+  String get trendExamplesSourceClipsEmpty => 'クリップはありません';
+
+  @override
+  String get trendExamplesSourceLists => 'リスト';
+
+  @override
+  String get trendExamplesSourceListsEmpty => 'リストはありません';
+
+  @override
+  String get trendExamplesSourceStore => 'ストア';
+
+  @override
+  String get trendExamplesSourceStoreHint => 'ストアを探す(空 = 一覧)';
+
+  @override
+  String get trendExamplesSourceStoreEmpty => '見つかりませんでした';
+
+  @override
+  String get trendExamplesKindPlugin => 'プラグイン';
+
+  @override
+  String get trendExamplesKindClip => 'クリップ';
+
+  @override
+  String get trendExamplesKindList => 'リスト';
+
+  @override
+  String get trendExamplesKindPost => '投稿';
+
+  @override
+  String get trendExamplesKindText => 'ことば';
+
+  @override
+  String get trendProfileSheetTitle => 'トレンドプロファイル設定';
+
+  @override
+  String get trendProfileClose => '閉じる';
+
+  @override
+  String get trendProfileDecide => '決定';
+
+  @override
+  String get trendProfileGenres => '好きなジャンル/方向性';
+
+  @override
+  String get trendProfileGenresSnsDefault => '好きなジャンル/方向性(SNS 側の設定に任せる)';
+
+  @override
+  String get trendProfileGenresAuto => '好きなジャンル/方向性(アクションから自動抽出)';
+
+  @override
+  String get trendProfileAddGenrePill => '+ ジャンルを追加';
+
+  @override
+  String get trendProfileEdit => '編集';
+
+  @override
+  String get trendProfileTendencyTitle => 'トレンドの指向性/刺激性';
+
+  @override
+  String trendProfileTendencySummary(String directivity, String stimulus) {
+    return '指向性 $directivity ・ 刺激性 $stimulus';
+  }
+
+  @override
+  String get trendProfilePluginsTitle => 'トレンドプラグインの設定';
+
+  @override
+  String get trendProfilePluginsSubtitle => 'TL のノード / 検索の候補';
+
+  @override
+  String get trendProfilePluginsDetail =>
+      'trend.suggest のプラグイン。TL のカスタマイズのノード(トレンドを取得 / Today / カスタム)と検索の候補で出します';
+
+  @override
+  String get trendProfileCacheNetworkTitle => 'キャッシュネットワークの設定';
+
+  @override
+  String get trendProfileComingSoon => '準備中';
+
+  @override
+  String get trendProfileAlgorithmTitle => 'アルゴリズム(ノード)を編集';
+
+  @override
+  String get trendProfileAlgorithmSubtitle => 'トレンドの集め方・並べ方を編集します';
+
+  @override
+  String get trendProfileAlgorithmDetail =>
+      'トレンドの取得・並べ替えの鎖(ml.tendency ノードでこのプロファイルを使えます)';
+
+  @override
+  String get trendProfileSharedCaption => 'この設定は、おすすめ / トレンド / 関連 TL で共通です。';
+
+  @override
+  String get trendProfileSharedCaptionDetail =>
+      'このプロファイルは storage.safe(trend.profile)に保存され、おすすめ / トレンド / 関連 TL の既定と、ノードエディタの「指向性/刺激性」ノードが共通で読みます。';
+
+  @override
+  String get trendProfileDirNarrow => '狭い';
+
+  @override
+  String get trendProfileDirWide => '広い';
+
+  @override
+  String get trendProfileDirNormal => 'ふつう';
+
+  @override
+  String get trendProfileStimNone => '制限なし';
+
+  @override
+  String trendProfileStimCapped(String emotions) {
+    return '$emotionsを抑える';
+  }
+
+  @override
+  String get trendProfileListSeparator => '・';
+
+  @override
+  String get trendProfileDirectivityTitle => 'トレンドの指向性';
+
+  @override
+  String get trendProfileDirectivitySubtitle => '狭いほど、好きなジャンルから外れた投稿を出しません。';
+
+  @override
+  String get trendProfileDirectivityDetail =>
+      '好きなジャンル/方向性への近さのしきい値(狭い ⇄ 広い)。狭いほど外れた投稿を落とします。';
+
+  @override
+  String get trendProfileShareTitle => '設定を共有';
+
+  @override
+  String get trendProfileShareSubtitle => 'おすすめ / トレンド / 関連 TL にこの設定を使います';
+
+  @override
+  String get trendProfileShareDetail => 'オフにすると TL の既定適用を止めます(ノードで明示した分は効きます)';
+
+  @override
+  String get trendProfileStimulusTitle => 'トレンドの刺激性';
+
+  @override
+  String get trendProfileStimulusCaption => '各感情の上限。中心に寄せるほど抑えます';
+
+  @override
+  String get trendProfileStimulusReset => '刺激性をリセット';
+
+  @override
+  String get trendProfileEchoChamberWarning =>
+      'トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。';
+
+  @override
+  String get trendProfileStimulusEstimate => '刺激性は、いまは言葉の傾向から推定しています。';
+
+  @override
+  String get trendProfileStimulusEstimateDetail => '刺激性は語彙ルールで推定しています。';
+
+  @override
+  String get trendProfileTendencySaved => 'トレンドの指向性/刺激性を保存しました';
+
+  @override
+  String get trendProfileSnsDefaultTitle => 'SNS 側の設定に任せる';
+
+  @override
+  String get trendProfileSnsDefaultSubtitle => 'オンの間は端末側で絞りません';
+
+  @override
+  String get trendProfileAutoGenreTitle => 'あなたのアクションから自動抽出';
+
+  @override
+  String get trendProfileAutoGenreSubtitle => 'リアクションした投稿の特徴語を好きなジャンルに足します';
+
+  @override
+  String get trendProfilePickFromActions => '最近のアクションから好きなものを選択';
+
+  @override
+  String get trendProfileGenresTapToRemove => '好きなジャンル/方向性(タップで外す)';
+
+  @override
+  String get trendProfileNoneYet => 'まだありません';
+
+  @override
+  String get trendProfileAddGenreHint => 'ジャンル/キーワードを追加';
+
+  @override
+  String get trendProfileAddGenre => 'ジャンルを追加';
+
+  @override
+  String trendProfileExamplesLabel(int allow, int deny) {
+    return '例(好き $allow / 好きではない $deny。タップで外す)';
+  }
+
+  @override
+  String trendProfileExampleAllow(String label) {
+    return '好き: $label';
+  }
+
+  @override
+  String trendProfileExampleDeny(String label) {
+    return '好きではない: $label';
+  }
+
+  @override
+  String get trendProfileDislikedTapToRemove => '好きではない(タップで外す)';
+
+  @override
+  String get trendProfileGenresSaved => '好きなジャンル/方向性を保存しました';
+
+  @override
+  String get trendProfilePickTitle => 'アクションからジャンルを選択';
+
+  @override
+  String get trendProfilePickIntro =>
+      '最近のアクションを話題ごとに出しています。カードを選んで「好き」/「好きではない」へ(右/左スワイプでも)。';
+
+  @override
+  String trendProfilePickIntroDetail(int perPage) {
+    String _temp0 = intl.Intl.pluralLogic(
+      perPage,
+      locale: localeName,
+      other: '$perPage 件',
+    );
+    return '最近のアクションを類似した話題でまとめ、話題性の強いものから $_temp0ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。';
+  }
+
+  @override
   String get vcSectionInvited => '招待';
 
   @override

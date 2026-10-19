@@ -20446,6 +20446,792 @@ abstract class AppLocalizations {
   /// **'アセットパック'**
   String get storePkgKindAssets;
 
+  /// No description provided for @trendTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド'**
+  String get trendTitle;
+
+  /// No description provided for @trendTabNotes.
+  ///
+  /// In ja, this message translates to:
+  /// **'ノート'**
+  String get trendTabNotes;
+
+  /// No description provided for @trendTabFollowing.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get trendTabFollowing;
+
+  /// No description provided for @trendTabUsers.
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザー'**
+  String get trendTabUsers;
+
+  /// No description provided for @trendBackToHome.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドホームへ戻る'**
+  String get trendBackToHome;
+
+  /// アカウントの選択で、このトレンドを出したアカウントに付ける印の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドに出したアカウント'**
+  String get trendSourceAccountMark;
+
+  /// No description provided for @trendSettingsTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド設定'**
+  String get trendSettingsTooltip;
+
+  /// No description provided for @trendCustomizeTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド TL をカスタマイズ'**
+  String get trendCustomizeTooltip;
+
+  /// No description provided for @trendReload.
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get trendReload;
+
+  /// No description provided for @trendEmptyTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'なんにもないようです'**
+  String get trendEmptyTitle;
+
+  /// No description provided for @trendEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ワードやフィルタを変えると見つかるかもしれません'**
+  String get trendEmptyHint;
+
+  /// No description provided for @trendFollowingEmptyTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中の投稿はありません'**
+  String get trendFollowingEmptyTitle;
+
+  /// No description provided for @trendFollowingEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'このワードについてフォロイーはまだ投稿していません'**
+  String get trendFollowingEmptyHint;
+
+  /// No description provided for @trendUsersBlocked.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がユーザーの検索を止めています'**
+  String get trendUsersBlocked;
+
+  /// No description provided for @trendUsersEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザーはいません'**
+  String get trendUsersEmpty;
+
+  /// トレンドのユーザーの一覧の行の補足。count はリアクションの合計
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション {count}'**
+  String trendUserReactions(int count);
+
+  /// No description provided for @trendMenuOpenAs.
+  ///
+  /// In ja, this message translates to:
+  /// **'別のアカウントで開く'**
+  String get trendMenuOpenAs;
+
+  /// No description provided for @trendMenuReport.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報'**
+  String get trendMenuReport;
+
+  /// account は SNS アカウント(@名前@サーバー)
+  ///
+  /// In ja, this message translates to:
+  /// **'{account}(トレンドに出したアカウント)'**
+  String trendMenuAccountSourced(String account);
+
+  /// No description provided for @trendReportTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報'**
+  String get trendReportTitle;
+
+  /// No description provided for @trendReportMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド「{tag}」を通報します。RASQ の審査で確認します。通報したトレンドは、トレンドの一覧に出なくなります。'**
+  String trendReportMessage(String tag);
+
+  /// server はトレンドを出したサーバー
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド「{tag}」({server})を通報します。RASQ の審査で確認します。通報したトレンドは、トレンドの一覧に出なくなります。'**
+  String trendReportMessageWithServer(String tag, String server);
+
+  /// No description provided for @trendReportNoteHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'補足(任意)'**
+  String get trendReportNoteHint;
+
+  /// No description provided for @trendReportSend.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報する'**
+  String get trendReportSend;
+
+  /// No description provided for @trendReportSent.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報しました。RASQ の審査で確認します'**
+  String get trendReportSent;
+
+  /// No description provided for @trendReportStored.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末に控えました。RASQ アカウントに繋がったら送ります'**
+  String get trendReportStored;
+
+  /// No description provided for @trendReportFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'送れなかったので、この端末に控えました(あとで送り直します)'**
+  String get trendReportFailed;
+
+  /// No description provided for @trendReportUnhide.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示に戻す'**
+  String get trendReportUnhide;
+
+  /// ノードの見出しで、プラグインが 1 つに決まらないときの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプラグイン'**
+  String get trendPluginFallbackName;
+
+  /// No description provided for @trendPluginLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした'**
+  String get trendPluginLoadFailed;
+
+  /// No description provided for @trendPluginNoWords.
+  ///
+  /// In ja, this message translates to:
+  /// **'候補のワードはまだありません'**
+  String get trendPluginNoWords;
+
+  /// Today のノードで、候補のワードを 1 つずつかぎかっこで囲む
+  ///
+  /// In ja, this message translates to:
+  /// **'「{word}」'**
+  String trendPluginWordQuoted(String word);
+
+  /// words は trendPluginWordQuoted を並べたもの
+  ///
+  /// In ja, this message translates to:
+  /// **'{words}の投稿はまだありません'**
+  String trendPluginTodayEmpty(String words);
+
+  /// words は trendPluginWordQuoted を並べたもの
+  ///
+  /// In ja, this message translates to:
+  /// **'{words}の投稿'**
+  String trendPluginTodayHeading(String words);
+
+  /// 刺激性の 8 つの感情の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'喜び'**
+  String get trendEmotionJoy;
+
+  /// No description provided for @trendEmotionTrust.
+  ///
+  /// In ja, this message translates to:
+  /// **'信頼'**
+  String get trendEmotionTrust;
+
+  /// No description provided for @trendEmotionFear.
+  ///
+  /// In ja, this message translates to:
+  /// **'恐れ'**
+  String get trendEmotionFear;
+
+  /// No description provided for @trendEmotionSurprise.
+  ///
+  /// In ja, this message translates to:
+  /// **'驚き'**
+  String get trendEmotionSurprise;
+
+  /// No description provided for @trendEmotionSadness.
+  ///
+  /// In ja, this message translates to:
+  /// **'悲しみ'**
+  String get trendEmotionSadness;
+
+  /// No description provided for @trendEmotionDisgust.
+  ///
+  /// In ja, this message translates to:
+  /// **'嫌悪'**
+  String get trendEmotionDisgust;
+
+  /// No description provided for @trendEmotionAnger.
+  ///
+  /// In ja, this message translates to:
+  /// **'怒り'**
+  String get trendEmotionAnger;
+
+  /// No description provided for @trendEmotionAnticipation.
+  ///
+  /// In ja, this message translates to:
+  /// **'期待'**
+  String get trendEmotionAnticipation;
+
+  /// No description provided for @trendExamplesNoCandidates.
+  ///
+  /// In ja, this message translates to:
+  /// **'候補がありません'**
+  String get trendExamplesNoCandidates;
+
+  /// No description provided for @trendExamplesAllow.
+  ///
+  /// In ja, this message translates to:
+  /// **'好き'**
+  String get trendExamplesAllow;
+
+  /// No description provided for @trendExamplesDeny.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きではない'**
+  String get trendExamplesDeny;
+
+  /// No description provided for @trendExamplesDecide.
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get trendExamplesDecide;
+
+  /// source は出どころの名前(最近のアクション / プラグインなど)
+  ///
+  /// In ja, this message translates to:
+  /// **'{source}を読み込めませんでした: {error}'**
+  String trendExamplesLoadFailed(String source, String error);
+
+  /// No description provided for @trendExamplesAllSeen.
+  ///
+  /// In ja, this message translates to:
+  /// **'全部見ました'**
+  String get trendExamplesAllSeen;
+
+  /// allowLabel / denyLabel はボタンの名前(好き / 好きではない など)、allow / deny はその数
+  ///
+  /// In ja, this message translates to:
+  /// **'{allowLabel} {allow} / {denyLabel} {deny}。決定で保存します'**
+  String trendExamplesAllSeenHint(
+    String allowLabel,
+    int allow,
+    String denyLabel,
+    int deny,
+  );
+
+  /// No description provided for @trendExamplesIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'中身を見て、下の「{allowLabel}」/「{denyLabel}」(右 / 左スワイプでも)で例にします。新しいものは、例との近さで分けます。'**
+  String trendExamplesIntro(String allowLabel, String denyLabel);
+
+  /// intro は説明の文(trendExamplesIntro など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{intro}({allowLabel} {allow} / {denyLabel} {deny}・残り {remaining, plural, other{{remaining} 件}})'**
+  String trendExamplesSummary(
+    String intro,
+    String allowLabel,
+    int allow,
+    String denyLabel,
+    int deny,
+    int remaining,
+  );
+
+  /// No description provided for @trendExamplesSearch.
+  ///
+  /// In ja, this message translates to:
+  /// **'探す'**
+  String get trendExamplesSearch;
+
+  /// No description provided for @trendExamplesSkip.
+  ///
+  /// In ja, this message translates to:
+  /// **'とばす'**
+  String get trendExamplesSkip;
+
+  /// 話題のカードの右上の、ほかの投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'+{count, plural, other{{count} 件}}'**
+  String trendExamplesMorePosts(int count);
+
+  /// No description provided for @trendExamplesPostsUnreadable.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿を読めませんでした(名前と説明で比べます)'**
+  String get trendExamplesPostsUnreadable;
+
+  /// No description provided for @trendExamplesOthers.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほか {count, plural, other{{count} 件}}'**
+  String trendExamplesOthers(int count);
+
+  /// No description provided for @trendExamplesSourceActions.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近のアクション'**
+  String get trendExamplesSourceActions;
+
+  /// No description provided for @trendExamplesSourceActionsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近のアクションがありません'**
+  String get trendExamplesSourceActionsEmpty;
+
+  /// No description provided for @trendExamplesSourceActionsEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションやブックマークをすると、ここから選べます'**
+  String get trendExamplesSourceActionsEmptyHint;
+
+  /// No description provided for @trendExamplesSourcePlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン'**
+  String get trendExamplesSourcePlugins;
+
+  /// No description provided for @trendExamplesSourcePluginsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'入れているプラグインはありません'**
+  String get trendExamplesSourcePluginsEmpty;
+
+  /// No description provided for @trendExamplesSourceClips.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ'**
+  String get trendExamplesSourceClips;
+
+  /// No description provided for @trendExamplesSourceClipsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップはありません'**
+  String get trendExamplesSourceClipsEmpty;
+
+  /// No description provided for @trendExamplesSourceLists.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get trendExamplesSourceLists;
+
+  /// No description provided for @trendExamplesSourceListsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストはありません'**
+  String get trendExamplesSourceListsEmpty;
+
+  /// No description provided for @trendExamplesSourceStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストア'**
+  String get trendExamplesSourceStore;
+
+  /// No description provided for @trendExamplesSourceStoreHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアを探す(空 = 一覧)'**
+  String get trendExamplesSourceStoreHint;
+
+  /// No description provided for @trendExamplesSourceStoreEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりませんでした'**
+  String get trendExamplesSourceStoreEmpty;
+
+  /// 例の種類の札
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン'**
+  String get trendExamplesKindPlugin;
+
+  /// No description provided for @trendExamplesKindClip.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ'**
+  String get trendExamplesKindClip;
+
+  /// No description provided for @trendExamplesKindList.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get trendExamplesKindList;
+
+  /// No description provided for @trendExamplesKindPost.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get trendExamplesKindPost;
+
+  /// No description provided for @trendExamplesKindText.
+  ///
+  /// In ja, this message translates to:
+  /// **'ことば'**
+  String get trendExamplesKindText;
+
+  /// No description provided for @trendProfileSheetTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプロファイル設定'**
+  String get trendProfileSheetTitle;
+
+  /// No description provided for @trendProfileClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get trendProfileClose;
+
+  /// No description provided for @trendProfileDecide.
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get trendProfileDecide;
+
+  /// No description provided for @trendProfileGenres.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性'**
+  String get trendProfileGenres;
+
+  /// No description provided for @trendProfileGenresSnsDefault.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性(SNS 側の設定に任せる)'**
+  String get trendProfileGenresSnsDefault;
+
+  /// No description provided for @trendProfileGenresAuto.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性(アクションから自動抽出)'**
+  String get trendProfileGenresAuto;
+
+  /// No description provided for @trendProfileAddGenrePill.
+  ///
+  /// In ja, this message translates to:
+  /// **'+ ジャンルを追加'**
+  String get trendProfileAddGenrePill;
+
+  /// No description provided for @trendProfileEdit.
+  ///
+  /// In ja, this message translates to:
+  /// **'編集'**
+  String get trendProfileEdit;
+
+  /// No description provided for @trendProfileTendencyTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの指向性/刺激性'**
+  String get trendProfileTendencyTitle;
+
+  /// directivity は trendProfileDirNarrow などの語、stimulus は trendProfileStimNone か trendProfileStimCapped
+  ///
+  /// In ja, this message translates to:
+  /// **'指向性 {directivity} ・ 刺激性 {stimulus}'**
+  String trendProfileTendencySummary(String directivity, String stimulus);
+
+  /// No description provided for @trendProfilePluginsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプラグインの設定'**
+  String get trendProfilePluginsTitle;
+
+  /// No description provided for @trendProfilePluginsSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'TL のノード / 検索の候補'**
+  String get trendProfilePluginsSubtitle;
+
+  /// 開発者モードの詳しい説明。trend.suggest はスロットの id(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'trend.suggest のプラグイン。TL のカスタマイズのノード(トレンドを取得 / Today / カスタム)と検索の候補で出します'**
+  String get trendProfilePluginsDetail;
+
+  /// No description provided for @trendProfileCacheNetworkTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャッシュネットワークの設定'**
+  String get trendProfileCacheNetworkTitle;
+
+  /// No description provided for @trendProfileComingSoon.
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中'**
+  String get trendProfileComingSoon;
+
+  /// No description provided for @trendProfileAlgorithmTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アルゴリズム(ノード)を編集'**
+  String get trendProfileAlgorithmTitle;
+
+  /// No description provided for @trendProfileAlgorithmSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの集め方・並べ方を編集します'**
+  String get trendProfileAlgorithmSubtitle;
+
+  /// 開発者モードの詳しい説明。ml.tendency はノードの id(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの取得・並べ替えの鎖(ml.tendency ノードでこのプロファイルを使えます)'**
+  String get trendProfileAlgorithmDetail;
+
+  /// No description provided for @trendProfileSharedCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'この設定は、おすすめ / トレンド / 関連 TL で共通です。'**
+  String get trendProfileSharedCaption;
+
+  /// 開発者モードの詳しい説明。storage.safe / trend.profile は保存先の名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'このプロファイルは storage.safe(trend.profile)に保存され、おすすめ / トレンド / 関連 TL の既定と、ノードエディタの「指向性/刺激性」ノードが共通で読みます。'**
+  String get trendProfileSharedCaptionDetail;
+
+  /// No description provided for @trendProfileDirNarrow.
+  ///
+  /// In ja, this message translates to:
+  /// **'狭い'**
+  String get trendProfileDirNarrow;
+
+  /// No description provided for @trendProfileDirWide.
+  ///
+  /// In ja, this message translates to:
+  /// **'広い'**
+  String get trendProfileDirWide;
+
+  /// No description provided for @trendProfileDirNormal.
+  ///
+  /// In ja, this message translates to:
+  /// **'ふつう'**
+  String get trendProfileDirNormal;
+
+  /// No description provided for @trendProfileStimNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'制限なし'**
+  String get trendProfileStimNone;
+
+  /// emotions は感情の名前(最大 3 つ)を trendProfileListSeparator でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'{emotions}を抑える'**
+  String trendProfileStimCapped(String emotions);
+
+  /// 感情の名前を並べるときの区切り
+  ///
+  /// In ja, this message translates to:
+  /// **'・'**
+  String get trendProfileListSeparator;
+
+  /// No description provided for @trendProfileDirectivityTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの指向性'**
+  String get trendProfileDirectivityTitle;
+
+  /// No description provided for @trendProfileDirectivitySubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'狭いほど、好きなジャンルから外れた投稿を出しません。'**
+  String get trendProfileDirectivitySubtitle;
+
+  /// No description provided for @trendProfileDirectivityDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性への近さのしきい値(狭い ⇄ 広い)。狭いほど外れた投稿を落とします。'**
+  String get trendProfileDirectivityDetail;
+
+  /// No description provided for @trendProfileShareTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'設定を共有'**
+  String get trendProfileShareTitle;
+
+  /// No description provided for @trendProfileShareSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'おすすめ / トレンド / 関連 TL にこの設定を使います'**
+  String get trendProfileShareSubtitle;
+
+  /// No description provided for @trendProfileShareDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフにすると TL の既定適用を止めます(ノードで明示した分は効きます)'**
+  String get trendProfileShareDetail;
+
+  /// No description provided for @trendProfileStimulusTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの刺激性'**
+  String get trendProfileStimulusTitle;
+
+  /// No description provided for @trendProfileStimulusCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'各感情の上限。中心に寄せるほど抑えます'**
+  String get trendProfileStimulusCaption;
+
+  /// No description provided for @trendProfileStimulusReset.
+  ///
+  /// In ja, this message translates to:
+  /// **'刺激性をリセット'**
+  String get trendProfileStimulusReset;
+
+  /// No description provided for @trendProfileEchoChamberWarning.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。'**
+  String get trendProfileEchoChamberWarning;
+
+  /// No description provided for @trendProfileStimulusEstimate.
+  ///
+  /// In ja, this message translates to:
+  /// **'刺激性は、いまは言葉の傾向から推定しています。'**
+  String get trendProfileStimulusEstimate;
+
+  /// 開発者モードの詳しい説明
+  ///
+  /// In ja, this message translates to:
+  /// **'刺激性は語彙ルールで推定しています。'**
+  String get trendProfileStimulusEstimateDetail;
+
+  /// No description provided for @trendProfileTendencySaved.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの指向性/刺激性を保存しました'**
+  String get trendProfileTendencySaved;
+
+  /// No description provided for @trendProfileSnsDefaultTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS 側の設定に任せる'**
+  String get trendProfileSnsDefaultTitle;
+
+  /// No description provided for @trendProfileSnsDefaultSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'オンの間は端末側で絞りません'**
+  String get trendProfileSnsDefaultSubtitle;
+
+  /// No description provided for @trendProfileAutoGenreTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'あなたのアクションから自動抽出'**
+  String get trendProfileAutoGenreTitle;
+
+  /// No description provided for @trendProfileAutoGenreSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションした投稿の特徴語を好きなジャンルに足します'**
+  String get trendProfileAutoGenreSubtitle;
+
+  /// No description provided for @trendProfilePickFromActions.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近のアクションから好きなものを選択'**
+  String get trendProfilePickFromActions;
+
+  /// No description provided for @trendProfileGenresTapToRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性(タップで外す)'**
+  String get trendProfileGenresTapToRemove;
+
+  /// No description provided for @trendProfileNoneYet.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだありません'**
+  String get trendProfileNoneYet;
+
+  /// No description provided for @trendProfileAddGenreHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ジャンル/キーワードを追加'**
+  String get trendProfileAddGenreHint;
+
+  /// No description provided for @trendProfileAddGenre.
+  ///
+  /// In ja, this message translates to:
+  /// **'ジャンルを追加'**
+  String get trendProfileAddGenre;
+
+  /// allow / deny は好きな例 / 好きではない例の数
+  ///
+  /// In ja, this message translates to:
+  /// **'例(好き {allow} / 好きではない {deny}。タップで外す)'**
+  String trendProfileExamplesLabel(int allow, int deny);
+
+  /// 好きな例のチップ。label は例の短い名前
+  ///
+  /// In ja, this message translates to:
+  /// **'好き: {label}'**
+  String trendProfileExampleAllow(String label);
+
+  /// 好きではない例のチップ。label は例の短い名前
+  ///
+  /// In ja, this message translates to:
+  /// **'好きではない: {label}'**
+  String trendProfileExampleDeny(String label);
+
+  /// No description provided for @trendProfileDislikedTapToRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きではない(タップで外す)'**
+  String get trendProfileDislikedTapToRemove;
+
+  /// No description provided for @trendProfileGenresSaved.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性を保存しました'**
+  String get trendProfileGenresSaved;
+
+  /// No description provided for @trendProfilePickTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションからジャンルを選択'**
+  String get trendProfilePickTitle;
+
+  /// No description provided for @trendProfilePickIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近のアクションを話題ごとに出しています。カードを選んで「好き」/「好きではない」へ(右/左スワイプでも)。'**
+  String get trendProfilePickIntro;
+
+  /// 開発者モードの詳しい説明。perPage は 1 ページのカードの数
+  ///
+  /// In ja, this message translates to:
+  /// **'最近のアクションを類似した話題でまとめ、話題性の強いものから {perPage, plural, other{{perPage} 件}}ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。'**
+  String trendProfilePickIntroDetail(int perPage);
+
   /// VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)
   ///
   /// In ja, this message translates to:

@@ -6,6 +6,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show TimelineKind;
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../nodeprog/node_executor.dart' show mergePostLists;
 import '../nodeprog/tl_components.dart';
@@ -74,7 +75,7 @@ final trendPluginTodayProvider = FutureProvider.autoDispose.family<TrendPluginTo
   if (session == null || words.isEmpty) return (words: words, posts: const <Post>[]);
   final lists = <List<Post>>[];
   for (final w in words) {
-    final query = w.replaceFirst(RegExp(r'^[#＃]'), '');
+    final query = w.replaceFirst(RegExp(r'^[#＃]'), ''); // l10n-ignore: ハッシュタグの記号(全角の＃)
     try {
       lists.add((await session.searchPosts(query)).items);
     } catch (e) {
@@ -99,7 +100,7 @@ List<SlotPlugin> trendPluginsOf(WidgetRef ref, TlSourceComponent node) {
 /// 見出し: 「トレンド(トレンドサジェスト)」「Today(…)」「検索の候補(…)」。プラグインが 1 つに決まらなければ「トレンドプラグイン」。
 String trendPluginNodeLabel(WidgetRef ref, TlSourceComponent node) {
   final plugins = trendPluginsOf(ref, node);
-  final name = plugins.length == 1 ? plugins.single.manifest.name : 'トレンドプラグイン';
+  final name = plugins.length == 1 ? plugins.single.manifest.name : appL10n.trendPluginFallbackName;
   return '${node.form.heading}($name)';
 }
 
@@ -139,28 +140,28 @@ class TrendPluginNodeContent extends ConsumerWidget {
     if (node.form == TrendNodeForm.today) {
       final today = ref.watch(trendPluginTodayProvider(q));
       final v = today.value;
-      if (v == null) return today.hasError ? const RasqCaption('読み込めませんでした') : _loading();
-      if (v.posts.isEmpty) return RasqCaption(v.words.isEmpty ? '候補のワードはまだありません' : '${v.words.map((w) => '「$w」').join('')}の投稿はまだありません');
+      if (v == null) return today.hasError ? RasqCaption(context.l10n.trendPluginLoadFailed) : _loading();
+      if (v.posts.isEmpty) return RasqCaption(v.words.isEmpty ? context.l10n.trendPluginNoWords : context.l10n.trendPluginTodayEmpty(v.words.map(context.l10n.trendPluginWordQuoted).join('')));
       final scheme = Theme.of(context).colorScheme;
       return Column(key: ValueKey('trend.plugin.today.$key'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
-          child: Text('${v.words.map((w) => '「$w」').join('')}の投稿', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text(context.l10n.trendPluginTodayHeading(v.words.map(context.l10n.trendPluginWordQuoted).join('')), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ),
         TlPostsDisplay(posts: v.posts, mode: node.display, limit: node.limit, scrollable: false, kind: TimelineKind.home),
       ]);
     }
     final items = ref.watch(trendPluginSuggestionsProvider(q));
     final v = items.value;
-    if (v == null) return items.hasError ? const RasqCaption('読み込めませんでした') : _loading();
+    if (v == null) return items.hasError ? RasqCaption(context.l10n.trendPluginLoadFailed) : _loading();
     final shown = v.take(node.limit).toList();
-    if (shown.isEmpty) return const RasqCaption('候補のワードはまだありません');
+    if (shown.isEmpty) return RasqCaption(context.l10n.trendPluginNoWords);
     if (node.form == TrendNodeForm.chips) {
       return Padding(
         key: ValueKey('trend.plugin.chips.$key'),
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
         child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
-          for (final s in shown) ActionChip(label: Text('#${s.text.replaceFirst(RegExp(r'^[#＃]'), '')}'), tooltip: s.reason, onPressed: () => context.pushTrend(s.text.replaceFirst(RegExp(r'^[#＃]'), ''))),
+          for (final s in shown) ActionChip(label: Text('#${s.text.replaceFirst(RegExp(r'^[#＃]'), '')}'), tooltip: s.reason, onPressed: () => context.pushTrend(s.text.replaceFirst(RegExp(r'^[#＃]'), ''))), // l10n-ignore: ハッシュタグの記号(全角の＃)
         ]),
       );
     }
@@ -176,7 +177,7 @@ class _PluginTrendTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final word = suggestion.text.replaceFirst(RegExp(r'^[#＃]'), '');
+    final word = suggestion.text.replaceFirst(RegExp(r'^[#＃]'), ''); // l10n-ignore: ハッシュタグの記号(全角の＃)
     final reason = suggestion.reason;
     return InkWell(
       key: ValueKey('trend.plugin.tile.$word'),
