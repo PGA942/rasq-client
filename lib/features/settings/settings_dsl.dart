@@ -58,28 +58,65 @@ class SettingsPageSpec {
   }
 }
 
-/// 現在の SNS プラグインが提供する設定ページ(短 area → spec)。壊れた
-/// ページは読み飛ばす(V12: 縮退)。
-final pluginSettingsPagesProvider = Provider<Map<String, SettingsPageSpec>>((ref) {
-  final session = ref.watch(currentSnsSessionProvider);
-  final plugin = session == null ? null : ref.watch(pluginRegistryProvider).plugin(session.pluginId);
+/// SNS プラグイン [pluginId] が提供する設定ページ(短 area → spec)(D-044 / D-482)。壊れたページは読み飛ばす
+/// (V12: 縮退)。wasm のプラグインは `sns.settingsPages` で返すので非同期([SnsPlugin.loadSettingsPages])。
+final snsPluginSettingsPagesProvider = FutureProvider.family<Map<String, SettingsPageSpec>, String>((ref, pluginId) async {
+  final plugin = ref.watch(pluginRegistryProvider).plugin(pluginId);
   final out = <String, SettingsPageSpec>{};
-  for (final raw in plugin?.settingsPages ?? const <String>[]) {
+  for (final raw in await plugin?.loadSettingsPages() ?? const <String>[]) {
     try {
       final spec = SettingsPageSpec.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
       out[spec.area] = spec;
     } catch (e) {
-      debugPrint('settings page from ${plugin?.manifest.id} skipped: $e');
+      debugPrint('settings page from $pluginId skipped: $e');
     }
   }
   return out;
 });
 
+/// 現在の SNS プラグインが提供する設定ページ(短 area → spec)。読み込み中は空(値を使う側は既定動作に縮退する)。
+final pluginSettingsPagesProvider = Provider<Map<String, SettingsPageSpec>>((ref) {
+  final session = ref.watch(currentSnsSessionProvider);
+  if (session == null) return const {};
+  return ref.watch(snsPluginSettingsPagesProvider(session.pluginId)).value ?? const {};
+});
+
+/// 設定する SNS アカウント(D-131 の切替を含む)のプラグインが提供する設定ページ (D-482)。
+/// 設定の「SNSプラグイン」の行はこれに無いページを出さず、ページはこれから開く。
+final settingsTargetPagesProvider = FutureProvider<Map<String, SettingsPageSpec>>((ref) async {
+  final session = settingsTargetSession(ref);
+  if (session == null) return const {};
+  return ref.watch(snsPluginSettingsPagesProvider(session.pluginId).future);
+});
+
+/// SNS プラグインが持たない設定ページを開こうとした (D-482)。行は出さないが、検索や古いリンクから来うる。
+class MissingSnsSettingsPage implements Exception {
+  const MissingSnsSettingsPage(this.area);
+  final String area;
+  @override
+  String toString() => 'SNS プラグインが設定ページ "$area" を提供していません';
+}
+
+/// 設定の行 [route] が SNS プラグインの設定ページ(`/settings/dsl/sns.<短area>`)なら、その短 area。
+String? snsSettingsAreaOf(String? route) {
+  const prefix = '/settings/dsl/sns.';
+  return route != null && route.startsWith(prefix) ? route.substring(prefix.length) : null;
+}
+
+/// 設定の行を出すか (D-482): SNS プラグインの設定ページの行は、プラグインが宣言したものだけ。
+/// 読み込み中は出しておく(出たり消えたりしないよう、宣言が分かってから消す)。
+bool settingsRowVisible(WidgetRef ref, String? route) {
+  final area = snsSettingsAreaOf(route);
+  if (area == null) return true;
+  final pages = ref.watch(settingsTargetPagesProvider).value;
+  return pages == null || pages.containsKey(area);
+}
+
 final settingsPageSpecProvider = FutureProvider.family<SettingsPageSpec, String>((ref, area) async {
   if (area.startsWith('sns.')) {
     final short = area.substring(4);
-    final spec = ref.watch(pluginSettingsPagesProvider)[short];
-    if (spec == null) throw StateError('SNS プラグインが設定ページ "$short" を提供していません');
+    final spec = (await ref.watch(settingsTargetPagesProvider.future))[short];
+    if (spec == null) throw MissingSnsSettingsPage(short);
     return spec;
   }
   final raw = await loadSettingsPageJson(area);
@@ -240,7 +277,12 @@ class SettingsDslScreen extends ConsumerWidget {
     final spec = ref.watch(settingsPageSpecProvider(area));
     return spec.when(
       loading: () => Scaffold(appBar: const RasqPageHeader(title: '設定'), body: const RasqLoading()),
-      error: (e, _) => Scaffold(appBar: const RasqPageHeader(title: '設定'), body: RasqEmptyView(title: '設定ページを読み込めません', hint: '$e')),
+      error: (e, _) => Scaffold(
+        appBar: const RasqPageHeader(title: '設定'),
+        body: e is MissingSnsSettingsPage
+            ? RasqEmptyView(title: 'このページはありません', hint: rasqDetail(context, 'このアカウントの SNS には、この設定がありません。', '$e(D-482)'))
+            : RasqEmptyView(title: '設定ページを読み込めません', hint: '$e'),
+      ),
       data: (s) {
         if (!s.isRemote) return _page(context, ref, s, ref.watch(settingsAreaProvider(area)).value ?? const {});
         final remote = ref.watch(remoteSettingsProvider(s.area));
@@ -257,19 +299,22 @@ class SettingsDslScreen extends ConsumerWidget {
     // チャイルドセーフ (D-307): 見守り中の「プライバシーとセーフモード」は読むだけ(閲覧注意のメディアは必ず隠す)。
     final childLocked = area == 'sns.safety' && ref.watch(childGateProvider).supervised;
     if (childLocked) values = {...values, 'sensitiveMedia': 'hide'};
+    // 疑似 instanceScope: ホスト自身の静的ページ(プラグイン非経由)。
+    final instanceScope = 'rasq.host.settings:-:0:$area';
     final host = RrlHost(
-      // 疑似 instanceScope: ホスト自身の静的ページ(プラグイン非経由)。
-      instanceScope: 'rasq.host.settings:-:0:$area',
+      instanceScope: instanceScope,
       scope: RrlScope({
         'settings': {...s.defaults, if (!s.isRemote && !area.startsWith('sns.')) ...ref.watch(hostSettingDefaultsProvider(area)), ...values},
       }),
       onEvent: (nodeId, kind, {String? fn, Map<String, Object?> payload = const {}}) {
-        // nodeId = `<instanceScope>:<node.k>`、設定キー/パス = ノードの k。
-        final key = nodeId.split(':').last;
+        // nodeId = `<instanceScope>:<node.k>`、設定キー/パス = ノードの k。k には `:` も入りうる(web.open の URL、D-482)。
+        final key = nodeId.startsWith('$instanceScope:') ? nodeId.substring(instanceScope.length + 1) : nodeId.split(':').last;
+        // 値: 設定タイルの change は payload.value、文字の欄(Input)の submit は payload.text (D-482)。
+        final value = payload.containsKey('value') ? payload['value'] : payload['text'];
         if (childLocked && fn == 'settings.set') return;
         switch (fn) {
           case 'settings.set' when s.isRemote:
-            ref.read(remoteSettingsProvider(s.area).notifier).set(key, payload['value']).catchError((Object e) {
+            ref.read(remoteSettingsProvider(s.area).notifier).set(key, value).catchError((Object e) {
               // 権限不足 (D-045): スコープの増加は既存トークンに反映されない
               // ため、再ログインの誘導を添える。
               final permission = '$e'.contains('PERMISSION_DENIED') || '$e'.contains('403');
@@ -277,9 +322,16 @@ class SettingsDslScreen extends ConsumerWidget {
               ref.read(overlayManagerProvider).showAlert(id: 'settings.remote.error', title: '保存できませんでした', message: '$e$hint', confirmText: 'OK');
             });
           case 'settings.set':
-            ref.read(settingsAreaProvider(area).notifier).set(key, payload['value']);
+            ref.read(settingsAreaProvider(area).notifier).set(key, value);
           case 'web.open':
-            final instance = ref.read(currentAccountProvider)?.instance;
+            // `https://` の URL はそのまま(Bluesky の bsky.app のように、設定の web がアカウントの接続先と別、D-482)。
+            // ほかは設定するアカウントのインスタンス上のパス。
+            if (key.startsWith('https://')) {
+              final uri = Uri.tryParse(key);
+              if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+              break;
+            }
+            final instance = (ref.read(settingsAccountOverrideProvider) ?? ref.read(currentAccountSessionProvider))?.account.instance;
             if (instance != null) launchUrl(Uri.https(instance, '/$key'), mode: LaunchMode.externalApplication);
           case 'route.push':
             // アプリ内の画面へ (D-238): `k` = ルート(`/store` など。`:` は含められない)。

@@ -18,6 +18,10 @@ abstract class SnsPlugin {
   /// [SnsSession.settingsRead]/[SnsSession.settingsWrite] 経由でサーバー保存)。
   List<String> get settingsPages => const [];
 
+  /// [settingsPages] を読む(D-482)。wasm のプラグインはページを `sns.settingsPages` で返すので非同期。
+  /// ホストはこちらを使う。既定は [settingsPages] をそのまま。読めなければ空(ページ無し = 行を出さない)。
+  Future<List<String>> loadSettingsPages() async => settingsPages;
+
   /// Normalises user input ("misskey.io", "https://misskey.io/") to a host.
   String normalizeHost(String input) {
     var s = input.trim();

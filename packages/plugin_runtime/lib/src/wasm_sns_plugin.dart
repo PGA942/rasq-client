@@ -153,6 +153,36 @@ class WasmSnsPlugin extends SnsPlugin {
     return controller.invoke(fn, {...args, if (host != null) ..._baseArgs(host)});
   }
 
+  /// 設定ページ (D-044 / D-482): `sns.settingsPages {}` → `{pages: [rasq.settings-page/1 …]}`。
+  /// アカウントに依らないので匿名ワーカーで 1 度だけ読んで持つ。未実装(C01)は「ページ無し」として持つ。
+  /// 失敗(ワーカーが起きない等)は持たず、次に開いたときに読み直す。
+  List<String> _settingsPages = const [];
+  Future<List<String>>? _settingsPagesLoad;
+
+  @override
+  List<String> get settingsPages => _settingsPages;
+
+  @override
+  Future<List<String>> loadSettingsPages() => _settingsPagesLoad ??= () async {
+        try {
+          final result = await callAnonymous('sns.settingsPages', const {});
+          if (result['ok'] != true) {
+            final code = (result['error'] as Map?)?['code'];
+            if (code != 'C01') _settingsPagesLoad = null;
+            return _settingsPages = const [];
+          }
+          final pages = ((result['value'] as Map?)?['pages'] as List?) ?? const [];
+          return _settingsPages = [
+            for (final p in pages)
+              if (p is Map) jsonEncode(p) else if (p is String) p,
+          ];
+        } catch (e) {
+          debugPrint('${manifest.id}: sns.settingsPages failed: $e');
+          _settingsPagesLoad = null;
+          return const <String>[];
+        }
+      }();
+
   @override
   Future<ServerInfo> inspectServer(String host) async {
     final h = normalizeHost(host);

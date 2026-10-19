@@ -14,6 +14,7 @@ import '../rai/rai_overlay.dart' show showRai;
 import '../rai/rai_providers.dart';
 import '../rai/rai_reference.dart' show RaiHit, RaiOperation;
 import '../rai/rai_reference_providers.dart';
+import 'settings_dsl.dart' show settingsRowVisible;
 import 'settings_search.dart';
 import 'settings_section_screen.dart' show openSettingsRow;
 import 'settings_sections.dart';
@@ -119,7 +120,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       loading: () => const RasqLoading(),
       error: (e, _) => RasqEmptyView(title: '設定を探せませんでした', hint: '$e'),
       data: (entries) {
-        final hits = searchSettings(entries, q, sections: _sections);
+        // SNS プラグインが持たない設定ページへの当たりは出さない (D-482)。
+        final hits = [
+          for (final h in searchSettings(entries, q, sections: _sections))
+            if (settingsRowVisible(ref, h.entry.row?.route)) h,
+        ];
         if (hits.isEmpty && _ops.isEmpty) return RasqEmptyView(title: '見つかりませんでした', hint: '「$q」に当たる設定はありません。言い方を変えるか、RAi に聞いてみてください');
         return ListView(
           key: const ValueKey('settings.search.results'),

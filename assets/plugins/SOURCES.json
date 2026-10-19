@@ -10,9 +10,9 @@
     },
     "bluesky_wasm.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
-      "commit": "3060558f841bc4d2d1048f37354948d2fea75fb2",
+      "commit": "0400cae06b722febfc6e7f51afdacaa8392bec3a",
       "version": "0.1.0",
-      "sha256": "8ecd1861545db548a21b108754966291515ba0568d27d08504a4bd9057f153c7"
+      "sha256": "78e5bc010ed00816c8e2cfb77139aa8fd02f6bdfe45294b234890a6627d94cd9"
     },
     "composer_media_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/composer-media-plugin.git",
@@ -46,9 +46,9 @@
     },
     "mastodon_wasm.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
-      "commit": "e947964405fab26acc97f1cccb0b6fdabe46701c",
+      "commit": "0400cae06b722febfc6e7f51afdacaa8392bec3a",
       "version": "0.1.0",
-      "sha256": "999edd64a3e5f9571064ed2333f9f942cdca8d693287eac4bb0a4aa9aceeb4f0"
+      "sha256": "2da5a3da6fb606d484e5dbb585d5f07a7dec091c1137b9faf8ceba7d88bf0037"
     },
     "media_draw_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/media-draw-plugin.git",
@@ -76,15 +76,15 @@
     },
     "misskey_wasm_sample.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
-      "commit": "e947964405fab26acc97f1cccb0b6fdabe46701c",
+      "commit": "0400cae06b722febfc6e7f51afdacaa8392bec3a",
       "version": "0.1.0",
-      "sha256": "6047a0198086ab56812a92349c72240cce6f9afc7b424b077370a2348801e954"
+      "sha256": "d89919395d538d06d90bdfdae6da9a616dd5926bb4b2bba0c80028ada44a9bbb"
     },
     "mixi2_wasm.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
-      "commit": "e947964405fab26acc97f1cccb0b6fdabe46701c",
+      "commit": "0400cae06b722febfc6e7f51afdacaa8392bec3a",
       "version": "0.1.0",
-      "sha256": "a5c7ab9101269ac49b814834b08867e3810c18d7b3ac45610b3e190efdd2acea"
+      "sha256": "4247ab71a5c7cb346e351162cc5f291fb41fdbea9997eeb77e20812fc8d28fd9"
     },
     "post_action_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/post-action-plugin.git",

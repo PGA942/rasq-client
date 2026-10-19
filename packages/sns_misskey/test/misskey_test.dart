@@ -124,6 +124,37 @@ void main() {
       expect(result.me.displayName, '名前me');
     });
 
+    test('アカウントの設定 (D-482): i から文字・公開範囲を読み、1 キーずつ i/update へ(許可リストと値の形)', () async {
+      final sent = <Map<String, Object?>>[];
+      final c = client({
+        'i': (_) => {'id': 'me', 'name': 'ゼポス', 'description': null, 'isLocked': true, 'isCat': true, 'ffVisibility': 'followers'},
+        'i/update': (body) {
+          sent.add(body);
+          return {'id': 'me', 'name': body['name'], 'location': body['location'], 'followingVisibility': 'private', 'followersVisibility': 'public'};
+        },
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: c);
+      final read = await s.settingsRead('account');
+      expect(read['name'], 'ゼポス');
+      expect(read['description'], '');
+      expect(read['isLocked'], isTrue);
+      expect(read['isExplorable'], isTrue); // 欠けたら既定
+      expect((read['followingVisibility'], read['followersVisibility']), ('followers', 'followers')); // 古いサーバーの ffVisibility
+      expect(read.keys.toSet(), MisskeyAccountSettings.defaults.keys.toSet());
+
+      final wrote = await s.settingsWrite('account', 'name', '  新しい名前 ');
+      expect(sent.single['name'], '新しい名前');
+      expect(wrote['name'], '新しい名前');
+      expect(wrote['followingVisibility'], 'private'); // 書いたあとのサーバーの値
+      await s.settingsWrite('account', 'location', '');
+      expect(sent.last.containsKey('location') && sent.last['location'] == null, isTrue); // 空 = 消す
+
+      expect(() => s.settingsWrite('account', 'isAdmin', true), throwsUnsupportedError);
+      expect(() => s.settingsWrite('account', 'birthday', '31/01/2000'), throwsArgumentError);
+      expect(() => s.settingsWrite('account', 'followersVisibility', 'everyone'), throwsArgumentError);
+      expect(() => s.settingsWrite('account', 'isLocked', 'yes'), throwsArgumentError);
+    });
+
     test('サーバーの広告 (D-438): meta.ads を読み、形の違うもの / https でない画像は捨てる。1 セッション 1 回', () async {
       var calls = 0;
       final c = client({
@@ -356,9 +387,15 @@ void main() {
         areas.add(j['area'] as String);
       }
       expect(areas, ['account', 'timeline', 'safety', 'security']);
-      // account はサーバー保存 (source: remote)。
+      // account はサーバー保存 (source: remote)。書くタイル(設定タイルの change / 文字の欄の submit)のキーはすべて許可リストにある (D-482)。
       final account = (jsonDecode(pages.first) as Map).cast<String, Object?>();
       expect(account['source'], 'remote');
+      final keys = {
+        for (final n in ((account['root'] as Map)['c'] as List).cast<Map<String, Object?>>())
+          if ((n['on'] as Map?)?.values.contains('settings.set') ?? false) n['k'],
+      };
+      expect(keys, containsAll(['name', 'description', 'birthday', 'followersVisibility', 'isCat']));
+      expect(MisskeyAccountSettings.defaults.keys.toSet().containsAll(keys), isTrue);
     });
 
     test('transport errors are not reported as 408', () async {
