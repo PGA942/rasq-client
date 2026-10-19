@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart' show RepaintBoundary, BuildContext;
 
 import 'overlay_entry.dart';
 import 'overlay_layer.dart';
@@ -51,6 +53,10 @@ class OverlayManager extends ChangeNotifier {
     if (contains(entry.id)) {
       close(entry.id, reason: OverlayCloseReason.replaced);
     }
+    // 同じ id で開き直す: 閉じかけ (D-476) の古い方は動きを待たずに消す(同じ id の FOW が 2 つ描かれないように)。
+    for (final x in _leavingFows.where((x) => x.entry.id == entry.id).toList()) {
+      _dropLeaving(x);
+    }
     switch (entry.layer.stacking) {
       case OverlayStacking.exclusive:
         for (final e in inLayer(entry.layer).toList()) {
@@ -72,7 +78,21 @@ class OverlayManager extends ChangeNotifier {
   void close(String id, {Object? result, OverlayCloseReason reason = OverlayCloseReason.completed}) {
     final i = _entries.indexWhere((e) => e.id == id);
     if (i < 0) return;
-    final e = _entries.removeAt(i);
+    final e = _entries[i];
+    // 閉じる動き (D-476): FOW は閉じたあとも、ホストが動かし終えるまで重ね順の位置ごと覚えておく(entries からは外す =
+    // 戻る / バリア / 前面の判定には入らない)。描くのは閉じる直前のパネルの**写し**(RepaintBoundary の画像)で、中身の
+    // ウィジェットはすぐ捨てる(GlobalKey の重複 / フォーカス / 閉じたビルダーの呼び直しを起こさない)。
+    // 退避中 (D-169) の FOW は見えていないので動かさない。写せなければ(まだ描かれていない等)動かさずに消す。
+    if (e.layer == OverlayLayer.fow && fowExitMotion && (e.fow?.motion ?? true) && !isFowSuspended(e)) {
+      final shot = _snapshot(e);
+      if (shot != null) {
+        final index = _entries.where((x) => x.layer == OverlayLayer.fow).toList().indexOf(e);
+        _leavingFows.add((entry: e, index: index, image: shot.image, size: shot.size));
+        // ホストが描かなくなっても溜まり続けないように。
+        if (_leavingFows.length > 16) _dropLeaving(_leavingFows.first);
+      }
+    }
+    _entries.removeAt(i);
     e.onClosed?.call(reason, result);
     _completers.remove(id)?.complete(reason == OverlayCloseReason.completed ? result : null);
     // 子 FOW は ownerId で連動クローズ(CONTRACT/D-067: 親が閉じたら
@@ -87,6 +107,44 @@ class OverlayManager extends ChangeNotifier {
       _fowSwitcherOpen = false; // 最後の FOW が消えたらスイッチャーも閉じる
     }
     notifyListeners();
+  }
+
+  // ---- 閉じかけの FOW (D-476) ------------------------------------------
+
+  final List<FowLeaving> _leavingFows = [];
+
+  /// 閉じたあと、ホストが閉じる動きを描いている FOW(index = 閉じたときの FOW の中の重ね順、image = 閉じる直前のパネルの写し)。
+  List<FowLeaving> get leavingFows => List.unmodifiable(_leavingFows);
+
+  /// 閉じる動きを付けるか(ホストが毎ビルド書く: モーションの抑制中は false = 写しを撮らずにすぐ消す)。
+  bool fowExitMotion = true;
+
+  /// 閉じる動きが終わった(ホストが呼ぶ)。
+  void fowLeft(RasqOverlayEntry entry) {
+    final hit = _leavingFows.where((x) => identical(x.entry, entry)).toList();
+    if (hit.isEmpty) return;
+    hit.forEach(_dropLeaving);
+    if (!_disposed) notifyListeners();
+  }
+
+  void _dropLeaving(FowLeaving x) {
+    _leavingFows.remove(x);
+    x.image.dispose();
+  }
+
+  ({ui.Image image, Size size})? _snapshot(RasqOverlayEntry e) {
+    try {
+      final obj = e.fow?.previewBoundaryKey.currentContext?.findRenderObject();
+      if (obj is! RenderRepaintBoundary || !obj.hasSize || !obj.attached || obj.size.isEmpty) return null;
+      // 直前に描いたレイヤーから写す(押したボタンのインク等で描き直し待ちでも、最後に描いた見た目でよい)。
+      // まだ一度も描かれていない(開いたのと同じフレームで閉じた)ならレイヤーが無いので写さない。
+      if (obj is! RenderFowSnapshotBoundary) return null;
+      final dpr = SchedulerBinding.instance.platformDispatcher.implicitView?.devicePixelRatio ?? 1.0;
+      final image = obj.lastPainted(dpr);
+      return image == null ? null : (image: image, size: obj.size);
+    } catch (_) {
+      return null;
+    }
   }
 
   // ---- FOW スイッチャー (D-065) ----------------------------------------
@@ -118,6 +176,9 @@ class OverlayManager extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    for (final x in _leavingFows.toList()) {
+      _dropLeaving(x);
+    }
     fowStickReserve.dispose();
     super.dispose();
   }
@@ -249,4 +310,25 @@ class OverlayManager extends ChangeNotifier {
   }
 
   OverlayHandle handleFor(RasqOverlayEntry e) => e.handleWith(close);
+}
+
+/// 閉じる動きの途中の FOW (D-476)。
+typedef FowLeaving = ({RasqOverlayEntry entry, int index, ui.Image image, Size size});
+
+/// FOW のパネルの RepaintBoundary (D-066 のスイッチャーのプレビュー / D-476 の閉じる動きの写し)。
+class FowSnapshotBoundary extends RepaintBoundary {
+  const FowSnapshotBoundary({super.key, super.child});
+
+  @override
+  RenderFowSnapshotBoundary createRenderObject(BuildContext context) => RenderFowSnapshotBoundary();
+}
+
+class RenderFowSnapshotBoundary extends RenderRepaintBoundary {
+  /// 直前に描いたレイヤーの写し。描き直し待ち(押したボタンのインク等)でも最後に描いた見た目を返す
+  /// ([toImageSync] は描き直し待ちだと debug で assert する)。まだ一度も描いていなければ null。
+  ui.Image? lastPainted(double pixelRatio) {
+    final l = layer;
+    if (l is! OffsetLayer || !hasSize || size.isEmpty) return null;
+    return l.toImageSync(Offset.zero & size, pixelRatio: pixelRatio);
+  }
 }

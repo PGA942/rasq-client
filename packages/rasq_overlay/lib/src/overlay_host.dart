@@ -10,6 +10,21 @@ import 'overlay_manager.dart';
 /// リサイズハンドルの高さ (D-178: 18 → 26。指で掴みやすく)。stick の高さ実測はこれを足す。
 const kFowHandleHeight = 26.0;
 
+/// FOW の動き (D-476): 高さの変化(スナップ着地 / stick の展開 / 投稿 FOW のピッタリ追従、D-049)と**開く**動きの長さと曲線。
+const kFowMotionDuration = Duration(milliseconds: 180);
+const kFowMotionCurve = Curves.easeOutCubic;
+
+/// **閉じる**動き (D-476): 開くより少し短く、加速しながら抜ける。
+const kFowExitDuration = Duration(milliseconds: 140);
+const kFowExitCurve = Curves.easeInCubic;
+
+/// 開いた / 閉じる動きを始めた印 (D-476)。エントリに付ける(ホストの外側の並びが変わって FOW 群の Element が作り直されても、
+/// 開く動きを二度やらない)。
+final Expando<bool> _fowEntered = Expando('fowEntered');
+final Expando<bool> _fowScrimShown = Expando('fowScrimShown');
+
+bool _reducedMotion(BuildContext context) => MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+
 class OverlayHost extends StatelessWidget {
   const OverlayHost({super.key, required this.manager, required this.child, this.scrimColor, this.fowDockInset, this.fowColumns, this.fowPinnedWidth = 320, this.fowTopInset, this.fowTopClearance});
 
@@ -61,27 +76,38 @@ class OverlayHost extends StatelessWidget {
   /// 重ね順に並べる。FOW 群は最初の FOW の位置に 1 回だけ。ただし `aboveSidebar` の FOW があれば、サイドバーの**前**に描く (D-274)。
   List<Widget> _layers(BuildContext context, List<RasqOverlayEntry> entries) {
     final fows = entries.where((x) => x.layer == OverlayLayer.fow).toList();
-    final lift = fows.any((e) => e.fow?.aboveSidebar ?? false) && entries.any((e) => e.layer == OverlayLayer.sidebar);
+    // 閉じる動きの途中の FOW (D-476)。モーションの抑制中は写しを撮らせず、残っていても描かない(すぐ消す)。
+    manager.fowExitMotion = !_reducedMotion(context);
+    final leaving = manager.leavingFows;
+    if (leaving.isNotEmpty && _reducedMotion(context)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        for (final l in leaving) {
+          manager.fowLeft(l.entry);
+        }
+      });
+    }
+    final showLeaving = _reducedMotion(context) ? const <FowLeaving>[] : leaving;
+    final lift = [...fows, for (final l in showLeaving) l.entry].any((e) => e.fow?.aboveSidebar ?? false) && entries.any((e) => e.layer == OverlayLayer.sidebar);
     final out = <Widget>[child];
-    var placed = fows.isEmpty;
+    var placed = fows.isEmpty && showLeaving.isEmpty;
     // FOW が無ければ、カラムを縮める量 (D-397) も無し。
     if (fows.isEmpty) manager.setFowStickReserve(const {});
     for (final e in entries) {
       if (e.layer == OverlayLayer.fow) {
         if (!placed && !lift) {
-          out.addAll(_buildFowGroup(context, fows));
+          out.addAll(_buildFowGroup(context, fows, showLeaving));
           placed = true;
         }
         continue;
       }
       // サイドバーより後ろのレイヤーに入る直前(= サイドバーの直後)に、持ち上げた FOW 群を置く。
       if (!placed && lift && e.layer.index > OverlayLayer.sidebar.index) {
-        out.addAll(_buildFowGroup(context, fows));
+        out.addAll(_buildFowGroup(context, fows, showLeaving));
         placed = true;
       }
       out.addAll(_buildEntry(context, e));
     }
-    if (!placed) out.addAll(_buildFowGroup(context, fows));
+    if (!placed) out.addAll(_buildFowGroup(context, fows, showLeaving));
     return out;
   }
 
@@ -124,15 +150,17 @@ class OverlayHost extends StatelessWidget {
 
   /// FOWs dock to the bottom as a bottom-up column: newest at the bottom.
   /// A scrim is painted once, behind the topmost interstitial (if any).
-  List<Widget> _buildFowGroup(BuildContext context, List<RasqOverlayEntry> fows) {
+  List<Widget> _buildFowGroup(BuildContext context, List<RasqOverlayEntry> fows, List<FowLeaving> leaving) {
     final widgets = <Widget>[];
+    final scrim = scrimColor ?? Colors.black.withValues(alpha: 0.35);
+    bool dims(RasqOverlayEntry e) => (e.fow?.blocksContent ?? false) || (e.fow?.dimBehind ?? false);
     // 退避中 (D-169) の FOW はバリアを張らない(Offstage で生かすだけ)。
-    final blocking = fows.lastWhere((e) => e.effectiveBarrierBehavior != OverlayBarrierBehavior.none && !manager.isFowSuspended(e), orElse: () => fows.first);
-    if (blocking.effectiveBarrierBehavior != OverlayBarrierBehavior.none && !manager.isFowSuspended(blocking)) {
+    final blocking = fows.where((e) => e.effectiveBarrierBehavior != OverlayBarrierBehavior.none && !manager.isFowSuspended(e)).lastOrNull;
+    if (blocking != null) {
       // グレーアウト(スクリム)はインタースティシャル(+ボタンの投稿
       // コンポーザー等)のときだけ (D-052)。ピッカー類の「余白クリックで
       // 消失」は**透明バリア**で受ける(背面を暗くしない)。
-      final dim = (blocking.fow?.blocksContent ?? false) || (blocking.fow?.dimBehind ?? false);
+      final dim = dims(blocking);
       widgets.add(Positioned.fill(
         child: Semantics(
           label: '閉じる',
@@ -140,10 +168,28 @@ class OverlayHost extends StatelessWidget {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => manager.barrierTapped(blocking.id),
-            child: dim ? ColoredBox(color: scrimColor ?? Colors.black.withValues(alpha: 0.35)) : const SizedBox.expand(),
+            // スクリムは FOW と一緒にフェードインする (D-476。一度出したら作り直されてもそのまま)。
+            child: dim ? _FowScrim(entry: blocking, color: scrim) : const SizedBox.expand(),
           ),
         ),
       ));
+    }
+    // 閉じる動きの間のスクリム (D-476): 暗くしていた FOW が閉じたら、ほかに暗くしている FOW が無ければフェードアウトする(押せない)。
+    if (blocking == null || !dims(blocking)) {
+      final fading = leaving.map((l) => l.entry).where((e) => dims(e) && e.effectiveBarrierBehavior != OverlayBarrierBehavior.none).lastOrNull;
+      if (fading != null) {
+        widgets.add(Positioned.fill(
+          key: ValueKey('fow.scrim.leave.${fading.id}'),
+          child: IgnorePointer(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 1, end: 0),
+              duration: kFowExitDuration,
+              curve: kFowExitCurve,
+              builder: (context, t, _) => ColoredBox(color: scrim.withValues(alpha: scrim.a * t)),
+            ),
+          ),
+        ));
+      }
     }
     widgets.add(Positioned.fill(
       // FOW スイッチャー表示中もパネルは Offstage で生かしておく
@@ -157,6 +203,8 @@ class OverlayHost extends StatelessWidget {
           columns: fowColumns,
           pinnedWidth: fowPinnedWidth,
           entries: fows,
+          leaving: leaving,
+          onLeft: manager.fowLeft,
           suspended: manager.isFowSuspended,
           onStickReserve: manager.setFowStickReserve,
           buildContent: (e) {
@@ -257,8 +305,12 @@ class _FowSwitcher extends StatelessWidget {
 /// 複数の FOW は**重ねて**表示され(最前面のみ影)、切り替えはハンドル
 /// クリックの FOW スイッチャーで行う。
 class _FowColumn extends StatelessWidget {
-  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, required this.onShowSwitcher, this.dockInset, this.topInset, this.topClearance, this.columns, this.pinnedWidth = 320, this.suspended, this.onStickReserve});
+  const _FowColumn({required this.entries, this.leaving = const [], this.onLeft, required this.buildContent, required this.onCancel, required this.onConfirm, required this.onShowSwitcher, this.dockInset, this.topInset, this.topClearance, this.columns, this.pinnedWidth = 320, this.suspended, this.onStickReserve});
   final List<RasqOverlayEntry> entries;
+
+  /// 閉じる動きの途中の FOW (D-476)。閉じたときの重ね順の位置に描き、操作は受けない。動き終えたら [onLeft]。
+  final List<FowLeaving> leaving;
+  final void Function(RasqOverlayEntry entry)? onLeft;
 
   /// stick の FOW がカラムの下端に占めている高さ(列スロットの index → 高さ)を知らせる口 (D-397)。
   final void Function(Map<int, double> reserve)? onStickReserve;
@@ -377,14 +429,26 @@ class _FowColumn extends StatelessWidget {
 
       return AnimatedBuilder(
         animation: Listenable.merge([
-          for (final e in entries) ...[e.fow?.heightFactor, e.fow?.geometryRev],
+          for (final e in [...entries, for (final l in leaving) l.entry]) ...[e.fow?.heightFactor, e.fow?.geometryRev],
         ].whereType<Listenable>().toList()),
         builder: (context, _) {
           // 重ね表示 (D-065): グループの縦積みをやめ、各 FOW を付け先ごとに
           // 独立配置する。entries は back → front なので後の子が上に描かれ、
           // 埋もれた FOW はハンドルクリックのスイッチャーで前面化する。
           final frontmostEntry = entries.isEmpty ? null : entries.last;
-          final byId = {for (final x in entries) x.id: x};
+          // 閉じかけ (D-476) は閉じたときの位置に差し込む(後ろの FOW が閉じても前へ飛び出さない)。同じ id が開いていれば描かない。
+          final liveIds = {for (final x in entries) x.id};
+          final order = <(RasqOverlayEntry, bool)>[for (final x in entries) (x, false)];
+          // index は閉じたときの(それより前に閉じたものを除いた)並びの位置なので、閉じた順に、先に閉じて手前の位置にいたぶんずらして戻す
+          // (親と一緒に閉じた子は親の前、離れて閉じたものは元の並び)。
+          final leavingLive = [...leaving.where((l) => !liveIds.contains(l.entry.id))];
+          for (var i = 0; i < leavingLive.length; i++) {
+            final l = leavingLive[i];
+            final shift = leavingLive.take(i).where((p) => p.index <= l.index).length;
+            order.insert((l.index + shift).clamp(0, order.length), (l.entry, true));
+          }
+          final byId = {for (final l in leavingLive) l.entry.id: l.entry, for (final x in entries) x.id: x};
+          final leavingById = {for (final l in leavingLive) l.entry.id: l};
           // 親子 FOW (D-067/D-068): 親の外側(付いている側)を占める子 FOW
           // の最大高さ。親はこのぶん**枠を伸ばし**、FOW ウィジェット内の
           // [FowChildGap](高さ可変 padding)がこの値を受けて内容を子の
@@ -405,9 +469,12 @@ class _FowColumn extends StatelessWidget {
           final children = <Widget>[];
           // stick のぶんカラムを縮める (D-397): 畳まれた stick FOW が下端に置かれていれば、重なるカラムにその高さを知らせる。
           final reserve = <int, double>{};
-          for (final e in entries) {
+          final seen = <String>{};
+          for (final (e, isLeaving) in order) {
+            if (!seen.add(e.id)) continue;
             final s = e.fow ?? FowSpec();
-            s.settleMove = (dx, dy) => settle(s, dx, dy);
+            // 閉じかけは位置だけ借りる: 精算 / 子の隙間 / 置いた矩形 / stick の予約は書かない(開いている FOW のもの)。
+            if (!isLeaving) s.settleMove = (dx, dy) => settle(s, dx, dy);
             final pinned = s.pinnedWall != 0;
             var h = (pinned ? 1.0 : s.heightFactor.value) * avail;
             final anchor = pinned ? null : s.anchor;
@@ -459,8 +526,8 @@ class _FowColumn extends StatelessWidget {
             // なら下、ヘッダー付きなら上)に付く。いなければ 0。
             final gapTop = !pinned && anchor == null && attachTopEff ? lift : 0.0;
             final gapBottom = !pinned && anchor == null && !attachTopEff ? lift : 0.0;
-            if (s.childGapTop.value != gapTop) s.childGapTop.value = gapTop;
-            if (s.childGapBottom.value != gapBottom) s.childGapBottom.value = gapBottom;
+            if (!isLeaving && s.childGapTop.value != gapTop) s.childGapTop.value = gapTop;
+            if (!isLeaving && s.childGapBottom.value != gapBottom) s.childGapBottom.value = gapBottom;
             // 最大幅 (D-185): 指定があればカラムの中で [FowSpec.hAlign] の側に寄せる(既定は中央)。
             // アンカー付き (D-209) はアンカーの横位置に寄せる(ボタンから出現したように見える)。
             final panelW = s.maxWidth != null && s.maxWidth! < slot.width ? s.maxWidth! : slot.width;
@@ -477,16 +544,20 @@ class _FowColumn extends StatelessWidget {
               };
             }
             // 置いた矩形を記録 (D-215): 上側基準なら padTop から、下側基準なら padBottom の上に h。
-            s.laidOut = (suspended?.call(e) ?? false) ? null : Rect.fromLTWH(left, topSide ? padTop : hostH - padBottom - h, panelW, h);
+            if (!isLeaving) s.laidOut = (suspended?.call(e) ?? false) ? null : Rect.fromLTWH(left, topSide ? padTop : hostH - padBottom - h, panelW, h);
             // 下端に置いた stick(壁付け / アンカー / 上付きは除く)。横に重なるカラムぜんぶ(またがって出ていれば両方)。
-            if (!(suspended?.call(e) ?? false) && !pinned && anchor == null && !topSide && s.isStick) {
+            if (!isLeaving && !(suspended?.call(e) ?? false) && !pinned && anchor == null && !topSide && s.isStick) {
               for (var i = 0; i < effSlots.length; i++) {
                 final sl = effSlots[i];
                 final overlap = (left + panelW < sl.x + sl.width ? left + panelW : sl.x + sl.width) - (left > sl.x ? left : sl.x);
                 if (overlap > 1 && h > (reserve[i] ?? 0)) reserve[i] = h;
               }
             }
+            // 閉じかけ (D-476) は閉じる直前のパネルの写しを描く(中身のウィジェットはもう無い)。
+            final shot = isLeaving ? leavingById[e.id] : null;
             children.add(Positioned(
+              // id でキー付け (D-476): 閉じかけに変わっても同じ Element のまま動かし、後ろの FOW が閉じても前の FOW の中身を作り直さない。
+              key: ValueKey('rasqOverlay.fow.${e.id}'),
               left: left,
               width: panelW,
               top: 0,
@@ -501,8 +572,24 @@ class _FowColumn extends StatelessWidget {
                   alignment: topSide ? Alignment.topCenter : Alignment.bottomCenter,
                   minHeight: 0,
                   maxHeight: double.infinity,
+                  // 出入りの動き (D-476): 付け先の側からすべり込み + フェード(アンカーは少し拡大)。閉じかけは押せない。
+                  child: _FowMotion(
+                    entry: e,
+                    leaving: isLeaving,
+                    topSide: topSide,
+                    anchored: anchor != null,
+                    height: h,
+                    onLeft: onLeft,
+                  child: shot != null
+                      ? SizedBox(
+                          key: ValueKey('rasqOverlay.fow.leaving.${e.id}'),
+                          width: shot.size.width,
+                          height: shot.size.height,
+                          // 写しの角はパネルと同じ角丸で切る(角の外側が透明で写らない環境でも四角く出ない)。
+                          child: ClipRRect(borderRadius: _fowPanelRadius(s, anchored: anchor != null, topSide: topSide), child: RawImage(image: shot.image, fit: BoxFit.fill)),
+                        )
                   // パネルのテーマ (D-202): 指定があればクロームごと差し替える(ビューワーのダーク FOW)。
-                  child: Builder(builder: (ctx) {
+                  : Builder(builder: (ctx) {
                     final panel = _FowPanel(
                       entry: e,
                       height: h,
@@ -524,6 +611,7 @@ class _FowColumn extends StatelessWidget {
                       return Theme(data: panelTheme?.call(bctx, base) ?? base, child: panel);
                     });
                   }),
+                  ),
                 ),
               ),
               ),
@@ -536,6 +624,14 @@ class _FowColumn extends StatelessWidget {
     });
   }
 }
+
+BorderRadius _fowPanelRadius(FowSpec spec, {required bool anchored, required bool topSide}) => anchored
+    ? BorderRadius.circular(16)
+    : topSide
+        ? const BorderRadius.vertical(bottom: Radius.circular(16))
+        : spec.dockAboveFooter
+            ? BorderRadius.circular(16)
+            : const BorderRadius.vertical(top: Radius.circular(16));
 
 class _FowPanel extends StatefulWidget {
   const _FowPanel({required this.entry, required this.height, required this.child, required this.onCancel, required this.onConfirm, required this.onShowSwitcher, this.frontmost = true, this.topSide = false, this.anchored = false});
@@ -582,13 +678,7 @@ class _FowPanelState extends State<_FowPanel> {
     // FOW = ドラッグハンドル + **角丸四角形枠**の集合 (D-048)。
     // 角丸は付け先で決まる: アンカー = 全周(浮いている)、ヘッダー下付き =
     // 下側のみ、フッター上にドックする stick = 全周、画面最下端 = 上側のみ。
-    final radius = widget.anchored
-        ? BorderRadius.circular(16)
-        : topSide
-            ? const BorderRadius.vertical(bottom: Radius.circular(16))
-            : spec.dockAboveFooter
-                ? BorderRadius.circular(16)
-                : const BorderRadius.vertical(top: Radius.circular(16));
+    final radius = _fowPanelRadius(spec, anchored: widget.anchored, topSide: topSide);
     // ハンドル: その場で長押し = FOW スイッチャー、タップ = stick なら展開モードへ (D-340。以前はタップでスイッチャー、D-065)、
     // 縦ドラッグ = リサイズ(D-062 で横移動はヘッダー/フッターの FowMoveGrip に役割分担)。
     // 上側基準の配置ではハンドルは下端の外縁 → リサイズの向きも反転する。
@@ -670,7 +760,7 @@ class _FowPanelState extends State<_FowPanel> {
       ),
       if (spec.showHandle && topSide) KeyedSubtree(key: const ValueKey('rasqOverlay.fow.handle.bottom'), child: handle),
     ]);
-    final panel = RepaintBoundary(
+    final panel = FowSnapshotBoundary(
       key: spec.previewBoundaryKey,
       child: Material(
         color: skin?.color?.call(context) ?? scheme.surface,
@@ -692,13 +782,156 @@ class _FowPanelState extends State<_FowPanel> {
     return AnimatedBuilder(
       animation: Listenable.merge([spec.moveDx, spec.moveDy, spec.dragging]),
       builder: (context, child) => AnimatedContainer(
-        duration: _dragging || spec.dragging.value ? Duration.zero : const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
+        duration: _dragging || spec.dragging.value ? Duration.zero : kFowMotionDuration,
+        curve: kFowMotionCurve,
         height: height,
         transform: Matrix4.translationValues(spec.moveDx.value, spec.moveDy.value, 0),
         child: child,
       ),
       child: panel,
+    );
+  }
+}
+
+/// FOW の出入りの動き (D-476)。以前は高さの変化(D-049: 投稿 FOW のピッタリ追従 / stick の展開)だけが動き、開く / 閉じるは
+/// 一瞬で出て消えていた。ホストが全 FOW に同じ動きを付ける(個々の FOW は何もしなくてよい):
+/// - 開く: [kFowMotionDuration] / [kFowMotionCurve] で、付け先の側(下端ドック = 下、ヘッダー下付き / アンカーの下 = 上)から
+///   パネルの高さの 12%(24〜72px)すべり込みながらフェードイン。アンカー付きは 0.94 倍から拡大(ボタンから出てくる)し、移動は 12px。
+/// - 閉じる: [kFowExitDuration] / [kFowExitCurve] で逆向き。閉じかけは閉じる直前のパネルの写し(画像)で、押せない([IgnorePointer] = タップは後ろの画面へ)。
+/// - 開き直し(同じ id の差し替え)や FOW 群の作り直しでは開く動きを繰り返さない([_fowEntered])。
+/// - `MediaQuery.disableAnimations`(端末のアクセシビリティ設定 / 設定 → モーションの抑制)と [FowSpec.motion] = false では動かさない。
+/// 部品の形は動きの有無で変えない(中身の State を作り直さない、D-050)。
+class _FowMotion extends StatefulWidget {
+  const _FowMotion({required this.entry, required this.leaving, required this.topSide, required this.anchored, required this.height, required this.child, this.onLeft});
+  final RasqOverlayEntry entry;
+  final bool leaving;
+  final bool topSide;
+  final bool anchored;
+  final double height;
+  final void Function(RasqOverlayEntry entry)? onLeft;
+  final Widget child;
+
+  @override
+  State<_FowMotion> createState() => _FowMotionState();
+}
+
+class _FowMotionState extends State<_FowMotion> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: kFowMotionDuration, reverseDuration: kFowExitDuration)..addStatusListener(_onStatus);
+  bool _started = false;
+  bool _left = false;
+
+  /// 閉じる動きを走らせている(その終わりでだけ [_done]。ビルド中に value を 0 にしたときの dismissed では呼ばない)。
+  bool _reversing = false;
+
+  bool get _still => _reducedMotion(context) || !(widget.entry.fow?.motion ?? true);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final played = _fowEntered[widget.entry] ?? false;
+    _fowEntered[widget.entry] = true;
+    if (widget.leaving) {
+      _c.value = 1;
+      _leave();
+    } else if (played || _still) {
+      _c.value = 1;
+    } else {
+      _c.forward(from: 0);
+    }
+  }
+
+  @override
+  void didUpdateWidget(_FowMotion old) {
+    super.didUpdateWidget(old);
+    // 同じ id の差し替え(同じ Element を使い続ける): 開く動きは繰り返さない。
+    if (!identical(old.entry, widget.entry)) _fowEntered[widget.entry] = true;
+    if (widget.leaving && !old.leaving) {
+      _leave();
+    } else if (!widget.leaving && old.leaving) {
+      _left = false;
+      _reversing = false;
+      if (_still) {
+        _c.value = 1;
+      } else {
+        _c.forward();
+      }
+    }
+  }
+
+  void _leave() {
+    if (_still || _c.value == 0) {
+      _reversing = false;
+      _c.value = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _done());
+      return;
+    }
+    _reversing = true;
+    _c.reverse();
+  }
+
+  void _onStatus(AnimationStatus status) {
+    if (status == AnimationStatus.dismissed && _reversing) {
+      _reversing = false;
+      _done();
+    }
+  }
+
+  void _done() {
+    if (_left || !mounted || !widget.leaving) return;
+    _left = true;
+    widget.onLeft?.call(widget.entry);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dir = widget.topSide ? -1.0 : 1.0;
+    final travel = widget.anchored ? 12.0 : (widget.height * 0.12).clamp(24.0, 72.0);
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, child) {
+        // 閉じるときの曲線は経過時間に掛ける(1 − exit(1 − t)): ゆっくり動き出して加速しながら抜ける。
+        final v = _c.status == AnimationStatus.reverse ? 1 - kFowExitCurve.transform(1 - _c.value) : kFowMotionCurve.transform(_c.value);
+        final scale = widget.anchored ? 0.94 + 0.06 * v : 1.0;
+        return Opacity(
+          opacity: v.clamp(0.0, 1.0),
+          // 開きかけ(透明に近い間)も読み上げ / テストからは見える。
+          alwaysIncludeSemantics: true,
+          child: Transform(
+            alignment: widget.topSide ? Alignment.topCenter : Alignment.bottomCenter,
+            transform: Matrix4.translationValues(0, dir * travel * (1 - v), 0)..multiply(Matrix4.diagonal3Values(scale, scale, 1)),
+            child: child,
+          ),
+        );
+      },
+      child: IgnorePointer(ignoring: widget.leaving, child: widget.child),
+    );
+  }
+}
+
+/// インタースティシャル / dimBehind の FOW のスクリム (D-476): 初めて出すときだけ FOW と一緒にフェードインする。
+class _FowScrim extends StatelessWidget {
+  const _FowScrim({required this.entry, required this.color});
+  final RasqOverlayEntry entry;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = _fowScrimShown[entry] ?? false;
+    _fowScrimShown[entry] = true;
+    final still = shown || _reducedMotion(context) || !(entry.fow?.motion ?? true);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: still ? 1 : 0, end: 1),
+      duration: kFowMotionDuration,
+      curve: kFowMotionCurve,
+      builder: (context, t, _) => ColoredBox(color: color.withValues(alpha: color.a * t)),
     );
   }
 }
@@ -779,8 +1012,8 @@ class FowStickPadding extends StatelessWidget {
         valueListenable: manager.fowStickReserve,
         // 部品の形は変えない(中身の State を作り直さない)。高さは FOW の高さのアニメーションと同じ速さで動かす。
         builder: (context, reserve, child) => AnimatedPadding(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
+          duration: kFowMotionDuration,
+          curve: kFowMotionCurve,
           padding: EdgeInsets.only(bottom: reserve[column] ?? 0),
           child: child,
         ),
