@@ -8,7 +8,7 @@
 //
 // 数えないもの: コメント(// /// /* */)、テスト(test/ は見ない)、生成物(lib/l10n/gen、*.g.dart)、
 // ログ(debugPrint / print / log / assert / developer.log の引数)、行末に `// l10n-ignore` を付けた行
-// (検索の語彙のような、訳さない日本語)。日本語 = ひらがな / カタカナ / 漢字 / 全角の記号を 1 文字でも含む。
+// (検索の語彙のような、訳さない日本語)、LLM への指示の文の表(`…/prompts/`、D-492)。日本語 = ひらがな / カタカナ / 漢字 / 全角の記号を 1 文字でも含む。
 // 失敗はしない(件数を出すだけ)。抽出の進め方は docs/I18N.md。
 import 'dart:convert';
 import 'dart:io';
@@ -34,6 +34,8 @@ void main(List<String> args) {
     for (final f in Directory(root).listSync(recursive: true).whereType<File>()) {
       final path = f.path.replaceAll('\\', '/');
       if (!path.endsWith('.dart') || path.endsWith('.g.dart') || path.contains('/l10n/gen/') || path.contains('/build/')) continue;
+      // LLM への指示の文の表(D-492: lib/features/rai/prompts/rai_prompts_<言語>.dart)は、言語ごとの訳そのもの。
+      if (path.contains('/prompts/')) continue;
       found.addAll(scanSource(path, f.readAsStringSync()));
     }
   }

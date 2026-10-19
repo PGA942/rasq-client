@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import '../settings/settings_dsl.dart';
 import '../../l10n/l10n.dart';
+import 'prompts/rai_prompts.dart';
 
 /// 端末内 LLM(ワイヤーフレームの「Agents-A1-4B」)の配線 (D-181)。
 ///
@@ -213,7 +214,7 @@ class RaiFallUp {
   /// 送るメッセージ(system にリファレンスを添える)。
   List<Map<String, String>> messages(String prompt, {String? system, List<String> context = const []}) => [
         if ((system ?? '').isNotEmpty || context.isNotEmpty)
-          {'role': 'system', 'content': [if ((system ?? '').isNotEmpty) system!, if (context.isNotEmpty) '参考(操作リファレンス、近い順):', ...context].join('\n')}, // l10n-ignore
+          {'role': 'system', 'content': [if ((system ?? '').isNotEmpty) system!, if (context.isNotEmpty) raiPrompts.referenceContextHeading, ...context].join('\n')},
         {'role': 'user', 'content': prompt},
       ];
 

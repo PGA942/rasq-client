@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import '../../l10n/l10n.dart';
+import 'prompts/rai_prompts.dart';
 
 /// RAi のリファレンス関数 (D-179 → D-189)。
 ///
@@ -512,5 +513,5 @@ List<String> proposalLines(RaiOperation op, List<RaiStep> steps) {
   return lines;
 }
 
-/// LLM に「シチュエーション」の一文を作らせるときの指示(入力そのままでは引けない言い回しを補う)。
-const raiSituationSystem = 'ユーザーの発言を、SNS ブラウザ RASQ で何をしたい状況かを表す日本語の一文に言い換えてください。一文だけ、20 文字程度で。'; // l10n-ignore
+/// LLM に「シチュエーション」の一文を作らせるときの指示(入力そのままでは引けない言い回しを補う)。表示の言語の表から (D-492)。
+String get raiSituationSystem => raiPrompts.situationSystem;
