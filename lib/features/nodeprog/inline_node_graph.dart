@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../settings/settings_dsl.dart';
 import 'node_canvas.dart';
 import 'node_editor_screen.dart' show nodeCatalogProvider;
@@ -105,7 +106,7 @@ class _InlineNodeGraphState extends ConsumerState<InlineNodeGraph> {
                   child: NodeGraphCanvas(graph: g, pan: _pan, scale: widget.scale, iconOf: (n) => widget.iconOf?.call(n) ?? catalog[n.type]?.icon ?? Icons.extension_outlined),
                 ),
               ),
-            if (g != null && g.nodes.isEmpty) const Center(child: Text('ノードがありません', style: RasqTypography.caption)),
+            if (g != null && g.nodes.isEmpty) Center(child: Text(context.l10n.nodeprogEditorInlineEmpty, style: RasqTypography.caption)),
             if (widget.scope != null)
               Positioned(
                 top: 4,
@@ -114,7 +115,8 @@ class _InlineNodeGraphState extends ConsumerState<InlineNodeGraph> {
                   key: const ValueKey('inline.nodes.expand'),
                   icon: Icons.open_in_full,
                   size: 18,
-                  tooltip: '全画面で編集',
+                  tooltip: context.l10n.nodeprogEditorInlineExpandTooltip,
+
                   onPressed: () => ref.read(routerProvider).push(Routes.nodes(widget.scope!)),
                 ),
               ),

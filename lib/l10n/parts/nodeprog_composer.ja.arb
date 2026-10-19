@@ -1,0 +1,284 @@
+{
+  "nodeprogComposerResetConfig": "この構成をリセット",
+  "@nodeprogComposerResetConfig": {
+    "description": "投稿先のカスタマイズの … メニューの項目。"
+  },
+  "nodeprogComposerLearnNone": "まだ学習していません(投稿すると学習します)",
+  "@nodeprogComposerLearnNone": {
+    "description": "学習プロファイルの状況(まだ学習していない)。"
+  },
+  "nodeprogComposerLearnNoneDetail": "学習プロファイル: まだ確定投稿がありません(投稿すると自動で学習します)",
+  "@nodeprogComposerLearnNoneDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogComposerLearnCount": "{count, plural, other{これまでの投稿 {count} 件から学習しています}}",
+  "@nodeprogComposerLearnCount": {
+    "description": "学習プロファイルの状況。{count} = 学習した投稿の数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogComposerLearnCountDetail": "{count, plural, other{学習プロファイル: 確定投稿 {count} 件(手動で切り替えた投稿は強く学習・半減期 90 日)}}",
+  "@nodeprogComposerLearnCountDetail": {
+    "description": "開発者モードの説明。{count} = 学習した投稿の数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogComposerRelationStats": "実績: 連動 {pos} 回 / 確認で解除 {neg} 回",
+  "@nodeprogComposerRelationStats": {
+    "description": "連動の実績。{pos} = 連動した回数、{neg} = 確認で外した回数。",
+    "placeholders": {
+      "pos": {
+        "type": "int"
+      },
+      "neg": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogComposerNoAccounts": "アカウントがありません",
+  "@nodeprogComposerNoAccounts": {
+    "description": "投稿先のカスタマイズ: アカウントが無いとき。"
+  },
+  "nodeprogComposerNoAccountsHint": "ログインすると投稿先の条件を組めます",
+  "@nodeprogComposerNoAccountsHint": {
+    "description": "投稿先のカスタマイズ: アカウントが無いときのヒント。"
+  },
+  "nodeprogComposerBanner": "下書きの内容に合うアカウントが、投稿先の候補になります",
+  "@nodeprogComposerBanner": {
+    "description": "投稿先のカスタマイズの説明のバナー。"
+  },
+  "nodeprogComposerBannerDetail": "アカウントごとに絞り込みを組むと、下書きの内容(と内部のフォーマット)が合うアカウントが投稿先の候補になります。",
+  "@nodeprogComposerBannerDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogComposerHandEdited": "ポスト先はノードエディタで編集されています。ここで変えると上書きされます",
+  "@nodeprogComposerHandEdited": {
+    "description": "ノードエディターで手を入れた構成の警告。"
+  },
+  "nodeprogComposerHandEditedDetail": "ポスト先はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。",
+  "@nodeprogComposerHandEditedDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogComposerFiltersHeader": "ポスト先の絞り込み",
+  "@nodeprogComposerFiltersHeader": {
+    "description": "投稿先のカスタマイズの節の見出し。"
+  },
+  "nodeprogComposerFormatHeader": "フォーマット",
+  "@nodeprogComposerFormatHeader": {
+    "description": "投稿先のカスタマイズの節の見出し。"
+  },
+  "nodeprogComposerFormatCaption": "絞り込みに合わなかったときも、別の形で候補に残せます",
+  "@nodeprogComposerFormatCaption": {
+    "description": "フォーマットの節の説明。"
+  },
+  "nodeprogComposerFormatCaptionDetail": "絞り込みに合わなかったとき、代わりのフォーマットで候補に残します(無くなる直前の比較からバイパス)。",
+  "@nodeprogComposerFormatCaptionDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogComposerDeliveryHeader": "連動投稿の届け方",
+  "@nodeprogComposerDeliveryHeader": {
+    "description": "投稿先のカスタマイズの節の見出し。"
+  },
+  "nodeprogComposerDeliveryCaption": "ほかのアカウントと一緒に送るときの設定です",
+  "@nodeprogComposerDeliveryCaption": {
+    "description": "連動投稿の届け方の節の説明。"
+  },
+  "nodeprogComposerDeliveryCaptionDetail": "複数選択モードの「ノード連動」でこのアカウントへ送るときの届け方と、連動できる連動元です。",
+  "@nodeprogComposerDeliveryCaptionDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogComposerDeliveryTitle": "届け方: {delivery}",
+  "@nodeprogComposerDeliveryTitle": {
+    "description": "届け方の行。{delivery} = いまの届け方。",
+    "placeholders": {
+      "delivery": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogComposerLinkSourcesLabel": "連動元のアカウント(主投稿先がここにあるときだけ連動)",
+  "@nodeprogComposerLinkSourcesLabel": {
+    "description": "連動元のアカウントの選択の見出し。"
+  },
+  "nodeprogComposerLinkFiltersCaption": "連動の絞り込み(一緒に送るときだけ効きます)",
+  "@nodeprogComposerLinkFiltersCaption": {
+    "description": "連動の絞り込みの説明。"
+  },
+  "nodeprogComposerLinkFiltersCaptionDetail": "連動の絞り込み(連動投稿だけに掛かる関門。ポスト先判定には影響しません)",
+  "@nodeprogComposerLinkFiltersCaptionDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogComposerFilterDescription": "このアカウントの{basis}を基準に、下書きが{what}で合うとき投稿先候補になります。",
+  "@nodeprogComposerFilterDescription": {
+    "description": "ポスト先の絞り込みのタイルの説明。{basis} = 基準(投稿 / リアクションした投稿 / 返信)、{what} = 比べ方。",
+    "placeholders": {
+      "basis": {
+        "type": "String"
+      },
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogComposerFilterBasisPosts": "投稿",
+  "@nodeprogComposerFilterBasisPosts": {
+    "description": "ポスト先の絞り込みの基準。"
+  },
+  "nodeprogComposerFilterBasisReplies": "返信",
+  "@nodeprogComposerFilterBasisReplies": {
+    "description": "ポスト先の絞り込みの基準。"
+  },
+  "nodeprogComposerFilterDisabled": "無効化中: このアカウントはポスト先の候補になりません。",
+  "@nodeprogComposerFilterDisabled": {
+    "description": "ポスト先の絞り込みのタイルの説明(無効のとき)。"
+  },
+  "nodeprogComposerLinkOnlySubtitle": "{account} ・ 連動のみ",
+  "@nodeprogComposerLinkOnlySubtitle": {
+    "description": "連動の絞り込みのタイルの副題。{account} = アカウント。",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogComposerAndSubtitle": "{account} ・ かつ",
+  "@nodeprogComposerAndSubtitle": {
+    "description": "追加の絞り込みのタイルの副題。{account} = アカウント。",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogComposerLinkFilterDescription": "連動投稿がこの条件に合わないとき、このアカウントへは送られません。",
+  "@nodeprogComposerLinkFilterDescription": {
+    "description": "連動の絞り込みのタイルの説明。"
+  },
+  "nodeprogComposerAndDescription": "前の絞り込みと「かつ」で連結されます。",
+  "@nodeprogComposerAndDescription": {
+    "description": "追加の絞り込みのタイルの説明。"
+  },
+  "nodeprogComposerDeleteNode": "ノードを削除",
+  "@nodeprogComposerDeleteNode": {
+    "description": "追加のノードを外すボタン。"
+  },
+  "nodeprogComposerRegexDescription": "このアカウントへ送る本文の「{pattern}」を「{replace}」に置換します。",
+  "@nodeprogComposerRegexDescription": {
+    "description": "投稿加工のタイルの説明。{pattern} = パターン、{replace} = 置換。",
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      },
+      "replace": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogComposerRegexDescriptionEmpty": "送信時に本文へ正規表現の置換をかけます(例: タグの付け替え・伏せ字)。",
+  "@nodeprogComposerRegexDescriptionEmpty": {
+    "description": "投稿加工のタイルの説明(未設定 / 無効)。"
+  },
+  "nodeprogComposerRegexUnset": "投稿加工(未設定)",
+  "@nodeprogComposerRegexUnset": {
+    "description": "追加の投稿加工のタイルの名前(パターンが空)。"
+  },
+  "nodeprogComposerRegexRule": "「{pattern}」→「{replace}」",
+  "@nodeprogComposerRegexRule": {
+    "description": "追加の投稿加工のタイルの名前。{pattern} = パターン、{replace} = 置換。",
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      },
+      "replace": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogComposerExtraNodeSubtitle": "{account} ・ 追加ノード",
+  "@nodeprogComposerExtraNodeSubtitle": {
+    "description": "追加の投稿加工のタイルの副題。{account} = アカウント。",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogComposerExtraRegexDescription": "上の加工に続けて適用されます。",
+  "@nodeprogComposerExtraRegexDescription": {
+    "description": "追加の投稿加工のタイルの説明。"
+  },
+  "nodeprogComposerCwLabel": "注釈",
+  "@nodeprogComposerCwLabel": {
+    "description": "代わりのフォーマット「注釈を付ける」の注釈の欄。"
+  },
+  "nodeprogComposerNoOtherAccounts": "他のアカウントがありません",
+  "@nodeprogComposerNoOtherAccounts": {
+    "description": "連動元のアカウントの選択: ほかにアカウントが無いとき。"
+  },
+  "nodeprogComposerRegexMenuTooltip": "投稿加工の操作",
+  "@nodeprogComposerRegexMenuTooltip": {
+    "description": "投稿加工のタイルの … ボタン。"
+  },
+  "nodeprogComposerFilterMenuTooltip": "ポスト先の操作",
+  "@nodeprogComposerFilterMenuTooltip": {
+    "description": "ポスト先の絞り込みのタイルの … ボタン。"
+  },
+  "nodeprogComposerParamsRegexEnabled": "投稿加工を有効にする",
+  "@nodeprogComposerParamsRegexEnabled": {
+    "description": "投稿加工のパラメーターのスイッチ。"
+  },
+  "nodeprogComposerParamsRegexEnabledSubtitle": "このアカウントへ送る本文にパターン置換をかけます",
+  "@nodeprogComposerParamsRegexEnabledSubtitle": {
+    "description": "投稿加工のパラメーターのスイッチの説明。"
+  },
+  "nodeprogComposerParamsExtraRegex": "上の加工に続けて適用される追加ノードです。",
+  "@nodeprogComposerParamsExtraRegex": {
+    "description": "追加の投稿加工のパラメーターの説明。"
+  },
+  "nodeprogComposerParamsFilterEnabled": "絞り込みを有効にする",
+  "@nodeprogComposerParamsFilterEnabled": {
+    "description": "ポスト先の絞り込みのパラメーターのスイッチ。"
+  },
+  "nodeprogComposerParamsFilterEnabledSubtitle": "無効のときこのアカウントはポスト先の候補になりません",
+  "@nodeprogComposerParamsFilterEnabledSubtitle": {
+    "description": "ポスト先の絞り込みのパラメーターのスイッチの説明。"
+  },
+  "nodeprogComposerParamsWhat": "なにを見る?",
+  "@nodeprogComposerParamsWhat": {
+    "description": "ポスト先の絞り込みのパラメーターの節の見出し。"
+  },
+  "nodeprogComposerParamsRegexDescription": "送信時に本文へ正規表現の置換をかけます。",
+  "@nodeprogComposerParamsRegexDescription": {
+    "description": "投稿加工のパラメーターの説明。"
+  },
+  "nodeprogComposerParamsLinkFilterDescription": "一緒に送るときだけ効く条件です。",
+  "@nodeprogComposerParamsLinkFilterDescription": {
+    "description": "連動の絞り込みのパラメーターの説明。"
+  },
+  "nodeprogComposerParamsLinkFilterDetail": "連動投稿だけに掛かる関門です(ポスト先判定には影響しません)。",
+  "@nodeprogComposerParamsLinkFilterDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogComposerParamsFilterDescription": "下書きがこの条件に合うとき、このアカウントが投稿先候補になります。",
+  "@nodeprogComposerParamsFilterDescription": {
+    "description": "ポスト先の絞り込みのパラメーターの説明。"
+  },
+  "nodeprogComposerParamsPatternLabel": "パターン(正規表現)",
+  "@nodeprogComposerParamsPatternLabel": {
+    "description": "投稿加工のパターンの欄。"
+  },
+  "nodeprogComposerParamsPatternHint": "例: #ネタバレ\\s*",
+  "@nodeprogComposerParamsPatternHint": {
+    "description": "投稿加工のパターンの欄のヒント(正規表現の例)。"
+  },
+  "nodeprogComposerParamsReplaceLabel": "置換(空 = 削除)",
+  "@nodeprogComposerParamsReplaceLabel": {
+    "description": "投稿加工の置換の欄。"
+  }
+}

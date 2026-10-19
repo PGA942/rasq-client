@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import 'node_graph.dart';
 
 /// 取得の kind id: RASQ の投稿 (D-283)。`resolveNodeFetch` が Central のフィードに解決する。
@@ -19,21 +20,29 @@ const trendPluginKindPrefix = 'trendplugin:';
 /// トレンドプラグインのノードの形式 (D-470)。どれもブロック(本体の TL にはまとめない)。
 enum TrendNodeForm {
   /// トレンドを取得: 候補のワードをトレンドのタイルの形で(タップでそのワードのトレンド TL)。
-  tiles('トレンドを取得', 'トレンド', Icons.trending_up),
+  tiles(Icons.trending_up),
 
   /// Today: 候補の上位のワードの投稿をまとめたダイジェスト(いまのアカウントの検索結果を合流)。
-  today('Today', 'Today', Icons.wb_sunny_outlined),
+  today(Icons.wb_sunny_outlined),
 
   /// カスタム(候補のチップ): 検索ホームの「検索の候補」と同じチップ(D-470 より前の固定の置き場の形)。
-  chips('カスタム(候補のチップ)', '検索の候補', Icons.label_outline);
+  chips(Icons.label_outline);
 
-  const TrendNodeForm(this.label, this.heading, this.icon);
+  const TrendNodeForm(this.icon);
 
   /// パレット / 編集画面での名前。
-  final String label;
+  String get label => switch (this) {
+        tiles => appL10n.nodeprogComponentsTrendFormTilesLabel,
+        today => 'Today',
+        chips => appL10n.nodeprogComponentsTrendFormChipsLabel,
+      };
 
   /// 画面の見出し(後ろにプラグインの名前を付ける)。
-  final String heading;
+  String get heading => switch (this) {
+        tiles => appL10n.nodeprogTimelineNodeTrend,
+        today => 'Today',
+        chips => appL10n.nodeprogComponentsTrendFormChipsHeading,
+      };
   final IconData icon;
 
   static TrendNodeForm byName(Object? name) => values.where((f) => f.name == name).firstOrNull ?? tiles;
@@ -41,9 +50,9 @@ enum TrendNodeForm {
 
 /// 形式の説明(パレット / 詳細)。
 String trendNodeFormDescription(TrendNodeForm f) => switch (f) {
-      TrendNodeForm.tiles => '候補のワードを、トレンドのタイルの形で出します(タップでそのワードのトレンド)。',
-      TrendNodeForm.today => '候補の上位のワードの投稿を、Today のようにまとめて出します。',
-      TrendNodeForm.chips => '候補のワードを、検索の候補のチップで出します。',
+      TrendNodeForm.tiles => appL10n.nodeprogComponentsTrendFormTilesDescription,
+      TrendNodeForm.today => appL10n.nodeprogComponentsTrendFormTodayDescription,
+      TrendNodeForm.chips => appL10n.nodeprogComponentsTrendFormChipsDescription,
     };
 
 /// 取得の kind id の接頭辞: RASQ リスト (D-346)。`rasqlist:<id>`。Central のリストのタイムライン(S-044)に解決する。
@@ -237,12 +246,12 @@ class TlAlgorithmComponent {
   bool get hasSuggestParams => isSuggest || isFilter;
 
   String get title => switch (type) {
-        'chrono' => '時系列順',
-        'suggest' => '$whatを$fromからサジェスト',
-        'filter' => '$whatを$fromから絞り込み',
-        'queryfilter' => exclude ? '検索絞り込み(除外)' : '検索絞り込み',
-        'tendency' => '指向性/刺激性(プロファイル)',
-        _ => pluginLabel.isEmpty ? 'カスタム(TLプラグイン)' : pluginLabel,
+        'chrono' => appL10n.nodeprogTimelinePaletteChronoTitle,
+        'suggest' => appL10n.nodeprogComponentsSuggestTitle(what, from),
+        'filter' => appL10n.nodeprogComponentsFilterTitle(what, from),
+        'queryfilter' => exclude ? appL10n.nodeprogComponentsQueryFilterExcludeTitle : appL10n.nodeprogTimelinePaletteQueryFilterTitle,
+        'tendency' => appL10n.nodeprogComponentsTendencyTitle,
+        _ => pluginLabel.isEmpty ? appL10n.nodeprogComponentsPluginTitle : pluginLabel,
       };
 
   TlAlgorithmComponent copyWith({String? what, String? from, bool? enabled, String? query, bool? exclude, Map<String, Object?>? params}) => TlAlgorithmComponent(
@@ -261,13 +270,18 @@ class TlAlgorithmComponent {
 
 /// タイムラインの表示モード (D-439)。同じ投稿の並びを、通常の TL / 会話のまとまり(関連 TL の形)/ 投稿した人の並びで見せる。
 enum TlDisplayMode {
-  timeline('通常 TL', Icons.view_stream_outlined),
-  relational('関連 TL', Icons.forum_outlined),
-  users('ユーザー', Icons.people_outline);
+  timeline(Icons.view_stream_outlined),
+  relational(Icons.forum_outlined),
+  users(Icons.people_outline);
 
-  const TlDisplayMode(this.label, this.icon);
-  final String label;
+  const TlDisplayMode(this.icon);
+  String get label => switch (this) {
+        timeline => appL10n.nodeprogComponentsDisplayTimeline,
+        relational => appL10n.nodeprogComponentsDisplayRelational,
+        users => appL10n.nodeprogEditorTabTrendUsers,
+      };
   final IconData icon;
+
 
   static TlDisplayMode byName(Object? name) => values.where((m) => m.name == name).firstOrNull ?? timeline;
 }
@@ -362,14 +376,14 @@ TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []})
   // (前は「このタイムライン」= self。保存した構成の self はそのまま動く。)
   // トレンド TL (D-442): 「フォロー中の反応」のセクション(AsTell / 会話のまとまり / 投稿 3 件)→ 本体 = このページの検索結果。
   if (scope == 'trend') {
-    return const TlConfig(sources: [
-      TlSourceComponent(tl: sectionKind, label: 'フォロー中の反応', children: [
+    return TlConfig(sources: [
+      TlSourceComponent(tl: sectionKind, label: appL10n.nodeprogTimelineSourceTrendFollowingTitle, children: const [
         TlSourceComponent(tl: astellSectionKind),
         TlSourceComponent(tl: trendFollowingKind, display: TlDisplayMode.relational, limit: 3),
         TlSourceComponent(tl: trendFollowingKind, limit: 3),
       ]),
-      TlSourceComponent(tl: pageSearchKind),
-    ], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
+      const TlSourceComponent(tl: pageSearchKind),
+    ], algorithms: const [TlAlgorithmComponent(type: 'chrono')]);
   }
   if (scope == trendTodayScope) {
     return const TlConfig(sources: [TlSourceComponent(tl: 'featured')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
@@ -378,11 +392,11 @@ TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []})
   // 「Today」のセクション(Today)。アルゴリズムはトレンドのタイルに掛かる(軽いものだけ)。自動更新は無い。
   // 末尾は「検索の候補」(トレンドプラグインのノード、候補のチップ。D-470 より前はノードではなく固定の置き場だった)。
   if (scope == trendTilesScope) {
-    return const TlConfig(sources: [
-      TlSourceComponent(tl: sectionKind, label: 'トレンド', children: [TlSourceComponent(tl: trendTagsKind, limit: 10)]),
-      TlSourceComponent(tl: sectionKind, label: 'Today', children: [TlSourceComponent(tl: 'featured', limit: 10)]),
+    return TlConfig(sources: [
+      TlSourceComponent(tl: sectionKind, label: appL10n.nodeprogTimelineNodeTrend, children: const [TlSourceComponent(tl: trendTagsKind, limit: 10)]),
+      const TlSourceComponent(tl: sectionKind, label: 'Today', children: [TlSourceComponent(tl: 'featured', limit: 10)]),
       trendSuggestChipsNode,
-    ], algorithms: [TlAlgorithmComponent(type: 'chrono')], clock: '');
+    ], algorithms: const [TlAlgorithmComponent(type: 'chrono')], clock: '');
   }
   if (scope == 'trend.users') {
     return const TlConfig(sources: [TlSourceComponent(tl: 'self')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
@@ -598,7 +612,7 @@ class ComposerFilterSpec {
   final String what;
   final String from;
 
-  String get title => '$whatを$fromから絞り込み';
+  String get title => appL10n.nodeprogComponentsFilterTitle(what, from);
 
   ComposerFilterSpec copyWith({String? what, String? from}) => ComposerFilterSpec(what: what ?? this.what, from: from ?? this.from);
   Map<String, Object?> toJson() => {'what': what, 'from': from};
@@ -675,7 +689,7 @@ class ComposerAccountFilter {
 
   bool linkAllowedFrom(String source) => linkSources.contains('*') || linkSources.contains(source);
 
-  String get title => '$whatを$fromから絞り込み';
+  String get title => appL10n.nodeprogComponentsFilterTitle(what, from);
 
   ComposerAccountFilter copyWith(
           {bool? enabled,
@@ -743,9 +757,9 @@ class ComposerAccountFilter {
 /// 連動投稿の届け方の表示 (D-129)。
 const composerDeliveryOptions = ['auto', 'confirm', 'draft'];
 String composerDeliveryLabel(String d) => switch (d) {
-      'confirm' => '確認して投稿 (confirm)',
-      'draft' => '下書きだけ作る (draft)',
-      _ => 'そのまま投稿 (auto)',
+      'confirm' => appL10n.nodeprogComponentsDeliveryConfirm,
+      'draft' => appL10n.nodeprogComponentsDeliveryDraft,
+      _ => appL10n.nodeprogComponentsDeliveryAuto,
     };
 
 /// コンポーザーグラフの正規表現加工ルール (D-130):
@@ -941,21 +955,22 @@ Iterable<TlSourceComponent> trendTagsNodesOf(TlConfig cfg) sync* {
 
 /// 「画面の投稿」(`self`)ノードの名前 (D-443): スコープごとに何を取り込むかを書く(前は「この画面の基礎タイムライン」)。
 String tlSelfLabel(String scope) {
-  if (scope == 'tl.dm' || scope.startsWith('tl.dm:') || scope.startsWith('tl.chat:')) return 'この DM のメッセージ';
-  if (scope == 'trend' || scope == 'trend.following' || scope == 'trend.users') return 'このワードの検索結果';
-  if (scope == trendTodayScope) return 'Today の投稿';
-  if (scope == trendTilesScope) return 'トレンドのワード';
+  final l = appL10n;
+  if (scope == 'tl.dm' || scope.startsWith('tl.dm:') || scope.startsWith('tl.chat:')) return l.nodeprogComponentsSelfDm;
+  if (scope == 'trend' || scope == 'trend.following' || scope == 'trend.users') return l.nodeprogComponentsSelfSearch;
+  if (scope == trendTodayScope) return l.nodeprogComponentsSelfToday;
+  if (scope == trendTilesScope) return l.nodeprogComponentsSelfTrendWords;
   final base = scope.startsWith('tl.') ? scope.substring(3) : scope;
-  if (base.startsWith('list:') || base.startsWith(rasqListKindPrefix)) return 'このリストの投稿';
-  if (base.startsWith('feed:')) return 'このフィードの投稿';
+  if (base.startsWith('list:') || base.startsWith(rasqListKindPrefix)) return l.nodeprogComponentsSelfList;
+  if (base.startsWith('feed:')) return l.nodeprogComponentsSelfFeed;
   return switch (base) {
-    'bundle' => '総合タブの投稿',
-    'home' => 'フォロー中タブの投稿',
-    'social' => 'おすすめタブの投稿',
-    'local' => 'ローカルタブの投稿',
-    'global' => 'グローバルタブの投稿',
-    'relational' => '関連タブの投稿',
-    _ => 'このタブの投稿',
+    'bundle' => l.nodeprogComponentsSelfBundle,
+    'home' => l.nodeprogComponentsSelfHome,
+    'social' => l.nodeprogComponentsSelfSocial,
+    'local' => l.nodeprogComponentsSelfLocal,
+    'global' => l.nodeprogComponentsSelfGlobal,
+    'relational' => l.nodeprogComponentsSelfRelational,
+    _ => l.nodeprogComponentsSelfTab,
   };
 }
 
@@ -969,8 +984,9 @@ const tendencyPinnedScopes = {'trend', 'trend.following', trendTodayScope, trend
 /// トレンドタイルで使えないアルゴリズムの理由(使えるなら null)。タイルは並ぶトレンドごとに掛け続けるので、ML モデル
 /// (GLiNER / SigLIP)や GPU を使いうる重いもの(サジェスト / 絞り込み / TL プラグイン)は使えない。
 String? trendTilesUnavailableReason(String type) => switch (type) {
-      'suggest' || 'filter' => 'ML モデルを使うので、トレンドタイルでは使えません',
-      _ when type.startsWith('plugin:') => '投稿の並べ替え(GPU を使うことも)なので、トレンドタイルでは使えません',
+      'suggest' || 'filter' => appL10n.nodeprogComponentsTrendTilesNoMl,
+      _ when type.startsWith('plugin:') => appL10n.nodeprogComponentsTrendTilesNoPlugin,
+
       _ => null,
     };
 

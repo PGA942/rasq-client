@@ -6,6 +6,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../session/session_providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/post_row.dart';
@@ -67,13 +68,14 @@ final tlSectionsRefreshProvider = NotifierProvider<TlSectionsRefresh, int>(TlSec
 
 /// ノードの名前(セクションの見出しが無いとき / 編集画面)。
 String tlNodeLabel(WidgetRef ref, TlSourceComponent s) {
-  if (s.isSection) return s.label.isEmpty ? 'セクション' : s.label;
-  if (s.isAstell) return 'ASTell のタイル';
+  final l = appL10n;
+  if (s.isSection) return s.label.isEmpty ? l.nodeprogTimelineSectionTitle : s.label;
+  if (s.isAstell) return l.nodeprogTimelineSourceAstellTitle;
   if (s.isSwing) return 'Swing';
-  if (s.isTrendTags) return 'トレンド';
-  if (s.isTrendFollowing) return 'フォロー中の反応';
+  if (s.isTrendTags) return l.nodeprogTimelineNodeTrend;
+  if (s.isTrendFollowing) return l.nodeprogTimelineSourceTrendFollowingTitle;
   if (s.isTrendPlugin) return trendPluginNodeLabel(ref, s);
-  if (s.tl.startsWith('node:')) return ref.watch(nodeTabsProvider).where((t) => t.id == s.tl).firstOrNull?.label ?? 'ノード TL';
+  if (s.tl.startsWith('node:')) return ref.watch(nodeTabsProvider).where((t) => t.id == s.tl).firstOrNull?.label ?? l.nodeprogTimelineNodeTabFallback;
   final kinds = ref.watch(currentSnsSessionProvider)?.timelines ?? const <TimelineKind>[];
   return kinds.where((k) => k.id == s.tl).firstOrNull?.label ?? switch (s.tl) {
         'home' => TimelineKind.home.label,
@@ -156,7 +158,7 @@ class TlNodeBlock extends ConsumerWidget {
         topMargin: 0,
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           ?trailing,
-          RasqIconButton(icon: Icons.refresh, size: 18, tooltip: '読み直す', onPressed: () => ref.read(tlSectionsRefreshProvider.notifier).bump()),
+          RasqIconButton(icon: Icons.refresh, size: 18, tooltip: context.l10n.nodeprogTimelineReload, onPressed: () => ref.read(tlSectionsRefreshProvider.notifier).bump()),
         ]),
       ),
       // 中のノードは入れた順に、枠なしで続けて出す (D-444。D-442 では 1 つずつ角丸の枠に入れていた)。
@@ -190,15 +192,15 @@ class TlNodeContent extends ConsumerWidget {
       // チャイルドセーフ: AsTell に入れないアカウントには出さない。
       if (!ref.watch(childGateProvider).featureAllowed('astell.join')) return const SizedBox.shrink();
       final home = ref.watch(astellHomeProvider);
-      if (home.value == null) return home.hasError ? const RasqCaption('読み込めませんでした') : _loading();
+      if (home.value == null) return home.hasError ? RasqCaption(context.l10n.nodeprogTimelineLoadFailed) : _loading();
       final rooms = searchAstellRooms(home.value!, q).take(s.limit).toList();
-      if (rooms.isEmpty) return RasqCaption(q.isEmpty ? 'いま開いている ASTell はありません' : '「$q」の ASTell はありません');
+      if (rooms.isEmpty) return RasqCaption(q.isEmpty ? context.l10n.nodeprogTimelineAstellEmpty : context.l10n.nodeprogTimelineAstellEmptyQuery(q));
       return AstellTileStrip(key: const ValueKey('tl.node.astell'), rooms: rooms, tileBuilder: (r) => AstellRoomTile(room: r));
     }
     if (s.isSwing) {
       final feed = ref.watch(swingFeedProvider).value ?? const <Swing>[];
       final entries = (q.isEmpty ? swingAuthorsOf(feed) : searchSwingAuthors(feed, q)).take(s.limit).toList();
-      if (entries.isEmpty) return RasqCaption(q.isEmpty ? 'いま Swing はありません' : '「$q」の Swing はありません');
+      if (entries.isEmpty) return RasqCaption(q.isEmpty ? context.l10n.nodeprogTimelineSwingEmpty : context.l10n.nodeprogTimelineSwingEmptyQuery(q));
       return Column(key: const ValueKey('tl.node.swing'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         for (final e in entries) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.sm, 0), child: SwingBanner(entry: e)),
       ]);
@@ -206,25 +208,25 @@ class TlNodeContent extends ConsumerWidget {
     if (s.isTrendTags) {
       final sourced = ref.watch(sourcedTrendsProvider);
       final v = sourced.value;
-      if (v == null) return sourced.hasError ? const RasqCaption('読み込めませんでした') : _loading();
+      if (v == null) return sourced.hasError ? RasqCaption(context.l10n.nodeprogTimelineLoadFailed) : _loading();
       final given = trends;
-      if (given != null && !given.hasValue) return given.hasError ? const RasqCaption('読み込めませんでした') : _loading();
+      if (given != null && !given.hasValue) return given.hasError ? RasqCaption(context.l10n.nodeprogTimelineLoadFailed) : _loading();
       // アカウントの表記が空 = 全部のアカウントのトレンド。
       final who = s.account.isEmpty ? null : s.account;
       final tags = [
         for (final t in given?.value ?? v.tags)
           if (who == null || (v.sources[trendKey(t.tag)] ?? const <AccountId>[]).any((a) => '$a' == who || a.key == who)) t,
       ].take(s.limit).toList();
-      if (tags.isEmpty) return const RasqCaption('トレンドはまだありません');
+      if (tags.isEmpty) return RasqCaption(context.l10n.nodeprogTimelineTrendEmpty);
       return Column(key: const ValueKey('tl.node.trend'), mainAxisSize: MainAxisSize.min, children: [for (final t in tags) TrendTile(trend: t)]);
     }
     if (s.isTrendPlugin) return TrendPluginNodeContent(key: ValueKey('tl.node.trendplugin.${s.trendPluginId}.${s.form.name}'), node: s, trends: trends);
     if (s.isTrendFollowing) {
-      if (q.isEmpty) return const RasqCaption('トレンド TL で出ます');
+      if (q.isEmpty) return RasqCaption(context.l10n.nodeprogTimelineTrendFollowingNoQuery);
       final posts = ref.watch(trendFollowingPostsProvider((tag: query!, account: null)));
       final v = posts.value;
-      if (v == null) return posts.hasError ? const RasqCaption('読み込めませんでした') : _loading();
-      if (v.isEmpty) return const RasqCaption('フォロー中の人の反応はまだありません', key: ValueKey('trend.following.empty'));
+      if (v == null) return posts.hasError ? RasqCaption(context.l10n.nodeprogTimelineLoadFailed) : _loading();
+      if (v.isEmpty) return RasqCaption(context.l10n.nodeprogTimelineTrendFollowingEmpty, key: const ValueKey('trend.following.empty'));
       return TlPostsDisplay(posts: v, mode: s.display, limit: s.limit, scrollable: false, kind: TimelineKind.home);
     }
     return _TlSnapshot(key: ValueKey('tl.node.tl.${s.tl}'), node: s);
@@ -265,8 +267,8 @@ class _TlSnapshotState extends ConsumerState<_TlSnapshot> {
     final tl = ref.watch(timelineProvider(_kind));
     if (_snapshot == null && tl.hasValue && !tl.isLoading) _snapshot = tl.requireValue.posts;
     final posts = _snapshot;
-    if (posts == null) return tl.hasError ? const RasqCaption('読み込めませんでした') : TlNodeContent._loading();
-    if (posts.isEmpty) return const RasqCaption('まだありません');
+    if (posts == null) return tl.hasError ? RasqCaption(context.l10n.nodeprogTimelineLoadFailed) : TlNodeContent._loading();
+    if (posts.isEmpty) return RasqCaption(context.l10n.nodeprogTimelinePostsEmpty);
     return TlPostsDisplay(posts: posts, mode: widget.node.display, limit: widget.node.limit, scrollable: false, kind: _kind);
   }
 }
@@ -308,7 +310,7 @@ class TlPostsDisplay extends ConsumerWidget {
   /// 関連 TL の形: 並びの投稿から会話のまとまりを組む(関連 TL と同じエンジン、ゲストなし)。
   List<Widget> _events(WidgetRef ref, List<Post> shown) {
     final events = ConversationEngine(settings: ref.watch(relationalSettingsProvider)).build(followeePosts: shown, guestPosts: const []);
-    if (events.isEmpty) return const [RasqCaption('会話のまとまりはまだありません')];
+    if (events.isEmpty) return [RasqCaption(appL10n.nodeprogTimelineEventsEmpty)];
     return [
       for (final e in limit == null ? events : events.take(limit!)) ...[RelationalEventCard(key: ValueKey('tl.display.event.${e.id}'), event: e), const Divider()],
     ];
@@ -327,8 +329,9 @@ class TlPostsDisplay extends ConsumerWidget {
     }
     final order = users.keys.toList()..sort((a, b) => count[b]!.compareTo(count[a]!));
     final picked = [for (final k in limit == null ? order : order.take(limit!)) users[k]!];
-    if (picked.isEmpty) return const [RasqCaption('まだいません')];
-    return [UserList(key: const ValueKey('tl.display.users.list'), users: picked, accountFor: (u) => via[u.key], shrinkWrap: true, subtitles: {for (final u in picked) u.id: '${count[u.key]} 件の投稿'})];
+    if (picked.isEmpty) return [RasqCaption(appL10n.nodeprogTimelineUsersEmpty)];
+    return [UserList(key: const ValueKey('tl.display.users.list'), users: picked, accountFor: (u) => via[u.key], shrinkWrap: true, subtitles: {for (final u in picked) u.id: appL10n.nodeprogTimelineUserPostCount(count[u.key]!)})];
+
   }
 }
 

@@ -142,6 +142,3160 @@ abstract class AppLocalizations {
   /// **'表示の言語'**
   String get languageSettingsListHeader;
 
+  /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
+  ///
+  /// In ja, this message translates to:
+  /// **'生成'**
+  String get nodeprogCatalogGenreGenerate;
+
+  /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
+  ///
+  /// In ja, this message translates to:
+  /// **'変換'**
+  String get nodeprogCatalogGenreConvert;
+
+  /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
+  ///
+  /// In ja, this message translates to:
+  /// **'入力'**
+  String get nodeprogCatalogGenreInput;
+
+  /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムライン'**
+  String get nodeprogCatalogGenreTimeline;
+
+  /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
+  ///
+  /// In ja, this message translates to:
+  /// **'加工'**
+  String get nodeprogCatalogGenreProcess;
+
+  /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
+  ///
+  /// In ja, this message translates to:
+  /// **'条件'**
+  String get nodeprogCatalogGenreCondition;
+
+  /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
+  ///
+  /// In ja, this message translates to:
+  /// **'関数'**
+  String get nodeprogCatalogGenreFunction;
+
+  /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
+  ///
+  /// In ja, this message translates to:
+  /// **'取得'**
+  String get nodeprogCatalogGenreFetch;
+
+  /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
+  ///
+  /// In ja, this message translates to:
+  /// **'コンポーザー'**
+  String get nodeprogCatalogGenreComposer;
+
+  /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
+  ///
+  /// In ja, this message translates to:
+  /// **'保存'**
+  String get nodeprogCatalogGenreStorage;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'クロックメーカー'**
+  String get nodeprogCatalogClockTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'一定間隔でクロックを出します。TL の自動更新などのトリガーに使います。'**
+  String get nodeprogCatalogClockDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'テキスト'**
+  String get nodeprogCatalogTextConstTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'書いた文をテキストとして出します。類似性 / キーワードの基準や、分割の入力に繋げます。'**
+  String get nodeprogCatalogTextConstDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'分割'**
+  String get nodeprogCatalogConvertSplitTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'テキストを区切り(改行 / カンマ / 空白)でテキスト配列にします。キーワードリストや保存の入力に繋げます。'**
+  String get nodeprogCatalogConvertSplitDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'結合'**
+  String get nodeprogCatalogConvertJoinTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'テキスト配列を区切り(改行 / カンマ / 空白)で 1 つのテキストにします。'**
+  String get nodeprogCatalogConvertJoinDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿を取り出す'**
+  String get nodeprogCatalogListFirstTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿リストの何番目かの投稿を 1 件取り出します(1 = 先頭)。本文をテキストにして基準や設定に繋げます。'**
+  String get nodeprogCatalogListFirstDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿の本文'**
+  String get nodeprogCatalogPostTextTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿 1 件の本文をテキストにします。'**
+  String get nodeprogCatalogPostTextDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'ランダム'**
+  String get nodeprogCatalogRandomTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿ごとに乱数を出します。範囲は「1-7」のように指定し、小数点を入れると小数点以下もカウントします。シードで再現できます。'**
+  String get nodeprogCatalogRandomDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルリーダー'**
+  String get nodeprogCatalogFileTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'ローカルファイルを読み込んでテキストとして出します。'**
+  String get nodeprogCatalogFileDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムライン'**
+  String get nodeprogCatalogTimelineTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'最終出力。投稿リストを繋ぐと、この画面のタイムラインに流れます。'**
+  String get nodeprogCatalogTimelineDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムライン取得'**
+  String get nodeprogCatalogTlSourceTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'選んだタイムラインを取得して、投稿リストとして渡します。'**
+  String get nodeprogCatalogTlSourceDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'選んだタイムラインを取得して、投稿リスト(RRLタグ付き)として渡します。'**
+  String get nodeprogCatalogTlSourceDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'並べ替え'**
+  String get nodeprogCatalogSortTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'下に繋いだ条件に合う投稿を先頭に並べ替えます(元の順序は保たれます)。'**
+  String get nodeprogCatalogSortDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'消去'**
+  String get nodeprogCatalogRemoveTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'下に繋いだ条件に合う投稿を取り除きます。'**
+  String get nodeprogCatalogRemoveDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'条件'**
+  String get nodeprogCatalogCondTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'指定したタグの内容を見て True/False を返します。下に数珠繋ぎで「かつ」、同じ接続部から並列で「または」。'**
+  String get nodeprogCatalogCondDescription;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'下に繋いだ条件の否定を返します。'**
+  String get nodeprogCatalogNotDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'関数入力'**
+  String get nodeprogCatalogFnInputTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'関数の中身の入口。呼び出し元から渡された投稿リストがここから出ます(関数の中身の編集画面専用)。'**
+  String get nodeprogCatalogFnInputDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'関数出力'**
+  String get nodeprogCatalogFnOutputTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'関数の中身の出口。ここに繋いだ投稿リストが関数ノードの出力になります(未接続なら素通し)。'**
+  String get nodeprogCatalogFnOutputDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索絞り込み'**
+  String get nodeprogCatalogFilterQueryTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ワードに合う投稿だけ通します(「除外」で逆に落とします)。'**
+  String get nodeprogCatalogFilterQueryDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ワードに合う投稿だけ通します。ワードが空のときは、このページの検索ワード/タグを使います。「除外」を true にすると、合う投稿を落とします(ワードミュート)。'**
+  String get nodeprogCatalogFilterQueryDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'マージ'**
+  String get nodeprogCatalogMergeTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'繋いだ投稿リストを時刻順に 1 本にまとめます。'**
+  String get nodeprogCatalogMergeDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'繋いだ投稿リストを時刻順に 1 本へ合流します。別アカウントに流れてきた同じ投稿は 1 枚に畳み、タイルの ↓ でアカウントを選べます。'**
+  String get nodeprogCatalogMergeDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'関連タイムライン'**
+  String get nodeprogCatalogTimelineRelationalTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'関連タイムラインの絞り込みの出口です。'**
+  String get nodeprogCatalogTimelineRelationalDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'関連TLの前段絞り込みの最終出力。繋いだ投稿リストが会話イベント構築の入力になります(処理系は変わりません)。'**
+  String get nodeprogCatalogTimelineRelationalDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'リストTL取得'**
+  String get nodeprogCatalogTlListTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'Misskey のリストのタイムラインを取得します(リスト名で指定)。'**
+  String get nodeprogCatalogTlListDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索TL取得'**
+  String get nodeprogCatalogTlSearchTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ワードにヒットする投稿を取得します。'**
+  String get nodeprogCatalogTlSearchDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'DM取得'**
+  String get nodeprogCatalogTlDmTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'相手(ハンドル)との DM を取得します。'**
+  String get nodeprogCatalogTlDmDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド取得'**
+  String get nodeprogCatalogTrendTagsTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'いまのトレンドタグを文字列の配列として出します(類似度/キーワードの入力に)。'**
+  String get nodeprogCatalogTrendTagsDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムフィード取得'**
+  String get nodeprogCatalogTlFeedTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'Bluesky のカスタムフィードを取得します。'**
+  String get nodeprogCatalogTlFeedDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'Bluesky のカスタムフィード(フィードジェネレーター)のタイムラインを取得します(at:// の URI で指定。TL カスタマイズでは検索して選べます)。'**
+  String get nodeprogCatalogTlFeedDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト取得'**
+  String get nodeprogCatalogTlRasqlistTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'いくつもの SNS の人をまとめた RASQ リストの投稿を取得します。'**
+  String get nodeprogCatalogTlRasqlistDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取得します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。'**
+  String get nodeprogCatalogTlRasqlistDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド検索結果取得'**
+  String get nodeprogCatalogTrendPostsTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'いまのトレンド上位タグを検索して、その投稿を 1 本に合流して出します。'**
+  String get nodeprogCatalogTrendPostsDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'ポスト先'**
+  String get nodeprogCatalogComposerTargetTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿先アカウントの候補です。下の条件に合うと投稿先になります。'**
+  String get nodeprogCatalogComposerTargetDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿先アカウントの候補。下に条件をぶら下げると、投稿内容がその条件に合うときこのアカウントが投稿先になります(上に置いたものほど優先。手動で選び直せます)。'**
+  String get nodeprogCatalogComposerTargetDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'代わりのフォーマットで投稿'**
+  String get nodeprogCatalogComposerFallbackTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'絞り込みで外れたとき、別の形でこのアカウントに投稿します。'**
+  String get nodeprogCatalogComposerFallbackDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'絞り込みで投稿先から外れた場合のバイパス。下の条件(通常は直前の比較の Not)が成立したとき、代わりのフォーマットでこのアカウントに投稿します。'**
+  String get nodeprogCatalogComposerFallbackDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'連動の絞り込み'**
+  String get nodeprogCatalogComposerLinkgateTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'一緒に送る投稿だけに効く絞り込みです。'**
+  String get nodeprogCatalogComposerLinkgateDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'連動投稿だけに掛かる絞り込みです。下の条件が成立しないと、このアカウントへの連動投稿は送られません(通常のポスト先判定には影響しません)。'**
+  String get nodeprogCatalogComposerLinkgateDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿加工(正規表現)'**
+  String get nodeprogCatalogComposerRegexTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'送信するときに本文の一部を置き換えます。'**
+  String get nodeprogCatalogComposerRegexDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'送信時に本文へ正規表現の置換をかけます(パターンに一致した部分を置換)。アカウントが空のときは全ての投稿先に適用します。'**
+  String get nodeprogCatalogComposerRegexDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション済み取得'**
+  String get nodeprogCatalogTlMyreactionsTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'TL で自分がリアクションした投稿を取得します(好みのプロファイル作りに)。'**
+  String get nodeprogCatalogTlMyreactionsDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド枠'**
+  String get nodeprogCatalogTrendFrameTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドホームの「トレンド」一覧の最終出力。タグ(テキスト配列)を繋ぐとそのまま一覧に出ます。'**
+  String get nodeprogCatalogTrendFrameDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'類似度 (SigLIP)'**
+  String get nodeprogCatalogMlSimilarTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'基準と各投稿の似ている度合いを 0〜1 で出します。'**
+  String get nodeprogCatalogMlSimilarDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'基準(テキスト/配列/ベクトル)と各投稿の類似度を、この TL 内での相対値 0〜1 で出します(0.8 ≒ 上位 2 割相当)。ML 不達時は n-gram 類似度に縮退します。'**
+  String get nodeprogCatalogMlSimilarDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'GLiNER抽出'**
+  String get nodeprogCatalogMlGlinerTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿リストから特徴語(頻出順)を抽出して文字列の配列で出します。'**
+  String get nodeprogCatalogMlGlinerDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'SigLIP埋め込み'**
+  String get nodeprogCatalogMlSiglipTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿リストの傾向をまとめて出します。'**
+  String get nodeprogCatalogMlSiglipDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿リストの平均埋め込み(プロファイル)をベクトルで出します。ML 不達時は n-gram プロファイルに縮退します。'**
+  String get nodeprogCatalogMlSiglipDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'保存 (storage.safe)'**
+  String get nodeprogCatalogStorageSaveTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'繋いだデータを保存します。'**
+  String get nodeprogCatalogStorageSaveDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'繋いだデータをスロットに保存します。storage.safe は依存関係の子プラグインにも渡せる安全な置き場(プラグイン側の受け渡しは初回起動時に確認)。'**
+  String get nodeprogCatalogStorageSaveDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'読み出し (storage.safe)'**
+  String get nodeprogCatalogStorageLoadTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'スロットに保存したデータを読み出します。'**
+  String get nodeprogCatalogStorageLoadDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'キーワード一致 (GLiNER)'**
+  String get nodeprogCatalogMlKeywordTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'キーワード(または配列)と各投稿の特徴語の一致数を出します。'**
+  String get nodeprogCatalogMlKeywordDescription;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'指向性/刺激性 (プロファイル)'**
+  String get nodeprogCatalogMlTendencyTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'好みの設定への合い具合(0〜1)を各投稿に出します。'**
+  String get nodeprogCatalogMlTendencyDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'storage.safe のトレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)への適合度(0〜1)を各投稿に出します。プロファイルは検索ホームのトレンド ⚙ で編集し、他のノードからも同じスロットを読めます。'**
+  String get nodeprogCatalogMlTendencyDetail;
+
+  /// ノードの名前(キャンバスのノードの見出し・パレットのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'比較'**
+  String get nodeprogCatalogCompareTitle;
+
+  /// パレットのタイル・ノード情報の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'数値としきい値を比べて True/False を返します。'**
+  String get nodeprogCatalogCompareDescription;
+
+  /// 開発者モードで説明の代わりに出す詳しい説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'数値(類似度・乱数など)としきい値を比べて True/False を返す演算子条件です。値元が未接続・値が取れないとき(スロットが空など)は False になります。'**
+  String get nodeprogCatalogCompareDetail;
+
+  /// ポートのデータ形式の表示。{type} = データ形式(ジャンル)、{format} = プラグインが指定する細かい形式(例: .dic)。
+  ///
+  /// In ja, this message translates to:
+  /// **'{type}({format})'**
+  String nodeprogCatalogTypeWithFormat(String type, String format);
+
+  /// パレットのタイルの入出力の 1 行の、ポート 1 つ。{label} = ポートの名前、{type} = データ形式。
+  ///
+  /// In ja, this message translates to:
+  /// **'{label}({type})'**
+  String nodeprogCatalogPortWithType(String label, String type);
+
+  /// 入出力の 1 行で、条件接続部を表す語。
+  ///
+  /// In ja, this message translates to:
+  /// **'条件'**
+  String get nodeprogCatalogIoCond;
+
+  /// 入出力の 1 行で、入力 / 出力が無いとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'なし'**
+  String get nodeprogCatalogIoNone;
+
+  /// 並べた語の区切り(ポートの一覧・条件タグの一覧)。
+  ///
+  /// In ja, this message translates to:
+  /// **'・'**
+  String get nodeprogCatalogListSeparator;
+
+  /// パレットのタイルの入出力の 1 行。{inputs} / {outputs} = ポートの一覧(区切りで繋いだもの)。
+  ///
+  /// In ja, this message translates to:
+  /// **'入力: {inputs} → 出力: {outputs}'**
+  String nodeprogCatalogIoSummary(String inputs, String outputs);
+
+  /// 自分で作った関数ノードの提供元の欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタム関数'**
+  String get nodeprogCatalogCustomFunctionAuthor;
+
+  /// 条件を受けるカスタム関数の説明。{tags} = 選んだ条件タグの一覧。
+  ///
+  /// In ja, this message translates to:
+  /// **'条件 {tags} を受ける、自分で作った関数です。'**
+  String nodeprogCatalogCustomFunctionCondDescription(String tags);
+
+  /// 開発者モードの説明。{tags} = 選んだ条件タグの一覧。
+  ///
+  /// In ja, this message translates to:
+  /// **'条件タグ {tags} を受けるカスタム関数です(中身の配線はプラグイン/RAi で)。'**
+  String nodeprogCatalogCustomFunctionCondDetail(String tags);
+
+  /// データを受けるカスタム関数の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'自分で作った関数です。'**
+  String get nodeprogCatalogCustomFunctionDataDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタム関数です(中身の配線はプラグイン/RAi で)。'**
+  String get nodeprogCatalogCustomFunctionDataDetail;
+
+  /// ノードのジャンル: TL プラグインの並べ替えノード(パレットのジャンルの絞り込みの既定の表示も)。
+  ///
+  /// In ja, this message translates to:
+  /// **'ソート/辞書'**
+  String get nodeprogCatalogGenreSortDictionary;
+
+  /// カスタム関数の名前が保存されていないときの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'関数'**
+  String get nodeprogCatalogCustomFunctionDefaultName;
+
+  /// トレンドプラグインのノードの形式の名前(トレンドのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドを取得'**
+  String get nodeprogComponentsTrendFormTilesLabel;
+
+  /// トレンドプラグインのノードの形式の名前(候補のチップ)。
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタム(候補のチップ)'**
+  String get nodeprogComponentsTrendFormChipsLabel;
+
+  /// トレンドプラグインのノード(候補のチップ)の画面の見出し(後ろにプラグインの名前)。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索の候補'**
+  String get nodeprogComponentsTrendFormChipsHeading;
+
+  /// トレンドプラグインのノードの形式の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'候補のワードを、トレンドのタイルの形で出します(タップでそのワードのトレンド)。'**
+  String get nodeprogComponentsTrendFormTilesDescription;
+
+  /// トレンドプラグインのノードの形式の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'候補の上位のワードの投稿を、Today のようにまとめて出します。'**
+  String get nodeprogComponentsTrendFormTodayDescription;
+
+  /// トレンドプラグインのノードの形式の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'候補のワードを、検索の候補のチップで出します。'**
+  String get nodeprogComponentsTrendFormChipsDescription;
+
+  /// アルゴリズム「サジェスト」の名前。{what} = なにを(キーワード / 類似性)、{from} = なにから(投稿内容 など)。
+  ///
+  /// In ja, this message translates to:
+  /// **'{what}を{from}からサジェスト'**
+  String nodeprogComponentsSuggestTitle(String what, String from);
+
+  /// アルゴリズム「絞り込み」の名前。{what} = なにを、{from} = なにから。
+  ///
+  /// In ja, this message translates to:
+  /// **'{what}を{from}から絞り込み'**
+  String nodeprogComponentsFilterTitle(String what, String from);
+
+  /// アルゴリズム「検索絞り込み」で除外にしたときの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索絞り込み(除外)'**
+  String get nodeprogComponentsQueryFilterExcludeTitle;
+
+  /// アルゴリズム「指向性/刺激性」の名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'指向性/刺激性(プロファイル)'**
+  String get nodeprogComponentsTendencyTitle;
+
+  /// TL プラグインのアルゴリズムの名前(名前が無いとき)。
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタム(TLプラグイン)'**
+  String get nodeprogComponentsPluginTitle;
+
+  /// 表示モードの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'通常 TL'**
+  String get nodeprogComponentsDisplayTimeline;
+
+  /// 表示モードの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'関連 TL'**
+  String get nodeprogComponentsDisplayRelational;
+
+  /// 連動投稿の届け方の名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'確認して投稿 (confirm)'**
+  String get nodeprogComponentsDeliveryConfirm;
+
+  /// 連動投稿の届け方の名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'下書きだけ作る (draft)'**
+  String get nodeprogComponentsDeliveryDraft;
+
+  /// 連動投稿の届け方の名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'そのまま投稿 (auto)'**
+  String get nodeprogComponentsDeliveryAuto;
+
+  /// 「画面の投稿」ノードの名前(DM のページ)。
+  ///
+  /// In ja, this message translates to:
+  /// **'この DM のメッセージ'**
+  String get nodeprogComponentsSelfDm;
+
+  /// 「画面の投稿」ノードの名前(トレンド / 検索のページ)。
+  ///
+  /// In ja, this message translates to:
+  /// **'このワードの検索結果'**
+  String get nodeprogComponentsSelfSearch;
+
+  /// 「画面の投稿」ノードの名前(Today)。
+  ///
+  /// In ja, this message translates to:
+  /// **'Today の投稿'**
+  String get nodeprogComponentsSelfToday;
+
+  /// 「画面の投稿」ノードの名前(トレンドページ)。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドのワード'**
+  String get nodeprogComponentsSelfTrendWords;
+
+  /// 「画面の投稿」ノードの名前(リストの TL)。
+  ///
+  /// In ja, this message translates to:
+  /// **'このリストの投稿'**
+  String get nodeprogComponentsSelfList;
+
+  /// 「画面の投稿」ノードの名前(カスタムフィード)。
+  ///
+  /// In ja, this message translates to:
+  /// **'このフィードの投稿'**
+  String get nodeprogComponentsSelfFeed;
+
+  /// 「画面の投稿」ノードの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'総合タブの投稿'**
+  String get nodeprogComponentsSelfBundle;
+
+  /// 「画面の投稿」ノードの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中タブの投稿'**
+  String get nodeprogComponentsSelfHome;
+
+  /// 「画面の投稿」ノードの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'おすすめタブの投稿'**
+  String get nodeprogComponentsSelfSocial;
+
+  /// 「画面の投稿」ノードの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'ローカルタブの投稿'**
+  String get nodeprogComponentsSelfLocal;
+
+  /// 「画面の投稿」ノードの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'グローバルタブの投稿'**
+  String get nodeprogComponentsSelfGlobal;
+
+  /// 「画面の投稿」ノードの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'関連タブの投稿'**
+  String get nodeprogComponentsSelfRelational;
+
+  /// 「画面の投稿」ノードの名前(そのほかのタブ)。
+  ///
+  /// In ja, this message translates to:
+  /// **'このタブの投稿'**
+  String get nodeprogComponentsSelfTab;
+
+  /// トレンドタイルで使えないアルゴリズムの理由。
+  ///
+  /// In ja, this message translates to:
+  /// **'ML モデルを使うので、トレンドタイルでは使えません'**
+  String get nodeprogComponentsTrendTilesNoMl;
+
+  /// トレンドタイルで使えないアルゴリズムの理由。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿の並べ替え(GPU を使うことも)なので、トレンドタイルでは使えません'**
+  String get nodeprogComponentsTrendTilesNoPlugin;
+
+  /// 投稿先のカスタマイズの … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'この構成をリセット'**
+  String get nodeprogComposerResetConfig;
+
+  /// 学習プロファイルの状況(まだ学習していない)。
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ学習していません(投稿すると学習します)'**
+  String get nodeprogComposerLearnNone;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'学習プロファイル: まだ確定投稿がありません(投稿すると自動で学習します)'**
+  String get nodeprogComposerLearnNoneDetail;
+
+  /// 学習プロファイルの状況。{count} = 学習した投稿の数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{これまでの投稿 {count} 件から学習しています}}'**
+  String nodeprogComposerLearnCount(int count);
+
+  /// 開発者モードの説明。{count} = 学習した投稿の数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{学習プロファイル: 確定投稿 {count} 件(手動で切り替えた投稿は強く学習・半減期 90 日)}}'**
+  String nodeprogComposerLearnCountDetail(int count);
+
+  /// 連動の実績。{pos} = 連動した回数、{neg} = 確認で外した回数。
+  ///
+  /// In ja, this message translates to:
+  /// **'実績: 連動 {pos} 回 / 確認で解除 {neg} 回'**
+  String nodeprogComposerRelationStats(int pos, int neg);
+
+  /// 投稿先のカスタマイズ: アカウントが無いとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントがありません'**
+  String get nodeprogComposerNoAccounts;
+
+  /// 投稿先のカスタマイズ: アカウントが無いときのヒント。
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインすると投稿先の条件を組めます'**
+  String get nodeprogComposerNoAccountsHint;
+
+  /// 投稿先のカスタマイズの説明のバナー。
+  ///
+  /// In ja, this message translates to:
+  /// **'下書きの内容に合うアカウントが、投稿先の候補になります'**
+  String get nodeprogComposerBanner;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントごとに絞り込みを組むと、下書きの内容(と内部のフォーマット)が合うアカウントが投稿先の候補になります。'**
+  String get nodeprogComposerBannerDetail;
+
+  /// ノードエディターで手を入れた構成の警告。
+  ///
+  /// In ja, this message translates to:
+  /// **'ポスト先はノードエディタで編集されています。ここで変えると上書きされます'**
+  String get nodeprogComposerHandEdited;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'ポスト先はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。'**
+  String get nodeprogComposerHandEditedDetail;
+
+  /// 投稿先のカスタマイズの節の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'ポスト先の絞り込み'**
+  String get nodeprogComposerFiltersHeader;
+
+  /// 投稿先のカスタマイズの節の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'フォーマット'**
+  String get nodeprogComposerFormatHeader;
+
+  /// フォーマットの節の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'絞り込みに合わなかったときも、別の形で候補に残せます'**
+  String get nodeprogComposerFormatCaption;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'絞り込みに合わなかったとき、代わりのフォーマットで候補に残します(無くなる直前の比較からバイパス)。'**
+  String get nodeprogComposerFormatCaptionDetail;
+
+  /// 投稿先のカスタマイズの節の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'連動投稿の届け方'**
+  String get nodeprogComposerDeliveryHeader;
+
+  /// 連動投稿の届け方の節の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかのアカウントと一緒に送るときの設定です'**
+  String get nodeprogComposerDeliveryCaption;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'複数選択モードの「ノード連動」でこのアカウントへ送るときの届け方と、連動できる連動元です。'**
+  String get nodeprogComposerDeliveryCaptionDetail;
+
+  /// 届け方の行。{delivery} = いまの届け方。
+  ///
+  /// In ja, this message translates to:
+  /// **'届け方: {delivery}'**
+  String nodeprogComposerDeliveryTitle(String delivery);
+
+  /// 連動元のアカウントの選択の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'連動元のアカウント(主投稿先がここにあるときだけ連動)'**
+  String get nodeprogComposerLinkSourcesLabel;
+
+  /// 連動の絞り込みの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'連動の絞り込み(一緒に送るときだけ効きます)'**
+  String get nodeprogComposerLinkFiltersCaption;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'連動の絞り込み(連動投稿だけに掛かる関門。ポスト先判定には影響しません)'**
+  String get nodeprogComposerLinkFiltersCaptionDetail;
+
+  /// ポスト先の絞り込みのタイルの説明。{basis} = 基準(投稿 / リアクションした投稿 / 返信)、{what} = 比べ方。
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントの{basis}を基準に、下書きが{what}で合うとき投稿先候補になります。'**
+  String nodeprogComposerFilterDescription(String basis, String what);
+
+  /// ポスト先の絞り込みの基準。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get nodeprogComposerFilterBasisPosts;
+
+  /// ポスト先の絞り込みの基準。
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get nodeprogComposerFilterBasisReplies;
+
+  /// ポスト先の絞り込みのタイルの説明(無効のとき)。
+  ///
+  /// In ja, this message translates to:
+  /// **'無効化中: このアカウントはポスト先の候補になりません。'**
+  String get nodeprogComposerFilterDisabled;
+
+  /// 連動の絞り込みのタイルの副題。{account} = アカウント。
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} ・ 連動のみ'**
+  String nodeprogComposerLinkOnlySubtitle(String account);
+
+  /// 追加の絞り込みのタイルの副題。{account} = アカウント。
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} ・ かつ'**
+  String nodeprogComposerAndSubtitle(String account);
+
+  /// 連動の絞り込みのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'連動投稿がこの条件に合わないとき、このアカウントへは送られません。'**
+  String get nodeprogComposerLinkFilterDescription;
+
+  /// 追加の絞り込みのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'前の絞り込みと「かつ」で連結されます。'**
+  String get nodeprogComposerAndDescription;
+
+  /// 追加のノードを外すボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノードを削除'**
+  String get nodeprogComposerDeleteNode;
+
+  /// 投稿加工のタイルの説明。{pattern} = パターン、{replace} = 置換。
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントへ送る本文の「{pattern}」を「{replace}」に置換します。'**
+  String nodeprogComposerRegexDescription(String pattern, String replace);
+
+  /// 投稿加工のタイルの説明(未設定 / 無効)。
+  ///
+  /// In ja, this message translates to:
+  /// **'送信時に本文へ正規表現の置換をかけます(例: タグの付け替え・伏せ字)。'**
+  String get nodeprogComposerRegexDescriptionEmpty;
+
+  /// 追加の投稿加工のタイルの名前(パターンが空)。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿加工(未設定)'**
+  String get nodeprogComposerRegexUnset;
+
+  /// 追加の投稿加工のタイルの名前。{pattern} = パターン、{replace} = 置換。
+  ///
+  /// In ja, this message translates to:
+  /// **'「{pattern}」→「{replace}」'**
+  String nodeprogComposerRegexRule(String pattern, String replace);
+
+  /// 追加の投稿加工のタイルの副題。{account} = アカウント。
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} ・ 追加ノード'**
+  String nodeprogComposerExtraNodeSubtitle(String account);
+
+  /// 追加の投稿加工のタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'上の加工に続けて適用されます。'**
+  String get nodeprogComposerExtraRegexDescription;
+
+  /// 代わりのフォーマット「注釈を付ける」の注釈の欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'注釈'**
+  String get nodeprogComposerCwLabel;
+
+  /// 連動元のアカウントの選択: ほかにアカウントが無いとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'他のアカウントがありません'**
+  String get nodeprogComposerNoOtherAccounts;
+
+  /// 投稿加工のタイルの … ボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿加工の操作'**
+  String get nodeprogComposerRegexMenuTooltip;
+
+  /// ポスト先の絞り込みのタイルの … ボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'ポスト先の操作'**
+  String get nodeprogComposerFilterMenuTooltip;
+
+  /// 投稿加工のパラメーターのスイッチ。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿加工を有効にする'**
+  String get nodeprogComposerParamsRegexEnabled;
+
+  /// 投稿加工のパラメーターのスイッチの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントへ送る本文にパターン置換をかけます'**
+  String get nodeprogComposerParamsRegexEnabledSubtitle;
+
+  /// 追加の投稿加工のパラメーターの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'上の加工に続けて適用される追加ノードです。'**
+  String get nodeprogComposerParamsExtraRegex;
+
+  /// ポスト先の絞り込みのパラメーターのスイッチ。
+  ///
+  /// In ja, this message translates to:
+  /// **'絞り込みを有効にする'**
+  String get nodeprogComposerParamsFilterEnabled;
+
+  /// ポスト先の絞り込みのパラメーターのスイッチの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'無効のときこのアカウントはポスト先の候補になりません'**
+  String get nodeprogComposerParamsFilterEnabledSubtitle;
+
+  /// ポスト先の絞り込みのパラメーターの節の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'なにを見る?'**
+  String get nodeprogComposerParamsWhat;
+
+  /// 投稿加工のパラメーターの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'送信時に本文へ正規表現の置換をかけます。'**
+  String get nodeprogComposerParamsRegexDescription;
+
+  /// 連動の絞り込みのパラメーターの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'一緒に送るときだけ効く条件です。'**
+  String get nodeprogComposerParamsLinkFilterDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'連動投稿だけに掛かる関門です(ポスト先判定には影響しません)。'**
+  String get nodeprogComposerParamsLinkFilterDetail;
+
+  /// ポスト先の絞り込みのパラメーターの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'下書きがこの条件に合うとき、このアカウントが投稿先候補になります。'**
+  String get nodeprogComposerParamsFilterDescription;
+
+  /// 投稿加工のパターンの欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'パターン(正規表現)'**
+  String get nodeprogComposerParamsPatternLabel;
+
+  /// 投稿加工のパターンの欄のヒント(正規表現の例)。
+  ///
+  /// In ja, this message translates to:
+  /// **'例: #ネタバレ\\s*'**
+  String get nodeprogComposerParamsPatternHint;
+
+  /// 投稿加工の置換の欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'置換(空 = 削除)'**
+  String get nodeprogComposerParamsReplaceLabel;
+
+  /// キャンバスのノードの、入力ポートの並びの見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'入力'**
+  String get nodeprogEditorCanvasInputs;
+
+  /// キャンバスのノードの、出力ポートの並びの見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'出力'**
+  String get nodeprogEditorCanvasOutputs;
+
+  /// プラグインのノードの印のツールチップ: 持ち主のアカウントが無い(総合 / 関数の中身)とき。
+  ///
+  /// In ja, this message translates to:
+  /// **'既定'**
+  String get nodeprogEditorBadgeDefaultOwner;
+
+  /// プラグインのノードの印のツールチップ: プラグインが登録されていないとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'未登録'**
+  String get nodeprogEditorBadgeNotRegistered;
+
+  /// プラグインのノードの印のツールチップの、アカウントと版の区切り(前後に空白)。
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get nodeprogEditorBadgeSeparator;
+
+  /// ノードのタブの名前が保存されていないときの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノードTL'**
+  String get nodeprogEditorNodeTabDefaultLabel;
+
+  /// 埋め込みのノードグラフが空のとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノードがありません'**
+  String get nodeprogEditorInlineEmpty;
+
+  /// 埋め込みのノードグラフを全画面のエディターで開くボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面で編集'**
+  String get nodeprogEditorInlineExpandTooltip;
+
+  /// 「ノードを設定」で、プラグインが登録されていないとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインは登録されていません(ストアから入れ直してください)。'**
+  String get nodeprogEditorParamsMissing;
+
+  /// 「ノードを設定」で、パラメーターの画面を読み込んでいるあいだ。
+  ///
+  /// In ja, this message translates to:
+  /// **'パラメーターを読み込んでいます…'**
+  String get nodeprogEditorParamsLoading;
+
+  /// 「ノードを設定」で、プラグインにパラメーターが無いとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインにパラメーターはありません。'**
+  String get nodeprogEditorParamsNone;
+
+  /// No description provided for @nodeprogEditorCancelButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get nodeprogEditorCancelButton;
+
+  /// No description provided for @nodeprogEditorConfirmButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get nodeprogEditorConfirmButton;
+
+  /// プラグインのノードのパラメーターを編集する FOW の見出し(ノードのメニューの項目も)。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノードを設定'**
+  String get nodeprogEditorParamsTitle;
+
+  /// TL プラグインの並べ替えノードの提供元の欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'TLプラグイン'**
+  String get nodeprogEditorPluginSortAuthor;
+
+  /// TL プラグインの並べ替えノードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの並べ方で投稿を並べ替えます。'**
+  String get nodeprogEditorPluginSortDescription;
+
+  /// 開発者モードの説明(「ノードを設定」の中)。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿リストをプラグインのソート(tl.sort)で並べ替えます。パラメーターはノードの「パラメーター」ポートに入ります。'**
+  String get nodeprogEditorParamsPluginDetail;
+
+  /// TL プラグインの並べ替えノードの名前。{name} = プラグインのタイムラインの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}でソート'**
+  String nodeprogEditorPluginSortTitle(String name);
+
+  /// 開発者モードの説明(パレット)。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿リストをプラグインのソート(tl.sort)で並べ替えます。'**
+  String get nodeprogEditorPluginSortDetail;
+
+  /// ノードエディターの見出し: カスタム関数の中身の編集(関数が見つからないとき)。
+  ///
+  /// In ja, this message translates to:
+  /// **'関数の中身'**
+  String get nodeprogEditorTitleFunctionBody;
+
+  /// ノードエディターの見出し: カスタム関数の中身の編集。{name} = 関数の名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'関数の中身 — {name}'**
+  String nodeprogEditorTitleFunctionBodyNamed(String name);
+
+  /// ノードエディターの見出し(投稿コンポーザー)。
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿先のカスタマイズ'**
+  String get nodeprogEditorTitleComposer;
+
+  /// ノードエディターの見出し(トレンド)。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドをカスタマイズ'**
+  String get nodeprogEditorTitleTrend;
+
+  /// ノードエディターの見出し(タイムライン)。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインをカスタマイズ'**
+  String get nodeprogEditorTitleTimeline;
+
+  /// トレンドのノードエディターのタブ。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノート'**
+  String get nodeprogEditorTabTrendNotes;
+
+  /// ノードエディターのタブ(タイムライン / トレンド)。
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get nodeprogEditorTabFollowing;
+
+  /// トレンドのノードエディターのタブ。
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザー'**
+  String get nodeprogEditorTabTrendUsers;
+
+  /// ノードエディターのタブ(全アカウントをまとめたタイムライン)。
+  ///
+  /// In ja, this message translates to:
+  /// **'総合'**
+  String get nodeprogEditorTabBundle;
+
+  /// ノードエディターのタブ。
+  ///
+  /// In ja, this message translates to:
+  /// **'おすすめ'**
+  String get nodeprogEditorTabSocial;
+
+  /// ノードエディターのタブ。
+  ///
+  /// In ja, this message translates to:
+  /// **'関連'**
+  String get nodeprogEditorTabRelational;
+
+  /// ノードエディターのタブ。
+  ///
+  /// In ja, this message translates to:
+  /// **'ローカル'**
+  String get nodeprogEditorTabLocal;
+
+  /// ノードエディターのタブ。
+  ///
+  /// In ja, this message translates to:
+  /// **'グローバル'**
+  String get nodeprogEditorTabGlobal;
+
+  /// No description provided for @nodeprogEditorAddTabTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'タブを追加'**
+  String get nodeprogEditorAddTabTooltip;
+
+  /// タブを足すダイアログの見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'新しいタブ'**
+  String get nodeprogEditorNewTabTitle;
+
+  /// タブの名前の入力欄のヒント。
+  ///
+  /// In ja, this message translates to:
+  /// **'タブ名'**
+  String get nodeprogEditorTabNameHint;
+
+  /// ダイアログの見出しと … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'タブ名を変更'**
+  String get nodeprogEditorRenameTab;
+
+  /// … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'タブを削除'**
+  String get nodeprogEditorDeleteTab;
+
+  /// … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'グラフをクリア'**
+  String get nodeprogEditorClearGraph;
+
+  /// … メニューの項目(チェック付き)。
+  ///
+  /// In ja, this message translates to:
+  /// **'バンドルでノードTLを集合表示'**
+  String get nodeprogEditorBundleTabsToggle;
+
+  /// ノードのパレット(FOW)の検索欄のヒントと読み上げ。
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインノードを検索'**
+  String get nodeprogEditorPaletteSearchHint;
+
+  /// データ形式が合わないポート同士を繋ごうとしたときのスナックバー。{from} / {to} = 出力 / 入力のデータ形式。
+  ///
+  /// In ja, this message translates to:
+  /// **'接続できません: {from} → {to}(形式が合いません)'**
+  String nodeprogEditorConnectTypeMismatch(String from, String to);
+
+  /// カスタム関数を作るダイアログの見出し・パレットの先頭のタイル。
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタム関数を作成'**
+  String get nodeprogEditorCreateFunction;
+
+  /// カスタム関数の名前の入力欄のヒント。
+  ///
+  /// In ja, this message translates to:
+  /// **'関数名'**
+  String get nodeprogEditorFunctionNameHint;
+
+  /// カスタム関数のダイアログ: 入力元の選択の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'入力元'**
+  String get nodeprogEditorFunctionSourceLabel;
+
+  /// カスタム関数のダイアログ: 入力元 = 条件。
+  ///
+  /// In ja, this message translates to:
+  /// **'条件'**
+  String get nodeprogEditorFunctionSourceCond;
+
+  /// カスタム関数のダイアログ: 入力元 = データ。
+  ///
+  /// In ja, this message translates to:
+  /// **'データ'**
+  String get nodeprogEditorFunctionSourceData;
+
+  /// カスタム関数のダイアログ: 条件タグの選択の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'条件タグ(複数選ぶと下側の分岐が増えます)'**
+  String get nodeprogEditorFunctionCondTagsLabel;
+
+  /// カスタム関数のダイアログ: 入力のデータ形式の選択の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'入力(データ形式)'**
+  String get nodeprogEditorFunctionInputsLabel;
+
+  /// カスタム関数のダイアログ: 出力のデータ形式の選択の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'出力(データ形式)'**
+  String get nodeprogEditorFunctionOutputsLabel;
+
+  /// No description provided for @nodeprogEditorCreateButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'作成'**
+  String get nodeprogEditorCreateButton;
+
+  /// ノードのメニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノード情報'**
+  String get nodeprogEditorMenuInfo;
+
+  /// ノードのメニューの項目(カスタム関数)。
+  ///
+  /// In ja, this message translates to:
+  /// **'関数の中身を編集'**
+  String get nodeprogEditorMenuEditFunctionBody;
+
+  /// ノードのメニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインストアに移動'**
+  String get nodeprogEditorMenuStore;
+
+  /// ノードのメニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'コピー'**
+  String get nodeprogEditorMenuCopy;
+
+  /// ノードのメニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'ペースト'**
+  String get nodeprogEditorMenuPaste;
+
+  /// ノードのメニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get nodeprogEditorMenuDelete;
+
+  /// ノードエディターの見出しの … ボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get nodeprogEditorMoreTooltip;
+
+  /// ノードのパレットを開き直すボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノードを検索'**
+  String get nodeprogEditorSearchNodesTooltip;
+
+  /// キャンバスにノードが無いときのヒント。
+  ///
+  /// In ja, this message translates to:
+  /// **'下の検索から追加(タップで詳細、長押しでドラッグ)'**
+  String get nodeprogEditorEmptyHint;
+
+  /// キャンバスのツールバー。
+  ///
+  /// In ja, this message translates to:
+  /// **'範囲選択'**
+  String get nodeprogEditorToolbarSelect;
+
+  /// キャンバスのツールバー(範囲選択のとき)。
+  ///
+  /// In ja, this message translates to:
+  /// **'範囲選択をやめる'**
+  String get nodeprogEditorToolbarSelectStop;
+
+  /// キャンバスのツールバー。
+  ///
+  /// In ja, this message translates to:
+  /// **'選んだノードを削除'**
+  String get nodeprogEditorToolbarDeleteSelected;
+
+  /// キャンバスのツールバー。
+  ///
+  /// In ja, this message translates to:
+  /// **'整理整頓'**
+  String get nodeprogEditorToolbarTidy;
+
+  /// キャンバスのツールバー。
+  ///
+  /// In ja, this message translates to:
+  /// **'縮小'**
+  String get nodeprogEditorToolbarZoomOut;
+
+  /// キャンバスのツールバー。
+  ///
+  /// In ja, this message translates to:
+  /// **'拡大'**
+  String get nodeprogEditorToolbarZoomIn;
+
+  /// キャンバスのツールバー。
+  ///
+  /// In ja, this message translates to:
+  /// **'全体表示'**
+  String get nodeprogEditorToolbarFit;
+
+  /// パレットの並び替えのチップ。
+  ///
+  /// In ja, this message translates to:
+  /// **'並び替え: 関連順'**
+  String get nodeprogEditorPaletteSortChip;
+
+  /// パレットの並び替えの選択肢。
+  ///
+  /// In ja, this message translates to:
+  /// **'関連順'**
+  String get nodeprogEditorPaletteSortRelevance;
+
+  /// パレットのジャンルのチップ。{genre} = 選んだジャンル。
+  ///
+  /// In ja, this message translates to:
+  /// **'ジャンル: {genre}'**
+  String nodeprogEditorPaletteGenreChip(String genre);
+
+  /// パレットのジャンルの選択肢: 絞り込まない。
+  ///
+  /// In ja, this message translates to:
+  /// **'すべて'**
+  String get nodeprogEditorPaletteGenreAll;
+
+  /// パレットの検索の設定ボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索設定(準備中)'**
+  String get nodeprogEditorPaletteSettingsTooltip;
+
+  /// パレットの検索で何も当たらないとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノードが見つかりません'**
+  String get nodeprogEditorPaletteEmptyTitle;
+
+  /// パレットの検索で何も当たらないときのヒント。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ワードやジャンルを変えてみてください'**
+  String get nodeprogEditorPaletteEmptyHint;
+
+  /// パレットの「カスタム関数を作成」のタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'条件タグまたは入出力(データ形式)を選んで、自分の関数ノードを作ります。データ関数は中身をノードで組めます。'**
+  String get nodeprogEditorCreateFunctionDescription;
+
+  /// パレットのタイルの副題。{author} = 提供元、{genre} = ジャンル。
+  ///
+  /// In ja, this message translates to:
+  /// **'{author} · {genre}'**
+  String nodeprogEditorTileSubtitle(String author, String genre);
+
+  /// パレットのタイルの提供元: アプリに組み込みのノード。
+  ///
+  /// In ja, this message translates to:
+  /// **'組み込みノード'**
+  String get nodeprogEditorBuiltinAuthor;
+
+  /// ノードの詳細のボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンバスに追加'**
+  String get nodeprogEditorAddToCanvas;
+
+  /// ノードの詳細のボタン(カスタム関数)。
+  ///
+  /// In ja, this message translates to:
+  /// **'中身を編集'**
+  String get nodeprogEditorEditFunctionBody;
+
+  /// ノードの詳細のボタン(カスタム関数)。
+  ///
+  /// In ja, this message translates to:
+  /// **'関数を削除'**
+  String get nodeprogEditorDeleteFunction;
+
+  /// ノード情報の 1 行目。{genre} = ノードのジャンル。
+  ///
+  /// In ja, this message translates to:
+  /// **'ジャンル: {genre}'**
+  String nodeprogEditorInfoGenre(String genre);
+
+  /// ノード情報: 上辺の条件接続部。
+  ///
+  /// In ja, this message translates to:
+  /// **'条件(上辺)'**
+  String get nodeprogEditorInfoCondIn;
+
+  /// ノード情報: 下辺の条件接続部。
+  ///
+  /// In ja, this message translates to:
+  /// **'条件(下辺)'**
+  String get nodeprogEditorInfoCondOut;
+
+  /// TL のカスタマイズのタブ: すべての DM のページに効く共通の設定。
+  ///
+  /// In ja, this message translates to:
+  /// **'DM(共通)'**
+  String get nodeprogTimelineTabDmCommon;
+
+  /// TL のカスタマイズのタブ: この DM のページだけの設定。
+  ///
+  /// In ja, this message translates to:
+  /// **'このDM'**
+  String get nodeprogTimelineTabThisDm;
+
+  /// トレンドの TL のカスタマイズのタブ。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドページ'**
+  String get nodeprogTimelineTabTrendPage;
+
+  /// トレンドの TL のカスタマイズのタブ。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド TL'**
+  String get nodeprogTimelineTabTrendTl;
+
+  /// TL のカスタマイズのタブ: 開いているリストの TL。
+  ///
+  /// In ja, this message translates to:
+  /// **'このリスト'**
+  String get nodeprogTimelineTabThisList;
+
+  /// タブを並べ替えるシートの見出しとボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'タブの並べ替え'**
+  String get nodeprogTimelineReorderTabs;
+
+  /// … メニューの項目(チェック付き)。
+  ///
+  /// In ja, this message translates to:
+  /// **'すべてのアカウントで共有'**
+  String get nodeprogTimelineShareTab;
+
+  /// … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'このTLの構成をリセット'**
+  String get nodeprogTimelineResetConfig;
+
+  /// … メニューの項目(ノードエディターで開く)。
+  ///
+  /// In ja, this message translates to:
+  /// **'グラフで編集'**
+  String get nodeprogTimelineEditAsGraph;
+
+  /// アルゴリズムのタイルの副題(プラグインの版つき)。{version} = 版。
+  ///
+  /// In ja, this message translates to:
+  /// **'TLプラグイン ・ v{version}'**
+  String nodeprogTimelinePluginWithVersion(String version);
+
+  /// アルゴリズム「時刻順」の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'取得したままの時刻順に整えます。'**
+  String get nodeprogTimelineAlgoChronoDescription;
+
+  /// アルゴリズム「指向性/刺激性」の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'好みの設定に合わない投稿を除き、合う順に並べます。'**
+  String get nodeprogTimelineAlgoTendencyDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプロファイル(指向性/刺激性・好きなジャンル)に合わない投稿を除外し、適合度順に並べます。'**
+  String get nodeprogTimelineAlgoTendencyDetail;
+
+  /// アルゴリズム「おすすめ」の説明。{from} = 基準の取得元、{kind} = 基準の種類、{what} = 比べ方。
+  ///
+  /// In ja, this message translates to:
+  /// **'{from}({kind})を基準に、{what}で合う投稿を先頭へ並べ替えます。'**
+  String nodeprogTimelineAlgoSuggestDescription(
+    String from,
+    String kind,
+    String what,
+  );
+
+  /// おすすめの基準の種類。
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の投稿'**
+  String get nodeprogTimelineSuggestFromMyPosts;
+
+  /// おすすめの基準の種類。
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の返信'**
+  String get nodeprogTimelineSuggestFromMyReplies;
+
+  /// おすすめの基準の種類。
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションした投稿'**
+  String get nodeprogTimelineSuggestFromReacted;
+
+  /// 取得元のタイルの説明: SNS が宣言していないときの home の TL の名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中 (home)'**
+  String get nodeprogTimelineSourceHomeLabel;
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の投稿を取得'**
+  String get nodeprogTimelineSourceRasqTitle;
+
+  /// 取得元のタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'TL: 自分とフォロー中の RASQ アカウントの投稿'**
+  String get nodeprogTimelineSourceRasqDescription;
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ 検索'**
+  String get nodeprogTimelineSourceRasqSearchTitle;
+
+  /// 取得元のタイルの説明(検索ワードが空)。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索: このページの検索ワード / タグ(フォローしていない人の投稿も)'**
+  String get nodeprogTimelineSourceRasqSearchPageQuery;
+
+  /// 取得元のタイルの説明。{word} = 検索ワード。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索: {word}(フォローしていない人の投稿も)'**
+  String nodeprogTimelineSourceRasqSearchWord(String word);
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストを取得'**
+  String get nodeprogTimelineSourceRasqListTitle;
+
+  /// 取得元のタイルの説明。{name} = リストの名前(未選択なら「未選択」)。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト: {name}'**
+  String nodeprogTimelineSourceRasqListDescription(String name);
+
+  /// リスト / フィードなどがまだ選ばれていないとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'未選択'**
+  String get nodeprogTimelineNotSelected;
+
+  /// セクション(ノードを包む枠)の名前・提供元の欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'セクション'**
+  String get nodeprogTimelineSectionTitle;
+
+  /// セクションの説明。{max} = 入れられるノードの数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{max, plural, other{ノードを {max} つまで包む枠(画面では入れた順に角丸の枠で出す)}}'**
+  String nodeprogTimelineSectionDescription(int max);
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell のタイル'**
+  String get nodeprogTimelineSourceAstellTitle;
+
+  /// 取得元のタイルの説明。{count} = 出す件数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{いま開いている ASTell のルーム({count} 件まで)}}'**
+  String nodeprogTimelineSourceAstellDescription(int count);
+
+  /// 取得元のタイルの説明。{count} = 出す件数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{Swing を出している人({count} 件まで)}}'**
+  String nodeprogTimelineSourceSwingDescription(int count);
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中の反応'**
+  String get nodeprogTimelineSourceTrendFollowingTitle;
+
+  /// 取得元のタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中の人の、このページのワード / タグの投稿'**
+  String get nodeprogTimelineSourceTrendFollowingDescription;
+
+  /// トレンドプラグインのノード: プラグインを選んでいないとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'入れているトレンドプラグイン全部'**
+  String get nodeprogTimelineTrendPluginAll;
+
+  /// トレンドプラグインのノード: 選んだプラグインが入っていないとき。{id} = プラグインの id。
+  ///
+  /// In ja, this message translates to:
+  /// **'{id}(入っていません)'**
+  String nodeprogTimelineTrendPluginMissing(String id);
+
+  /// トレンドプラグインのノードの提供元の欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプラグイン'**
+  String get nodeprogTimelineTrendPluginAuthor;
+
+  /// トレンドプラグインのノードの説明。{name} = プラグインの名前、{form} = 形式の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} ・ {form}'**
+  String nodeprogTimelineTrendPluginDescription(String name, String form);
+
+  /// 取得元のアカウントが空のとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'(現在のアカウント)'**
+  String get nodeprogTimelineCurrentAccount;
+
+  /// トレンドを取得のノード: アカウントが空(全部のアカウント)のときの提供元の欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'全部のアカウント'**
+  String get nodeprogTimelineAllAccounts;
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドを取得'**
+  String get nodeprogTimelineSourceTrendTitle;
+
+  /// 取得元のタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'種別: トレンドタイル(RASQ アカウントの SNS アカウント全部のトレンドのワード)'**
+  String get nodeprogTimelineSourceTrendTagsAllDescription;
+
+  /// 取得元のタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'種別: トレンドタイル(このアカウントのサーバーのトレンドのワード)'**
+  String get nodeprogTimelineSourceTrendTagsDescription;
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索結果を取得'**
+  String get nodeprogTimelineSourceSearchTitle;
+
+  /// 取得元のタイルの説明(検索ワードが空)。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索: このページの検索ワード / タグ'**
+  String get nodeprogTimelineSourceSearchPageQuery;
+
+  /// 取得元のタイルの説明。{word} = 検索ワード。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索: {word}'**
+  String nodeprogTimelineSourceSearchWord(String word);
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'Today を取得'**
+  String get nodeprogTimelineSourceTodayTitle;
+
+  /// 取得元のタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'TL: Today(注目の投稿)'**
+  String get nodeprogTimelineSourceTodayDescription;
+
+  /// 取得元のタイルの名前: 開いているページそのものの投稿。{name} = ページの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}を取得'**
+  String nodeprogTimelineSourceSelfTitle(String name);
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'DM取得'**
+  String get nodeprogTimelineSourceDmTitle;
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムフィードを取得'**
+  String get nodeprogTimelineSourceFeedTitle;
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'リストTLを取得'**
+  String get nodeprogTimelineSourceListTitle;
+
+  /// 取得元のタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインを取得'**
+  String get nodeprogTimelineSourceTimelineTitle;
+
+  /// 取得元のタイルの説明。{tl} = 取得する TL の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'TL: {tl}'**
+  String nodeprogTimelineSourceTlDescription(String tl);
+
+  /// 取得元のタイルの説明の中身。{peer} = DM の相手のハンドル。
+  ///
+  /// In ja, this message translates to:
+  /// **'DM: @{peer}'**
+  String nodeprogTimelineSourceDmPeer(String peer);
+
+  /// 取得元のタイルの説明の中身。
+  ///
+  /// In ja, this message translates to:
+  /// **'種別: トレンド TL(トレンド上位タグの検索結果)'**
+  String get nodeprogTimelineSourceTrendTlKind;
+
+  /// 取得元のタイルの説明の中身。{name} = フィードの名前(または URI)。
+  ///
+  /// In ja, this message translates to:
+  /// **'フィード: {name}'**
+  String nodeprogTimelineSourceFeedName(String name);
+
+  /// 取得元のタイルの説明の中身。{name} = リストの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト: {name}'**
+  String nodeprogTimelineSourceListName(String name);
+
+  /// 部品の … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'詳細'**
+  String get nodeprogTimelineMenuInfo;
+
+  /// 部品の … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'パラメーターを編集'**
+  String get nodeprogTimelineMenuEditParams;
+
+  /// 部品の … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'一時的な無効化'**
+  String get nodeprogTimelineMenuDisable;
+
+  /// 部品の … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'無効化の解除'**
+  String get nodeprogTimelineMenuEnable;
+
+  /// 部品の … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインのストアページへ移動'**
+  String get nodeprogTimelineMenuStore;
+
+  /// 部品の … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'種別をトレンドタイルに'**
+  String get nodeprogTimelineMenuKindToTiles;
+
+  /// 部品の … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'種別をトレンド TL に'**
+  String get nodeprogTimelineMenuKindToTl;
+
+  /// 部品の … メニューの項目。{count} = いまの件数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{件数: {count}}}'**
+  String nodeprogTimelineMenuLimit(int count);
+
+  /// 部品の … メニューの項目。{form} = いまの形式。
+  ///
+  /// In ja, this message translates to:
+  /// **'形式: {form}'**
+  String nodeprogTimelineMenuForm(String form);
+
+  /// 部品の … メニューの項目。{mode} = いまの表示モード。
+  ///
+  /// In ja, this message translates to:
+  /// **'表示モード: {mode}'**
+  String nodeprogTimelineMenuDisplay(String mode);
+
+  /// 件数の選択肢。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 件}}'**
+  String nodeprogTimelineLimitItems(int count);
+
+  /// 部品の詳細のシート。{provider} = 提供元。
+  ///
+  /// In ja, this message translates to:
+  /// **'提供: {provider}'**
+  String nodeprogTimelineInfoProvider(String provider);
+
+  /// 部品の詳細のシート。{sns} = 対応する SNS の一覧。
+  ///
+  /// In ja, this message translates to:
+  /// **'対応: {sns}'**
+  String nodeprogTimelineInfoSupported(String sns);
+
+  /// 並べ替えのシートの見出しとボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'アルゴリズムの並べ替え'**
+  String get nodeprogTimelineReorderAlgorithms;
+
+  /// 並べ替えのシートの見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインの並べ替え'**
+  String get nodeprogTimelineReorderSources;
+
+  /// TL のカスタマイズの説明のバナー(DM 共通)。
+  ///
+  /// In ja, this message translates to:
+  /// **'すべての DM ページに使う設定です'**
+  String get nodeprogTimelineBannerDmCommon;
+
+  /// TL のカスタマイズの説明のバナー(DM の 1 ページ)。
+  ///
+  /// In ja, this message translates to:
+  /// **'この DM ページだけの設定です'**
+  String get nodeprogTimelineBannerDmPage;
+
+  /// TL のカスタマイズの説明のバナー。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインの中身と並び方を決められます'**
+  String get nodeprogTimelineBanner;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'DM のメイン設定です。個別設定のない全ての DM ページに適用されます。アルゴリズムは上から順に適用されます。'**
+  String get nodeprogTimelineBannerDmCommonDetail;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'この DM ページだけの設定です(保存すると DM 共通設定より優先されます)。アルゴリズムは上から順に適用されます。'**
+  String get nodeprogTimelineBannerDmPageDetail;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインのアルゴリズムや取り込み、表示するタイムラインなどを指定できます。アルゴリズムは上から順に適用されます。'**
+  String get nodeprogTimelineBannerDetail;
+
+  /// タイムラインを作る FOW の名前の欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインの名前'**
+  String get nodeprogTimelineCreateNameLabel;
+
+  /// タイムラインを作る FOW の名前の欄のヒント。
+  ///
+  /// In ja, this message translates to:
+  /// **'例: 友だち / 写真'**
+  String get nodeprogTimelineCreateNameHint;
+
+  /// 一時変更 FOW: プラグインが並べる TL のとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインが並べるタイムラインです。ここでは探すだけできます'**
+  String get nodeprogTimelineTempSearchOnly;
+
+  /// 一時変更 FOW: 一時的に変えているとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'このタイムラインを一時的に変えています(保存していません)。'**
+  String get nodeprogTimelineTempChanged;
+
+  /// 一時変更 FOW のボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'元に戻す'**
+  String get nodeprogTimelineTempRevert;
+
+  /// 一時変更 FOW のボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'この内容で保存'**
+  String get nodeprogTimelineTempSave;
+
+  /// 一時変更 FOW の案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'ここでの変更は一時的です。保存するまで元の設定は変わりません'**
+  String get nodeprogTimelineTempNotice;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'ここでの変更はこのタイムラインに一時的に効きます。保存するまで、元の設定は変わりません。'**
+  String get nodeprogTimelineTempNoticeDetail;
+
+  /// タイムラインを作る FOW の案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'取り込むタイムラインとアルゴリズムを選んで「決定」'**
+  String get nodeprogTimelineCreateCaption;
+
+  /// ノードエディターで手を入れた TL の警告。
+  ///
+  /// In ja, this message translates to:
+  /// **'この TL はノードエディタで編集されています。ここで変えると上書きされます'**
+  String get nodeprogTimelineHandEdited;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'この TL はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。'**
+  String get nodeprogTimelineHandEditedDetail;
+
+  /// TL のカスタマイズの節の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'アルゴリズム'**
+  String get nodeprogTimelineAlgorithmsHeader;
+
+  /// TL のカスタマイズの追加のタイル。
+  ///
+  /// In ja, this message translates to:
+  /// **'アルゴリズムを追加'**
+  String get nodeprogTimelineAddAlgorithm;
+
+  /// セクションのタイルの副題。{count} = 入れたノードの数、{max} = 入れられる数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{セクション ・ {count} / {max}}}'**
+  String nodeprogTimelineSectionSubtitle(int count, int max);
+
+  /// 副題の後ろに付ける、一時的に無効にしている印(前に区切り)。
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ 無効化中'**
+  String get nodeprogTimelineDisabledSuffix;
+
+  /// 一時的に無効にしている印。
+  ///
+  /// In ja, this message translates to:
+  /// **'無効化中'**
+  String get nodeprogTimelineDisabled;
+
+  /// 副題に並べる語の区切り(前後に空白)。
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get nodeprogTimelineMetaSeparator;
+
+  /// セクションの … ボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'セクションの操作'**
+  String get nodeprogTimelineSectionMenuTooltip;
+
+  /// セクションにノードを足すボタン・メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノードを追加'**
+  String get nodeprogTimelineAddNode;
+
+  /// セクションの中のノードの … ボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノードの操作'**
+  String get nodeprogTimelineNodeMenuTooltip;
+
+  /// セクションの … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'見出しを変更'**
+  String get nodeprogTimelineSectionRename;
+
+  /// セクションの見出しを変えるダイアログの見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'セクションの見出し'**
+  String get nodeprogTimelineSectionRenameTitle;
+
+  /// セクションの中のノードの … メニューの項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'セクションから出す'**
+  String get nodeprogTimelineMenuTakeOut;
+
+  /// TL のカスタマイズの節の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'表示モード'**
+  String get nodeprogTimelineDisplayHeader;
+
+  /// 表示モードの行。{mode} = いまの表示モード。
+  ///
+  /// In ja, this message translates to:
+  /// **'表示: {mode}'**
+  String nodeprogTimelineDisplayTitle(String mode);
+
+  /// 表示モードの行の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'同じ投稿を、通常の TL / 会話のまとまり(関連 TL)/ 投稿した人の並びで見せます'**
+  String get nodeprogTimelineDisplaySubtitle;
+
+  /// TL のカスタマイズの節の見出し(取得元)。
+  ///
+  /// In ja, this message translates to:
+  /// **'SNSタイムライン'**
+  String get nodeprogTimelineSourcesHeader;
+
+  /// 取得元の並べ替えのボタン(並べ替え中)。
+  ///
+  /// In ja, this message translates to:
+  /// **'並べ替えを終える'**
+  String get nodeprogTimelineReorderDone;
+
+  /// トレンドページの取得元の節の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ホームに上から順に出します。セクションでトレンドと Today の区間を分けます'**
+  String get nodeprogTimelineTrendPageCaption;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ホームに上から順に出します。既定は「トレンド」(全部のアカウントのトレンドのタイル)と「Today」のセクションです。アルゴリズムはトレンドのタイルに掛かります(重いものは使えません)。'**
+  String get nodeprogTimelineTrendPageCaptionDetail;
+
+  /// 取得元の節の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'複数を重ねると 1 本にまとまり、同じ投稿は 1 つになります'**
+  String get nodeprogTimelineSourcesCaption;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'複数を重ねると 1 本に合流し、同じ投稿は 1 枚に畳まれます(タイルの ↓ でアカウント切替)。投稿加工プラグインは各タイムライン提供元(SNSプラグイン)側で適用されます。'**
+  String get nodeprogTimelineSourcesCaptionDetail;
+
+  /// 取得元の並べ替え中の案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'長押しでつかんで動かします。セクションの中(3 つまで)へも出し入れできます'**
+  String get nodeprogTimelineReorderHint;
+
+  /// 取得元の節の追加のボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインを追加'**
+  String get nodeprogTimelineAddSource;
+
+  /// TL のカスタマイズの節の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'自動更新'**
+  String get nodeprogTimelineClockHeader;
+
+  /// 自動更新の間隔の行。{interval} = 間隔(なしなら「なし」)。
+  ///
+  /// In ja, this message translates to:
+  /// **'間隔: {interval}'**
+  String nodeprogTimelineClockInterval(String interval);
+
+  /// アルゴリズムのタイルの … ボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'アルゴリズムの操作'**
+  String get nodeprogTimelineAlgorithmMenuTooltip;
+
+  /// 取得元のタイルの … ボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインの操作'**
+  String get nodeprogTimelineSourceMenuTooltip;
+
+  /// 指向性/刺激性(傾向)の要約。{count} = 好きなジャンルの数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{好きなジャンル {count}}}'**
+  String nodeprogTimelineTendencyGenres(int count);
+
+  /// 指向性/刺激性(傾向)の要約。{count} = 好きではないジャンルの数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{好きではない {count}}}'**
+  String nodeprogTimelineTendencyDisliked(int count);
+
+  /// 指向性/刺激性(傾向)の要約。{count} = 例の数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{例 {count}}}'**
+  String nodeprogTimelineTendencyExamples(int count);
+
+  /// 指向性/刺激性(傾向)の要約。{count} = 上限を下げた刺激性の数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{刺激性の上限 {count}}}'**
+  String nodeprogTimelineTendencyStimulus(int count);
+
+  /// アルゴリズムの一番最後に固定で掛かる項目の名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'指向性/刺激性(傾向)'**
+  String get nodeprogTimelineTendencyPinnedTitle;
+
+  /// アルゴリズムの一番最後に固定で掛かる項目の副題。
+  ///
+  /// In ja, this message translates to:
+  /// **'いつも最後'**
+  String get nodeprogTimelineTendencyPinnedSubtitle;
+
+  /// アルゴリズムの一番最後に固定で掛かる項目の説明(要約が無いとき)。
+  ///
+  /// In ja, this message translates to:
+  /// **'傾向 FOW の設定'**
+  String get nodeprogTimelineTendencyPinnedEmpty;
+
+  /// ℹ️ のツールチップ。
+  ///
+  /// In ja, this message translates to:
+  /// **'傾向 FOW で設定した指向性/刺激性を、アルゴリズムの一番最後に掛けます。ここでは外せません(変える / 止めるときは傾向 FOW で)'**
+  String get nodeprogTimelineTendencyPinnedInfo;
+
+  /// 部品のパラメーターの節の見出し(サジェスト)。
+  ///
+  /// In ja, this message translates to:
+  /// **'なにをサジェストする?'**
+  String get nodeprogTimelineParamsSuggestWhat;
+
+  /// 部品のパラメーターの節の見出し(サジェスト)。
+  ///
+  /// In ja, this message translates to:
+  /// **'なにから読み取る?'**
+  String get nodeprogTimelineParamsSuggestFrom;
+
+  /// 部品のパラメーターの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインの設定は準備中です。'**
+  String get nodeprogTimelineParamsPluginPending;
+
+  /// 部品のパラメーターの説明(検索絞り込み)。
+  ///
+  /// In ja, this message translates to:
+  /// **'ワードが空のときは、このページの検索ワード/タグで絞り込みます。ワードは下の欄で指定できます。'**
+  String get nodeprogTimelineParamsQueryFilter;
+
+  /// 部品のパラメーターの説明(指向性/刺激性)。
+  ///
+  /// In ja, this message translates to:
+  /// **'好みの設定を使います。下から変えられます。'**
+  String get nodeprogTimelineParamsTendency;
+
+  /// 部品のパラメーターの説明(時系列順)。
+  ///
+  /// In ja, this message translates to:
+  /// **'時系列順にパラメーターはありません。'**
+  String get nodeprogTimelineParamsChrono;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインのパラメーター(RRL 設定ページ)は、ノード定義の配布(ストア統合)でここに表示されます。'**
+  String get nodeprogTimelineParamsPluginPendingDetail;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'storage.safe のトレンドプロファイルを使います。下のオプションから指向性/刺激性・好きなジャンル・アクションからのジャンル選択を編集できます(検索ホームのトレンド ⚙ と同じもの)。'**
+  String get nodeprogTimelineParamsTendencyDetail;
+
+  /// 部品のパラメーターの説明(トレンドプラグイン)。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプラグインが出した候補のワードを、選んだ形式で出します。'**
+  String get nodeprogTimelineParamsTrendPlugin;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット trend.suggest の答え(候補のワード)を、トレンドを取得 = トレンドのタイル / Today = 上位の語の投稿のダイジェスト / カスタム = 候補のチップ で出します。件数は … から。'**
+  String get nodeprogTimelineParamsTrendPluginDetail;
+
+  /// 部品のパラメーターの節の見出し(トレンドプラグイン)。
+  ///
+  /// In ja, this message translates to:
+  /// **'形式'**
+  String get nodeprogTimelineParamsForm;
+
+  /// 部品のパラメーターの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'自分とフォロー中の人の RASQ の投稿を取り込みます。RASQ にログインしているときだけ流れます。'**
+  String get nodeprogTimelineParamsRasq;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。RASQ アカウントにログインしているときだけ流れます。パラメーターはありません。'**
+  String get nodeprogTimelineParamsRasqDetail;
+
+  /// 部品のパラメーターの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の公開の投稿を検索して取り込みます。フォローしていない人の投稿も入ります。'**
+  String get nodeprogTimelineParamsRasqSearch;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の公開の投稿(フォロー中かどうかに関係なく)を、下のワードで検索して取り込みます。空にすると、このページの検索ワード / タグで探します。表示モードを「ユーザー」にすると、投稿した人のタイルで並びます。'**
+  String get nodeprogTimelineParamsRasqSearchDetail;
+
+  /// 部品のパラメーターの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストの投稿を取り込みます。下で選ぶと、そのリストをフォローします。'**
+  String get nodeprogTimelineParamsRasqList;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストの投稿を取り込みます(Central が、見たときにリスト内の人の投稿を集めます)。下の欄で、自分のリスト・フォロー中のリストから選ぶか、公開リストを検索して選びます。選ぶと、そのリストをフォローします。'**
+  String get nodeprogTimelineParamsRasqListDetail;
+
+  /// 開発者モードの説明。{name} = 開いているページの投稿の名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}をそのまま取り込みます。パラメーターはありません。'**
+  String nodeprogTimelineParamsSelfDetail(String name);
+
+  /// 部品のパラメーターの節の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウント'**
+  String get nodeprogTimelineParamsAccount;
+
+  /// 部品のパラメーターの節の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'TL 種別(この SNS が出せるもの)'**
+  String get nodeprogTimelineParamsTlKind;
+
+  /// 部品のパラメーターの節の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト(このアカウントのもの)'**
+  String get nodeprogTimelineParamsList;
+
+  /// 部品のパラメーター: リストが無いとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントにはリストがありません(または取得できません)。'**
+  String get nodeprogTimelineParamsNoLists;
+
+  /// 部品のパラメーターの節の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムフィード(下の欄で検索して選ぶ)'**
+  String get nodeprogTimelineParamsFeed;
+
+  /// 部品のパラメーター(指向性/刺激性)の項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの指向性/刺激性'**
+  String get nodeprogTimelineParamsTendencyEdit;
+
+  /// 部品のパラメーター(指向性/刺激性)の項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性'**
+  String get nodeprogTimelineParamsGenresEdit;
+
+  /// 部品のパラメーター(指向性/刺激性)の項目「アクションからジャンルを選択」の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'類似した話題でまとめて、話題性の強いものから'**
+  String get nodeprogTimelineParamsPickGenresSubtitle;
+
+  /// RASQ 検索のワードの欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ワード(空 = このページのワード / タグ)'**
+  String get nodeprogTimelineParamsRasqSearchWordLabel;
+
+  /// RASQ リストの検索の欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストを検索(名前 / @作った人 / 共有リンク)'**
+  String get nodeprogTimelineParamsRasqListSearchLabel;
+
+  /// カスタムフィードの検索の欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'フィードを検索'**
+  String get nodeprogTimelineParamsFeedSearchLabel;
+
+  /// カスタムフィードの検索で何も当たらないとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりません'**
+  String get nodeprogTimelineParamsFeedNotFound;
+
+  /// 検索絞り込みのワードの欄。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ワード(空 = このページの検索ワード)'**
+  String get nodeprogTimelineParamsQueryLabel;
+
+  /// 検索絞り込みのスイッチ。
+  ///
+  /// In ja, this message translates to:
+  /// **'このワードを含む投稿を除外する'**
+  String get nodeprogTimelineParamsExcludeTitle;
+
+  /// 検索絞り込みのスイッチの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'オフなら含む投稿だけ通します'**
+  String get nodeprogTimelineParamsExcludeSubtitle;
+
+  /// タイムラインを作る FOW の見出しと読み上げ。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインを作成'**
+  String get nodeprogTimelineCreateTitle;
+
+  /// 名前を入れずに作ったタイムラインの名前。{number} = 通し番号。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムライン {number}'**
+  String nodeprogTimelineCreateDefaultName(int number);
+
+  /// タイムラインを作るときの確認の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'他のアカウントにも適用しますか'**
+  String get nodeprogTimelineCreateShareTitle;
+
+  /// タイムラインを作るときの確認の本文。
+  ///
+  /// In ja, this message translates to:
+  /// **'「すべてのアカウントに適用」にすると、どのアカウントでもこのタイムラインが並び、中身の変更も全部に効きます(あとで … メニューから変えられます)。'**
+  String get nodeprogTimelineCreateShareMessage;
+
+  /// タイムラインを作るときの確認のボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'すべてのアカウントに適用'**
+  String get nodeprogTimelineCreateShareConfirm;
+
+  /// タイムラインを作るときの確認のボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントだけ'**
+  String get nodeprogTimelineCreateShareCancel;
+
+  /// セクションのノードの中身が読み込めなかったとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした'**
+  String get nodeprogTimelineLoadFailed;
+
+  /// ノードの名前(トレンドのタイル)。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド'**
+  String get nodeprogTimelineNodeTrend;
+
+  /// ノードの名前: 見つからないノードのタブ。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノード TL'**
+  String get nodeprogTimelineNodeTabFallback;
+
+  /// セクションの読み直しのボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'読み直す'**
+  String get nodeprogTimelineReload;
+
+  /// ASTell のタイルのノードが空のとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'いま開いている ASTell はありません'**
+  String get nodeprogTimelineAstellEmpty;
+
+  /// ASTell のタイルのノードが空のとき。{query} = このページの検索ワード。
+  ///
+  /// In ja, this message translates to:
+  /// **'「{query}」の ASTell はありません'**
+  String nodeprogTimelineAstellEmptyQuery(String query);
+
+  /// Swing のノードが空のとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'いま Swing はありません'**
+  String get nodeprogTimelineSwingEmpty;
+
+  /// Swing のノードが空のとき。{query} = このページの検索ワード。
+  ///
+  /// In ja, this message translates to:
+  /// **'「{query}」の Swing はありません'**
+  String nodeprogTimelineSwingEmptyQuery(String query);
+
+  /// トレンドのノードが空のとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドはまだありません'**
+  String get nodeprogTimelineTrendEmpty;
+
+  /// フォロー中の反応のノード: このページにワードが無いとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド TL で出ます'**
+  String get nodeprogTimelineTrendFollowingNoQuery;
+
+  /// フォロー中の反応のノードが空のとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中の人の反応はまだありません'**
+  String get nodeprogTimelineTrendFollowingEmpty;
+
+  /// TL のノードが空のとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'まだありません'**
+  String get nodeprogTimelinePostsEmpty;
+
+  /// 表示モード「関連」で空のとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'会話のまとまりはまだありません'**
+  String get nodeprogTimelineEventsEmpty;
+
+  /// 表示モード「ユーザー」で空のとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'まだいません'**
+  String get nodeprogTimelineUsersEmpty;
+
+  /// 表示モード「ユーザー」の人の副題。{count} = その人の投稿の数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 件の投稿}}'**
+  String nodeprogTimelineUserPostCount(int count);
+
+  /// 一時変更 FOW の読み上げ。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインを一時的に変える'**
+  String get nodeprogTimelineTempSemantics;
+
+  /// TL 内の検索のボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'前の該当投稿'**
+  String get nodeprogTimelineSearchPrev;
+
+  /// TL 内の検索のボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'次の該当投稿'**
+  String get nodeprogTimelineSearchNext;
+
+  /// TL 内の検索の欄のヒント。
+  ///
+  /// In ja, this message translates to:
+  /// **'このタイムラインから探す'**
+  String get nodeprogTimelineSearchHint;
+
+  /// TL 内の検索のチップ。
+  ///
+  /// In ja, this message translates to:
+  /// **'近似検索'**
+  String get nodeprogTimelineSearchFuzzy;
+
+  /// 一時変更 FOW を閉じるボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get nodeprogTimelineTempClose;
+
+  /// 一時変更 FOW の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインを一時変更'**
+  String get nodeprogTimelineTempTitle;
+
+  /// 部品の追加のパレットのタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'サジェスト'**
+  String get nodeprogTimelinePaletteSuggestTitle;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'あなたの投稿や反応に近い投稿を先頭に並べます。'**
+  String get nodeprogTimelinePaletteSuggestDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合う投稿を先頭へ並べ替えます。'**
+  String get nodeprogTimelinePaletteSuggestDetail;
+
+  /// 部品の追加のパレットのタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'絞り込み'**
+  String get nodeprogTimelinePaletteFilterTitle;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'あなたの投稿や反応に合わない投稿を除きます。'**
+  String get nodeprogTimelinePaletteFilterDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合わない投稿を除外します(サジェストと同じパラメーター)。'**
+  String get nodeprogTimelinePaletteFilterDetail;
+
+  /// 部品の追加のパレットのタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索絞り込み'**
+  String get nodeprogTimelinePaletteQueryFilterTitle;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'このページの検索ワード/タグ(または指定ワード)に合う投稿だけ通します。'**
+  String get nodeprogTimelinePaletteQueryFilterDescription;
+
+  /// 部品の追加のパレットのタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'指向性/刺激性'**
+  String get nodeprogTimelinePaletteTendencyTitle;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'好みの設定に合わない投稿を除き、合う順に並べます。'**
+  String get nodeprogTimelinePaletteTendencyDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)に合わない投稿を除外し、適合度順に並べます。プロファイルは検索ホームのトレンド ⚙ で編集します。'**
+  String get nodeprogTimelinePaletteTendencyDetail;
+
+  /// 部品の追加のパレットのタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションからジャンルを選択'**
+  String get nodeprogTimelinePalettePickGenresTitle;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'反応した投稿の話題から、好きなジャンルを選びます。'**
+  String get nodeprogTimelinePalettePickGenresDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションした投稿を類似した話題でまとめ、話題性の強いものから「好き / 好きではない」で好きなジャンルを決めます(指向性/刺激性の部品がこのプロファイルを使います)。'**
+  String get nodeprogTimelinePalettePickGenresDetail;
+
+  /// 部品の追加のパレットのタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'時系列順'**
+  String get nodeprogTimelinePaletteChronoTitle;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'取得したままの時刻順に整えます。'**
+  String get nodeprogTimelinePaletteChronoDescription;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'この DM ページのメッセージをそのまま取り込みます。'**
+  String get nodeprogTimelinePaletteThisDmDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'この DM ページのメッセージをそのまま取り込みます(共通設定ではそれぞれのページの DM)。'**
+  String get nodeprogTimelinePaletteThisDmDetail;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントで、このページの検索ワード / タグを検索した結果を取り込みます。'**
+  String get nodeprogTimelinePaletteSearchResultsDescription;
+
+  /// 部品の追加のパレットのタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の投稿'**
+  String get nodeprogTimelinePaletteRasqPostsTitle;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'自分とフォロー中の人の RASQ の投稿を取り込みます。'**
+  String get nodeprogTimelinePaletteRasqPostsDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。SNS の投稿と同じタイムラインに混ぜられます。'**
+  String get nodeprogTimelinePaletteRasqPostsDetail;
+
+  /// 部品の追加のパレットのタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムライン'**
+  String get nodeprogTimelinePaletteTimelineTitle;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントのタイムラインを取り込みます。種類は追加後に選べます。'**
+  String get nodeprogTimelinePaletteTimelineDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントの基本タイムラインを取り込みます。種類はその SNS が出せるもの(フォロー中 / ローカル / グローバル / Discover …)から、アカウントと合わせて追加後のタイルで選べます。'**
+  String get nodeprogTimelinePaletteTimelineDetail;
+
+  /// 部品の追加のパレットのタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'リストTL'**
+  String get nodeprogTimelinePaletteListTlTitle;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントのリストを取り込みます。リストは追加後に選べます。'**
+  String get nodeprogTimelinePaletteListTlDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントと、そのアカウントに含まれるリストのタイムラインを取り込みます(追加後のタイルで選択)。'**
+  String get nodeprogTimelinePaletteListTlDetail;
+
+  /// 部品の追加のパレットのタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムフィード(Bluesky)'**
+  String get nodeprogTimelinePaletteFeedTitle;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'Bluesky のカスタムフィードを探して取り込みます。'**
+  String get nodeprogTimelinePaletteFeedDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'Bluesky のカスタムフィードを検索して取り込みます(SNS を跨いだリストは「RASQ リスト」)。'**
+  String get nodeprogTimelinePaletteFeedDetail;
+
+  /// 部品の追加のパレットのタイルの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト'**
+  String get nodeprogTimelinePaletteRasqListTitle;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'いくつもの SNS の人をまとめたリストの投稿を取り込みます。'**
+  String get nodeprogTimelinePaletteRasqListDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取り込みます。自分のリスト・フォロー中のリストから選ぶか、公開リストを検索します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。'**
+  String get nodeprogTimelinePaletteRasqListDetail;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'いまのトレンドを取り込みます。種別(トレンドタイル / トレンド TL)は追加後に切り替えます。'**
+  String get nodeprogTimelinePaletteTrendDescription;
+
+  /// 開発者モードの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドタイル = サーバーのトレンドのワードのタイル、トレンド TL = いまのトレンド上位タグの検索結果を 1 本に合流した投稿。'**
+  String get nodeprogTimelinePaletteTrendDetail;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中の人の、このページのワード / タグの投稿を出します。'**
+  String get nodeprogTimelinePaletteTrendFollowingDescription;
+
+  /// 部品の追加のパレット(DM)のタイルの説明。{peer} = 相手のハンドル。
+  ///
+  /// In ja, this message translates to:
+  /// **'@{peer} との DM を取り込みます。'**
+  String nodeprogTimelinePaletteDmPeerDescription(String peer);
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'ノードを 3 つまで包む枠です。画面では見出しの下に、入れた順で出します。'**
+  String get nodeprogTimelinePaletteSectionDescription;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'いま開いている ASTell のルームをタイルで出します。'**
+  String get nodeprogTimelinePaletteAstellDescription;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing を出している人を並べます。'**
+  String get nodeprogTimelinePaletteSwingDescription;
+
+  /// 部品の追加のパレットのタイルの名前。{form} = 形式、{name} = トレンドプラグインの名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'{form}: {name}'**
+  String nodeprogTimelinePaletteTrendPluginTitle(String form, String name);
+
+  /// 開発者モードの説明。{form} = 形式の説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'{form}(スロット trend.suggest の答えを、この形式のノードで出します)'**
+  String nodeprogTimelinePaletteTrendPluginDetail(String form);
+
+  /// 部品の追加のパレットのタイルの名前。{account} = アカウントの表記。
+  ///
+  /// In ja, this message translates to:
+  /// **'Today: {account}'**
+  String nodeprogTimelinePaletteTodayTitle(String account);
+
+  /// 部品の追加のパレットのタイルの提供元(ジャンルの絞り込みにも使う)。
+  ///
+  /// In ja, this message translates to:
+  /// **'SNSプラグイン'**
+  String get nodeprogTimelinePaletteSnsPluginAuthor;
+
+  /// 部品の追加のパレットのタイルの提供元(ジャンルの絞り込みにも使う)。
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト系'**
+  String get nodeprogTimelinePaletteListsAuthor;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントの Today(注目の投稿)を取り込みます。'**
+  String get nodeprogTimelinePaletteTodayDescription;
+
+  /// 部品の追加のパレットのタイルの名前。{account} = アカウントの表記(または「全部のアカウント」)。
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド: {account}'**
+  String nodeprogTimelinePaletteTrendTagsTitle(String account);
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントの SNS アカウント全部のトレンドのワードを、タイルで出します。'**
+  String get nodeprogTimelinePaletteTrendTagsAllDescription;
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントのサーバーのトレンドのワードを、タイルで出します。'**
+  String get nodeprogTimelinePaletteTrendTagsDescription;
+
+  /// 部品の追加のパレットのタイルの名前。{account} = アカウントの表記。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索結果: {account}'**
+  String nodeprogTimelinePaletteSearchResultsTitle(String account);
+
+  /// 部品の追加のパレットのタイルの説明。{name} = 開いているページの投稿の名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}をそのまま取り込みます。'**
+  String nodeprogTimelinePaletteSelfDescription(String name);
+
+  /// 部品の追加のパレットのタイルの説明。
+  ///
+  /// In ja, this message translates to:
+  /// **'フォローしていない人も含めて、RASQ の投稿を検索して取り込みます。表示モード「ユーザー」で人のタイルに。'**
+  String get nodeprogTimelinePaletteRasqSearchDescription;
+
+  /// 部品の追加のパレットで何も当たらないとき。
+  ///
+  /// In ja, this message translates to:
+  /// **'コンポーネントが見つかりません'**
+  String get nodeprogTimelinePaletteEmptyTitle;
+
+  /// 部品の追加のパレットで何も当たらないときのヒント。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ワードを変えてみてください'**
+  String get nodeprogTimelinePaletteEmptyHint;
+
   /// No description provided for @settingsActionBarTitle.
   ///
   /// In ja, this message translates to:

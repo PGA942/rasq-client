@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../settings/settings_dsl.dart';
 import 'node_tabs.dart';
 import 'timeline_config_screen.dart';
@@ -38,7 +39,7 @@ Future<String?> showTimelineCreateFow(WidgetRef ref) async {
   try {
     await manager.showFow<void>(
       id: timelineCreateFowId,
-      semanticsLabel: 'タイムラインを作成',
+      semanticsLabel: appL10n.nodeprogTimelineCreateTitle,
       spec: FowSpec(
         type: FowPanelType.widget,
         initialHeightFactor: timelineTempExpandedFactor,
@@ -72,15 +73,16 @@ Future<String?> showTimelineCreateFow(WidgetRef ref) async {
 Future<bool> _create(WidgetRef ref, {required String id, required String label}) async {
   final scope = 'tl.$id';
   final sessions = ref.read(sessionsProvider).value?.sessions ?? const [];
-  final name = label.trim().isEmpty ? 'タイムライン ${ref.read(nodeTabsProvider).length + 1}' : label.trim();
+  final l = appL10n;
+  final name = label.trim().isEmpty ? l.nodeprogTimelineCreateDefaultName(ref.read(nodeTabsProvider).length + 1) : label.trim();
   var shared = false;
   if (sessions.length > 1) {
     shared = await ref.read(overlayManagerProvider).showAlert(
           id: 'tl.create.share',
-          title: '他のアカウントにも適用しますか',
-          message: '「すべてのアカウントに適用」にすると、どのアカウントでもこのタイムラインが並び、中身の変更も全部に効きます(あとで … メニューから変えられます)。',
-          confirmText: 'すべてのアカウントに適用',
-          cancelText: 'このアカウントだけ',
+          title: l.nodeprogTimelineCreateShareTitle,
+          message: l.nodeprogTimelineCreateShareMessage,
+          confirmText: l.nodeprogTimelineCreateShareConfirm,
+          cancelText: l.nodeprogTimelineCreateShareCancel,
         );
   }
   final accounts = [for (final s in sessions) '${s.account}'];
@@ -108,9 +110,10 @@ class _CreateBody extends StatelessWidget {
         key: timelineCreateHeaderKey,
         height: 40,
         child: Row(children: [
-          TextButton(key: const ValueKey('tl.create.cancel'), onPressed: onCancel, child: Text('キャンセル', style: TextStyle(color: scheme.onSurfaceVariant))),
-          Expanded(child: Center(child: Text('タイムラインを作成', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis))),
-          TextButton(key: const ValueKey('tl.create.confirm'), onPressed: onConfirm, child: Text('決定', style: TextStyle(color: scheme.primary))),
+          TextButton(key: const ValueKey('tl.create.cancel'), onPressed: onCancel, child: Text(context.l10n.nodeprogEditorCancelButton, style: TextStyle(color: scheme.onSurfaceVariant))),
+          Expanded(child: Center(child: Text(context.l10n.nodeprogTimelineCreateTitle, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis))),
+          TextButton(key: const ValueKey('tl.create.confirm'), onPressed: onConfirm, child: Text(context.l10n.nodeprogEditorConfirmButton, style: TextStyle(color: scheme.primary))),
+
         ]),
       ),
       Expanded(child: TimelineConfigScreen(scope: scope, temporary: true, nameController: name)),

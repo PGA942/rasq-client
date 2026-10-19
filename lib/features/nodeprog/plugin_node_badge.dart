@@ -3,6 +3,8 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart' show UserSummary;
 import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
+import '../../l10n/l10n.dart';
+
 /// プラグインのノードの印 (D-355): このグラフの持ち主のアカウント(アイコン)と、そのアカウントで動くプラグインの版。
 /// 「アカウントごとにバージョンを設定」で版を分けていると、同じプラグインでもアカウントで版が変わるので、ノードの上で見えるようにする。
 /// [owner] null = 総合 / 関数の中身(既定の版)。[version] null = 登録されていない(動かない)。
@@ -16,7 +18,8 @@ class PluginNodeBadge extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final o = owner;
     return Tooltip(
-      message: [if (o != null) '${o.account}' else '既定', version == null ? '未登録' : 'v$version'].join(' ・ '),
+      message: [if (o != null) '${o.account}' else context.l10n.nodeprogEditorBadgeDefaultOwner, version == null ? context.l10n.nodeprogEditorBadgeNotRegistered : 'v$version'].join(context.l10n.nodeprogEditorBadgeSeparator),
+
       child: Container(
         padding: const EdgeInsets.fromLTRB(2, 1, 6, 1),
         decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(999)),

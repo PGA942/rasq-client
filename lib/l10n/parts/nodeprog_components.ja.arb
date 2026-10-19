@@ -1,0 +1,142 @@
+{
+  "nodeprogComponentsTrendFormTilesLabel": "トレンドを取得",
+  "@nodeprogComponentsTrendFormTilesLabel": {
+    "description": "トレンドプラグインのノードの形式の名前(トレンドのタイル)。"
+  },
+  "nodeprogComponentsTrendFormChipsLabel": "カスタム(候補のチップ)",
+  "@nodeprogComponentsTrendFormChipsLabel": {
+    "description": "トレンドプラグインのノードの形式の名前(候補のチップ)。"
+  },
+  "nodeprogComponentsTrendFormChipsHeading": "検索の候補",
+  "@nodeprogComponentsTrendFormChipsHeading": {
+    "description": "トレンドプラグインのノード(候補のチップ)の画面の見出し(後ろにプラグインの名前)。"
+  },
+  "nodeprogComponentsTrendFormTilesDescription": "候補のワードを、トレンドのタイルの形で出します(タップでそのワードのトレンド)。",
+  "@nodeprogComponentsTrendFormTilesDescription": {
+    "description": "トレンドプラグインのノードの形式の説明。"
+  },
+  "nodeprogComponentsTrendFormTodayDescription": "候補の上位のワードの投稿を、Today のようにまとめて出します。",
+  "@nodeprogComponentsTrendFormTodayDescription": {
+    "description": "トレンドプラグインのノードの形式の説明。"
+  },
+  "nodeprogComponentsTrendFormChipsDescription": "候補のワードを、検索の候補のチップで出します。",
+  "@nodeprogComponentsTrendFormChipsDescription": {
+    "description": "トレンドプラグインのノードの形式の説明。"
+  },
+  "nodeprogComponentsSuggestTitle": "{what}を{from}からサジェスト",
+  "@nodeprogComponentsSuggestTitle": {
+    "description": "アルゴリズム「サジェスト」の名前。{what} = なにを(キーワード / 類似性)、{from} = なにから(投稿内容 など)。",
+    "placeholders": {
+      "what": {
+        "type": "String"
+      },
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogComponentsFilterTitle": "{what}を{from}から絞り込み",
+  "@nodeprogComponentsFilterTitle": {
+    "description": "アルゴリズム「絞り込み」の名前。{what} = なにを、{from} = なにから。",
+    "placeholders": {
+      "what": {
+        "type": "String"
+      },
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogComponentsQueryFilterExcludeTitle": "検索絞り込み(除外)",
+  "@nodeprogComponentsQueryFilterExcludeTitle": {
+    "description": "アルゴリズム「検索絞り込み」で除外にしたときの名前。"
+  },
+  "nodeprogComponentsTendencyTitle": "指向性/刺激性(プロファイル)",
+  "@nodeprogComponentsTendencyTitle": {
+    "description": "アルゴリズム「指向性/刺激性」の名前。"
+  },
+  "nodeprogComponentsPluginTitle": "カスタム(TLプラグイン)",
+  "@nodeprogComponentsPluginTitle": {
+    "description": "TL プラグインのアルゴリズムの名前(名前が無いとき)。"
+  },
+  "nodeprogComponentsDisplayTimeline": "通常 TL",
+  "@nodeprogComponentsDisplayTimeline": {
+    "description": "表示モードの名前。"
+  },
+  "nodeprogComponentsDisplayRelational": "関連 TL",
+  "@nodeprogComponentsDisplayRelational": {
+    "description": "表示モードの名前。"
+  },
+  "nodeprogComponentsDeliveryConfirm": "確認して投稿 (confirm)",
+  "@nodeprogComponentsDeliveryConfirm": {
+    "description": "連動投稿の届け方の名前。"
+  },
+  "nodeprogComponentsDeliveryDraft": "下書きだけ作る (draft)",
+  "@nodeprogComponentsDeliveryDraft": {
+    "description": "連動投稿の届け方の名前。"
+  },
+  "nodeprogComponentsDeliveryAuto": "そのまま投稿 (auto)",
+  "@nodeprogComponentsDeliveryAuto": {
+    "description": "連動投稿の届け方の名前。"
+  },
+  "nodeprogComponentsSelfDm": "この DM のメッセージ",
+  "@nodeprogComponentsSelfDm": {
+    "description": "「画面の投稿」ノードの名前(DM のページ)。"
+  },
+  "nodeprogComponentsSelfSearch": "このワードの検索結果",
+  "@nodeprogComponentsSelfSearch": {
+    "description": "「画面の投稿」ノードの名前(トレンド / 検索のページ)。"
+  },
+  "nodeprogComponentsSelfToday": "Today の投稿",
+  "@nodeprogComponentsSelfToday": {
+    "description": "「画面の投稿」ノードの名前(Today)。"
+  },
+  "nodeprogComponentsSelfTrendWords": "トレンドのワード",
+  "@nodeprogComponentsSelfTrendWords": {
+    "description": "「画面の投稿」ノードの名前(トレンドページ)。"
+  },
+  "nodeprogComponentsSelfList": "このリストの投稿",
+  "@nodeprogComponentsSelfList": {
+    "description": "「画面の投稿」ノードの名前(リストの TL)。"
+  },
+  "nodeprogComponentsSelfFeed": "このフィードの投稿",
+  "@nodeprogComponentsSelfFeed": {
+    "description": "「画面の投稿」ノードの名前(カスタムフィード)。"
+  },
+  "nodeprogComponentsSelfBundle": "総合タブの投稿",
+  "@nodeprogComponentsSelfBundle": {
+    "description": "「画面の投稿」ノードの名前。"
+  },
+  "nodeprogComponentsSelfHome": "フォロー中タブの投稿",
+  "@nodeprogComponentsSelfHome": {
+    "description": "「画面の投稿」ノードの名前。"
+  },
+  "nodeprogComponentsSelfSocial": "おすすめタブの投稿",
+  "@nodeprogComponentsSelfSocial": {
+    "description": "「画面の投稿」ノードの名前。"
+  },
+  "nodeprogComponentsSelfLocal": "ローカルタブの投稿",
+  "@nodeprogComponentsSelfLocal": {
+    "description": "「画面の投稿」ノードの名前。"
+  },
+  "nodeprogComponentsSelfGlobal": "グローバルタブの投稿",
+  "@nodeprogComponentsSelfGlobal": {
+    "description": "「画面の投稿」ノードの名前。"
+  },
+  "nodeprogComponentsSelfRelational": "関連タブの投稿",
+  "@nodeprogComponentsSelfRelational": {
+    "description": "「画面の投稿」ノードの名前。"
+  },
+  "nodeprogComponentsSelfTab": "このタブの投稿",
+  "@nodeprogComponentsSelfTab": {
+    "description": "「画面の投稿」ノードの名前(そのほかのタブ)。"
+  },
+  "nodeprogComponentsTrendTilesNoMl": "ML モデルを使うので、トレンドタイルでは使えません",
+  "@nodeprogComponentsTrendTilesNoMl": {
+    "description": "トレンドタイルで使えないアルゴリズムの理由。"
+  },
+  "nodeprogComponentsTrendTilesNoPlugin": "投稿の並べ替え(GPU を使うことも)なので、トレンドタイルでは使えません",
+  "@nodeprogComponentsTrendTilesNoPlugin": {
+    "description": "トレンドタイルで使えないアルゴリズムの理由。"
+  }
+}

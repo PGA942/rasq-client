@@ -38,6 +38,1907 @@ class AppLocalizationsJa extends AppLocalizations {
   String get languageSettingsListHeader => '表示の言語';
 
   @override
+  String get nodeprogCatalogGenreGenerate => '生成';
+
+  @override
+  String get nodeprogCatalogGenreConvert => '変換';
+
+  @override
+  String get nodeprogCatalogGenreInput => '入力';
+
+  @override
+  String get nodeprogCatalogGenreTimeline => 'タイムライン';
+
+  @override
+  String get nodeprogCatalogGenreProcess => '加工';
+
+  @override
+  String get nodeprogCatalogGenreCondition => '条件';
+
+  @override
+  String get nodeprogCatalogGenreFunction => '関数';
+
+  @override
+  String get nodeprogCatalogGenreFetch => '取得';
+
+  @override
+  String get nodeprogCatalogGenreComposer => 'コンポーザー';
+
+  @override
+  String get nodeprogCatalogGenreStorage => '保存';
+
+  @override
+  String get nodeprogCatalogClockTitle => 'クロックメーカー';
+
+  @override
+  String get nodeprogCatalogClockDescription =>
+      '一定間隔でクロックを出します。TL の自動更新などのトリガーに使います。';
+
+  @override
+  String get nodeprogCatalogTextConstTitle => 'テキスト';
+
+  @override
+  String get nodeprogCatalogTextConstDescription =>
+      '書いた文をテキストとして出します。類似性 / キーワードの基準や、分割の入力に繋げます。';
+
+  @override
+  String get nodeprogCatalogConvertSplitTitle => '分割';
+
+  @override
+  String get nodeprogCatalogConvertSplitDescription =>
+      'テキストを区切り(改行 / カンマ / 空白)でテキスト配列にします。キーワードリストや保存の入力に繋げます。';
+
+  @override
+  String get nodeprogCatalogConvertJoinTitle => '結合';
+
+  @override
+  String get nodeprogCatalogConvertJoinDescription =>
+      'テキスト配列を区切り(改行 / カンマ / 空白)で 1 つのテキストにします。';
+
+  @override
+  String get nodeprogCatalogListFirstTitle => '投稿を取り出す';
+
+  @override
+  String get nodeprogCatalogListFirstDescription =>
+      '投稿リストの何番目かの投稿を 1 件取り出します(1 = 先頭)。本文をテキストにして基準や設定に繋げます。';
+
+  @override
+  String get nodeprogCatalogPostTextTitle => '投稿の本文';
+
+  @override
+  String get nodeprogCatalogPostTextDescription => '投稿 1 件の本文をテキストにします。';
+
+  @override
+  String get nodeprogCatalogRandomTitle => 'ランダム';
+
+  @override
+  String get nodeprogCatalogRandomDescription =>
+      '投稿ごとに乱数を出します。範囲は「1-7」のように指定し、小数点を入れると小数点以下もカウントします。シードで再現できます。';
+
+  @override
+  String get nodeprogCatalogFileTitle => 'ファイルリーダー';
+
+  @override
+  String get nodeprogCatalogFileDescription => 'ローカルファイルを読み込んでテキストとして出します。';
+
+  @override
+  String get nodeprogCatalogTimelineTitle => 'タイムライン';
+
+  @override
+  String get nodeprogCatalogTimelineDescription =>
+      '最終出力。投稿リストを繋ぐと、この画面のタイムラインに流れます。';
+
+  @override
+  String get nodeprogCatalogTlSourceTitle => 'タイムライン取得';
+
+  @override
+  String get nodeprogCatalogTlSourceDescription =>
+      '選んだタイムラインを取得して、投稿リストとして渡します。';
+
+  @override
+  String get nodeprogCatalogTlSourceDetail =>
+      '選んだタイムラインを取得して、投稿リスト(RRLタグ付き)として渡します。';
+
+  @override
+  String get nodeprogCatalogSortTitle => '並べ替え';
+
+  @override
+  String get nodeprogCatalogSortDescription =>
+      '下に繋いだ条件に合う投稿を先頭に並べ替えます(元の順序は保たれます)。';
+
+  @override
+  String get nodeprogCatalogRemoveTitle => '消去';
+
+  @override
+  String get nodeprogCatalogRemoveDescription => '下に繋いだ条件に合う投稿を取り除きます。';
+
+  @override
+  String get nodeprogCatalogCondTitle => '条件';
+
+  @override
+  String get nodeprogCatalogCondDescription =>
+      '指定したタグの内容を見て True/False を返します。下に数珠繋ぎで「かつ」、同じ接続部から並列で「または」。';
+
+  @override
+  String get nodeprogCatalogNotDescription => '下に繋いだ条件の否定を返します。';
+
+  @override
+  String get nodeprogCatalogFnInputTitle => '関数入力';
+
+  @override
+  String get nodeprogCatalogFnInputDescription =>
+      '関数の中身の入口。呼び出し元から渡された投稿リストがここから出ます(関数の中身の編集画面専用)。';
+
+  @override
+  String get nodeprogCatalogFnOutputTitle => '関数出力';
+
+  @override
+  String get nodeprogCatalogFnOutputDescription =>
+      '関数の中身の出口。ここに繋いだ投稿リストが関数ノードの出力になります(未接続なら素通し)。';
+
+  @override
+  String get nodeprogCatalogFilterQueryTitle => '検索絞り込み';
+
+  @override
+  String get nodeprogCatalogFilterQueryDescription =>
+      '検索ワードに合う投稿だけ通します(「除外」で逆に落とします)。';
+
+  @override
+  String get nodeprogCatalogFilterQueryDetail =>
+      '検索ワードに合う投稿だけ通します。ワードが空のときは、このページの検索ワード/タグを使います。「除外」を true にすると、合う投稿を落とします(ワードミュート)。';
+
+  @override
+  String get nodeprogCatalogMergeTitle => 'マージ';
+
+  @override
+  String get nodeprogCatalogMergeDescription => '繋いだ投稿リストを時刻順に 1 本にまとめます。';
+
+  @override
+  String get nodeprogCatalogMergeDetail =>
+      '繋いだ投稿リストを時刻順に 1 本へ合流します。別アカウントに流れてきた同じ投稿は 1 枚に畳み、タイルの ↓ でアカウントを選べます。';
+
+  @override
+  String get nodeprogCatalogTimelineRelationalTitle => '関連タイムライン';
+
+  @override
+  String get nodeprogCatalogTimelineRelationalDescription =>
+      '関連タイムラインの絞り込みの出口です。';
+
+  @override
+  String get nodeprogCatalogTimelineRelationalDetail =>
+      '関連TLの前段絞り込みの最終出力。繋いだ投稿リストが会話イベント構築の入力になります(処理系は変わりません)。';
+
+  @override
+  String get nodeprogCatalogTlListTitle => 'リストTL取得';
+
+  @override
+  String get nodeprogCatalogTlListDescription =>
+      'Misskey のリストのタイムラインを取得します(リスト名で指定)。';
+
+  @override
+  String get nodeprogCatalogTlSearchTitle => '検索TL取得';
+
+  @override
+  String get nodeprogCatalogTlSearchDescription => '検索ワードにヒットする投稿を取得します。';
+
+  @override
+  String get nodeprogCatalogTlDmTitle => 'DM取得';
+
+  @override
+  String get nodeprogCatalogTlDmDescription => '相手(ハンドル)との DM を取得します。';
+
+  @override
+  String get nodeprogCatalogTrendTagsTitle => 'トレンド取得';
+
+  @override
+  String get nodeprogCatalogTrendTagsDescription =>
+      'いまのトレンドタグを文字列の配列として出します(類似度/キーワードの入力に)。';
+
+  @override
+  String get nodeprogCatalogTlFeedTitle => 'カスタムフィード取得';
+
+  @override
+  String get nodeprogCatalogTlFeedDescription => 'Bluesky のカスタムフィードを取得します。';
+
+  @override
+  String get nodeprogCatalogTlFeedDetail =>
+      'Bluesky のカスタムフィード(フィードジェネレーター)のタイムラインを取得します(at:// の URI で指定。TL カスタマイズでは検索して選べます)。';
+
+  @override
+  String get nodeprogCatalogTlRasqlistTitle => 'RASQ リスト取得';
+
+  @override
+  String get nodeprogCatalogTlRasqlistDescription =>
+      'いくつもの SNS の人をまとめた RASQ リストの投稿を取得します。';
+
+  @override
+  String get nodeprogCatalogTlRasqlistDetail =>
+      'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取得します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。';
+
+  @override
+  String get nodeprogCatalogTrendPostsTitle => 'トレンド検索結果取得';
+
+  @override
+  String get nodeprogCatalogTrendPostsDescription =>
+      'いまのトレンド上位タグを検索して、その投稿を 1 本に合流して出します。';
+
+  @override
+  String get nodeprogCatalogComposerTargetTitle => 'ポスト先';
+
+  @override
+  String get nodeprogCatalogComposerTargetDescription =>
+      '投稿先アカウントの候補です。下の条件に合うと投稿先になります。';
+
+  @override
+  String get nodeprogCatalogComposerTargetDetail =>
+      '投稿先アカウントの候補。下に条件をぶら下げると、投稿内容がその条件に合うときこのアカウントが投稿先になります(上に置いたものほど優先。手動で選び直せます)。';
+
+  @override
+  String get nodeprogCatalogComposerFallbackTitle => '代わりのフォーマットで投稿';
+
+  @override
+  String get nodeprogCatalogComposerFallbackDescription =>
+      '絞り込みで外れたとき、別の形でこのアカウントに投稿します。';
+
+  @override
+  String get nodeprogCatalogComposerFallbackDetail =>
+      '絞り込みで投稿先から外れた場合のバイパス。下の条件(通常は直前の比較の Not)が成立したとき、代わりのフォーマットでこのアカウントに投稿します。';
+
+  @override
+  String get nodeprogCatalogComposerLinkgateTitle => '連動の絞り込み';
+
+  @override
+  String get nodeprogCatalogComposerLinkgateDescription =>
+      '一緒に送る投稿だけに効く絞り込みです。';
+
+  @override
+  String get nodeprogCatalogComposerLinkgateDetail =>
+      '連動投稿だけに掛かる絞り込みです。下の条件が成立しないと、このアカウントへの連動投稿は送られません(通常のポスト先判定には影響しません)。';
+
+  @override
+  String get nodeprogCatalogComposerRegexTitle => '投稿加工(正規表現)';
+
+  @override
+  String get nodeprogCatalogComposerRegexDescription => '送信するときに本文の一部を置き換えます。';
+
+  @override
+  String get nodeprogCatalogComposerRegexDetail =>
+      '送信時に本文へ正規表現の置換をかけます(パターンに一致した部分を置換)。アカウントが空のときは全ての投稿先に適用します。';
+
+  @override
+  String get nodeprogCatalogTlMyreactionsTitle => 'リアクション済み取得';
+
+  @override
+  String get nodeprogCatalogTlMyreactionsDescription =>
+      'TL で自分がリアクションした投稿を取得します(好みのプロファイル作りに)。';
+
+  @override
+  String get nodeprogCatalogTrendFrameTitle => 'トレンド枠';
+
+  @override
+  String get nodeprogCatalogTrendFrameDescription =>
+      'トレンドホームの「トレンド」一覧の最終出力。タグ(テキスト配列)を繋ぐとそのまま一覧に出ます。';
+
+  @override
+  String get nodeprogCatalogMlSimilarTitle => '類似度 (SigLIP)';
+
+  @override
+  String get nodeprogCatalogMlSimilarDescription =>
+      '基準と各投稿の似ている度合いを 0〜1 で出します。';
+
+  @override
+  String get nodeprogCatalogMlSimilarDetail =>
+      '基準(テキスト/配列/ベクトル)と各投稿の類似度を、この TL 内での相対値 0〜1 で出します(0.8 ≒ 上位 2 割相当)。ML 不達時は n-gram 類似度に縮退します。';
+
+  @override
+  String get nodeprogCatalogMlGlinerTitle => 'GLiNER抽出';
+
+  @override
+  String get nodeprogCatalogMlGlinerDescription =>
+      '投稿リストから特徴語(頻出順)を抽出して文字列の配列で出します。';
+
+  @override
+  String get nodeprogCatalogMlSiglipTitle => 'SigLIP埋め込み';
+
+  @override
+  String get nodeprogCatalogMlSiglipDescription => '投稿リストの傾向をまとめて出します。';
+
+  @override
+  String get nodeprogCatalogMlSiglipDetail =>
+      '投稿リストの平均埋め込み(プロファイル)をベクトルで出します。ML 不達時は n-gram プロファイルに縮退します。';
+
+  @override
+  String get nodeprogCatalogStorageSaveTitle => '保存 (storage.safe)';
+
+  @override
+  String get nodeprogCatalogStorageSaveDescription => '繋いだデータを保存します。';
+
+  @override
+  String get nodeprogCatalogStorageSaveDetail =>
+      '繋いだデータをスロットに保存します。storage.safe は依存関係の子プラグインにも渡せる安全な置き場(プラグイン側の受け渡しは初回起動時に確認)。';
+
+  @override
+  String get nodeprogCatalogStorageLoadTitle => '読み出し (storage.safe)';
+
+  @override
+  String get nodeprogCatalogStorageLoadDescription => 'スロットに保存したデータを読み出します。';
+
+  @override
+  String get nodeprogCatalogMlKeywordTitle => 'キーワード一致 (GLiNER)';
+
+  @override
+  String get nodeprogCatalogMlKeywordDescription =>
+      'キーワード(または配列)と各投稿の特徴語の一致数を出します。';
+
+  @override
+  String get nodeprogCatalogMlTendencyTitle => '指向性/刺激性 (プロファイル)';
+
+  @override
+  String get nodeprogCatalogMlTendencyDescription =>
+      '好みの設定への合い具合(0〜1)を各投稿に出します。';
+
+  @override
+  String get nodeprogCatalogMlTendencyDetail =>
+      'storage.safe のトレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)への適合度(0〜1)を各投稿に出します。プロファイルは検索ホームのトレンド ⚙ で編集し、他のノードからも同じスロットを読めます。';
+
+  @override
+  String get nodeprogCatalogCompareTitle => '比較';
+
+  @override
+  String get nodeprogCatalogCompareDescription =>
+      '数値としきい値を比べて True/False を返します。';
+
+  @override
+  String get nodeprogCatalogCompareDetail =>
+      '数値(類似度・乱数など)としきい値を比べて True/False を返す演算子条件です。値元が未接続・値が取れないとき(スロットが空など)は False になります。';
+
+  @override
+  String nodeprogCatalogTypeWithFormat(String type, String format) {
+    return '$type($format)';
+  }
+
+  @override
+  String nodeprogCatalogPortWithType(String label, String type) {
+    return '$label($type)';
+  }
+
+  @override
+  String get nodeprogCatalogIoCond => '条件';
+
+  @override
+  String get nodeprogCatalogIoNone => 'なし';
+
+  @override
+  String get nodeprogCatalogListSeparator => '・';
+
+  @override
+  String nodeprogCatalogIoSummary(String inputs, String outputs) {
+    return '入力: $inputs → 出力: $outputs';
+  }
+
+  @override
+  String get nodeprogCatalogCustomFunctionAuthor => 'カスタム関数';
+
+  @override
+  String nodeprogCatalogCustomFunctionCondDescription(String tags) {
+    return '条件 $tags を受ける、自分で作った関数です。';
+  }
+
+  @override
+  String nodeprogCatalogCustomFunctionCondDetail(String tags) {
+    return '条件タグ $tags を受けるカスタム関数です(中身の配線はプラグイン/RAi で)。';
+  }
+
+  @override
+  String get nodeprogCatalogCustomFunctionDataDescription => '自分で作った関数です。';
+
+  @override
+  String get nodeprogCatalogCustomFunctionDataDetail =>
+      'カスタム関数です(中身の配線はプラグイン/RAi で)。';
+
+  @override
+  String get nodeprogCatalogGenreSortDictionary => 'ソート/辞書';
+
+  @override
+  String get nodeprogCatalogCustomFunctionDefaultName => '関数';
+
+  @override
+  String get nodeprogComponentsTrendFormTilesLabel => 'トレンドを取得';
+
+  @override
+  String get nodeprogComponentsTrendFormChipsLabel => 'カスタム(候補のチップ)';
+
+  @override
+  String get nodeprogComponentsTrendFormChipsHeading => '検索の候補';
+
+  @override
+  String get nodeprogComponentsTrendFormTilesDescription =>
+      '候補のワードを、トレンドのタイルの形で出します(タップでそのワードのトレンド)。';
+
+  @override
+  String get nodeprogComponentsTrendFormTodayDescription =>
+      '候補の上位のワードの投稿を、Today のようにまとめて出します。';
+
+  @override
+  String get nodeprogComponentsTrendFormChipsDescription =>
+      '候補のワードを、検索の候補のチップで出します。';
+
+  @override
+  String nodeprogComponentsSuggestTitle(String what, String from) {
+    return '$whatを$fromからサジェスト';
+  }
+
+  @override
+  String nodeprogComponentsFilterTitle(String what, String from) {
+    return '$whatを$fromから絞り込み';
+  }
+
+  @override
+  String get nodeprogComponentsQueryFilterExcludeTitle => '検索絞り込み(除外)';
+
+  @override
+  String get nodeprogComponentsTendencyTitle => '指向性/刺激性(プロファイル)';
+
+  @override
+  String get nodeprogComponentsPluginTitle => 'カスタム(TLプラグイン)';
+
+  @override
+  String get nodeprogComponentsDisplayTimeline => '通常 TL';
+
+  @override
+  String get nodeprogComponentsDisplayRelational => '関連 TL';
+
+  @override
+  String get nodeprogComponentsDeliveryConfirm => '確認して投稿 (confirm)';
+
+  @override
+  String get nodeprogComponentsDeliveryDraft => '下書きだけ作る (draft)';
+
+  @override
+  String get nodeprogComponentsDeliveryAuto => 'そのまま投稿 (auto)';
+
+  @override
+  String get nodeprogComponentsSelfDm => 'この DM のメッセージ';
+
+  @override
+  String get nodeprogComponentsSelfSearch => 'このワードの検索結果';
+
+  @override
+  String get nodeprogComponentsSelfToday => 'Today の投稿';
+
+  @override
+  String get nodeprogComponentsSelfTrendWords => 'トレンドのワード';
+
+  @override
+  String get nodeprogComponentsSelfList => 'このリストの投稿';
+
+  @override
+  String get nodeprogComponentsSelfFeed => 'このフィードの投稿';
+
+  @override
+  String get nodeprogComponentsSelfBundle => '総合タブの投稿';
+
+  @override
+  String get nodeprogComponentsSelfHome => 'フォロー中タブの投稿';
+
+  @override
+  String get nodeprogComponentsSelfSocial => 'おすすめタブの投稿';
+
+  @override
+  String get nodeprogComponentsSelfLocal => 'ローカルタブの投稿';
+
+  @override
+  String get nodeprogComponentsSelfGlobal => 'グローバルタブの投稿';
+
+  @override
+  String get nodeprogComponentsSelfRelational => '関連タブの投稿';
+
+  @override
+  String get nodeprogComponentsSelfTab => 'このタブの投稿';
+
+  @override
+  String get nodeprogComponentsTrendTilesNoMl => 'ML モデルを使うので、トレンドタイルでは使えません';
+
+  @override
+  String get nodeprogComponentsTrendTilesNoPlugin =>
+      '投稿の並べ替え(GPU を使うことも)なので、トレンドタイルでは使えません';
+
+  @override
+  String get nodeprogComposerResetConfig => 'この構成をリセット';
+
+  @override
+  String get nodeprogComposerLearnNone => 'まだ学習していません(投稿すると学習します)';
+
+  @override
+  String get nodeprogComposerLearnNoneDetail =>
+      '学習プロファイル: まだ確定投稿がありません(投稿すると自動で学習します)';
+
+  @override
+  String nodeprogComposerLearnCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'これまでの投稿 $count 件から学習しています',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String nodeprogComposerLearnCountDetail(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '学習プロファイル: 確定投稿 $count 件(手動で切り替えた投稿は強く学習・半減期 90 日)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String nodeprogComposerRelationStats(int pos, int neg) {
+    return '実績: 連動 $pos 回 / 確認で解除 $neg 回';
+  }
+
+  @override
+  String get nodeprogComposerNoAccounts => 'アカウントがありません';
+
+  @override
+  String get nodeprogComposerNoAccountsHint => 'ログインすると投稿先の条件を組めます';
+
+  @override
+  String get nodeprogComposerBanner => '下書きの内容に合うアカウントが、投稿先の候補になります';
+
+  @override
+  String get nodeprogComposerBannerDetail =>
+      'アカウントごとに絞り込みを組むと、下書きの内容(と内部のフォーマット)が合うアカウントが投稿先の候補になります。';
+
+  @override
+  String get nodeprogComposerHandEdited =>
+      'ポスト先はノードエディタで編集されています。ここで変えると上書きされます';
+
+  @override
+  String get nodeprogComposerHandEditedDetail =>
+      'ポスト先はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。';
+
+  @override
+  String get nodeprogComposerFiltersHeader => 'ポスト先の絞り込み';
+
+  @override
+  String get nodeprogComposerFormatHeader => 'フォーマット';
+
+  @override
+  String get nodeprogComposerFormatCaption => '絞り込みに合わなかったときも、別の形で候補に残せます';
+
+  @override
+  String get nodeprogComposerFormatCaptionDetail =>
+      '絞り込みに合わなかったとき、代わりのフォーマットで候補に残します(無くなる直前の比較からバイパス)。';
+
+  @override
+  String get nodeprogComposerDeliveryHeader => '連動投稿の届け方';
+
+  @override
+  String get nodeprogComposerDeliveryCaption => 'ほかのアカウントと一緒に送るときの設定です';
+
+  @override
+  String get nodeprogComposerDeliveryCaptionDetail =>
+      '複数選択モードの「ノード連動」でこのアカウントへ送るときの届け方と、連動できる連動元です。';
+
+  @override
+  String nodeprogComposerDeliveryTitle(String delivery) {
+    return '届け方: $delivery';
+  }
+
+  @override
+  String get nodeprogComposerLinkSourcesLabel => '連動元のアカウント(主投稿先がここにあるときだけ連動)';
+
+  @override
+  String get nodeprogComposerLinkFiltersCaption => '連動の絞り込み(一緒に送るときだけ効きます)';
+
+  @override
+  String get nodeprogComposerLinkFiltersCaptionDetail =>
+      '連動の絞り込み(連動投稿だけに掛かる関門。ポスト先判定には影響しません)';
+
+  @override
+  String nodeprogComposerFilterDescription(String basis, String what) {
+    return 'このアカウントの$basisを基準に、下書きが$whatで合うとき投稿先候補になります。';
+  }
+
+  @override
+  String get nodeprogComposerFilterBasisPosts => '投稿';
+
+  @override
+  String get nodeprogComposerFilterBasisReplies => '返信';
+
+  @override
+  String get nodeprogComposerFilterDisabled => '無効化中: このアカウントはポスト先の候補になりません。';
+
+  @override
+  String nodeprogComposerLinkOnlySubtitle(String account) {
+    return '$account ・ 連動のみ';
+  }
+
+  @override
+  String nodeprogComposerAndSubtitle(String account) {
+    return '$account ・ かつ';
+  }
+
+  @override
+  String get nodeprogComposerLinkFilterDescription =>
+      '連動投稿がこの条件に合わないとき、このアカウントへは送られません。';
+
+  @override
+  String get nodeprogComposerAndDescription => '前の絞り込みと「かつ」で連結されます。';
+
+  @override
+  String get nodeprogComposerDeleteNode => 'ノードを削除';
+
+  @override
+  String nodeprogComposerRegexDescription(String pattern, String replace) {
+    return 'このアカウントへ送る本文の「$pattern」を「$replace」に置換します。';
+  }
+
+  @override
+  String get nodeprogComposerRegexDescriptionEmpty =>
+      '送信時に本文へ正規表現の置換をかけます(例: タグの付け替え・伏せ字)。';
+
+  @override
+  String get nodeprogComposerRegexUnset => '投稿加工(未設定)';
+
+  @override
+  String nodeprogComposerRegexRule(String pattern, String replace) {
+    return '「$pattern」→「$replace」';
+  }
+
+  @override
+  String nodeprogComposerExtraNodeSubtitle(String account) {
+    return '$account ・ 追加ノード';
+  }
+
+  @override
+  String get nodeprogComposerExtraRegexDescription => '上の加工に続けて適用されます。';
+
+  @override
+  String get nodeprogComposerCwLabel => '注釈';
+
+  @override
+  String get nodeprogComposerNoOtherAccounts => '他のアカウントがありません';
+
+  @override
+  String get nodeprogComposerRegexMenuTooltip => '投稿加工の操作';
+
+  @override
+  String get nodeprogComposerFilterMenuTooltip => 'ポスト先の操作';
+
+  @override
+  String get nodeprogComposerParamsRegexEnabled => '投稿加工を有効にする';
+
+  @override
+  String get nodeprogComposerParamsRegexEnabledSubtitle =>
+      'このアカウントへ送る本文にパターン置換をかけます';
+
+  @override
+  String get nodeprogComposerParamsExtraRegex => '上の加工に続けて適用される追加ノードです。';
+
+  @override
+  String get nodeprogComposerParamsFilterEnabled => '絞り込みを有効にする';
+
+  @override
+  String get nodeprogComposerParamsFilterEnabledSubtitle =>
+      '無効のときこのアカウントはポスト先の候補になりません';
+
+  @override
+  String get nodeprogComposerParamsWhat => 'なにを見る?';
+
+  @override
+  String get nodeprogComposerParamsRegexDescription => '送信時に本文へ正規表現の置換をかけます。';
+
+  @override
+  String get nodeprogComposerParamsLinkFilterDescription => '一緒に送るときだけ効く条件です。';
+
+  @override
+  String get nodeprogComposerParamsLinkFilterDetail =>
+      '連動投稿だけに掛かる関門です(ポスト先判定には影響しません)。';
+
+  @override
+  String get nodeprogComposerParamsFilterDescription =>
+      '下書きがこの条件に合うとき、このアカウントが投稿先候補になります。';
+
+  @override
+  String get nodeprogComposerParamsPatternLabel => 'パターン(正規表現)';
+
+  @override
+  String get nodeprogComposerParamsPatternHint => '例: #ネタバレ\\s*';
+
+  @override
+  String get nodeprogComposerParamsReplaceLabel => '置換(空 = 削除)';
+
+  @override
+  String get nodeprogEditorCanvasInputs => '入力';
+
+  @override
+  String get nodeprogEditorCanvasOutputs => '出力';
+
+  @override
+  String get nodeprogEditorBadgeDefaultOwner => '既定';
+
+  @override
+  String get nodeprogEditorBadgeNotRegistered => '未登録';
+
+  @override
+  String get nodeprogEditorBadgeSeparator => ' ・ ';
+
+  @override
+  String get nodeprogEditorNodeTabDefaultLabel => 'ノードTL';
+
+  @override
+  String get nodeprogEditorInlineEmpty => 'ノードがありません';
+
+  @override
+  String get nodeprogEditorInlineExpandTooltip => '全画面で編集';
+
+  @override
+  String get nodeprogEditorParamsMissing =>
+      'このプラグインは登録されていません(ストアから入れ直してください)。';
+
+  @override
+  String get nodeprogEditorParamsLoading => 'パラメーターを読み込んでいます…';
+
+  @override
+  String get nodeprogEditorParamsNone => 'このプラグインにパラメーターはありません。';
+
+  @override
+  String get nodeprogEditorCancelButton => 'キャンセル';
+
+  @override
+  String get nodeprogEditorConfirmButton => '決定';
+
+  @override
+  String get nodeprogEditorParamsTitle => 'ノードを設定';
+
+  @override
+  String get nodeprogEditorPluginSortAuthor => 'TLプラグイン';
+
+  @override
+  String get nodeprogEditorPluginSortDescription => 'プラグインの並べ方で投稿を並べ替えます。';
+
+  @override
+  String get nodeprogEditorParamsPluginDetail =>
+      '投稿リストをプラグインのソート(tl.sort)で並べ替えます。パラメーターはノードの「パラメーター」ポートに入ります。';
+
+  @override
+  String nodeprogEditorPluginSortTitle(String name) {
+    return '$nameでソート';
+  }
+
+  @override
+  String get nodeprogEditorPluginSortDetail =>
+      '投稿リストをプラグインのソート(tl.sort)で並べ替えます。';
+
+  @override
+  String get nodeprogEditorTitleFunctionBody => '関数の中身';
+
+  @override
+  String nodeprogEditorTitleFunctionBodyNamed(String name) {
+    return '関数の中身 — $name';
+  }
+
+  @override
+  String get nodeprogEditorTitleComposer => '投稿先のカスタマイズ';
+
+  @override
+  String get nodeprogEditorTitleTrend => 'トレンドをカスタマイズ';
+
+  @override
+  String get nodeprogEditorTitleTimeline => 'タイムラインをカスタマイズ';
+
+  @override
+  String get nodeprogEditorTabTrendNotes => 'ノート';
+
+  @override
+  String get nodeprogEditorTabFollowing => 'フォロー中';
+
+  @override
+  String get nodeprogEditorTabTrendUsers => 'ユーザー';
+
+  @override
+  String get nodeprogEditorTabBundle => '総合';
+
+  @override
+  String get nodeprogEditorTabSocial => 'おすすめ';
+
+  @override
+  String get nodeprogEditorTabRelational => '関連';
+
+  @override
+  String get nodeprogEditorTabLocal => 'ローカル';
+
+  @override
+  String get nodeprogEditorTabGlobal => 'グローバル';
+
+  @override
+  String get nodeprogEditorAddTabTooltip => 'タブを追加';
+
+  @override
+  String get nodeprogEditorNewTabTitle => '新しいタブ';
+
+  @override
+  String get nodeprogEditorTabNameHint => 'タブ名';
+
+  @override
+  String get nodeprogEditorRenameTab => 'タブ名を変更';
+
+  @override
+  String get nodeprogEditorDeleteTab => 'タブを削除';
+
+  @override
+  String get nodeprogEditorClearGraph => 'グラフをクリア';
+
+  @override
+  String get nodeprogEditorBundleTabsToggle => 'バンドルでノードTLを集合表示';
+
+  @override
+  String get nodeprogEditorPaletteSearchHint => 'プラグインノードを検索';
+
+  @override
+  String nodeprogEditorConnectTypeMismatch(String from, String to) {
+    return '接続できません: $from → $to(形式が合いません)';
+  }
+
+  @override
+  String get nodeprogEditorCreateFunction => 'カスタム関数を作成';
+
+  @override
+  String get nodeprogEditorFunctionNameHint => '関数名';
+
+  @override
+  String get nodeprogEditorFunctionSourceLabel => '入力元';
+
+  @override
+  String get nodeprogEditorFunctionSourceCond => '条件';
+
+  @override
+  String get nodeprogEditorFunctionSourceData => 'データ';
+
+  @override
+  String get nodeprogEditorFunctionCondTagsLabel => '条件タグ(複数選ぶと下側の分岐が増えます)';
+
+  @override
+  String get nodeprogEditorFunctionInputsLabel => '入力(データ形式)';
+
+  @override
+  String get nodeprogEditorFunctionOutputsLabel => '出力(データ形式)';
+
+  @override
+  String get nodeprogEditorCreateButton => '作成';
+
+  @override
+  String get nodeprogEditorMenuInfo => 'ノード情報';
+
+  @override
+  String get nodeprogEditorMenuEditFunctionBody => '関数の中身を編集';
+
+  @override
+  String get nodeprogEditorMenuStore => 'プラグインストアに移動';
+
+  @override
+  String get nodeprogEditorMenuCopy => 'コピー';
+
+  @override
+  String get nodeprogEditorMenuPaste => 'ペースト';
+
+  @override
+  String get nodeprogEditorMenuDelete => '削除';
+
+  @override
+  String get nodeprogEditorMoreTooltip => 'その他';
+
+  @override
+  String get nodeprogEditorSearchNodesTooltip => 'ノードを検索';
+
+  @override
+  String get nodeprogEditorEmptyHint => '下の検索から追加(タップで詳細、長押しでドラッグ)';
+
+  @override
+  String get nodeprogEditorToolbarSelect => '範囲選択';
+
+  @override
+  String get nodeprogEditorToolbarSelectStop => '範囲選択をやめる';
+
+  @override
+  String get nodeprogEditorToolbarDeleteSelected => '選んだノードを削除';
+
+  @override
+  String get nodeprogEditorToolbarTidy => '整理整頓';
+
+  @override
+  String get nodeprogEditorToolbarZoomOut => '縮小';
+
+  @override
+  String get nodeprogEditorToolbarZoomIn => '拡大';
+
+  @override
+  String get nodeprogEditorToolbarFit => '全体表示';
+
+  @override
+  String get nodeprogEditorPaletteSortChip => '並び替え: 関連順';
+
+  @override
+  String get nodeprogEditorPaletteSortRelevance => '関連順';
+
+  @override
+  String nodeprogEditorPaletteGenreChip(String genre) {
+    return 'ジャンル: $genre';
+  }
+
+  @override
+  String get nodeprogEditorPaletteGenreAll => 'すべて';
+
+  @override
+  String get nodeprogEditorPaletteSettingsTooltip => '検索設定(準備中)';
+
+  @override
+  String get nodeprogEditorPaletteEmptyTitle => 'ノードが見つかりません';
+
+  @override
+  String get nodeprogEditorPaletteEmptyHint => '検索ワードやジャンルを変えてみてください';
+
+  @override
+  String get nodeprogEditorCreateFunctionDescription =>
+      '条件タグまたは入出力(データ形式)を選んで、自分の関数ノードを作ります。データ関数は中身をノードで組めます。';
+
+  @override
+  String nodeprogEditorTileSubtitle(String author, String genre) {
+    return '$author · $genre';
+  }
+
+  @override
+  String get nodeprogEditorBuiltinAuthor => '組み込みノード';
+
+  @override
+  String get nodeprogEditorAddToCanvas => 'キャンバスに追加';
+
+  @override
+  String get nodeprogEditorEditFunctionBody => '中身を編集';
+
+  @override
+  String get nodeprogEditorDeleteFunction => '関数を削除';
+
+  @override
+  String nodeprogEditorInfoGenre(String genre) {
+    return 'ジャンル: $genre';
+  }
+
+  @override
+  String get nodeprogEditorInfoCondIn => '条件(上辺)';
+
+  @override
+  String get nodeprogEditorInfoCondOut => '条件(下辺)';
+
+  @override
+  String get nodeprogTimelineTabDmCommon => 'DM(共通)';
+
+  @override
+  String get nodeprogTimelineTabThisDm => 'このDM';
+
+  @override
+  String get nodeprogTimelineTabTrendPage => 'トレンドページ';
+
+  @override
+  String get nodeprogTimelineTabTrendTl => 'トレンド TL';
+
+  @override
+  String get nodeprogTimelineTabThisList => 'このリスト';
+
+  @override
+  String get nodeprogTimelineReorderTabs => 'タブの並べ替え';
+
+  @override
+  String get nodeprogTimelineShareTab => 'すべてのアカウントで共有';
+
+  @override
+  String get nodeprogTimelineResetConfig => 'このTLの構成をリセット';
+
+  @override
+  String get nodeprogTimelineEditAsGraph => 'グラフで編集';
+
+  @override
+  String nodeprogTimelinePluginWithVersion(String version) {
+    return 'TLプラグイン ・ v$version';
+  }
+
+  @override
+  String get nodeprogTimelineAlgoChronoDescription => '取得したままの時刻順に整えます。';
+
+  @override
+  String get nodeprogTimelineAlgoTendencyDescription =>
+      '好みの設定に合わない投稿を除き、合う順に並べます。';
+
+  @override
+  String get nodeprogTimelineAlgoTendencyDetail =>
+      'トレンドプロファイル(指向性/刺激性・好きなジャンル)に合わない投稿を除外し、適合度順に並べます。';
+
+  @override
+  String nodeprogTimelineAlgoSuggestDescription(
+    String from,
+    String kind,
+    String what,
+  ) {
+    return '$from($kind)を基準に、$whatで合う投稿を先頭へ並べ替えます。';
+  }
+
+  @override
+  String get nodeprogTimelineSuggestFromMyPosts => '自分の投稿';
+
+  @override
+  String get nodeprogTimelineSuggestFromMyReplies => '自分の返信';
+
+  @override
+  String get nodeprogTimelineSuggestFromReacted => 'リアクションした投稿';
+
+  @override
+  String get nodeprogTimelineSourceHomeLabel => 'フォロー中 (home)';
+
+  @override
+  String get nodeprogTimelineSourceRasqTitle => 'RASQ の投稿を取得';
+
+  @override
+  String get nodeprogTimelineSourceRasqDescription =>
+      'TL: 自分とフォロー中の RASQ アカウントの投稿';
+
+  @override
+  String get nodeprogTimelineSourceRasqSearchTitle => 'RASQ 検索';
+
+  @override
+  String get nodeprogTimelineSourceRasqSearchPageQuery =>
+      '検索: このページの検索ワード / タグ(フォローしていない人の投稿も)';
+
+  @override
+  String nodeprogTimelineSourceRasqSearchWord(String word) {
+    return '検索: $word(フォローしていない人の投稿も)';
+  }
+
+  @override
+  String get nodeprogTimelineSourceRasqListTitle => 'RASQ リストを取得';
+
+  @override
+  String nodeprogTimelineSourceRasqListDescription(String name) {
+    return 'RASQ リスト: $name';
+  }
+
+  @override
+  String get nodeprogTimelineNotSelected => '未選択';
+
+  @override
+  String get nodeprogTimelineSectionTitle => 'セクション';
+
+  @override
+  String nodeprogTimelineSectionDescription(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ノードを $max つまで包む枠(画面では入れた順に角丸の枠で出す)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get nodeprogTimelineSourceAstellTitle => 'ASTell のタイル';
+
+  @override
+  String nodeprogTimelineSourceAstellDescription(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'いま開いている ASTell のルーム($count 件まで)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String nodeprogTimelineSourceSwingDescription(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Swing を出している人($count 件まで)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get nodeprogTimelineSourceTrendFollowingTitle => 'フォロー中の反応';
+
+  @override
+  String get nodeprogTimelineSourceTrendFollowingDescription =>
+      'フォロー中の人の、このページのワード / タグの投稿';
+
+  @override
+  String get nodeprogTimelineTrendPluginAll => '入れているトレンドプラグイン全部';
+
+  @override
+  String nodeprogTimelineTrendPluginMissing(String id) {
+    return '$id(入っていません)';
+  }
+
+  @override
+  String get nodeprogTimelineTrendPluginAuthor => 'トレンドプラグイン';
+
+  @override
+  String nodeprogTimelineTrendPluginDescription(String name, String form) {
+    return '$name ・ $form';
+  }
+
+  @override
+  String get nodeprogTimelineCurrentAccount => '(現在のアカウント)';
+
+  @override
+  String get nodeprogTimelineAllAccounts => '全部のアカウント';
+
+  @override
+  String get nodeprogTimelineSourceTrendTitle => 'トレンドを取得';
+
+  @override
+  String get nodeprogTimelineSourceTrendTagsAllDescription =>
+      '種別: トレンドタイル(RASQ アカウントの SNS アカウント全部のトレンドのワード)';
+
+  @override
+  String get nodeprogTimelineSourceTrendTagsDescription =>
+      '種別: トレンドタイル(このアカウントのサーバーのトレンドのワード)';
+
+  @override
+  String get nodeprogTimelineSourceSearchTitle => '検索結果を取得';
+
+  @override
+  String get nodeprogTimelineSourceSearchPageQuery => '検索: このページの検索ワード / タグ';
+
+  @override
+  String nodeprogTimelineSourceSearchWord(String word) {
+    return '検索: $word';
+  }
+
+  @override
+  String get nodeprogTimelineSourceTodayTitle => 'Today を取得';
+
+  @override
+  String get nodeprogTimelineSourceTodayDescription => 'TL: Today(注目の投稿)';
+
+  @override
+  String nodeprogTimelineSourceSelfTitle(String name) {
+    return '$nameを取得';
+  }
+
+  @override
+  String get nodeprogTimelineSourceDmTitle => 'DM取得';
+
+  @override
+  String get nodeprogTimelineSourceFeedTitle => 'カスタムフィードを取得';
+
+  @override
+  String get nodeprogTimelineSourceListTitle => 'リストTLを取得';
+
+  @override
+  String get nodeprogTimelineSourceTimelineTitle => 'タイムラインを取得';
+
+  @override
+  String nodeprogTimelineSourceTlDescription(String tl) {
+    return 'TL: $tl';
+  }
+
+  @override
+  String nodeprogTimelineSourceDmPeer(String peer) {
+    return 'DM: @$peer';
+  }
+
+  @override
+  String get nodeprogTimelineSourceTrendTlKind => '種別: トレンド TL(トレンド上位タグの検索結果)';
+
+  @override
+  String nodeprogTimelineSourceFeedName(String name) {
+    return 'フィード: $name';
+  }
+
+  @override
+  String nodeprogTimelineSourceListName(String name) {
+    return 'リスト: $name';
+  }
+
+  @override
+  String get nodeprogTimelineMenuInfo => '詳細';
+
+  @override
+  String get nodeprogTimelineMenuEditParams => 'パラメーターを編集';
+
+  @override
+  String get nodeprogTimelineMenuDisable => '一時的な無効化';
+
+  @override
+  String get nodeprogTimelineMenuEnable => '無効化の解除';
+
+  @override
+  String get nodeprogTimelineMenuStore => 'プラグインのストアページへ移動';
+
+  @override
+  String get nodeprogTimelineMenuKindToTiles => '種別をトレンドタイルに';
+
+  @override
+  String get nodeprogTimelineMenuKindToTl => '種別をトレンド TL に';
+
+  @override
+  String nodeprogTimelineMenuLimit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '件数: $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String nodeprogTimelineMenuForm(String form) {
+    return '形式: $form';
+  }
+
+  @override
+  String nodeprogTimelineMenuDisplay(String mode) {
+    return '表示モード: $mode';
+  }
+
+  @override
+  String nodeprogTimelineLimitItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String nodeprogTimelineInfoProvider(String provider) {
+    return '提供: $provider';
+  }
+
+  @override
+  String nodeprogTimelineInfoSupported(String sns) {
+    return '対応: $sns';
+  }
+
+  @override
+  String get nodeprogTimelineReorderAlgorithms => 'アルゴリズムの並べ替え';
+
+  @override
+  String get nodeprogTimelineReorderSources => 'タイムラインの並べ替え';
+
+  @override
+  String get nodeprogTimelineBannerDmCommon => 'すべての DM ページに使う設定です';
+
+  @override
+  String get nodeprogTimelineBannerDmPage => 'この DM ページだけの設定です';
+
+  @override
+  String get nodeprogTimelineBanner => 'タイムラインの中身と並び方を決められます';
+
+  @override
+  String get nodeprogTimelineBannerDmCommonDetail =>
+      'DM のメイン設定です。個別設定のない全ての DM ページに適用されます。アルゴリズムは上から順に適用されます。';
+
+  @override
+  String get nodeprogTimelineBannerDmPageDetail =>
+      'この DM ページだけの設定です(保存すると DM 共通設定より優先されます)。アルゴリズムは上から順に適用されます。';
+
+  @override
+  String get nodeprogTimelineBannerDetail =>
+      'タイムラインのアルゴリズムや取り込み、表示するタイムラインなどを指定できます。アルゴリズムは上から順に適用されます。';
+
+  @override
+  String get nodeprogTimelineCreateNameLabel => 'タイムラインの名前';
+
+  @override
+  String get nodeprogTimelineCreateNameHint => '例: 友だち / 写真';
+
+  @override
+  String get nodeprogTimelineTempSearchOnly => 'プラグインが並べるタイムラインです。ここでは探すだけできます';
+
+  @override
+  String get nodeprogTimelineTempChanged => 'このタイムラインを一時的に変えています(保存していません)。';
+
+  @override
+  String get nodeprogTimelineTempRevert => '元に戻す';
+
+  @override
+  String get nodeprogTimelineTempSave => 'この内容で保存';
+
+  @override
+  String get nodeprogTimelineTempNotice => 'ここでの変更は一時的です。保存するまで元の設定は変わりません';
+
+  @override
+  String get nodeprogTimelineTempNoticeDetail =>
+      'ここでの変更はこのタイムラインに一時的に効きます。保存するまで、元の設定は変わりません。';
+
+  @override
+  String get nodeprogTimelineCreateCaption => '取り込むタイムラインとアルゴリズムを選んで「決定」';
+
+  @override
+  String get nodeprogTimelineHandEdited =>
+      'この TL はノードエディタで編集されています。ここで変えると上書きされます';
+
+  @override
+  String get nodeprogTimelineHandEditedDetail =>
+      'この TL はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。';
+
+  @override
+  String get nodeprogTimelineAlgorithmsHeader => 'アルゴリズム';
+
+  @override
+  String get nodeprogTimelineAddAlgorithm => 'アルゴリズムを追加';
+
+  @override
+  String nodeprogTimelineSectionSubtitle(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'セクション ・ $count / $max',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get nodeprogTimelineDisabledSuffix => ' ・ 無効化中';
+
+  @override
+  String get nodeprogTimelineDisabled => '無効化中';
+
+  @override
+  String get nodeprogTimelineMetaSeparator => ' ・ ';
+
+  @override
+  String get nodeprogTimelineSectionMenuTooltip => 'セクションの操作';
+
+  @override
+  String get nodeprogTimelineAddNode => 'ノードを追加';
+
+  @override
+  String get nodeprogTimelineNodeMenuTooltip => 'ノードの操作';
+
+  @override
+  String get nodeprogTimelineSectionRename => '見出しを変更';
+
+  @override
+  String get nodeprogTimelineSectionRenameTitle => 'セクションの見出し';
+
+  @override
+  String get nodeprogTimelineMenuTakeOut => 'セクションから出す';
+
+  @override
+  String get nodeprogTimelineDisplayHeader => '表示モード';
+
+  @override
+  String nodeprogTimelineDisplayTitle(String mode) {
+    return '表示: $mode';
+  }
+
+  @override
+  String get nodeprogTimelineDisplaySubtitle =>
+      '同じ投稿を、通常の TL / 会話のまとまり(関連 TL)/ 投稿した人の並びで見せます';
+
+  @override
+  String get nodeprogTimelineSourcesHeader => 'SNSタイムライン';
+
+  @override
+  String get nodeprogTimelineReorderDone => '並べ替えを終える';
+
+  @override
+  String get nodeprogTimelineTrendPageCaption =>
+      '検索ホームに上から順に出します。セクションでトレンドと Today の区間を分けます';
+
+  @override
+  String get nodeprogTimelineTrendPageCaptionDetail =>
+      '検索ホームに上から順に出します。既定は「トレンド」(全部のアカウントのトレンドのタイル)と「Today」のセクションです。アルゴリズムはトレンドのタイルに掛かります(重いものは使えません)。';
+
+  @override
+  String get nodeprogTimelineSourcesCaption =>
+      '複数を重ねると 1 本にまとまり、同じ投稿は 1 つになります';
+
+  @override
+  String get nodeprogTimelineSourcesCaptionDetail =>
+      '複数を重ねると 1 本に合流し、同じ投稿は 1 枚に畳まれます(タイルの ↓ でアカウント切替)。投稿加工プラグインは各タイムライン提供元(SNSプラグイン)側で適用されます。';
+
+  @override
+  String get nodeprogTimelineReorderHint =>
+      '長押しでつかんで動かします。セクションの中(3 つまで)へも出し入れできます';
+
+  @override
+  String get nodeprogTimelineAddSource => 'タイムラインを追加';
+
+  @override
+  String get nodeprogTimelineClockHeader => '自動更新';
+
+  @override
+  String nodeprogTimelineClockInterval(String interval) {
+    return '間隔: $interval';
+  }
+
+  @override
+  String get nodeprogTimelineAlgorithmMenuTooltip => 'アルゴリズムの操作';
+
+  @override
+  String get nodeprogTimelineSourceMenuTooltip => 'タイムラインの操作';
+
+  @override
+  String nodeprogTimelineTendencyGenres(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '好きなジャンル $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String nodeprogTimelineTendencyDisliked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '好きではない $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String nodeprogTimelineTendencyExamples(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '例 $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String nodeprogTimelineTendencyStimulus(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '刺激性の上限 $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get nodeprogTimelineTendencyPinnedTitle => '指向性/刺激性(傾向)';
+
+  @override
+  String get nodeprogTimelineTendencyPinnedSubtitle => 'いつも最後';
+
+  @override
+  String get nodeprogTimelineTendencyPinnedEmpty => '傾向 FOW の設定';
+
+  @override
+  String get nodeprogTimelineTendencyPinnedInfo =>
+      '傾向 FOW で設定した指向性/刺激性を、アルゴリズムの一番最後に掛けます。ここでは外せません(変える / 止めるときは傾向 FOW で)';
+
+  @override
+  String get nodeprogTimelineParamsSuggestWhat => 'なにをサジェストする?';
+
+  @override
+  String get nodeprogTimelineParamsSuggestFrom => 'なにから読み取る?';
+
+  @override
+  String get nodeprogTimelineParamsPluginPending => 'このプラグインの設定は準備中です。';
+
+  @override
+  String get nodeprogTimelineParamsQueryFilter =>
+      'ワードが空のときは、このページの検索ワード/タグで絞り込みます。ワードは下の欄で指定できます。';
+
+  @override
+  String get nodeprogTimelineParamsTendency => '好みの設定を使います。下から変えられます。';
+
+  @override
+  String get nodeprogTimelineParamsChrono => '時系列順にパラメーターはありません。';
+
+  @override
+  String get nodeprogTimelineParamsPluginPendingDetail =>
+      'このプラグインのパラメーター(RRL 設定ページ)は、ノード定義の配布(ストア統合)でここに表示されます。';
+
+  @override
+  String get nodeprogTimelineParamsTendencyDetail =>
+      'storage.safe のトレンドプロファイルを使います。下のオプションから指向性/刺激性・好きなジャンル・アクションからのジャンル選択を編集できます(検索ホームのトレンド ⚙ と同じもの)。';
+
+  @override
+  String get nodeprogTimelineParamsTrendPlugin =>
+      'トレンドプラグインが出した候補のワードを、選んだ形式で出します。';
+
+  @override
+  String get nodeprogTimelineParamsTrendPluginDetail =>
+      'スロット trend.suggest の答え(候補のワード)を、トレンドを取得 = トレンドのタイル / Today = 上位の語の投稿のダイジェスト / カスタム = 候補のチップ で出します。件数は … から。';
+
+  @override
+  String get nodeprogTimelineParamsForm => '形式';
+
+  @override
+  String get nodeprogTimelineParamsRasq =>
+      '自分とフォロー中の人の RASQ の投稿を取り込みます。RASQ にログインしているときだけ流れます。';
+
+  @override
+  String get nodeprogTimelineParamsRasqDetail =>
+      '自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。RASQ アカウントにログインしているときだけ流れます。パラメーターはありません。';
+
+  @override
+  String get nodeprogTimelineParamsRasqSearch =>
+      'RASQ の公開の投稿を検索して取り込みます。フォローしていない人の投稿も入ります。';
+
+  @override
+  String get nodeprogTimelineParamsRasqSearchDetail =>
+      'RASQ の公開の投稿(フォロー中かどうかに関係なく)を、下のワードで検索して取り込みます。空にすると、このページの検索ワード / タグで探します。表示モードを「ユーザー」にすると、投稿した人のタイルで並びます。';
+
+  @override
+  String get nodeprogTimelineParamsRasqList =>
+      'RASQ リストの投稿を取り込みます。下で選ぶと、そのリストをフォローします。';
+
+  @override
+  String get nodeprogTimelineParamsRasqListDetail =>
+      'RASQ リストの投稿を取り込みます(Central が、見たときにリスト内の人の投稿を集めます)。下の欄で、自分のリスト・フォロー中のリストから選ぶか、公開リストを検索して選びます。選ぶと、そのリストをフォローします。';
+
+  @override
+  String nodeprogTimelineParamsSelfDetail(String name) {
+    return '$nameをそのまま取り込みます。パラメーターはありません。';
+  }
+
+  @override
+  String get nodeprogTimelineParamsAccount => 'アカウント';
+
+  @override
+  String get nodeprogTimelineParamsTlKind => 'TL 種別(この SNS が出せるもの)';
+
+  @override
+  String get nodeprogTimelineParamsList => 'リスト(このアカウントのもの)';
+
+  @override
+  String get nodeprogTimelineParamsNoLists => 'このアカウントにはリストがありません(または取得できません)。';
+
+  @override
+  String get nodeprogTimelineParamsFeed => 'カスタムフィード(下の欄で検索して選ぶ)';
+
+  @override
+  String get nodeprogTimelineParamsTendencyEdit => 'トレンドの指向性/刺激性';
+
+  @override
+  String get nodeprogTimelineParamsGenresEdit => '好きなジャンル/方向性';
+
+  @override
+  String get nodeprogTimelineParamsPickGenresSubtitle =>
+      '類似した話題でまとめて、話題性の強いものから';
+
+  @override
+  String get nodeprogTimelineParamsRasqSearchWordLabel =>
+      '検索ワード(空 = このページのワード / タグ)';
+
+  @override
+  String get nodeprogTimelineParamsRasqListSearchLabel =>
+      'RASQ リストを検索(名前 / @作った人 / 共有リンク)';
+
+  @override
+  String get nodeprogTimelineParamsFeedSearchLabel => 'フィードを検索';
+
+  @override
+  String get nodeprogTimelineParamsFeedNotFound => '見つかりません';
+
+  @override
+  String get nodeprogTimelineParamsQueryLabel => '検索ワード(空 = このページの検索ワード)';
+
+  @override
+  String get nodeprogTimelineParamsExcludeTitle => 'このワードを含む投稿を除外する';
+
+  @override
+  String get nodeprogTimelineParamsExcludeSubtitle => 'オフなら含む投稿だけ通します';
+
+  @override
+  String get nodeprogTimelineCreateTitle => 'タイムラインを作成';
+
+  @override
+  String nodeprogTimelineCreateDefaultName(int number) {
+    return 'タイムライン $number';
+  }
+
+  @override
+  String get nodeprogTimelineCreateShareTitle => '他のアカウントにも適用しますか';
+
+  @override
+  String get nodeprogTimelineCreateShareMessage =>
+      '「すべてのアカウントに適用」にすると、どのアカウントでもこのタイムラインが並び、中身の変更も全部に効きます(あとで … メニューから変えられます)。';
+
+  @override
+  String get nodeprogTimelineCreateShareConfirm => 'すべてのアカウントに適用';
+
+  @override
+  String get nodeprogTimelineCreateShareCancel => 'このアカウントだけ';
+
+  @override
+  String get nodeprogTimelineLoadFailed => '読み込めませんでした';
+
+  @override
+  String get nodeprogTimelineNodeTrend => 'トレンド';
+
+  @override
+  String get nodeprogTimelineNodeTabFallback => 'ノード TL';
+
+  @override
+  String get nodeprogTimelineReload => '読み直す';
+
+  @override
+  String get nodeprogTimelineAstellEmpty => 'いま開いている ASTell はありません';
+
+  @override
+  String nodeprogTimelineAstellEmptyQuery(String query) {
+    return '「$query」の ASTell はありません';
+  }
+
+  @override
+  String get nodeprogTimelineSwingEmpty => 'いま Swing はありません';
+
+  @override
+  String nodeprogTimelineSwingEmptyQuery(String query) {
+    return '「$query」の Swing はありません';
+  }
+
+  @override
+  String get nodeprogTimelineTrendEmpty => 'トレンドはまだありません';
+
+  @override
+  String get nodeprogTimelineTrendFollowingNoQuery => 'トレンド TL で出ます';
+
+  @override
+  String get nodeprogTimelineTrendFollowingEmpty => 'フォロー中の人の反応はまだありません';
+
+  @override
+  String get nodeprogTimelinePostsEmpty => 'まだありません';
+
+  @override
+  String get nodeprogTimelineEventsEmpty => '会話のまとまりはまだありません';
+
+  @override
+  String get nodeprogTimelineUsersEmpty => 'まだいません';
+
+  @override
+  String nodeprogTimelineUserPostCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件の投稿',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get nodeprogTimelineTempSemantics => 'タイムラインを一時的に変える';
+
+  @override
+  String get nodeprogTimelineSearchPrev => '前の該当投稿';
+
+  @override
+  String get nodeprogTimelineSearchNext => '次の該当投稿';
+
+  @override
+  String get nodeprogTimelineSearchHint => 'このタイムラインから探す';
+
+  @override
+  String get nodeprogTimelineSearchFuzzy => '近似検索';
+
+  @override
+  String get nodeprogTimelineTempClose => '閉じる';
+
+  @override
+  String get nodeprogTimelineTempTitle => 'タイムラインを一時変更';
+
+  @override
+  String get nodeprogTimelinePaletteSuggestTitle => 'サジェスト';
+
+  @override
+  String get nodeprogTimelinePaletteSuggestDescription =>
+      'あなたの投稿や反応に近い投稿を先頭に並べます。';
+
+  @override
+  String get nodeprogTimelinePaletteSuggestDetail =>
+      '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合う投稿を先頭へ並べ替えます。';
+
+  @override
+  String get nodeprogTimelinePaletteFilterTitle => '絞り込み';
+
+  @override
+  String get nodeprogTimelinePaletteFilterDescription =>
+      'あなたの投稿や反応に合わない投稿を除きます。';
+
+  @override
+  String get nodeprogTimelinePaletteFilterDetail =>
+      '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合わない投稿を除外します(サジェストと同じパラメーター)。';
+
+  @override
+  String get nodeprogTimelinePaletteQueryFilterTitle => '検索絞り込み';
+
+  @override
+  String get nodeprogTimelinePaletteQueryFilterDescription =>
+      'このページの検索ワード/タグ(または指定ワード)に合う投稿だけ通します。';
+
+  @override
+  String get nodeprogTimelinePaletteTendencyTitle => '指向性/刺激性';
+
+  @override
+  String get nodeprogTimelinePaletteTendencyDescription =>
+      '好みの設定に合わない投稿を除き、合う順に並べます。';
+
+  @override
+  String get nodeprogTimelinePaletteTendencyDetail =>
+      'トレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)に合わない投稿を除外し、適合度順に並べます。プロファイルは検索ホームのトレンド ⚙ で編集します。';
+
+  @override
+  String get nodeprogTimelinePalettePickGenresTitle => 'アクションからジャンルを選択';
+
+  @override
+  String get nodeprogTimelinePalettePickGenresDescription =>
+      '反応した投稿の話題から、好きなジャンルを選びます。';
+
+  @override
+  String get nodeprogTimelinePalettePickGenresDetail =>
+      'リアクションした投稿を類似した話題でまとめ、話題性の強いものから「好き / 好きではない」で好きなジャンルを決めます(指向性/刺激性の部品がこのプロファイルを使います)。';
+
+  @override
+  String get nodeprogTimelinePaletteChronoTitle => '時系列順';
+
+  @override
+  String get nodeprogTimelinePaletteChronoDescription => '取得したままの時刻順に整えます。';
+
+  @override
+  String get nodeprogTimelinePaletteThisDmDescription =>
+      'この DM ページのメッセージをそのまま取り込みます。';
+
+  @override
+  String get nodeprogTimelinePaletteThisDmDetail =>
+      'この DM ページのメッセージをそのまま取り込みます(共通設定ではそれぞれのページの DM)。';
+
+  @override
+  String get nodeprogTimelinePaletteSearchResultsDescription =>
+      'このアカウントで、このページの検索ワード / タグを検索した結果を取り込みます。';
+
+  @override
+  String get nodeprogTimelinePaletteRasqPostsTitle => 'RASQ の投稿';
+
+  @override
+  String get nodeprogTimelinePaletteRasqPostsDescription =>
+      '自分とフォロー中の人の RASQ の投稿を取り込みます。';
+
+  @override
+  String get nodeprogTimelinePaletteRasqPostsDetail =>
+      '自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。SNS の投稿と同じタイムラインに混ぜられます。';
+
+  @override
+  String get nodeprogTimelinePaletteTimelineTitle => 'タイムライン';
+
+  @override
+  String get nodeprogTimelinePaletteTimelineDescription =>
+      'アカウントのタイムラインを取り込みます。種類は追加後に選べます。';
+
+  @override
+  String get nodeprogTimelinePaletteTimelineDetail =>
+      'アカウントの基本タイムラインを取り込みます。種類はその SNS が出せるもの(フォロー中 / ローカル / グローバル / Discover …)から、アカウントと合わせて追加後のタイルで選べます。';
+
+  @override
+  String get nodeprogTimelinePaletteListTlTitle => 'リストTL';
+
+  @override
+  String get nodeprogTimelinePaletteListTlDescription =>
+      'アカウントのリストを取り込みます。リストは追加後に選べます。';
+
+  @override
+  String get nodeprogTimelinePaletteListTlDetail =>
+      'アカウントと、そのアカウントに含まれるリストのタイムラインを取り込みます(追加後のタイルで選択)。';
+
+  @override
+  String get nodeprogTimelinePaletteFeedTitle => 'カスタムフィード(Bluesky)';
+
+  @override
+  String get nodeprogTimelinePaletteFeedDescription =>
+      'Bluesky のカスタムフィードを探して取り込みます。';
+
+  @override
+  String get nodeprogTimelinePaletteFeedDetail =>
+      'Bluesky のカスタムフィードを検索して取り込みます(SNS を跨いだリストは「RASQ リスト」)。';
+
+  @override
+  String get nodeprogTimelinePaletteRasqListTitle => 'RASQ リスト';
+
+  @override
+  String get nodeprogTimelinePaletteRasqListDescription =>
+      'いくつもの SNS の人をまとめたリストの投稿を取り込みます。';
+
+  @override
+  String get nodeprogTimelinePaletteRasqListDetail =>
+      'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取り込みます。自分のリスト・フォロー中のリストから選ぶか、公開リストを検索します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。';
+
+  @override
+  String get nodeprogTimelinePaletteTrendDescription =>
+      'いまのトレンドを取り込みます。種別(トレンドタイル / トレンド TL)は追加後に切り替えます。';
+
+  @override
+  String get nodeprogTimelinePaletteTrendDetail =>
+      'トレンドタイル = サーバーのトレンドのワードのタイル、トレンド TL = いまのトレンド上位タグの検索結果を 1 本に合流した投稿。';
+
+  @override
+  String get nodeprogTimelinePaletteTrendFollowingDescription =>
+      'フォロー中の人の、このページのワード / タグの投稿を出します。';
+
+  @override
+  String nodeprogTimelinePaletteDmPeerDescription(String peer) {
+    return '@$peer との DM を取り込みます。';
+  }
+
+  @override
+  String get nodeprogTimelinePaletteSectionDescription =>
+      'ノードを 3 つまで包む枠です。画面では見出しの下に、入れた順で出します。';
+
+  @override
+  String get nodeprogTimelinePaletteAstellDescription =>
+      'いま開いている ASTell のルームをタイルで出します。';
+
+  @override
+  String get nodeprogTimelinePaletteSwingDescription => 'Swing を出している人を並べます。';
+
+  @override
+  String nodeprogTimelinePaletteTrendPluginTitle(String form, String name) {
+    return '$form: $name';
+  }
+
+  @override
+  String nodeprogTimelinePaletteTrendPluginDetail(String form) {
+    return '$form(スロット trend.suggest の答えを、この形式のノードで出します)';
+  }
+
+  @override
+  String nodeprogTimelinePaletteTodayTitle(String account) {
+    return 'Today: $account';
+  }
+
+  @override
+  String get nodeprogTimelinePaletteSnsPluginAuthor => 'SNSプラグイン';
+
+  @override
+  String get nodeprogTimelinePaletteListsAuthor => 'リスト系';
+
+  @override
+  String get nodeprogTimelinePaletteTodayDescription =>
+      'このアカウントの Today(注目の投稿)を取り込みます。';
+
+  @override
+  String nodeprogTimelinePaletteTrendTagsTitle(String account) {
+    return 'トレンド: $account';
+  }
+
+  @override
+  String get nodeprogTimelinePaletteTrendTagsAllDescription =>
+      'RASQ アカウントの SNS アカウント全部のトレンドのワードを、タイルで出します。';
+
+  @override
+  String get nodeprogTimelinePaletteTrendTagsDescription =>
+      'このアカウントのサーバーのトレンドのワードを、タイルで出します。';
+
+  @override
+  String nodeprogTimelinePaletteSearchResultsTitle(String account) {
+    return '検索結果: $account';
+  }
+
+  @override
+  String nodeprogTimelinePaletteSelfDescription(String name) {
+    return '$nameをそのまま取り込みます。';
+  }
+
+  @override
+  String get nodeprogTimelinePaletteRasqSearchDescription =>
+      'フォローしていない人も含めて、RASQ の投稿を検索して取り込みます。表示モード「ユーザー」で人のタイルに。';
+
+  @override
+  String get nodeprogTimelinePaletteEmptyTitle => 'コンポーネントが見つかりません';
+
+  @override
+  String get nodeprogTimelinePaletteEmptyHint => '検索ワードを変えてみてください';
+
+  @override
   String get settingsActionBarTitle => 'プラグインボタン';
 
   @override

@@ -1,0 +1,354 @@
+{
+  "nodeprogEditorCanvasInputs": "入力",
+  "@nodeprogEditorCanvasInputs": {
+    "description": "キャンバスのノードの、入力ポートの並びの見出し。"
+  },
+  "nodeprogEditorCanvasOutputs": "出力",
+  "@nodeprogEditorCanvasOutputs": {
+    "description": "キャンバスのノードの、出力ポートの並びの見出し。"
+  },
+  "nodeprogEditorBadgeDefaultOwner": "既定",
+  "@nodeprogEditorBadgeDefaultOwner": {
+    "description": "プラグインのノードの印のツールチップ: 持ち主のアカウントが無い(総合 / 関数の中身)とき。"
+  },
+  "nodeprogEditorBadgeNotRegistered": "未登録",
+  "@nodeprogEditorBadgeNotRegistered": {
+    "description": "プラグインのノードの印のツールチップ: プラグインが登録されていないとき。"
+  },
+  "nodeprogEditorBadgeSeparator": " ・ ",
+  "@nodeprogEditorBadgeSeparator": {
+    "description": "プラグインのノードの印のツールチップの、アカウントと版の区切り(前後に空白)。"
+  },
+  "nodeprogEditorNodeTabDefaultLabel": "ノードTL",
+  "@nodeprogEditorNodeTabDefaultLabel": {
+    "description": "ノードのタブの名前が保存されていないときの名前。"
+  },
+  "nodeprogEditorInlineEmpty": "ノードがありません",
+  "@nodeprogEditorInlineEmpty": {
+    "description": "埋め込みのノードグラフが空のとき。"
+  },
+  "nodeprogEditorInlineExpandTooltip": "全画面で編集",
+  "@nodeprogEditorInlineExpandTooltip": {
+    "description": "埋め込みのノードグラフを全画面のエディターで開くボタン。"
+  },
+  "nodeprogEditorParamsMissing": "このプラグインは登録されていません(ストアから入れ直してください)。",
+  "@nodeprogEditorParamsMissing": {
+    "description": "「ノードを設定」で、プラグインが登録されていないとき。"
+  },
+  "nodeprogEditorParamsLoading": "パラメーターを読み込んでいます…",
+  "@nodeprogEditorParamsLoading": {
+    "description": "「ノードを設定」で、パラメーターの画面を読み込んでいるあいだ。"
+  },
+  "nodeprogEditorParamsNone": "このプラグインにパラメーターはありません。",
+  "@nodeprogEditorParamsNone": {
+    "description": "「ノードを設定」で、プラグインにパラメーターが無いとき。"
+  },
+  "nodeprogEditorCancelButton": "キャンセル",
+  "nodeprogEditorConfirmButton": "決定",
+  "nodeprogEditorParamsTitle": "ノードを設定",
+  "@nodeprogEditorParamsTitle": {
+    "description": "プラグインのノードのパラメーターを編集する FOW の見出し(ノードのメニューの項目も)。"
+  },
+  "nodeprogEditorPluginSortAuthor": "TLプラグイン",
+  "@nodeprogEditorPluginSortAuthor": {
+    "description": "TL プラグインの並べ替えノードの提供元の欄。"
+  },
+  "nodeprogEditorPluginSortDescription": "プラグインの並べ方で投稿を並べ替えます。",
+  "@nodeprogEditorPluginSortDescription": {
+    "description": "TL プラグインの並べ替えノードの説明。"
+  },
+  "nodeprogEditorParamsPluginDetail": "投稿リストをプラグインのソート(tl.sort)で並べ替えます。パラメーターはノードの「パラメーター」ポートに入ります。",
+  "@nodeprogEditorParamsPluginDetail": {
+    "description": "開発者モードの説明(「ノードを設定」の中)。"
+  },
+  "nodeprogEditorPluginSortTitle": "{name}でソート",
+  "@nodeprogEditorPluginSortTitle": {
+    "description": "TL プラグインの並べ替えノードの名前。{name} = プラグインのタイムラインの名前。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogEditorPluginSortDetail": "投稿リストをプラグインのソート(tl.sort)で並べ替えます。",
+  "@nodeprogEditorPluginSortDetail": {
+    "description": "開発者モードの説明(パレット)。"
+  },
+  "nodeprogEditorTitleFunctionBody": "関数の中身",
+  "@nodeprogEditorTitleFunctionBody": {
+    "description": "ノードエディターの見出し: カスタム関数の中身の編集(関数が見つからないとき)。"
+  },
+  "nodeprogEditorTitleFunctionBodyNamed": "関数の中身 — {name}",
+  "@nodeprogEditorTitleFunctionBodyNamed": {
+    "description": "ノードエディターの見出し: カスタム関数の中身の編集。{name} = 関数の名前。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogEditorTitleComposer": "投稿先のカスタマイズ",
+  "@nodeprogEditorTitleComposer": {
+    "description": "ノードエディターの見出し(投稿コンポーザー)。"
+  },
+  "nodeprogEditorTitleTrend": "トレンドをカスタマイズ",
+  "@nodeprogEditorTitleTrend": {
+    "description": "ノードエディターの見出し(トレンド)。"
+  },
+  "nodeprogEditorTitleTimeline": "タイムラインをカスタマイズ",
+  "@nodeprogEditorTitleTimeline": {
+    "description": "ノードエディターの見出し(タイムライン)。"
+  },
+  "nodeprogEditorTabTrendNotes": "ノート",
+  "@nodeprogEditorTabTrendNotes": {
+    "description": "トレンドのノードエディターのタブ。"
+  },
+  "nodeprogEditorTabFollowing": "フォロー中",
+  "@nodeprogEditorTabFollowing": {
+    "description": "ノードエディターのタブ(タイムライン / トレンド)。"
+  },
+  "nodeprogEditorTabTrendUsers": "ユーザー",
+  "@nodeprogEditorTabTrendUsers": {
+    "description": "トレンドのノードエディターのタブ。"
+  },
+  "nodeprogEditorTabBundle": "総合",
+  "@nodeprogEditorTabBundle": {
+    "description": "ノードエディターのタブ(全アカウントをまとめたタイムライン)。"
+  },
+  "nodeprogEditorTabSocial": "おすすめ",
+  "@nodeprogEditorTabSocial": {
+    "description": "ノードエディターのタブ。"
+  },
+  "nodeprogEditorTabRelational": "関連",
+  "@nodeprogEditorTabRelational": {
+    "description": "ノードエディターのタブ。"
+  },
+  "nodeprogEditorTabLocal": "ローカル",
+  "@nodeprogEditorTabLocal": {
+    "description": "ノードエディターのタブ。"
+  },
+  "nodeprogEditorTabGlobal": "グローバル",
+  "@nodeprogEditorTabGlobal": {
+    "description": "ノードエディターのタブ。"
+  },
+  "nodeprogEditorAddTabTooltip": "タブを追加",
+  "nodeprogEditorNewTabTitle": "新しいタブ",
+  "@nodeprogEditorNewTabTitle": {
+    "description": "タブを足すダイアログの見出し。"
+  },
+  "nodeprogEditorTabNameHint": "タブ名",
+  "@nodeprogEditorTabNameHint": {
+    "description": "タブの名前の入力欄のヒント。"
+  },
+  "nodeprogEditorRenameTab": "タブ名を変更",
+  "@nodeprogEditorRenameTab": {
+    "description": "ダイアログの見出しと … メニューの項目。"
+  },
+  "nodeprogEditorDeleteTab": "タブを削除",
+  "@nodeprogEditorDeleteTab": {
+    "description": "… メニューの項目。"
+  },
+  "nodeprogEditorClearGraph": "グラフをクリア",
+  "@nodeprogEditorClearGraph": {
+    "description": "… メニューの項目。"
+  },
+  "nodeprogEditorBundleTabsToggle": "バンドルでノードTLを集合表示",
+  "@nodeprogEditorBundleTabsToggle": {
+    "description": "… メニューの項目(チェック付き)。"
+  },
+  "nodeprogEditorPaletteSearchHint": "プラグインノードを検索",
+  "@nodeprogEditorPaletteSearchHint": {
+    "description": "ノードのパレット(FOW)の検索欄のヒントと読み上げ。"
+  },
+  "nodeprogEditorConnectTypeMismatch": "接続できません: {from} → {to}(形式が合いません)",
+  "@nodeprogEditorConnectTypeMismatch": {
+    "description": "データ形式が合わないポート同士を繋ごうとしたときのスナックバー。{from} / {to} = 出力 / 入力のデータ形式。",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogEditorCreateFunction": "カスタム関数を作成",
+  "@nodeprogEditorCreateFunction": {
+    "description": "カスタム関数を作るダイアログの見出し・パレットの先頭のタイル。"
+  },
+  "nodeprogEditorFunctionNameHint": "関数名",
+  "@nodeprogEditorFunctionNameHint": {
+    "description": "カスタム関数の名前の入力欄のヒント。"
+  },
+  "nodeprogEditorFunctionSourceLabel": "入力元",
+  "@nodeprogEditorFunctionSourceLabel": {
+    "description": "カスタム関数のダイアログ: 入力元の選択の見出し。"
+  },
+  "nodeprogEditorFunctionSourceCond": "条件",
+  "@nodeprogEditorFunctionSourceCond": {
+    "description": "カスタム関数のダイアログ: 入力元 = 条件。"
+  },
+  "nodeprogEditorFunctionSourceData": "データ",
+  "@nodeprogEditorFunctionSourceData": {
+    "description": "カスタム関数のダイアログ: 入力元 = データ。"
+  },
+  "nodeprogEditorFunctionCondTagsLabel": "条件タグ(複数選ぶと下側の分岐が増えます)",
+  "@nodeprogEditorFunctionCondTagsLabel": {
+    "description": "カスタム関数のダイアログ: 条件タグの選択の見出し。"
+  },
+  "nodeprogEditorFunctionInputsLabel": "入力(データ形式)",
+  "@nodeprogEditorFunctionInputsLabel": {
+    "description": "カスタム関数のダイアログ: 入力のデータ形式の選択の見出し。"
+  },
+  "nodeprogEditorFunctionOutputsLabel": "出力(データ形式)",
+  "@nodeprogEditorFunctionOutputsLabel": {
+    "description": "カスタム関数のダイアログ: 出力のデータ形式の選択の見出し。"
+  },
+  "nodeprogEditorCreateButton": "作成",
+  "nodeprogEditorMenuInfo": "ノード情報",
+  "@nodeprogEditorMenuInfo": {
+    "description": "ノードのメニューの項目。"
+  },
+  "nodeprogEditorMenuEditFunctionBody": "関数の中身を編集",
+  "@nodeprogEditorMenuEditFunctionBody": {
+    "description": "ノードのメニューの項目(カスタム関数)。"
+  },
+  "nodeprogEditorMenuStore": "プラグインストアに移動",
+  "@nodeprogEditorMenuStore": {
+    "description": "ノードのメニューの項目。"
+  },
+  "nodeprogEditorMenuCopy": "コピー",
+  "@nodeprogEditorMenuCopy": {
+    "description": "ノードのメニューの項目。"
+  },
+  "nodeprogEditorMenuPaste": "ペースト",
+  "@nodeprogEditorMenuPaste": {
+    "description": "ノードのメニューの項目。"
+  },
+  "nodeprogEditorMenuDelete": "削除",
+  "@nodeprogEditorMenuDelete": {
+    "description": "ノードのメニューの項目。"
+  },
+  "nodeprogEditorMoreTooltip": "その他",
+  "@nodeprogEditorMoreTooltip": {
+    "description": "ノードエディターの見出しの … ボタン。"
+  },
+  "nodeprogEditorSearchNodesTooltip": "ノードを検索",
+  "@nodeprogEditorSearchNodesTooltip": {
+    "description": "ノードのパレットを開き直すボタン。"
+  },
+  "nodeprogEditorEmptyHint": "下の検索から追加(タップで詳細、長押しでドラッグ)",
+  "@nodeprogEditorEmptyHint": {
+    "description": "キャンバスにノードが無いときのヒント。"
+  },
+  "nodeprogEditorToolbarSelect": "範囲選択",
+  "@nodeprogEditorToolbarSelect": {
+    "description": "キャンバスのツールバー。"
+  },
+  "nodeprogEditorToolbarSelectStop": "範囲選択をやめる",
+  "@nodeprogEditorToolbarSelectStop": {
+    "description": "キャンバスのツールバー(範囲選択のとき)。"
+  },
+  "nodeprogEditorToolbarDeleteSelected": "選んだノードを削除",
+  "@nodeprogEditorToolbarDeleteSelected": {
+    "description": "キャンバスのツールバー。"
+  },
+  "nodeprogEditorToolbarTidy": "整理整頓",
+  "@nodeprogEditorToolbarTidy": {
+    "description": "キャンバスのツールバー。"
+  },
+  "nodeprogEditorToolbarZoomOut": "縮小",
+  "@nodeprogEditorToolbarZoomOut": {
+    "description": "キャンバスのツールバー。"
+  },
+  "nodeprogEditorToolbarZoomIn": "拡大",
+  "@nodeprogEditorToolbarZoomIn": {
+    "description": "キャンバスのツールバー。"
+  },
+  "nodeprogEditorToolbarFit": "全体表示",
+  "@nodeprogEditorToolbarFit": {
+    "description": "キャンバスのツールバー。"
+  },
+  "nodeprogEditorPaletteSortChip": "並び替え: 関連順",
+  "@nodeprogEditorPaletteSortChip": {
+    "description": "パレットの並び替えのチップ。"
+  },
+  "nodeprogEditorPaletteSortRelevance": "関連順",
+  "@nodeprogEditorPaletteSortRelevance": {
+    "description": "パレットの並び替えの選択肢。"
+  },
+  "nodeprogEditorPaletteGenreChip": "ジャンル: {genre}",
+  "@nodeprogEditorPaletteGenreChip": {
+    "description": "パレットのジャンルのチップ。{genre} = 選んだジャンル。",
+    "placeholders": {
+      "genre": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogEditorPaletteGenreAll": "すべて",
+  "@nodeprogEditorPaletteGenreAll": {
+    "description": "パレットのジャンルの選択肢: 絞り込まない。"
+  },
+  "nodeprogEditorPaletteSettingsTooltip": "検索設定(準備中)",
+  "@nodeprogEditorPaletteSettingsTooltip": {
+    "description": "パレットの検索の設定ボタン。"
+  },
+  "nodeprogEditorPaletteEmptyTitle": "ノードが見つかりません",
+  "@nodeprogEditorPaletteEmptyTitle": {
+    "description": "パレットの検索で何も当たらないとき。"
+  },
+  "nodeprogEditorPaletteEmptyHint": "検索ワードやジャンルを変えてみてください",
+  "@nodeprogEditorPaletteEmptyHint": {
+    "description": "パレットの検索で何も当たらないときのヒント。"
+  },
+  "nodeprogEditorCreateFunctionDescription": "条件タグまたは入出力(データ形式)を選んで、自分の関数ノードを作ります。データ関数は中身をノードで組めます。",
+  "@nodeprogEditorCreateFunctionDescription": {
+    "description": "パレットの「カスタム関数を作成」のタイルの説明。"
+  },
+  "nodeprogEditorTileSubtitle": "{author} · {genre}",
+  "@nodeprogEditorTileSubtitle": {
+    "description": "パレットのタイルの副題。{author} = 提供元、{genre} = ジャンル。",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "genre": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogEditorBuiltinAuthor": "組み込みノード",
+  "@nodeprogEditorBuiltinAuthor": {
+    "description": "パレットのタイルの提供元: アプリに組み込みのノード。"
+  },
+  "nodeprogEditorAddToCanvas": "キャンバスに追加",
+  "@nodeprogEditorAddToCanvas": {
+    "description": "ノードの詳細のボタン。"
+  },
+  "nodeprogEditorEditFunctionBody": "中身を編集",
+  "@nodeprogEditorEditFunctionBody": {
+    "description": "ノードの詳細のボタン(カスタム関数)。"
+  },
+  "nodeprogEditorDeleteFunction": "関数を削除",
+  "@nodeprogEditorDeleteFunction": {
+    "description": "ノードの詳細のボタン(カスタム関数)。"
+  },
+  "nodeprogEditorInfoGenre": "ジャンル: {genre}",
+  "@nodeprogEditorInfoGenre": {
+    "description": "ノード情報の 1 行目。{genre} = ノードのジャンル。",
+    "placeholders": {
+      "genre": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogEditorInfoCondIn": "条件(上辺)",
+  "@nodeprogEditorInfoCondIn": {
+    "description": "ノード情報: 上辺の条件接続部。"
+  },
+  "nodeprogEditorInfoCondOut": "条件(下辺)",
+  "@nodeprogEditorInfoCondOut": {
+    "description": "ノード情報: 下辺の条件接続部。"
+  }
+}

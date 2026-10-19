@@ -1,0 +1,504 @@
+{
+  "nodeprogCatalogGenreGenerate": "生成",
+  "@nodeprogCatalogGenreGenerate": {
+    "description": "ノードのジャンル(パレットの絞り込み・タイルの副題)。"
+  },
+  "nodeprogCatalogGenreConvert": "変換",
+  "@nodeprogCatalogGenreConvert": {
+    "description": "ノードのジャンル(パレットの絞り込み・タイルの副題)。"
+  },
+  "nodeprogCatalogGenreInput": "入力",
+  "@nodeprogCatalogGenreInput": {
+    "description": "ノードのジャンル(パレットの絞り込み・タイルの副題)。"
+  },
+  "nodeprogCatalogGenreTimeline": "タイムライン",
+  "@nodeprogCatalogGenreTimeline": {
+    "description": "ノードのジャンル(パレットの絞り込み・タイルの副題)。"
+  },
+  "nodeprogCatalogGenreProcess": "加工",
+  "@nodeprogCatalogGenreProcess": {
+    "description": "ノードのジャンル(パレットの絞り込み・タイルの副題)。"
+  },
+  "nodeprogCatalogGenreCondition": "条件",
+  "@nodeprogCatalogGenreCondition": {
+    "description": "ノードのジャンル(パレットの絞り込み・タイルの副題)。"
+  },
+  "nodeprogCatalogGenreFunction": "関数",
+  "@nodeprogCatalogGenreFunction": {
+    "description": "ノードのジャンル(パレットの絞り込み・タイルの副題)。"
+  },
+  "nodeprogCatalogGenreFetch": "取得",
+  "@nodeprogCatalogGenreFetch": {
+    "description": "ノードのジャンル(パレットの絞り込み・タイルの副題)。"
+  },
+  "nodeprogCatalogGenreComposer": "コンポーザー",
+  "@nodeprogCatalogGenreComposer": {
+    "description": "ノードのジャンル(パレットの絞り込み・タイルの副題)。"
+  },
+  "nodeprogCatalogGenreStorage": "保存",
+  "@nodeprogCatalogGenreStorage": {
+    "description": "ノードのジャンル(パレットの絞り込み・タイルの副題)。"
+  },
+  "nodeprogCatalogClockTitle": "クロックメーカー",
+  "@nodeprogCatalogClockTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogClockDescription": "一定間隔でクロックを出します。TL の自動更新などのトリガーに使います。",
+  "@nodeprogCatalogClockDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTextConstTitle": "テキスト",
+  "@nodeprogCatalogTextConstTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTextConstDescription": "書いた文をテキストとして出します。類似性 / キーワードの基準や、分割の入力に繋げます。",
+  "@nodeprogCatalogTextConstDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogConvertSplitTitle": "分割",
+  "@nodeprogCatalogConvertSplitTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogConvertSplitDescription": "テキストを区切り(改行 / カンマ / 空白)でテキスト配列にします。キーワードリストや保存の入力に繋げます。",
+  "@nodeprogCatalogConvertSplitDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogConvertJoinTitle": "結合",
+  "@nodeprogCatalogConvertJoinTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogConvertJoinDescription": "テキスト配列を区切り(改行 / カンマ / 空白)で 1 つのテキストにします。",
+  "@nodeprogCatalogConvertJoinDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogListFirstTitle": "投稿を取り出す",
+  "@nodeprogCatalogListFirstTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogListFirstDescription": "投稿リストの何番目かの投稿を 1 件取り出します(1 = 先頭)。本文をテキストにして基準や設定に繋げます。",
+  "@nodeprogCatalogListFirstDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogPostTextTitle": "投稿の本文",
+  "@nodeprogCatalogPostTextTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogPostTextDescription": "投稿 1 件の本文をテキストにします。",
+  "@nodeprogCatalogPostTextDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogRandomTitle": "ランダム",
+  "@nodeprogCatalogRandomTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogRandomDescription": "投稿ごとに乱数を出します。範囲は「1-7」のように指定し、小数点を入れると小数点以下もカウントします。シードで再現できます。",
+  "@nodeprogCatalogRandomDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogFileTitle": "ファイルリーダー",
+  "@nodeprogCatalogFileTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogFileDescription": "ローカルファイルを読み込んでテキストとして出します。",
+  "@nodeprogCatalogFileDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTimelineTitle": "タイムライン",
+  "@nodeprogCatalogTimelineTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTimelineDescription": "最終出力。投稿リストを繋ぐと、この画面のタイムラインに流れます。",
+  "@nodeprogCatalogTimelineDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTlSourceTitle": "タイムライン取得",
+  "@nodeprogCatalogTlSourceTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTlSourceDescription": "選んだタイムラインを取得して、投稿リストとして渡します。",
+  "@nodeprogCatalogTlSourceDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTlSourceDetail": "選んだタイムラインを取得して、投稿リスト(RRLタグ付き)として渡します。",
+  "@nodeprogCatalogTlSourceDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogSortTitle": "並べ替え",
+  "@nodeprogCatalogSortTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogSortDescription": "下に繋いだ条件に合う投稿を先頭に並べ替えます(元の順序は保たれます)。",
+  "@nodeprogCatalogSortDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogRemoveTitle": "消去",
+  "@nodeprogCatalogRemoveTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogRemoveDescription": "下に繋いだ条件に合う投稿を取り除きます。",
+  "@nodeprogCatalogRemoveDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogCondTitle": "条件",
+  "@nodeprogCatalogCondTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogCondDescription": "指定したタグの内容を見て True/False を返します。下に数珠繋ぎで「かつ」、同じ接続部から並列で「または」。",
+  "@nodeprogCatalogCondDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogNotDescription": "下に繋いだ条件の否定を返します。",
+  "@nodeprogCatalogNotDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogFnInputTitle": "関数入力",
+  "@nodeprogCatalogFnInputTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogFnInputDescription": "関数の中身の入口。呼び出し元から渡された投稿リストがここから出ます(関数の中身の編集画面専用)。",
+  "@nodeprogCatalogFnInputDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogFnOutputTitle": "関数出力",
+  "@nodeprogCatalogFnOutputTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogFnOutputDescription": "関数の中身の出口。ここに繋いだ投稿リストが関数ノードの出力になります(未接続なら素通し)。",
+  "@nodeprogCatalogFnOutputDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogFilterQueryTitle": "検索絞り込み",
+  "@nodeprogCatalogFilterQueryTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogFilterQueryDescription": "検索ワードに合う投稿だけ通します(「除外」で逆に落とします)。",
+  "@nodeprogCatalogFilterQueryDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogFilterQueryDetail": "検索ワードに合う投稿だけ通します。ワードが空のときは、このページの検索ワード/タグを使います。「除外」を true にすると、合う投稿を落とします(ワードミュート)。",
+  "@nodeprogCatalogFilterQueryDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogMergeTitle": "マージ",
+  "@nodeprogCatalogMergeTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogMergeDescription": "繋いだ投稿リストを時刻順に 1 本にまとめます。",
+  "@nodeprogCatalogMergeDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogMergeDetail": "繋いだ投稿リストを時刻順に 1 本へ合流します。別アカウントに流れてきた同じ投稿は 1 枚に畳み、タイルの ↓ でアカウントを選べます。",
+  "@nodeprogCatalogMergeDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogTimelineRelationalTitle": "関連タイムライン",
+  "@nodeprogCatalogTimelineRelationalTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTimelineRelationalDescription": "関連タイムラインの絞り込みの出口です。",
+  "@nodeprogCatalogTimelineRelationalDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTimelineRelationalDetail": "関連TLの前段絞り込みの最終出力。繋いだ投稿リストが会話イベント構築の入力になります(処理系は変わりません)。",
+  "@nodeprogCatalogTimelineRelationalDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogTlListTitle": "リストTL取得",
+  "@nodeprogCatalogTlListTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTlListDescription": "Misskey のリストのタイムラインを取得します(リスト名で指定)。",
+  "@nodeprogCatalogTlListDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTlSearchTitle": "検索TL取得",
+  "@nodeprogCatalogTlSearchTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTlSearchDescription": "検索ワードにヒットする投稿を取得します。",
+  "@nodeprogCatalogTlSearchDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTlDmTitle": "DM取得",
+  "@nodeprogCatalogTlDmTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTlDmDescription": "相手(ハンドル)との DM を取得します。",
+  "@nodeprogCatalogTlDmDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTrendTagsTitle": "トレンド取得",
+  "@nodeprogCatalogTrendTagsTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTrendTagsDescription": "いまのトレンドタグを文字列の配列として出します(類似度/キーワードの入力に)。",
+  "@nodeprogCatalogTrendTagsDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTlFeedTitle": "カスタムフィード取得",
+  "@nodeprogCatalogTlFeedTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTlFeedDescription": "Bluesky のカスタムフィードを取得します。",
+  "@nodeprogCatalogTlFeedDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTlFeedDetail": "Bluesky のカスタムフィード(フィードジェネレーター)のタイムラインを取得します(at:// の URI で指定。TL カスタマイズでは検索して選べます)。",
+  "@nodeprogCatalogTlFeedDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogTlRasqlistTitle": "RASQ リスト取得",
+  "@nodeprogCatalogTlRasqlistTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTlRasqlistDescription": "いくつもの SNS の人をまとめた RASQ リストの投稿を取得します。",
+  "@nodeprogCatalogTlRasqlistDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTlRasqlistDetail": "RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取得します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。",
+  "@nodeprogCatalogTlRasqlistDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogTrendPostsTitle": "トレンド検索結果取得",
+  "@nodeprogCatalogTrendPostsTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTrendPostsDescription": "いまのトレンド上位タグを検索して、その投稿を 1 本に合流して出します。",
+  "@nodeprogCatalogTrendPostsDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogComposerTargetTitle": "ポスト先",
+  "@nodeprogCatalogComposerTargetTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogComposerTargetDescription": "投稿先アカウントの候補です。下の条件に合うと投稿先になります。",
+  "@nodeprogCatalogComposerTargetDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogComposerTargetDetail": "投稿先アカウントの候補。下に条件をぶら下げると、投稿内容がその条件に合うときこのアカウントが投稿先になります(上に置いたものほど優先。手動で選び直せます)。",
+  "@nodeprogCatalogComposerTargetDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogComposerFallbackTitle": "代わりのフォーマットで投稿",
+  "@nodeprogCatalogComposerFallbackTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogComposerFallbackDescription": "絞り込みで外れたとき、別の形でこのアカウントに投稿します。",
+  "@nodeprogCatalogComposerFallbackDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogComposerFallbackDetail": "絞り込みで投稿先から外れた場合のバイパス。下の条件(通常は直前の比較の Not)が成立したとき、代わりのフォーマットでこのアカウントに投稿します。",
+  "@nodeprogCatalogComposerFallbackDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogComposerLinkgateTitle": "連動の絞り込み",
+  "@nodeprogCatalogComposerLinkgateTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogComposerLinkgateDescription": "一緒に送る投稿だけに効く絞り込みです。",
+  "@nodeprogCatalogComposerLinkgateDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogComposerLinkgateDetail": "連動投稿だけに掛かる絞り込みです。下の条件が成立しないと、このアカウントへの連動投稿は送られません(通常のポスト先判定には影響しません)。",
+  "@nodeprogCatalogComposerLinkgateDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogComposerRegexTitle": "投稿加工(正規表現)",
+  "@nodeprogCatalogComposerRegexTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogComposerRegexDescription": "送信するときに本文の一部を置き換えます。",
+  "@nodeprogCatalogComposerRegexDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogComposerRegexDetail": "送信時に本文へ正規表現の置換をかけます(パターンに一致した部分を置換)。アカウントが空のときは全ての投稿先に適用します。",
+  "@nodeprogCatalogComposerRegexDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogTlMyreactionsTitle": "リアクション済み取得",
+  "@nodeprogCatalogTlMyreactionsTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTlMyreactionsDescription": "TL で自分がリアクションした投稿を取得します(好みのプロファイル作りに)。",
+  "@nodeprogCatalogTlMyreactionsDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogTrendFrameTitle": "トレンド枠",
+  "@nodeprogCatalogTrendFrameTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogTrendFrameDescription": "トレンドホームの「トレンド」一覧の最終出力。タグ(テキスト配列)を繋ぐとそのまま一覧に出ます。",
+  "@nodeprogCatalogTrendFrameDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogMlSimilarTitle": "類似度 (SigLIP)",
+  "@nodeprogCatalogMlSimilarTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogMlSimilarDescription": "基準と各投稿の似ている度合いを 0〜1 で出します。",
+  "@nodeprogCatalogMlSimilarDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogMlSimilarDetail": "基準(テキスト/配列/ベクトル)と各投稿の類似度を、この TL 内での相対値 0〜1 で出します(0.8 ≒ 上位 2 割相当)。ML 不達時は n-gram 類似度に縮退します。",
+  "@nodeprogCatalogMlSimilarDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogMlGlinerTitle": "GLiNER抽出",
+  "@nodeprogCatalogMlGlinerTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogMlGlinerDescription": "投稿リストから特徴語(頻出順)を抽出して文字列の配列で出します。",
+  "@nodeprogCatalogMlGlinerDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogMlSiglipTitle": "SigLIP埋め込み",
+  "@nodeprogCatalogMlSiglipTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogMlSiglipDescription": "投稿リストの傾向をまとめて出します。",
+  "@nodeprogCatalogMlSiglipDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogMlSiglipDetail": "投稿リストの平均埋め込み(プロファイル)をベクトルで出します。ML 不達時は n-gram プロファイルに縮退します。",
+  "@nodeprogCatalogMlSiglipDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogStorageSaveTitle": "保存 (storage.safe)",
+  "@nodeprogCatalogStorageSaveTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogStorageSaveDescription": "繋いだデータを保存します。",
+  "@nodeprogCatalogStorageSaveDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogStorageSaveDetail": "繋いだデータをスロットに保存します。storage.safe は依存関係の子プラグインにも渡せる安全な置き場(プラグイン側の受け渡しは初回起動時に確認)。",
+  "@nodeprogCatalogStorageSaveDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogStorageLoadTitle": "読み出し (storage.safe)",
+  "@nodeprogCatalogStorageLoadTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogStorageLoadDescription": "スロットに保存したデータを読み出します。",
+  "@nodeprogCatalogStorageLoadDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogMlKeywordTitle": "キーワード一致 (GLiNER)",
+  "@nodeprogCatalogMlKeywordTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogMlKeywordDescription": "キーワード(または配列)と各投稿の特徴語の一致数を出します。",
+  "@nodeprogCatalogMlKeywordDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogMlTendencyTitle": "指向性/刺激性 (プロファイル)",
+  "@nodeprogCatalogMlTendencyTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogMlTendencyDescription": "好みの設定への合い具合(0〜1)を各投稿に出します。",
+  "@nodeprogCatalogMlTendencyDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogMlTendencyDetail": "storage.safe のトレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)への適合度(0〜1)を各投稿に出します。プロファイルは検索ホームのトレンド ⚙ で編集し、他のノードからも同じスロットを読めます。",
+  "@nodeprogCatalogMlTendencyDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogCompareTitle": "比較",
+  "@nodeprogCatalogCompareTitle": {
+    "description": "ノードの名前(キャンバスのノードの見出し・パレットのタイル)。"
+  },
+  "nodeprogCatalogCompareDescription": "数値としきい値を比べて True/False を返します。",
+  "@nodeprogCatalogCompareDescription": {
+    "description": "パレットのタイル・ノード情報の説明。"
+  },
+  "nodeprogCatalogCompareDetail": "数値(類似度・乱数など)としきい値を比べて True/False を返す演算子条件です。値元が未接続・値が取れないとき(スロットが空など)は False になります。",
+  "@nodeprogCatalogCompareDetail": {
+    "description": "開発者モードで説明の代わりに出す詳しい説明。"
+  },
+  "nodeprogCatalogTypeWithFormat": "{type}({format})",
+  "@nodeprogCatalogTypeWithFormat": {
+    "description": "ポートのデータ形式の表示。{type} = データ形式(ジャンル)、{format} = プラグインが指定する細かい形式(例: .dic)。",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogCatalogPortWithType": "{label}({type})",
+  "@nodeprogCatalogPortWithType": {
+    "description": "パレットのタイルの入出力の 1 行の、ポート 1 つ。{label} = ポートの名前、{type} = データ形式。",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogCatalogIoCond": "条件",
+  "@nodeprogCatalogIoCond": {
+    "description": "入出力の 1 行で、条件接続部を表す語。"
+  },
+  "nodeprogCatalogIoNone": "なし",
+  "@nodeprogCatalogIoNone": {
+    "description": "入出力の 1 行で、入力 / 出力が無いとき。"
+  },
+  "nodeprogCatalogListSeparator": "・",
+  "@nodeprogCatalogListSeparator": {
+    "description": "並べた語の区切り(ポートの一覧・条件タグの一覧)。"
+  },
+  "nodeprogCatalogIoSummary": "入力: {inputs} → 出力: {outputs}",
+  "@nodeprogCatalogIoSummary": {
+    "description": "パレットのタイルの入出力の 1 行。{inputs} / {outputs} = ポートの一覧(区切りで繋いだもの)。",
+    "placeholders": {
+      "inputs": {
+        "type": "String"
+      },
+      "outputs": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogCatalogCustomFunctionAuthor": "カスタム関数",
+  "@nodeprogCatalogCustomFunctionAuthor": {
+    "description": "自分で作った関数ノードの提供元の欄。"
+  },
+  "nodeprogCatalogCustomFunctionCondDescription": "条件 {tags} を受ける、自分で作った関数です。",
+  "@nodeprogCatalogCustomFunctionCondDescription": {
+    "description": "条件を受けるカスタム関数の説明。{tags} = 選んだ条件タグの一覧。",
+    "placeholders": {
+      "tags": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogCatalogCustomFunctionCondDetail": "条件タグ {tags} を受けるカスタム関数です(中身の配線はプラグイン/RAi で)。",
+  "@nodeprogCatalogCustomFunctionCondDetail": {
+    "description": "開発者モードの説明。{tags} = 選んだ条件タグの一覧。",
+    "placeholders": {
+      "tags": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogCatalogCustomFunctionDataDescription": "自分で作った関数です。",
+  "@nodeprogCatalogCustomFunctionDataDescription": {
+    "description": "データを受けるカスタム関数の説明。"
+  },
+  "nodeprogCatalogCustomFunctionDataDetail": "カスタム関数です(中身の配線はプラグイン/RAi で)。",
+  "@nodeprogCatalogCustomFunctionDataDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogCatalogGenreSortDictionary": "ソート/辞書",
+  "@nodeprogCatalogGenreSortDictionary": {
+    "description": "ノードのジャンル: TL プラグインの並べ替えノード(パレットのジャンルの絞り込みの既定の表示も)。"
+  },
+  "nodeprogCatalogCustomFunctionDefaultName": "関数",
+  "@nodeprogCatalogCustomFunctionDefaultName": {
+    "description": "カスタム関数の名前が保存されていないときの名前。"
+  }
+}
