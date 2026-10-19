@@ -1,0 +1,3887 @@
+[
+ {
+  "name": "SimpleParser > text > basic",
+  "fn": "parseSimple",
+  "input": "abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "SimpleParser > text > ignore hashtag",
+  "fn": "parseSimple",
+  "input": "abc#abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "abc#abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "SimpleParser > text > keycap number sign",
+  "fn": "parseSimple",
+  "input": "abc#️⃣abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "abc"
+    }
+   },
+   {
+    "type": "unicodeEmoji",
+    "props": {
+     "emoji": "#️⃣"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "SimpleParser > emoji > basic",
+  "fn": "parseSimple",
+  "input": ":foo:",
+  "opts": null,
+  "output": [
+   {
+    "type": "emojiCode",
+    "props": {
+     "name": "foo"
+    }
+   }
+  ]
+ },
+ {
+  "name": "SimpleParser > emoji > between texts",
+  "fn": "parseSimple",
+  "input": "foo:bar:baz",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "foo:bar:baz"
+    }
+   }
+  ]
+ },
+ {
+  "name": "SimpleParser > emoji > between texts 2",
+  "fn": "parseSimple",
+  "input": "12:34:56",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "12:34:56"
+    }
+   }
+  ]
+ },
+ {
+  "name": "SimpleParser > emoji > between texts 3",
+  "fn": "parseSimple",
+  "input": "あ:bar:い",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "あ"
+    }
+   },
+   {
+    "type": "emojiCode",
+    "props": {
+     "name": "bar"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "い"
+    }
+   }
+  ]
+ },
+ {
+  "name": "SimpleParser > emoji > Ignore Variation Selector preceded by Unicode Emoji",
+  "fn": "parseSimple",
+  "input": "️",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "️"
+    }
+   }
+  ]
+ },
+ {
+  "name": "SimpleParser > disallow other syntaxes",
+  "fn": "parseSimple",
+  "input": "foo **bar** baz",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "foo **bar** baz"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > text > 普通のテキストを入力すると1つのテキストノードが返される",
+  "fn": "parse",
+  "input": "abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > quote > 1行の引用ブロックを使用できる",
+  "fn": "parse",
+  "input": "> abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "quote",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > quote > 複数行の引用ブロックを使用できる",
+  "fn": "parse",
+  "input": "\n> abc\n> 123\n",
+  "opts": null,
+  "output": [
+   {
+    "type": "quote",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc\n123"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > quote > 引用ブロックはブロックをネストできる",
+  "fn": "parse",
+  "input": "\n> <center>\n> a\n> </center>\n",
+  "opts": null,
+  "output": [
+   {
+    "type": "quote",
+    "children": [
+     {
+      "type": "center",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "a"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > quote > 引用ブロックはインライン構文を含んだブロックをネストできる",
+  "fn": "parse",
+  "input": "\n> <center>\n> I'm @ai, An bot of misskey!\n> </center>\n",
+  "opts": null,
+  "output": [
+   {
+    "type": "quote",
+    "children": [
+     {
+      "type": "center",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "I'm "
+        }
+       },
+       {
+        "type": "mention",
+        "props": {
+         "username": "ai",
+         "host": null,
+         "acct": "@ai"
+        }
+       },
+       {
+        "type": "text",
+        "props": {
+         "text": ", An bot of misskey!"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > quote > 複数行の引用ブロックでは空行を含めることができる",
+  "fn": "parse",
+  "input": "\n> abc\n>\n> 123\n",
+  "opts": null,
+  "output": [
+   {
+    "type": "quote",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc\n\n123"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > quote > 1行の引用ブロックを空行にはできない",
+  "fn": "parse",
+  "input": "> ",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "> "
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > quote > 引用ブロックの後ろの空行は無視される",
+  "fn": "parse",
+  "input": "\n> foo\n> bar\n\nhoge",
+  "opts": null,
+  "output": [
+   {
+    "type": "quote",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "foo\nbar"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "hoge"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > quote > 2つの引用行の間に空行がある場合は2つの引用ブロックが生成される",
+  "fn": "parse",
+  "input": "\n> foo\n\n> bar\n\nhoge",
+  "opts": null,
+  "output": [
+   {
+    "type": "quote",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "foo"
+      }
+     }
+    ]
+   },
+   {
+    "type": "quote",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "bar"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "hoge"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > search > 検索構文を使用できる > Search",
+  "fn": "parse",
+  "input": "MFM 書き方 123 Search",
+  "opts": null,
+  "output": [
+   {
+    "type": "search",
+    "props": {
+     "query": "MFM 書き方 123",
+     "content": "MFM 書き方 123 Search"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > search > 検索構文を使用できる > [Search]",
+  "fn": "parse",
+  "input": "MFM 書き方 123 [Search]",
+  "opts": null,
+  "output": [
+   {
+    "type": "search",
+    "props": {
+     "query": "MFM 書き方 123",
+     "content": "MFM 書き方 123 [Search]"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > search > 検索構文を使用できる > search",
+  "fn": "parse",
+  "input": "MFM 書き方 123 search",
+  "opts": null,
+  "output": [
+   {
+    "type": "search",
+    "props": {
+     "query": "MFM 書き方 123",
+     "content": "MFM 書き方 123 search"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > search > 検索構文を使用できる > [search]",
+  "fn": "parse",
+  "input": "MFM 書き方 123 [search]",
+  "opts": null,
+  "output": [
+   {
+    "type": "search",
+    "props": {
+     "query": "MFM 書き方 123",
+     "content": "MFM 書き方 123 [search]"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > search > 検索構文を使用できる > 検索",
+  "fn": "parse",
+  "input": "MFM 書き方 123 検索",
+  "opts": null,
+  "output": [
+   {
+    "type": "search",
+    "props": {
+     "query": "MFM 書き方 123",
+     "content": "MFM 書き方 123 検索"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > search > 検索構文を使用できる > [検索]",
+  "fn": "parse",
+  "input": "MFM 書き方 123 [検索]",
+  "opts": null,
+  "output": [
+   {
+    "type": "search",
+    "props": {
+     "query": "MFM 書き方 123",
+     "content": "MFM 書き方 123 [検索]"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > search > ブロックの前後にあるテキストが正しく解釈される",
+  "fn": "parse",
+  "input": "abc\nhoge piyo bebeyo 検索\n123",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "abc"
+    }
+   },
+   {
+    "type": "search",
+    "props": {
+     "query": "hoge piyo bebeyo",
+     "content": "hoge piyo bebeyo 検索"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "123"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > code block > コードブロックを使用できる",
+  "fn": "parse",
+  "input": "```\nabc\n```",
+  "opts": null,
+  "output": [
+   {
+    "type": "blockCode",
+    "props": {
+     "code": "abc",
+     "lang": null
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > code block > コードブロックには複数行のコードを入力できる",
+  "fn": "parse",
+  "input": "```\na\nb\nc\n```",
+  "opts": null,
+  "output": [
+   {
+    "type": "blockCode",
+    "props": {
+     "code": "a\nb\nc",
+     "lang": null
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > code block > コードブロックは言語を指定できる",
+  "fn": "parse",
+  "input": "```js\nconst a = 1;\n```",
+  "opts": null,
+  "output": [
+   {
+    "type": "blockCode",
+    "props": {
+     "code": "const a = 1;",
+     "lang": "js"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > code block > ブロックの前後にあるテキストが正しく解釈される",
+  "fn": "parse",
+  "input": "abc\n```\nconst abc = 1;\n```\n123",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "abc"
+    }
+   },
+   {
+    "type": "blockCode",
+    "props": {
+     "code": "const abc = 1;",
+     "lang": null
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "123"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > code block > ignore internal marker",
+  "fn": "parse",
+  "input": "```\naaa```bbb\n```",
+  "opts": null,
+  "output": [
+   {
+    "type": "blockCode",
+    "props": {
+     "code": "aaa```bbb",
+     "lang": null
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > code block > trim after line break",
+  "fn": "parse",
+  "input": "```\nfoo\n```\nbar",
+  "opts": null,
+  "output": [
+   {
+    "type": "blockCode",
+    "props": {
+     "code": "foo",
+     "lang": null
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "bar"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mathBlock > 1行の数式ブロックを使用できる",
+  "fn": "parse",
+  "input": "\\[math1\\]",
+  "opts": null,
+  "output": [
+   {
+    "type": "mathBlock",
+    "props": {
+     "formula": "math1"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mathBlock > ブロックの前後にあるテキストが正しく解釈される",
+  "fn": "parse",
+  "input": "abc\n\\[math1\\]\n123",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "abc"
+    }
+   },
+   {
+    "type": "mathBlock",
+    "props": {
+     "formula": "math1"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "123"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mathBlock > 行末以外に閉じタグがある場合はマッチしない",
+  "fn": "parse",
+  "input": "\\[aaa\\]after",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "\\[aaa\\]after"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mathBlock > 行頭以外に開始タグがある場合はマッチしない",
+  "fn": "parse",
+  "input": "before\\[aaa\\]",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before\\[aaa\\]"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > center > single text",
+  "fn": "parse",
+  "input": "<center>abc</center>",
+  "opts": null,
+  "output": [
+   {
+    "type": "center",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > center > multiple text",
+  "fn": "parse",
+  "input": "before\n<center>\nabc\n123\n\npiyo\n</center>\nafter",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before"
+    }
+   },
+   {
+    "type": "center",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc\n123\n\npiyo"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "after"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > emoji code > basic",
+  "fn": "parse",
+  "input": ":abc:",
+  "opts": null,
+  "output": [
+   {
+    "type": "emojiCode",
+    "props": {
+     "name": "abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > unicode emoji > basic",
+  "fn": "parse",
+  "input": "今起きた😇",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "今起きた"
+    }
+   },
+   {
+    "type": "unicodeEmoji",
+    "props": {
+     "emoji": "😇"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > unicode emoji > keycap number sign",
+  "fn": "parse",
+  "input": "abc#️⃣123",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "abc"
+    }
+   },
+   {
+    "type": "unicodeEmoji",
+    "props": {
+     "emoji": "#️⃣"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "123"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > big > basic",
+  "fn": "parse",
+  "input": "***abc***",
+  "opts": null,
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "tada",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > big > 内容にはインライン構文を利用できる",
+  "fn": "parse",
+  "input": "***123**abc**123***",
+  "opts": null,
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "tada",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "123"
+      }
+     },
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "abc"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "123"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > big > 内容は改行できる",
+  "fn": "parse",
+  "input": "***123\n**abc**\n123***",
+  "opts": null,
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "tada",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "123\n"
+      }
+     },
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "abc"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "\n123"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > bold tag > basic",
+  "fn": "parse",
+  "input": "<b>abc</b>",
+  "opts": null,
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > bold tag > inline syntax allowed inside",
+  "fn": "parse",
+  "input": "<b>123~~abc~~123</b>",
+  "opts": null,
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "123"
+      }
+     },
+     {
+      "type": "strike",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "abc"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "123"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > bold tag > line breaks",
+  "fn": "parse",
+  "input": "<b>123\n~~abc~~\n123</b>",
+  "opts": null,
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "123\n"
+      }
+     },
+     {
+      "type": "strike",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "abc"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "\n123"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > bold > basic",
+  "fn": "parse",
+  "input": "**abc**",
+  "opts": null,
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > bold > 内容にはインライン構文を利用できる",
+  "fn": "parse",
+  "input": "**123~~abc~~123**",
+  "opts": null,
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "123"
+      }
+     },
+     {
+      "type": "strike",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "abc"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "123"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > bold > 内容は改行できる",
+  "fn": "parse",
+  "input": "**123\n~~abc~~\n123**",
+  "opts": null,
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "123\n"
+      }
+     },
+     {
+      "type": "strike",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "abc"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "\n123"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > small > basic",
+  "fn": "parse",
+  "input": "<small>abc</small>",
+  "opts": null,
+  "output": [
+   {
+    "type": "small",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > small > 内容にはインライン構文を利用できる",
+  "fn": "parse",
+  "input": "<small>abc**123**abc</small>",
+  "opts": null,
+  "output": [
+   {
+    "type": "small",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     },
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "123"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > small > 内容は改行できる",
+  "fn": "parse",
+  "input": "<small>abc\n**123**\nabc</small>",
+  "opts": null,
+  "output": [
+   {
+    "type": "small",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc\n"
+      }
+     },
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "123"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "\nabc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > italic tag > basic",
+  "fn": "parse",
+  "input": "<i>abc</i>",
+  "opts": null,
+  "output": [
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > italic tag > 内容にはインライン構文を利用できる",
+  "fn": "parse",
+  "input": "<i>abc**123**abc</i>",
+  "opts": null,
+  "output": [
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     },
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "123"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > italic tag > 内容は改行できる",
+  "fn": "parse",
+  "input": "<i>abc\n**123**\nabc</i>",
+  "opts": null,
+  "output": [
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc\n"
+      }
+     },
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "123"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "\nabc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > italic alt 1 > basic",
+  "fn": "parse",
+  "input": "*abc*",
+  "opts": null,
+  "output": [
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > italic alt 1 > basic 2",
+  "fn": "parse",
+  "input": "before *abc* after",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before "
+    }
+   },
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " after"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > italic alt 1 > ignore a italic syntax if the before char is neither a space nor an LF nor [^a-z0-9]i",
+  "fn": "parse",
+  "input": "before*abc*after",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before*abc*after"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > italic alt 1 > ignore a italic syntax if the before char is neither a space nor an LF nor [^a-z0-9]i",
+  "fn": "parse",
+  "input": "あいう*abc*えお",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "あいう"
+    }
+   },
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "えお"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > italic alt 2 > basic",
+  "fn": "parse",
+  "input": "_abc_",
+  "opts": null,
+  "output": [
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > italic alt 2 > basic 2",
+  "fn": "parse",
+  "input": "before _abc_ after",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before "
+    }
+   },
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " after"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > italic alt 2 > ignore a italic syntax if the before char is neither a space nor an LF nor [^a-z0-9]i",
+  "fn": "parse",
+  "input": "before_abc_after",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before_abc_after"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > italic alt 2 > ignore a italic syntax if the before char is neither a space nor an LF nor [^a-z0-9]i",
+  "fn": "parse",
+  "input": "あいう_abc_えお",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "あいう"
+    }
+   },
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "えお"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > strike tag > basic",
+  "fn": "parse",
+  "input": "<s>foo</s>",
+  "opts": null,
+  "output": [
+   {
+    "type": "strike",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "foo"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > strike > basic",
+  "fn": "parse",
+  "input": "~~foo~~",
+  "opts": null,
+  "output": [
+   {
+    "type": "strike",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "foo"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > inlineCode > basic",
+  "fn": "parse",
+  "input": "`var x = \"Strawberry Pasta\";`",
+  "opts": null,
+  "output": [
+   {
+    "type": "inlineCode",
+    "props": {
+     "code": "var x = \"Strawberry Pasta\";"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > inlineCode > disallow line break",
+  "fn": "parse",
+  "input": "`foo\nbar`",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "`foo\nbar`"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > inlineCode > disallow ´",
+  "fn": "parse",
+  "input": "`foo´bar`",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "`foo´bar`"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mathInline > basic",
+  "fn": "parse",
+  "input": "\\(x = {-b \\pm \\sqrt{b^2-4ac} \\over 2a}\\)",
+  "opts": null,
+  "output": [
+   {
+    "type": "mathInline",
+    "props": {
+     "formula": "x = {-b \\pm \\sqrt{b^2-4ac} \\over 2a}"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > basic",
+  "fn": "parse",
+  "input": "@abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "mention",
+    "props": {
+     "username": "abc",
+     "host": null,
+     "acct": "@abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > basic 2",
+  "fn": "parse",
+  "input": "before @abc after",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before "
+    }
+   },
+   {
+    "type": "mention",
+    "props": {
+     "username": "abc",
+     "host": null,
+     "acct": "@abc"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " after"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > basic remote",
+  "fn": "parse",
+  "input": "@abc@misskey.io",
+  "opts": null,
+  "output": [
+   {
+    "type": "mention",
+    "props": {
+     "username": "abc",
+     "host": "misskey.io",
+     "acct": "@abc@misskey.io"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > basic remote 2",
+  "fn": "parse",
+  "input": "before @abc@misskey.io after",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before "
+    }
+   },
+   {
+    "type": "mention",
+    "props": {
+     "username": "abc",
+     "host": "misskey.io",
+     "acct": "@abc@misskey.io"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " after"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > basic remote 3",
+  "fn": "parse",
+  "input": "before\n@abc@misskey.io\nafter",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before\n"
+    }
+   },
+   {
+    "type": "mention",
+    "props": {
+     "username": "abc",
+     "host": "misskey.io",
+     "acct": "@abc@misskey.io"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "\nafter"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > ignore format of mail address",
+  "fn": "parse",
+  "input": "abc@example.com",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "abc@example.com"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > detect as a mention if the before char is [^a-z0-9]i",
+  "fn": "parse",
+  "input": "あいう@abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "あいう"
+    }
+   },
+   {
+    "type": "mention",
+    "props": {
+     "username": "abc",
+     "host": null,
+     "acct": "@abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > invalid char only username",
+  "fn": "parse",
+  "input": "@-",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "@-"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > invalid char only hostname",
+  "fn": "parse",
+  "input": "@abc@.",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "@abc@."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > allow \"-\" in username",
+  "fn": "parse",
+  "input": "@abc-d",
+  "opts": null,
+  "output": [
+   {
+    "type": "mention",
+    "props": {
+     "username": "abc-d",
+     "host": null,
+     "acct": "@abc-d"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > allow \".\" in username",
+  "fn": "parse",
+  "input": "@bsky.brid.gy@bsky.brid.gy",
+  "opts": null,
+  "output": [
+   {
+    "type": "mention",
+    "props": {
+     "username": "bsky.brid.gy",
+     "host": "bsky.brid.gy",
+     "acct": "@bsky.brid.gy@bsky.brid.gy"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > disallow \"-\" in head of username",
+  "fn": "parse",
+  "input": "@-abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "@-abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > disallow \"-\" in tail of username",
+  "fn": "parse",
+  "input": "@abc-",
+  "opts": null,
+  "output": [
+   {
+    "type": "mention",
+    "props": {
+     "username": "abc",
+     "host": null,
+     "acct": "@abc"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "-"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > disallow \".\" in head of username",
+  "fn": "parse",
+  "input": "@.abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "@.abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > disallow \".\" in tail of username",
+  "fn": "parse",
+  "input": "@abc.",
+  "opts": null,
+  "output": [
+   {
+    "type": "mention",
+    "props": {
+     "username": "abc",
+     "host": null,
+     "acct": "@abc"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > disallow \".\" in head of hostname",
+  "fn": "parse",
+  "input": "@abc@.aaa",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "@abc@.aaa"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > disallow \".\" in tail of hostname",
+  "fn": "parse",
+  "input": "@abc@aaa.",
+  "opts": null,
+  "output": [
+   {
+    "type": "mention",
+    "props": {
+     "username": "abc",
+     "host": "aaa",
+     "acct": "@abc@aaa"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > disallow \"-\" in head of hostname",
+  "fn": "parse",
+  "input": "@abc@-aaa",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "@abc@-aaa"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > mention > disallow \"-\" in tail of hostname",
+  "fn": "parse",
+  "input": "@abc@aaa-",
+  "opts": null,
+  "output": [
+   {
+    "type": "mention",
+    "props": {
+     "username": "abc",
+     "host": "aaa",
+     "acct": "@abc@aaa"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "-"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > basic",
+  "fn": "parse",
+  "input": "#abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > basic 2",
+  "fn": "parse",
+  "input": "before #abc after",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before "
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "abc"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " after"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > with keycap number sign",
+  "fn": "parse",
+  "input": "#️⃣abc123 #abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "unicodeEmoji",
+    "props": {
+     "emoji": "#️⃣"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "abc123 "
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > with keycap number sign 2",
+  "fn": "parse",
+  "input": "abc\n#️⃣abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "abc\n"
+    }
+   },
+   {
+    "type": "unicodeEmoji",
+    "props": {
+     "emoji": "#️⃣"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > ignore a hashtag if the before char is neither a space nor an LF nor [^a-z0-9]i",
+  "fn": "parse",
+  "input": "abc#abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "abc#abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > ignore a hashtag if the before char is neither a space nor an LF nor [^a-z0-9]i",
+  "fn": "parse",
+  "input": "あいう#abc",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "あいう"
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "abc"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > ignore comma and period",
+  "fn": "parse",
+  "input": "Foo #bar, baz #piyo.",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "Foo "
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "bar"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": ", baz "
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "piyo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > ignore exclamation mark",
+  "fn": "parse",
+  "input": "#Foo!",
+  "opts": null,
+  "output": [
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "Foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "!"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > ignore colon",
+  "fn": "parse",
+  "input": "#Foo:",
+  "opts": null,
+  "output": [
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "Foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": ":"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > ignore single quote",
+  "fn": "parse",
+  "input": "#Foo'",
+  "opts": null,
+  "output": [
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "Foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "'"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > ignore double quote",
+  "fn": "parse",
+  "input": "#Foo\"",
+  "opts": null,
+  "output": [
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "Foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "\""
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > ignore square bracket",
+  "fn": "parse",
+  "input": "#Foo]",
+  "opts": null,
+  "output": [
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "Foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "]"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > ignore slash",
+  "fn": "parse",
+  "input": "#foo/bar",
+  "opts": null,
+  "output": [
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "/bar"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > ignore angle bracket",
+  "fn": "parse",
+  "input": "#foo<bar>",
+  "opts": null,
+  "output": [
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "<bar>"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > allow including number",
+  "fn": "parse",
+  "input": "#foo123",
+  "opts": null,
+  "output": [
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "foo123"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > with brackets \"()\"",
+  "fn": "parse",
+  "input": "(#foo)",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "("
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": ")"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > with brackets \"「」\"",
+  "fn": "parse",
+  "input": "「#foo」",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "「"
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "」"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > with mixed brackets",
+  "fn": "parse",
+  "input": "「#foo(bar)」",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "「"
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "foo(bar)"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "」"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > with brackets \"()\" (space before)",
+  "fn": "parse",
+  "input": "(bar #foo)",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "(bar "
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": ")"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > with brackets \"「」\" (space before)",
+  "fn": "parse",
+  "input": "「bar #foo」",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "「bar "
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "」"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > disallow number only",
+  "fn": "parse",
+  "input": "#123",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "#123"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > hashtag > disallow number only (with brackets)",
+  "fn": "parse",
+  "input": "(#123)",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "(#123)"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > basic",
+  "fn": "parse",
+  "input": "https://misskey.io/@ai",
+  "opts": null,
+  "output": [
+   {
+    "type": "url",
+    "props": {
+     "url": "https://misskey.io/@ai"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > with other texts",
+  "fn": "parse",
+  "input": "official instance: https://misskey.io/@ai.",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "official instance: "
+    }
+   },
+   {
+    "type": "url",
+    "props": {
+     "url": "https://misskey.io/@ai"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > ignore trailing period",
+  "fn": "parse",
+  "input": "https://misskey.io/@ai.",
+  "opts": null,
+  "output": [
+   {
+    "type": "url",
+    "props": {
+     "url": "https://misskey.io/@ai"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > disallow period only",
+  "fn": "parse",
+  "input": "https://.",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "https://."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > ignore trailing periods",
+  "fn": "parse",
+  "input": "https://misskey.io/@ai...",
+  "opts": null,
+  "output": [
+   {
+    "type": "url",
+    "props": {
+     "url": "https://misskey.io/@ai"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "..."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > with comma",
+  "fn": "parse",
+  "input": "https://example.com/foo?bar=a,b",
+  "opts": null,
+  "output": [
+   {
+    "type": "url",
+    "props": {
+     "url": "https://example.com/foo?bar=a,b"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > ignore trailing comma",
+  "fn": "parse",
+  "input": "https://example.com/foo, bar",
+  "opts": null,
+  "output": [
+   {
+    "type": "url",
+    "props": {
+     "url": "https://example.com/foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": ", bar"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > with brackets",
+  "fn": "parse",
+  "input": "https://example.com/foo(bar)",
+  "opts": null,
+  "output": [
+   {
+    "type": "url",
+    "props": {
+     "url": "https://example.com/foo(bar)"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > ignore parent brackets",
+  "fn": "parse",
+  "input": "(https://example.com/foo)",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "("
+    }
+   },
+   {
+    "type": "url",
+    "props": {
+     "url": "https://example.com/foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": ")"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > ignore parent brackets (2)",
+  "fn": "parse",
+  "input": "(foo https://example.com/foo)",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "(foo "
+    }
+   },
+   {
+    "type": "url",
+    "props": {
+     "url": "https://example.com/foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": ")"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > ignore parent brackets with internal brackets",
+  "fn": "parse",
+  "input": "(https://example.com/foo(bar))",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "("
+    }
+   },
+   {
+    "type": "url",
+    "props": {
+     "url": "https://example.com/foo(bar)"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": ")"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > ignore parent []",
+  "fn": "parse",
+  "input": "foo [https://example.com/foo] bar",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "foo ["
+    }
+   },
+   {
+    "type": "url",
+    "props": {
+     "url": "https://example.com/foo"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "] bar"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > ignore non-ascii characters contained url without angle brackets",
+  "fn": "parse",
+  "input": "https://大石泉すき.example.com",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "https://大石泉すき.example.com"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > match non-ascii characters contained url with angle brackets",
+  "fn": "parse",
+  "input": "<https://大石泉すき.example.com>",
+  "opts": null,
+  "output": [
+   {
+    "type": "url",
+    "props": {
+     "url": "https://大石泉すき.example.com",
+     "brackets": true
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > url > prevent xss",
+  "fn": "parse",
+  "input": "javascript:foo",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "javascript:foo"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > basic",
+  "fn": "parse",
+  "input": "[official instance](https://misskey.io/@ai).",
+  "opts": null,
+  "output": [
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://misskey.io/@ai"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "official instance"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > silent flag",
+  "fn": "parse",
+  "input": "?[official instance](https://misskey.io/@ai).",
+  "opts": null,
+  "output": [
+   {
+    "type": "link",
+    "props": {
+     "silent": true,
+     "url": "https://misskey.io/@ai"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "official instance"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > with angle brackets url",
+  "fn": "parse",
+  "input": "[official instance](<https://misskey.io/@ai>).",
+  "opts": null,
+  "output": [
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://misskey.io/@ai"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "official instance"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > prevent xss",
+  "fn": "parse",
+  "input": "[click here](javascript:foo)",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "[click here](javascript:foo)"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > cannot nest a url in a link label > basic",
+  "fn": "parse",
+  "input": "official instance: [https://misskey.io/@ai](https://misskey.io/@ai).",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "official instance: "
+    }
+   },
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://misskey.io/@ai"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "https://misskey.io/@ai"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > cannot nest a url in a link label > nested",
+  "fn": "parse",
+  "input": "official instance: [https://misskey.io/@ai**https://misskey.io/@ai**](https://misskey.io/@ai).",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "official instance: "
+    }
+   },
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://misskey.io/@ai"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "https://misskey.io/@ai"
+      }
+     },
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "https://misskey.io/@ai"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > cannot nest a link in a link label > basic",
+  "fn": "parse",
+  "input": "official instance: [[https://misskey.io/@ai](https://misskey.io/@ai)](https://misskey.io/@ai).",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "official instance: "
+    }
+   },
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://misskey.io/@ai"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "[https://misskey.io/@ai"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "]("
+    }
+   },
+   {
+    "type": "url",
+    "props": {
+     "url": "https://misskey.io/@ai"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": ")."
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > cannot nest a mention in a link label > basic",
+  "fn": "parse",
+  "input": "[@example](https://example.com)",
+  "opts": null,
+  "output": [
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://example.com"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "@example"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > cannot nest a mention in a link label > nested",
+  "fn": "parse",
+  "input": "[@example**@example**](https://example.com)",
+  "opts": null,
+  "output": [
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://example.com"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "@example"
+      }
+     },
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "@example"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > with brackets",
+  "fn": "parse",
+  "input": "[foo](https://example.com/foo(bar))",
+  "opts": null,
+  "output": [
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://example.com/foo(bar)"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "foo"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > with parent brackets",
+  "fn": "parse",
+  "input": "([foo](https://example.com/foo(bar)))",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "("
+    }
+   },
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://example.com/foo(bar)"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "foo"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": ")"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > with brackets before",
+  "fn": "parse",
+  "input": "[test] foo [bar](https://example.com)",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "[test] foo "
+    }
+   },
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://example.com"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "bar"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > bad url in url part",
+  "fn": "parse",
+  "input": "[test](http://..)",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "[test](http://..)"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > with unclosed brackets before",
+  "fn": "parse",
+  "input": "[[[foo] [bar](https://example.com)",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "[[[foo] "
+    }
+   },
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://example.com"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "bar"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > with unclosed brackets in label",
+  "fn": "parse",
+  "input": "[[[foo](https://example.com)",
+  "opts": null,
+  "output": [
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://example.com"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "[[foo"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > with unclosed brackets in previous line",
+  "fn": "parse",
+  "input": "[[foo\n?[[bar](https://example.com)",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "[[foo\n"
+    }
+   },
+   {
+    "type": "link",
+    "props": {
+     "silent": true,
+     "url": "https://example.com"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "[bar"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > link > with unclosed brackets in bold",
+  "fn": "parse",
+  "input": "**[[foo** [[bar** **[baz](https://example.com)**",
+  "opts": null,
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "[[foo"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://example.com"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "[bar"
+      }
+     },
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": " "
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "[baz"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "**"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > fn > basic",
+  "fn": "parse",
+  "input": "$[tada abc]",
+  "opts": null,
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "tada",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > fn > with a string argument",
+  "fn": "parse",
+  "input": "$[spin.speed=1.1s a]",
+  "opts": null,
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "spin",
+     "args": {
+      "speed": "1.1s"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "a"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > fn > with a string argument 2",
+  "fn": "parse",
+  "input": "$[position.x=-3 a]",
+  "opts": null,
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "position",
+     "args": {
+      "x": "-3"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "a"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > fn > invalid fn name",
+  "fn": "parse",
+  "input": "$[関数 text]",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "$[関数 text]"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > fn > nest",
+  "fn": "parse",
+  "input": "$[spin.speed=1.1s $[shake a]]",
+  "opts": null,
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "spin",
+     "args": {
+      "speed": "1.1s"
+     }
+    },
+    "children": [
+     {
+      "type": "fn",
+      "props": {
+       "name": "shake",
+       "args": {}
+      },
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "a"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > plain > multiple line",
+  "fn": "parse",
+  "input": "a\n<plain>\n**Hello**\nworld\n</plain>\nb",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "a\n"
+    }
+   },
+   {
+    "type": "plain",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "**Hello**\nworld"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "\nb"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > plain > single line",
+  "fn": "parse",
+  "input": "a\n<plain>**Hello** world</plain>\nb",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "a\n"
+    }
+   },
+   {
+    "type": "plain",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "**Hello** world"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "\nb"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > quote > basic",
+  "fn": "parse",
+  "input": ">>> abc",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "quote",
+    "children": [
+     {
+      "type": "quote",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "> abc"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > quote > basic 2",
+  "fn": "parse",
+  "input": ">> **abc**",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "quote",
+    "children": [
+     {
+      "type": "quote",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "**abc**"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > big",
+  "fn": "parse",
+  "input": "<b><b>***abc***</b></b>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "***abc***"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > bold > basic",
+  "fn": "parse",
+  "input": "<i><i>**abc**</i></i>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "italic",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "**abc**"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > bold > tag",
+  "fn": "parse",
+  "input": "<i><i><b>abc</b></i></i>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "italic",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "<b>abc</b>"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > small",
+  "fn": "parse",
+  "input": "<i><i><small>abc</small></i></i>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "italic",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "<small>abc</small>"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > italic",
+  "fn": "parse",
+  "input": "<b><b><i>abc</i></b></b>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "<i>abc</i>"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > strike > basic",
+  "fn": "parse",
+  "input": "<b><b>~~abc~~</b></b>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "~~abc~~"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > strike > tag",
+  "fn": "parse",
+  "input": "<b><b><s>abc</s></b></b>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "<s>abc</s>"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > hashtag > basic",
+  "fn": "parse",
+  "input": "<b>#abc(xyz)</b>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "hashtag",
+      "props": {
+       "hashtag": "abc(xyz)"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > hashtag > basic",
+  "fn": "parse",
+  "input": "<b>#abc(x(y)z)</b>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "hashtag",
+      "props": {
+       "hashtag": "abc"
+      }
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "(x(y)z)"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > hashtag > outside \"()\"",
+  "fn": "parse",
+  "input": "(#abc)",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "("
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "abc"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": ")"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > hashtag > outside \"[]\"",
+  "fn": "parse",
+  "input": "[#abc]",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "["
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "abc"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "]"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > hashtag > outside \"「」\"",
+  "fn": "parse",
+  "input": "「#abc」",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "「"
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "abc"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "」"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > hashtag > outside \"（）\"",
+  "fn": "parse",
+  "input": "（#abc）",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "（"
+    }
+   },
+   {
+    "type": "hashtag",
+    "props": {
+     "hashtag": "abc"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "）"
+    }
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > url",
+  "fn": "parse",
+  "input": "<b>https://example.com/abc(xyz)</b>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "url",
+      "props": {
+       "url": "https://example.com/abc(xyz)"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > url",
+  "fn": "parse",
+  "input": "<b>https://example.com/abc(x(y)z)</b>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "url",
+      "props": {
+       "url": "https://example.com/abc"
+      }
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "(x(y)z)"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > nesting limit > fn",
+  "fn": "parse",
+  "input": "<b><b>$[a b]</b></b>",
+  "opts": {
+   "nestLimit": 2
+  },
+  "output": [
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "$[a b]"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "FullParser > composite",
+  "fn": "parse",
+  "input": "before\n<center>\nHello $[tada everynyan! 🎉]\n\nI'm @ai, A bot of misskey!\n\nhttps://github.com/syuilo/ai\n</center>\nafter",
+  "opts": null,
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before"
+    }
+   },
+   {
+    "type": "center",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "Hello "
+      }
+     },
+     {
+      "type": "fn",
+      "props": {
+       "name": "tada",
+       "args": {}
+      },
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "everynyan! "
+        }
+       },
+       {
+        "type": "unicodeEmoji",
+        "props": {
+         "emoji": "🎉"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "\n\nI'm "
+      }
+     },
+     {
+      "type": "mention",
+      "props": {
+       "username": "ai",
+       "host": null,
+       "acct": "@ai"
+      }
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": ", A bot of misskey!\n\n"
+      }
+     },
+     {
+      "type": "url",
+      "props": {
+       "url": "https://github.com/syuilo/ai"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "after"
+    }
+   }
+  ]
+ }
+]

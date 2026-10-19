@@ -21,9 +21,11 @@ void main() {
   });
 
   group('MFM markdown', () {
-    test('inline: *italic* / ~~strike~~ / `code` / [text](url)', () {
-      final spans = InlineSpans.parse(r'*斜体* ~~消し~~ `x = 1` [リンク](https://example.com/a)');
+    test('inline: <i>italic</i> / ~~strike~~ / `code` / [text](url)(mfm.js: `*…*` は英数字と空白だけ)', () {
+      final spans = InlineSpans.parse(r'<i>斜体</i> ~~消し~~ `x = 1` [リンク](https://example.com/a)');
       expect((spans[0] as RasqTextSpan).italic, isTrue);
+      expect((InlineSpans.parse('*abc*').single as RasqTextSpan).italic, isTrue);
+      expect((InlineSpans.parse('*斜体*').single as RasqTextSpan).italic, isFalse);
       expect(spans.whereType<RasqTextSpan>().where((s) => s.strike).single.text, '消し');
       expect(spans.whereType<RasqTextSpan>().where((s) => s.code).single.text, 'x = 1');
       final link = spans.whereType<RasqLinkSpan>().single;
@@ -31,14 +33,15 @@ void main() {
       expect(link.url.toString(), 'https://example.com/a');
     });
 
-    test('tags: <b> <s> <small> <plain> <center>', () {
-      final spans = InlineSpans.parse('<b>太い</b><s>消す</s><small>小さい</small><plain>**そのまま** :emoji:</plain><center>中央</center>');
+    test('tags: <b> <s> <small> <plain> <center>(center は行頭のブロック)', () {
+      final spans = InlineSpans.parse('<b>太い</b><s>消す</s><small>小さい</small><plain>**そのまま** :emoji:</plain>\n<center>中央</center>');
       expect((spans[0] as RasqTextSpan).bold, isTrue);
       expect((spans[1] as RasqTextSpan).strike, isTrue);
-      expect((spans[2] as RasqTextSpan).small, isTrue);
+      expect((spans[2] as RasqTransformSpan).fn, 'small');
       expect((spans[3] as RasqTextSpan).text, '**そのまま** :emoji:'); // plain は未解析
       final center = spans[4] as RasqTransformSpan;
       expect(center.fn, 'center');
+      expect(InlineSpans.parse('a<center>行の途中</center>').whereType<RasqTransformSpan>(), isEmpty);
     });
 
     test('blocks: ```code``` と > 引用(連続行を束ね、中はインライン解析)', () {
@@ -83,9 +86,11 @@ void main() {
   });
 
   test('**bold** marks nested text spans bold', () {
-    final spans = InlineSpans.parse('a **太字 #tag** b');
+    final spans = InlineSpans.parse('a **太字 #tag ** b');
     expect((spans[1] as RasqTextSpan).bold, isTrue);
     expect(spans.whereType<RasqHashtagSpan>().single.tag, 'tag');
     expect((spans.last as RasqTextSpan).text, ' b');
+    // mfm.js: ハッシュタグは `*` も含むので `#tag**` は閉じの `**` を食べ、太字にならない(全体が文字)。
+    expect(InlineSpans.parse('a **太字 #tag** b').single, isA<RasqTextSpan>());
   });
 }

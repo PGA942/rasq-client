@@ -3028,6 +3028,144 @@ abstract class AppLocalizations {
   /// **'装飾を無効化'**
   String get composeMfmFnPlain;
 
+  /// MFM の関数 font の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'書体を変える'**
+  String get composeMfmFnFont;
+
+  /// MFM の関数 font のプロパティー serif の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'明朝体(serif)'**
+  String get composeMfmPropFontSerif;
+
+  /// MFM の関数 font のプロパティー monospace の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'等幅(monospace)'**
+  String get composeMfmPropFontMonospace;
+
+  /// MFM の関数 font のプロパティー cursive の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'筆記体(cursive)'**
+  String get composeMfmPropFontCursive;
+
+  /// MFM の関数 font のプロパティー fantasy の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'装飾体(fantasy)'**
+  String get composeMfmPropFontFantasy;
+
+  /// MFM の関数 position の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'位置をずらす'**
+  String get composeMfmFnPosition;
+
+  /// MFM の関数 position のプロパティー x の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'横(文字の大きさ単位、例: 0.5)'**
+  String get composeMfmPropPositionX;
+
+  /// MFM の関数 position のプロパティー y の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'縦(文字の大きさ単位、例: -1)'**
+  String get composeMfmPropPositionY;
+
+  /// MFM の関数 scale の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'拡大・縮小(最大 5 倍)'**
+  String get composeMfmFnScale;
+
+  /// MFM の関数 scale のプロパティー x の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'横の倍率(例: 0.5)'**
+  String get composeMfmPropScaleX;
+
+  /// MFM の関数 scale のプロパティー y の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'縦の倍率(例: 1.5)'**
+  String get composeMfmPropScaleY;
+
+  /// MFM の関数 border の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'枠線'**
+  String get composeMfmFnBorder;
+
+  /// MFM の関数 border のプロパティー style の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'線の種類(solid / dashed / dotted など)'**
+  String get composeMfmPropBorderStyle;
+
+  /// MFM の関数 border のプロパティー width の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'太さ(px、既定 1)'**
+  String get composeMfmPropBorderWidth;
+
+  /// MFM の関数 border のプロパティー color の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'16進(既定はアクセント色)'**
+  String get composeMfmPropBorderColor;
+
+  /// MFM の関数 border のプロパティー radius の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'角の丸み(px)'**
+  String get composeMfmPropBorderRadius;
+
+  /// MFM の関数 border のプロパティー noclip の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'はみ出しを切らない'**
+  String get composeMfmPropBorderNoclip;
+
+  /// MFM の関数 ruby の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'ルビ(「本文 読み」の形で書く)'**
+  String get composeMfmFnRuby;
+
+  /// MFM の関数 ruby のプレビューに入れる見本(本文と読みを半角の空白で区切る)
+  ///
+  /// In ja, this message translates to:
+  /// **'漢字 かんじ'**
+  String get composeMfmSampleRuby;
+
+  /// MFM の関数 unixtime の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'UNIX 時刻(秒)を日時で表示'**
+  String get composeMfmFnUnixtime;
+
+  /// MFM の関数 sparkle の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'きらきら'**
+  String get composeMfmFnSparkle;
+
+  /// MFM のアニメーションの関数のプロパティー delay の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'開始を遅らせる(例: 0.5s)'**
+  String get composeMfmPropDelay;
+
+  /// MFM の検索ブロック(「… 検索」の行)のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'検索'**
+  String get composeMfmSearchButton;
+
   /// Markdown のスニペットの名前
   ///
   /// In ja, this message translates to:

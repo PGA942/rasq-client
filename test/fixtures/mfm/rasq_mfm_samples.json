@@ -1,0 +1,2106 @@
+[
+ {
+  "name": "flower",
+  "input": "<center>$[bounce $[spin.speed=6s $[x2 $[bounce.speed=2s $[twitch.speed=5s $[scale.x=0.5 :ablobblewobble:]\n$[position.y=-1.5 $[rotate.deg=-45 $[scale.x=0.5 :ablobblewobble:]]　$[rotate.deg=45 $[scale.x=0.5 :ablobblewobble:]]]\n$[position.y=-2 $[rotate.deg=-90 $[scale.x=0.5 :ablobblewobble:]]　　$[rotate.deg=90 $[scale.x=0.5 :ablobblewobble:]]]\n$[position.y=-2.5 $[rotate.deg=-135 $[scale.x=0.5 :ablobblewobble:]]　$[rotate.deg=135 $[scale.x=0.5 :ablobblewobble:]]]\n$[position.y=-4 $[rotate.deg=180 $[scale.x=0.5 :ablobblewobble:]]]\n$[position.y=-8 $[spin.left,speed=6s $[scale.x=1.3,y=1.3 $[border.radius=50,width=0 :m_head:]]]]]]]]]\n</center>",
+  "output": [
+   {
+    "type": "center",
+    "children": [
+     {
+      "type": "fn",
+      "props": {
+       "name": "bounce",
+       "args": {}
+      },
+      "children": [
+       {
+        "type": "fn",
+        "props": {
+         "name": "spin",
+         "args": {
+          "speed": "6s"
+         }
+        },
+        "children": [
+         {
+          "type": "fn",
+          "props": {
+           "name": "x2",
+           "args": {}
+          },
+          "children": [
+           {
+            "type": "fn",
+            "props": {
+             "name": "bounce",
+             "args": {
+              "speed": "2s"
+             }
+            },
+            "children": [
+             {
+              "type": "fn",
+              "props": {
+               "name": "twitch",
+               "args": {
+                "speed": "5s"
+               }
+              },
+              "children": [
+               {
+                "type": "fn",
+                "props": {
+                 "name": "scale",
+                 "args": {
+                  "x": "0.5"
+                 }
+                },
+                "children": [
+                 {
+                  "type": "emojiCode",
+                  "props": {
+                   "name": "ablobblewobble"
+                  }
+                 }
+                ]
+               },
+               {
+                "type": "text",
+                "props": {
+                 "text": "\n"
+                }
+               },
+               {
+                "type": "fn",
+                "props": {
+                 "name": "position",
+                 "args": {
+                  "y": "-1.5"
+                 }
+                },
+                "children": [
+                 {
+                  "type": "fn",
+                  "props": {
+                   "name": "rotate",
+                   "args": {
+                    "deg": "-45"
+                   }
+                  },
+                  "children": [
+                   {
+                    "type": "fn",
+                    "props": {
+                     "name": "scale",
+                     "args": {
+                      "x": "0.5"
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "emojiCode",
+                      "props": {
+                       "name": "ablobblewobble"
+                      }
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 {
+                  "type": "text",
+                  "props": {
+                   "text": "　"
+                  }
+                 },
+                 {
+                  "type": "fn",
+                  "props": {
+                   "name": "rotate",
+                   "args": {
+                    "deg": "45"
+                   }
+                  },
+                  "children": [
+                   {
+                    "type": "fn",
+                    "props": {
+                     "name": "scale",
+                     "args": {
+                      "x": "0.5"
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "emojiCode",
+                      "props": {
+                       "name": "ablobblewobble"
+                      }
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "text",
+                "props": {
+                 "text": "\n"
+                }
+               },
+               {
+                "type": "fn",
+                "props": {
+                 "name": "position",
+                 "args": {
+                  "y": "-2"
+                 }
+                },
+                "children": [
+                 {
+                  "type": "fn",
+                  "props": {
+                   "name": "rotate",
+                   "args": {
+                    "deg": "-90"
+                   }
+                  },
+                  "children": [
+                   {
+                    "type": "fn",
+                    "props": {
+                     "name": "scale",
+                     "args": {
+                      "x": "0.5"
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "emojiCode",
+                      "props": {
+                       "name": "ablobblewobble"
+                      }
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 {
+                  "type": "text",
+                  "props": {
+                   "text": "　　"
+                  }
+                 },
+                 {
+                  "type": "fn",
+                  "props": {
+                   "name": "rotate",
+                   "args": {
+                    "deg": "90"
+                   }
+                  },
+                  "children": [
+                   {
+                    "type": "fn",
+                    "props": {
+                     "name": "scale",
+                     "args": {
+                      "x": "0.5"
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "emojiCode",
+                      "props": {
+                       "name": "ablobblewobble"
+                      }
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "text",
+                "props": {
+                 "text": "\n"
+                }
+               },
+               {
+                "type": "fn",
+                "props": {
+                 "name": "position",
+                 "args": {
+                  "y": "-2.5"
+                 }
+                },
+                "children": [
+                 {
+                  "type": "fn",
+                  "props": {
+                   "name": "rotate",
+                   "args": {
+                    "deg": "-135"
+                   }
+                  },
+                  "children": [
+                   {
+                    "type": "fn",
+                    "props": {
+                     "name": "scale",
+                     "args": {
+                      "x": "0.5"
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "emojiCode",
+                      "props": {
+                       "name": "ablobblewobble"
+                      }
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 {
+                  "type": "text",
+                  "props": {
+                   "text": "　"
+                  }
+                 },
+                 {
+                  "type": "fn",
+                  "props": {
+                   "name": "rotate",
+                   "args": {
+                    "deg": "135"
+                   }
+                  },
+                  "children": [
+                   {
+                    "type": "fn",
+                    "props": {
+                     "name": "scale",
+                     "args": {
+                      "x": "0.5"
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "emojiCode",
+                      "props": {
+                       "name": "ablobblewobble"
+                      }
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "text",
+                "props": {
+                 "text": "\n"
+                }
+               },
+               {
+                "type": "fn",
+                "props": {
+                 "name": "position",
+                 "args": {
+                  "y": "-4"
+                 }
+                },
+                "children": [
+                 {
+                  "type": "fn",
+                  "props": {
+                   "name": "rotate",
+                   "args": {
+                    "deg": "180"
+                   }
+                  },
+                  "children": [
+                   {
+                    "type": "fn",
+                    "props": {
+                     "name": "scale",
+                     "args": {
+                      "x": "0.5"
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "emojiCode",
+                      "props": {
+                       "name": "ablobblewobble"
+                      }
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "text",
+                "props": {
+                 "text": "\n"
+                }
+               },
+               {
+                "type": "fn",
+                "props": {
+                 "name": "position",
+                 "args": {
+                  "y": "-8"
+                 }
+                },
+                "children": [
+                 {
+                  "type": "fn",
+                  "props": {
+                   "name": "spin",
+                   "args": {
+                    "left": true,
+                    "speed": "6s"
+                   }
+                  },
+                  "children": [
+                   {
+                    "type": "fn",
+                    "props": {
+                     "name": "scale",
+                     "args": {
+                      "x": "1.3",
+                      "y": "1.3"
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "fn",
+                      "props": {
+                       "name": "border",
+                       "args": {
+                        "radius": "50",
+                        "width": "0"
+                       }
+                      },
+                      "children": [
+                       {
+                        "type": "emojiCode",
+                        "props": {
+                         "name": "m_head"
+                        }
+                       }
+                      ]
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "nested_animations",
+  "input": "$[spin.speed=3s $[position.x=1 $[jump :m_head:]]] $[spin.left,speed=2s $[x2 $[rotate.deg=30 回る]]] $[bounce.delay=-0.3s $[twitch :ablobblewobble:]] $[spin.alternate $[shake ゆれ]] $[spin.x 横軸] $[spin.y,speed=0.5s 縦軸]",
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "spin",
+     "args": {
+      "speed": "3s"
+     }
+    },
+    "children": [
+     {
+      "type": "fn",
+      "props": {
+       "name": "position",
+       "args": {
+        "x": "1"
+       }
+      },
+      "children": [
+       {
+        "type": "fn",
+        "props": {
+         "name": "jump",
+         "args": {}
+        },
+        "children": [
+         {
+          "type": "emojiCode",
+          "props": {
+           "name": "m_head"
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "spin",
+     "args": {
+      "left": true,
+      "speed": "2s"
+     }
+    },
+    "children": [
+     {
+      "type": "fn",
+      "props": {
+       "name": "x2",
+       "args": {}
+      },
+      "children": [
+       {
+        "type": "fn",
+        "props": {
+         "name": "rotate",
+         "args": {
+          "deg": "30"
+         }
+        },
+        "children": [
+         {
+          "type": "text",
+          "props": {
+           "text": "回る"
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "bounce",
+     "args": {
+      "delay": "-0.3s"
+     }
+    },
+    "children": [
+     {
+      "type": "fn",
+      "props": {
+       "name": "twitch",
+       "args": {}
+      },
+      "children": [
+       {
+        "type": "emojiCode",
+        "props": {
+         "name": "ablobblewobble"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "spin",
+     "args": {
+      "alternate": true
+     }
+    },
+    "children": [
+     {
+      "type": "fn",
+      "props": {
+       "name": "shake",
+       "args": {}
+      },
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "ゆれ"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "spin",
+     "args": {
+      "x": true
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "横軸"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "spin",
+     "args": {
+      "y": true,
+      "speed": "0.5s"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "縦軸"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "ruby",
+  "input": "$[ruby 漢字 かんじ] $[ruby $[fg.color=f00 赤] あか] $[ruby **太字** ふとじ] $[x2 $[ruby 大 おお]]",
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "ruby",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "漢字 かんじ"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "ruby",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "fn",
+      "props": {
+       "name": "fg",
+       "args": {
+        "color": "f00"
+       }
+      },
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "赤"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": " あか"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "ruby",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "太字"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": " ふとじ"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "x2",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "fn",
+      "props": {
+       "name": "ruby",
+       "args": {}
+      },
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "大 おお"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "unixtime",
+  "input": "投稿日時: $[unixtime 1700000000] / 不正: $[unixtime abc]",
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "投稿日時: "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "unixtime",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "1700000000"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " / 不正: "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "unixtime",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "abc"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "border",
+  "input": "$[border.style=dashed,width=3,color=f0f,radius=8 枠] $[border.radius=50,width=0 :m_head:] $[border.noclip,width=2 はみ出し$[position.y=-0.8 ↑]] $[border.style=hidden 隠れ枠] $[border 既定の枠]",
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "border",
+     "args": {
+      "style": "dashed",
+      "width": "3",
+      "color": "f0f",
+      "radius": "8"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "枠"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "border",
+     "args": {
+      "radius": "50",
+      "width": "0"
+     }
+    },
+    "children": [
+     {
+      "type": "emojiCode",
+      "props": {
+       "name": "m_head"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "border",
+     "args": {
+      "noclip": true,
+      "width": "2"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "はみ出し"
+      }
+     },
+     {
+      "type": "fn",
+      "props": {
+       "name": "position",
+       "args": {
+        "y": "-0.8"
+       }
+      },
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "↑"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "border",
+     "args": {
+      "style": "hidden"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "隠れ枠"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "border",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "既定の枠"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "fg_bg",
+  "input": "$[fg.color=f00 赤] $[bg.color=ff0 黄背景] $[fg.color=00f $[bg.color=0f0 青と緑]] $[fg.color=xyz 不正な色は赤] $[bg 既定は赤]",
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "fg",
+     "args": {
+      "color": "f00"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "赤"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "bg",
+     "args": {
+      "color": "ff0"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "黄背景"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "fg",
+     "args": {
+      "color": "00f"
+     }
+    },
+    "children": [
+     {
+      "type": "fn",
+      "props": {
+       "name": "bg",
+       "args": {
+        "color": "0f0"
+       }
+      },
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "青と緑"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "fg",
+     "args": {
+      "color": "xyz"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "不正な色は赤"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "bg",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "既定は赤"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "font",
+  "input": "$[font.serif 明朝 Serif] $[font.monospace Mono 0O] $[font.cursive Cursive] $[font.fantasy Fantasy] $[font 書体なし]",
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "font",
+     "args": {
+      "serif": true
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "明朝 Serif"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "font",
+     "args": {
+      "monospace": true
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "Mono 0O"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "font",
+     "args": {
+      "cursive": true
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "Cursive"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "font",
+     "args": {
+      "fantasy": true
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "Fantasy"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "font",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "書体なし"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "flip",
+  "input": "$[flip 左右] $[flip.v 上下] $[flip.h,v 両方] $[flip :ablobblewobble:] $[flip.v :m_head:]",
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "flip",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "左右"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "flip",
+     "args": {
+      "v": true
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "上下"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "flip",
+     "args": {
+      "h": true,
+      "v": true
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "両方"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "flip",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "emojiCode",
+      "props": {
+       "name": "ablobblewobble"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "flip",
+     "args": {
+      "v": true
+     }
+    },
+    "children": [
+     {
+      "type": "emojiCode",
+      "props": {
+       "name": "m_head"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "nested_position_rotate",
+  "input": "$[position.x=2,y=-1 $[rotate.deg=45 $[scale.x=2,y=0.5 :ablobblewobble:]]] $[rotate.deg=-30 $[position.x=1 A]] $[scale.x=10,y=-1 clamp] $[position.x=abc,y=0.5 半分下]",
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "position",
+     "args": {
+      "x": "2",
+      "y": "-1"
+     }
+    },
+    "children": [
+     {
+      "type": "fn",
+      "props": {
+       "name": "rotate",
+       "args": {
+        "deg": "45"
+       }
+      },
+      "children": [
+       {
+        "type": "fn",
+        "props": {
+         "name": "scale",
+         "args": {
+          "x": "2",
+          "y": "0.5"
+         }
+        },
+        "children": [
+         {
+          "type": "emojiCode",
+          "props": {
+           "name": "ablobblewobble"
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "rotate",
+     "args": {
+      "deg": "-30"
+     }
+    },
+    "children": [
+     {
+      "type": "fn",
+      "props": {
+       "name": "position",
+       "args": {
+        "x": "1"
+       }
+      },
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "A"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "scale",
+     "args": {
+      "x": "10",
+      "y": "-1"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "clamp"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "position",
+     "args": {
+      "x": "abc",
+      "y": "0.5"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "半分下"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "zoom",
+  "input": "$[x2 x2 $[x3 x3 $[x4 x4]]] $[x3 :m_head:] $[x4 big]",
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "x2",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "x2 "
+      }
+     },
+     {
+      "type": "fn",
+      "props": {
+       "name": "x3",
+       "args": {}
+      },
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "x3 "
+        }
+       },
+       {
+        "type": "fn",
+        "props": {
+         "name": "x4",
+         "args": {}
+        },
+        "children": [
+         {
+          "type": "text",
+          "props": {
+           "text": "x4"
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "x3",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "emojiCode",
+      "props": {
+       "name": "m_head"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "x4",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "big"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "blocks_and_misc",
+  "input": "before\n<center>中央 **太字** <small>小さい</small></center>\n> 引用 #tag @user@example.com\n\n$[tada じゃーん] ***big*** $[jelly ぷる] $[shake ぶる] $[twitch ぴく] $[rainbow 虹 :m_head:] $[sparkle きら] $[blur ぼかし] $[unknown 知らない] $[clickable.ev=foo 押せる]",
+  "output": [
+   {
+    "type": "text",
+    "props": {
+     "text": "before"
+    }
+   },
+   {
+    "type": "center",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "中央 "
+      }
+     },
+     {
+      "type": "bold",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "太字"
+        }
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": " "
+      }
+     },
+     {
+      "type": "small",
+      "children": [
+       {
+        "type": "text",
+        "props": {
+         "text": "小さい"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "quote",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "引用 "
+      }
+     },
+     {
+      "type": "hashtag",
+      "props": {
+       "hashtag": "tag"
+      }
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": " "
+      }
+     },
+     {
+      "type": "mention",
+      "props": {
+       "username": "user",
+       "host": "example.com",
+       "acct": "@user@example.com"
+      }
+     }
+    ]
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "tada",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "じゃーん"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "tada",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "big"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "jelly",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "ぷる"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "shake",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "ぶる"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "twitch",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "ぴく"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "rainbow",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "虹 "
+      }
+     },
+     {
+      "type": "emojiCode",
+      "props": {
+       "name": "m_head"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "sparkle",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "きら"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "blur",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "ぼかし"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "unknown",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "知らない"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "clickable",
+     "args": {
+      "ev": "foo"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "押せる"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "links_and_search",
+  "input": "?[silent](https://example.com/a) [label :m_head:](https://example.com/b) <https://example.com/c> https://example.com/d.\nMisskey 検索",
+  "output": [
+   {
+    "type": "link",
+    "props": {
+     "silent": true,
+     "url": "https://example.com/a"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "silent"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "link",
+    "props": {
+     "silent": false,
+     "url": "https://example.com/b"
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "label "
+      }
+     },
+     {
+      "type": "emojiCode",
+      "props": {
+       "name": "m_head"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "url",
+    "props": {
+     "url": "https://example.com/c",
+     "brackets": true
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "url",
+    "props": {
+     "url": "https://example.com/d"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "."
+    }
+   },
+   {
+    "type": "search",
+    "props": {
+     "query": "Misskey",
+     "content": "Misskey 検索"
+    }
+   }
+  ]
+ },
+ {
+  "name": "spaces_and_newlines",
+  "input": "$[x2 :m_head:　:m_head:\n　:m_head:]\n$[position.y=-1 上へ]\n下の行",
+  "output": [
+   {
+    "type": "fn",
+    "props": {
+     "name": "x2",
+     "args": {}
+    },
+    "children": [
+     {
+      "type": "emojiCode",
+      "props": {
+       "name": "m_head"
+      }
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "　"
+      }
+     },
+     {
+      "type": "emojiCode",
+      "props": {
+       "name": "m_head"
+      }
+     },
+     {
+      "type": "text",
+      "props": {
+       "text": "\n　"
+      }
+     },
+     {
+      "type": "emojiCode",
+      "props": {
+       "name": "m_head"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "\n"
+    }
+   },
+   {
+    "type": "fn",
+    "props": {
+     "name": "position",
+     "args": {
+      "y": "-1"
+     }
+    },
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "上へ"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": "\n下の行"
+    }
+   }
+  ]
+ },
+ {
+  "name": "math_and_code",
+  "input": "\\(x^2\\) and `code`\n\\[\na+b\n\\]\n```js\nconst a = 1;\n```\n__bold__ *italic* <i>斜体</i> ~~strike~~ <s>s</s> <plain>**plain** :m_head:</plain> 🎉 #️⃣",
+  "output": [
+   {
+    "type": "mathInline",
+    "props": {
+     "formula": "x^2"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " and "
+    }
+   },
+   {
+    "type": "inlineCode",
+    "props": {
+     "code": "code"
+    }
+   },
+   {
+    "type": "mathBlock",
+    "props": {
+     "formula": "a+b"
+    }
+   },
+   {
+    "type": "blockCode",
+    "props": {
+     "code": "const a = 1;",
+     "lang": "js"
+    }
+   },
+   {
+    "type": "bold",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "bold"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "italic"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "italic",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "斜体"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "strike",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "strike"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "strike",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "s"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "plain",
+    "children": [
+     {
+      "type": "text",
+      "props": {
+       "text": "**plain** :m_head:"
+      }
+     }
+    ]
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "unicodeEmoji",
+    "props": {
+     "emoji": "🎉"
+    }
+   },
+   {
+    "type": "text",
+    "props": {
+     "text": " "
+    }
+   },
+   {
+    "type": "unicodeEmoji",
+    "props": {
+     "emoji": "#️⃣"
+    }
+   }
+  ]
+ }
+]

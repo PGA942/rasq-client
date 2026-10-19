@@ -1,33 +1,34 @@
 import 'package:rasq_design/rasq_design.dart';
 
-/// Inline parser for MFM / plain text → RSL spans.
+import '../l10n/l10n.dart';
+import 'mfm/mfm_node.dart';
+import 'mfm/mfm_parser.dart';
+
+/// MFM / プレーンテキスト → RSL スパン。
 ///
-/// - リーフ: URL / @mention(@user@host) / #hashtag / :custom_emoji:(`:name@host:`
-///   はローカルキャッシュの `name` にフォールバック)
-/// - マークダウン: `**太字**` `*斜体*` `~~打ち消し~~` `` `コード` `` ```コードブロック```
-///   `[テキスト](URL)` 行頭の `> 引用`
-/// - タグ: `<b> <i> <s> <small> <center> <plain>`(plain は中身を解析しない)
-/// - MFM 関数: `$[fn.args …]`(入れ子可)→ [RasqTransformSpan]
-/// - HTML 風の MFM(`htmlFns: true` のときだけ、D-446 の RASQ の Markdown ページ): `<spin speed="1s">…</spin>` / `<x2>` / `<fg color="f00">` /
-///   `<flip h v>` / `<rotate deg="30">` …(MFM の関数名をタグに、引数を属性に)、`<ruby>本<rt>ほん</rt></ruby>`。入れ子可。
-///
-/// 引用・コードブロックも transform スパン(`quote` / `code_block`)として
-/// 持ち、`RasqMfmTransform` が描画する。
+/// 解析は mfm.js の移植([Mfm.parse]、D-509)。木は mfm.js と同じで、ここでは Misskey の描画(MkMfm /
+/// frontend-shared の mfm-renderer)と同じ意味のスパンに置き換える:
+/// - リーフ: URL(`<https://…>` も)/ @mention / #hashtag / :custom_emoji:(`:name@host:` はローカルキャッシュの
+///   `name` にフォールバック)/ Unicode の絵文字(文字のまま)
+/// - 装飾: `**太字**` `<b>` / `<i>` `*abc*` `_abc_` / `~~打ち消し~~` `<s>` / `` `コード` `` / `\(数式\)`(コード)/
+///   `<small>`(`small`)/ `<plain>`(解析しない)/ `[ラベル](URL)` `?[ラベル](URL)`
+/// - ブロック(行頭): `<center>`(`center`)/ `> 引用`(`quote`)/ ```` ``` ````(`code_block`)/ `\[数式\]`(コード)/
+///   `… 検索`(`search`)
+/// - MFM 関数 `$[fn.args …]`(入れ子可)→ [RasqTransformSpan]。Misskey が知らない関数は Misskey と同じく
+///   `$[name 中身]` を文字のまま出す。`***大きく***` は `tada`。`ruby` / `unixtime` は Misskey と同じ読み方で引数にする。
+/// - HTML 風の MFM(`htmlFns: true` のときだけ、D-446 の RASQ の Markdown ページ): `<spin speed="1s">…</spin>` / `<x2>` /
+///   `<fg color="f00">` / `<flip h v>` / `<rotate deg="30">` …(MFM の関数名をタグに、引数を属性に)、`<ruby>本<rt>ほん</rt></ruby>`。
 abstract final class InlineSpans {
-  static final _token = RegExp(
-    r'(https?://[^\s<>"　]+)|(?<![\w@.])@([A-Za-z0-9_.-]+)(@[A-Za-z0-9.-]+)?|(?<![\w#])#([^\s#＃]+)|:([A-Za-z0-9_+-]+(?:@[A-Za-z0-9.-]+)?):',
-    unicode: true,
-  );
   static final _emojiToken = RegExp(r':([A-Za-z0-9_+-]+)(@[A-Za-z0-9.-]+)?:');
-  static final _mfmOpen = RegExp(r'\$\[([a-zA-Z][a-zA-Z0-9_]*)((?:\.[a-zA-Z0-9_.,=\-]+)?)\s');
-  static final _mdLink = RegExp(r'^\[([^\[\]]+)\]\((https?://[^\s)]+)\)');
-  static final _htmlTag = RegExp(r'^<(b|i|s|small|center|plain)>');
 
-  /// HTML 風の MFM の開きタグ(`<spin speed="1s" left>`)。
-  static final _htmlFnOpen = RegExp(r'^<([a-z][a-z0-9]*)((?:\s+[a-z][a-z0-9]*(?:="[^"<>]*")?)*)\s*>');
+  /// HTML 風に書ける MFM の関数(`<b>` などの mfm.js のタグは除く)。
+  static const htmlFnTags = mfmHtmlFnTags;
 
-  /// HTML 風に書ける MFM の関数(`<b>` などの既存のタグは除く)。
-  static const htmlFnTags = {'x2', 'x3', 'x4', 'blur', 'rotate', 'flip', 'fg', 'bg', 'shake', 'spin', 'jump', 'bounce', 'rainbow', 'twitch', 'jelly', 'tada', 'ruby'};
+  /// Misskey の描画が知っている MFM 関数(これ以外は `$[name 中身]` を文字のまま)。
+  static const misskeyFns = {
+    'tada', 'jelly', 'twitch', 'shake', 'spin', 'jump', 'bounce', 'flip', 'x2', 'x3', 'x4', 'font', 'blur', 'rainbow', //
+    'sparkle', 'rotate', 'position', 'scale', 'fg', 'bg', 'border', 'ruby', 'unixtime', 'clickable',
+  };
 
   /// Shortcodes found in [text], host suffix stripped (絵文字URLのプリフェッチ用。
   /// リモート絵文字の URL は本来ノートの emojis フィールド由来)。
@@ -43,7 +44,10 @@ abstract final class InlineSpans {
     void Function(String tag)? onHashtag,
     bool htmlFns = false,
   }) =>
-      _Parser(emojis: emojis, onLink: onLink, onMention: onMention, onHashtag: onHashtag, htmlFns: htmlFns).parse(text, atLineStart: true);
+      _Converter(emojis: emojis, onLink: onLink, onMention: onMention, onHashtag: onHashtag).spans(Mfm.parse(text, htmlFns: htmlFns, emojiHost: true));
+
+  /// Misskey の名前などの簡易な解析(`parseSimple`: 絵文字と `<plain>` だけ)。
+  static List<RasqSpan> parseSimple(String text, {Map<String, Uri?> emojis = const {}}) => _Converter(emojis: emojis).spans(Mfm.parseSimple(text));
 
   static String shortUrl(String raw) {
     var s = raw.replaceFirst(RegExp(r'^https?://'), '');
@@ -52,338 +56,120 @@ abstract final class InlineSpans {
   }
 }
 
-class _Parser {
-  _Parser({required this.emojis, this.onLink, this.onMention, this.onHashtag, this.htmlFns = false});
-
-  /// HTML 風の MFM を読むか (D-446)。
-  final bool htmlFns;
+class _Converter {
+  _Converter({required this.emojis, this.onLink, this.onMention, this.onHashtag});
 
   final Map<String, Uri?> emojis;
   final void Function(Uri url)? onLink;
   final void Function(String handle, String? host)? onMention;
   final void Function(String tag)? onHashtag;
 
-  List<RasqSpan> parse(String text, {bool atLineStart = false}) {
-    final out = <RasqSpan>[];
-    var rest = text;
-    var lineStart = atLineStart;
-    while (rest.isNotEmpty) {
-      final marker = _firstMarker(rest, lineStart);
-      if (marker == null) {
-        out.addAll(_leaf(rest));
-        break;
-      }
-      if (marker.index > 0) out.addAll(_leaf(rest.substring(0, marker.index)));
-      final consumed = marker.handle(this, rest, out);
-      if (consumed <= 0) {
-        // Unbalanced → treat the marker char literally and move on.
-        out.addAll(_leaf(rest.substring(marker.index, marker.index + 1)));
-        rest = rest.substring(marker.index + 1);
-      } else {
-        rest = rest.substring(consumed);
-      }
-      lineStart = rest.isNotEmpty && (marker is _QuoteMarker || rest.startsWith('\n'));
-      if (out.isNotEmpty && out.last is RasqTextSpan) {
-        lineStart = (out.last as RasqTextSpan).text.endsWith('\n') || lineStart;
-      }
-    }
-    return out;
-  }
+  List<RasqSpan> spans(List<MfmNode> nodes, {bool bold = false, bool italic = false, bool strike = false}) => [
+        for (final n in nodes) ..._node(n, bold: bold, italic: italic, strike: strike),
+      ];
 
-  // ---- marker scan ----------------------------------------------------------
+  RasqLinkSpan _link(String text, Uri url) => RasqLinkSpan(text, url: url, onTap: onLink == null ? null : () => onLink!(url));
 
-  _Marker? _firstMarker(String s, bool lineStart) {
-    _Marker? best;
-    void consider(_Marker? m) {
-      if (m != null && (best == null || m.index < best!.index)) best = m;
-    }
-
-    consider(_index(s, r'```', (i) => _FenceMarker(i)));
-    consider(_index(s, '`', (i) => s.startsWith('```', i) ? null : _InlineCodeMarker(i)));
-    consider(_index(s, '**', (i) => _StyleMarker(i, '**', bold: true)));
-    consider(_index(s, '~~', (i) => _StyleMarker(i, '~~', strike: true)));
-    final mfm = InlineSpans._mfmOpen.firstMatch(s);
-    if (mfm != null) consider(_MfmMarker(mfm.start, mfm));
-    consider(_index(s, '*', (i) => s.startsWith('**', i) ? null : _StyleMarker(i, '*', italic: true)));
-    consider(_index(s, '[', (i) => InlineSpans._mdLink.firstMatch(s.substring(i)) == null ? null : _LinkMarker(i)));
-    consider(_index(s, '<', (i) => InlineSpans._htmlTag.firstMatch(s.substring(i)) == null ? null : _TagMarker(i, InlineSpans._htmlTag.firstMatch(s.substring(i))!.group(1)!)));
-    if (htmlFns) {
-      for (final m in RegExp('<').allMatches(s)) {
-        final open = InlineSpans._htmlFnOpen.firstMatch(s.substring(m.start));
-        if (open != null && InlineSpans.htmlFnTags.contains(open.group(1))) {
-          consider(_HtmlFnMarker(m.start, open));
-          break;
-        }
-      }
-    }
-    // 行頭の "> " 引用(先頭 or 改行直後)。
-    final quote = RegExp(r'(^|\n)> ').firstMatch(s);
-    if (quote != null) {
-      final at = quote.group(1)!.isEmpty ? 0 : quote.start + 1;
-      if (at > 0 || lineStart) consider(_QuoteMarker(at));
-    }
-    return best;
-  }
-
-  static _Marker? _index(String s, String pattern, _Marker? Function(int) build) {
-    final i = s.indexOf(pattern);
-    return i < 0 ? null : build(i);
-  }
-
-  // ---- leaf tokens ----------------------------------------------------------
-
-  List<RasqSpan> _leaf(String t) {
-    final out = <RasqSpan>[];
-    var last = 0;
-    for (final m in InlineSpans._token.allMatches(t)) {
-      if (m.start > last) out.add(RasqTextSpan(t.substring(last, m.start)));
-      if (m.group(1) != null) {
-        final raw = m.group(1)!;
+  List<RasqSpan> _node(MfmNode n, {required bool bold, required bool italic, required bool strike}) {
+    RasqTextSpan text(String t, {bool code = false}) => RasqTextSpan(t, bold: bold, italic: italic, strike: strike, code: code);
+    List<RasqSpan> kids({bool? b, bool? i, bool? s}) => spans(n.children ?? const [], bold: b ?? bold, italic: i ?? italic, strike: s ?? strike);
+    final p = n.props ?? const {};
+    switch (n.type) {
+      case 'text':
+        return [text(n.text)];
+      case 'bold':
+        return kids(b: true);
+      case 'italic':
+        return kids(i: true);
+      case 'strike':
+        return kids(s: true);
+      case 'small':
+        return [RasqTransformSpan('small', children: kids())];
+      case 'center':
+        return [RasqTransformSpan('center', children: kids())];
+      case 'quote':
+        return [RasqTransformSpan('quote', children: kids())];
+      case 'blockCode':
+        return [
+          RasqTransformSpan('code_block', args: {if (p['lang'] != null) 'lang': p['lang']}, children: [RasqTextSpan(p['code'] as String, code: true)]),
+        ];
+      // Misskey は数式を `<code>` のまま出す(ブロックも)。
+      case 'inlineCode':
+        return [text(p['code'] as String, code: true)];
+      case 'mathInline' || 'mathBlock':
+        return [text(p['formula'] as String, code: true)];
+      case 'search':
+        final q = p['query'] as String;
+        final url = Uri.https('www.google.com', '/search', {'q': q});
+        return [
+          RasqTransformSpan('search', args: {'query': q}, children: [_link(appL10n.composeMfmSearchButton, url)]),
+        ];
+      case 'mention':
+        final user = p['username'] as String;
+        final host = p['host'] as String?;
+        return [RasqMentionSpan(host == null ? user : '$user@$host', onTap: onMention == null ? null : () => onMention!(user, host))];
+      case 'hashtag':
+        final tag = p['hashtag'] as String;
+        return [RasqHashtagSpan(tag, onTap: onHashtag == null ? null : () => onHashtag!(tag))];
+      case 'url':
+        final raw = p['url'] as String;
         final uri = Uri.tryParse(raw);
-        out.add(uri == null ? RasqTextSpan(raw) : RasqLinkSpan(InlineSpans.shortUrl(raw), url: uri, onTap: onLink == null ? null : () => onLink!(uri)));
-      } else if (m.group(2) != null) {
-        final handle = m.group(2)!;
-        final host = m.group(3)?.substring(1);
-        out.add(RasqMentionSpan(host == null ? handle : '$handle@$host', onTap: onMention == null ? null : () => onMention!(handle, host)));
-      } else if (m.group(4) != null) {
-        final tag = m.group(4)!;
-        out.add(RasqHashtagSpan(tag, onTap: onHashtag == null ? null : () => onHashtag!(tag)));
-      } else if (m.group(5) != null) {
-        final code = m.group(5)!;
+        return [if (uri == null) text(raw) else _link(InlineSpans.shortUrl(raw), uri)];
+      case 'link':
+        final uri = Uri.tryParse(p['url'] as String);
+        final label = kids();
+        if (uri == null) return label;
+        return [for (final s in label) s is RasqTextSpan ? _link(s.text, uri) : s];
+      case 'emojiCode':
+        final code = p['name'] as String;
         // `:name@host:` / `:name@.:` はローカルキャッシュの `name` にフォールバック。
         final bare = code.split('@').first;
-        out.add(RasqEmojiSpan(shortcode: code, url: emojis[code] ?? emojis[bare]));
-      }
-      last = m.end;
-    }
-    if (last < t.length) out.add(RasqTextSpan(t.substring(last)));
-    return out;
-  }
-
-  /// スタイルを子スパンのテキストへ畳み込む(**bold** / *italic* / ~~strike~~)。
-  List<RasqSpan> styled(String inner, {bool bold = false, bool italic = false, bool strike = false}) => [
-        for (final s in parse(inner))
-          s is RasqTextSpan ? s.copyWith(bold: bold || s.bold, italic: italic || s.italic, strike: strike || s.strike) : s,
-      ];
-}
-
-sealed class _Marker {
-  _Marker(this.index);
-  final int index;
-
-  /// Handles the marker at [index]; returns total consumed length from the
-  /// start of [s] (0 = unbalanced, treat literally).
-  int handle(_Parser p, String s, List<RasqSpan> out);
-}
-
-class _StyleMarker extends _Marker {
-  _StyleMarker(super.index, this.token, {this.bold = false, this.italic = false, this.strike = false});
-  final String token;
-  final bool bold;
-  final bool italic;
-  final bool strike;
-
-  @override
-  int handle(_Parser p, String s, List<RasqSpan> out) {
-    final start = index + token.length;
-    final end = s.indexOf(token, start);
-    if (end < 0 || end == start) return 0;
-    out.addAll(p.styled(s.substring(start, end), bold: bold, italic: italic, strike: strike));
-    return end + token.length;
-  }
-}
-
-class _InlineCodeMarker extends _Marker {
-  _InlineCodeMarker(super.index);
-
-  @override
-  int handle(_Parser p, String s, List<RasqSpan> out) {
-    final start = index + 1;
-    final end = s.indexOf('`', start);
-    if (end < 0 || end == start) return 0;
-    out.add(RasqTextSpan(s.substring(start, end), code: true));
-    return end + 1;
-  }
-}
-
-class _FenceMarker extends _Marker {
-  _FenceMarker(super.index);
-
-  @override
-  int handle(_Parser p, String s, List<RasqSpan> out) {
-    final start = index + 3;
-    final end = s.indexOf('```', start);
-    if (end < 0) return 0;
-    var content = s.substring(start, end);
-    // ```lang\n … ``` の言語行と前後の改行を落とす。
-    content = content.replaceFirst(RegExp(r'^[^\n]*\n'), '').replaceFirst(RegExp(r'\n$'), '');
-    out.add(RasqTransformSpan('code_block', children: [RasqTextSpan(content, code: true)]));
-    return end + 3;
-  }
-}
-
-class _LinkMarker extends _Marker {
-  _LinkMarker(super.index);
-
-  @override
-  int handle(_Parser p, String s, List<RasqSpan> out) {
-    final m = InlineSpans._mdLink.firstMatch(s.substring(index))!;
-    final url = Uri.tryParse(m.group(2)!);
-    if (url == null) return 0;
-    out.add(RasqLinkSpan(m.group(1)!, url: url, onTap: p.onLink == null ? null : () => p.onLink!(url)));
-    return index + m.end;
-  }
-}
-
-class _TagMarker extends _Marker {
-  _TagMarker(super.index, this.tag);
-  final String tag;
-
-  @override
-  int handle(_Parser p, String s, List<RasqSpan> out) {
-    final open = '<$tag>';
-    final close = '</$tag>';
-    final start = index + open.length;
-    final end = s.indexOf(close, start);
-    if (end < 0) return 0;
-    final inner = s.substring(start, end);
-    switch (tag) {
-      case 'b':
-        out.addAll(p.styled(inner, bold: true));
-      case 'i':
-        out.addAll(p.styled(inner, italic: true));
-      case 's':
-        out.addAll(p.styled(inner, strike: true));
-      case 'small':
-        out.addAll([for (final sp in p.parse(inner)) sp is RasqTextSpan ? RasqTextSpan(sp.text, bold: sp.bold, italic: sp.italic, strike: sp.strike, small: true, code: sp.code) : sp]);
-      case 'center':
-        out.add(RasqTransformSpan('center', children: p.parse(inner)));
+        return [RasqEmojiSpan(shortcode: code, url: emojis[code] ?? emojis[bare])];
+      case 'unicodeEmoji':
+        return [text(p['emoji'] as String)];
       case 'plain':
-        out.add(RasqTextSpan(inner)); // 中身は解析しない
+        return [text(n.children?.map((c) => c.text).join() ?? '')];
+      case 'fn':
+        return _fn(n, kids, text);
     }
-    return end + close.length;
-  }
-}
-
-class _MfmMarker extends _Marker {
-  _MfmMarker(super.index, this.match);
-  final RegExpMatch match;
-
-  @override
-  int handle(_Parser p, String s, List<RasqSpan> out) {
-    final contentStart = match.end;
-    final close = _matchingBracket(s, contentStart);
-    if (close < 0) return 0;
-    out.add(RasqTransformSpan(match.group(1)!, args: _args(match.group(2) ?? ''), children: p.parse(s.substring(contentStart, close))));
-    return close + 1;
+    return kids();
   }
 
-  static int _matchingBracket(String s, int from) {
-    var depth = 0;
-    for (var i = from; i < s.length; i++) {
-      if (s[i] == ']') {
-        if (depth == 0) return i;
-        depth--;
-      } else if (s.startsWith(r'$[', i)) {
-        depth++;
-        i++;
-      }
+  List<RasqSpan> _fn(MfmNode n, List<RasqSpan> Function() kids, RasqTextSpan Function(String) text) {
+    final name = n.fnName;
+    final args = n.fnArgs;
+    final children = n.children ?? const <MfmNode>[];
+    // Misskey: 知らない関数・書体の無い font は `$[name 中身]` を文字のまま(引数は出さない)。
+    final fontless = name == 'font' && !const ['serif', 'monospace', 'cursive', 'fantasy', 'emoji', 'math'].any(args.containsKey);
+    if (!InlineSpans.misskeyFns.contains(name) || fontless) {
+      return [text('\$[$name '), ...kids(), text(']')];
     }
-    return -1;
+    switch (name) {
+      case 'ruby':
+        // HTML 風 (D-446) は `<rt>` を引数で持つ。
+        if (args['rt'] != null) return [RasqTransformSpan('ruby', args: args, children: kids())];
+        // Misskey: 子が 1 つなら「本文 読み」を空白で分ける。2 つ以上なら最後の text が読み。
+        if (children.length == 1) {
+          final t = children.single.type == 'text' ? children.single.text : '';
+          final parts = t.split(' ');
+          return [
+            RasqTransformSpan('ruby', args: {'rt': parts.length > 1 ? parts[1] : ''}, children: [text(parts[0])]),
+          ];
+        }
+        final rt = children.isEmpty || children.last.type != 'text' ? '' : children.last.text.trim();
+        return [
+          RasqTransformSpan('ruby', args: {'rt': rt}, children: spans(children.sublist(0, children.isEmpty ? 0 : children.length - 1))),
+        ];
+      case 'unixtime':
+        final t = children.isNotEmpty && children.first.type == 'text' ? children.first.text : '';
+        return [RasqTransformSpan('unixtime', args: {'time': _parseInt(t)}, children: [text(t)])];
+    }
+    return [RasqTransformSpan(name, args: args, children: kids())];
   }
 
-  /// `.left,speed=0.5,deg=30` → {left: true, speed: '0.5', deg: 30}.
-  static Map<String, Object?> _args(String raw) {
-    if (raw.isEmpty) return const {};
-    final out = <String, Object?>{};
-    for (final part in raw.substring(1).split(',')) {
-      if (part.isEmpty) continue;
-      final eq = part.indexOf('=');
-      if (eq < 0) {
-        out[part] = true;
-      } else {
-        final v = part.substring(eq + 1);
-        out[part.substring(0, eq)] = num.tryParse(v) ?? v;
-      }
-    }
-    return out;
-  }
-}
-
-/// HTML 風の MFM (D-446): `<fn attr="v" flag>…</fn>` → [RasqTransformSpan]。同じタグの入れ子を数えて閉じタグを探す。
-/// `<ruby>本<rt>ほん</rt></ruby>` は `ruby`(引数 `rt` = 読み)。
-class _HtmlFnMarker extends _Marker {
-  _HtmlFnMarker(super.index, this.open);
-  final RegExpMatch open;
-
-  static final _attr = RegExp(r'([a-z][a-z0-9]*)(?:="([^"<>]*)")?');
-
-  @override
-  int handle(_Parser p, String s, List<RasqSpan> out) {
-    final tag = open.group(1)!;
-    final start = index + open.end;
-    final close = _closing(s, tag, start);
-    if (close < 0) return 0;
-    var inner = s.substring(start, close);
-    final args = <String, Object?>{};
-    for (final a in _attr.allMatches(open.group(2) ?? '')) {
-      final v = a.group(2);
-      args[a.group(1)!] = v == null ? true : (num.tryParse(v) ?? v);
-    }
-    if (tag == 'ruby') {
-      final rt = RegExp(r'<rt>([\s\S]*?)</rt>').firstMatch(inner);
-      if (rt != null) {
-        args['rt'] = rt.group(1)!;
-        inner = inner.replaceRange(rt.start, rt.end, '');
-      }
-    }
-    out.add(RasqTransformSpan(tag, args: args, children: p.parse(inner)));
-    return close + '</$tag>'.length;
-  }
-
-  static int _closing(String s, String tag, int from) {
-    final opener = RegExp('<$tag(?=[\\s>])');
-    final closer = '</$tag>';
-    var depth = 0;
-    var i = from;
-    while (i < s.length) {
-      final c = s.indexOf(closer, i);
-      if (c < 0) return -1;
-      final o = opener.firstMatch(s.substring(i))?.start;
-      if (o != null && i + o < c) {
-        depth++;
-        i = i + o + 1;
-        continue;
-      }
-      if (depth == 0) return c;
-      depth--;
-      i = c + closer.length;
-    }
-    return -1;
-  }
-
-}
-
-class _QuoteMarker extends _Marker {
-  _QuoteMarker(super.index);
-
-  @override
-  int handle(_Parser p, String s, List<RasqSpan> out) {
-    // 連続する "> " 行をひとつの引用ブロックに。
-    var end = index;
-    final lines = <String>[];
-    while (end < s.length && s.startsWith('> ', end)) {
-      final lineEnd = s.indexOf('\n', end);
-      if (lineEnd < 0) {
-        lines.add(s.substring(end + 2));
-        end = s.length;
-        break;
-      }
-      lines.add(s.substring(end + 2, lineEnd));
-      end = lineEnd + 1;
-    }
-    if (lines.isEmpty) return 0;
-    out.add(RasqTransformSpan('quote', children: p.parse(lines.join('\n'))));
-    return end;
+  /// JS の `parseInt`(先頭の空白を飛ばし、先頭の整数だけ。読めなければ null)。
+  static int? _parseInt(String s) {
+    final m = RegExp(r'^\s*([+-]?\d+)').firstMatch(s);
+    return m == null ? null : int.tryParse(m[1]!);
   }
 }

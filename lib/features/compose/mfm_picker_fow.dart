@@ -28,39 +28,62 @@ class MfmProp {
 }
 
 /// 1 関数(または Markdown スニペット)。[prefix]/[suffix] があれば固定
-/// スニペット(Markdown 系)、なければ MFM `$[name.props 中身]` を組み立てる。
+/// スニペット(Markdown 系)、なければ MFM `$[name.props 中身]` を組み立てる。[sample] はプレビューの中身
+/// (null = 見本の文 + サーバーの絵文字。`ruby` の「本文 読み」や `unixtime` の秒数のように形の決まった中身)。
 class MfmFn {
-  const MfmFn(this.name, this.description, {this.props = const [], this.prefix, this.suffix});
+  const MfmFn(this.name, this.description, {this.props = const [], this.prefix, this.suffix, this.sample});
   final String name;
   final String description;
   final List<MfmProp> props;
   final String? prefix;
   final String? suffix;
+  final String? sample;
 }
 
-/// MFM カタログ = ホストが描画できるコアセット(PROTOCOL §2.3。プレビューが
-/// 必ず動く範囲に限定)。
-List<MfmFn> get mfmFunctions => <MfmFn>[
-  MfmFn('x2', appL10n.composeMfmFnX2),
-  MfmFn('x3', appL10n.composeMfmFnX3),
-  MfmFn('x4', appL10n.composeMfmFnX4),
-  MfmFn('small', appL10n.composeMfmFnSmall),
-  MfmFn('center', appL10n.composeMfmFnCenter),
-  MfmFn('blur', appL10n.composeMfmFnBlur),
-  MfmFn('rotate', appL10n.composeMfmFnRotate, props: [MfmProp('deg', hint: appL10n.composeMfmPropRotateDeg)]),
-  MfmFn('flip', appL10n.composeMfmFnFlip, props: [MfmProp('h', hint: appL10n.composeMfmPropFlipH, flag: true), MfmProp('v', hint: appL10n.composeMfmPropFlipV, flag: true)]),
-  MfmFn('fg', appL10n.composeMfmFnFg, props: [MfmProp('color', hint: appL10n.composeMfmPropFgColor)]),
-  MfmFn('bg', appL10n.composeMfmFnBg, props: [MfmProp('color', hint: appL10n.composeMfmPropBgColor)]),
-  MfmFn('shake', appL10n.composeMfmFnShake, props: [MfmProp('speed', hint: appL10n.composeMfmPropShakeSpeed)]),
-  MfmFn('spin', appL10n.composeMfmFnSpin, props: [MfmProp('speed', hint: appL10n.composeMfmPropSpinSpeed), MfmProp('left', hint: appL10n.composeMfmPropSpinLeft, flag: true), MfmProp('alternate', hint: appL10n.composeMfmPropSpinAlternate, flag: true), MfmProp('x', hint: appL10n.composeMfmPropSpinX, flag: true), MfmProp('y', hint: appL10n.composeMfmPropSpinY, flag: true)]),
-  MfmFn('jump', appL10n.composeMfmFnJump, props: [MfmProp('speed', hint: appL10n.composeMfmPropJumpSpeed)]),
-  MfmFn('bounce', appL10n.composeMfmFnBounce, props: [MfmProp('speed', hint: appL10n.composeMfmPropBounceSpeed)]),
-  MfmFn('rainbow', appL10n.composeMfmFnRainbow, props: [MfmProp('speed', hint: appL10n.composeMfmPropRainbowSpeed)]),
-  MfmFn('twitch', appL10n.composeMfmFnTwitch, props: [MfmProp('speed', hint: appL10n.composeMfmPropTwitchSpeed)]),
-  MfmFn('jelly', appL10n.composeMfmFnJelly, props: [MfmProp('speed', hint: appL10n.composeMfmPropJellySpeed)]),
-  MfmFn('tada', appL10n.composeMfmFnTada, props: [MfmProp('speed', hint: appL10n.composeMfmPropTadaSpeed)]),
-  MfmFn('plain', appL10n.composeMfmFnPlain),
-];
+/// MFM カタログ = Misskey の描画が知っている関数 (D-509、ホストはすべて描ける)。アニメーションの関数は
+/// `speed` / `delay`(Misskey の `animation-delay`)を持つ。
+List<MfmFn> get mfmFunctions {
+  final delay = MfmProp('delay', hint: appL10n.composeMfmPropDelay);
+  return <MfmFn>[
+    MfmFn('x2', appL10n.composeMfmFnX2),
+    MfmFn('x3', appL10n.composeMfmFnX3),
+    MfmFn('x4', appL10n.composeMfmFnX4),
+    MfmFn('small', appL10n.composeMfmFnSmall),
+    MfmFn('center', appL10n.composeMfmFnCenter),
+    MfmFn('blur', appL10n.composeMfmFnBlur),
+    MfmFn('rotate', appL10n.composeMfmFnRotate, props: [MfmProp('deg', hint: appL10n.composeMfmPropRotateDeg)]),
+    MfmFn('flip', appL10n.composeMfmFnFlip, props: [MfmProp('h', hint: appL10n.composeMfmPropFlipH, flag: true), MfmProp('v', hint: appL10n.composeMfmPropFlipV, flag: true)]),
+    MfmFn('position', appL10n.composeMfmFnPosition, props: [MfmProp('x', hint: appL10n.composeMfmPropPositionX), MfmProp('y', hint: appL10n.composeMfmPropPositionY)]),
+    MfmFn('scale', appL10n.composeMfmFnScale, props: [MfmProp('x', hint: appL10n.composeMfmPropScaleX), MfmProp('y', hint: appL10n.composeMfmPropScaleY)]),
+    MfmFn('fg', appL10n.composeMfmFnFg, props: [MfmProp('color', hint: appL10n.composeMfmPropFgColor)]),
+    MfmFn('bg', appL10n.composeMfmFnBg, props: [MfmProp('color', hint: appL10n.composeMfmPropBgColor)]),
+    MfmFn('border', appL10n.composeMfmFnBorder, props: [
+      MfmProp('style', hint: appL10n.composeMfmPropBorderStyle),
+      MfmProp('width', hint: appL10n.composeMfmPropBorderWidth),
+      MfmProp('color', hint: appL10n.composeMfmPropBorderColor),
+      MfmProp('radius', hint: appL10n.composeMfmPropBorderRadius),
+      MfmProp('noclip', hint: appL10n.composeMfmPropBorderNoclip, flag: true),
+    ]),
+    MfmFn('font', appL10n.composeMfmFnFont, props: [
+      MfmProp('serif', hint: appL10n.composeMfmPropFontSerif, flag: true),
+      MfmProp('monospace', hint: appL10n.composeMfmPropFontMonospace, flag: true),
+      MfmProp('cursive', hint: appL10n.composeMfmPropFontCursive, flag: true),
+      MfmProp('fantasy', hint: appL10n.composeMfmPropFontFantasy, flag: true),
+    ]),
+    MfmFn('ruby', appL10n.composeMfmFnRuby, sample: appL10n.composeMfmSampleRuby),
+    MfmFn('unixtime', appL10n.composeMfmFnUnixtime, sample: '${DateTime.now().millisecondsSinceEpoch ~/ 1000}'),
+    MfmFn('shake', appL10n.composeMfmFnShake, props: [MfmProp('speed', hint: appL10n.composeMfmPropShakeSpeed), delay]),
+    MfmFn('spin', appL10n.composeMfmFnSpin, props: [MfmProp('speed', hint: appL10n.composeMfmPropSpinSpeed), MfmProp('left', hint: appL10n.composeMfmPropSpinLeft, flag: true), MfmProp('alternate', hint: appL10n.composeMfmPropSpinAlternate, flag: true), MfmProp('x', hint: appL10n.composeMfmPropSpinX, flag: true), MfmProp('y', hint: appL10n.composeMfmPropSpinY, flag: true), delay]),
+    MfmFn('jump', appL10n.composeMfmFnJump, props: [MfmProp('speed', hint: appL10n.composeMfmPropJumpSpeed), delay]),
+    MfmFn('bounce', appL10n.composeMfmFnBounce, props: [MfmProp('speed', hint: appL10n.composeMfmPropBounceSpeed), delay]),
+    MfmFn('rainbow', appL10n.composeMfmFnRainbow, props: [MfmProp('speed', hint: appL10n.composeMfmPropRainbowSpeed), delay]),
+    MfmFn('twitch', appL10n.composeMfmFnTwitch, props: [MfmProp('speed', hint: appL10n.composeMfmPropTwitchSpeed), delay]),
+    MfmFn('jelly', appL10n.composeMfmFnJelly, props: [MfmProp('speed', hint: appL10n.composeMfmPropJellySpeed), delay]),
+    MfmFn('tada', appL10n.composeMfmFnTada, props: [MfmProp('speed', hint: appL10n.composeMfmPropTadaSpeed), delay]),
+    MfmFn('sparkle', appL10n.composeMfmFnSparkle),
+    MfmFn('plain', appL10n.composeMfmFnPlain),
+  ];
+}
 
 /// Markdown カタログ(MFM 非対応 SNS 向け。固定スニペット)。
 List<MfmFn> get markdownFunctions => <MfmFn>[
@@ -176,7 +199,9 @@ class _MfmPickerPanelState extends ConsumerState<MfmPickerPanel> {
     final scheme = Theme.of(context).colorScheme;
     final emojiUrls = <String, Uri?>{};
     var sample = context.l10n.composeMfmSample;
-    if (_sampleEmoji != null) {
+    if (fn.sample != null) {
+      sample = fn.sample!;
+    } else if (_sampleEmoji != null) {
       sample = context.l10n.composeMfmSampleWithEmoji(':$_sampleEmoji:');
       final info = (ref.watch(customEmojisProvider).value ?? const []).where((e) => e.name == _sampleEmoji).firstOrNull;
       emojiUrls[_sampleEmoji!] = info?.url;
