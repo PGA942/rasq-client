@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/features/store/release_fow.dart';
 import 'package:rasq_client/features/store/review_timeline_screen.dart';
 import 'package:rasq_client/features/store/store_client.dart';
@@ -27,14 +28,14 @@ void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
   Post post(String id, String body) => Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 8, 31), body: body);
 
-  Future<ProviderContainer> pump(WidgetTester tester) async {
+  Future<ProviderContainer> pump(WidgetTester tester, {StoreClient? store}) async {
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p1', 'ふつうの投稿')]));
     await tester.pumpWidget(ProviderScope(
       // レビュー / リリースノートの画面を見るので、作り物を持つテスト用のストア(アプリの同梱のストアには無い、D-393)。
-      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), storeClientProvider.overrideWithValue(FakeStoreClient())],
+      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), storeClientProvider.overrideWithValue(store ?? FakeStoreClient())],
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
@@ -212,4 +213,66 @@ void main() {
     final button = tester.widget<FilledButton>(find.ancestor(of: find.text('Ver.0.6.0-pre.1 はインストール済み'), matching: find.byType(FilledButton)));
     expect(button.onPressed, isNull);
   });
+
+  // D-515: 評価つきのレビューは、インストールしたプラグインにだけ書ける(Central が 403 review_requires_install で断る)。
+  testWidgets('D-515: 入れていないプラグインは、レビューを書く欄の代わりに案内(ページ / TL の + も無い)。読む / 👍 はできる', (tester) async {
+    final container = await pump(tester);
+    await openSamplePage(tester, container);
+    expect(container.read(installedPluginsProvider).any((p) => p.id == storeSamplePluginId), isFalse);
+
+    // ストアのページ: レビューの枠の下に案内。
+    await reveal(tester, find.byKey(const ValueKey('store.review.needsInstall')));
+    expect(find.text('インストールしたプラグインにだけレビューを書けます'), findsOneWidget);
+
+    // レビュー TL: + は無く、一覧の上に案内。
+    await reveal(tester, find.text('レビュー'), up: true);
+    await tester.tap(find.text('レビュー'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReviewTimelineScreen), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.byKey(const ValueKey('store.review.needsInstall')), findsOneWidget);
+    expect(find.byType(StoreReviewTile), findsWidgets);
+    await tester.tap(find.descendant(of: find.byType(StoreReviewTile).first, matching: find.byIcon(Icons.thumb_up_outlined)));
+    await tester.pumpAndSettle();
+    expect(container.read(reviewVotesProvider)['$storeSamplePluginId/r1'], ReviewVote.up);
+  });
+
+  testWidgets('D-515: 入れると案内が消えて + が出る。サーバーの断り(review_requires_install)は案内の文で出す', (tester) async {
+    final container = await pump(tester, store: _RefusingStoreClient());
+    await openSamplePage(tester, container);
+
+    // リリースノートの FOW から入れる(上のテストと同じ流れ)。
+    await reveal(tester, find.text('アップデートとバージョン'));
+    await tester.tap(find.text('Misskey コネクタ 0.6.0-pre.1 Pre'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver.0.6.0-pre.1 をインストール'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('インストールする'));
+    await tester.pumpAndSettle();
+    expect(container.read(installedPluginsProvider).any((p) => p.id == storeSamplePluginId), isTrue);
+    expect(find.byKey(const ValueKey('store.review.needsInstall')), findsNothing);
+
+    await reveal(tester, find.text('レビュー'), up: true);
+    await tester.tap(find.text('レビュー'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('store.review.needsInstall')), findsNothing);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+
+    // 端末には入っていてもサーバーに記録が無い(ログインせずに入れた など)と、名前つきの理由で断られる → 案内の文。
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    expect(find.text('レビューの作成'), findsOneWidget);
+    await tester.tap(find.byTooltip('4'));
+    await tester.pump();
+    await tester.tap(find.text('送信'));
+    await tester.pumpAndSettle();
+    expect(find.text('インストールしたプラグインにだけレビューを書けます。ログインした状態でインストール(または更新)し直すと書けるようになります'), findsOneWidget);
+  });
+}
+
+/// Central の S-113 の断り(`403 review_requires_install`)を返すストア。
+class _RefusingStoreClient extends FakeStoreClient {
+  @override
+  Future<StoreReview> createReview(String pluginId, {required int rating, String title = '', String body = '', String? usedVersion}) async =>
+      throw OrgateException(ErrorCode.http(403), 'レビューは、インストールしたプラグインにだけ書けます。', serverCode: 'review_requires_install');
 }

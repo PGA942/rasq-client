@@ -62,8 +62,10 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
   /// アカウント (RASQ アカウント) の関係 API が無いのでまだ出さない。
   Future<void> _more(StorePluginDetail d, Rect anchor) async {
     final manager = ref.read(overlayManagerProvider);
+    // レビューはインストールしたプラグインにだけ (D-515)。入れていなければ押せない(押せない理由はレビューの枠に出る)。
+    final canReview = ref.read(installedPluginsProvider).any((p) => p.id == d.id);
     final pick = await manager.showDropdown<String>(id: 'store.plugin.more', anchor: anchor, items: [
-      RasqDropdownItem(context.l10n.storePageMenuPostReview, 'review'),
+      RasqDropdownItem(context.l10n.storePageMenuPostReview, 'review', enabled: canReview),
       RasqDropdownItem(context.l10n.storeCopyLink, 'copy'),
       RasqDropdownItem(context.l10n.storeShare, 'share'),
       RasqDropdownItem(context.l10n.storePageMenuReport, 'report', destructive: true, enabled: d.supportUrl != null),
@@ -310,8 +312,11 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
                 StoreFrameCard(
                   showChevron: false,
                   header: Text(context.l10n.storeReviewsEmpty, style: RasqTypography.listTile),
-                  body: Text(context.l10n.storePageReviewsEmptyBody, style: RasqTypography.caption),
-                  footer: Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: () => openReviewComposer(context, ref, detail: d), child: Text(context.l10n.storeReviewWrite))),
+                  // インストールしていなければ、書く欄の代わりに案内 (D-515)。
+                  body: installed == null ? const StoreReviewNeedsInstallNote() : Text(context.l10n.storePageReviewsEmptyBody, style: RasqTypography.caption),
+                  footer: installed == null
+                      ? null
+                      : Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: () => openReviewComposer(context, ref, detail: d), child: Text(context.l10n.storeReviewWrite))),
                 ),
               ]
             : [
@@ -319,6 +324,11 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
                   StoreReviewFrame(pluginId: d.id, review: r, onTap: () => context.push(Routes.storePluginReviews(d.id))),
               ],
       ),
+      if (installed == null && topReviews.isNotEmpty)
+        const Padding(
+          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
+          child: StoreReviewNeedsInstallNote(),
+        ),
       // ── アップデートとバージョン ›(タップで FOW) ─────────────────────
       StoreFrameSectionHeader(title: context.l10n.storePageUpdatesHeader, onTap: releases.isEmpty ? null : () => _showAllReleases(d, releases, installed)),
       StoreFrameStrip(

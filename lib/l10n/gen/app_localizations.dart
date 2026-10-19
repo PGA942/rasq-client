@@ -20849,6 +20849,18 @@ abstract class AppLocalizations {
   /// **'レビューを送信できませんでした: {error}'**
   String storeReviewSendFailed(String error);
 
+  /// インストールしていないプラグインのストアのページ / レビュー TL に出す案内。レビューを書く欄の代わり (D-515)
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールしたプラグインにだけレビューを書けます'**
+  String get storeReviewNeedsInstall;
+
+  /// 端末には入っているが、サーバーにインストールの記録が無い(ログインせずに入れた など)とき (review_requires_install、D-515)
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールしたプラグインにだけレビューを書けます。ログインした状態でインストール(または更新)し直すと書けるようになります'**
+  String get storeReviewNeedsInstallServer;
+
   /// No description provided for @storeSafetyNoPermissions.
   ///
   /// In ja, this message translates to:

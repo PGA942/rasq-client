@@ -12629,6 +12629,13 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get storeReviewNeedsInstall => 'インストールしたプラグインにだけレビューを書けます';
+
+  @override
+  String get storeReviewNeedsInstallServer =>
+      'インストールしたプラグインにだけレビューを書けます。ログインした状態でインストール(または更新)し直すと書けるようになります';
+
+  @override
   String get storeSafetyNoPermissions => '必要な権限: なし';
 
   @override

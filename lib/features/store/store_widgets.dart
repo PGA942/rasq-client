@@ -6,6 +6,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../backend/orgate_client.dart' show OrgateException;
 import '../../l10n/l10n.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
@@ -462,12 +463,39 @@ class StoreReviewFrame extends StatelessWidget {
   }
 }
 
+/// Central が「インストールしていないプラグインのレビュー」を断るときの理由 (D-515 / Central S-113)。
+const reviewRequiresInstallCode = 'review_requires_install';
+
+/// 評価(★)つきのレビューを書けるか (D-515): **インストールしているプラグインだけ**。
+/// 本当の線引きは Central(インストール履歴 = ログインした状態で配布物を取った記録)。ここは書く欄を出すかどうかだけ。
+bool canWriteStoreReview(WidgetRef ref, String pluginId) => ref.watch(installedPluginsProvider).any((p) => p.id == pluginId);
+
+/// レビューを書けないときの短い案内 (D-515)。ストアのページのレビューの枠と、レビュー TL の上に出す。
+class StoreReviewNeedsInstallNote extends StatelessWidget {
+  const StoreReviewNeedsInstallNote({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(key: const ValueKey('store.review.needsInstall'), children: [
+      Icon(Icons.info_outline, size: 16, color: scheme.onSurfaceVariant),
+      const SizedBox(width: RasqSpacing.xs),
+      Expanded(child: Text(context.l10n.storeReviewNeedsInstall, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+    ]);
+  }
+}
+
 /// レビュー作成シート(ワイヤーフレーム「レビューの作成」): ★ を選んで
 /// 見出し + 本文。利用バージョンはインストール中の版を自動で付ける。
 /// 送信後は一覧を再取得する。
+/// インストールしていないプラグインでは開かず、案内だけ出す (D-515)。
 Future<void> openReviewComposer(BuildContext context, WidgetRef ref, {required StorePluginDetail detail}) async {
   final manager = ref.read(overlayManagerProvider);
   final installed = ref.read(installedPluginsProvider).where((p) => p.id == detail.id).firstOrNull;
+  if (installed == null) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.storeReviewNeedsInstall)));
+    return;
+  }
   final title = TextEditingController();
   final body = TextEditingController();
   var rating = 0;
@@ -495,11 +523,10 @@ Future<void> openReviewComposer(BuildContext context, WidgetRef ref, {required S
             RasqInput(controller: title, hintText: ctx.l10n.storeReviewTitleHint),
             const SizedBox(height: RasqSpacing.sm),
             RasqInput(controller: body, hintText: ctx.l10n.storeReviewBodyHint, maxLines: 5, autofocus: true),
-            if (installed != null)
-              Padding(
-                padding: const EdgeInsets.only(top: RasqSpacing.xs),
-                child: Text(ctx.l10n.storeReviewUsedVersion(installed.version), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-              ),
+            Padding(
+              padding: const EdgeInsets.only(top: RasqSpacing.xs),
+              child: Text(ctx.l10n.storeReviewUsedVersion(installed.version), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            ),
           ]),
         );
       },
@@ -511,9 +538,14 @@ Future<void> openReviewComposer(BuildContext context, WidgetRef ref, {required S
     return;
   }
   try {
-    await ref.read(storeClientProvider).createReview(detail.id, rating: rating, title: title.text.trim(), body: body.text.trim(), usedVersion: installed?.version);
+    await ref.read(storeClientProvider).createReview(detail.id, rating: rating, title: title.text.trim(), body: body.text.trim(), usedVersion: installed.version);
     ref.invalidate(storeReviewsProvider(detail.id));
     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.storeReviewSent)));
+  } on OrgateException catch (e) {
+    if (!context.mounted) return;
+    // 端末には入っていても、サーバーにインストールの記録が無い(ログインせずに入れた など)ときは名前つきの理由で断られる。
+    final text = e.isReason(reviewRequiresInstallCode) ? context.l10n.storeReviewNeedsInstallServer : context.l10n.storeReviewSendFailed('$e');
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   } catch (e) {
     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.storeReviewSendFailed('$e'))));
   }
