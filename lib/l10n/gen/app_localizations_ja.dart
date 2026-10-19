@@ -2640,4 +2640,1895 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get shellTermsBannerOpenButton => '確認する';
+
+  @override
+  String get storeStatusInReview => '審査中';
+
+  @override
+  String get storeStatusPublished => '公開中';
+
+  @override
+  String get storeStatusUpdateAvailable => '更新あり';
+
+  @override
+  String get storeStatusWarning => '警告';
+
+  @override
+  String get storeStatusSuspended => '停止';
+
+  @override
+  String get storeStatusWithdrawn => '取り下げ';
+
+  @override
+  String get storeStatusUnlisted => '非公開';
+
+  @override
+  String get storeStatusBeta => 'ベータ';
+
+  @override
+  String get storeStatusRevoked => '失効';
+
+  @override
+  String get storeOriginOfficial => '公式';
+
+  @override
+  String get storeOriginVerified => '検証済み';
+
+  @override
+  String get storeOriginCommunity => 'コミュニティ';
+
+  @override
+  String get storeTypeComposer => '投稿作成';
+
+  @override
+  String get storeTypePost => '投稿';
+
+  @override
+  String get storeTypeViewer => '全画面表示';
+
+  @override
+  String get storeTypeTimeline => 'タイムライン';
+
+  @override
+  String get storeTypeTrend => 'トレンド';
+
+  @override
+  String get storeTypeTheme => '着せ替え';
+
+  @override
+  String get storeTypeAssets => 'ステッカー / 素材';
+
+  @override
+  String get storeTypeCustom => 'カスタム';
+
+  @override
+  String get storeTypeOther => 'その他';
+
+  @override
+  String get storeFilterFree => '無料';
+
+  @override
+  String get storeFilterNoAds => '広告なし';
+
+  @override
+  String get storeFilterOfficial => '公式';
+
+  @override
+  String get storeFilterVerified => '認証済み';
+
+  @override
+  String get storeFilterRecent => '30 日以内';
+
+  @override
+  String get storeFilterLightweight => '軽量(5MB 未満)';
+
+  @override
+  String get storeFilterOffline => 'オフライン';
+
+  @override
+  String get storePermNetwork => 'ネットワーク';
+
+  @override
+  String get storePermNetworkDescription => '外部への通信';
+
+  @override
+  String get storePermStorage => 'ストレージ';
+
+  @override
+  String get storePermStorageDescription => '端末内の保存領域';
+
+  @override
+  String get storePermFiles => 'ファイル';
+
+  @override
+  String get storePermFilesDescription => 'ユーザーが選んだファイルの読み書き';
+
+  @override
+  String get storePermSns => '投稿とアカウント';
+
+  @override
+  String get storePermSnsDescription => 'SNS アカウントを使った操作';
+
+  @override
+  String get storePermDm => 'ダイレクトメッセージ';
+
+  @override
+  String get storePermDmDescription => 'DM の読み書き';
+
+  @override
+  String get storePermGpuMl => 'GPU / 機械学習';
+
+  @override
+  String get storePermGpuMlDescription => 'GPU 実行・モデル推論';
+
+  @override
+  String get storePermClipboard => 'クリップボード';
+
+  @override
+  String get storePermClipboardDescription => 'コピー内容の読み書き';
+
+  @override
+  String get storePermBackground => 'バックグラウンド実行';
+
+  @override
+  String get storePermBackgroundDescription => '画面を閉じても動作';
+
+  @override
+  String get storePermUi => '画面と配置';
+
+  @override
+  String get storePermUiDescription => '画面の表示とボタンの配置';
+
+  @override
+  String get storePermOther => 'その他';
+
+  @override
+  String get storeReviewSortHelpful => '関連性';
+
+  @override
+  String get storeReviewSortRecent => '最新';
+
+  @override
+  String get storeReviewSortRatingHigh => '評価が高い';
+
+  @override
+  String get storeReviewSortRatingLow => '評価が低い';
+
+  @override
+  String storeScopePermission(String permission) {
+    return '権限 $permission';
+  }
+
+  @override
+  String storeScopeHost(String host) {
+    return '接続先 $host';
+  }
+
+  @override
+  String get storeScopeInstance => '接続先 ログイン先のインスタンス';
+
+  @override
+  String storeScopeSlot(String slot) {
+    return '使う場所 $slot';
+  }
+
+  @override
+  String storeScopeReason(String permission, String reason) {
+    return '用途 $permission — $reason';
+  }
+
+  @override
+  String storeScopeDataHandling(String text) {
+    return 'データの扱い — $text';
+  }
+
+  @override
+  String storeNeedsOrgate(String feature) {
+    return '$featureは ORGATE-Server につなぐと使えます(接続先が設定されていません)';
+  }
+
+  @override
+  String get storeFeaturePurchase => '購入';
+
+  @override
+  String get storeFeaturePoints => 'ポイント';
+
+  @override
+  String get storeFeatureReview => 'レビュー';
+
+  @override
+  String storeSessionPluginMismatch(String actual, String expected) {
+    return '構成のプラグイン ($actual) が頼んだもの ($expected) と違います';
+  }
+
+  @override
+  String storeSessionVersionMismatch(String actual, String expected) {
+    return '構成の版 ($actual) が頼んだ版 ($expected) と違います';
+  }
+
+  @override
+  String get storeNoBundle => '配布物がありません';
+
+  @override
+  String get storeListSeparator => '、';
+
+  @override
+  String get storeDotSeparator => ' ・ ';
+
+  @override
+  String get storeVerifyHashOnly => 'SHA-512 照合 OK(署名なし)';
+
+  @override
+  String get storeVerifyFull => 'SHA-512 + ed25519 署名 検証 OK';
+
+  @override
+  String get storeVerifyHashMismatch =>
+      '整合性検証に失敗しました(SHA-512 不一致)。時間をおいて再取得してください';
+
+  @override
+  String get storeVerifyKeyMismatch => 'ストアの署名鍵がアプリに焼き込んだ鍵と一致しません。接続先を確認してください';
+
+  @override
+  String get storeVerifyUnsigned => '配布物に署名がありません(このビルドは署名済みストアのみを許可します)';
+
+  @override
+  String get storeVerifyBadSignature => '配布物の署名が正しくありません。インストールを中止しました';
+
+  @override
+  String storeVerifyError(String error) {
+    return '署名を検証できませんでした: $error';
+  }
+
+  @override
+  String get storeWidenedNoRecord => '最後に許可した内容の記録がないため(プラグインを管理から確かめて入れてください)';
+
+  @override
+  String storeWidenedOver(String items) {
+    return '最後に許可した内容より広がるため($items)';
+  }
+
+  @override
+  String get storeManifestUnavailable => '構成(マニフェスト)を取得できませんでした';
+
+  @override
+  String storeManifestVersionNotFound(String version) {
+    return 'Ver.$version の構成が見つかりませんでした';
+  }
+
+  @override
+  String storeConsentChanged(String version) {
+    return '確認した内容(Ver.$version)と、ストアの構成が変わりました。もう一度確かめてください';
+  }
+
+  @override
+  String storePackageInvalid(String error) {
+    return '配布物の中身を検証できませんでした: $error';
+  }
+
+  @override
+  String storePackageMismatch(String actual, String expected) {
+    return '配布物の中身($actual)がストアの掲載($expected)と違います';
+  }
+
+  @override
+  String storePackageRequires(String plugins) {
+    return 'このプラグインには $plugins が必要です(未対応のため入れられません)';
+  }
+
+  @override
+  String storeThemeSaveFailed(String error) {
+    return '着せ替えを保存できませんでした: $error';
+  }
+
+  @override
+  String storeAssetsSaveFailed(String error) {
+    return 'アセットパックを保存できませんでした: $error';
+  }
+
+  @override
+  String get storeSlotRegisterFailed => 'スロットに登録できませんでした';
+
+  @override
+  String storeVersionBundleChanged(String version) {
+    return 'Ver.$version の配布物がインストール時と違うため読み込みません(入れ直してください)';
+  }
+
+  @override
+  String storeVersionLoadFailed(String version, String error) {
+    return 'Ver.$version を読み込めませんでした: $error';
+  }
+
+  @override
+  String get storeVersionNoScopeRecord => 'この版で許す内容の記録がありません(入れ直すと確かめられます)';
+
+  @override
+  String storeVersionNotInstalled(String version) {
+    return 'Ver.$version は入っていません';
+  }
+
+  @override
+  String get storeNotInstalled => 'インストールされていません';
+
+  @override
+  String storeVersionInUse(String version) {
+    return 'Ver.$version は使われています(既定 / アカウントの指定を外してから)';
+  }
+
+  @override
+  String get storeManageTitle => 'プラグインを管理';
+
+  @override
+  String get storeManageUpdatesHeader => 'アップデート';
+
+  @override
+  String get storeManageUpdateSettingsTitle => 'アップデートの設定';
+
+  @override
+  String get storeManageUpdateSettingsSubtitle => '自動で更新するかどうか ・ 更新ログ';
+
+  @override
+  String get storeManageUpdateSettingsDetail =>
+      'SNS / アクション / ビューごとに、おまかせ・インストールだけ・手動 ・ 更新ログ';
+
+  @override
+  String get storeManagePointsTitle => 'ポイント';
+
+  @override
+  String get storeManagePointsDisabled => '公開テストでは使えません';
+
+  @override
+  String storeManagePointsBalance(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ポイント $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storeManagePointsSignIn => 'RASQ アカウントにログインすると使えます';
+
+  @override
+  String get storeManagePointsBuyInConsole => 'Web コンソールで買えます(付与から 1 か月で失効)';
+
+  @override
+  String storeManagePointsExpiring(int month, int day, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$month/$day に $count ポイントが失効 ・ Web コンソールで買う',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storeNoInstalledPlugins => 'インストール済みのプラグインはありません';
+
+  @override
+  String get storeManageImportTitle => 'プラグインのインポート';
+
+  @override
+  String get storeManageImportSubtitle => '開発中のプラグインを入れる(審査前)';
+
+  @override
+  String get storeManageImportDetail => '開発中の wasm / .rasqpkg を入れる(審査を通っていません)';
+
+  @override
+  String get storeManageHomeHeader => 'ホームの表示';
+
+  @override
+  String get storeManageShowInstalledTitle => 'インストール済みもホームに出す';
+
+  @override
+  String get storeManageShowInstalledSubtitle =>
+      '今週のトレンド / 新着の列に、入れたプラグインも並べます';
+
+  @override
+  String get storeBookmarksTitle => 'ブックマーク';
+
+  @override
+  String storeManageSwitchTo(String version) {
+    return '$version に切り替え';
+  }
+
+  @override
+  String storeVersionMadeDefault(String version) {
+    return '$version を既定の版にしました';
+  }
+
+  @override
+  String storeManageUpdateTo(String version) {
+    return '$version に更新';
+  }
+
+  @override
+  String get storeManageOffline => 'ストアに接続できません';
+
+  @override
+  String get storeManageUpToDate => '最新です';
+
+  @override
+  String get storeManageDeployedVersion => 'デプロイしたバージョン';
+
+  @override
+  String get storeAccountVersionsTitle => 'アカウントごとにバージョンを設定';
+
+  @override
+  String storeManageAccountVersionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'アカウントごと($count 件指定)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storePluginNotFound => 'このプラグインは見つかりませんでした';
+
+  @override
+  String storeInstallFailed(String error) {
+    return 'インストールできませんでした: $error';
+  }
+
+  @override
+  String get storeHasAds => '広告あり';
+
+  @override
+  String get storeBuyDisabled => '公開テストでは購入できません';
+
+  @override
+  String get storeTileGet => '入手';
+
+  @override
+  String get storeTileUpdate => '更新';
+
+  @override
+  String get storeOpen => '開く';
+
+  @override
+  String get storeTileUnavailable => '停止中';
+
+  @override
+  String storeDownloadsTenThousands(String value) {
+    return '$value万';
+  }
+
+  @override
+  String storeNotAssetPack(String id) {
+    return 'アセットパックではありません: $id';
+  }
+
+  @override
+  String get storeUpdatesNoneApplied => '自動で入れる更新はありませんでした';
+
+  @override
+  String get storeUpdateSettingsTitle => 'アップデート/デプロイの設定';
+
+  @override
+  String get storeUpdateSettingsModeHeader => 'アップデート/デプロイ';
+
+  @override
+  String get storeUpdateSettingsPopup => 'アップデート後の起動時にポップアップを表示';
+
+  @override
+  String get storeUpdateLogTitle => '更新ログ';
+
+  @override
+  String get storeUpdateSettingsCheckNow => 'いま確かめる';
+
+  @override
+  String get storeUpdateSettingsCaption => '許可した内容が広がる版と有料の版は、自動では入りません';
+
+  @override
+  String get storeUpdateSettingsCaptionDetail =>
+      '最後に許可した内容より権限・接続先・使う場所・用途が広がる版(確かめられない版も)と、買っていない有料の版は、どのモードでも自動では使い始めません(更新ログに理由が残ります)。起動するたびに 1 回確かめます。';
+
+  @override
+  String get storeUpdateLogEmpty => 'まだありません';
+
+  @override
+  String get storeUpdateLogEmptyHint => 'アップデートすると、ここに残ります';
+
+  @override
+  String get storeInstalledTitle => 'インストール済み';
+
+  @override
+  String get storeInstalledEmptyHint => 'ストアから追加できます';
+
+  @override
+  String storeInstalledItemSubtitle(String version, String id) {
+    return 'v$version ・ $id';
+  }
+
+  @override
+  String get storeUnknown => '不明';
+
+  @override
+  String get storeInstalledMissingHint => '削除済みか、別の端末で入れたものです';
+
+  @override
+  String get storeInstalledSourceSnapshot => 'インストールしたときの掲載の写しです。';
+
+  @override
+  String get storeInstalledSourceManifest => 'プラグイン自身の宣言(権限の id だけ)です。';
+
+  @override
+  String get storeInstalledRemoveTitle => '削除しますか？';
+
+  @override
+  String storeInstalledRemoveMessage(String name) {
+    return '$name を端末から削除します。';
+  }
+
+  @override
+  String get storeRemove => '削除';
+
+  @override
+  String get storeCancel => 'キャンセル';
+
+  @override
+  String get storeInstalledOffline => 'ストアに接続できないので、手元の情報を出しています。';
+
+  @override
+  String get storeInstalledUnlisted =>
+      'ストアの掲載は見つかりません(取り下げられた可能性があります)。このまま使い続けることも、削除することもできます。';
+
+  @override
+  String get storeInstalledVersionHeader => 'インストール済みのバージョン';
+
+  @override
+  String storeInstalledAt(String date) {
+    return 'インストール: $date';
+  }
+
+  @override
+  String storeInstalledAtVerified(String date, String sha512) {
+    return 'インストール: $date ・ 検証済み SHA-512 $sha512';
+  }
+
+  @override
+  String storeInstalledNewerTitle(String version) {
+    return 'ストアには v$version があります';
+  }
+
+  @override
+  String get storeInstalledNewerSubtitle => 'ストアのページから入れ直せます';
+
+  @override
+  String storeInstalledSlots(String slots) {
+    return '動いている場所: $slots';
+  }
+
+  @override
+  String get storeInstalledOpenStore => 'ストアのページを開く';
+
+  @override
+  String get storePrivacyHeader => 'プライバシーと必要な権限';
+
+  @override
+  String get storeVersionsInstalledHeader => '入っている版';
+
+  @override
+  String get storeVersionsDefault => '既定の版';
+
+  @override
+  String storeVersionsUsers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count アカウントが使用中',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String storeVersionsInstalledOn(int year, int month, int day) {
+    return '入れた日 $year/$month/$day';
+  }
+
+  @override
+  String get storeMenu => 'メニュー';
+
+  @override
+  String get storeVersionsMakeDefault => '既定の版にする';
+
+  @override
+  String get storeVersionsRemove => 'この版を消す';
+
+  @override
+  String storeVersionsRemoved(String version) {
+    return '$version を消しました';
+  }
+
+  @override
+  String get storeVersionsOthersHeader => 'ほかの版を入れる';
+
+  @override
+  String get storeVersionsMorePermissions => '権限が増えます';
+
+  @override
+  String get storeVersionsInstall => '入れる';
+
+  @override
+  String get storeVersionsPerAccountHeader => 'アカウントごと';
+
+  @override
+  String get storeVersionsPerAccountCaption => 'アカウントごとに、使う版を選べます';
+
+  @override
+  String get storeVersionsPerAccountDetail =>
+      'そのアカウントを使っている間、スロットプラグインとノードの並べ替えは、ここで選んだ版で動きます。';
+
+  @override
+  String storeVersionsFollowDefault(String version) {
+    return '既定に従う($version)';
+  }
+
+  @override
+  String storeVersionsAccountFollows(String account) {
+    return '$account は既定の版に従います';
+  }
+
+  @override
+  String storeVersionsAccountUses(String account, String version) {
+    return '$account は $version を使います';
+  }
+
+  @override
+  String storeVersionsDefaultShort(String version) {
+    return '既定($version)';
+  }
+
+  @override
+  String get storeVersionsPackNote => '着せ替え / ステッカー・素材は端末全体で 1 つの版を使います(既定の版)。';
+
+  @override
+  String get storeUpdateModeAuto => 'おまかせ';
+
+  @override
+  String get storeUpdateModeAutoDescription =>
+      '新しい版を入れて、既定の版にします(アカウントごとに指定した版はそのまま)';
+
+  @override
+  String get storeUpdateModeInstallOnly => 'インストールだけおまかせ';
+
+  @override
+  String get storeUpdateModeInstallOnlyDescription => '新しい版を入れておくだけで、使う版は変えません';
+
+  @override
+  String get storeUpdateModeManual => '全て手動で構成';
+
+  @override
+  String get storeUpdateModeManualDescription => '自動では何もしません(プラグインを管理から入れます)';
+
+  @override
+  String get storeUpdateGroupSns => 'SNSプラグイン';
+
+  @override
+  String get storeUpdateGroupAction => 'アクションプラグイン';
+
+  @override
+  String get storeUpdateGroupView => 'ビュープラグイン';
+
+  @override
+  String storeUpdateLogActivated(String from, String to) {
+    return '$from → $to(既定の版にしました)';
+  }
+
+  @override
+  String storeUpdateLogInstalled(String from, String to) {
+    return '$to を入れました(使う版は $from のまま)';
+  }
+
+  @override
+  String storeUpdateLogSwitched(String from, String to) {
+    return '$from → $to(入っていた版を既定に)';
+  }
+
+  @override
+  String storeUpdateLogSkipped(String to) {
+    return '$to は自動では入れません';
+  }
+
+  @override
+  String storeUpdateLogSkippedNote(String to, String note) {
+    return '$to は自動では入れません($note)';
+  }
+
+  @override
+  String storeUpdateLogFailed(String to) {
+    return '$to を入れられませんでした';
+  }
+
+  @override
+  String storeUpdateLogFailedNote(String to, String note) {
+    return '$to を入れられませんでした($note)';
+  }
+
+  @override
+  String get storeUpdatePopupTitle => 'プラグインをアップデートしました';
+
+  @override
+  String get storeClose => '閉じる';
+
+  @override
+  String get storeReviewsTitle => 'レビュー';
+
+  @override
+  String get storeReviewsLoadFailed => 'レビューを取得できませんでした';
+
+  @override
+  String get storeReviewWrite => 'レビューを書く';
+
+  @override
+  String get storeReviewsEmpty => 'まだレビューがありません';
+
+  @override
+  String get storeReviewsEmptyHint => '右下の + から最初のレビューを書けます';
+
+  @override
+  String get storeCopyLink => 'リンクをコピー';
+
+  @override
+  String get storeReviewReport => 'レビューを報告';
+
+  @override
+  String get storeReviewLinkCopied => 'レビューのリンクをコピーしました';
+
+  @override
+  String get storeReviewReportUnavailable => 'レビューの報告は準備中です';
+
+  @override
+  String storeReloadFailed(String error) {
+    return '読み直せませんでした: $error';
+  }
+
+  @override
+  String get storeNoNewPlugins => '新しく公開されたプラグインはありません';
+
+  @override
+  String storeNewPluginsAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '新しく公開されたプラグインを $count 件追加しました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storeSearchTitle => 'プラグインを検索';
+
+  @override
+  String get storeSearchRecentPick => '最近の投稿内容から選出';
+
+  @override
+  String get storeSearchFailed => '検索できませんでした';
+
+  @override
+  String get storeSearchNoRecentPosts => '最近の投稿が見つかりませんでした';
+
+  @override
+  String get storeSearchNoRecentPostsHint =>
+      'SNS アカウントで投稿すると、その内容に近いプラグインを選びます';
+
+  @override
+  String storeSearchRecentCaption(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最近の投稿 $count 件の内容に近い順(端末の中で選んでいます)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storeSearchNoRecentMatches => '最近の投稿に近いプラグインは見つかりませんでした';
+
+  @override
+  String get storeSearchNoResults => '見つかりませんでした';
+
+  @override
+  String get storeSearchNoResultsHint => 'ワードや絞り込みを変えてみてください';
+
+  @override
+  String get storeHomeTitle => 'プラグインストア';
+
+  @override
+  String get storeConnectFailed => 'ストアに接続できませんでした';
+
+  @override
+  String get storeHomeOffline => 'RASQ サーバーにつながっていません。アプリに入っているプラグインだけを表示しています';
+
+  @override
+  String get storeHomeOfflineDetail =>
+      'Central 未接続: 同梱の実物(Misskey コネクタとスロットのサンプル)だけ。評価 / ダウンロード数 / レビュー / 購入はサーバーにつなぐと出ます。';
+
+  @override
+  String get storeHomeTrending => '今週のトレンド';
+
+  @override
+  String get storeHomeRecent => '新着';
+
+  @override
+  String get storeHomeReviewedOnly => '掲載されるのは審査済みのプラグインだけです';
+
+  @override
+  String get storeHomeReviewedOnlyDetail =>
+      '開発中のプラグインは、開発者モードで右上の歯車 → プラグインを管理 →「プラグインのインポート」から入れられます。';
+
+  @override
+  String get storeRowEmpty => 'いまは表示できるプラグインがありません';
+
+  @override
+  String get storeInstallManifestUnavailable => '構成を取得できませんでした';
+
+  @override
+  String storeInstallSheetTitle(String name, String version) {
+    return '$name $version をインストール';
+  }
+
+  @override
+  String get storeInstallPermissionsHeader => 'このプラグインが使う権限';
+
+  @override
+  String get storeInstallHostsHeader => '接続先';
+
+  @override
+  String get storeInstallLoginInstance => 'ログイン先のインスタンス';
+
+  @override
+  String get storeInstallScopeNoRecord => '許可する内容(前に入れたときの記録がありません)';
+
+  @override
+  String get storeInstallScopeWidened => '最後に許可した内容から広がるもの';
+
+  @override
+  String get storeInstallPermissionsAdded => '前のバージョンから増えた権限';
+
+  @override
+  String storeInstallBundleSummary(String size, String signature) {
+    return '${size}MB ・ $signature';
+  }
+
+  @override
+  String get storeInstallSignedShort => 'ストアの署名あり';
+
+  @override
+  String get storeInstallUnsignedShort => 'ストアの署名なし';
+
+  @override
+  String storeInstallBundleDetail(
+    String size,
+    String sha512,
+    String signature,
+  ) {
+    return '配布物: ${size}MB ・ SHA-512 $sha512… ・ $signature';
+  }
+
+  @override
+  String get storeInstallSignedDetail => 'ストア署名つき (ed25519)';
+
+  @override
+  String get storeInstallUnsignedDetail => 'ストア署名なし(ハッシュ照合のみ)';
+
+  @override
+  String get storeInstallConfirm => 'インストールする';
+
+  @override
+  String storeInstallThemeDarkOnly(String name) {
+    return '$name を使います。暗いモードのときに効きます';
+  }
+
+  @override
+  String storeInstallThemeLightOnly(String name) {
+    return '$name を使います。明るいモードのときに効きます';
+  }
+
+  @override
+  String storeInstallThemeApplied(String name) {
+    return '$name を使います';
+  }
+
+  @override
+  String storeInstallDone(String name, String version) {
+    return '$name $version をインストールしました';
+  }
+
+  @override
+  String storeVersionScopeTitle(String version) {
+    return 'Ver.$version は許可する内容が広がります';
+  }
+
+  @override
+  String get storeVersionScopeConfirm => '許可して使う';
+
+  @override
+  String get storeVersionScopeCancel => 'やめる';
+
+  @override
+  String storePurchasePointsFailed(String error) {
+    return 'ポイントを確かめられませんでした(RASQ アカウントにログインしていますか?): $error';
+  }
+
+  @override
+  String storePurchaseTitle(String name) {
+    return '$name を購入';
+  }
+
+  @override
+  String storePurchasePrice(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ポイント',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String storePurchaseBalance(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '残り $count ポイント',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String storePurchaseBalanceExpiring(int count, String date, int expiring) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '残り $count ポイント ・ $date に $expiring ポイントが失効',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storePurchaseCaption => '買ったプラグインは、同じアカウントならどの端末でも使えます';
+
+  @override
+  String get storePurchaseCaptionDetail =>
+      '買ったプラグインは、同じ RASQ アカウントならどの端末でも入れられます。ポイントは有効期限の近いものから使います。';
+
+  @override
+  String storePurchaseBuy(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ポイントで購入する',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String storePurchaseShort(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ポイントが足りません(あと $count ポイント)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storePurchaseConsole => 'Web コンソールでポイントを買う';
+
+  @override
+  String get storePurchaseFailed => '購入できませんでした';
+
+  @override
+  String storeReleaseNotesSemantics(String version) {
+    return 'リリースノート $version';
+  }
+
+  @override
+  String get storeReleaseBeta => 'プレビュー版 (β)';
+
+  @override
+  String get storeReleaseStable => '安定版';
+
+  @override
+  String storeReleasePublishedOn(int year, int month, int day) {
+    return '$year/$month/$day 公開';
+  }
+
+  @override
+  String get storeReleaseCurrentListing => '現在の掲載版';
+
+  @override
+  String get storeReleaseInstalled => 'インストール中';
+
+  @override
+  String get storeReleaseNoNotes => 'この版のリリースノートはありません。';
+
+  @override
+  String get storeReleasePermissionsAdded => 'この版で増えた権限';
+
+  @override
+  String get storeReleasePermissionsNote =>
+      '権限が増える更新は自動アップデートの対象外です。内容を確認してから入れてください。';
+
+  @override
+  String storeReleaseAlreadyInstalled(String version) {
+    return 'Ver.$version はインストール済み';
+  }
+
+  @override
+  String storeReleaseBlocked(String status) {
+    return '$statusのためインストールできません';
+  }
+
+  @override
+  String storeReleaseInstall(String version) {
+    return 'Ver.$version をインストール';
+  }
+
+  @override
+  String storeReleaseReplaces(String version) {
+    return '現在 v$version が入っています。この版に置き換わります。';
+  }
+
+  @override
+  String get storeReviewNoVotes => 'まだ評価がありません';
+
+  @override
+  String storeReviewHelpfulCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人が役に立ったと考えました。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storeShare => '共有';
+
+  @override
+  String get storeReviewHelpful => '参考になった';
+
+  @override
+  String get storeReviewNotHelpful => '参考にならなかった';
+
+  @override
+  String get storeReviewAnonymous => '匿名';
+
+  @override
+  String get storeReviewVerifiedUse => '実利用済み';
+
+  @override
+  String storeReviewDeveloperReply(String reply) {
+    return '開発者の返信: $reply';
+  }
+
+  @override
+  String get storeReviewNoBody => '(本文なし)';
+
+  @override
+  String get storeReviewComposeTitle => 'レビューの作成';
+
+  @override
+  String get storeReviewSend => '送信';
+
+  @override
+  String get storeRatingLabel => '評価';
+
+  @override
+  String get storeReviewTitleHint => '見出し(任意)';
+
+  @override
+  String get storeReviewBodyHint => '使用感や気になった点を入力してください';
+
+  @override
+  String storeReviewUsedVersion(String version) {
+    return '利用バージョン: v$version';
+  }
+
+  @override
+  String get storeReviewPickRating => '★ を選んでください';
+
+  @override
+  String get storeReviewSent => 'レビューを送信しました';
+
+  @override
+  String storeReviewSendFailed(String error) {
+    return 'レビューを送信できませんでした: $error';
+  }
+
+  @override
+  String get storeSafetyNoPermissions => '必要な権限: なし';
+
+  @override
+  String get storeSafetyExternalHeader => '外部通信とデータ';
+
+  @override
+  String get storeSafetyNoHosts => '外部通信先: なし';
+
+  @override
+  String storeSafetyHosts(String hosts) {
+    return '外部通信先: $hosts';
+  }
+
+  @override
+  String storeSafetyDataHandling(String text) {
+    return 'データの扱い: $text';
+  }
+
+  @override
+  String storeSafetySdks(String sdks) {
+    return '外部 SDK: $sdks';
+  }
+
+  @override
+  String get storeSafetyRuntimeHeader => '実行環境';
+
+  @override
+  String storeSafetyCrashFree(String rate) {
+    return '正常起動率 $rate%';
+  }
+
+  @override
+  String get storeSafetyBackground => 'バックグラウンド実行あり';
+
+  @override
+  String get storeSafetyNoBackground => 'バックグラウンド実行なし';
+
+  @override
+  String get storeSafetyGpu => 'GPU 使用';
+
+  @override
+  String get storeSafetyNoGpu => 'GPU 不使用';
+
+  @override
+  String get storeSafetyNoAds => '広告なし';
+
+  @override
+  String storeSafetyAds(String placements) {
+    return '広告あり($placements)';
+  }
+
+  @override
+  String get storePageMenuPostReview => 'レビューを投稿';
+
+  @override
+  String get storePageMenuReport => 'プラグインを報告';
+
+  @override
+  String get storePageLinkCopied => 'ストアページのリンクをコピーしました';
+
+  @override
+  String get storePageTitle => 'プラグイン';
+
+  @override
+  String get storePageMaybeWithdrawn => '取り下げられた可能性があります';
+
+  @override
+  String get storePageOpenInstalled => 'インストール済みの情報を見る';
+
+  @override
+  String get storePageRequiresPrefix => 'このプラグインを利用するには ';
+
+  @override
+  String get storePageRequiresSuffix => ' のインストールが必要です。';
+
+  @override
+  String storePageInstalledVersion(String version) {
+    return 'インストール済み v$version';
+  }
+
+  @override
+  String storePageInstalledVersionVerified(String version) {
+    return 'インストール済み v$version(SHA-512 検証済み)';
+  }
+
+  @override
+  String get storeFree => '無料';
+
+  @override
+  String storePriceYen(String amount) {
+    return '¥$amount';
+  }
+
+  @override
+  String get storePageInstall => 'インストール';
+
+  @override
+  String storePageBuy(String amount) {
+    return '¥$amount で購入';
+  }
+
+  @override
+  String get storePageThemeInUse => '使用中';
+
+  @override
+  String get storePageThemeUse => '使う';
+
+  @override
+  String get storePageUnknownDeveloper => '提供元不明';
+
+  @override
+  String storePageRatingDownloads(String rating, String downloads) {
+    return '★$rating ・ $downloads DL';
+  }
+
+  @override
+  String storePageStatus(String status) {
+    return '状態: $status';
+  }
+
+  @override
+  String get storePagePreview => 'プレビュー';
+
+  @override
+  String get storePageDownloadsLastMonth => '先月のダウンロード数';
+
+  @override
+  String storePageReviewCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storePageReviewsEmptyBody => '最初のレビューを書いてみませんか。';
+
+  @override
+  String get storePageUpdatesHeader => 'アップデートとバージョン';
+
+  @override
+  String get storePageNoReleaseNotes => 'リリースノートはまだありません。';
+
+  @override
+  String get storeInUse => '利用中';
+
+  @override
+  String storePermissionsAddedList(String permissions) {
+    return '権限の追加: $permissions';
+  }
+
+  @override
+  String get storePagePermissionsHeader => '権限';
+
+  @override
+  String get storePageNoPermissions => 'このプラグインは追加の権限を要求しません。';
+
+  @override
+  String get storePageCompatibilityHeader => '互換性';
+
+  @override
+  String storePageRuntimes(String runtimes) {
+    return 'ランタイム: $runtimes';
+  }
+
+  @override
+  String storePageRequiredPlugins(String plugins) {
+    return '必要プラグイン: $plugins';
+  }
+
+  @override
+  String storePageConflicts(String plugins) {
+    return '競合: $plugins';
+  }
+
+  @override
+  String storePageRasqFeatures(String features) {
+    return '利用する RASQ 機能: $features';
+  }
+
+  @override
+  String get storePageVersionsTitle => 'バージョン';
+
+  @override
+  String storePageNoPreview(String name) {
+    return '$name のプレビュー画像はまだありません';
+  }
+
+  @override
+  String get storePageBookmarkRemove => 'ブックマークを外す';
+
+  @override
+  String get storePageBookmarkAdd => 'ブックマークする';
+
+  @override
+  String storePageBookmarkFailed(String error) {
+    return 'ブックマークを更新できませんでした: $error';
+  }
+
+  @override
+  String storeNeedsServer(String feature) {
+    return '$featureは RASQ サーバーにつなぐと使えます';
+  }
+
+  @override
+  String get storeNoListing => '掲載がありません';
+
+  @override
+  String get storeCatalogMisskeyName => 'Misskey コネクタ';
+
+  @override
+  String get storeCatalogMisskeySummary =>
+      'Misskey を RASQ に繋ぐ SNS プラグイン(wasm サンプル)。TL 取得/投稿/リアクション/絵文字/投稿加工まで一式。';
+
+  @override
+  String get storeCatalogMisskeyDescription =>
+      'rasq-sdk-sample の Rust 製 wasm プラグインです。sns.login / sns.timeline / post.transform / tl.sort などの契約(PROTOCOL.md)を実装し、RRL タイルで TL を描画します。ノード定義を持たない投稿加工は、取得ノードに渡す直前に適用されます。';
+
+  @override
+  String get storeCatalogFeatureTimelineRrl => 'タイムライン描画 (RRL)';
+
+  @override
+  String get storeCatalogFeatureNodeGraph => 'ノードグラフ (tl.sort)';
+
+  @override
+  String get storeCatalogMisskeyPerm1 =>
+      'Misskey インスタンスの API を呼ぶため(接続先はログイン時に指定したホストのみ)';
+
+  @override
+  String get storeCatalogMisskeyPerm2 => 'セッショントークンと TL 設定の保存';
+
+  @override
+  String get storeCatalogMisskeyHost => '<ログインした Misskey インスタンス>';
+
+  @override
+  String get storeCatalogMisskeyDataHandling =>
+      '投稿・トークンは端末内(storage.safe)にのみ保存。開発元への送信はありません。';
+
+  @override
+  String get storeCatalogSampleDataHandling => '処理は端末内の wasm で完結し、外部送信はありません。';
+
+  @override
+  String get storeCatalogAstellName => 'ASTell 効果音・効果映像';
+
+  @override
+  String get storeCatalogAstellSummary =>
+      'ASTell のプラグインアクションから効果音 / 生成した効果映像 / 定型テキストを流します。';
+
+  @override
+  String get storeCatalogAstellDescription =>
+      'スロット `astell.action`。ルーム下段の、このプラグインが宣言したボタンで FOW を開き、システム音(ピンポン / クリック)、紙吹雪・花火・拍手の生成 PNG、定型テキストを共有します。「ASTell で共有」した投稿の受け取りも表示します。';
+
+  @override
+  String get storeCatalogFeatureAstellAction => 'ASTell プラグインアクション';
+
+  @override
+  String get storeCatalogAstellPerm1 => '操作パネル(FOW)を出すため';
+
+  @override
+  String get storeCatalogAstellPerm2 => '効果の使用回数の保存';
+
+  @override
+  String get storeCatalogComposerMediaName => 'メディア加工';
+
+  @override
+  String get storeCatalogComposerMediaSummary => '添付画像のガンマ補正 / 回転 / 色相 / クロップ。';
+
+  @override
+  String get storeCatalogComposerMediaDescription =>
+      'スロット `composer.media`。コンポーザーの添付タイルの「プラグインで加工」で FOW を開き、プレビューを見ながら適用します。処理は端末内の wasm だけで完結します。';
+
+  @override
+  String get storeCatalogFeatureMediaComposer => 'メディアコンポーザー';
+
+  @override
+  String get storeCatalogComposerMediaPerm1 => '加工パネル(FOW)を出すため';
+
+  @override
+  String get storeCatalogComposerMediaPerm2 => '前回の設定の保存';
+
+  @override
+  String get storeCatalogComposerTextName => 'ハッシュタグ候補';
+
+  @override
+  String get storeCatalogComposerTextSummary => '本文で # を打つと候補が出て、タップで挿入します。';
+
+  @override
+  String get storeCatalogComposerTextDescription =>
+      'スロット `composer.text`。本文の変化を受け取り、カーソル直前が #〜 のときに候補 FOW(最近使ったタグ + 辞書)を出します。';
+
+  @override
+  String get storeCatalogFeatureTextComposer => 'テキストコンポーザー';
+
+  @override
+  String get storeCatalogComposerTextPerm1 => '候補パネル(FOW)を出すため';
+
+  @override
+  String get storeCatalogComposerTextPerm2 => '最近使ったタグの保存';
+
+  @override
+  String get storeCatalogMediaFullscreenName => 'QR コード検出';
+
+  @override
+  String get storeCatalogMediaFullscreenSummary =>
+      '全画面表示の画像から QR コードを見つけて枠を出し、タップでリンクを開けます。';
+
+  @override
+  String get storeCatalogMediaFullscreenDescription =>
+      'スロット `viewer.overlay`。全画面ビューワーの画像を受け取って QR を検出し、バウンディングボックスを重ねます。タップでリンク FOW(コピー / ブラウザで開く / ミュート語に追加)。';
+
+  @override
+  String get storeCatalogFeatureViewerPlugin => '全画面表示プラグイン';
+
+  @override
+  String get storeCatalogMediaFullscreenPerm1 => 'リンクパネル(FOW)を出すため';
+
+  @override
+  String get storeCatalogMediaFullscreenPerm2 =>
+      '「このリンクをミュート」でミュート語に追加するため(毎回確認)';
+
+  @override
+  String get storeCatalogPostProcessName => '相対日付を日付に';
+
+  @override
+  String get storeCatalogPostProcessSummary => '「今日」「昨日」「明日」を投稿日基準の日付に置き換えます。';
+
+  @override
+  String get storeCatalogPostProcessDescription =>
+      'スロット `post.transform`。全 TL の表示直前に本文の相対日付を「9/10(今日)」のように書き換えます(JST)。URL の中は触りません。';
+
+  @override
+  String get storeCatalogFeaturePostTransform => '投稿加工 (post.transform)';
+
+  @override
+  String get storeCatalogTimelineName => 'Unicode 昇順 TL';
+
+  @override
+  String get storeCatalogTimelineSummary => 'ホームに本文の Unicode 順で並ぶタブを足します。';
+
+  @override
+  String get storeCatalogTimelineDescription =>
+      'スロット `tl`。基礎 TL(ホーム)を受け取り、本文の Unicode コードポイント昇順で並べ替えたカスタムタブを出します。';
+
+  @override
+  String get storeCatalogFeatureTimelineSort => 'タイムライン (tl.sort)';
+
+  @override
+  String get storeCatalogPostShareName => '共有テンプレート';
+
+  @override
+  String get storeCatalogPostShareSummary =>
+      '共有 FOW から投稿をテンプレート(リンク / 引用 / 作者に言及)で整えてコンポーザーへ。';
+
+  @override
+  String get storeCatalogPostShareDescription =>
+      'スロット `post.share`。投稿の共有 FOW の「プラグイン」節に自動で並び、タップするとインライン FOW で文面を選んでコンポーザー / コピー / ブラウザ / ASTell へ渡します。';
+
+  @override
+  String get storeCatalogFeaturePostShare => '投稿共有 (post.share)';
+
+  @override
+  String get storeCatalogPostSharePerm1 => 'テンプレート選択パネル(FOW)を出すため';
+
+  @override
+  String get storeCatalogPostSharePerm2 => '前回のテンプレートの保存';
+
+  @override
+  String get storeCatalogMediaTransformName => '変形ハンドル';
+
+  @override
+  String get storeCatalogMediaTransformSummary =>
+      '画像の上に回転 / クロップのハンドルを重ねて編集します。';
+
+  @override
+  String get storeCatalogMediaTransformDescription =>
+      'スロット `composer.media`(変形)。メディアエディターのプレビューに RRL の重ね(契約 v0.5 `composer.media.overlay`)でハンドルを描き、指でなぞって回転角やクロップ範囲を決めます。';
+
+  @override
+  String get storeCatalogFeatureOverlay => '重ね (overlay)';
+
+  @override
+  String get storeCatalogMediaTransformPerm1 => 'パネル(FOW)を出すため';
+
+  @override
+  String get storeCatalogMediaProcessName => '加工(顔ぼかし / スタンプ)';
+
+  @override
+  String get storeCatalogMediaProcessSummary =>
+      '顔を検知してぼかす、スタンプをオブジェクトとして貼る(移動 / 拡縮 / 回転 / 削除 / 複製)。';
+
+  @override
+  String get storeCatalogMediaProcessDescription =>
+      'スロット `composer.media`(加工)。顔検知は端末内の wasm(rustface)で行い、外部送信はありません。スタンプは重ねの枠とハンドルで動かせます。';
+
+  @override
+  String get storeCatalogMediaProcessPerm1 => 'スタンプ選択パネル(FOW)を出すため';
+
+  @override
+  String get storeCatalogMediaDrawName => '描画(ペン / 図形)';
+
+  @override
+  String get storeCatalogMediaDrawSummary =>
+      'ペンの軌跡をスプライン曲線で描く、四角 / 丸を追加して編集します。';
+
+  @override
+  String get storeCatalogMediaDrawDescription =>
+      'スロット `composer.media`(描画)。ペンは指の軌跡を Catmull-Rom スプラインで滑らかにして描きます。図形はオブジェクトとして移動 / 拡縮 / 削除 / 複製できます。';
+
+  @override
+  String get storeCatalogMediaDrawPerm1 => 'ペンの太さ / 色のパネル(FOW)を出すため';
+
+  @override
+  String get storeCatalogMediaDrawPerm2 => 'ペンの設定の保存';
+
+  @override
+  String get storeCatalogPostActionName => '投稿ボタン';
+
+  @override
+  String get storeCatalogPostActionSummary =>
+      '後で読む / 本文をコピー / 引用の下書き — タグで既存ボタンのバンドルに入ります。';
+
+  @override
+  String get storeCatalogPostActionDescription =>
+      'スロット `post.action`。マニフェストのタグ(希望スロット)が既存のアクションボタンに近ければ、そのバンドルの最下層に自動で入ります。「アクションリストの編集」でアカウントごとに有効 / 無効と閾値を変えられます。';
+
+  @override
+  String get storeCatalogFeaturePostAction => '投稿のアクションボタン (post.action)';
+
+  @override
+  String get storeCatalogPostActionPerm1 => '後で読む一覧(FOW)を出すため';
+
+  @override
+  String get storeCatalogPostActionPerm2 => '後で読むの保存';
+
+  @override
+  String get storeCatalogThemeStarryName => '着せ替え「星空」';
+
+  @override
+  String get storeCatalogThemeStarrySummary => '夜空の背景、星の粒を重ねた投稿タイル、星のいいね。';
+
+  @override
+  String get storeCatalogThemeStarryDescription =>
+      '着せ替え(`kind: \"theme\"`、契約 v0.16)。コードを持たない配布物で、色 / アイコンの差し替え / 画面・投稿タイル・FOW・ボタンの背景の画像のレイヤーを宣言します。インストール後に 設定 → アプリの外観 → フォントやカラースキーム で選びます(暗いモードのときに効きます)。';
+
+  @override
+  String get storeCatalogFeatureTheme => '着せ替え';
+
+  @override
+  String get storeCatalogThemeRasqName => '着せ替え「RASQ」';
+
+  @override
+  String get storeCatalogThemeRasqSummary =>
+      '投稿の上に紺のグラデーションの帯と薄い RASQ のマーク、FOW は緑のグラデーション。';
+
+  @override
+  String get storeCatalogThemeRasqDescription =>
+      '着せ替え(`kind: \"theme\"`、契約 v0.17)。投稿タイルの上辺に #1F1E33 から投稿の背景色へ溶けるグラデーションの帯、背景に薄い RASQ のマーク、FOW の背景は上から下へ #02775C → #178178 のグラデーション(文字は白)。明るい / 暗いモードのどちらでも効きます。';
+
+  @override
+  String get storeCatalogPaintName => 'みんなで落書き';
+
+  @override
+  String get storeCatalogPaintSummary =>
+      '1 人 1 マスの落書きを、期限つきでみんなに見せ合います。ASTell のルームやプロフィールで。';
+
+  @override
+  String get storeCatalogPaintDescription =>
+      'カスタムプラグイン(スロット `page`、契約 v0.23)。3:4 のマスを 2 列に並べ(並びは人ごとにシャッフル)、自分のマスを押すとメディア編集画面の SVG モードで落書きします(保存は zstd で縮めて送ります)。表示期間は各自が選び、管理者(セッションの持ち主)が既定と上限を決めます。期限が来ると Central が消します。管理者は他人の落書きを削除できます。';
+
+  @override
+  String get storeCatalogFeatureCustomPage => 'カスタムプラグイン (page)';
+
+  @override
+  String get storeCatalogFeatureSvgPaint => 'SVG の落書き';
+
+  @override
+  String get storeCatalogFeatureDisplayPeriod => '表示期間';
+
+  @override
+  String get storeCatalogFeatureProfile => 'プロフィール';
+
+  @override
+  String get storeCatalogPaintPerm1 => '落書きのマスを表示し、編集画面を開くため';
+
+  @override
+  String get storeCatalogPaintPerm2 => 'みんなの落書きと管理者の設定を、期限つきで共有するため';
+
+  @override
+  String get storeCatalogBoardName => 'みんなのボード';
+
+  @override
+  String get storeCatalogBoardSummary =>
+      'カウンター・投票・寄せ書き・🎉。ASTell のルームやプロフィールで、みんなで同じボードを使えます。';
+
+  @override
+  String get storeCatalogBoardDescription =>
+      'カスタムプラグイン(スロット `page`、契約 v0.18)。ページを 1 枚足し、共有セッションではサーバー変数(カウンター / 投票 / 寄せ書き)とサーバー関数(🎉 を全員に)で同じ画面を共有します。セッションが無いときは端末の中だけで動きます。';
+
+  @override
+  String get storeCatalogBoardPerm1 => 'ページを描くため';
+
+  @override
+  String get storeCatalogBoardPerm2 => 'みんなの値(カウンター / 投票 / 寄せ書き)を共有するため';
+
+  @override
+  String get storeCatalogBoardPerm3 => '1 人で使うときのボードの保存';
+
+  @override
+  String get storeCatalogTrendName => 'トレンドサジェスト';
+
+  @override
+  String get storeCatalogTrendSummary => '今のトレンド語から関連タグをローカル規則で提案します。';
+
+  @override
+  String get storeCatalogTrendDescription =>
+      'スロット `trend.suggest`。TL のノード(トレンドを取得 / Today / 候補のチップ)と、検索ホームの「検索の候補」で出します。サーバー無しの共起辞書 + 前方一致です。';
+
+  @override
+  String get storeCatalogFeatureTrendSuggest => 'トレンド (trend.suggest)';
+
+  @override
+  String storePkgMissingPlugin(String id) {
+    return '配布物に $id がありません';
+  }
+
+  @override
+  String get storePkgNotPackage => '配布物が .rasqpkg(zstd)ではありません';
+
+  @override
+  String storePkgUnpack(String error) {
+    return '配布物を展開できません(壊れているか、大きすぎます): $error';
+  }
+
+  @override
+  String storePkgTar(String error) {
+    return '配布物の tar を読めません: $error';
+  }
+
+  @override
+  String get storePkgTooManyFiles => '配布物のファイル数が多すぎます';
+
+  @override
+  String storePkgNotRegularFile(String path) {
+    return '配布物に通常ファイルでないものがあります: $path';
+  }
+
+  @override
+  String storePkgDuplicatePath(String path) {
+    return '配布物内のパスが重複しています: $path';
+  }
+
+  @override
+  String get storePkgBundleFirst => '配布物の先頭が bundle.json ではありません';
+
+  @override
+  String storePkgBundleRead(String error) {
+    return 'bundle.json を読めません: $error';
+  }
+
+  @override
+  String storePkgBundleSchema(String schema) {
+    return 'bundle.json の schema が rasq.bundle/1 ではありません: $schema';
+  }
+
+  @override
+  String storePkgFileShape(String what) {
+    return 'bundle.json: $what の wasm / file の形が違います';
+  }
+
+  @override
+  String storePkgNoPath(String what) {
+    return 'bundle.json: $what に path がありません';
+  }
+
+  @override
+  String storePkgSizeMismatch(String path) {
+    return '$path: 大きさが目次と違います';
+  }
+
+  @override
+  String storePkgHashMismatch(String path) {
+    return '$path: SHA-512 が目次と違います';
+  }
+
+  @override
+  String storePkgNoSha512(String what) {
+    return 'bundle.json: $what に sha512 がありません';
+  }
+
+  @override
+  String storePkgNotWasm(String path) {
+    return '$path: wasm ではありません';
+  }
+
+  @override
+  String storePkgPluginShape(String what) {
+    return 'bundle.json: $what の形が違います';
+  }
+
+  @override
+  String storePkgBadId(String what, String id) {
+    return 'bundle.json: $what の id が不正です: $id';
+  }
+
+  @override
+  String storePkgBadVersion(String id, String version) {
+    return 'bundle.json: $id の version が不正です: $version';
+  }
+
+  @override
+  String storePkgBadKind(String id, String kind) {
+    return 'bundle.json: $id の kind が不正です: $kind';
+  }
+
+  @override
+  String storePkgNoManifest(String id) {
+    return 'bundle.json: $id に manifest がありません';
+  }
+
+  @override
+  String storePkgManifestRead(String path, String error) {
+    return '$path を読めません: $error';
+  }
+
+  @override
+  String storePkgManifestMismatch(
+    String path,
+    String id,
+    String version,
+    String kind,
+  ) {
+    return '$path: id / version / kind が目次($id $version $kind)と違います';
+  }
+
+  @override
+  String storePkgChildPackKind(String id, String kind) {
+    return 'bundle.json: 子 $id は kind = $kind にできません';
+  }
+
+  @override
+  String storePkgPackHasWasm(String kind, String id) {
+    return 'bundle.json: $kind $id が wasm を持っています';
+  }
+
+  @override
+  String storePkgMissingKey(String key) {
+    return 'bundle.json: $key がありません';
+  }
+
+  @override
+  String get storePkgChildrenNotSns =>
+      'bundle.json: sns 以外の root は children を持てません';
+
+  @override
+  String storePkgChildPrefix(String id, String root) {
+    return 'bundle.json: 子 $id の id が $root. で始まっていません';
+  }
+
+  @override
+  String storePkgChildSns(String id) {
+    return 'bundle.json: 子 $id は kind = sns にできません';
+  }
+
+  @override
+  String get storePkgDuplicateId => 'bundle.json: プラグインの id が重複しています';
+
+  @override
+  String get storePkgLibsShape => 'bundle.json: libs の形が違います';
+
+  @override
+  String get storePkgAssetsShape => 'bundle.json: assets の形が違います';
+
+  @override
+  String get storePkgPackExtras =>
+      'bundle.json: アセットパック / 着せ替えは children / libs / models を持てません';
+
+  @override
+  String get storePkgPackWasm => 'アセットパック / 着せ替えに wasm が入っています';
+
+  @override
+  String storePkgPackImageCount(int max, int count) {
+    return 'アセットパックの画像は 1〜$max 枚です: $count';
+  }
+
+  @override
+  String storePkgNotImage(String path) {
+    return '$path: 画像(PNG / JPEG / WebP / GIF)ではありません';
+  }
+
+  @override
+  String storePkgImageTooLarge(String path, int mib) {
+    return '$path: 大きすぎます(1 枚 $mib MiB まで)';
+  }
+
+  @override
+  String storePkgAssetNotListed(String path) {
+    return 'manifest.assets の $path が配布物の目次にありません';
+  }
+
+  @override
+  String get storePkgModelsShape => 'bundle.json: models の形が違います';
+
+  @override
+  String get storePkgRequiresShape => 'bundle.json: requires の形が違います';
+
+  @override
+  String get storePkgNoSums => 'SHA512SUMS がありません';
+
+  @override
+  String storePkgSumsMissingFile(String path) {
+    return '$path: SHA512SUMS にあるのに中にありません';
+  }
+
+  @override
+  String storePkgSumsMismatch(String path) {
+    return '$path: SHA512SUMS と違います';
+  }
+
+  @override
+  String storePkgUnlisted(String path) {
+    return '$path: 目次に載っていないファイルがあります';
+  }
+
+  @override
+  String get storePkgThemeMissing => '着せ替えのマニフェストに theme がありません';
+
+  @override
+  String storePkgThemeAsset(String where, String id) {
+    return 'theme.$where の画像 $id が assets(use: theme)にありません';
+  }
+
+  @override
+  String storePkgThemeSurface(String surface) {
+    return 'theme.surfaces の $surface は使えません(app / postTile / fow / actionButton)';
+  }
+
+  @override
+  String storePkgThemeLayer(String surface) {
+    return 'theme.surfaces.$surface.layers: asset か gradient のどちらか 1 つを書いてください';
+  }
+
+  @override
+  String storePkgThemeColors(String surface) {
+    return 'theme.surfaces.$surface.layers: gradient.colors は 2〜8 色です';
+  }
+
+  @override
+  String storePkgThemeStops(String surface) {
+    return 'theme.surfaces.$surface.layers: gradient.stops は colors と同じ数です';
+  }
+
+  @override
+  String storePkgBadPath(String path) {
+    return '配布物内のパスとして使えません: $path';
+  }
+
+  @override
+  String storePkgSigAlg(String alg) {
+    return '署名の alg が ed25519 ではありません: $alg';
+  }
+
+  @override
+  String get storePkgSigDigest => 'sig.json の digest が配布物と違います(配布物が差し替わっています)';
+
+  @override
+  String get storePkgSigRead => 'sig.json の publicKey / signature を読めません';
+
+  @override
+  String get storePkgSigLength => 'sig.json の鍵 / 署名の長さが違います';
+
+  @override
+  String get storePkgSigInvalid => '開発者鍵の署名が合いません';
+
+  @override
+  String storePkgFileMissing(String path) {
+    return '$path: 目次にあるのに中にありません';
+  }
+
+  @override
+  String storePkgTwice(String path) {
+    return 'bundle.json: $path が 2 回出てきます';
+  }
+
+  @override
+  String get storePkgKindTheme => '着せ替え';
+
+  @override
+  String get storePkgKindAssets => 'アセットパック';
 }

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:rasq_models/rasq_models.dart' show ErrorCode;
 
 import '../../backend/orgate_client.dart' show OrgateException;
+import '../../l10n/l10n.dart';
 
 import 'store_models.dart';
 
@@ -69,23 +70,26 @@ const storeSamplePluginId = 'jp.rasq.misskey-wasm-sample';
 
 /// スロットプラグインのサンプル (D-168): ストア id = マニフェストの id、
 /// 配布物 = 同梱の wasm(`assets/plugins/<asset>`)。インストールでスロット登録される。
-const storeSlotSamples = <({String id, String asset, String name, String summary, String description, List<String> features, List<(String, String)> permissions, double sizeMb})>[
-  (id: 'sample.astell', asset: 'astell_plugin.wasm', name: 'ASTell 効果音・効果映像', summary: 'ASTell のプラグインアクションから効果音 / 生成した効果映像 / 定型テキストを流します。', description: 'スロット `astell.action`。ルーム下段の、このプラグインが宣言したボタンで FOW を開き、システム音(ピンポン / クリック)、紙吹雪・花火・拍手の生成 PNG、定型テキストを共有します。「ASTell で共有」した投稿の受け取りも表示します。', features: ['ASTell プラグインアクション', 'FOW'], permissions: [('fow.widget', '操作パネル(FOW)を出すため'), ('storage.safe', '効果の使用回数の保存')], sizeMb: 0.25),
-  (id: 'sample.composer-media', asset: 'composer_media_plugin.wasm', name: 'メディア加工', summary: '添付画像のガンマ補正 / 回転 / 色相 / クロップ。', description: 'スロット `composer.media`。コンポーザーの添付タイルの「プラグインで加工」で FOW を開き、プレビューを見ながら適用します。処理は端末内の wasm だけで完結します。', features: ['メディアコンポーザー', 'FOW'], permissions: [('fow.widget', '加工パネル(FOW)を出すため'), ('storage.safe', '前回の設定の保存')], sizeMb: 0.53),
-  (id: 'sample.composer-text', asset: 'composer_text_plugin.wasm', name: 'ハッシュタグ候補', summary: '本文で # を打つと候補が出て、タップで挿入します。', description: 'スロット `composer.text`。本文の変化を受け取り、カーソル直前が #〜 のときに候補 FOW(最近使ったタグ + 辞書)を出します。', features: ['テキストコンポーザー', 'FOW'], permissions: [('fow.widget', '候補パネル(FOW)を出すため'), ('storage.safe', '最近使ったタグの保存')], sizeMb: 0.14),
-  (id: 'sample.media-fullscreen', asset: 'media_fullscreen_plugin.wasm', name: 'QR コード検出', summary: '全画面表示の画像から QR コードを見つけて枠を出し、タップでリンクを開けます。', description: 'スロット `viewer.overlay`。全画面ビューワーの画像を受け取って QR を検出し、バウンディングボックスを重ねます。タップでリンク FOW(コピー / ブラウザで開く / ミュート語に追加)。', features: ['全画面表示プラグイン', 'FOW'], permissions: [('fow.widget', 'リンクパネル(FOW)を出すため'), ('mute.words', '「このリンクをミュート」でミュート語に追加するため(毎回確認)')], sizeMb: 0.71),
-  (id: 'sample.post-process', asset: 'post_process_plugin.wasm', name: '相対日付を日付に', summary: '「今日」「昨日」「明日」を投稿日基準の日付に置き換えます。', description: 'スロット `post.transform`。全 TL の表示直前に本文の相対日付を「9/10(今日)」のように書き換えます(JST)。URL の中は触りません。', features: ['投稿加工 (post.transform)'], permissions: [], sizeMb: 0.1),
-  (id: 'sample.timeline', asset: 'timeline_plugin.wasm', name: 'Unicode 昇順 TL', summary: 'ホームに本文の Unicode 順で並ぶタブを足します。', description: 'スロット `tl`。基礎 TL(ホーム)を受け取り、本文の Unicode コードポイント昇順で並べ替えたカスタムタブを出します。', features: ['タイムライン (tl.sort)'], permissions: [], sizeMb: 0.1),
-  (id: 'sample.post-share', asset: 'post_share_plugin.wasm', name: '共有テンプレート', summary: '共有 FOW から投稿をテンプレート(リンク / 引用 / 作者に言及)で整えてコンポーザーへ。', description: 'スロット `post.share`。投稿の共有 FOW の「プラグイン」節に自動で並び、タップするとインライン FOW で文面を選んでコンポーザー / コピー / ブラウザ / ASTell へ渡します。', features: ['投稿共有 (post.share)', 'FOW'], permissions: [('fow.widget', 'テンプレート選択パネル(FOW)を出すため'), ('storage.safe', '前回のテンプレートの保存')], sizeMb: 0.13),
-  (id: 'sample.media-transform', asset: 'media_transform_plugin.wasm', name: '変形ハンドル', summary: '画像の上に回転 / クロップのハンドルを重ねて編集します。', description: 'スロット `composer.media`(変形)。メディアエディターのプレビューに RRL の重ね(契約 v0.5 `composer.media.overlay`)でハンドルを描き、指でなぞって回転角やクロップ範囲を決めます。', features: ['メディアコンポーザー', '重ね (overlay)'], permissions: [('fow.widget', 'パネル(FOW)を出すため')], sizeMb: 0.5),
-  (id: 'sample.media-process', asset: 'media_process_plugin.wasm', name: '加工(顔ぼかし / スタンプ)', summary: '顔を検知してぼかす、スタンプをオブジェクトとして貼る(移動 / 拡縮 / 回転 / 削除 / 複製)。', description: 'スロット `composer.media`(加工)。顔検知は端末内の wasm(rustface)で行い、外部送信はありません。スタンプは重ねの枠とハンドルで動かせます。', features: ['メディアコンポーザー', '重ね (overlay)', 'FOW'], permissions: [('fow.widget', 'スタンプ選択パネル(FOW)を出すため')], sizeMb: 2.0),
-  (id: 'sample.media-draw', asset: 'media_draw_plugin.wasm', name: '描画(ペン / 図形)', summary: 'ペンの軌跡をスプライン曲線で描く、四角 / 丸を追加して編集します。', description: 'スロット `composer.media`(描画)。ペンは指の軌跡を Catmull-Rom スプラインで滑らかにして描きます。図形はオブジェクトとして移動 / 拡縮 / 削除 / 複製できます。', features: ['メディアコンポーザー', '重ね (overlay)', 'FOW'], permissions: [('fow.widget', 'ペンの太さ / 色のパネル(FOW)を出すため'), ('storage.safe', 'ペンの設定の保存')], sizeMb: 0.5),
-  (id: 'sample.post-action', asset: 'post_action_plugin.wasm', name: '投稿ボタン', summary: '後で読む / 本文をコピー / 引用の下書き — タグで既存ボタンのバンドルに入ります。', description: 'スロット `post.action`。マニフェストのタグ(希望スロット)が既存のアクションボタンに近ければ、そのバンドルの最下層に自動で入ります。「アクションリストの編集」でアカウントごとに有効 / 無効と閾値を変えられます。', features: ['投稿のアクションボタン (post.action)', 'FOW'], permissions: [('fow.widget', '後で読む一覧(FOW)を出すため'), ('storage.safe', '後で読むの保存')], sizeMb: 0.13),
-  (id: 'sample.theme-starry', asset: 'theme_starry.rasqpkg', name: '着せ替え「星空」', summary: '夜空の背景、星の粒を重ねた投稿タイル、星のいいね。', description: '着せ替え(`kind: "theme"`、契約 v0.16)。コードを持たない配布物で、色 / アイコンの差し替え / 画面・投稿タイル・FOW・ボタンの背景の画像のレイヤーを宣言します。インストール後に 設定 → アプリの外観 → フォントやカラースキーム で選びます(暗いモードのときに効きます)。', features: ['着せ替え'], permissions: [], sizeMb: 0.09),
-  (id: 'sample.theme-rasq', asset: 'theme_rasq.rasqpkg', name: '着せ替え「RASQ」', summary: '投稿の上に紺のグラデーションの帯と薄い RASQ のマーク、FOW は緑のグラデーション。', description: '着せ替え(`kind: "theme"`、契約 v0.17)。投稿タイルの上辺に #1F1E33 から投稿の背景色へ溶けるグラデーションの帯、背景に薄い RASQ のマーク、FOW の背景は上から下へ #02775C → #178178 のグラデーション(文字は白)。明るい / 暗いモードのどちらでも効きます。', features: ['着せ替え'], permissions: [], sizeMb: 0.02),
-  (id: 'sample.paint', asset: 'custom_plugin_paint.wasm', name: 'みんなで落書き', summary: '1 人 1 マスの落書きを、期限つきでみんなに見せ合います。ASTell のルームやプロフィールで。', description: 'カスタムプラグイン(スロット `page`、契約 v0.23)。3:4 のマスを 2 列に並べ(並びは人ごとにシャッフル)、自分のマスを押すとメディア編集画面の SVG モードで落書きします(保存は zstd で縮めて送ります)。表示期間は各自が選び、管理者(セッションの持ち主)が既定と上限を決めます。期限が来ると Central が消します。管理者は他人の落書きを削除できます。', features: ['カスタムプラグイン (page)', 'SVG の落書き', '表示期間', 'ASTell', 'プロフィール'], permissions: [('render', '落書きのマスを表示し、編集画面を開くため'), ('shared.session', 'みんなの落書きと管理者の設定を、期限つきで共有するため')], sizeMb: 0.18),
-  (id: 'sample.board', asset: 'custom_page_plugin.wasm', name: 'みんなのボード', summary: 'カウンター・投票・寄せ書き・🎉。ASTell のルームやプロフィールで、みんなで同じボードを使えます。', description: 'カスタムプラグイン(スロット `page`、契約 v0.18)。ページを 1 枚足し、共有セッションではサーバー変数(カウンター / 投票 / 寄せ書き)とサーバー関数(🎉 を全員に)で同じ画面を共有します。セッションが無いときは端末の中だけで動きます。', features: ['カスタムプラグイン (page)', 'ASTell', 'プロフィール'], permissions: [('render', 'ページを描くため'), ('shared.session', 'みんなの値(カウンター / 投票 / 寄せ書き)を共有するため'), ('storage.safe', '1 人で使うときのボードの保存')], sizeMb: 0.16),
-  (id: 'sample.trend', asset: 'trend_plugin.wasm', name: 'トレンドサジェスト', summary: '今のトレンド語から関連タグをローカル規則で提案します。', description: 'スロット `trend.suggest`。TL のノード(トレンドを取得 / Today / 候補のチップ)と、検索ホームの「検索の候補」で出します。サーバー無しの共起辞書 + 前方一致です。', features: ['トレンド (trend.suggest)'], permissions: [], sizeMb: 0.1),
+List<({String id, String asset, String name, String summary, String description, List<String> features, List<(String, String)> permissions, double sizeMb})> get storeSlotSamples => storeSlotSamplesOf(appL10n);
+
+/// [storeSlotSamples] の掲載の文を [l] の言語で。
+List<({String id, String asset, String name, String summary, String description, List<String> features, List<(String, String)> permissions, double sizeMb})> storeSlotSamplesOf(AppLocalizations l) => [
+  (id: 'sample.astell', asset: 'astell_plugin.wasm', name: l.storeCatalogAstellName, summary: l.storeCatalogAstellSummary, description: l.storeCatalogAstellDescription, features: [l.storeCatalogFeatureAstellAction, 'FOW'], permissions: [('fow.widget', l.storeCatalogAstellPerm1), ('storage.safe', l.storeCatalogAstellPerm2)], sizeMb: 0.25),
+  (id: 'sample.composer-media', asset: 'composer_media_plugin.wasm', name: l.storeCatalogComposerMediaName, summary: l.storeCatalogComposerMediaSummary, description: l.storeCatalogComposerMediaDescription, features: [l.storeCatalogFeatureMediaComposer, 'FOW'], permissions: [('fow.widget', l.storeCatalogComposerMediaPerm1), ('storage.safe', l.storeCatalogComposerMediaPerm2)], sizeMb: 0.53),
+  (id: 'sample.composer-text', asset: 'composer_text_plugin.wasm', name: l.storeCatalogComposerTextName, summary: l.storeCatalogComposerTextSummary, description: l.storeCatalogComposerTextDescription, features: [l.storeCatalogFeatureTextComposer, 'FOW'], permissions: [('fow.widget', l.storeCatalogComposerTextPerm1), ('storage.safe', l.storeCatalogComposerTextPerm2)], sizeMb: 0.14),
+  (id: 'sample.media-fullscreen', asset: 'media_fullscreen_plugin.wasm', name: l.storeCatalogMediaFullscreenName, summary: l.storeCatalogMediaFullscreenSummary, description: l.storeCatalogMediaFullscreenDescription, features: [l.storeCatalogFeatureViewerPlugin, 'FOW'], permissions: [('fow.widget', l.storeCatalogMediaFullscreenPerm1), ('mute.words', l.storeCatalogMediaFullscreenPerm2)], sizeMb: 0.71),
+  (id: 'sample.post-process', asset: 'post_process_plugin.wasm', name: l.storeCatalogPostProcessName, summary: l.storeCatalogPostProcessSummary, description: l.storeCatalogPostProcessDescription, features: [l.storeCatalogFeaturePostTransform], permissions: [], sizeMb: 0.1),
+  (id: 'sample.timeline', asset: 'timeline_plugin.wasm', name: l.storeCatalogTimelineName, summary: l.storeCatalogTimelineSummary, description: l.storeCatalogTimelineDescription, features: [l.storeCatalogFeatureTimelineSort], permissions: [], sizeMb: 0.1),
+  (id: 'sample.post-share', asset: 'post_share_plugin.wasm', name: l.storeCatalogPostShareName, summary: l.storeCatalogPostShareSummary, description: l.storeCatalogPostShareDescription, features: [l.storeCatalogFeaturePostShare, 'FOW'], permissions: [('fow.widget', l.storeCatalogPostSharePerm1), ('storage.safe', l.storeCatalogPostSharePerm2)], sizeMb: 0.13),
+  (id: 'sample.media-transform', asset: 'media_transform_plugin.wasm', name: l.storeCatalogMediaTransformName, summary: l.storeCatalogMediaTransformSummary, description: l.storeCatalogMediaTransformDescription, features: [l.storeCatalogFeatureMediaComposer, l.storeCatalogFeatureOverlay], permissions: [('fow.widget', l.storeCatalogMediaTransformPerm1)], sizeMb: 0.5),
+  (id: 'sample.media-process', asset: 'media_process_plugin.wasm', name: l.storeCatalogMediaProcessName, summary: l.storeCatalogMediaProcessSummary, description: l.storeCatalogMediaProcessDescription, features: [l.storeCatalogFeatureMediaComposer, l.storeCatalogFeatureOverlay, 'FOW'], permissions: [('fow.widget', l.storeCatalogMediaProcessPerm1)], sizeMb: 2.0),
+  (id: 'sample.media-draw', asset: 'media_draw_plugin.wasm', name: l.storeCatalogMediaDrawName, summary: l.storeCatalogMediaDrawSummary, description: l.storeCatalogMediaDrawDescription, features: [l.storeCatalogFeatureMediaComposer, l.storeCatalogFeatureOverlay, 'FOW'], permissions: [('fow.widget', l.storeCatalogMediaDrawPerm1), ('storage.safe', l.storeCatalogMediaDrawPerm2)], sizeMb: 0.5),
+  (id: 'sample.post-action', asset: 'post_action_plugin.wasm', name: l.storeCatalogPostActionName, summary: l.storeCatalogPostActionSummary, description: l.storeCatalogPostActionDescription, features: [l.storeCatalogFeaturePostAction, 'FOW'], permissions: [('fow.widget', l.storeCatalogPostActionPerm1), ('storage.safe', l.storeCatalogPostActionPerm2)], sizeMb: 0.13),
+  (id: 'sample.theme-starry', asset: 'theme_starry.rasqpkg', name: l.storeCatalogThemeStarryName, summary: l.storeCatalogThemeStarrySummary, description: l.storeCatalogThemeStarryDescription, features: [l.storeCatalogFeatureTheme], permissions: [], sizeMb: 0.09),
+  (id: 'sample.theme-rasq', asset: 'theme_rasq.rasqpkg', name: l.storeCatalogThemeRasqName, summary: l.storeCatalogThemeRasqSummary, description: l.storeCatalogThemeRasqDescription, features: [l.storeCatalogFeatureTheme], permissions: [], sizeMb: 0.02),
+  (id: 'sample.paint', asset: 'custom_plugin_paint.wasm', name: l.storeCatalogPaintName, summary: l.storeCatalogPaintSummary, description: l.storeCatalogPaintDescription, features: [l.storeCatalogFeatureCustomPage, l.storeCatalogFeatureSvgPaint, l.storeCatalogFeatureDisplayPeriod, 'ASTell', l.storeCatalogFeatureProfile], permissions: [('render', l.storeCatalogPaintPerm1), ('shared.session', l.storeCatalogPaintPerm2)], sizeMb: 0.18),
+  (id: 'sample.board', asset: 'custom_page_plugin.wasm', name: l.storeCatalogBoardName, summary: l.storeCatalogBoardSummary, description: l.storeCatalogBoardDescription, features: [l.storeCatalogFeatureCustomPage, 'ASTell', l.storeCatalogFeatureProfile], permissions: [('render', l.storeCatalogBoardPerm1), ('shared.session', l.storeCatalogBoardPerm2), ('storage.safe', l.storeCatalogBoardPerm3)], sizeMb: 0.16),
+  (id: 'sample.trend', asset: 'trend_plugin.wasm', name: l.storeCatalogTrendName, summary: l.storeCatalogTrendSummary, description: l.storeCatalogTrendDescription, features: [l.storeCatalogFeatureTrendSuggest], permissions: [], sizeMb: 0.1),
 ];
 
 /// モックストア (M4 v1)。掲載物 = 実在する同梱 wasm サンプル + 架空の
@@ -213,21 +217,21 @@ class BundledStoreClient implements StoreClient {
 
   static StorePluginDetail _misskey(String version) => StorePluginDetail(
         id: storeSamplePluginId,
-        name: 'Misskey コネクタ',
-        summary: 'Misskey を RASQ に繋ぐ SNS プラグイン(wasm サンプル)。TL 取得/投稿/リアクション/絵文字/投稿加工まで一式。',
+        name: appL10n.storeCatalogMisskeyName,
+        summary: appL10n.storeCatalogMisskeySummary,
         version: version,
         status: PluginStatus.published,
         origin: PluginOrigin.official,
         sizeMb: 1.8,
-        description: 'rasq-sdk-sample の Rust 製 wasm プラグインです。sns.login / sns.timeline / post.transform / tl.sort などの契約(PROTOCOL.md)を実装し、RRL タイルで TL を描画します。ノード定義を持たない投稿加工は、取得ノードに渡す直前に適用されます。',
-        safety: const SafetyBlock(
-          rasqFeatures: ['タイムライン描画 (RRL)', 'ノードグラフ (tl.sort)', '投稿加工 (post.transform)'],
+        description: appL10n.storeCatalogMisskeyDescription,
+        safety: SafetyBlock(
+          rasqFeatures: [appL10n.storeCatalogFeatureTimelineRrl, appL10n.storeCatalogFeatureNodeGraph, appL10n.storeCatalogFeaturePostTransform],
           permissions: [
-            PermissionEntry('net.fetch', 'Misskey インスタンスの API を呼ぶため(接続先はログイン時に指定したホストのみ)'),
-            PermissionEntry('storage.safe', 'セッショントークンと TL 設定の保存'),
+            PermissionEntry('net.fetch', appL10n.storeCatalogMisskeyPerm1),
+            PermissionEntry('storage.safe', appL10n.storeCatalogMisskeyPerm2),
           ],
-          externalHosts: ['<ログインした Misskey インスタンス>'],
-          dataHandling: '投稿・トークンは端末内(storage.safe)にのみ保存。開発元への送信はありません。',
+          externalHosts: [appL10n.storeCatalogMisskeyHost],
+          dataHandling: appL10n.storeCatalogMisskeyDataHandling,
         ),
         compatibility: const Compatibility(rasqVersion: '>=0.1.0', os: ['ios', 'android', 'macos', 'windows', 'linux']),
         developerName: 'RASQ Project',
@@ -246,7 +250,7 @@ class BundledStoreClient implements StoreClient {
         safety: SafetyBlock(
           rasqFeatures: x.features,
           permissions: [for (final (p, why) in x.permissions) PermissionEntry(p, why)],
-          dataHandling: '処理は端末内の wasm で完結し、外部送信はありません。',
+          dataHandling: appL10n.storeCatalogSampleDataHandling,
         ),
         compatibility: const Compatibility(rasqVersion: '>=0.1.0', os: ['ios', 'android', 'macos', 'windows', 'linux']),
         developerName: 'RASQ Project',
@@ -274,10 +278,10 @@ class BundledStoreClient implements StoreClient {
   /// ブックマークはサーバー側の状態なので、つないでいない間は端末内に持つ(再起動で消える)。
   final _bookmarked = <String>{};
 
-  static OrgateException _needsServer(String what) => OrgateException(ErrorCode.http(503), '$whatは RASQ サーバーにつなぐと使えます');
+  static OrgateException _needsServer(String what) => OrgateException(ErrorCode.http(503), appL10n.storeNeedsServer(what));
 
   @override
-  Future<StorePurchaseResult> purchase(String pluginId) async => throw _needsServer('購入');
+  Future<StorePurchaseResult> purchase(String pluginId) async => throw _needsServer(appL10n.storeFeaturePurchase);
 
   @override
   Future<StorePoints> points() async => const StorePoints(balance: 0, grants: []);
@@ -293,7 +297,7 @@ class BundledStoreClient implements StoreClient {
   }
 
   @override
-  Future<StoreReview> createReview(String pluginId, {required int rating, String title = '', String body = '', String? usedVersion}) async => throw _needsServer('レビュー');
+  Future<StoreReview> createReview(String pluginId, {required int rating, String title = '', String body = '', String? usedVersion}) async => throw _needsServer(appL10n.storeFeatureReview);
 
   @override
   Future<void> voteReview(String pluginId, String reviewId, ReviewVote vote) async {}
@@ -331,7 +335,7 @@ class BundledStoreClient implements StoreClient {
     if (cached != null) return cached;
     final sample = storeSlotSamples.where((x) => x.id == pluginId).firstOrNull;
     final asset = pluginId == storeSamplePluginId ? _misskeyAsset : sample?.asset;
-    if (asset == null) throw OrgateException(ErrorCode.http(404), '掲載がありません');
+    if (asset == null) throw OrgateException(ErrorCode.http(404), appL10n.storeNoListing);
     return _bytesCache[pluginId] = (await rootBundle.load('assets/plugins/$asset')).buffer.asUint8List();
   }
 

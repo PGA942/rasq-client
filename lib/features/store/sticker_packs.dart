@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../l10n/l10n.dart';
 import '../../session/session_providers.dart';
 import 'rasqpkg.dart';
 
@@ -82,7 +83,7 @@ class StickerPacks extends Notifier<List<InstalledStickerPack>> {
 
   /// 検証済みのアセットパックを保存する(同じ id は入れ替え)。
   Future<InstalledStickerPack> install(RasqPackage package) async {
-    if (!package.root.isAssets) throw ArgumentError('アセットパックではありません: ${package.root.id}');
+    if (!package.root.isAssets) throw ArgumentError(appL10n.storeNotAssetPack(package.root.id));
     await ready;
     final base = await ref.read(assetPackDirProvider)();
     final dir = Directory('${base.path}/${_dirName(package.root.id)}');

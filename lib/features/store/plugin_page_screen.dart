@@ -10,6 +10,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/payments_api.dart' show paidFeaturesProvider;
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../custom/custom_page.dart' show registeredPagePlugin;
 import '../custom/custom_plugins_screen.dart' show installedPagePluginsProvider;
@@ -62,10 +63,10 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
   Future<void> _more(StorePluginDetail d, Rect anchor) async {
     final manager = ref.read(overlayManagerProvider);
     final pick = await manager.showDropdown<String>(id: 'store.plugin.more', anchor: anchor, items: [
-      const RasqDropdownItem('レビューを投稿', 'review'),
-      const RasqDropdownItem('リンクをコピー', 'copy'),
-      const RasqDropdownItem('共有', 'share'),
-      RasqDropdownItem('プラグインを報告', 'report', destructive: true, enabled: d.supportUrl != null),
+      RasqDropdownItem(context.l10n.storePageMenuPostReview, 'review'),
+      RasqDropdownItem(context.l10n.storeCopyLink, 'copy'),
+      RasqDropdownItem(context.l10n.storeShare, 'share'),
+      RasqDropdownItem(context.l10n.storePageMenuReport, 'report', destructive: true, enabled: d.supportUrl != null),
     ]);
     if (!mounted) return;
     switch (pick) {
@@ -75,7 +76,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
       case 'share':
         // 共有シート(OS)は share_plus 未導入なのでリンクのコピーで代替する。
         await Clipboard.setData(ClipboardData(text: 'rasq://store/plugin/${Uri.encodeComponent(d.id)}'));
-        _toast('ストアページのリンクをコピーしました');
+        _toast(appL10n.storePageLinkCopied);
       case 'report':
         // 報告は開発者のサポート窓口へ(ストア側の通報 API は M4 後段)。
         if (d.supportUrl != null) await launchUrl(d.supportUrl!, mode: LaunchMode.externalApplication);
@@ -88,12 +89,12 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
   Widget build(BuildContext context) {
     final detail = ref.watch(storePluginProvider(widget.pluginId));
     return Scaffold(
-      appBar: RasqPageHeader(title: 'プラグイン', onMore: () {}),
+      appBar: RasqPageHeader(title: context.l10n.storePageTitle, onMore: () {}),
       body: detail.when(
         loading: () => const RasqLoading(),
         // 掲載が無い / つながらないときも、インストール済みなら手元の情報のページ(削除もそこ)へ行ける (D-256)。
-        error: (e, _) => _missing('ストアに接続できませんでした', '$e'),
-        data: (d) => d == null ? _missing('このプラグインは見つかりませんでした', '取り下げられた可能性があります') : _page(d),
+        error: (e, _) => _missing(context.l10n.storeConnectFailed, '$e'),
+        data: (d) => d == null ? _missing(context.l10n.storePluginNotFound, context.l10n.storePageMaybeWithdrawn) : _page(d),
       ),
     );
   }
@@ -105,7 +106,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
       if (installed)
         Padding(
           padding: const EdgeInsets.only(top: RasqSpacing.md),
-          child: FilledButton(key: const ValueKey('store.plugin.openInstalled'), onPressed: () => context.push(Routes.storeInstalledPlugin(widget.pluginId)), child: const Text('インストール済みの情報を見る')),
+          child: FilledButton(key: const ValueKey('store.plugin.openInstalled'), onPressed: () => context.push(Routes.storeInstalledPlugin(widget.pluginId)), child: Text(context.l10n.storePageOpenInstalled)),
         ),
     ]);
   }
@@ -135,7 +136,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
               // 依存が欠けていれば出し続ける。
               if (missingDeps.isNotEmpty)
                 Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-                  Text('このプラグインを利用するには ', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                  Text(context.l10n.storePageRequiresPrefix, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                   for (final (i, id) in missingDeps.indexed) ...[
                     if (i > 0) Text(' / ', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                     InkWell(
@@ -143,13 +144,19 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
                       child: Text(id, style: RasqTypography.caption.copyWith(color: tokens.link)),
                     ),
                   ],
-                  Text(' のインストールが必要です。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                  Text(context.l10n.storePageRequiresSuffix, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 ]),
               if (installed != null)
-                Text(rasqDetail(context, 'インストール済み v${installed.version}', 'インストール済み v${installed.version}(SHA-512 検証済み)'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
+                Text(rasqDetail(context, context.l10n.storePageInstalledVersion(installed.version), context.l10n.storePageInstalledVersionVerified(installed.version)), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
               else if (missingDeps.isEmpty)
                 Text(
-                  '${d.price == 0 ? '無料' : '¥${d.price.toStringAsFixed(0)}'} ・ ${d.sizeMb.toStringAsFixed(1)}MB ・ v${d.version}${d.channel == 'beta' ? ' (β)' : ''}${d.hasAds ? ' ・ 広告あり' : ''}${buyBlocked ? ' ・ 公開テストでは購入できません' : ''}',
+                  [
+                    d.price == 0 ? context.l10n.storeFree : context.l10n.storePriceYen(d.price.toStringAsFixed(0)),
+                    '${d.sizeMb.toStringAsFixed(1)}MB',
+                    'v${d.version}${d.channel == 'beta' ? ' (β)' : ''}',
+                    if (d.hasAds) context.l10n.storeHasAds,
+                    if (buyBlocked) context.l10n.storeBuyDisabled,
+                  ].join(context.l10n.storeDotSeparator),
                   key: const ValueKey('store.plugin.priceLine'),
                   style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
                 ),
@@ -161,7 +168,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
               // 停止/失効は新規インストール不可(警告はバナー明示の上で可)。
               onPressed: canInstall ? () => _install(d) : null,
               style: FilledButton.styleFrom(shape: const StadiumBorder(), padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.lg)),
-              child: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(d.price == 0 ? 'インストール' : '¥${d.price.toStringAsFixed(0)} で購入'),
+              child: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(d.price == 0 ? context.l10n.storePageInstall : context.l10n.storePageBuy(d.price.toStringAsFixed(0))),
             )
           else ...[
             // カスタムプラグイン (D-357): 入っていれば「開く」。
@@ -170,27 +177,27 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
                 key: const ValueKey('store.plugin.openCustom'),
                 onPressed: () => context.push(Routes.customPage(d.id)),
                 style: FilledButton.styleFrom(shape: const StadiumBorder()),
-                child: const Text('開く'),
+                child: Text(context.l10n.storeOpen),
               ),
               const SizedBox(width: RasqSpacing.xs),
             ],
             // 着せ替え (D-375): 入っていれば「使う」/ 使用中。
             if (ref.watch(themePacksProvider).any((p) => p.id == d.id)) ...[
               if (ref.watch(activeThemeIdProvider) == d.id)
-                const OutlinedButton(key: ValueKey('store.theme.inUse'), onPressed: null, style: ButtonStyle(shape: WidgetStatePropertyAll(StadiumBorder())), child: Text('使用中'))
+                OutlinedButton(key: const ValueKey('store.theme.inUse'), onPressed: null, style: const ButtonStyle(shape: WidgetStatePropertyAll(StadiumBorder())), child: Text(context.l10n.storePageThemeInUse))
               else
                 FilledButton(
                   key: const ValueKey('store.theme.use'),
                   onPressed: () => ref.read(settingsAreaProvider(themeSettingsArea).notifier).set('id', d.id),
                   style: FilledButton.styleFrom(shape: const StadiumBorder()),
-                  child: const Text('使う'),
+                  child: Text(context.l10n.storePageThemeUse),
                 ),
               const SizedBox(width: RasqSpacing.xs),
             ],
             OutlinedButton(
               onPressed: _busy ? null : () => ref.read(installedPluginsProvider.notifier).uninstall(d.id),
               style: OutlinedButton.styleFrom(shape: const StadiumBorder()),
-              child: const Text('削除'),
+              child: Text(context.l10n.storeRemove),
             ),
           ],
           // カスタムプラグインの「共有」(Obsidian: インストールボタンの横に共有ボタン)。
@@ -199,7 +206,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
               builder: (bctx) => RasqIconButton(
                 key: const ValueKey('store.plugin.share'),
                 icon: Icons.ios_share,
-                tooltip: '共有',
+                tooltip: context.l10n.storeShare,
                 onPressed: () {
                   final box = bctx.findRenderObject() as RenderBox;
                   showCustomPluginShareMenu(context, ref, d, box.localToGlobal(Offset.zero) & box.size);
@@ -225,16 +232,16 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(d.name, style: RasqTypography.title),
-              Text('${d.developerName.isEmpty ? '提供元不明' : d.developerName} ・ ${d.origin.label}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
+              Text([d.developerName.isEmpty ? context.l10n.storePageUnknownDeveloper : d.developerName, d.origin.label].join(context.l10n.storeDotSeparator), style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
               const SizedBox(height: 2),
-              Text('★${d.rating.toStringAsFixed(1)} ・ ${_formatDownloads(d.downloads)} DL', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              Text(context.l10n.storePageRatingDownloads(d.rating.toStringAsFixed(1), _formatDownloads(d.downloads)), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ]),
           ),
           _BookmarkButton(pluginId: d.id),
           Builder(
             builder: (ctx) => RasqIconButton(
               icon: Icons.more_horiz,
-              tooltip: 'メニュー',
+              tooltip: context.l10n.storeMenu,
               onPressed: () {
                 final box = ctx.findRenderObject() as RenderBox;
                 _more(d, box.localToGlobal(Offset.zero) & box.size);
@@ -272,29 +279,29 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
             color: (d.status.isCaution ? tokens.danger : tokens.link).withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(RasqSizes.radiusSm),
           ),
-          child: Text('状態: ${d.status.label}', style: RasqTypography.bodySmall.copyWith(color: d.status.isCaution ? tokens.danger : tokens.link)),
+          child: Text(context.l10n.storePageStatus(d.status.label), style: RasqTypography.bodySmall.copyWith(color: d.status.isCaution ? tokens.danger : tokens.link)),
         ),
       // ── プレビュー(横スライド) ──────────────────────────────────────
-      const StoreFrameSectionHeader(title: 'プレビュー'),
+      StoreFrameSectionHeader(title: context.l10n.storePagePreview),
       // 高さは見ている画像の縦横比に合わせる (D-374)。
       StorePreviewStrip(images: d.screenshots, placeholder: _PreviewPlaceholder(name: d.name)),
       // ── 先月のダウンロード数 / 評価 ──────────────────────────────────
       if (d.downloadsLastMonth != null)
         _StatBlock(
-          title: '先月のダウンロード数',
+          title: context.l10n.storePageDownloadsLastMonth,
           value: _formatDownloads(d.downloadsLastMonth!),
           chart: DownloadsSparkline(values: d.downloadHistory),
         ),
       _StatBlock(
-        title: '評価',
+        title: context.l10n.storeRatingLabel,
         value: d.rating == 0 ? '—' : d.rating.toStringAsFixed(1),
         chart: RatingHistogram(histogram: histogram),
       ),
       // ── レビュー ›(TL 上位 10 件) ────────────────────────────────────
       StoreFrameSectionHeader(
-        title: 'レビュー',
+        title: context.l10n.storeReviewsTitle,
         onTap: () => context.push(Routes.storePluginReviews(d.id)),
-        trailing: Text('${allReviews.length}件', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        trailing: Text(context.l10n.storePageReviewCount(allReviews.length), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
       ),
       StoreFrameStrip(
         height: 176,
@@ -302,9 +309,9 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
             ? [
                 StoreFrameCard(
                   showChevron: false,
-                  header: Text('まだレビューがありません', style: RasqTypography.listTile),
-                  body: Text('最初のレビューを書いてみませんか。', style: RasqTypography.caption),
-                  footer: Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: () => openReviewComposer(context, ref, detail: d), child: const Text('レビューを書く'))),
+                  header: Text(context.l10n.storeReviewsEmpty, style: RasqTypography.listTile),
+                  body: Text(context.l10n.storePageReviewsEmptyBody, style: RasqTypography.caption),
+                  footer: Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: () => openReviewComposer(context, ref, detail: d), child: Text(context.l10n.storeReviewWrite))),
                 ),
               ]
             : [
@@ -313,7 +320,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
               ],
       ),
       // ── アップデートとバージョン ›(タップで FOW) ─────────────────────
-      StoreFrameSectionHeader(title: 'アップデートとバージョン', onTap: releases.isEmpty ? null : () => _showAllReleases(d, releases, installed)),
+      StoreFrameSectionHeader(title: context.l10n.storePageUpdatesHeader, onTap: releases.isEmpty ? null : () => _showAllReleases(d, releases, installed)),
       StoreFrameStrip(
         height: 150,
         children: releases.isEmpty
@@ -321,7 +328,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
                 StoreFrameCard(
                   showChevron: false,
                   header: Text('v${d.version}', style: RasqTypography.listTile),
-                  body: Text('リリースノートはまだありません。', style: RasqTypography.caption),
+                  body: Text(context.l10n.storePageNoReleaseNotes, style: RasqTypography.caption),
                 ),
               ]
             : [
@@ -330,18 +337,18 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
                     onTap: () => openReleaseFow(ref, detail: d, release: r, installed: installed, onInstall: (v) => _install(d, version: v)),
                     header: Text('${d.name} ${r.version}${r.channel == 'beta' ? ' Pre' : ''}', style: RasqTypography.listTile, maxLines: 1, overflow: TextOverflow.ellipsis),
                     headerTrailing: installed?.version == r.version
-                        ? Padding(padding: const EdgeInsets.only(right: RasqSpacing.xs), child: Text('利用中', style: RasqTypography.caption.copyWith(color: tokens.link)))
+                        ? Padding(padding: const EdgeInsets.only(right: RasqSpacing.xs), child: Text(context.l10n.storeInUse, style: RasqTypography.caption.copyWith(color: tokens.link)))
                         : null,
                     body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Expanded(child: Text(r.notes, style: RasqTypography.caption.copyWith(height: 1.5), overflow: TextOverflow.fade)),
                       if (r.permissionsAdded.isNotEmpty)
-                        Text('権限の追加: ${[for (final p in r.permissionsAdded) p.permission].join('、')}', style: RasqTypography.caption.copyWith(color: tokens.danger), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text(context.l10n.storePermissionsAddedList([for (final p in r.permissionsAdded) p.permission].join(context.l10n.storeListSeparator)), style: RasqTypography.caption.copyWith(color: tokens.danger), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ]),
                   ),
               ],
       ),
       // ── プライバシーと必要な権限 ›(権限タイプごとのグループ) ────────
-      StoreFrameSectionHeader(title: 'プライバシーと必要な権限', onTap: () => _showSafetyDetail(d)),
+      StoreFrameSectionHeader(title: context.l10n.storePrivacyHeader, onTap: () => _showSafetyDetail(d)),
       StoreFrameStrip(
         height: 150,
         children: [
@@ -360,18 +367,18 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
           if (d.safety.permissions.isEmpty)
             StoreFrameCard(
               showChevron: false,
-              header: Text('権限', style: RasqTypography.listTile),
-              body: Text('このプラグインは追加の権限を要求しません。', style: RasqTypography.caption),
+              header: Text(context.l10n.storePagePermissionsHeader, style: RasqTypography.listTile),
+              body: Text(context.l10n.storePageNoPermissions, style: RasqTypography.caption),
             ),
           // 常設安全性ブロックの残り (D-033): 外部通信とデータ / 実行環境。
           StoreFrameCard(
             onTap: () => _showSafetyDetail(d),
-            header: Text('外部通信とデータ', style: RasqTypography.listTile),
+            header: Text(context.l10n.storeSafetyExternalHeader, style: RasqTypography.listTile),
             body: Text(
               [
-                d.safety.externalHosts.isEmpty ? '外部通信先: なし' : '外部通信先: ${d.safety.externalHosts.join('、')}',
+                d.safety.externalHosts.isEmpty ? context.l10n.storeSafetyNoHosts : context.l10n.storeSafetyHosts(d.safety.externalHosts.join(context.l10n.storeListSeparator)),
                 if (d.safety.dataHandling.isNotEmpty) d.safety.dataHandling,
-                if (d.safety.externalSdks.isNotEmpty) '外部 SDK: ${d.safety.externalSdks.join('、')}',
+                if (d.safety.externalSdks.isNotEmpty) context.l10n.storeSafetySdks(d.safety.externalSdks.join(context.l10n.storeListSeparator)),
               ].join('\n'),
               style: RasqTypography.caption.copyWith(height: 1.4),
               maxLines: 5,
@@ -380,13 +387,13 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
           ),
           StoreFrameCard(
             onTap: () => _showSafetyDetail(d),
-            header: Text('実行環境', style: RasqTypography.listTile),
+            header: Text(context.l10n.storeSafetyRuntimeHeader, style: RasqTypography.listTile),
             body: Text(
               [
-                if (d.safety.crashFreeRate != null) '正常起動率 ${(d.safety.crashFreeRate! * 100).toStringAsFixed(1)}%',
-                d.safety.backgroundExecution ? 'バックグラウンド実行あり' : 'バックグラウンド実行なし',
-                d.safety.usesGpu ? 'GPU 使用' : 'GPU 不使用',
-                d.safety.adPlacements.isEmpty ? '広告なし' : '広告あり(${d.safety.adPlacements.join('、')})',
+                if (d.safety.crashFreeRate != null) context.l10n.storeSafetyCrashFree((d.safety.crashFreeRate! * 100).toStringAsFixed(1)),
+                d.safety.backgroundExecution ? context.l10n.storeSafetyBackground : context.l10n.storeSafetyNoBackground,
+                d.safety.usesGpu ? context.l10n.storeSafetyGpu : context.l10n.storeSafetyNoGpu,
+                d.safety.adPlacements.isEmpty ? context.l10n.storeSafetyNoAds : context.l10n.storeSafetyAds(d.safety.adPlacements.join(context.l10n.storeListSeparator)),
               ].join('\n'),
               style: RasqTypography.caption.copyWith(height: 1.4),
             ),
@@ -394,7 +401,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
         ],
       ),
       // ── 互換性 ───────────────────────────────────────────────────────
-      const RasqSectionHeader(title: '互換性'),
+      RasqSectionHeader(title: context.l10n.storePageCompatibilityHeader),
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -402,16 +409,16 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
             [
               if (d.compatibility.rasqVersion.isNotEmpty) 'RASQ ${d.compatibility.rasqVersion}',
               if (d.compatibility.os.isNotEmpty) d.compatibility.os.join('/'),
-              if (d.compatibility.requiredRuntimes.isNotEmpty) 'ランタイム: ${d.compatibility.requiredRuntimes.join('、')}',
-              if (d.compatibility.requiresPlugins.isNotEmpty) '必要プラグイン: ${d.compatibility.requiresPlugins.join('、')}',
-              if (d.compatibility.conflictsWith.isNotEmpty) '競合: ${d.compatibility.conflictsWith.join('、')}',
-            ].join(' ・ '),
+              if (d.compatibility.requiredRuntimes.isNotEmpty) context.l10n.storePageRuntimes(d.compatibility.requiredRuntimes.join(context.l10n.storeListSeparator)),
+              if (d.compatibility.requiresPlugins.isNotEmpty) context.l10n.storePageRequiredPlugins(d.compatibility.requiresPlugins.join(context.l10n.storeListSeparator)),
+              if (d.compatibility.conflictsWith.isNotEmpty) context.l10n.storePageConflicts(d.compatibility.conflictsWith.join(context.l10n.storeListSeparator)),
+            ].join(context.l10n.storeDotSeparator),
             style: RasqTypography.bodySmall,
           ),
           if (d.safety.rasqFeatures.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text('利用する RASQ 機能: ${d.safety.rasqFeatures.join('、')}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              child: Text(context.l10n.storePageRasqFeatures(d.safety.rasqFeatures.join(context.l10n.storeListSeparator)), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ),
         ]),
       ),
@@ -424,15 +431,15 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
     final manager = ref.read(overlayManagerProvider);
     final pick = await manager.showBottomSheet<ReleaseNote>(
       id: 'store.releases',
-      title: 'バージョン',
+      title: appL10n.storePageVersionsTitle,
       builder: (ctx) => ListView(shrinkWrap: true, children: [
         for (final r in releases)
           RasqPluginTile(
             icon: r.channel == 'beta' ? Icons.science_outlined : Icons.new_releases_outlined,
             title: '${r.version}${r.channel == 'beta' ? ' (β)' : ''}',
-            subtitle: '${r.publishedAt.year}/${r.publishedAt.month}/${r.publishedAt.day}${installed?.version == r.version ? ' ・ 利用中' : ''}',
+            subtitle: ['${r.publishedAt.year}/${r.publishedAt.month}/${r.publishedAt.day}', if (installed?.version == r.version) ctx.l10n.storeInUse].join(ctx.l10n.storeDotSeparator),
             description: r.notes,
-            detail: r.permissionsAdded.isEmpty ? null : '権限の追加: ${[for (final p in r.permissionsAdded) p.permission].join('、')}',
+            detail: r.permissionsAdded.isEmpty ? null : ctx.l10n.storePermissionsAddedList([for (final p in r.permissionsAdded) p.permission].join(ctx.l10n.storeListSeparator)),
             detailColorDots: [if (r.permissionsAdded.isNotEmpty) RasqTokens.of(ctx).danger],
             onTap: () => manager.close('store.releases', result: r),
           ),
@@ -447,7 +454,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
     final manager = ref.read(overlayManagerProvider);
     await manager.showBottomSheet<void>(
       id: 'store.safety',
-      title: 'プライバシーと必要な権限',
+      title: appL10n.storePrivacyHeader,
       builder: (ctx) {
         return SingleChildScrollView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page), child: SafetyDetail(safety: d.safety));
       },
@@ -490,7 +497,7 @@ class _PreviewPlaceholder extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.image_outlined, size: 32, color: scheme.onSurfaceVariant),
           const SizedBox(height: RasqSpacing.xs),
-          Text('$name のプレビュー画像はまだありません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text(context.l10n.storePageNoPreview(name), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ]),
       ),
     );
@@ -522,7 +529,7 @@ class _StatBlock extends StatelessWidget {
       );
 }
 
-String _formatDownloads(int n) => n >= 10000 ? '${(n / 10000).toStringAsFixed(1)}万' : '$n';
+String _formatDownloads(int n) => n >= 10000 ? appL10n.storeDownloadsTenThousands((n / 10000).toStringAsFixed(1)) : '$n';
 
 /// ストアのブックマーク (D-033 `/me/bookmarks`)。RASQ アカウントに紐づく
 /// サーバー側の状態なので、接続していないときは出さない。
@@ -535,10 +542,10 @@ class _BookmarkButton extends ConsumerWidget {
     if (!ref.watch(centralConfiguredProvider)) return const SizedBox.shrink();
     final marked = ref.watch(storeBookmarksProvider).value?.contains(pluginId) ?? false;
     return IconButton(
-      tooltip: marked ? 'ブックマークを外す' : 'ブックマークする',
+      tooltip: marked ? context.l10n.storePageBookmarkRemove : context.l10n.storePageBookmarkAdd,
       icon: Icon(marked ? Icons.bookmark : Icons.bookmark_border),
       onPressed: () => ref.read(storeBookmarksProvider.notifier).toggle(pluginId).catchError((Object e) {
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ブックマークを更新できませんでした: $e')));
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.storePageBookmarkFailed('$e'))));
       }),
     );
   }

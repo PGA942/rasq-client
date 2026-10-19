@@ -6,6 +6,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart';
 import 'rasqpkg.dart' show parseStoreSlotSource;
@@ -28,16 +29,16 @@ class InstalledPluginsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final installed = ref.watch(installedPluginsProvider);
     return Scaffold(
-      appBar: RasqPageHeader(title: 'インストール済み', onMore: () {}),
+      appBar: RasqPageHeader(title: context.l10n.storeInstalledTitle, onMore: () {}),
       body: installed.isEmpty
-          ? const RasqEmptyView(title: 'インストール済みのプラグインはありません', hint: 'ストアから追加できます')
+          ? RasqEmptyView(title: context.l10n.storeNoInstalledPlugins, hint: context.l10n.storeInstalledEmptyHint)
           : ListView(children: [
               for (final p in installed) ...[
                 RasqPluginTile(
                   key: ValueKey('store.installed.${p.id}'),
                   icon: Icons.extension,
                   title: p.name.isEmpty ? p.id : p.name,
-                  subtitle: 'v${p.version} ・ ${p.id}',
+                  subtitle: context.l10n.storeInstalledItemSubtitle(p.version, p.id),
                   onTap: () => context.push(Routes.storeInstalledPlugin(p.id)),
                 ),
                 const Divider(height: 1),
@@ -51,14 +52,14 @@ class InstalledPluginScreen extends ConsumerWidget {
   const InstalledPluginScreen({super.key, required this.pluginId});
   final String pluginId;
 
-  static String _date(DateTime d) => d.millisecondsSinceEpoch == 0 ? '不明' : '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+  static String _date(DateTime d) => d.millisecondsSinceEpoch == 0 ? appL10n.storeUnknown : '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final record = ref.watch(installedPluginsProvider).where((p) => p.id == pluginId).firstOrNull;
     if (record == null) {
-      return Scaffold(appBar: RasqPageHeader(title: 'インストール済み', onMore: () {}), body: const RasqEmptyView(title: 'インストールされていません', hint: '削除済みか、別の端末で入れたものです'));
+      return Scaffold(appBar: RasqPageHeader(title: context.l10n.storeInstalledTitle, onMore: () {}), body: RasqEmptyView(title: context.l10n.storeNotInstalled, hint: context.l10n.storeInstalledMissingHint));
     }
     // いまの掲載(あれば)。無くても / つながらなくても、このページは手元の情報で描く。
     final live = ref.watch(storePluginProvider(pluginId));
@@ -75,17 +76,17 @@ class InstalledPluginScreen extends ConsumerWidget {
     final description = detail?.description ?? info?.description ?? (slots.isEmpty ? '' : slots.first.manifest.description);
     final iconUrl = detail?.iconUrl ?? info?.iconUrl;
     final newer = detail != null && isNewerVersion(detail.version, record.version);
-    final source = detail != null ? null : (info != null ? 'インストールしたときの掲載の写しです。' : (slots.isNotEmpty ? 'プラグイン自身の宣言(権限の id だけ)です。' : null));
+    final source = detail != null ? null : (info != null ? context.l10n.storeInstalledSourceSnapshot : (slots.isNotEmpty ? context.l10n.storeInstalledSourceManifest : null));
 
     Future<void> remove() async {
-      final ok = await ref.read(overlayManagerProvider).showAlert(id: 'store.installed.remove', title: '削除しますか？', message: '$name を端末から削除します。', confirmText: '削除', cancelText: 'キャンセル', destructive: true);
+      final ok = await ref.read(overlayManagerProvider).showAlert(id: 'store.installed.remove', title: context.l10n.storeInstalledRemoveTitle, message: context.l10n.storeInstalledRemoveMessage(name), confirmText: context.l10n.storeRemove, cancelText: context.l10n.storeCancel, destructive: true);
       if (!ok || !context.mounted) return;
       await ref.read(installedPluginsProvider.notifier).uninstall(pluginId);
       if (context.mounted) context.pop();
     }
 
     return Scaffold(
-      appBar: RasqPageHeader(title: 'インストール済み', onMore: () {}),
+      appBar: RasqPageHeader(title: context.l10n.storeInstalledTitle, onMore: () {}),
       body: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
         // ── 見出し部(ストアのページの「プレビューより上」と同じ並び)──
         Padding(
@@ -122,43 +123,43 @@ class InstalledPluginScreen extends ConsumerWidget {
               key: const ValueKey('store.installed.unlisted'),
               padding: const EdgeInsets.all(RasqSpacing.sm),
               decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-              child: Text(live.hasError ? 'ストアに接続できないので、手元の情報を出しています。' : 'ストアの掲載は見つかりません(取り下げられた可能性があります)。このまま使い続けることも、削除することもできます。', style: RasqTypography.bodySmall),
+              child: Text(live.hasError ? context.l10n.storeInstalledOffline : context.l10n.storeInstalledUnlisted, style: RasqTypography.bodySmall),
             ),
           ),
         // ── インストール済みのバージョン ──
-        const RasqSectionHeader(title: 'インストール済みのバージョン'),
+        RasqSectionHeader(title: context.l10n.storeInstalledVersionHeader),
         RasqListTile(
           key: const ValueKey('store.installed.version'),
           leading: const Icon(Icons.verified_outlined),
           title: 'v${record.version}',
-          subtitle: 'インストール: ${_date(record.installedAt)}',
-          detail: 'インストール: ${_date(record.installedAt)} ・ 検証済み SHA-512 ${record.sha512.length > 16 ? '${record.sha512.substring(0, 16)}…' : record.sha512}',
+          subtitle: context.l10n.storeInstalledAt(_date(record.installedAt)),
+          detail: context.l10n.storeInstalledAtVerified(_date(record.installedAt), record.sha512.length > 16 ? '${record.sha512.substring(0, 16)}…' : record.sha512),
           chevron: false,
         ),
         if (newer)
           RasqListTile(
             key: const ValueKey('store.installed.update'),
             leading: Icon(Icons.system_update_alt, color: RasqColors.accent),
-            title: 'ストアには v${detail.version} があります',
-            subtitle: 'ストアのページから入れ直せます',
+            title: context.l10n.storeInstalledNewerTitle(detail.version),
+            subtitle: context.l10n.storeInstalledNewerSubtitle,
             onTap: () => context.push(Routes.storePlugin(pluginId)),
           ),
         if (slots.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
-            child: Text('動いている場所: ${{for (final p in slots) ...p.manifest.slots}.join('、')}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            child: Text(context.l10n.storeInstalledSlots({for (final p in slots) ...p.manifest.slots}.join(context.l10n.storeListSeparator)), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
         // ── 操作(権限の節は長くなるので、その上に置く)──
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
           child: Row(children: [
-            if (detail != null) Expanded(child: OutlinedButton(key: const ValueKey('store.installed.openStore'), onPressed: () => context.push(Routes.storePlugin(pluginId)), child: const Text('ストアのページを開く'))),
+            if (detail != null) Expanded(child: OutlinedButton(key: const ValueKey('store.installed.openStore'), onPressed: () => context.push(Routes.storePlugin(pluginId)), child: Text(context.l10n.storeInstalledOpenStore))),
             if (detail != null) const SizedBox(width: RasqSpacing.sm),
-            Expanded(child: FilledButton.tonal(key: const ValueKey('store.installed.remove'), onPressed: remove, style: FilledButton.styleFrom(foregroundColor: scheme.error), child: const Text('削除'))),
+            Expanded(child: FilledButton.tonal(key: const ValueKey('store.installed.remove'), onPressed: remove, style: FilledButton.styleFrom(foregroundColor: scheme.error), child: Text(context.l10n.storeRemove))),
           ]),
         ),
         // ── プライバシーと必要な権限 ──
-        const RasqSectionHeader(title: 'プライバシーと必要な権限'),
+        RasqSectionHeader(title: context.l10n.storePrivacyHeader),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

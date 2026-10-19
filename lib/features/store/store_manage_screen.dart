@@ -8,6 +8,7 @@ import '../../app/providers.dart' show overlayManagerProvider;
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart' show centralBaseUrlProvider;
 import '../../backend/payments_api.dart' show paidFeaturesProvider;
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../settings/settings_dsl.dart';
@@ -35,26 +36,26 @@ class StoreManageScreen extends ConsumerWidget {
     final bookmarks = ref.watch(storeHomeProvider).value?.bookmarks ?? const <StorePluginCard>[];
     final showInstalled = ref.watch(storeHomeShowInstalledProvider);
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'プラグインを管理', showMore: false),
+      appBar: RasqPageHeader(title: context.l10n.storeManageTitle, showMore: false),
       body: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
-        const RasqSectionHeader(title: 'アップデート', topMargin: 0),
+        RasqSectionHeader(title: context.l10n.storeManageUpdatesHeader, topMargin: 0),
         RasqListTile(
           key: const ValueKey('store.manage.updateSettings'),
           leading: const Icon(Icons.tune),
-          title: 'アップデートの設定',
-          subtitle: '自動で更新するかどうか ・ 更新ログ',
-          detail: 'SNS / アクション / ビューごとに、おまかせ・インストールだけ・手動 ・ 更新ログ',
+          title: context.l10n.storeManageUpdateSettingsTitle,
+          subtitle: context.l10n.storeManageUpdateSettingsSubtitle,
+          detail: context.l10n.storeManageUpdateSettingsDetail,
           onTap: () => context.push(Routes.storeUpdateSettings),
         ),
         // ポイント (D-355): 有料プラグインを買う。買うのは Web コンソール(Stripe)。
         // 公開テスト(ORGATE で有料の機能が止まっている、D-401)は灰色で押せない(コンソールへも誘わない)。
         Builder(builder: (context) {
           if (!ref.watch(paidFeaturesProvider)) {
-            return const RasqListTile(
-              key: ValueKey('store.manage.points'),
-              leading: Icon(Icons.toll_outlined),
-              title: 'ポイント',
-              subtitle: '公開テストでは使えません',
+            return RasqListTile(
+              key: const ValueKey('store.manage.points'),
+              leading: const Icon(Icons.toll_outlined),
+              title: context.l10n.storeManagePointsTitle,
+              subtitle: context.l10n.storeManagePointsDisabled,
               enabled: false,
               chevron: false,
             );
@@ -65,19 +66,19 @@ class StoreManageScreen extends ConsumerWidget {
           return RasqListTile(
             key: const ValueKey('store.manage.points'),
             leading: const Icon(Icons.toll_outlined),
-            title: points == null ? 'ポイント' : 'ポイント ${points.balance}',
+            title: points == null ? context.l10n.storeManagePointsTitle : context.l10n.storeManagePointsBalance(points.balance),
             subtitle: points == null
-                ? 'RASQ アカウントにログインすると使えます'
+                ? context.l10n.storeManagePointsSignIn
                 : next == null
-                    ? 'Web コンソールで買えます(付与から 1 か月で失効)'
-                    : '${next.expiresAt.month}/${next.expiresAt.day} に ${next.remaining} ポイントが失効 ・ Web コンソールで買う',
+                    ? context.l10n.storeManagePointsBuyInConsole
+                    : context.l10n.storeManagePointsExpiring(next.expiresAt.month, next.expiresAt.day, next.remaining),
             onTap: console == null ? null : () => launchUrl(console, mode: LaunchMode.externalApplication),
           );
         }),
         if (installed.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
-            child: Text('インストール済みのプラグインはありません', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+            child: Text(context.l10n.storeNoInstalledPlugins, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
           )
         else
           for (final p in installed) ...[_InstalledBlock(record: p), const Divider(height: 1)],
@@ -86,20 +87,20 @@ class StoreManageScreen extends ConsumerWidget {
         RasqListTile(
           key: const ValueKey('store.manage.import'),
           leading: const Icon(Icons.warning_amber_rounded, color: RasqColors.warning),
-          title: 'プラグインのインポート',
-          subtitle: '開発中のプラグインを入れる(審査前)',
-          detail: '開発中の wasm / .rasqpkg を入れる(審査を通っていません)',
+          title: context.l10n.storeManageImportTitle,
+          subtitle: context.l10n.storeManageImportSubtitle,
+          detail: context.l10n.storeManageImportDetail,
           onTap: () => context.push(Routes.wasmDev),
         ),
-        const RasqSectionHeader(title: 'ホームの表示'),
+        RasqSectionHeader(title: context.l10n.storeManageHomeHeader),
         RasqSwitchListTile(
           key: const ValueKey('store.manage.showInstalled'),
-          title: 'インストール済みもホームに出す',
-          subtitle: '今週のトレンド / 新着の列に、入れたプラグインも並べます',
+          title: context.l10n.storeManageShowInstalledTitle,
+          subtitle: context.l10n.storeManageShowInstalledSubtitle,
           value: showInstalled,
           onChanged: (v) => ref.read(settingsAreaProvider(storeHomeArea).notifier).set('showInstalled', v),
         ),
-        if (bookmarks.isNotEmpty) StoreTileRow(key: const ValueKey('store.manage.bookmarks'), title: 'ブックマーク', cards: bookmarks, installed: {for (final p in installed) p.id: p.version}),
+        if (bookmarks.isNotEmpty) StoreTileRow(key: const ValueKey('store.manage.bookmarks'), title: context.l10n.storeBookmarksTitle, cards: bookmarks, installed: {for (final p in installed) p.id: p.version}),
       ]),
     );
   }
@@ -128,7 +129,7 @@ class _InstalledBlock extends ConsumerWidget {
     if (newer != null && record.versionInfo(newer) != null) {
       second = _VersionChip(
         key: ValueKey('store.manage.switch.${record.id}'),
-        label: '$newer に切り替え',
+        label: context.l10n.storeManageSwitchTo(newer),
         selected: false,
         onTap: () async {
           final notifier = ref.read(installedPluginsProvider.notifier);
@@ -136,13 +137,13 @@ class _InstalledBlock extends ConsumerWidget {
           final ok = await confirmVersionScope(ref.read(overlayManagerProvider), notifier, record.id, newer);
           if (ok == null) return;
           final error = await notifier.setDefaultVersion(record.id, newer, consent: ok.consent);
-          messenger?.showSnackBar(SnackBar(content: Text(error ?? '$newer を既定の版にしました')));
+          messenger?.showSnackBar(SnackBar(content: Text(error ?? appL10n.storeVersionMadeDefault(newer))));
         },
       );
     } else if (newer != null) {
       second = _VersionChip(
         key: ValueKey('store.manage.update.${record.id}'),
-        label: '$newer に更新',
+        label: context.l10n.storeManageUpdateTo(newer),
         selected: false,
         onTap: () async {
           final messenger = ref.read(rootMessengerKeyProvider).currentState;
@@ -153,7 +154,7 @@ class _InstalledBlock extends ConsumerWidget {
     } else if (others.isNotEmpty) {
       second = _VersionChip(label: others.first.version, selected: false, onTap: () => context.push(Routes.storePluginVersions(record.id)));
     } else {
-      second = _VersionChip(label: detail == null ? 'ストアに接続できません' : '最新です', selected: false, muted: true);
+      second = _VersionChip(label: detail == null ? context.l10n.storeManageOffline : context.l10n.storeManageUpToDate, selected: false, muted: true);
     }
     return InkWell(
       key: ValueKey('store.manage.installed.${record.id}'),
@@ -175,7 +176,7 @@ class _InstalledBlock extends ConsumerWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(name, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text([if (developer.isNotEmpty) developer, if (detail != null) detail.origin.label].join(' ・ '), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text([if (developer.isNotEmpty) developer, if (detail != null) detail.origin.label].join(context.l10n.storeDotSeparator), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
               ]),
             ),
             const Icon(Icons.chevron_right),
@@ -184,12 +185,12 @@ class _InstalledBlock extends ConsumerWidget {
           const SizedBox(height: RasqSpacing.xs),
           // デプロイしたバージョン(左)と「アカウントごとにバージョンを設定 ›」(右)、ワイヤーフレームの並び (D-355)。
           Row(children: [
-            Expanded(child: Text('デプロイしたバージョン', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+            Expanded(child: Text(context.l10n.storeManageDeployedVersion, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
             InkWell(
               key: ValueKey('store.manage.versions.${record.id}'),
               onTap: () => context.push(Routes.storePluginVersions(record.id)),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(record.accountVersions.isEmpty ? 'アカウントごとにバージョンを設定' : 'アカウントごと(${record.accountVersions.length} 件指定)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                Text(record.accountVersions.isEmpty ? context.l10n.storeAccountVersionsTitle : context.l10n.storeManageAccountVersionsCount(record.accountVersions.length), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 const Icon(Icons.chevron_right, size: 16),
               ]),
             ),

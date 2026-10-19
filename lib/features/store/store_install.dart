@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart' show OrgateException, centralBaseUrlProvider;
 import '../../backend/payments_api.dart';
+import '../../l10n/l10n.dart';
 import '../theme/theme_packs.dart';
 import 'plugin_scope.dart';
 import 'store_client.dart';
@@ -42,7 +43,7 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
   } on OrgateException catch (e) {
     return e.message;
   }
-  if (manifest == null) return version == null ? '構成を取得できませんでした' : 'Ver.$version の構成が見つかりませんでした';
+  if (manifest == null) return version == null ? appL10n.storeInstallManifestUnavailable : appL10n.storeManifestVersionNotFound(version);
   final bundle = manifest.bundle;
   final permissions = [
     for (final id in (manifest.manifest['permissions'] as List? ?? const []))
@@ -55,7 +56,7 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
   // インストール確認シート (D-033): 権限(種別ごと・用途理由つき)と配布物が根拠。
   final ok = await manager.showBottomSheet<bool>(
     id: 'store.install',
-    title: '${d.name} ${manifest.version} をインストール',
+    title: appL10n.storeInstallSheetTitle(d.name, manifest.version),
     builder: (ctx) {
       final scheme = Theme.of(ctx).colorScheme;
       final storeAdded = manifest!.permissionsAdded;
@@ -63,7 +64,7 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('このプラグインが使う権限', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(ctx.l10n.storeInstallPermissionsHeader, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 4),
             for (final g in PermissionKind.group(permissions)) ...[
               Text(g.kind.label, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700)),
@@ -79,18 +80,18 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
             ],
             if (scope.hosts.isNotEmpty || scope.instance) ...[
               const SizedBox(height: 4),
-              Text('接続先', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700)),
-              Text([...scope.hosts, if (scope.instance) 'ログイン先のインスタンス'].join('、'), style: RasqTypography.bodySmall),
+              Text(ctx.l10n.storeInstallHostsHeader, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700)),
+              Text([...scope.hosts, if (scope.instance) ctx.l10n.storeInstallLoginInstance].join(ctx.l10n.storeListSeparator), style: RasqTypography.bodySmall),
             ],
             if (widened.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(prev?.approvedScope == null ? '許可する内容(前に入れたときの記録がありません)' : '最後に許可した内容から広がるもの',
+              Text(prev?.approvedScope == null ? ctx.l10n.storeInstallScopeNoRecord : ctx.l10n.storeInstallScopeWidened,
                   key: const ValueKey('store.install.widened'), style: RasqTypography.caption.copyWith(color: RasqTokens.of(ctx).danger)),
               for (final w in widened) Text(w, style: RasqTypography.bodySmall),
             ] else if (storeAdded.isNotEmpty) ...[
               // ストアの差分(直前の公開版から)は参考。判断は端末の記録で行う。
               const SizedBox(height: 4),
-              Text('前のバージョンから増えた権限', style: RasqTypography.caption.copyWith(color: RasqTokens.of(ctx).danger)),
+              Text(ctx.l10n.storeInstallPermissionsAdded, style: RasqTypography.caption.copyWith(color: RasqTokens.of(ctx).danger)),
               for (final p in storeAdded) Text('${p.permission} — ${p.reason}', style: RasqTypography.bodySmall),
             ],
             const SizedBox(height: RasqSpacing.sm),
@@ -100,15 +101,16 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
               Text(
                   rasqDetail(
                       ctx,
-                      '${(bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1)}MB ・ ${bundle.signature.isNotEmpty && manifest.storePublicKey.isNotEmpty ? 'ストアの署名あり' : 'ストアの署名なし'}',
-                      '配布物: ${(bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1)}MB ・ SHA-512 ${bundle.sha512.substring(0, 16)}…'
-                          ' ・ ${bundle.signature.isNotEmpty && manifest.storePublicKey.isNotEmpty ? 'ストア署名つき (ed25519)' : 'ストア署名なし(ハッシュ照合のみ)'}'),
+                      ctx.l10n.storeInstallBundleSummary((bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1),
+                          bundle.signature.isNotEmpty && manifest.storePublicKey.isNotEmpty ? ctx.l10n.storeInstallSignedShort : ctx.l10n.storeInstallUnsignedShort),
+                      ctx.l10n.storeInstallBundleDetail((bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1), bundle.sha512.substring(0, 16),
+                          bundle.signature.isNotEmpty && manifest.storePublicKey.isNotEmpty ? ctx.l10n.storeInstallSignedDetail : ctx.l10n.storeInstallUnsignedDetail)),
                   style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ]),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
-          child: FilledButton(onPressed: () => manager.close('store.install', result: true), child: const Text('インストールする')),
+          child: FilledButton(onPressed: () => manager.close('store.install', result: true), child: Text(ctx.l10n.storeInstallConfirm)),
         ),
       ]);
     },
@@ -124,12 +126,12 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
   final pack = activate ? container.read(themePacksProvider).where((p) => p.id == d.id).firstOrNull : null;
   if (pack != null) {
     return switch (pack.theme['brightness']) {
-      'dark' when brightness != Brightness.dark => '${d.name} を使います。暗いモードのときに効きます',
-      'light' when brightness != Brightness.light => '${d.name} を使います。明るいモードのときに効きます',
-      _ => '${d.name} を使います',
+      'dark' when brightness != Brightness.dark => appL10n.storeInstallThemeDarkOnly(d.name),
+      'light' when brightness != Brightness.light => appL10n.storeInstallThemeLightOnly(d.name),
+      _ => appL10n.storeInstallThemeApplied(d.name),
     };
   }
-  return '${d.name} ${manifest.version} をインストールしました';
+  return appL10n.storeInstallDone(d.name, manifest.version);
 }
 
 /// 入っている版を使い始める前の確認(セキュリティ確認 2026-10-09 の [8]): 最後に許可した内容より広がるなら、広がるものを見せて確かめる。
@@ -139,10 +141,10 @@ Future<({PluginConsent? consent})?> confirmVersionScope(OverlayManager manager, 
   if (widened.isEmpty) return (consent: null);
   final ok = await manager.showAlert(
     id: 'store.versions.scope',
-    title: 'Ver.$version は許可する内容が広がります',
+    title: appL10n.storeVersionScopeTitle(version),
     message: widened.join('\n'),
-    confirmText: '許可して使う',
-    cancelText: 'やめる',
+    confirmText: appL10n.storeVersionScopeConfirm,
+    cancelText: appL10n.storeVersionScopeCancel,
   );
   return ok ? (consent: const PluginConsent()) : null;
 }
@@ -159,35 +161,35 @@ Future<String?> showPurchaseSheet(OverlayManager manager, StoreClient client, St
     points = await client.points();
   } catch (e) {
     if (isPaidFeaturesDisabled(e)) return _showPaidDisabledSheet(manager, d, price);
-    return 'ポイントを確かめられませんでした(RASQ アカウントにログインしていますか?): $e';
+    return appL10n.storePurchasePointsFailed('$e');
   }
   final enough = points.balance >= price;
   final next = points.nextExpiring;
   String date(DateTime t) => '${t.year}/${t.month}/${t.day}';
   final go = await manager.showBottomSheet<String>(
     id: 'store.purchase',
-    title: '${d.name} を購入',
+    title: appL10n.storePurchaseTitle(d.name),
     builder: (ctx) {
       final scheme = Theme.of(ctx).colorScheme;
       return Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('$price ポイント', key: const ValueKey('store.purchase.price'), style: RasqTypography.title),
+          Text(ctx.l10n.storePurchasePrice(price), key: const ValueKey('store.purchase.price'), style: RasqTypography.title),
           const SizedBox(height: 4),
-          Text('残り ${points.balance} ポイント${next == null ? '' : ' ・ ${date(next.expiresAt)} に ${next.remaining} ポイントが失効'}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+          Text(next == null ? ctx.l10n.storePurchaseBalance(points.balance) : ctx.l10n.storePurchaseBalanceExpiring(points.balance, date(next.expiresAt), next.remaining), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: 4),
-          Text(rasqDetail(ctx, '買ったプラグインは、同じアカウントならどの端末でも使えます', '買ったプラグインは、同じ RASQ アカウントならどの端末でも入れられます。ポイントは有効期限の近いものから使います。'),
+          Text(rasqDetail(ctx, ctx.l10n.storePurchaseCaption, ctx.l10n.storePurchaseCaptionDetail),
               style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: RasqSpacing.sm),
           if (enough)
-            FilledButton(key: const ValueKey('store.purchase.buy'), onPressed: () => manager.close('store.purchase', result: 'buy'), child: Text('$price ポイントで購入する'))
+            FilledButton(key: const ValueKey('store.purchase.buy'), onPressed: () => manager.close('store.purchase', result: 'buy'), child: Text(ctx.l10n.storePurchaseBuy(price)))
           else ...[
-            Text('ポイントが足りません(あと ${price - points.balance} ポイント)', style: RasqTypography.bodySmall.copyWith(color: scheme.error)),
+            Text(ctx.l10n.storePurchaseShort(price - points.balance), style: RasqTypography.bodySmall.copyWith(color: scheme.error)),
             const SizedBox(height: RasqSpacing.xs),
             FilledButton.tonal(
               key: const ValueKey('store.purchase.console'),
               onPressed: consoleUrl == null ? null : () => manager.close('store.purchase', result: 'console'),
-              child: const Text('Web コンソールでポイントを買う'),
+              child: Text(ctx.l10n.storePurchaseConsole),
             ),
           ],
         ]),
@@ -201,7 +203,7 @@ Future<String?> showPurchaseSheet(OverlayManager manager, StoreClient client, St
   if (go != 'buy') return null;
   try {
     final r = await client.purchase(d.id);
-    return r.purchased ? '' : '購入できませんでした';
+    return r.purchased ? '' : appL10n.storePurchaseFailed;
   } on OrgateException catch (e) {
     return isPaidFeaturesDisabled(e) ? paidFeaturesDisabledMessage : e.message;
   }
@@ -211,17 +213,17 @@ Future<String?> showPurchaseSheet(OverlayManager manager, StoreClient client, St
 Future<String?> _showPaidDisabledSheet(OverlayManager manager, StorePluginDetail d, int price) async {
   await manager.showBottomSheet<String>(
     id: 'store.purchase',
-    title: '${d.name} を購入',
+    title: appL10n.storePurchaseTitle(d.name),
     builder: (ctx) {
       final scheme = Theme.of(ctx).colorScheme;
       return Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('$price ポイント', key: const ValueKey('store.purchase.price'), style: RasqTypography.title.copyWith(color: scheme.onSurfaceVariant)),
+          Text(ctx.l10n.storePurchasePrice(price), key: const ValueKey('store.purchase.price'), style: RasqTypography.title.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: 4),
           Text(paidFeaturesDisabledMessage, key: const ValueKey('store.purchase.disabled'), style: RasqTypography.bodySmall.copyWith(color: scheme.error)),
           const SizedBox(height: RasqSpacing.sm),
-          FilledButton(key: const ValueKey('store.purchase.buy'), onPressed: null, child: Text('$price ポイントで購入する')),
+          FilledButton(key: const ValueKey('store.purchase.buy'), onPressed: null, child: Text(ctx.l10n.storePurchaseBuy(price))),
         ]),
       );
     },

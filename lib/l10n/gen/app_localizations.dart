@@ -4590,6 +4590,2999 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'確認する'**
   String get shellTermsBannerOpenButton;
+
+  /// No description provided for @storeStatusInReview.
+  ///
+  /// In ja, this message translates to:
+  /// **'審査中'**
+  String get storeStatusInReview;
+
+  /// No description provided for @storeStatusPublished.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開中'**
+  String get storeStatusPublished;
+
+  /// No description provided for @storeStatusUpdateAvailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'更新あり'**
+  String get storeStatusUpdateAvailable;
+
+  /// No description provided for @storeStatusWarning.
+  ///
+  /// In ja, this message translates to:
+  /// **'警告'**
+  String get storeStatusWarning;
+
+  /// No description provided for @storeStatusSuspended.
+  ///
+  /// In ja, this message translates to:
+  /// **'停止'**
+  String get storeStatusSuspended;
+
+  /// No description provided for @storeStatusWithdrawn.
+  ///
+  /// In ja, this message translates to:
+  /// **'取り下げ'**
+  String get storeStatusWithdrawn;
+
+  /// No description provided for @storeStatusUnlisted.
+  ///
+  /// In ja, this message translates to:
+  /// **'非公開'**
+  String get storeStatusUnlisted;
+
+  /// No description provided for @storeStatusBeta.
+  ///
+  /// In ja, this message translates to:
+  /// **'ベータ'**
+  String get storeStatusBeta;
+
+  /// No description provided for @storeStatusRevoked.
+  ///
+  /// In ja, this message translates to:
+  /// **'失効'**
+  String get storeStatusRevoked;
+
+  /// No description provided for @storeOriginOfficial.
+  ///
+  /// In ja, this message translates to:
+  /// **'公式'**
+  String get storeOriginOfficial;
+
+  /// No description provided for @storeOriginVerified.
+  ///
+  /// In ja, this message translates to:
+  /// **'検証済み'**
+  String get storeOriginVerified;
+
+  /// No description provided for @storeOriginCommunity.
+  ///
+  /// In ja, this message translates to:
+  /// **'コミュニティ'**
+  String get storeOriginCommunity;
+
+  /// No description provided for @storeTypeComposer.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿作成'**
+  String get storeTypeComposer;
+
+  /// No description provided for @storeTypePost.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get storeTypePost;
+
+  /// No description provided for @storeTypeViewer.
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面表示'**
+  String get storeTypeViewer;
+
+  /// No description provided for @storeTypeTimeline.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムライン'**
+  String get storeTypeTimeline;
+
+  /// No description provided for @storeTypeTrend.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド'**
+  String get storeTypeTrend;
+
+  /// No description provided for @storeTypeTheme.
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え'**
+  String get storeTypeTheme;
+
+  /// No description provided for @storeTypeAssets.
+  ///
+  /// In ja, this message translates to:
+  /// **'ステッカー / 素材'**
+  String get storeTypeAssets;
+
+  /// No description provided for @storeTypeCustom.
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタム'**
+  String get storeTypeCustom;
+
+  /// No description provided for @storeTypeOther.
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get storeTypeOther;
+
+  /// No description provided for @storeFilterFree.
+  ///
+  /// In ja, this message translates to:
+  /// **'無料'**
+  String get storeFilterFree;
+
+  /// No description provided for @storeFilterNoAds.
+  ///
+  /// In ja, this message translates to:
+  /// **'広告なし'**
+  String get storeFilterNoAds;
+
+  /// No description provided for @storeFilterOfficial.
+  ///
+  /// In ja, this message translates to:
+  /// **'公式'**
+  String get storeFilterOfficial;
+
+  /// No description provided for @storeFilterVerified.
+  ///
+  /// In ja, this message translates to:
+  /// **'認証済み'**
+  String get storeFilterVerified;
+
+  /// No description provided for @storeFilterRecent.
+  ///
+  /// In ja, this message translates to:
+  /// **'30 日以内'**
+  String get storeFilterRecent;
+
+  /// No description provided for @storeFilterLightweight.
+  ///
+  /// In ja, this message translates to:
+  /// **'軽量(5MB 未満)'**
+  String get storeFilterLightweight;
+
+  /// No description provided for @storeFilterOffline.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフライン'**
+  String get storeFilterOffline;
+
+  /// No description provided for @storePermNetwork.
+  ///
+  /// In ja, this message translates to:
+  /// **'ネットワーク'**
+  String get storePermNetwork;
+
+  /// No description provided for @storePermNetworkDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'外部への通信'**
+  String get storePermNetworkDescription;
+
+  /// No description provided for @storePermStorage.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストレージ'**
+  String get storePermStorage;
+
+  /// No description provided for @storePermStorageDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末内の保存領域'**
+  String get storePermStorageDescription;
+
+  /// No description provided for @storePermFiles.
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイル'**
+  String get storePermFiles;
+
+  /// No description provided for @storePermFilesDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザーが選んだファイルの読み書き'**
+  String get storePermFilesDescription;
+
+  /// No description provided for @storePermSns.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿とアカウント'**
+  String get storePermSns;
+
+  /// No description provided for @storePermSnsDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS アカウントを使った操作'**
+  String get storePermSnsDescription;
+
+  /// No description provided for @storePermDm.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダイレクトメッセージ'**
+  String get storePermDm;
+
+  /// No description provided for @storePermDmDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'DM の読み書き'**
+  String get storePermDmDescription;
+
+  /// No description provided for @storePermGpuMl.
+  ///
+  /// In ja, this message translates to:
+  /// **'GPU / 機械学習'**
+  String get storePermGpuMl;
+
+  /// No description provided for @storePermGpuMlDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'GPU 実行・モデル推論'**
+  String get storePermGpuMlDescription;
+
+  /// No description provided for @storePermClipboard.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップボード'**
+  String get storePermClipboard;
+
+  /// No description provided for @storePermClipboardDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'コピー内容の読み書き'**
+  String get storePermClipboardDescription;
+
+  /// No description provided for @storePermBackground.
+  ///
+  /// In ja, this message translates to:
+  /// **'バックグラウンド実行'**
+  String get storePermBackground;
+
+  /// No description provided for @storePermBackgroundDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面を閉じても動作'**
+  String get storePermBackgroundDescription;
+
+  /// No description provided for @storePermUi.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面と配置'**
+  String get storePermUi;
+
+  /// No description provided for @storePermUiDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面の表示とボタンの配置'**
+  String get storePermUiDescription;
+
+  /// No description provided for @storePermOther.
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get storePermOther;
+
+  /// No description provided for @storeReviewSortHelpful.
+  ///
+  /// In ja, this message translates to:
+  /// **'関連性'**
+  String get storeReviewSortHelpful;
+
+  /// No description provided for @storeReviewSortRecent.
+  ///
+  /// In ja, this message translates to:
+  /// **'最新'**
+  String get storeReviewSortRecent;
+
+  /// No description provided for @storeReviewSortRatingHigh.
+  ///
+  /// In ja, this message translates to:
+  /// **'評価が高い'**
+  String get storeReviewSortRatingHigh;
+
+  /// No description provided for @storeReviewSortRatingLow.
+  ///
+  /// In ja, this message translates to:
+  /// **'評価が低い'**
+  String get storeReviewSortRatingLow;
+
+  /// 許可した内容から広がるもの(権限)。permission は権限の id
+  ///
+  /// In ja, this message translates to:
+  /// **'権限 {permission}'**
+  String storeScopePermission(String permission);
+
+  /// 広がるもの(接続先)。host はホスト名
+  ///
+  /// In ja, this message translates to:
+  /// **'接続先 {host}'**
+  String storeScopeHost(String host);
+
+  /// No description provided for @storeScopeInstance.
+  ///
+  /// In ja, this message translates to:
+  /// **'接続先 ログイン先のインスタンス'**
+  String get storeScopeInstance;
+
+  /// 広がるもの(使う場所)。slot はスロットの id
+  ///
+  /// In ja, this message translates to:
+  /// **'使う場所 {slot}'**
+  String storeScopeSlot(String slot);
+
+  /// 権限の用途の理由が変わった。permission は権限の id、reason は開発者が書いた理由
+  ///
+  /// In ja, this message translates to:
+  /// **'用途 {permission} — {reason}'**
+  String storeScopeReason(String permission, String reason);
+
+  /// データの扱いの文が変わった。text はその文(長ければ省略)
+  ///
+  /// In ja, this message translates to:
+  /// **'データの扱い — {text}'**
+  String storeScopeDataHandling(String text);
+
+  /// feature は機能の名前(storeFeaturePurchase など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{feature}は ORGATE-Server につなぐと使えます(接続先が設定されていません)'**
+  String storeNeedsOrgate(String feature);
+
+  /// No description provided for @storeFeaturePurchase.
+  ///
+  /// In ja, this message translates to:
+  /// **'購入'**
+  String get storeFeaturePurchase;
+
+  /// No description provided for @storeFeaturePoints.
+  ///
+  /// In ja, this message translates to:
+  /// **'ポイント'**
+  String get storeFeaturePoints;
+
+  /// No description provided for @storeFeatureReview.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビュー'**
+  String get storeFeatureReview;
+
+  /// 共有セッションの配布物の検証の失敗。actual / expected はプラグインの id
+  ///
+  /// In ja, this message translates to:
+  /// **'構成のプラグイン ({actual}) が頼んだもの ({expected}) と違います'**
+  String storeSessionPluginMismatch(String actual, String expected);
+
+  /// actual / expected は版
+  ///
+  /// In ja, this message translates to:
+  /// **'構成の版 ({actual}) が頼んだ版 ({expected}) と違います'**
+  String storeSessionVersionMismatch(String actual, String expected);
+
+  /// No description provided for @storeNoBundle.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物がありません'**
+  String get storeNoBundle;
+
+  /// 一覧を 1 行につなぐときの区切り
+  ///
+  /// In ja, this message translates to:
+  /// **'、'**
+  String get storeListSeparator;
+
+  /// 情報を 1 行に並べるときの区切り(前後に空白)
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get storeDotSeparator;
+
+  /// No description provided for @storeVerifyHashOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'SHA-512 照合 OK(署名なし)'**
+  String get storeVerifyHashOnly;
+
+  /// No description provided for @storeVerifyFull.
+  ///
+  /// In ja, this message translates to:
+  /// **'SHA-512 + ed25519 署名 検証 OK'**
+  String get storeVerifyFull;
+
+  /// No description provided for @storeVerifyHashMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'整合性検証に失敗しました(SHA-512 不一致)。時間をおいて再取得してください'**
+  String get storeVerifyHashMismatch;
+
+  /// No description provided for @storeVerifyKeyMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアの署名鍵がアプリに焼き込んだ鍵と一致しません。接続先を確認してください'**
+  String get storeVerifyKeyMismatch;
+
+  /// No description provided for @storeVerifyUnsigned.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物に署名がありません(このビルドは署名済みストアのみを許可します)'**
+  String get storeVerifyUnsigned;
+
+  /// No description provided for @storeVerifyBadSignature.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物の署名が正しくありません。インストールを中止しました'**
+  String get storeVerifyBadSignature;
+
+  /// error は例外の文
+  ///
+  /// In ja, this message translates to:
+  /// **'署名を検証できませんでした: {error}'**
+  String storeVerifyError(String error);
+
+  /// No description provided for @storeWidenedNoRecord.
+  ///
+  /// In ja, this message translates to:
+  /// **'最後に許可した内容の記録がないため(プラグインを管理から確かめて入れてください)'**
+  String get storeWidenedNoRecord;
+
+  /// 自動では有効にしない理由。items は広がるもの(storeScope…)を区切りでつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'最後に許可した内容より広がるため({items})'**
+  String storeWidenedOver(String items);
+
+  /// No description provided for @storeManifestUnavailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'構成(マニフェスト)を取得できませんでした'**
+  String get storeManifestUnavailable;
+
+  /// No description provided for @storeManifestVersionNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'Ver.{version} の構成が見つかりませんでした'**
+  String storeManifestVersionNotFound(String version);
+
+  /// No description provided for @storeConsentChanged.
+  ///
+  /// In ja, this message translates to:
+  /// **'確認した内容(Ver.{version})と、ストアの構成が変わりました。もう一度確かめてください'**
+  String storeConsentChanged(String version);
+
+  /// No description provided for @storePackageInvalid.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物の中身を検証できませんでした: {error}'**
+  String storePackageInvalid(String error);
+
+  /// actual / expected は「プラグインの id 版」
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物の中身({actual})がストアの掲載({expected})と違います'**
+  String storePackageMismatch(String actual, String expected);
+
+  /// plugins は「id 版」を / でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインには {plugins} が必要です(未対応のため入れられません)'**
+  String storePackageRequires(String plugins);
+
+  /// No description provided for @storeThemeSaveFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替えを保存できませんでした: {error}'**
+  String storeThemeSaveFailed(String error);
+
+  /// No description provided for @storeAssetsSaveFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'アセットパックを保存できませんでした: {error}'**
+  String storeAssetsSaveFailed(String error);
+
+  /// No description provided for @storeSlotRegisterFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロットに登録できませんでした'**
+  String get storeSlotRegisterFailed;
+
+  /// No description provided for @storeVersionBundleChanged.
+  ///
+  /// In ja, this message translates to:
+  /// **'Ver.{version} の配布物がインストール時と違うため読み込みません(入れ直してください)'**
+  String storeVersionBundleChanged(String version);
+
+  /// No description provided for @storeVersionLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'Ver.{version} を読み込めませんでした: {error}'**
+  String storeVersionLoadFailed(String version, String error);
+
+  /// No description provided for @storeVersionNoScopeRecord.
+  ///
+  /// In ja, this message translates to:
+  /// **'この版で許す内容の記録がありません(入れ直すと確かめられます)'**
+  String get storeVersionNoScopeRecord;
+
+  /// No description provided for @storeVersionNotInstalled.
+  ///
+  /// In ja, this message translates to:
+  /// **'Ver.{version} は入っていません'**
+  String storeVersionNotInstalled(String version);
+
+  /// No description provided for @storeNotInstalled.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールされていません'**
+  String get storeNotInstalled;
+
+  /// No description provided for @storeVersionInUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'Ver.{version} は使われています(既定 / アカウントの指定を外してから)'**
+  String storeVersionInUse(String version);
+
+  /// No description provided for @storeManageTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインを管理'**
+  String get storeManageTitle;
+
+  /// No description provided for @storeManageUpdatesHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップデート'**
+  String get storeManageUpdatesHeader;
+
+  /// No description provided for @storeManageUpdateSettingsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップデートの設定'**
+  String get storeManageUpdateSettingsTitle;
+
+  /// No description provided for @storeManageUpdateSettingsSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'自動で更新するかどうか ・ 更新ログ'**
+  String get storeManageUpdateSettingsSubtitle;
+
+  /// No description provided for @storeManageUpdateSettingsDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS / アクション / ビューごとに、おまかせ・インストールだけ・手動 ・ 更新ログ'**
+  String get storeManageUpdateSettingsDetail;
+
+  /// No description provided for @storeManagePointsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ポイント'**
+  String get storeManagePointsTitle;
+
+  /// No description provided for @storeManagePointsDisabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開テストでは使えません'**
+  String get storeManagePointsDisabled;
+
+  /// ポイントの残高
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{ポイント {count}}}'**
+  String storeManagePointsBalance(int count);
+
+  /// No description provided for @storeManagePointsSignIn.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインすると使えます'**
+  String get storeManagePointsSignIn;
+
+  /// No description provided for @storeManagePointsBuyInConsole.
+  ///
+  /// In ja, this message translates to:
+  /// **'Web コンソールで買えます(付与から 1 か月で失効)'**
+  String get storeManagePointsBuyInConsole;
+
+  /// month / day は次に失効する日、count は失効するポイント
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{month}/{day} に {count} ポイントが失効 ・ Web コンソールで買う}}'**
+  String storeManagePointsExpiring(int month, int day, int count);
+
+  /// No description provided for @storeNoInstalledPlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール済みのプラグインはありません'**
+  String get storeNoInstalledPlugins;
+
+  /// No description provided for @storeManageImportTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインのインポート'**
+  String get storeManageImportTitle;
+
+  /// No description provided for @storeManageImportSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'開発中のプラグインを入れる(審査前)'**
+  String get storeManageImportSubtitle;
+
+  /// No description provided for @storeManageImportDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'開発中の wasm / .rasqpkg を入れる(審査を通っていません)'**
+  String get storeManageImportDetail;
+
+  /// No description provided for @storeManageHomeHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホームの表示'**
+  String get storeManageHomeHeader;
+
+  /// No description provided for @storeManageShowInstalledTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール済みもホームに出す'**
+  String get storeManageShowInstalledTitle;
+
+  /// No description provided for @storeManageShowInstalledSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'今週のトレンド / 新着の列に、入れたプラグインも並べます'**
+  String get storeManageShowInstalledSubtitle;
+
+  /// No description provided for @storeBookmarksTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマーク'**
+  String get storeBookmarksTitle;
+
+  /// No description provided for @storeManageSwitchTo.
+  ///
+  /// In ja, this message translates to:
+  /// **'{version} に切り替え'**
+  String storeManageSwitchTo(String version);
+
+  /// No description provided for @storeVersionMadeDefault.
+  ///
+  /// In ja, this message translates to:
+  /// **'{version} を既定の版にしました'**
+  String storeVersionMadeDefault(String version);
+
+  /// No description provided for @storeManageUpdateTo.
+  ///
+  /// In ja, this message translates to:
+  /// **'{version} に更新'**
+  String storeManageUpdateTo(String version);
+
+  /// No description provided for @storeManageOffline.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアに接続できません'**
+  String get storeManageOffline;
+
+  /// No description provided for @storeManageUpToDate.
+  ///
+  /// In ja, this message translates to:
+  /// **'最新です'**
+  String get storeManageUpToDate;
+
+  /// No description provided for @storeManageDeployedVersion.
+  ///
+  /// In ja, this message translates to:
+  /// **'デプロイしたバージョン'**
+  String get storeManageDeployedVersion;
+
+  /// No description provided for @storeAccountVersionsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントごとにバージョンを設定'**
+  String get storeAccountVersionsTitle;
+
+  /// No description provided for @storeManageAccountVersionsCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{アカウントごと({count} 件指定)}}'**
+  String storeManageAccountVersionsCount(int count);
+
+  /// No description provided for @storePluginNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインは見つかりませんでした'**
+  String get storePluginNotFound;
+
+  /// No description provided for @storeInstallFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールできませんでした: {error}'**
+  String storeInstallFailed(String error);
+
+  /// No description provided for @storeHasAds.
+  ///
+  /// In ja, this message translates to:
+  /// **'広告あり'**
+  String get storeHasAds;
+
+  /// No description provided for @storeBuyDisabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開テストでは購入できません'**
+  String get storeBuyDisabled;
+
+  /// No description provided for @storeTileGet.
+  ///
+  /// In ja, this message translates to:
+  /// **'入手'**
+  String get storeTileGet;
+
+  /// No description provided for @storeTileUpdate.
+  ///
+  /// In ja, this message translates to:
+  /// **'更新'**
+  String get storeTileUpdate;
+
+  /// No description provided for @storeOpen.
+  ///
+  /// In ja, this message translates to:
+  /// **'開く'**
+  String get storeOpen;
+
+  /// No description provided for @storeTileUnavailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'停止中'**
+  String get storeTileUnavailable;
+
+  /// ダウンロード数(1 万以上)。value は 1 万で割った数(小数 1 桁)
+  ///
+  /// In ja, this message translates to:
+  /// **'{value}万'**
+  String storeDownloadsTenThousands(String value);
+
+  /// No description provided for @storeNotAssetPack.
+  ///
+  /// In ja, this message translates to:
+  /// **'アセットパックではありません: {id}'**
+  String storeNotAssetPack(String id);
+
+  /// No description provided for @storeUpdatesNoneApplied.
+  ///
+  /// In ja, this message translates to:
+  /// **'自動で入れる更新はありませんでした'**
+  String get storeUpdatesNoneApplied;
+
+  /// No description provided for @storeUpdateSettingsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップデート/デプロイの設定'**
+  String get storeUpdateSettingsTitle;
+
+  /// No description provided for @storeUpdateSettingsModeHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップデート/デプロイ'**
+  String get storeUpdateSettingsModeHeader;
+
+  /// No description provided for @storeUpdateSettingsPopup.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップデート後の起動時にポップアップを表示'**
+  String get storeUpdateSettingsPopup;
+
+  /// No description provided for @storeUpdateLogTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'更新ログ'**
+  String get storeUpdateLogTitle;
+
+  /// No description provided for @storeUpdateSettingsCheckNow.
+  ///
+  /// In ja, this message translates to:
+  /// **'いま確かめる'**
+  String get storeUpdateSettingsCheckNow;
+
+  /// No description provided for @storeUpdateSettingsCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'許可した内容が広がる版と有料の版は、自動では入りません'**
+  String get storeUpdateSettingsCaption;
+
+  /// No description provided for @storeUpdateSettingsCaptionDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'最後に許可した内容より権限・接続先・使う場所・用途が広がる版(確かめられない版も)と、買っていない有料の版は、どのモードでも自動では使い始めません(更新ログに理由が残ります)。起動するたびに 1 回確かめます。'**
+  String get storeUpdateSettingsCaptionDetail;
+
+  /// No description provided for @storeUpdateLogEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだありません'**
+  String get storeUpdateLogEmpty;
+
+  /// No description provided for @storeUpdateLogEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップデートすると、ここに残ります'**
+  String get storeUpdateLogEmptyHint;
+
+  /// No description provided for @storeInstalledTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール済み'**
+  String get storeInstalledTitle;
+
+  /// No description provided for @storeInstalledEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアから追加できます'**
+  String get storeInstalledEmptyHint;
+
+  /// No description provided for @storeInstalledItemSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'v{version} ・ {id}'**
+  String storeInstalledItemSubtitle(String version, String id);
+
+  /// No description provided for @storeUnknown.
+  ///
+  /// In ja, this message translates to:
+  /// **'不明'**
+  String get storeUnknown;
+
+  /// No description provided for @storeInstalledMissingHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除済みか、別の端末で入れたものです'**
+  String get storeInstalledMissingHint;
+
+  /// No description provided for @storeInstalledSourceSnapshot.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールしたときの掲載の写しです。'**
+  String get storeInstalledSourceSnapshot;
+
+  /// No description provided for @storeInstalledSourceManifest.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン自身の宣言(権限の id だけ)です。'**
+  String get storeInstalledSourceManifest;
+
+  /// No description provided for @storeInstalledRemoveTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除しますか？'**
+  String get storeInstalledRemoveTitle;
+
+  /// No description provided for @storeInstalledRemoveMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を端末から削除します。'**
+  String storeInstalledRemoveMessage(String name);
+
+  /// No description provided for @storeRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get storeRemove;
+
+  /// No description provided for @storeCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get storeCancel;
+
+  /// No description provided for @storeInstalledOffline.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアに接続できないので、手元の情報を出しています。'**
+  String get storeInstalledOffline;
+
+  /// No description provided for @storeInstalledUnlisted.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアの掲載は見つかりません(取り下げられた可能性があります)。このまま使い続けることも、削除することもできます。'**
+  String get storeInstalledUnlisted;
+
+  /// No description provided for @storeInstalledVersionHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール済みのバージョン'**
+  String get storeInstalledVersionHeader;
+
+  /// date は入れた日(2026/10/19 の形)
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール: {date}'**
+  String storeInstalledAt(String date);
+
+  /// sha512 はダイジェストの先頭
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール: {date} ・ 検証済み SHA-512 {sha512}'**
+  String storeInstalledAtVerified(String date, String sha512);
+
+  /// No description provided for @storeInstalledNewerTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアには v{version} があります'**
+  String storeInstalledNewerTitle(String version);
+
+  /// No description provided for @storeInstalledNewerSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアのページから入れ直せます'**
+  String get storeInstalledNewerSubtitle;
+
+  /// slots はスロットの id を区切りでつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'動いている場所: {slots}'**
+  String storeInstalledSlots(String slots);
+
+  /// No description provided for @storeInstalledOpenStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアのページを開く'**
+  String get storeInstalledOpenStore;
+
+  /// No description provided for @storePrivacyHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'プライバシーと必要な権限'**
+  String get storePrivacyHeader;
+
+  /// No description provided for @storeVersionsInstalledHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'入っている版'**
+  String get storeVersionsInstalledHeader;
+
+  /// No description provided for @storeVersionsDefault.
+  ///
+  /// In ja, this message translates to:
+  /// **'既定の版'**
+  String get storeVersionsDefault;
+
+  /// No description provided for @storeVersionsUsers.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} アカウントが使用中}}'**
+  String storeVersionsUsers(int count);
+
+  /// No description provided for @storeVersionsInstalledOn.
+  ///
+  /// In ja, this message translates to:
+  /// **'入れた日 {year}/{month}/{day}'**
+  String storeVersionsInstalledOn(int year, int month, int day);
+
+  /// No description provided for @storeMenu.
+  ///
+  /// In ja, this message translates to:
+  /// **'メニュー'**
+  String get storeMenu;
+
+  /// No description provided for @storeVersionsMakeDefault.
+  ///
+  /// In ja, this message translates to:
+  /// **'既定の版にする'**
+  String get storeVersionsMakeDefault;
+
+  /// No description provided for @storeVersionsRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'この版を消す'**
+  String get storeVersionsRemove;
+
+  /// No description provided for @storeVersionsRemoved.
+  ///
+  /// In ja, this message translates to:
+  /// **'{version} を消しました'**
+  String storeVersionsRemoved(String version);
+
+  /// No description provided for @storeVersionsOthersHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかの版を入れる'**
+  String get storeVersionsOthersHeader;
+
+  /// No description provided for @storeVersionsMorePermissions.
+  ///
+  /// In ja, this message translates to:
+  /// **'権限が増えます'**
+  String get storeVersionsMorePermissions;
+
+  /// No description provided for @storeVersionsInstall.
+  ///
+  /// In ja, this message translates to:
+  /// **'入れる'**
+  String get storeVersionsInstall;
+
+  /// No description provided for @storeVersionsPerAccountHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントごと'**
+  String get storeVersionsPerAccountHeader;
+
+  /// No description provided for @storeVersionsPerAccountCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントごとに、使う版を選べます'**
+  String get storeVersionsPerAccountCaption;
+
+  /// No description provided for @storeVersionsPerAccountDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'そのアカウントを使っている間、スロットプラグインとノードの並べ替えは、ここで選んだ版で動きます。'**
+  String get storeVersionsPerAccountDetail;
+
+  /// No description provided for @storeVersionsFollowDefault.
+  ///
+  /// In ja, this message translates to:
+  /// **'既定に従う({version})'**
+  String storeVersionsFollowDefault(String version);
+
+  /// account は SNS アカウント(handle@host)
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} は既定の版に従います'**
+  String storeVersionsAccountFollows(String account);
+
+  /// No description provided for @storeVersionsAccountUses.
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} は {version} を使います'**
+  String storeVersionsAccountUses(String account, String version);
+
+  /// No description provided for @storeVersionsDefaultShort.
+  ///
+  /// In ja, this message translates to:
+  /// **'既定({version})'**
+  String storeVersionsDefaultShort(String version);
+
+  /// No description provided for @storeVersionsPackNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え / ステッカー・素材は端末全体で 1 つの版を使います(既定の版)。'**
+  String get storeVersionsPackNote;
+
+  /// No description provided for @storeUpdateModeAuto.
+  ///
+  /// In ja, this message translates to:
+  /// **'おまかせ'**
+  String get storeUpdateModeAuto;
+
+  /// No description provided for @storeUpdateModeAutoDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい版を入れて、既定の版にします(アカウントごとに指定した版はそのまま)'**
+  String get storeUpdateModeAutoDescription;
+
+  /// No description provided for @storeUpdateModeInstallOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールだけおまかせ'**
+  String get storeUpdateModeInstallOnly;
+
+  /// No description provided for @storeUpdateModeInstallOnlyDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい版を入れておくだけで、使う版は変えません'**
+  String get storeUpdateModeInstallOnlyDescription;
+
+  /// No description provided for @storeUpdateModeManual.
+  ///
+  /// In ja, this message translates to:
+  /// **'全て手動で構成'**
+  String get storeUpdateModeManual;
+
+  /// No description provided for @storeUpdateModeManualDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'自動では何もしません(プラグインを管理から入れます)'**
+  String get storeUpdateModeManualDescription;
+
+  /// No description provided for @storeUpdateGroupSns.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNSプラグイン'**
+  String get storeUpdateGroupSns;
+
+  /// No description provided for @storeUpdateGroupAction.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションプラグイン'**
+  String get storeUpdateGroupAction;
+
+  /// No description provided for @storeUpdateGroupView.
+  ///
+  /// In ja, this message translates to:
+  /// **'ビュープラグイン'**
+  String get storeUpdateGroupView;
+
+  /// 更新ログの 1 行。from / to は版
+  ///
+  /// In ja, this message translates to:
+  /// **'{from} → {to}(既定の版にしました)'**
+  String storeUpdateLogActivated(String from, String to);
+
+  /// No description provided for @storeUpdateLogInstalled.
+  ///
+  /// In ja, this message translates to:
+  /// **'{to} を入れました(使う版は {from} のまま)'**
+  String storeUpdateLogInstalled(String from, String to);
+
+  /// No description provided for @storeUpdateLogSwitched.
+  ///
+  /// In ja, this message translates to:
+  /// **'{from} → {to}(入っていた版を既定に)'**
+  String storeUpdateLogSwitched(String from, String to);
+
+  /// No description provided for @storeUpdateLogSkipped.
+  ///
+  /// In ja, this message translates to:
+  /// **'{to} は自動では入れません'**
+  String storeUpdateLogSkipped(String to);
+
+  /// note は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'{to} は自動では入れません({note})'**
+  String storeUpdateLogSkippedNote(String to, String note);
+
+  /// No description provided for @storeUpdateLogFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'{to} を入れられませんでした'**
+  String storeUpdateLogFailed(String to);
+
+  /// note は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'{to} を入れられませんでした({note})'**
+  String storeUpdateLogFailedNote(String to, String note);
+
+  /// No description provided for @storeUpdatePopupTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインをアップデートしました'**
+  String get storeUpdatePopupTitle;
+
+  /// No description provided for @storeClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get storeClose;
+
+  /// No description provided for @storeReviewsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビュー'**
+  String get storeReviewsTitle;
+
+  /// No description provided for @storeReviewsLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビューを取得できませんでした'**
+  String get storeReviewsLoadFailed;
+
+  /// No description provided for @storeReviewWrite.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビューを書く'**
+  String get storeReviewWrite;
+
+  /// No description provided for @storeReviewsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだレビューがありません'**
+  String get storeReviewsEmpty;
+
+  /// No description provided for @storeReviewsEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'右下の + から最初のレビューを書けます'**
+  String get storeReviewsEmptyHint;
+
+  /// No description provided for @storeCopyLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピー'**
+  String get storeCopyLink;
+
+  /// No description provided for @storeReviewReport.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビューを報告'**
+  String get storeReviewReport;
+
+  /// No description provided for @storeReviewLinkCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビューのリンクをコピーしました'**
+  String get storeReviewLinkCopied;
+
+  /// No description provided for @storeReviewReportUnavailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビューの報告は準備中です'**
+  String get storeReviewReportUnavailable;
+
+  /// No description provided for @storeReloadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み直せませんでした: {error}'**
+  String storeReloadFailed(String error);
+
+  /// No description provided for @storeNoNewPlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'新しく公開されたプラグインはありません'**
+  String get storeNoNewPlugins;
+
+  /// No description provided for @storeNewPluginsAdded.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{新しく公開されたプラグインを {count} 件追加しました}}'**
+  String storeNewPluginsAdded(int count);
+
+  /// No description provided for @storeSearchTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインを検索'**
+  String get storeSearchTitle;
+
+  /// No description provided for @storeSearchRecentPick.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近の投稿内容から選出'**
+  String get storeSearchRecentPick;
+
+  /// No description provided for @storeSearchFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索できませんでした'**
+  String get storeSearchFailed;
+
+  /// No description provided for @storeSearchNoRecentPosts.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近の投稿が見つかりませんでした'**
+  String get storeSearchNoRecentPosts;
+
+  /// No description provided for @storeSearchNoRecentPostsHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS アカウントで投稿すると、その内容に近いプラグインを選びます'**
+  String get storeSearchNoRecentPostsHint;
+
+  /// No description provided for @storeSearchRecentCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{最近の投稿 {count} 件の内容に近い順(端末の中で選んでいます)}}'**
+  String storeSearchRecentCaption(int count);
+
+  /// No description provided for @storeSearchNoRecentMatches.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近の投稿に近いプラグインは見つかりませんでした'**
+  String get storeSearchNoRecentMatches;
+
+  /// No description provided for @storeSearchNoResults.
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりませんでした'**
+  String get storeSearchNoResults;
+
+  /// No description provided for @storeSearchNoResultsHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ワードや絞り込みを変えてみてください'**
+  String get storeSearchNoResultsHint;
+
+  /// No description provided for @storeHomeTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインストア'**
+  String get storeHomeTitle;
+
+  /// No description provided for @storeConnectFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアに接続できませんでした'**
+  String get storeConnectFailed;
+
+  /// No description provided for @storeHomeOffline.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ サーバーにつながっていません。アプリに入っているプラグインだけを表示しています'**
+  String get storeHomeOffline;
+
+  /// No description provided for @storeHomeOfflineDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'Central 未接続: 同梱の実物(Misskey コネクタとスロットのサンプル)だけ。評価 / ダウンロード数 / レビュー / 購入はサーバーにつなぐと出ます。'**
+  String get storeHomeOfflineDetail;
+
+  /// No description provided for @storeHomeTrending.
+  ///
+  /// In ja, this message translates to:
+  /// **'今週のトレンド'**
+  String get storeHomeTrending;
+
+  /// No description provided for @storeHomeRecent.
+  ///
+  /// In ja, this message translates to:
+  /// **'新着'**
+  String get storeHomeRecent;
+
+  /// No description provided for @storeHomeReviewedOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'掲載されるのは審査済みのプラグインだけです'**
+  String get storeHomeReviewedOnly;
+
+  /// No description provided for @storeHomeReviewedOnlyDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'開発中のプラグインは、開発者モードで右上の歯車 → プラグインを管理 →「プラグインのインポート」から入れられます。'**
+  String get storeHomeReviewedOnlyDetail;
+
+  /// No description provided for @storeRowEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'いまは表示できるプラグインがありません'**
+  String get storeRowEmpty;
+
+  /// No description provided for @storeInstallManifestUnavailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'構成を取得できませんでした'**
+  String get storeInstallManifestUnavailable;
+
+  /// インストールの確認シートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} {version} をインストール'**
+  String storeInstallSheetTitle(String name, String version);
+
+  /// No description provided for @storeInstallPermissionsHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインが使う権限'**
+  String get storeInstallPermissionsHeader;
+
+  /// No description provided for @storeInstallHostsHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'接続先'**
+  String get storeInstallHostsHeader;
+
+  /// No description provided for @storeInstallLoginInstance.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログイン先のインスタンス'**
+  String get storeInstallLoginInstance;
+
+  /// No description provided for @storeInstallScopeNoRecord.
+  ///
+  /// In ja, this message translates to:
+  /// **'許可する内容(前に入れたときの記録がありません)'**
+  String get storeInstallScopeNoRecord;
+
+  /// No description provided for @storeInstallScopeWidened.
+  ///
+  /// In ja, this message translates to:
+  /// **'最後に許可した内容から広がるもの'**
+  String get storeInstallScopeWidened;
+
+  /// No description provided for @storeInstallPermissionsAdded.
+  ///
+  /// In ja, this message translates to:
+  /// **'前のバージョンから増えた権限'**
+  String get storeInstallPermissionsAdded;
+
+  /// 配布物の大きさ(MB、小数 1 桁)と署名の有無(storeInstallSignedShort / storeInstallUnsignedShort)
+  ///
+  /// In ja, this message translates to:
+  /// **'{size}MB ・ {signature}'**
+  String storeInstallBundleSummary(String size, String signature);
+
+  /// No description provided for @storeInstallSignedShort.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアの署名あり'**
+  String get storeInstallSignedShort;
+
+  /// No description provided for @storeInstallUnsignedShort.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアの署名なし'**
+  String get storeInstallUnsignedShort;
+
+  /// sha512 はダイジェストの先頭 16 文字。signature は storeInstallSignedDetail / storeInstallUnsignedDetail
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物: {size}MB ・ SHA-512 {sha512}… ・ {signature}'**
+  String storeInstallBundleDetail(String size, String sha512, String signature);
+
+  /// No description provided for @storeInstallSignedDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストア署名つき (ed25519)'**
+  String get storeInstallSignedDetail;
+
+  /// No description provided for @storeInstallUnsignedDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストア署名なし(ハッシュ照合のみ)'**
+  String get storeInstallUnsignedDetail;
+
+  /// No description provided for @storeInstallConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールする'**
+  String get storeInstallConfirm;
+
+  /// No description provided for @storeInstallThemeDarkOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を使います。暗いモードのときに効きます'**
+  String storeInstallThemeDarkOnly(String name);
+
+  /// No description provided for @storeInstallThemeLightOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を使います。明るいモードのときに効きます'**
+  String storeInstallThemeLightOnly(String name);
+
+  /// No description provided for @storeInstallThemeApplied.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を使います'**
+  String storeInstallThemeApplied(String name);
+
+  /// No description provided for @storeInstallDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} {version} をインストールしました'**
+  String storeInstallDone(String name, String version);
+
+  /// No description provided for @storeVersionScopeTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Ver.{version} は許可する内容が広がります'**
+  String storeVersionScopeTitle(String version);
+
+  /// No description provided for @storeVersionScopeConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'許可して使う'**
+  String get storeVersionScopeConfirm;
+
+  /// No description provided for @storeVersionScopeCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'やめる'**
+  String get storeVersionScopeCancel;
+
+  /// No description provided for @storePurchasePointsFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ポイントを確かめられませんでした(RASQ アカウントにログインしていますか?): {error}'**
+  String storePurchasePointsFailed(String error);
+
+  /// No description provided for @storePurchaseTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を購入'**
+  String storePurchaseTitle(String name);
+
+  /// No description provided for @storePurchasePrice.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} ポイント}}'**
+  String storePurchasePrice(int count);
+
+  /// No description provided for @storePurchaseBalance.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{残り {count} ポイント}}'**
+  String storePurchaseBalance(int count);
+
+  /// date は次に失効する日(2026/10/19 の形)、expiring は失効するポイント
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{残り {count} ポイント ・ {date} に {expiring} ポイントが失効}}'**
+  String storePurchaseBalanceExpiring(int count, String date, int expiring);
+
+  /// No description provided for @storePurchaseCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'買ったプラグインは、同じアカウントならどの端末でも使えます'**
+  String get storePurchaseCaption;
+
+  /// No description provided for @storePurchaseCaptionDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'買ったプラグインは、同じ RASQ アカウントならどの端末でも入れられます。ポイントは有効期限の近いものから使います。'**
+  String get storePurchaseCaptionDetail;
+
+  /// No description provided for @storePurchaseBuy.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} ポイントで購入する}}'**
+  String storePurchaseBuy(int count);
+
+  /// No description provided for @storePurchaseShort.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{ポイントが足りません(あと {count} ポイント)}}'**
+  String storePurchaseShort(int count);
+
+  /// No description provided for @storePurchaseConsole.
+  ///
+  /// In ja, this message translates to:
+  /// **'Web コンソールでポイントを買う'**
+  String get storePurchaseConsole;
+
+  /// No description provided for @storePurchaseFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'購入できませんでした'**
+  String get storePurchaseFailed;
+
+  /// No description provided for @storeReleaseNotesSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'リリースノート {version}'**
+  String storeReleaseNotesSemantics(String version);
+
+  /// No description provided for @storeReleaseBeta.
+  ///
+  /// In ja, this message translates to:
+  /// **'プレビュー版 (β)'**
+  String get storeReleaseBeta;
+
+  /// No description provided for @storeReleaseStable.
+  ///
+  /// In ja, this message translates to:
+  /// **'安定版'**
+  String get storeReleaseStable;
+
+  /// No description provided for @storeReleasePublishedOn.
+  ///
+  /// In ja, this message translates to:
+  /// **'{year}/{month}/{day} 公開'**
+  String storeReleasePublishedOn(int year, int month, int day);
+
+  /// No description provided for @storeReleaseCurrentListing.
+  ///
+  /// In ja, this message translates to:
+  /// **'現在の掲載版'**
+  String get storeReleaseCurrentListing;
+
+  /// No description provided for @storeReleaseInstalled.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール中'**
+  String get storeReleaseInstalled;
+
+  /// No description provided for @storeReleaseNoNotes.
+  ///
+  /// In ja, this message translates to:
+  /// **'この版のリリースノートはありません。'**
+  String get storeReleaseNoNotes;
+
+  /// No description provided for @storeReleasePermissionsAdded.
+  ///
+  /// In ja, this message translates to:
+  /// **'この版で増えた権限'**
+  String get storeReleasePermissionsAdded;
+
+  /// No description provided for @storeReleasePermissionsNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'権限が増える更新は自動アップデートの対象外です。内容を確認してから入れてください。'**
+  String get storeReleasePermissionsNote;
+
+  /// No description provided for @storeReleaseAlreadyInstalled.
+  ///
+  /// In ja, this message translates to:
+  /// **'Ver.{version} はインストール済み'**
+  String storeReleaseAlreadyInstalled(String version);
+
+  /// status は掲載の状態(停止 / 失効)
+  ///
+  /// In ja, this message translates to:
+  /// **'{status}のためインストールできません'**
+  String storeReleaseBlocked(String status);
+
+  /// No description provided for @storeReleaseInstall.
+  ///
+  /// In ja, this message translates to:
+  /// **'Ver.{version} をインストール'**
+  String storeReleaseInstall(String version);
+
+  /// No description provided for @storeReleaseReplaces.
+  ///
+  /// In ja, this message translates to:
+  /// **'現在 v{version} が入っています。この版に置き換わります。'**
+  String storeReleaseReplaces(String version);
+
+  /// No description provided for @storeReviewNoVotes.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ評価がありません'**
+  String get storeReviewNoVotes;
+
+  /// No description provided for @storeReviewHelpfulCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}人が役に立ったと考えました。}}'**
+  String storeReviewHelpfulCount(int count);
+
+  /// No description provided for @storeShare.
+  ///
+  /// In ja, this message translates to:
+  /// **'共有'**
+  String get storeShare;
+
+  /// No description provided for @storeReviewHelpful.
+  ///
+  /// In ja, this message translates to:
+  /// **'参考になった'**
+  String get storeReviewHelpful;
+
+  /// No description provided for @storeReviewNotHelpful.
+  ///
+  /// In ja, this message translates to:
+  /// **'参考にならなかった'**
+  String get storeReviewNotHelpful;
+
+  /// No description provided for @storeReviewAnonymous.
+  ///
+  /// In ja, this message translates to:
+  /// **'匿名'**
+  String get storeReviewAnonymous;
+
+  /// No description provided for @storeReviewVerifiedUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'実利用済み'**
+  String get storeReviewVerifiedUse;
+
+  /// No description provided for @storeReviewDeveloperReply.
+  ///
+  /// In ja, this message translates to:
+  /// **'開発者の返信: {reply}'**
+  String storeReviewDeveloperReply(String reply);
+
+  /// No description provided for @storeReviewNoBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'(本文なし)'**
+  String get storeReviewNoBody;
+
+  /// No description provided for @storeReviewComposeTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビューの作成'**
+  String get storeReviewComposeTitle;
+
+  /// No description provided for @storeReviewSend.
+  ///
+  /// In ja, this message translates to:
+  /// **'送信'**
+  String get storeReviewSend;
+
+  /// No description provided for @storeRatingLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'評価'**
+  String get storeRatingLabel;
+
+  /// No description provided for @storeReviewTitleHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'見出し(任意)'**
+  String get storeReviewTitleHint;
+
+  /// No description provided for @storeReviewBodyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'使用感や気になった点を入力してください'**
+  String get storeReviewBodyHint;
+
+  /// No description provided for @storeReviewUsedVersion.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用バージョン: v{version}'**
+  String storeReviewUsedVersion(String version);
+
+  /// No description provided for @storeReviewPickRating.
+  ///
+  /// In ja, this message translates to:
+  /// **'★ を選んでください'**
+  String get storeReviewPickRating;
+
+  /// No description provided for @storeReviewSent.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビューを送信しました'**
+  String get storeReviewSent;
+
+  /// No description provided for @storeReviewSendFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビューを送信できませんでした: {error}'**
+  String storeReviewSendFailed(String error);
+
+  /// No description provided for @storeSafetyNoPermissions.
+  ///
+  /// In ja, this message translates to:
+  /// **'必要な権限: なし'**
+  String get storeSafetyNoPermissions;
+
+  /// No description provided for @storeSafetyExternalHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'外部通信とデータ'**
+  String get storeSafetyExternalHeader;
+
+  /// No description provided for @storeSafetyNoHosts.
+  ///
+  /// In ja, this message translates to:
+  /// **'外部通信先: なし'**
+  String get storeSafetyNoHosts;
+
+  /// hosts は接続先を区切りでつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'外部通信先: {hosts}'**
+  String storeSafetyHosts(String hosts);
+
+  /// No description provided for @storeSafetyDataHandling.
+  ///
+  /// In ja, this message translates to:
+  /// **'データの扱い: {text}'**
+  String storeSafetyDataHandling(String text);
+
+  /// No description provided for @storeSafetySdks.
+  ///
+  /// In ja, this message translates to:
+  /// **'外部 SDK: {sdks}'**
+  String storeSafetySdks(String sdks);
+
+  /// No description provided for @storeSafetyRuntimeHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'実行環境'**
+  String get storeSafetyRuntimeHeader;
+
+  /// rate は百分率(小数 1 桁)
+  ///
+  /// In ja, this message translates to:
+  /// **'正常起動率 {rate}%'**
+  String storeSafetyCrashFree(String rate);
+
+  /// No description provided for @storeSafetyBackground.
+  ///
+  /// In ja, this message translates to:
+  /// **'バックグラウンド実行あり'**
+  String get storeSafetyBackground;
+
+  /// No description provided for @storeSafetyNoBackground.
+  ///
+  /// In ja, this message translates to:
+  /// **'バックグラウンド実行なし'**
+  String get storeSafetyNoBackground;
+
+  /// No description provided for @storeSafetyGpu.
+  ///
+  /// In ja, this message translates to:
+  /// **'GPU 使用'**
+  String get storeSafetyGpu;
+
+  /// No description provided for @storeSafetyNoGpu.
+  ///
+  /// In ja, this message translates to:
+  /// **'GPU 不使用'**
+  String get storeSafetyNoGpu;
+
+  /// No description provided for @storeSafetyNoAds.
+  ///
+  /// In ja, this message translates to:
+  /// **'広告なし'**
+  String get storeSafetyNoAds;
+
+  /// placements は広告の場所を区切りでつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'広告あり({placements})'**
+  String storeSafetyAds(String placements);
+
+  /// No description provided for @storePageMenuPostReview.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビューを投稿'**
+  String get storePageMenuPostReview;
+
+  /// No description provided for @storePageMenuReport.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインを報告'**
+  String get storePageMenuReport;
+
+  /// No description provided for @storePageLinkCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアページのリンクをコピーしました'**
+  String get storePageLinkCopied;
+
+  /// No description provided for @storePageTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン'**
+  String get storePageTitle;
+
+  /// No description provided for @storePageMaybeWithdrawn.
+  ///
+  /// In ja, this message translates to:
+  /// **'取り下げられた可能性があります'**
+  String get storePageMaybeWithdrawn;
+
+  /// No description provided for @storePageOpenInstalled.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール済みの情報を見る'**
+  String get storePageOpenInstalled;
+
+  /// 必要プラグインのリンクの前に置く文(リンクは / で区切って並ぶ)
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインを利用するには '**
+  String get storePageRequiresPrefix;
+
+  /// 必要プラグインのリンクの後ろに置く文
+  ///
+  /// In ja, this message translates to:
+  /// **' のインストールが必要です。'**
+  String get storePageRequiresSuffix;
+
+  /// No description provided for @storePageInstalledVersion.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール済み v{version}'**
+  String storePageInstalledVersion(String version);
+
+  /// No description provided for @storePageInstalledVersionVerified.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール済み v{version}(SHA-512 検証済み)'**
+  String storePageInstalledVersionVerified(String version);
+
+  /// No description provided for @storeFree.
+  ///
+  /// In ja, this message translates to:
+  /// **'無料'**
+  String get storeFree;
+
+  /// 値段(円、整数)
+  ///
+  /// In ja, this message translates to:
+  /// **'¥{amount}'**
+  String storePriceYen(String amount);
+
+  /// No description provided for @storePageInstall.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール'**
+  String get storePageInstall;
+
+  /// No description provided for @storePageBuy.
+  ///
+  /// In ja, this message translates to:
+  /// **'¥{amount} で購入'**
+  String storePageBuy(String amount);
+
+  /// No description provided for @storePageThemeInUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'使用中'**
+  String get storePageThemeInUse;
+
+  /// No description provided for @storePageThemeUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'使う'**
+  String get storePageThemeUse;
+
+  /// No description provided for @storePageUnknownDeveloper.
+  ///
+  /// In ja, this message translates to:
+  /// **'提供元不明'**
+  String get storePageUnknownDeveloper;
+
+  /// rating は小数 1 桁、downloads は整形したダウンロード数
+  ///
+  /// In ja, this message translates to:
+  /// **'★{rating} ・ {downloads} DL'**
+  String storePageRatingDownloads(String rating, String downloads);
+
+  /// No description provided for @storePageStatus.
+  ///
+  /// In ja, this message translates to:
+  /// **'状態: {status}'**
+  String storePageStatus(String status);
+
+  /// No description provided for @storePagePreview.
+  ///
+  /// In ja, this message translates to:
+  /// **'プレビュー'**
+  String get storePagePreview;
+
+  /// No description provided for @storePageDownloadsLastMonth.
+  ///
+  /// In ja, this message translates to:
+  /// **'先月のダウンロード数'**
+  String get storePageDownloadsLastMonth;
+
+  /// No description provided for @storePageReviewCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}件}}'**
+  String storePageReviewCount(int count);
+
+  /// No description provided for @storePageReviewsEmptyBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'最初のレビューを書いてみませんか。'**
+  String get storePageReviewsEmptyBody;
+
+  /// No description provided for @storePageUpdatesHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップデートとバージョン'**
+  String get storePageUpdatesHeader;
+
+  /// No description provided for @storePageNoReleaseNotes.
+  ///
+  /// In ja, this message translates to:
+  /// **'リリースノートはまだありません。'**
+  String get storePageNoReleaseNotes;
+
+  /// No description provided for @storeInUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用中'**
+  String get storeInUse;
+
+  /// permissions は権限の id を区切りでつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'権限の追加: {permissions}'**
+  String storePermissionsAddedList(String permissions);
+
+  /// No description provided for @storePagePermissionsHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'権限'**
+  String get storePagePermissionsHeader;
+
+  /// No description provided for @storePageNoPermissions.
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインは追加の権限を要求しません。'**
+  String get storePageNoPermissions;
+
+  /// No description provided for @storePageCompatibilityHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'互換性'**
+  String get storePageCompatibilityHeader;
+
+  /// No description provided for @storePageRuntimes.
+  ///
+  /// In ja, this message translates to:
+  /// **'ランタイム: {runtimes}'**
+  String storePageRuntimes(String runtimes);
+
+  /// No description provided for @storePageRequiredPlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'必要プラグイン: {plugins}'**
+  String storePageRequiredPlugins(String plugins);
+
+  /// No description provided for @storePageConflicts.
+  ///
+  /// In ja, this message translates to:
+  /// **'競合: {plugins}'**
+  String storePageConflicts(String plugins);
+
+  /// No description provided for @storePageRasqFeatures.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用する RASQ 機能: {features}'**
+  String storePageRasqFeatures(String features);
+
+  /// No description provided for @storePageVersionsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'バージョン'**
+  String get storePageVersionsTitle;
+
+  /// No description provided for @storePageNoPreview.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} のプレビュー画像はまだありません'**
+  String storePageNoPreview(String name);
+
+  /// No description provided for @storePageBookmarkRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークを外す'**
+  String get storePageBookmarkRemove;
+
+  /// No description provided for @storePageBookmarkAdd.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークする'**
+  String get storePageBookmarkAdd;
+
+  /// No description provided for @storePageBookmarkFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークを更新できませんでした: {error}'**
+  String storePageBookmarkFailed(String error);
+
+  /// feature は機能の名前(storeFeaturePurchase など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{feature}は RASQ サーバーにつなぐと使えます'**
+  String storeNeedsServer(String feature);
+
+  /// No description provided for @storeNoListing.
+  ///
+  /// In ja, this message translates to:
+  /// **'掲載がありません'**
+  String get storeNoListing;
+
+  /// No description provided for @storeCatalogMisskeyName.
+  ///
+  /// In ja, this message translates to:
+  /// **'Misskey コネクタ'**
+  String get storeCatalogMisskeyName;
+
+  /// No description provided for @storeCatalogMisskeySummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'Misskey を RASQ に繋ぐ SNS プラグイン(wasm サンプル)。TL 取得/投稿/リアクション/絵文字/投稿加工まで一式。'**
+  String get storeCatalogMisskeySummary;
+
+  /// No description provided for @storeCatalogMisskeyDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'rasq-sdk-sample の Rust 製 wasm プラグインです。sns.login / sns.timeline / post.transform / tl.sort などの契約(PROTOCOL.md)を実装し、RRL タイルで TL を描画します。ノード定義を持たない投稿加工は、取得ノードに渡す直前に適用されます。'**
+  String get storeCatalogMisskeyDescription;
+
+  /// No description provided for @storeCatalogFeatureTimelineRrl.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムライン描画 (RRL)'**
+  String get storeCatalogFeatureTimelineRrl;
+
+  /// No description provided for @storeCatalogFeatureNodeGraph.
+  ///
+  /// In ja, this message translates to:
+  /// **'ノードグラフ (tl.sort)'**
+  String get storeCatalogFeatureNodeGraph;
+
+  /// No description provided for @storeCatalogMisskeyPerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'Misskey インスタンスの API を呼ぶため(接続先はログイン時に指定したホストのみ)'**
+  String get storeCatalogMisskeyPerm1;
+
+  /// No description provided for @storeCatalogMisskeyPerm2.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッショントークンと TL 設定の保存'**
+  String get storeCatalogMisskeyPerm2;
+
+  /// No description provided for @storeCatalogMisskeyHost.
+  ///
+  /// In ja, this message translates to:
+  /// **'<ログインした Misskey インスタンス>'**
+  String get storeCatalogMisskeyHost;
+
+  /// No description provided for @storeCatalogMisskeyDataHandling.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿・トークンは端末内(storage.safe)にのみ保存。開発元への送信はありません。'**
+  String get storeCatalogMisskeyDataHandling;
+
+  /// No description provided for @storeCatalogSampleDataHandling.
+  ///
+  /// In ja, this message translates to:
+  /// **'処理は端末内の wasm で完結し、外部送信はありません。'**
+  String get storeCatalogSampleDataHandling;
+
+  /// No description provided for @storeCatalogAstellName.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell 効果音・効果映像'**
+  String get storeCatalogAstellName;
+
+  /// No description provided for @storeCatalogAstellSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell のプラグインアクションから効果音 / 生成した効果映像 / 定型テキストを流します。'**
+  String get storeCatalogAstellSummary;
+
+  /// No description provided for @storeCatalogAstellDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `astell.action`。ルーム下段の、このプラグインが宣言したボタンで FOW を開き、システム音(ピンポン / クリック)、紙吹雪・花火・拍手の生成 PNG、定型テキストを共有します。「ASTell で共有」した投稿の受け取りも表示します。'**
+  String get storeCatalogAstellDescription;
+
+  /// No description provided for @storeCatalogFeatureAstellAction.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell プラグインアクション'**
+  String get storeCatalogFeatureAstellAction;
+
+  /// No description provided for @storeCatalogAstellPerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'操作パネル(FOW)を出すため'**
+  String get storeCatalogAstellPerm1;
+
+  /// No description provided for @storeCatalogAstellPerm2.
+  ///
+  /// In ja, this message translates to:
+  /// **'効果の使用回数の保存'**
+  String get storeCatalogAstellPerm2;
+
+  /// No description provided for @storeCatalogComposerMediaName.
+  ///
+  /// In ja, this message translates to:
+  /// **'メディア加工'**
+  String get storeCatalogComposerMediaName;
+
+  /// No description provided for @storeCatalogComposerMediaSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'添付画像のガンマ補正 / 回転 / 色相 / クロップ。'**
+  String get storeCatalogComposerMediaSummary;
+
+  /// No description provided for @storeCatalogComposerMediaDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `composer.media`。コンポーザーの添付タイルの「プラグインで加工」で FOW を開き、プレビューを見ながら適用します。処理は端末内の wasm だけで完結します。'**
+  String get storeCatalogComposerMediaDescription;
+
+  /// No description provided for @storeCatalogFeatureMediaComposer.
+  ///
+  /// In ja, this message translates to:
+  /// **'メディアコンポーザー'**
+  String get storeCatalogFeatureMediaComposer;
+
+  /// No description provided for @storeCatalogComposerMediaPerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'加工パネル(FOW)を出すため'**
+  String get storeCatalogComposerMediaPerm1;
+
+  /// No description provided for @storeCatalogComposerMediaPerm2.
+  ///
+  /// In ja, this message translates to:
+  /// **'前回の設定の保存'**
+  String get storeCatalogComposerMediaPerm2;
+
+  /// No description provided for @storeCatalogComposerTextName.
+  ///
+  /// In ja, this message translates to:
+  /// **'ハッシュタグ候補'**
+  String get storeCatalogComposerTextName;
+
+  /// No description provided for @storeCatalogComposerTextSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'本文で # を打つと候補が出て、タップで挿入します。'**
+  String get storeCatalogComposerTextSummary;
+
+  /// No description provided for @storeCatalogComposerTextDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `composer.text`。本文の変化を受け取り、カーソル直前が #〜 のときに候補 FOW(最近使ったタグ + 辞書)を出します。'**
+  String get storeCatalogComposerTextDescription;
+
+  /// No description provided for @storeCatalogFeatureTextComposer.
+  ///
+  /// In ja, this message translates to:
+  /// **'テキストコンポーザー'**
+  String get storeCatalogFeatureTextComposer;
+
+  /// No description provided for @storeCatalogComposerTextPerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'候補パネル(FOW)を出すため'**
+  String get storeCatalogComposerTextPerm1;
+
+  /// No description provided for @storeCatalogComposerTextPerm2.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近使ったタグの保存'**
+  String get storeCatalogComposerTextPerm2;
+
+  /// No description provided for @storeCatalogMediaFullscreenName.
+  ///
+  /// In ja, this message translates to:
+  /// **'QR コード検出'**
+  String get storeCatalogMediaFullscreenName;
+
+  /// No description provided for @storeCatalogMediaFullscreenSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面表示の画像から QR コードを見つけて枠を出し、タップでリンクを開けます。'**
+  String get storeCatalogMediaFullscreenSummary;
+
+  /// No description provided for @storeCatalogMediaFullscreenDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `viewer.overlay`。全画面ビューワーの画像を受け取って QR を検出し、バウンディングボックスを重ねます。タップでリンク FOW(コピー / ブラウザで開く / ミュート語に追加)。'**
+  String get storeCatalogMediaFullscreenDescription;
+
+  /// No description provided for @storeCatalogFeatureViewerPlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面表示プラグイン'**
+  String get storeCatalogFeatureViewerPlugin;
+
+  /// No description provided for @storeCatalogMediaFullscreenPerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクパネル(FOW)を出すため'**
+  String get storeCatalogMediaFullscreenPerm1;
+
+  /// No description provided for @storeCatalogMediaFullscreenPerm2.
+  ///
+  /// In ja, this message translates to:
+  /// **'「このリンクをミュート」でミュート語に追加するため(毎回確認)'**
+  String get storeCatalogMediaFullscreenPerm2;
+
+  /// No description provided for @storeCatalogPostProcessName.
+  ///
+  /// In ja, this message translates to:
+  /// **'相対日付を日付に'**
+  String get storeCatalogPostProcessName;
+
+  /// No description provided for @storeCatalogPostProcessSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'「今日」「昨日」「明日」を投稿日基準の日付に置き換えます。'**
+  String get storeCatalogPostProcessSummary;
+
+  /// No description provided for @storeCatalogPostProcessDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `post.transform`。全 TL の表示直前に本文の相対日付を「9/10(今日)」のように書き換えます(JST)。URL の中は触りません。'**
+  String get storeCatalogPostProcessDescription;
+
+  /// No description provided for @storeCatalogFeaturePostTransform.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿加工 (post.transform)'**
+  String get storeCatalogFeaturePostTransform;
+
+  /// No description provided for @storeCatalogTimelineName.
+  ///
+  /// In ja, this message translates to:
+  /// **'Unicode 昇順 TL'**
+  String get storeCatalogTimelineName;
+
+  /// No description provided for @storeCatalogTimelineSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホームに本文の Unicode 順で並ぶタブを足します。'**
+  String get storeCatalogTimelineSummary;
+
+  /// No description provided for @storeCatalogTimelineDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `tl`。基礎 TL(ホーム)を受け取り、本文の Unicode コードポイント昇順で並べ替えたカスタムタブを出します。'**
+  String get storeCatalogTimelineDescription;
+
+  /// No description provided for @storeCatalogFeatureTimelineSort.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムライン (tl.sort)'**
+  String get storeCatalogFeatureTimelineSort;
+
+  /// No description provided for @storeCatalogPostShareName.
+  ///
+  /// In ja, this message translates to:
+  /// **'共有テンプレート'**
+  String get storeCatalogPostShareName;
+
+  /// No description provided for @storeCatalogPostShareSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'共有 FOW から投稿をテンプレート(リンク / 引用 / 作者に言及)で整えてコンポーザーへ。'**
+  String get storeCatalogPostShareSummary;
+
+  /// No description provided for @storeCatalogPostShareDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `post.share`。投稿の共有 FOW の「プラグイン」節に自動で並び、タップするとインライン FOW で文面を選んでコンポーザー / コピー / ブラウザ / ASTell へ渡します。'**
+  String get storeCatalogPostShareDescription;
+
+  /// No description provided for @storeCatalogFeaturePostShare.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿共有 (post.share)'**
+  String get storeCatalogFeaturePostShare;
+
+  /// No description provided for @storeCatalogPostSharePerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'テンプレート選択パネル(FOW)を出すため'**
+  String get storeCatalogPostSharePerm1;
+
+  /// No description provided for @storeCatalogPostSharePerm2.
+  ///
+  /// In ja, this message translates to:
+  /// **'前回のテンプレートの保存'**
+  String get storeCatalogPostSharePerm2;
+
+  /// No description provided for @storeCatalogMediaTransformName.
+  ///
+  /// In ja, this message translates to:
+  /// **'変形ハンドル'**
+  String get storeCatalogMediaTransformName;
+
+  /// No description provided for @storeCatalogMediaTransformSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像の上に回転 / クロップのハンドルを重ねて編集します。'**
+  String get storeCatalogMediaTransformSummary;
+
+  /// No description provided for @storeCatalogMediaTransformDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `composer.media`(変形)。メディアエディターのプレビューに RRL の重ね(契約 v0.5 `composer.media.overlay`)でハンドルを描き、指でなぞって回転角やクロップ範囲を決めます。'**
+  String get storeCatalogMediaTransformDescription;
+
+  /// No description provided for @storeCatalogFeatureOverlay.
+  ///
+  /// In ja, this message translates to:
+  /// **'重ね (overlay)'**
+  String get storeCatalogFeatureOverlay;
+
+  /// No description provided for @storeCatalogMediaTransformPerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'パネル(FOW)を出すため'**
+  String get storeCatalogMediaTransformPerm1;
+
+  /// No description provided for @storeCatalogMediaProcessName.
+  ///
+  /// In ja, this message translates to:
+  /// **'加工(顔ぼかし / スタンプ)'**
+  String get storeCatalogMediaProcessName;
+
+  /// No description provided for @storeCatalogMediaProcessSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'顔を検知してぼかす、スタンプをオブジェクトとして貼る(移動 / 拡縮 / 回転 / 削除 / 複製)。'**
+  String get storeCatalogMediaProcessSummary;
+
+  /// No description provided for @storeCatalogMediaProcessDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `composer.media`(加工)。顔検知は端末内の wasm(rustface)で行い、外部送信はありません。スタンプは重ねの枠とハンドルで動かせます。'**
+  String get storeCatalogMediaProcessDescription;
+
+  /// No description provided for @storeCatalogMediaProcessPerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'スタンプ選択パネル(FOW)を出すため'**
+  String get storeCatalogMediaProcessPerm1;
+
+  /// No description provided for @storeCatalogMediaDrawName.
+  ///
+  /// In ja, this message translates to:
+  /// **'描画(ペン / 図形)'**
+  String get storeCatalogMediaDrawName;
+
+  /// No description provided for @storeCatalogMediaDrawSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'ペンの軌跡をスプライン曲線で描く、四角 / 丸を追加して編集します。'**
+  String get storeCatalogMediaDrawSummary;
+
+  /// No description provided for @storeCatalogMediaDrawDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `composer.media`(描画)。ペンは指の軌跡を Catmull-Rom スプラインで滑らかにして描きます。図形はオブジェクトとして移動 / 拡縮 / 削除 / 複製できます。'**
+  String get storeCatalogMediaDrawDescription;
+
+  /// No description provided for @storeCatalogMediaDrawPerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'ペンの太さ / 色のパネル(FOW)を出すため'**
+  String get storeCatalogMediaDrawPerm1;
+
+  /// No description provided for @storeCatalogMediaDrawPerm2.
+  ///
+  /// In ja, this message translates to:
+  /// **'ペンの設定の保存'**
+  String get storeCatalogMediaDrawPerm2;
+
+  /// No description provided for @storeCatalogPostActionName.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿ボタン'**
+  String get storeCatalogPostActionName;
+
+  /// No description provided for @storeCatalogPostActionSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'後で読む / 本文をコピー / 引用の下書き — タグで既存ボタンのバンドルに入ります。'**
+  String get storeCatalogPostActionSummary;
+
+  /// No description provided for @storeCatalogPostActionDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `post.action`。マニフェストのタグ(希望スロット)が既存のアクションボタンに近ければ、そのバンドルの最下層に自動で入ります。「アクションリストの編集」でアカウントごとに有効 / 無効と閾値を変えられます。'**
+  String get storeCatalogPostActionDescription;
+
+  /// No description provided for @storeCatalogFeaturePostAction.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿のアクションボタン (post.action)'**
+  String get storeCatalogFeaturePostAction;
+
+  /// No description provided for @storeCatalogPostActionPerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'後で読む一覧(FOW)を出すため'**
+  String get storeCatalogPostActionPerm1;
+
+  /// No description provided for @storeCatalogPostActionPerm2.
+  ///
+  /// In ja, this message translates to:
+  /// **'後で読むの保存'**
+  String get storeCatalogPostActionPerm2;
+
+  /// No description provided for @storeCatalogThemeStarryName.
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え「星空」'**
+  String get storeCatalogThemeStarryName;
+
+  /// No description provided for @storeCatalogThemeStarrySummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'夜空の背景、星の粒を重ねた投稿タイル、星のいいね。'**
+  String get storeCatalogThemeStarrySummary;
+
+  /// No description provided for @storeCatalogThemeStarryDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え(`kind: \"theme\"`、契約 v0.16)。コードを持たない配布物で、色 / アイコンの差し替え / 画面・投稿タイル・FOW・ボタンの背景の画像のレイヤーを宣言します。インストール後に 設定 → アプリの外観 → フォントやカラースキーム で選びます(暗いモードのときに効きます)。'**
+  String get storeCatalogThemeStarryDescription;
+
+  /// No description provided for @storeCatalogFeatureTheme.
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え'**
+  String get storeCatalogFeatureTheme;
+
+  /// No description provided for @storeCatalogThemeRasqName.
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え「RASQ」'**
+  String get storeCatalogThemeRasqName;
+
+  /// No description provided for @storeCatalogThemeRasqSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿の上に紺のグラデーションの帯と薄い RASQ のマーク、FOW は緑のグラデーション。'**
+  String get storeCatalogThemeRasqSummary;
+
+  /// No description provided for @storeCatalogThemeRasqDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え(`kind: \"theme\"`、契約 v0.17)。投稿タイルの上辺に #1F1E33 から投稿の背景色へ溶けるグラデーションの帯、背景に薄い RASQ のマーク、FOW の背景は上から下へ #02775C → #178178 のグラデーション(文字は白)。明るい / 暗いモードのどちらでも効きます。'**
+  String get storeCatalogThemeRasqDescription;
+
+  /// No description provided for @storeCatalogPaintName.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなで落書き'**
+  String get storeCatalogPaintName;
+
+  /// No description provided for @storeCatalogPaintSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'1 人 1 マスの落書きを、期限つきでみんなに見せ合います。ASTell のルームやプロフィールで。'**
+  String get storeCatalogPaintSummary;
+
+  /// No description provided for @storeCatalogPaintDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムプラグイン(スロット `page`、契約 v0.23)。3:4 のマスを 2 列に並べ(並びは人ごとにシャッフル)、自分のマスを押すとメディア編集画面の SVG モードで落書きします(保存は zstd で縮めて送ります)。表示期間は各自が選び、管理者(セッションの持ち主)が既定と上限を決めます。期限が来ると Central が消します。管理者は他人の落書きを削除できます。'**
+  String get storeCatalogPaintDescription;
+
+  /// No description provided for @storeCatalogFeatureCustomPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムプラグイン (page)'**
+  String get storeCatalogFeatureCustomPage;
+
+  /// No description provided for @storeCatalogFeatureSvgPaint.
+  ///
+  /// In ja, this message translates to:
+  /// **'SVG の落書き'**
+  String get storeCatalogFeatureSvgPaint;
+
+  /// No description provided for @storeCatalogFeatureDisplayPeriod.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示期間'**
+  String get storeCatalogFeatureDisplayPeriod;
+
+  /// No description provided for @storeCatalogFeatureProfile.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィール'**
+  String get storeCatalogFeatureProfile;
+
+  /// No description provided for @storeCatalogPaintPerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'落書きのマスを表示し、編集画面を開くため'**
+  String get storeCatalogPaintPerm1;
+
+  /// No description provided for @storeCatalogPaintPerm2.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなの落書きと管理者の設定を、期限つきで共有するため'**
+  String get storeCatalogPaintPerm2;
+
+  /// No description provided for @storeCatalogBoardName.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなのボード'**
+  String get storeCatalogBoardName;
+
+  /// No description provided for @storeCatalogBoardSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'カウンター・投票・寄せ書き・🎉。ASTell のルームやプロフィールで、みんなで同じボードを使えます。'**
+  String get storeCatalogBoardSummary;
+
+  /// No description provided for @storeCatalogBoardDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムプラグイン(スロット `page`、契約 v0.18)。ページを 1 枚足し、共有セッションではサーバー変数(カウンター / 投票 / 寄せ書き)とサーバー関数(🎉 を全員に)で同じ画面を共有します。セッションが無いときは端末の中だけで動きます。'**
+  String get storeCatalogBoardDescription;
+
+  /// No description provided for @storeCatalogBoardPerm1.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページを描くため'**
+  String get storeCatalogBoardPerm1;
+
+  /// No description provided for @storeCatalogBoardPerm2.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなの値(カウンター / 投票 / 寄せ書き)を共有するため'**
+  String get storeCatalogBoardPerm2;
+
+  /// No description provided for @storeCatalogBoardPerm3.
+  ///
+  /// In ja, this message translates to:
+  /// **'1 人で使うときのボードの保存'**
+  String get storeCatalogBoardPerm3;
+
+  /// No description provided for @storeCatalogTrendName.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドサジェスト'**
+  String get storeCatalogTrendName;
+
+  /// No description provided for @storeCatalogTrendSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'今のトレンド語から関連タグをローカル規則で提案します。'**
+  String get storeCatalogTrendSummary;
+
+  /// No description provided for @storeCatalogTrendDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット `trend.suggest`。TL のノード(トレンドを取得 / Today / 候補のチップ)と、検索ホームの「検索の候補」で出します。サーバー無しの共起辞書 + 前方一致です。'**
+  String get storeCatalogTrendDescription;
+
+  /// No description provided for @storeCatalogFeatureTrendSuggest.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド (trend.suggest)'**
+  String get storeCatalogFeatureTrendSuggest;
+
+  /// No description provided for @storePkgMissingPlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物に {id} がありません'**
+  String storePkgMissingPlugin(String id);
+
+  /// No description provided for @storePkgNotPackage.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物が .rasqpkg(zstd)ではありません'**
+  String get storePkgNotPackage;
+
+  /// No description provided for @storePkgUnpack.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物を展開できません(壊れているか、大きすぎます): {error}'**
+  String storePkgUnpack(String error);
+
+  /// No description provided for @storePkgTar.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物の tar を読めません: {error}'**
+  String storePkgTar(String error);
+
+  /// No description provided for @storePkgTooManyFiles.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物のファイル数が多すぎます'**
+  String get storePkgTooManyFiles;
+
+  /// No description provided for @storePkgNotRegularFile.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物に通常ファイルでないものがあります: {path}'**
+  String storePkgNotRegularFile(String path);
+
+  /// No description provided for @storePkgDuplicatePath.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物内のパスが重複しています: {path}'**
+  String storePkgDuplicatePath(String path);
+
+  /// No description provided for @storePkgBundleFirst.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物の先頭が bundle.json ではありません'**
+  String get storePkgBundleFirst;
+
+  /// No description provided for @storePkgBundleRead.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json を読めません: {error}'**
+  String storePkgBundleRead(String error);
+
+  /// No description provided for @storePkgBundleSchema.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json の schema が rasq.bundle/1 ではありません: {schema}'**
+  String storePkgBundleSchema(String schema);
+
+  /// No description provided for @storePkgFileShape.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: {what} の wasm / file の形が違います'**
+  String storePkgFileShape(String what);
+
+  /// No description provided for @storePkgNoPath.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: {what} に path がありません'**
+  String storePkgNoPath(String what);
+
+  /// No description provided for @storePkgSizeMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'{path}: 大きさが目次と違います'**
+  String storePkgSizeMismatch(String path);
+
+  /// No description provided for @storePkgHashMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'{path}: SHA-512 が目次と違います'**
+  String storePkgHashMismatch(String path);
+
+  /// No description provided for @storePkgNoSha512.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: {what} に sha512 がありません'**
+  String storePkgNoSha512(String what);
+
+  /// No description provided for @storePkgNotWasm.
+  ///
+  /// In ja, this message translates to:
+  /// **'{path}: wasm ではありません'**
+  String storePkgNotWasm(String path);
+
+  /// No description provided for @storePkgPluginShape.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: {what} の形が違います'**
+  String storePkgPluginShape(String what);
+
+  /// No description provided for @storePkgBadId.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: {what} の id が不正です: {id}'**
+  String storePkgBadId(String what, String id);
+
+  /// No description provided for @storePkgBadVersion.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: {id} の version が不正です: {version}'**
+  String storePkgBadVersion(String id, String version);
+
+  /// No description provided for @storePkgBadKind.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: {id} の kind が不正です: {kind}'**
+  String storePkgBadKind(String id, String kind);
+
+  /// No description provided for @storePkgNoManifest.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: {id} に manifest がありません'**
+  String storePkgNoManifest(String id);
+
+  /// No description provided for @storePkgManifestRead.
+  ///
+  /// In ja, this message translates to:
+  /// **'{path} を読めません: {error}'**
+  String storePkgManifestRead(String path, String error);
+
+  /// No description provided for @storePkgManifestMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'{path}: id / version / kind が目次({id} {version} {kind})と違います'**
+  String storePkgManifestMismatch(
+    String path,
+    String id,
+    String version,
+    String kind,
+  );
+
+  /// No description provided for @storePkgChildPackKind.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: 子 {id} は kind = {kind} にできません'**
+  String storePkgChildPackKind(String id, String kind);
+
+  /// No description provided for @storePkgPackHasWasm.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: {kind} {id} が wasm を持っています'**
+  String storePkgPackHasWasm(String kind, String id);
+
+  /// No description provided for @storePkgMissingKey.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: {key} がありません'**
+  String storePkgMissingKey(String key);
+
+  /// No description provided for @storePkgChildrenNotSns.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: sns 以外の root は children を持てません'**
+  String get storePkgChildrenNotSns;
+
+  /// No description provided for @storePkgChildPrefix.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: 子 {id} の id が {root}. で始まっていません'**
+  String storePkgChildPrefix(String id, String root);
+
+  /// No description provided for @storePkgChildSns.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: 子 {id} は kind = sns にできません'**
+  String storePkgChildSns(String id);
+
+  /// No description provided for @storePkgDuplicateId.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: プラグインの id が重複しています'**
+  String get storePkgDuplicateId;
+
+  /// No description provided for @storePkgLibsShape.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: libs の形が違います'**
+  String get storePkgLibsShape;
+
+  /// No description provided for @storePkgAssetsShape.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: assets の形が違います'**
+  String get storePkgAssetsShape;
+
+  /// No description provided for @storePkgPackExtras.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: アセットパック / 着せ替えは children / libs / models を持てません'**
+  String get storePkgPackExtras;
+
+  /// No description provided for @storePkgPackWasm.
+  ///
+  /// In ja, this message translates to:
+  /// **'アセットパック / 着せ替えに wasm が入っています'**
+  String get storePkgPackWasm;
+
+  /// No description provided for @storePkgPackImageCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'アセットパックの画像は 1〜{max} 枚です: {count}'**
+  String storePkgPackImageCount(int max, int count);
+
+  /// No description provided for @storePkgNotImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'{path}: 画像(PNG / JPEG / WebP / GIF)ではありません'**
+  String storePkgNotImage(String path);
+
+  /// No description provided for @storePkgImageTooLarge.
+  ///
+  /// In ja, this message translates to:
+  /// **'{path}: 大きすぎます(1 枚 {mib} MiB まで)'**
+  String storePkgImageTooLarge(String path, int mib);
+
+  /// No description provided for @storePkgAssetNotListed.
+  ///
+  /// In ja, this message translates to:
+  /// **'manifest.assets の {path} が配布物の目次にありません'**
+  String storePkgAssetNotListed(String path);
+
+  /// No description provided for @storePkgModelsShape.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: models の形が違います'**
+  String get storePkgModelsShape;
+
+  /// No description provided for @storePkgRequiresShape.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: requires の形が違います'**
+  String get storePkgRequiresShape;
+
+  /// No description provided for @storePkgNoSums.
+  ///
+  /// In ja, this message translates to:
+  /// **'SHA512SUMS がありません'**
+  String get storePkgNoSums;
+
+  /// No description provided for @storePkgSumsMissingFile.
+  ///
+  /// In ja, this message translates to:
+  /// **'{path}: SHA512SUMS にあるのに中にありません'**
+  String storePkgSumsMissingFile(String path);
+
+  /// No description provided for @storePkgSumsMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'{path}: SHA512SUMS と違います'**
+  String storePkgSumsMismatch(String path);
+
+  /// No description provided for @storePkgUnlisted.
+  ///
+  /// In ja, this message translates to:
+  /// **'{path}: 目次に載っていないファイルがあります'**
+  String storePkgUnlisted(String path);
+
+  /// No description provided for @storePkgThemeMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替えのマニフェストに theme がありません'**
+  String get storePkgThemeMissing;
+
+  /// No description provided for @storePkgThemeAsset.
+  ///
+  /// In ja, this message translates to:
+  /// **'theme.{where} の画像 {id} が assets(use: theme)にありません'**
+  String storePkgThemeAsset(String where, String id);
+
+  /// No description provided for @storePkgThemeSurface.
+  ///
+  /// In ja, this message translates to:
+  /// **'theme.surfaces の {surface} は使えません(app / postTile / fow / actionButton)'**
+  String storePkgThemeSurface(String surface);
+
+  /// No description provided for @storePkgThemeLayer.
+  ///
+  /// In ja, this message translates to:
+  /// **'theme.surfaces.{surface}.layers: asset か gradient のどちらか 1 つを書いてください'**
+  String storePkgThemeLayer(String surface);
+
+  /// No description provided for @storePkgThemeColors.
+  ///
+  /// In ja, this message translates to:
+  /// **'theme.surfaces.{surface}.layers: gradient.colors は 2〜8 色です'**
+  String storePkgThemeColors(String surface);
+
+  /// No description provided for @storePkgThemeStops.
+  ///
+  /// In ja, this message translates to:
+  /// **'theme.surfaces.{surface}.layers: gradient.stops は colors と同じ数です'**
+  String storePkgThemeStops(String surface);
+
+  /// No description provided for @storePkgBadPath.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物内のパスとして使えません: {path}'**
+  String storePkgBadPath(String path);
+
+  /// No description provided for @storePkgSigAlg.
+  ///
+  /// In ja, this message translates to:
+  /// **'署名の alg が ed25519 ではありません: {alg}'**
+  String storePkgSigAlg(String alg);
+
+  /// No description provided for @storePkgSigDigest.
+  ///
+  /// In ja, this message translates to:
+  /// **'sig.json の digest が配布物と違います(配布物が差し替わっています)'**
+  String get storePkgSigDigest;
+
+  /// No description provided for @storePkgSigRead.
+  ///
+  /// In ja, this message translates to:
+  /// **'sig.json の publicKey / signature を読めません'**
+  String get storePkgSigRead;
+
+  /// No description provided for @storePkgSigLength.
+  ///
+  /// In ja, this message translates to:
+  /// **'sig.json の鍵 / 署名の長さが違います'**
+  String get storePkgSigLength;
+
+  /// No description provided for @storePkgSigInvalid.
+  ///
+  /// In ja, this message translates to:
+  /// **'開発者鍵の署名が合いません'**
+  String get storePkgSigInvalid;
+
+  /// No description provided for @storePkgFileMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'{path}: 目次にあるのに中にありません'**
+  String storePkgFileMissing(String path);
+
+  /// No description provided for @storePkgTwice.
+  ///
+  /// In ja, this message translates to:
+  /// **'bundle.json: {path} が 2 回出てきます'**
+  String storePkgTwice(String path);
+
+  /// No description provided for @storePkgKindTheme.
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え'**
+  String get storePkgKindTheme;
+
+  /// No description provided for @storePkgKindAssets.
+  ///
+  /// In ja, this message translates to:
+  /// **'アセットパック'**
+  String get storePkgKindAssets;
 }
 
 class _AppLocalizationsDelegate

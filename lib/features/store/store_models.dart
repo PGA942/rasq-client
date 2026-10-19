@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../l10n/l10n.dart';
+
 import 'plugin_scope.dart';
 
 /// プラグインストアのクライアント側モデル (M4 / D-120)。
@@ -9,19 +11,30 @@ import 'plugin_scope.dart';
 
 /// 状態表記の統一 (D-033: rasq_design のステータス表示と 1:1)。
 enum PluginStatus {
-  inReview('in_review', '審査中'),
-  published('published', '公開中'),
-  updateAvailable('update_available', '更新あり'),
-  warning('warning', '警告'),
-  suspended('suspended', '停止'),
-  withdrawn('withdrawn', '取り下げ'),
-  unlisted('unlisted', '非公開'),
-  beta('beta', 'ベータ'),
-  revoked('revoked', '失効');
+  inReview('in_review'),
+  published('published'),
+  updateAvailable('update_available'),
+  warning('warning'),
+  suspended('suspended'),
+  withdrawn('withdrawn'),
+  unlisted('unlisted'),
+  beta('beta'),
+  revoked('revoked');
 
-  const PluginStatus(this.wire, this.label);
+  const PluginStatus(this.wire);
   final String wire;
-  final String label;
+
+  String get label => switch (this) {
+        inReview => appL10n.storeStatusInReview,
+        published => appL10n.storeStatusPublished,
+        updateAvailable => appL10n.storeStatusUpdateAvailable,
+        warning => appL10n.storeStatusWarning,
+        suspended => appL10n.storeStatusSuspended,
+        withdrawn => appL10n.storeStatusWithdrawn,
+        unlisted => appL10n.storeStatusUnlisted,
+        beta => appL10n.storeStatusBeta,
+        revoked => appL10n.storeStatusRevoked,
+      };
 
   static PluginStatus fromWire(String? w) => PluginStatus.values.where((s) => s.wire == w).firstOrNull ?? PluginStatus.published;
 
@@ -31,13 +44,18 @@ enum PluginStatus {
 
 /// 提供元の種別(公式/検証済み/コミュニティ)。
 enum PluginOrigin {
-  official('official', '公式'),
-  verified('verified', '検証済み'),
-  community('community', 'コミュニティ');
+  official('official'),
+  verified('verified'),
+  community('community');
 
-  const PluginOrigin(this.wire, this.label);
+  const PluginOrigin(this.wire);
   final String wire;
-  final String label;
+
+  String get label => switch (this) {
+        official => appL10n.storeOriginOfficial,
+        verified => appL10n.storeOriginVerified,
+        community => appL10n.storeOriginCommunity,
+      };
   static PluginOrigin fromWire(String? w) => PluginOrigin.values.where((o) => o.wire == w).firstOrNull ?? PluginOrigin.community;
 }
 
@@ -110,21 +128,34 @@ class StorePluginCard {
 
 /// プラグインの種別 (D-354、store.yaml `PluginCard.pluginType`)。ストアのタイルの色(色相)と見出し。
 enum StorePluginType {
-  sns('sns', 'SNS', 212),
-  composer('composer', '投稿作成', 150),
-  post('post', '投稿', 32),
-  viewer('viewer', '全画面表示', 275),
-  timeline('timeline', 'タイムライン', 188),
-  astell('astell', 'ASTell', 330),
-  trend('trend', 'トレンド', 0),
-  theme('theme', '着せ替え', 52),
-  assets('assets', 'ステッカー / 素材', 95),
-  custom('custom', 'カスタム', 300),
-  other('other', 'その他', -1);
+  sns('sns', 212),
+  composer('composer', 150),
+  post('post', 32),
+  viewer('viewer', 275),
+  timeline('timeline', 188),
+  astell('astell', 330),
+  trend('trend', 0),
+  theme('theme', 52),
+  assets('assets', 95),
+  custom('custom', 300),
+  other('other', -1);
 
-  const StorePluginType(this.wire, this.label, this.hue);
+  const StorePluginType(this.wire, this.hue);
   final String wire;
-  final String label;
+
+  String get label => switch (this) {
+        sns => 'SNS',
+        composer => appL10n.storeTypeComposer,
+        post => appL10n.storeTypePost,
+        viewer => appL10n.storeTypeViewer,
+        timeline => appL10n.storeTypeTimeline,
+        astell => 'ASTell',
+        trend => appL10n.storeTypeTrend,
+        theme => appL10n.storeTypeTheme,
+        assets => appL10n.storeTypeAssets,
+        custom => appL10n.storeTypeCustom,
+        other => appL10n.storeTypeOther,
+      };
 
   /// 色相(-1 = 無彩色)。
   final double hue;
@@ -134,17 +165,26 @@ enum StorePluginType {
 
 /// 検索の絞り込み(store.yaml `/plugins` の `filter`、D-353 の検索画面のチップ)。
 enum StoreFilter {
-  free('free', '無料'),
-  noAds('no_ads', '広告なし'),
-  official('official', '公式'),
-  verified('verified', '認証済み'),
-  recent('recent', '30 日以内'),
-  lightweight('lightweight', '軽量(5MB 未満)'),
-  offline('offline', 'オフライン');
+  free('free'),
+  noAds('no_ads'),
+  official('official'),
+  verified('verified'),
+  recent('recent'),
+  lightweight('lightweight'),
+  offline('offline');
 
-  const StoreFilter(this.wire, this.label);
+  const StoreFilter(this.wire);
   final String wire;
-  final String label;
+
+  String get label => switch (this) {
+        free => appL10n.storeFilterFree,
+        noAds => appL10n.storeFilterNoAds,
+        official => appL10n.storeFilterOfficial,
+        verified => appL10n.storeFilterVerified,
+        recent => appL10n.storeFilterRecent,
+        lightweight => appL10n.storeFilterLightweight,
+        offline => appL10n.storeFilterOffline,
+      };
 }
 
 /// JSON の数値は int でも double でも来る(サーバーの avg は double、
@@ -176,20 +216,42 @@ class PermissionEntry {
 /// `<領域>_<修飾>` なので、先頭の領域語で分類する。未知の領域は
 /// [other] に落ちる(隠さない)。
 enum PermissionKind {
-  network('ネットワーク', '外部への通信'),
-  storage('ストレージ', '端末内の保存領域'),
-  files('ファイル', 'ユーザーが選んだファイルの読み書き'),
-  sns('投稿とアカウント', 'SNS アカウントを使った操作'),
-  dm('ダイレクトメッセージ', 'DM の読み書き'),
-  gpuMl('GPU / 機械学習', 'GPU 実行・モデル推論'),
-  clipboard('クリップボード', 'コピー内容の読み書き'),
-  background('バックグラウンド実行', '画面を閉じても動作'),
-  ui('画面と配置', '画面の表示とボタンの配置'),
-  other('その他', '');
+  network,
+  storage,
+  files,
+  sns,
+  dm,
+  gpuMl,
+  clipboard,
+  background,
+  ui,
+  other;
 
-  const PermissionKind(this.label, this.description);
-  final String label;
-  final String description;
+  String get label => switch (this) {
+        network => appL10n.storePermNetwork,
+        storage => appL10n.storePermStorage,
+        files => appL10n.storePermFiles,
+        sns => appL10n.storePermSns,
+        dm => appL10n.storePermDm,
+        gpuMl => appL10n.storePermGpuMl,
+        clipboard => appL10n.storePermClipboard,
+        background => appL10n.storePermBackground,
+        ui => appL10n.storePermUi,
+        other => appL10n.storePermOther,
+      };
+
+  String get description => switch (this) {
+        network => appL10n.storePermNetworkDescription,
+        storage => appL10n.storePermStorageDescription,
+        files => appL10n.storePermFilesDescription,
+        sns => appL10n.storePermSnsDescription,
+        dm => appL10n.storePermDmDescription,
+        gpuMl => appL10n.storePermGpuMlDescription,
+        clipboard => appL10n.storePermClipboardDescription,
+        background => appL10n.storePermBackgroundDescription,
+        ui => appL10n.storePermUiDescription,
+        other => '',
+      };
 
   static PermissionKind of(String permission) {
     final head = permission.split(RegExp(r'[._:/]')).first.toLowerCase();
@@ -490,14 +552,20 @@ class InstallManifest {
 
 /// レビュー TL の並び順(store.yaml `GET /reviews?sort=`)。
 enum ReviewSort {
-  helpful('helpful', '関連性'),
-  recent('recent', '最新'),
-  ratingHigh('rating_high', '評価が高い'),
-  ratingLow('rating_low', '評価が低い');
+  helpful('helpful'),
+  recent('recent'),
+  ratingHigh('rating_high'),
+  ratingLow('rating_low');
 
-  const ReviewSort(this.wire, this.label);
+  const ReviewSort(this.wire);
   final String wire;
-  final String label;
+
+  String get label => switch (this) {
+        helpful => appL10n.storeReviewSortHelpful,
+        recent => appL10n.storeReviewSortRecent,
+        ratingHigh => appL10n.storeReviewSortRatingHigh,
+        ratingLow => appL10n.storeReviewSortRatingLow,
+      };
 }
 
 /// レビューへの「参考になった」投票(端末側の状態。KV `store.reviewVotes.v1`)。

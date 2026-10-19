@@ -8,6 +8,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../settings/settings_dsl.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
@@ -19,26 +20,41 @@ import 'store_providers.dart';
 /// どのモードでも、**最後に許可した内容より権限・接続先・データ・目的が広がる版 / 有料で買っていない版は自動では有効にしない**
 /// (更新ログに理由を残す。比べるのは端末に記録した最後の承認で、サーバーの直前の版との差分ではない。セキュリティ確認 2026-10-09 の [8])。
 enum PluginUpdateMode {
-  auto('auto', 'おまかせ', '新しい版を入れて、既定の版にします(アカウントごとに指定した版はそのまま)'),
-  installOnly('installOnly', 'インストールだけおまかせ', '新しい版を入れておくだけで、使う版は変えません'),
-  manual('manual', '全て手動で構成', '自動では何もしません(プラグインを管理から入れます)');
+  auto('auto'),
+  installOnly('installOnly'),
+  manual('manual');
 
-  const PluginUpdateMode(this.wire, this.label, this.description);
+  const PluginUpdateMode(this.wire);
   final String wire;
-  final String label;
-  final String description;
+
+  String get label => switch (this) {
+        auto => appL10n.storeUpdateModeAuto,
+        installOnly => appL10n.storeUpdateModeInstallOnly,
+        manual => appL10n.storeUpdateModeManual,
+      };
+
+  String get description => switch (this) {
+        auto => appL10n.storeUpdateModeAutoDescription,
+        installOnly => appL10n.storeUpdateModeInstallOnlyDescription,
+        manual => appL10n.storeUpdateModeManualDescription,
+      };
   static PluginUpdateMode fromWire(Object? w) => values.where((m) => m.wire == w).firstOrNull ?? PluginUpdateMode.installOnly;
 }
 
 /// アップデートの設定の区分(ワイヤーフレームのタブ)。
 enum PluginUpdateGroup {
-  sns('sns', 'SNSプラグイン'),
-  action('action', 'アクションプラグイン'),
-  view('view', 'ビュープラグイン');
+  sns('sns'),
+  action('action'),
+  view('view');
 
-  const PluginUpdateGroup(this.wire, this.label);
+  const PluginUpdateGroup(this.wire);
   final String wire;
-  final String label;
+
+  String get label => switch (this) {
+        sns => appL10n.storeUpdateGroupSns,
+        action => appL10n.storeUpdateGroupAction,
+        view => appL10n.storeUpdateGroupView,
+      };
 
   static PluginUpdateGroup of(StorePluginType t) => switch (t) {
         StorePluginType.sns => sns,
@@ -70,11 +86,11 @@ class PluginUpdateLogEntry {
   bool get changed => result == 'activated' || result == 'installed' || result == 'switched';
 
   String get summary => switch (result) {
-        'activated' => '$from → $to(既定の版にしました)',
-        'installed' => '$to を入れました(使う版は $from のまま)',
-        'switched' => '$from → $to(入っていた版を既定に)',
-        'skipped' => '$to は自動では入れません${note == null ? '' : '($note)'}',
-        _ => '$to を入れられませんでした${note == null ? '' : '($note)'}',
+        'activated' => appL10n.storeUpdateLogActivated(from, to),
+        'installed' => appL10n.storeUpdateLogInstalled(from, to),
+        'switched' => appL10n.storeUpdateLogSwitched(from, to),
+        'skipped' => note == null ? appL10n.storeUpdateLogSkipped(to) : appL10n.storeUpdateLogSkippedNote(to, note!),
+        _ => note == null ? appL10n.storeUpdateLogFailed(to) : appL10n.storeUpdateLogFailedNote(to, note!),
       };
 
   Map<String, Object?> toJson() => {'pluginId': pluginId, 'name': name, 'from': from, 'to': to, 'at': at.toIso8601String(), 'result': result, 'note': ?note};
@@ -195,10 +211,10 @@ Future<void> showPluginUpdatePopup(OverlayManager manager, GoRouter router, List
   if (!enabled || changed.isEmpty) return;
   final showLog = await manager.showAlert(
     id: 'store.updates.popup',
-    title: 'プラグインをアップデートしました',
+    title: appL10n.storeUpdatePopupTitle,
     message: [for (final e in changed) '${e.name}: ${e.summary}'].join('\n'),
-    confirmText: '更新ログ',
-    cancelText: '閉じる',
+    confirmText: appL10n.storeUpdateLogTitle,
+    cancelText: appL10n.storeClose,
   );
   if (showLog) router.push(Routes.storeUpdateLog);
 }

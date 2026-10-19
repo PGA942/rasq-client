@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/payments_api.dart' show paidFeaturesProvider;
 import '../../backend/rasq_account.dart' show currentCentralAccountIdProvider;
+import '../../l10n/l10n.dart';
 import '../settings/settings_dsl.dart';
 import '../trend/example_match.dart' show pluginExamplePieces;
 import 'http_store_client.dart';
@@ -81,8 +82,8 @@ class ArtifactVerification {
   /// ed25519 署名まで検証できたか(モックや未署名のストアでは false)。
   final bool signatureChecked;
 
-  static const _hashOnly = ArtifactVerification._(true, 'SHA-512 照合 OK(署名なし)');
-  static const _full = ArtifactVerification._(true, 'SHA-512 + ed25519 署名 検証 OK', signatureChecked: true);
+  static ArtifactVerification get _hashOnly => ArtifactVerification._(true, appL10n.storeVerifyHashOnly);
+  static ArtifactVerification get _full => ArtifactVerification._(true, appL10n.storeVerifyFull, signatureChecked: true);
   static ArtifactVerification failure(String why) => ArtifactVerification._(false, why);
 }
 
@@ -108,15 +109,15 @@ Future<ArtifactVerification> verifyArtifact({
 }) async {
   final digest = sha512.convert(bytes);
   if (digest.toString() != artifact.sha512) {
-    return ArtifactVerification.failure('整合性検証に失敗しました(SHA-512 不一致)。時間をおいて再取得してください');
+    return ArtifactVerification.failure(appL10n.storeVerifyHashMismatch);
   }
 
   if (pinnedKey.isNotEmpty && storePublicKey != pinnedKey) {
-    return ArtifactVerification.failure('ストアの署名鍵がアプリに焼き込んだ鍵と一致しません。接続先を確認してください');
+    return ArtifactVerification.failure(appL10n.storeVerifyKeyMismatch);
   }
   if (storePublicKey.isEmpty || artifact.signature.isEmpty) {
     if (pinnedKey.isNotEmpty) {
-      return ArtifactVerification.failure('配布物に署名がありません(このビルドは署名済みストアのみを許可します)');
+      return ArtifactVerification.failure(appL10n.storeVerifyUnsigned);
     }
     return ArtifactVerification._hashOnly;
   }
@@ -126,9 +127,9 @@ Future<ArtifactVerification> verifyArtifact({
     final signature = Signature(base64Decode(artifact.signature), publicKey: publicKey);
     // 署名対象はバイト列そのものではなく **SHA-512 ダイジェストの生 64 バイト**。
     final ok = await Ed25519().verify(Uint8List.fromList(digest.bytes), signature: signature);
-    return ok ? ArtifactVerification._full : ArtifactVerification.failure('配布物の署名が正しくありません。インストールを中止しました');
+    return ok ? ArtifactVerification._full : ArtifactVerification.failure(appL10n.storeVerifyBadSignature);
   } catch (e) {
-    return ArtifactVerification.failure('署名を検証できませんでした: $e');
+    return ArtifactVerification.failure(appL10n.storeVerifyError('$e'));
   }
 }
 
@@ -144,8 +145,8 @@ PluginScope packageScope(RasqPackage package) {
 
 /// 自動では有効にしない理由(更新ログ / 画面に出す)。[widened] = [PluginScope.wideningOver] の答え。
 String scopeWidenedMessage(PluginScope? approved, List<String> widened) => approved == null
-    ? '最後に許可した内容の記録がないため(プラグインを管理から確かめて入れてください)'
-    : '最後に許可した内容より広がるため(${widened.join('、')})';
+    ? appL10n.storeWidenedNoRecord
+    : appL10n.storeWidenedOver(widened.join(appL10n.storeListSeparator));
 
 /// インストール済みプラグイン (M4 v1): KV `store.installed.v1` に永続化。
 /// インストール = manifest 取得 → 配布物ダウンロード → **SHA-512 照合 +
@@ -199,7 +200,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       // 停止・取り下げ中のプラグインはサーバーが 403 で断る (D-120 ③)。有料で未購入も 403 (D-355)。
       return fail(e.message);
     }
-    if (m == null) return fail(pinned == null ? '構成(マニフェスト)を取得できませんでした' : 'Ver.$pinned の構成が見つかりませんでした');
+    if (m == null) return fail(pinned == null ? appL10n.storeManifestUnavailable : appL10n.storeManifestVersionNotFound(pinned));
     // チャイルドセーフの例 (D-314): 構成の中身(名前 / 説明 / スロット)が分かったので、例との近さでもう 1 度。
     final manifestText = pluginExamplePieces(
       name: '${m.manifest['name'] ?? pluginId}',
@@ -209,11 +210,11 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     final exampleBlocked = ref.read(childGateProvider).installBlockReason(pluginId, text: manifestText);
     if (exampleBlocked != null) return fail(exampleBlocked);
     final bundle = m.bundle;
-    if (bundle == null) return fail('配布物がありません');
+    if (bundle == null) return fail(appL10n.storeNoBundle);
     // 確認シートで見た版 / 配布物と違えば、何も登録する前にやめる(セキュリティ確認 2026-10-09 の [14])。
     // 下の verifyArtifact が落としたバイト列と bundle.sha512 を突き合わせるので、入るのは確かめた配布物そのものになる。
     if ((consent?.version != null && m.version != consent!.version) || (consent?.sha512 != null && bundle.sha512 != consent!.sha512)) {
-      return fail('確認した内容(Ver.${consent.version ?? m.version})と、ストアの構成が変わりました。もう一度確かめてください');
+      return fail(appL10n.storeConsentChanged(consent.version ?? m.version));
     }
 
     final Uint8List bytes;
@@ -234,15 +235,15 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       try {
         package = RasqPackage.open(bytes, decompress: ref.read(rasqpkgZstdProvider));
       } on RasqPackageException catch (e) {
-        return fail('配布物の中身を検証できませんでした: ${e.message}', verified);
+        return fail(appL10n.storePackageInvalid(e.message), verified);
       }
       if (package.root.id != pluginId || package.root.version != m.version) {
-        return fail('配布物の中身(${package.root.id} ${package.root.version})がストアの掲載($pluginId ${m.version})と違います', verified);
+        return fail(appL10n.storePackageMismatch('${package.root.id} ${package.root.version}', '$pluginId ${m.version}'), verified);
       }
       // 土台の SNS プラグイン(他人の土台に足す子、D-244c)。第一期は id の有無だけを見る(版の範囲は見ない)。
       final available = {...bundledSnsPluginIds, for (final p in state) p.id};
       final missing = [for (final r in package.requires) if (!available.contains(r.id)) '${r.id} ${r.version}'];
-      if (missing.isNotEmpty) return fail('このプラグインには ${missing.join(' / ')} が必要です(未対応のため入れられません)', verified);
+      if (missing.isNotEmpty) return fail(appL10n.storePackageRequires(missing.join(' / ')), verified);
     }
 
     // 許す内容 (セキュリティ確認 2026-10-09 の [8]): 選んだ版の配布物そのもの(署名を確かめた中身。生の wasm / 中身の無いモックは
@@ -296,7 +297,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       await _persist([...state.where((p) => p.id != pluginId), record]);
       if (makeDefault && isWasmBytes(bytes) && m.manifest['kind'] != 'sns') {
         final slot = await ref.read(slotPluginsProvider.notifier).register(storeSlotSource(pluginId, m.version), bytes: bytes);
-        if (slot == null) return fail(ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした', verified);
+        if (slot == null) return fail(ref.read(slotPluginsNoticeProvider) ?? appL10n.storeSlotRegisterFailed, verified);
         await _syncSlots(pluginId);
       }
       return (error: null, verification: verified, widened: const <String>[]);
@@ -307,7 +308,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       try {
         await ref.read(themePacksProvider.notifier).install(package);
       } catch (e) {
-        return fail('着せ替えを保存できませんでした: $e', verified);
+        return fail(appL10n.storeThemeSaveFailed('$e'), verified);
       }
       await _persist([...state.where((p) => p.id != pluginId), record]);
       // 入れたらすぐ使う (D-375): 入れただけで選ばれず「入れたのに変わらない」になっていた(ファイルからの読み込みと同じにする)。
@@ -320,7 +321,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       try {
         await ref.read(stickerPacksProvider.notifier).install(package);
       } catch (e) {
-        return fail('アセットパックを保存できませんでした: $e', verified);
+        return fail(appL10n.storeAssetsSaveFailed('$e'), verified);
       }
       await _persist([...state.where((p) => p.id != pluginId), record]);
       return (error: null, verification: verified, widened: const <String>[]);
@@ -349,7 +350,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
         for (final s in registered) {
           await slots.unregisterSource(s);
         }
-        return ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした';
+        return ref.read(slotPluginsNoticeProvider) ?? appL10n.storeSlotRegisterFailed;
       }
       registered.add(source);
     }
@@ -378,7 +379,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
         final bytes = await ref.read(storeClientProvider).downloadArtifact(pluginId, 'bundle', version: v);
         final expected = record.versionInfo(v)?.sha512;
         if (expected != null && expected.isNotEmpty && expected != '-' && sha512.convert(bytes).toString() != expected) {
-          return 'Ver.$v の配布物がインストール時と違うため読み込みません(入れ直してください)';
+          return appL10n.storeVersionBundleChanged(v);
         }
         if (isRasqPackage(bytes)) {
           final package = RasqPackage.open(bytes, decompress: ref.read(rasqpkgZstdProvider));
@@ -387,11 +388,11 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
           if (error != null) return error;
         } else if (isWasmBytes(bytes)) {
           final slot = await slots.register(storeSlotSource(pluginId, v), bytes: bytes);
-          final String? notice = slot == null ? (ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした') : null;
+          final String? notice = slot == null ? (ref.read(slotPluginsNoticeProvider) ?? appL10n.storeSlotRegisterFailed) : null;
           if (notice != null) return notice;
         }
       } catch (e) {
-        return 'Ver.$v を読み込めませんでした: $e';
+        return appL10n.storeVersionLoadFailed(v, '$e');
       }
     }
     return null;
@@ -407,7 +408,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     final v = record?.versionInfo(version);
     if (record == null || v == null || record.usedVersions.contains(version)) return const [];
     final scope = v.scope;
-    if (scope == null) return const ['この版で許す内容の記録がありません(入れ直すと確かめられます)'];
+    if (scope == null) return [appL10n.storeVersionNoScopeRecord];
     return scope.wideningOver(record.approvedScope);
   }
 
@@ -422,7 +423,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
   Future<String?> setDefaultVersion(String pluginId, String version, {PluginConsent? consent}) async {
     final record = state.where((p) => p.id == pluginId).firstOrNull;
     final v = record?.versionInfo(version);
-    if (record == null || v == null) return 'Ver.$version は入っていません';
+    if (record == null || v == null) return appL10n.storeVersionNotInstalled(version);
     final (refused, approved) = _versionConsent(record, version, consent);
     if (refused != null) return refused;
     final prevUsed = record.usedVersions;
@@ -433,8 +434,8 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
   /// アカウントごとの版 (D-355)。[version] null = 既定に従う。最後に許可した内容より広がる版は、[consent] が無ければ断る。
   Future<String?> setAccountVersion(String pluginId, String accountKey, String? version, {PluginConsent? consent}) async {
     final record = state.where((p) => p.id == pluginId).firstOrNull;
-    if (record == null) return 'インストールされていません';
-    if (version != null && record.versionInfo(version) == null) return 'Ver.$version は入っていません';
+    if (record == null) return appL10n.storeNotInstalled;
+    if (version != null && record.versionInfo(version) == null) return appL10n.storeVersionNotInstalled(version);
     final (refused, approved) = version == null ? (null, null) : _versionConsent(record, version, consent);
     if (refused != null) return refused;
     final prevUsed = record.usedVersions;
@@ -451,8 +452,8 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
   /// 入っている版を 1 つ消す(既定 / どれかのアカウントが指定している版は消せない)。
   Future<String?> removeVersion(String pluginId, String version) async {
     final record = state.where((p) => p.id == pluginId).firstOrNull;
-    if (record == null) return 'インストールされていません';
-    if (record.usedVersions.contains(version)) return 'Ver.$version は使われています(既定 / アカウントの指定を外してから)';
+    if (record == null) return appL10n.storeNotInstalled;
+    if (record.usedVersions.contains(version)) return appL10n.storeVersionInUse(version);
     await _persist([for (final p in state) if (p.id == pluginId) p.copyWith(versions: [for (final v in p.allVersions) if (v.version != version) v]) else p]);
     return null;
   }

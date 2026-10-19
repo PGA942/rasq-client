@@ -9,6 +9,7 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/router.dart';
 import '../../backend/payments_api.dart' show paidFeaturesProvider;
+import '../../l10n/l10n.dart';
 import 'store_install.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
@@ -63,14 +64,14 @@ class _StorePluginTileState extends ConsumerState<StorePluginTile> {
       // 確認シートを出している間は回さない(回すのは掲載を引く間と、検証 / 登録の間だけ)。
       setState(() => _busy = false);
       if (detail == null) {
-        message = 'このプラグインは見つかりませんでした';
+        message = appL10n.storePluginNotFound;
       } else {
         message = await confirmAndInstallPlugin(ref, detail, onBusy: (b) {
           if (mounted) setState(() => _busy = b);
         });
       }
     } catch (e) {
-      message = 'インストールできませんでした: $e';
+      message = appL10n.storeInstallFailed('$e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -91,7 +92,7 @@ class _StorePluginTileState extends ConsumerState<StorePluginTile> {
     final meta = [
       if (card.sizeMb > 0) '${card.sizeMb.toStringAsFixed(card.sizeMb < 1 ? 2 : 1)}MB',
       if (card.version.isNotEmpty) 'v${card.version}',
-      if (card.hasAds) '広告あり',
+      if (card.hasAds) context.l10n.storeHasAds,
     ];
     return SizedBox(
       width: widget.width,
@@ -114,7 +115,7 @@ class _StorePluginTileState extends ConsumerState<StorePluginTile> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                     Text(card.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: RasqTypography.body.copyWith(color: ink, fontWeight: FontWeight.w700)),
                     Text(
-                      [if (card.developerName.isNotEmpty) card.developerName, card.pluginType.label].join(' ・ '),
+                      [if (card.developerName.isNotEmpty) card.developerName, card.pluginType.label].join(context.l10n.storeDotSeparator),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: RasqTypography.caption.copyWith(color: muted),
@@ -132,7 +133,7 @@ class _StorePluginTileState extends ConsumerState<StorePluginTile> {
                     action: action,
                     price: card.price,
                     busy: _busy,
-                    tooltip: buyBlocked ? '公開テストでは購入できません' : null,
+                    tooltip: buyBlocked ? context.l10n.storeBuyDisabled : null,
                     onPressed: action == StoreTileAction.unavailable || buyBlocked ? null : () => _act(action)),
               ]),
               const SizedBox(height: 10),
@@ -155,7 +156,7 @@ class _StorePluginTileState extends ConsumerState<StorePluginTile> {
                         ],
                         if (meta.isNotEmpty) ...[
                           const SizedBox(height: 4),
-                          Text(meta.join(' ・ '), maxLines: 1, overflow: TextOverflow.ellipsis, style: RasqTypography.caption.copyWith(color: muted)),
+                          Text(meta.join(context.l10n.storeDotSeparator), maxLines: 1, overflow: TextOverflow.ellipsis, style: RasqTypography.caption.copyWith(color: muted)),
                         ],
                       ]),
                     ),
@@ -181,11 +182,11 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = switch (action) {
-      StoreTileAction.get => '入手',
+      StoreTileAction.get => context.l10n.storeTileGet,
       StoreTileAction.buy => '¥${price.toStringAsFixed(0)}',
-      StoreTileAction.update => '更新',
-      StoreTileAction.open => '開く',
-      StoreTileAction.unavailable => '停止中',
+      StoreTileAction.update => context.l10n.storeTileUpdate,
+      StoreTileAction.open => context.l10n.storeOpen,
+      StoreTileAction.unavailable => context.l10n.storeTileUnavailable,
     };
     final child = busy ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : Text(label);
     const style = ButtonStyle(
@@ -215,7 +216,7 @@ Color storeTileColor(StorePluginType type, ColorScheme scheme) {
   return Color.alphaBlend(base.withValues(alpha: dark ? 0.22 : 0.33), scheme.surface);
 }
 
-String formatStoreDownloads(int n) => n >= 10000 ? '${(n / 10000).toStringAsFixed(1)}万' : '$n';
+String formatStoreDownloads(int n) => n >= 10000 ? appL10n.storeDownloadsTenThousands((n / 10000).toStringAsFixed(1)) : '$n';
 
 class _Icon extends StatelessWidget {
   const _Icon({required this.url, required this.type});

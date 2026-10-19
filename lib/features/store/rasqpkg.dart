@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:plugin_runtime/plugin_runtime.dart' show rasqZstdDecompress;
 import 'package:rasq_plugin_api/rasq_plugin_api.dart' show ManifestLocales;
 
+import '../../l10n/l10n.dart';
+
 /// `.rasqpkg`(D-034 / D-244d): zstd 圧縮 tar。先頭が `bundle.json`(`rasq.bundle/1`、rasq-sdk-sample
 /// `schema/bundle.schema.json`)、最後が `SHA512SUMS`。ここは **展開と中身の検証**(`rasq inspect` と同じ手順):
 ///
@@ -148,17 +150,17 @@ class RasqPackage {
   /// id で引く(null / 空 = root)。無ければ例外。
   RasqPackagePlugin plugin(String? id) {
     if (id == null || id.isEmpty || id == root.id) return root;
-    return children.firstWhere((c) => c.id == id, orElse: () => throw RasqPackageException('配布物に $id がありません'));
+    return children.firstWhere((c) => c.id == id, orElse: () => throw RasqPackageException(appL10n.storePkgMissingPlugin(id)));
   }
 
   /// 展開して検証する。失敗は [RasqPackageException](メッセージはそのままユーザーに見せられる形)。
   static RasqPackage open(Uint8List bytes, {ZstdDecompress decompress = rasqZstdDecompress, int maxUnpackedBytes = rasqpkgMaxUnpackedBytes}) {
-    if (!isRasqPackage(bytes)) throw const RasqPackageException('配布物が .rasqpkg(zstd)ではありません');
+    if (!isRasqPackage(bytes)) throw RasqPackageException(appL10n.storePkgNotPackage);
     final Uint8List tar;
     try {
       tar = decompress(bytes, maxOutput: maxUnpackedBytes);
     } catch (e) {
-      throw RasqPackageException('配布物を展開できません(壊れているか、大きすぎます): $e');
+      throw RasqPackageException(appL10n.storePkgUnpack('$e'));
     }
 
     // 1. tar
@@ -168,72 +170,72 @@ class RasqPackage {
     try {
       archive = TarDecoder().decodeBytes(tar);
     } catch (e) {
-      throw RasqPackageException('配布物の tar を読めません: $e');
+      throw RasqPackageException(appL10n.storePkgTar('$e'));
     }
     for (final f in archive) {
-      if (order.length >= rasqpkgMaxEntries) throw const RasqPackageException('配布物のファイル数が多すぎます');
-      if (!f.isFile || f.isSymbolicLink) throw RasqPackageException('配布物に通常ファイルでないものがあります: ${f.name}');
+      if (order.length >= rasqpkgMaxEntries) throw RasqPackageException(appL10n.storePkgTooManyFiles);
+      if (!f.isFile || f.isSymbolicLink) throw RasqPackageException(appL10n.storePkgNotRegularFile(f.name));
       _checkPath(f.name);
-      if (files.containsKey(f.name)) throw RasqPackageException('配布物内のパスが重複しています: ${f.name}');
+      if (files.containsKey(f.name)) throw RasqPackageException(appL10n.storePkgDuplicatePath(f.name));
       files[f.name] = Uint8List.fromList(f.content as List<int>);
       order.add(f.name);
     }
-    if (order.isEmpty || order.first != _bundleName) throw const RasqPackageException('配布物の先頭が bundle.json ではありません');
+    if (order.isEmpty || order.first != _bundleName) throw RasqPackageException(appL10n.storePkgBundleFirst);
 
     // 2. 目次
     final Map<String, Object?> bundle;
     try {
       bundle = (jsonDecode(utf8.decode(files[_bundleName]!)) as Map).cast<String, Object?>();
     } catch (e) {
-      throw RasqPackageException('bundle.json を読めません: $e');
+      throw RasqPackageException(appL10n.storePkgBundleRead('$e'));
     }
-    if (bundle['schema'] != 'rasq.bundle/1') throw RasqPackageException('bundle.json の schema が rasq.bundle/1 ではありません: ${bundle['schema']}');
+    if (bundle['schema'] != 'rasq.bundle/1') throw RasqPackageException(appL10n.storePkgBundleSchema('${bundle['schema']}'));
     final listed = <String>{_bundleName, _sumsName};
 
     Uint8List fileOf(Object? spec, String what, {bool wasm = false}) {
-      if (spec is! Map) throw RasqPackageException('bundle.json: $what の wasm / file の形が違います');
+      if (spec is! Map) throw RasqPackageException(appL10n.storePkgFileShape(what));
       final path = spec['path'];
-      if (path is! String) throw RasqPackageException('bundle.json: $what に path がありません');
+      if (path is! String) throw RasqPackageException(appL10n.storePkgNoPath(what));
       _checkPath(path);
       final data = files[path];
-      if (data == null) throw RasqPackageException('$path: 目次にあるのに中にありません');
+      if (data == null) throw RasqPackageException(appL10n.storePkgFileMissing(path));
       final size = spec['sizeBytes'];
-      if (size is int && size != data.length) throw RasqPackageException('$path: 大きさが目次と違います');
+      if (size is int && size != data.length) throw RasqPackageException(appL10n.storePkgSizeMismatch(path));
       final hash = spec['sha512'];
       if (hash is String) {
-        if (sha512.convert(data).toString() != hash) throw RasqPackageException('$path: SHA-512 が目次と違います');
+        if (sha512.convert(data).toString() != hash) throw RasqPackageException(appL10n.storePkgHashMismatch(path));
       } else if (wasm) {
-        throw RasqPackageException('bundle.json: $what に sha512 がありません');
+        throw RasqPackageException(appL10n.storePkgNoSha512(what));
       }
-      if (wasm && !isWasmModule(data)) throw RasqPackageException('$path: wasm ではありません');
-      if (!listed.add(path)) throw RasqPackageException('bundle.json: $path が 2 回出てきます');
+      if (wasm && !isWasmModule(data)) throw RasqPackageException(appL10n.storePkgNotWasm(path));
+      if (!listed.add(path)) throw RasqPackageException(appL10n.storePkgTwice(path));
       return data;
     }
 
     RasqPackagePlugin pluginOf(Object? spec, String what) {
-      if (spec is! Map) throw RasqPackageException('bundle.json: $what の形が違います');
+      if (spec is! Map) throw RasqPackageException(appL10n.storePkgPluginShape(what));
       final id = spec['id'], version = spec['version'], kind = spec['kind'], manifestPath = spec['manifest'];
-      if (id is! String || !_pluginId.hasMatch(id)) throw RasqPackageException('bundle.json: $what の id が不正です: $id');
-      if (version is! String || !_semver.hasMatch(version)) throw RasqPackageException('bundle.json: $id の version が不正です: $version');
-      if (kind is! String || !_kinds.contains(kind)) throw RasqPackageException('bundle.json: $id の kind が不正です: $kind');
-      if (manifestPath is! String) throw RasqPackageException('bundle.json: $id に manifest がありません');
+      if (id is! String || !_pluginId.hasMatch(id)) throw RasqPackageException(appL10n.storePkgBadId(what, '$id'));
+      if (version is! String || !_semver.hasMatch(version)) throw RasqPackageException(appL10n.storePkgBadVersion(id, '$version'));
+      if (kind is! String || !_kinds.contains(kind)) throw RasqPackageException(appL10n.storePkgBadKind(id, '$kind'));
+      if (manifestPath is! String) throw RasqPackageException(appL10n.storePkgNoManifest(id));
       _checkPath(manifestPath);
       final raw = files[manifestPath];
-      if (raw == null) throw RasqPackageException('$manifestPath: 目次にあるのに中にありません');
-      if (!listed.add(manifestPath)) throw RasqPackageException('bundle.json: $manifestPath が 2 回出てきます');
+      if (raw == null) throw RasqPackageException(appL10n.storePkgFileMissing(manifestPath));
+      if (!listed.add(manifestPath)) throw RasqPackageException(appL10n.storePkgTwice(manifestPath));
       final Map<String, Object?> manifest;
       try {
         manifest = (jsonDecode(utf8.decode(raw)) as Map).cast<String, Object?>();
       } catch (e) {
-        throw RasqPackageException('$manifestPath を読めません: $e');
+        throw RasqPackageException(appL10n.storePkgManifestRead(manifestPath, '$e'));
       }
       if (manifest['id'] != id || manifest['version'] != version || manifest['kind'] != kind) {
-        throw RasqPackageException('$manifestPath: id / version / kind が目次($id $version $kind)と違います');
+        throw RasqPackageException(appL10n.storePkgManifestMismatch(manifestPath, id, version, kind));
       }
       // アセットパック(v0.11)/ 着せ替え(v0.16)は wasm を持たない(持っていたら入れ物として不正)。root だけがなれる。
       if (kind == 'assets' || kind == 'theme') {
-        if (what != 'root') throw RasqPackageException('bundle.json: 子 $id は kind = $kind にできません');
-        if (spec['wasm'] != null) throw RasqPackageException('bundle.json: ${kind == 'theme' ? '着せ替え' : 'アセットパック'} $id が wasm を持っています');
+        if (what != 'root') throw RasqPackageException(appL10n.storePkgChildPackKind(id, kind));
+        if (spec['wasm'] != null) throw RasqPackageException(appL10n.storePkgPackHasWasm(kind == 'theme' ? appL10n.storePkgKindTheme : appL10n.storePkgKindAssets, id));
         return RasqPackagePlugin(id: id, version: version, kind: kind, manifest: manifest, wasm: Uint8List(0), template: null);
       }
       return RasqPackagePlugin(id: id, version: version, kind: kind, manifest: manifest, wasm: fileOf(spec['wasm'], id, wasm: true), template: spec['template'] as String?);
@@ -241,74 +243,74 @@ class RasqPackage {
 
     List<Object?> listOf(String key) {
       final v = bundle[key];
-      if (v is! List) throw RasqPackageException('bundle.json: $key がありません');
+      if (v is! List) throw RasqPackageException(appL10n.storePkgMissingKey(key));
       return v;
     }
 
     final rootSpec = bundle['root'];
     final root = pluginOf(rootSpec, 'root');
     final children = [for (final c in listOf('children')) pluginOf(c, 'children')];
-    if (!root.isSns && children.isNotEmpty) throw const RasqPackageException('bundle.json: sns 以外の root は children を持てません');
+    if (!root.isSns && children.isNotEmpty) throw RasqPackageException(appL10n.storePkgChildrenNotSns);
     for (final c in children) {
-      if (!c.id.startsWith('${root.id}.')) throw RasqPackageException('bundle.json: 子 ${c.id} の id が ${root.id}. で始まっていません');
-      if (c.isSns) throw RasqPackageException('bundle.json: 子 ${c.id} は kind = sns にできません');
+      if (!c.id.startsWith('${root.id}.')) throw RasqPackageException(appL10n.storePkgChildPrefix(c.id, root.id));
+      if (c.isSns) throw RasqPackageException(appL10n.storePkgChildSns(c.id));
     }
-    if ({root.id, for (final c in children) c.id}.length != children.length + 1) throw const RasqPackageException('bundle.json: プラグインの id が重複しています');
+    if ({root.id, for (final c in children) c.id}.length != children.length + 1) throw RasqPackageException(appL10n.storePkgDuplicateId);
 
     final libs = <RasqPackageLib>[];
     for (final l in listOf('libs')) {
-      if (l is! Map || l['name'] is! String) throw const RasqPackageException('bundle.json: libs の形が違います');
+      if (l is! Map || l['name'] is! String) throw RasqPackageException(appL10n.storePkgLibsShape);
       libs.add(RasqPackageLib(name: l['name'] as String, wasm: fileOf(l['wasm'], 'lib ${l['name']}', wasm: true), exports: [for (final e in (l['exports'] as List? ?? const [])) if (e is String) e]));
     }
     final assets = <String, Uint8List>{};
     for (final a in listOf('assets')) {
-      if (a is! Map || a['path'] is! String) throw const RasqPackageException('bundle.json: assets の形が違います');
+      if (a is! Map || a['path'] is! String) throw RasqPackageException(appL10n.storePkgAssetsShape);
       assets[a['path'] as String] = fileOf(a, 'asset ${a['path']}');
     }
     if (root.isPack) {
       // アセットパック / 着せ替え: コードを一切含まない(wasm を入れ物に紛れ込ませない)、中身は画像だけ、上限つき。
       // 着せ替えは画像 0 枚(色だけ)でもよい。
-      if (children.isNotEmpty || libs.isNotEmpty || listOf('models').isNotEmpty) throw const RasqPackageException('bundle.json: アセットパック / 着せ替えは children / libs / models を持てません');
-      if (files.values.any(isWasmModule)) throw const RasqPackageException('アセットパック / 着せ替えに wasm が入っています');
-      if ((root.isAssets && assets.isEmpty) || assets.length > rasqPackMaxImages) throw RasqPackageException('アセットパックの画像は 1〜$rasqPackMaxImages 枚です: ${assets.length}');
+      if (children.isNotEmpty || libs.isNotEmpty || listOf('models').isNotEmpty) throw RasqPackageException(appL10n.storePkgPackExtras);
+      if (files.values.any(isWasmModule)) throw RasqPackageException(appL10n.storePkgPackWasm);
+      if ((root.isAssets && assets.isEmpty) || assets.length > rasqPackMaxImages) throw RasqPackageException(appL10n.storePkgPackImageCount(rasqPackMaxImages, assets.length));
       for (final e in assets.entries) {
-        if (!isPackImage(e.value)) throw RasqPackageException('${e.key}: 画像(PNG / JPEG / WebP / GIF)ではありません');
-        if (e.value.length > rasqPackMaxImageBytes) throw RasqPackageException('${e.key}: 大きすぎます(1 枚 ${rasqPackMaxImageBytes ~/ 1024 ~/ 1024} MiB まで)');
+        if (!isPackImage(e.value)) throw RasqPackageException(appL10n.storePkgNotImage(e.key));
+        if (e.value.length > rasqPackMaxImageBytes) throw RasqPackageException(appL10n.storePkgImageTooLarge(e.key, rasqPackMaxImageBytes ~/ 1024 ~/ 1024));
       }
       for (final a in (root.manifest['assets'] as List? ?? const [])) {
-        if (a is! Map || a['path'] is! String || !assets.containsKey(a['path'])) throw RasqPackageException('manifest.assets の ${a is Map ? a['path'] : a} が配布物の目次にありません');
+        if (a is! Map || a['path'] is! String || !assets.containsKey(a['path'])) throw RasqPackageException(appL10n.storePkgAssetNotListed('${a is Map ? a['path'] : a}'));
       }
       if (root.isTheme) checkThemeManifest(root.manifest);
     }
     for (final m in listOf('models')) {
-      if (m is! Map || m['manifest'] is! String) throw const RasqPackageException('bundle.json: models の形が違います');
+      if (m is! Map || m['manifest'] is! String) throw RasqPackageException(appL10n.storePkgModelsShape);
       final path = m['manifest'] as String;
       _checkPath(path);
-      if (!files.containsKey(path)) throw RasqPackageException('$path: 目次にあるのに中にありません');
+      if (!files.containsKey(path)) throw RasqPackageException(appL10n.storePkgFileMissing(path));
       listed.add(path);
     }
     final requires = <RasqPackageRequirement>[];
     final req = rootSpec is Map ? rootSpec['requires'] : null;
     if (req is List) {
       for (final r in req) {
-        if (r is! Map || r['id'] is! String || !_pluginId.hasMatch(r['id'] as String)) throw const RasqPackageException('bundle.json: requires の形が違います');
+        if (r is! Map || r['id'] is! String || !_pluginId.hasMatch(r['id'] as String)) throw RasqPackageException(appL10n.storePkgRequiresShape);
         requires.add(RasqPackageRequirement(id: r['id'] as String, version: r['version'] as String? ?? '*'));
       }
     }
 
     // 5. SHA512SUMS と、目次に無いファイル
     final sums = files[_sumsName];
-    if (sums == null) throw const RasqPackageException('SHA512SUMS がありません');
+    if (sums == null) throw RasqPackageException(appL10n.storePkgNoSums);
     for (final line in const LineSplitter().convert(utf8.decode(sums))) {
       final i = line.indexOf('  ');
       if (i <= 0) continue;
       final path = line.substring(i + 2);
       final data = files[path];
-      if (data == null) throw RasqPackageException('$path: SHA512SUMS にあるのに中にありません');
-      if (sha512.convert(data).toString() != line.substring(0, i)) throw RasqPackageException('$path: SHA512SUMS と違います');
+      if (data == null) throw RasqPackageException(appL10n.storePkgSumsMissingFile(path));
+      if (sha512.convert(data).toString() != line.substring(0, i)) throw RasqPackageException(appL10n.storePkgSumsMismatch(path));
     }
     for (final path in order) {
-      if (!listed.contains(path) && !path.startsWith('models/')) throw RasqPackageException('$path: 目次に載っていないファイルがあります');
+      if (!listed.contains(path) && !path.startsWith('models/')) throw RasqPackageException(appL10n.storePkgUnlisted(path));
     }
 
     return RasqPackage(bundle: bundle, root: root, children: children, libs: libs, assets: assets, files: files, requires: requires);
@@ -322,10 +324,10 @@ const _kinds = {'sns', 'action', 'view', 'trend', 'mediaViewer', 'postProcessor'
 /// 着せ替えの宣言の整合 (契約 v0.16 §2.12): `theme` があり、レイヤーとアイコンの `asset:<id>` が `use: "theme"` の画像を指す。
 void checkThemeManifest(Map<String, Object?> manifest) {
   final theme = manifest['theme'];
-  if (theme is! Map) throw const RasqPackageException('着せ替えのマニフェストに theme がありません');
+  if (theme is! Map) throw RasqPackageException(appL10n.storePkgThemeMissing);
   final ids = {for (final a in (manifest['assets'] as List? ?? const [])) if (a is Map && a['use'] == 'theme' && a['id'] is String) a['id'] as String};
   void need(Object? id, String where) {
-    if (id is! String || !ids.contains(id)) throw RasqPackageException('theme.$where の画像 $id が assets(use: theme)にありません');
+    if (id is! String || !ids.contains(id)) throw RasqPackageException(appL10n.storePkgThemeAsset(where, '$id'));
   }
 
   if (theme['icons'] case final Map<Object?, Object?> icons) {
@@ -335,19 +337,19 @@ void checkThemeManifest(Map<String, Object?> manifest) {
   }
   if (theme['surfaces'] case final Map<Object?, Object?> surfaces) {
     for (final e in surfaces.entries) {
-      if (!const {'app', 'postTile', 'fow', 'actionButton'}.contains(e.key)) throw RasqPackageException('theme.surfaces の ${e.key} は使えません(app / postTile / fow / actionButton)');
+      if (!const {'app', 'postTile', 'fow', 'actionButton'}.contains(e.key)) throw RasqPackageException(appL10n.storePkgThemeSurface('${e.key}'));
       for (final l in ((e.value as Map?)?['layers'] as List? ?? const [])) {
         // レイヤーは画像(asset)かグラデーション(gradient、v0.17)のどちらか 1 つ。
         final hasAsset = l is Map && l['asset'] != null;
         final hasGradient = l is Map && l['gradient'] != null;
-        if (hasAsset == hasGradient) throw RasqPackageException('theme.surfaces.${e.key}.layers: asset か gradient のどちらか 1 つを書いてください');
+        if (hasAsset == hasGradient) throw RasqPackageException(appL10n.storePkgThemeLayer('${e.key}'));
         if (hasAsset) need(l['asset'], 'surfaces.${e.key}.layers');
         if (hasGradient) {
           final g = l['gradient'];
           final colors = g is Map ? g['colors'] : null;
           final stops = g is Map ? g['stops'] : null;
-          if (colors is! List || colors.length < 2 || colors.length > 8) throw RasqPackageException('theme.surfaces.${e.key}.layers: gradient.colors は 2〜8 色です');
-          if (stops is List && stops.length != colors.length) throw RasqPackageException('theme.surfaces.${e.key}.layers: gradient.stops は colors と同じ数です');
+          if (colors is! List || colors.length < 2 || colors.length > 8) throw RasqPackageException(appL10n.storePkgThemeColors('${e.key}'));
+          if (stops is List && stops.length != colors.length) throw RasqPackageException(appL10n.storePkgThemeStops('${e.key}'));
         }
       }
     }
@@ -358,7 +360,7 @@ final _pathChars = RegExp(r'^[A-Za-z0-9_][A-Za-z0-9_./-]*$');
 /// 配布物内のパスの文法(`bundle.schema.json` の `path`): 相対、`..` なし、英数字と `_ . / -` だけ。
 void _checkPath(String p) {
   final ok = _pathChars.hasMatch(p) && !p.startsWith('/') && !p.split('/').any((s) => s.isEmpty || s == '..' || s == '.');
-  if (!ok) throw RasqPackageException('配布物内のパスとして使えません: $p');
+  if (!ok) throw RasqPackageException(appL10n.storePkgBadPath(p));
 }
 
 /// 登録元の文字列から「入れ物」と「中のプラグイン id」を分ける: `store:<id>#<childId>` / `/path/x.rasqpkg#<childId>`。
@@ -383,18 +385,18 @@ String storeSlotSource(String pluginId, String version, {String? child}) => 'sto
 /// (生 64 バイト)= ストア署名と同じ。戻りは公開鍵の指紋(SHA-512 の先頭 8 バイト、`rasq key show` と同じ)。
 /// サイドロード用: 鍵そのものの信頼はユーザーが指紋で判断する(常に警告つき)。
 Future<String> verifyDevSignature(Uint8List packageBytes, Map<String, Object?> sig) async {
-  if (sig['alg'] != 'ed25519') throw RasqPackageException('署名の alg が ed25519 ではありません: ${sig['alg']}');
+  if (sig['alg'] != 'ed25519') throw RasqPackageException(appL10n.storePkgSigAlg('${sig['alg']}'));
   final digest = sha512.convert(packageBytes);
-  if (sig['digest'] != 'sha512:$digest') throw const RasqPackageException('sig.json の digest が配布物と違います(配布物が差し替わっています)');
+  if (sig['digest'] != 'sha512:$digest') throw RasqPackageException(appL10n.storePkgSigDigest);
   final Uint8List publicKey, signature;
   try {
     publicKey = base64Decode(sig['publicKey'] as String);
     signature = base64Decode(sig['signature'] as String);
   } catch (_) {
-    throw const RasqPackageException('sig.json の publicKey / signature を読めません');
+    throw RasqPackageException(appL10n.storePkgSigRead);
   }
-  if (publicKey.length != 32 || signature.length != 64) throw const RasqPackageException('sig.json の鍵 / 署名の長さが違います');
+  if (publicKey.length != 32 || signature.length != 64) throw RasqPackageException(appL10n.storePkgSigLength);
   final ok = await Ed25519().verify(Uint8List.fromList(digest.bytes), signature: Signature(signature, publicKey: SimplePublicKey(publicKey, type: KeyPairType.ed25519)));
-  if (!ok) throw const RasqPackageException('開発者鍵の署名が合いません');
+  if (!ok) throw RasqPackageException(appL10n.storePkgSigInvalid);
   return sha512.convert(publicKey).bytes.take(8).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 }
