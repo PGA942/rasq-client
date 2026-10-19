@@ -1471,7 +1471,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     _tagTimer = Timer(const Duration(milliseconds: 250), () => _searchTags(q.$2));
   }
 
-  /// 候補を引く: 投稿するアカウントの SNS の `searchHashtags`。持たない SNS(Bluesky など)/ 古いプラグイン / 通信の失敗は、
+  /// 候補を引く: 投稿するアカウントの SNS の `searchHashtags`。持たない SNS(mixi2 など)/ 古いプラグイン / 通信の失敗は、
   /// 候補を出さないだけ(@ 補完と同じ)。
   Future<void> _searchTags(String q) async {
     final seq = ++_tagSeq;
