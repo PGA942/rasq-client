@@ -19,6 +19,30 @@ class FowPanelSkin extends InheritedWidget {
   bool updateShouldNotify(FowPanelSkin oldWidget) => oldWidget.color != color || oldWidget.decorate != decorate || oldWidget.theme != theme;
 }
 
+/// FOW の外側のふち (D-479: 2026-10-19 のユーザーの指摘)。見出し / ハンドルのある FOW のパネル・ボタンにつながったパネル
+/// ([TetheredPanel])・RAi のウィジェットで共通。外側の灰色の余白(太い影 / ふちの帯)をやめ、ほぼ線に見える細いふちにする。
+/// ここを変えれば 3 つとも揃って変わる。
+///
+/// ふちの線の太さ(px)。色は [fowRimColor]。
+const double kFowRimWidth = 1;
+
+/// 最前面のパネルの影の深さ(Material の elevation)。以前は 8(FOW)/ 6(RAi・つながったパネル)で、外側に灰色の
+/// 余白が見えていた。影の有無で最前面を見分ける(D-052)のは変えない(後ろのパネルは 0)。
+const double kFowElevation = 2;
+
+/// ふちの線の色: テーマの outlineVariant(FOW の枠線は全パネル共通のグレー、D-052)。
+Color fowRimColor(ColorScheme scheme) => scheme.outlineVariant;
+
+/// ふちの線([kFowRimWidth] / [fowRimColor])。
+BorderSide fowRimSide(ColorScheme scheme) => BorderSide(color: fowRimColor(scheme), width: kFowRimWidth);
+
+/// FOW のパネルの [Material] のキー(テストがパネルを探す口。以前は elevation 8 で探していたが、D-479 で RAi のウィジェットと
+/// 同じ影の深さになったので、キーで見分ける)。
+const kFowPanelKey = ValueKey<String>('rasqOverlay.fow.panel');
+
+/// 最前面(影付き)の FOW のパネルか([find.byWidgetPredicate] 用)。
+bool isFrontmostFowPanel(Widget w) => w is Material && w.key == kFowPanelKey && w.elevation > 0;
+
 /// FOW type (原典: UI_Elements「FOWタイプ（3種）」).
 enum FowPanelType { widget, interstitial, system }
 

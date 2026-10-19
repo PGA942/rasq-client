@@ -18,6 +18,7 @@ import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/third_column.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 
 import 'support/fakes.dart';
 
@@ -100,7 +101,7 @@ void main() {
     await tester.longPress(reactionBtn);
     await tester.pumpAndSettle();
     expect(find.byType(EmojiPanel), findsOneWidget);
-    Finder fowPanel() => find.byWidgetPredicate((w) => w is Material && w.elevation == 8);
+    Finder fowPanel() => find.byWidgetPredicate(isFrontmostFowPanel);
     expect(tester.getTopLeft(fowPanel()).dx, closeTo(72, 1)); // 第2カラムの左端
     expect(tester.getSize(fowPanel()).width, closeTo(1200 - 72 - kSearchHomeColumnWidth, 1));
     // 基本は下付き: FOW の上辺がボタンの下辺の近く(ボタンより下)。

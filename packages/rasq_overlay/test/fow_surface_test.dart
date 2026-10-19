@@ -11,7 +11,7 @@ Widget host(OverlayManager m, {List<FowColumnSlot> Function(BuildContext)? colum
       ),
     );
 
-Finder fowPanel() => find.byWidgetPredicate((w) => w is Material && w.elevation == 8);
+Finder fowPanel() => find.byWidgetPredicate(isFrontmostFowPanel);
 
 void main() {
   testWidgets('FOW スイッチャー: ハンドル長押し → リスト → 親選択で子が自動クローズ + 前面化', (tester) async {

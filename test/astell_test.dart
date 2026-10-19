@@ -1339,7 +1339,7 @@ void main() {
     await tester.tap(find.text('参加'));
     await tester.pumpAndSettle();
     expect(find.byType(AstellRoomBody), findsOneWidget);
-    Finder panel() => find.byWidgetPredicate((w) => w is Material && w.elevation == 8);
+    Finder panel() => find.byWidgetPredicate(isFrontmostFowPanel);
     final before = tester.getTopLeft(panel()).dy;
     expect(before, greaterThan(100));
     // 本体側ヘッダーのタイトル文字を掴んで上へ(ウィンドウ高さの 1 割以上)。

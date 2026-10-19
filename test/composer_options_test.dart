@@ -12,6 +12,7 @@ import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 
 import 'support/fakes.dart';
 
@@ -185,14 +186,14 @@ void main() {
     await tester.pumpAndSettle();
 
     // FOW = 角丸四角形枠: stick はフッター上にドックするので下側も丸い。
-    final panel = tester.widgetList<Material>(find.byType(Material)).firstWhere((w) => w.elevation == 8);
+    final panel = tester.widgetList<Material>(find.byType(Material)).firstWhere(isFrontmostFowPanel);
     expect((panel.shape! as RoundedRectangleBorder).borderRadius, BorderRadius.circular(16));
 
     // ドラッグハンドル (D-049): 上に引くと展開段階へスナップ、
     // 大きく下げると最下段(折りたたみフィット)へ戻って止まる。
     final handle = find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'サイズ変更ハンドル');
     expect(handle, findsOneWidget);
-    Material fowPanel() => tester.widgetList<Material>(find.byType(Material)).firstWhere((w) => w.elevation == 8);
+    Material fowPanel() => tester.widgetList<Material>(find.byType(Material)).firstWhere(isFrontmostFowPanel);
     double panelHeight() => tester.getSize(find.byWidget(fowPanel())).height;
     final h0 = panelHeight(); // 折りたたみフィット
     // ハンドルのタップで展開モードへ (D-340): 入力欄にフォーカスが入り、ヘッダーが割り込む。
