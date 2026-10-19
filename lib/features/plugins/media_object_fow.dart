@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
+import '../../l10n/l10n.dart';
+
 /// 加工画面に置いたメディアのオブジェクト(画像 / 動画 / 投稿)の設定 (D-266)。
 class MediaObjectSettings {
   const MediaObjectSettings({this.loop = true, this.speed = 1, this.volume = 1, this.opacity = 1});
@@ -30,22 +32,22 @@ Future<bool?> showMediaObjectFow(OverlayManager manager, {required String title,
   if (manager.contains(mediaObjectFowId)) manager.close(mediaObjectFowId);
   return manager.showFow<bool>(
     id: mediaObjectFowId,
-    spec: FowSpec(title: title, cancelText: '閉じる', initialHeightFactor: 0.4, minHeightFactor: 0.2, maxHeightFactor: 0.7, maxWidth: 560, dockAboveFooter: true),
-    semanticsLabel: '$title の編集',
+    spec: FowSpec(title: title, cancelText: appL10n.pluginsMediaClose, initialHeightFactor: 0.4, minHeightFactor: 0.2, maxHeightFactor: 0.7, maxWidth: 560, dockAboveFooter: true),
+    semanticsLabel: appL10n.pluginsMediaObjectEditSemantics(title),
     builder: (context, _) {
       final scheme = Theme.of(context).colorScheme;
       return ValueListenableBuilder<MediaObjectSettings>(
         valueListenable: settings,
         builder: (_, s, _) => ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.md), children: [
           if (isVideo) ...[
-            RasqSwitchListTile(key: const ValueKey('mediaObject.loop'), title: '繰り返し再生', subtitle: 'オフ = 終わったら最後のコマで止まる', value: s.loop, onChanged: (v) => settings.value = s.copyWith(loop: v)),
-            RasqSliderListTile(key: const ValueKey('mediaObject.speed'), title: '再生の速さ', value: s.speed, min: 0.25, max: 2, divisions: 7, valueLabel: '× ${s.speed.toStringAsFixed(2)}', onChanged: (v) => settings.value = s.copyWith(speed: v)),
-            RasqSliderListTile(key: const ValueKey('mediaObject.volume'), title: '音', value: s.volume, min: 0, max: 1, divisions: 20, valueLabel: s.volume == 0 ? '消音' : '${(s.volume * 100).round()}%', onChanged: (v) => settings.value = s.copyWith(volume: v)),
+            RasqSwitchListTile(key: const ValueKey('mediaObject.loop'), title: context.l10n.pluginsMediaObjectLoop, subtitle: context.l10n.pluginsMediaObjectLoopSubtitle, value: s.loop, onChanged: (v) => settings.value = s.copyWith(loop: v)),
+            RasqSliderListTile(key: const ValueKey('mediaObject.speed'), title: context.l10n.pluginsMediaObjectSpeed, value: s.speed, min: 0.25, max: 2, divisions: 7, valueLabel: '× ${s.speed.toStringAsFixed(2)}', onChanged: (v) => settings.value = s.copyWith(speed: v)),
+            RasqSliderListTile(key: const ValueKey('mediaObject.volume'), title: context.l10n.pluginsMediaObjectVolume, value: s.volume, min: 0, max: 1, divisions: 20, valueLabel: s.volume == 0 ? context.l10n.pluginsMediaObjectMuted : '${(s.volume * 100).round()}%', onChanged: (v) => settings.value = s.copyWith(volume: v)),
           ],
-          RasqSliderListTile(key: const ValueKey('mediaObject.opacity'), title: '不透明度', value: s.opacity, min: 0.1, max: 1, divisions: 18, valueLabel: '${(s.opacity * 100).round()}%', onChanged: (v) => settings.value = s.copyWith(opacity: v)),
+          RasqSliderListTile(key: const ValueKey('mediaObject.opacity'), title: context.l10n.pluginsMediaObjectOpacity, value: s.opacity, min: 0.1, max: 1, divisions: 18, valueLabel: '${(s.opacity * 100).round()}%', onChanged: (v) => settings.value = s.copyWith(opacity: v)),
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-            child: TextButton(key: const ValueKey('mediaObject.remove'), onPressed: () => manager.close(mediaObjectFowId, result: true), child: Text('このオブジェクトを削除', style: TextStyle(color: scheme.error))),
+            child: TextButton(key: const ValueKey('mediaObject.remove'), onPressed: () => manager.close(mediaObjectFowId, result: true), child: Text(context.l10n.pluginsMediaObjectRemove, style: TextStyle(color: scheme.error))),
           ),
         ]),
       );

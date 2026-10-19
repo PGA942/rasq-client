@@ -4991,6 +4991,513 @@
   "@onboardingTourRaiBubble": {
     "description": "RAi のページの絵の吹き出し(利用者の質問の例)"
   },
+  "pluginsCancel": "キャンセル",
+  "pluginsClose": "閉じる",
+  "pluginsSwingNotPackage": "Swing のプラグインは .rasqpkg か .wasm です",
+  "pluginsSwingNoRequires": "Swing では、ほかのプラグインを土台にする子プラグインは配れません",
+  "pluginsSwingSingleOnly": "Swing で配れるのは、プラグイン 1 つだけの入れ物です",
+  "pluginsPageNotPage": "ページ型のプラグインではありません",
+  "pluginsPageSwingRequires": "ほかのプラグイン({ids})を土台にしているため、Swing では配れません",
+  "@pluginsPageSwingRequires": {
+    "description": "ids は土台のプラグインの id を「 / 」でつないだもの",
+    "placeholders": {
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsPageSwingChild": "ほかのプラグインの入れ物に入っている子プラグインのため、Swing では配れません",
+  "pluginsPageSwingSiblings": "子プラグイン({names})と一緒の入れ物のため、Swing では配れません",
+  "@pluginsPageSwingSiblings": {
+    "description": "names はプラグインの名前を「 / 」でつないだもの",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsArtifactMismatch": "{pluginId}: 取り直した配布物がインストール時と違うため読み込みません(ストアで入れ直してください)",
+  "@pluginsArtifactMismatch": {
+    "placeholders": {
+      "pluginId": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsIsSnsPlugin": "{id} は SNS プラグインです(スロットには登録できません)",
+  "@pluginsIsSnsPlugin": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsManifestMissing": "plugin.manifest がありません",
+  "@pluginsManifestMissing": {
+    "description": "plugin.manifest はプラグインの関数の名前(訳さない)"
+  },
+  "pluginsManifestIdEmpty": "plugin.manifest.id が空です",
+  "pluginsSwingSurfaceOnly": "Swing で配れるのは、Swing の面(surfaces: swing、solo)のページ型だけです",
+  "@pluginsSwingSurfaceOnly": {
+    "description": "surfaces: swing、solo はマニフェストの書き方(訳さない)"
+  },
+  "pluginsRasqPageSurfaceOnly": "RASQ のページに置けるのは、プロフィールの面(surfaces: profile、solo)のページ型だけです",
+  "pluginsIdMismatch": "配布物の目次は {expected} なのに、wasm は {actual} を名乗っています",
+  "@pluginsIdMismatch": {
+    "placeholders": {
+      "expected": {
+        "type": "String"
+      },
+      "actual": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsRegistered": "{name} を登録しました({slots})",
+  "@pluginsRegistered": {
+    "description": "slots はスロットの id を「, 」でつないだもの",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "slots": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsRegisterFailed": "登録できませんでした: {error}",
+  "@pluginsRegisterFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsImageReceiveFailed": "{name}: 画像を受け取れませんでした({error})",
+  "@pluginsImageReceiveFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsSharedNoSession": "{name}: 共有セッションに入っていないため、みんなの値は変えられません",
+  "@pluginsSharedNoSession": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMuteAddTitle": "ミュート語に追加",
+  "pluginsMuteAddMessage": "{name} が「{word}」をミュート語に追加しようとしています。",
+  "@pluginsMuteAddMessage": {
+    "description": "name はプラグインの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMuteAddConfirm": "追加",
+  "pluginsMuteAdded": "「{word}」をミュート語に追加しました",
+  "@pluginsMuteAdded": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsEffectSendFailed": "{name}: 効果映像を送れませんでした({error})",
+  "@pluginsEffectSendFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsImageScaled": "{name}: 編集のため画像を小さくしました",
+  "@pluginsImageScaled": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsErrorReturned": "プラグインがエラーを返しました",
+  "pluginsGenreTone": "色調",
+  "@pluginsGenreTone": {
+    "description": "メディアの加工のジャンル(既定の 5 種)"
+  },
+  "pluginsGenreProcess": "加工",
+  "pluginsGenreTransform": "変形",
+  "pluginsGenreAdd": "追加",
+  "pluginsGenreDraw": "描画",
+  "pluginsTrustFull": "フル",
+  "@pluginsTrustFull": {
+    "description": "サイドロードしたプラグインの段(フル機能)"
+  },
+  "pluginsTrustBundled": "フル(同梱)",
+  "pluginsTrustRestricted": "制限",
+  "pluginsTrustSwing": "制限(Swing)",
+  "pluginsTrustHint": "自分の開発者鍵で署名した .rspkg / .rasqpkg はフル機能。rasq build が署名します",
+  "@pluginsTrustHint": {
+    "description": "開発者向けの説明。rasq build はコマンド(訳さない)"
+  },
+  "pluginsEditorCancel": "キャンセル",
+  "@pluginsEditorCancel": {
+    "description": "画像 / 動画の加工画面(pro_image_editor)の共通のボタン"
+  },
+  "pluginsEditorUndo": "ひとつ戻す",
+  "pluginsEditorRedo": "やり直す",
+  "pluginsEditorDone": "完了",
+  "pluginsEditorRemove": "削除",
+  "pluginsEditorBack": "戻る",
+  "pluginsEditorMore": "その他",
+  "@pluginsEditorMore": {
+    "description": "狭い画面で道具をまとめたボタンのツールチップ"
+  },
+  "pluginsEditorApplying": "変更を適用しています",
+  "pluginsEditorPreparing": "エディターを準備しています",
+  "pluginsEditorPleaseWait": "お待ちください…",
+  "pluginsEditorCloseWarningTitle": "加工をやめますか？",
+  "pluginsEditorCloseWarningMessage": "変更は保存されません。",
+  "pluginsEditorCloseWarningConfirm": "やめる",
+  "pluginsEditorCloseWarningCancel": "続ける",
+  "pluginsEditorLayerEdit": "編集",
+  "pluginsEditorLayerRotateScale": "回転と拡縮",
+  "pluginsEditorPaint": "ペイント",
+  "pluginsEditorZoom": "ズーム",
+  "pluginsEditorFreehand": "フリーハンド",
+  "pluginsEditorArrow": "矢印",
+  "pluginsEditorLine": "直線",
+  "pluginsEditorRectangle": "四角",
+  "pluginsEditorCircle": "丸",
+  "pluginsEditorDashLine": "点線",
+  "pluginsEditorBlur": "ぼかし",
+  "pluginsEditorPixelate": "モザイク",
+  "pluginsEditorLineWidth": "線の太さ",
+  "pluginsEditorEraser": "消しゴム",
+  "pluginsEditorFill": "塗り",
+  "pluginsEditorOpacity": "不透明度",
+  "pluginsEditorColor": "色",
+  "pluginsEditorTextHint": "テキストを入力",
+  "pluginsEditorText": "テキスト",
+  "pluginsEditorTextAlign": "揃え",
+  "pluginsEditorFontScale": "文字の大きさ",
+  "pluginsEditorTextBackground": "背景",
+  "pluginsEditorCropRotate": "クロップ / 回転",
+  "pluginsEditorRotate": "回転",
+  "pluginsEditorFlip": "反転",
+  "pluginsEditorTilt": "傾き",
+  "pluginsEditorTiltHorizontal": "水平",
+  "pluginsEditorTiltVertical": "垂直",
+  "pluginsEditorRatio": "比率",
+  "pluginsEditorReset": "リセット",
+  "pluginsEditorTune": "調整",
+  "pluginsEditorBrightness": "明るさ",
+  "pluginsEditorContrast": "コントラスト",
+  "pluginsEditorSaturation": "彩度",
+  "pluginsEditorExposure": "露出",
+  "pluginsEditorHue": "色相",
+  "pluginsEditorTemperature": "色温度",
+  "pluginsEditorFade": "フェード",
+  "pluginsEditorTint": "ティント",
+  "pluginsEditorFilter": "フィルター",
+  "pluginsEditorSticker": "ステッカー",
+  "pluginsEditorEmoji": "絵文字",
+  "pluginsEditorEmojiSearch": "検索",
+  "pluginsEditorEmojiRecent": "最近",
+  "pluginsEditorEmojiSmileys": "顔と人",
+  "pluginsEditorEmojiAnimals": "動物と自然",
+  "pluginsEditorEmojiFood": "食べ物",
+  "pluginsEditorEmojiActivities": "アクティビティ",
+  "pluginsEditorEmojiTravel": "旅行と場所",
+  "pluginsEditorEmojiObjects": "もの",
+  "pluginsEditorEmojiSymbols": "記号",
+  "pluginsEditorEmojiFlags": "旗",
+  "pluginsMediaCancel": "キャンセル",
+  "pluginsMediaClose": "閉じる",
+  "pluginsMediaApply": "適用",
+  "pluginsMediaNotSvg": "{name} が SVG を返さなかったので、使いませんでした",
+  "@pluginsMediaNotSvg": {
+    "description": "落書きの紙から SVG を渡したプラグインが SVG を返さなかった。name はプラグインの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaPaperDoneMissing": "いまは使えません(紙の「完了」が見つかりません)",
+  "@pluginsMediaPaperDoneMissing": {
+    "description": "落書きの紙(SVG の加工)でプラグインのボタンを押したが、今の絵を受け取れなかった"
+  },
+  "pluginsMediaBarEdit": "バーの編集",
+  "pluginsMediaAudioUnsupported": "この端末では音声を動画にできません(Android / iOS / macOS だけ)。音声のまま添付できます",
+  "pluginsMediaOpenAudioFailed": "音声を開けませんでした: {error}",
+  "@pluginsMediaOpenAudioFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaOpenVideoFailed": "動画を開けませんでした: {error}",
+  "@pluginsMediaOpenVideoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaReexportFailed": "動画を書き出し直せませんでした: {error}",
+  "@pluginsMediaReexportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaCropWithMovingObject": "クロップ / 回転と、動くオブジェクトは一緒に使えません。静止画で入れました",
+  "pluginsMediaExportFailed": "動画を書き出せませんでした: {error}",
+  "@pluginsMediaExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaOverlayFailed": "動くオブジェクトを重ねられなかったので、静止画で入れました: {error}",
+  "@pluginsMediaOverlayFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaFilterNotReceived": "{label}: フィルターを受け取れませんでした",
+  "@pluginsMediaFilterNotReceived": {
+    "description": "label はプラグインのボタンの名前",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaFilterDropped": "{label}: 描画が多すぎるので {count, plural, other{{count} 個}}を省きました",
+  "@pluginsMediaFilterDropped": {
+    "description": "label はプラグインのボタンの名前",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pluginsMediaFiltersFailed": "適用できなかったフィルター: {names}(この加工は入っていません)",
+  "@pluginsMediaFiltersFailed": {
+    "description": "names はフィルターの名前を「 / 」でつないだもの",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaCropWithMovingPost": "クロップ / 回転と、動く投稿は一緒に使えません。投稿は静止画で入れました",
+  "pluginsMediaVideoImageUnreadable": "動画にできなかったので、静止画で入れました(画像を読めませんでした)",
+  "pluginsMediaVideoPostFailed": "動画にできなかったので、投稿は静止画で入れました: {error}",
+  "@pluginsMediaVideoPostFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaToVideoTitle": "動画に変換しますか?",
+  "pluginsMediaToVideoMessage": "{note}\n「動画にする」と、置いた場所で動く動画として書き出します。「静止画で貼る」は今の画像だけを貼ります。",
+  "@pluginsMediaToVideoMessage": {
+    "description": "note は置くもの(動く投稿 / 動画)の説明の 1 行。「動画にする」「静止画で貼る」は pluginsMediaToVideoConfirm / pluginsMediaToVideoStill と同じ語",
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaToVideoConfirm": "動画にする",
+  "pluginsMediaToVideoStill": "静止画で貼る",
+  "pluginsMediaImageUnreadable": "画像を読めませんでした",
+  "pluginsMediaExportOnDone": "完了すると、動画として書き出します",
+  "pluginsMediaObjectNote": "ノート",
+  "@pluginsMediaObjectNote": {
+    "description": "加工画面に置いた投稿のオブジェクトの編集の見出し"
+  },
+  "pluginsMediaObjectVideo": "動画",
+  "pluginsMediaObjectImage": "画像",
+  "pluginsMediaAddImage": "画像を追加",
+  "pluginsMediaAddVideo": "動画を追加",
+  "pluginsMediaVideoLoadFailed": "動画を読み込めませんでした",
+  "pluginsMediaVideoLoadFailedDetail": "動画(.{ext}、{bytes} バイト)の最初のコマを取れませんでした: {error}",
+  "@pluginsMediaVideoLoadFailedDetail": {
+    "description": "開発者モードの詳しい説明。ext は拡張子、bytes はファイルの大きさ",
+    "placeholders": {
+      "ext": {
+        "type": "String"
+      },
+      "bytes": {
+        "type": "int"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaFirstFrameFailed": "動画の最初のコマを取れませんでした",
+  "pluginsMediaVideoAsObject": "動画をオブジェクトとして置きます。",
+  "pluginsMediaAddFailed": "メディアを追加できませんでした: {error}",
+  "@pluginsMediaAddFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaAudioConverting": "音声を動画に変換しています…",
+  "pluginsMediaPanelNotEditable": "{name} はここでは編集できません(プラグインのパネルで操作してください)",
+  "@pluginsMediaPanelNotEditable": {
+    "description": "name はプラグインの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaSnapDragUnset": "この上にドラッグ(解除)",
+  "pluginsMediaSnapDragSet": "この上にドラッグ(合わせる先にする)",
+  "pluginsMediaSnapPick": "合わせる先を選ぶ…",
+  "pluginsMediaSnapClearAll": "合わせる先をすべて解除",
+  "pluginsMediaSnapTitle": "合わせる先",
+  "pluginsMediaSnapEmpty": "名前の付いた枠がありません",
+  "pluginsMediaSnapSize": "{width} × {height}",
+  "@pluginsMediaSnapSize": {
+    "description": "合わせる先の枠の大きさ(画素)",
+    "placeholders": {
+      "width": {
+        "type": "int"
+      },
+      "height": {
+        "type": "int"
+      }
+    }
+  },
+  "pluginsMediaSnapSizeAngle": "{width} × {height}、{angle}°",
+  "@pluginsMediaSnapSizeAngle": {
+    "description": "合わせる先の枠の大きさ(画素)と傾き(度)",
+    "placeholders": {
+      "width": {
+        "type": "int"
+      },
+      "height": {
+        "type": "int"
+      },
+      "angle": {
+        "type": "int"
+      }
+    }
+  },
+  "pluginsMediaPanelNoResult": "適用できませんでした(プラグインが結果を返しませんでした)",
+  "pluginsMediaPanelNoEdits": "このプラグインに編集はありません",
+  "pluginsMediaObjectEditSemantics": "{title} の編集",
+  "@pluginsMediaObjectEditSemantics": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaObjectLoop": "繰り返し再生",
+  "pluginsMediaObjectLoopSubtitle": "オフ = 終わったら最後のコマで止まる",
+  "pluginsMediaObjectSpeed": "再生の速さ",
+  "pluginsMediaObjectVolume": "音",
+  "pluginsMediaObjectMuted": "消音",
+  "pluginsMediaObjectOpacity": "不透明度",
+  "pluginsMediaObjectRemove": "このオブジェクトを削除",
+  "pluginsMediaFilterAdjustSemantics": "{title} の調整",
+  "@pluginsMediaFilterAdjustSemantics": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsMediaFilterObjectHint": "絵の上で、ドラッグで移動、つまんで拡縮 / 回転できます。",
+  "pluginsMediaFilterRemove": "このフィルターを外す",
+  "pluginsMediaStickerEmpty": "ステッカーがありません。ストアで入れると、ここに並びます",
+  "pluginsMediaStickerEmptyDetail": "ステッカーがありません。ストアでアセットパック(カテゴリ「assets」)を入れると、ここに並びます。",
+  "@pluginsMediaStickerEmptyDetail": {
+    "description": "開発者モードの詳しい説明。assets はストアのカテゴリの id(訳さない)"
+  },
+  "pluginsMediaStickerGenerate": "プラグインで作る",
+  "pluginsPaintTitle": "落書き",
+  "@pluginsPaintTitle": {
+    "description": "SVG の落書きの画面の既定の見出し"
+  },
+  "pluginsPaintCancel": "キャンセル",
+  "pluginsPaintDone": "完了",
+  "pluginsPaintCanvasSemantics": "落書きの紙",
+  "pluginsPaintFillLeak": "線で閉じた形の中をタップしてください",
+  "pluginsPaintFillOnLine": "線の内側をタップしてください",
+  "pluginsPaintFillEmpty": "塗れる形がありませんでした",
+  "pluginsPaintToolPen": "ペン",
+  "pluginsPaintToolEraser": "消しゴム",
+  "pluginsPaintToolLasso": "投げ輪",
+  "pluginsPaintToolFill": "塗る",
+  "pluginsPaintUndo": "取り消し",
+  "pluginsPaintRedo": "やり直し",
+  "pluginsPaintClear": "全部消す",
+  "pluginsPaintStabilizer": "手ぶれ補正",
+  "pluginsPaintStabilizerOff": "切",
+  "@pluginsPaintStabilizerOff": {
+    "description": "手ぶれ補正のスライダーが 0 のときの短い表示(1 文字程度)"
+  },
+  "pluginsPaintEraserCut": "切る",
+  "pluginsPaintEraserWhole": "線ごと",
+  "pluginsPaintLassoHint": "囲んで選ぶ(線の半分以上が入ったもの)",
+  "pluginsPaintSelectionDelete": "削除",
+  "pluginsPaintSelectionDuplicate": "複製",
+  "pluginsPaintSelectionRecolor": "色を変える",
+  "pluginsPaintSelectionDeselect": "解除",
+  "pluginsPaintFillHint": "線で閉じた形の中をタップすると、線の下に塗ります",
+  "pluginsPaintWidthSemantics": "太さ {width}",
+  "@pluginsPaintWidthSemantics": {
+    "placeholders": {
+      "width": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsPaintColorSemantics": "色 {color}",
+  "@pluginsPaintColorSemantics": {
+    "description": "color は #rrggbb の色の値",
+    "placeholders": {
+      "color": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsPaintNibMili": "ミリペン",
+  "pluginsPaintNibKabura": "カプラペン",
+  "pluginsPaintNibBrush": "ブラシニブ",
   "profileEditTitle": "プロフィールの更新",
   "@profileEditTitle": {
     "description": "プロフィールの編集画面(RASQ アカウント / SNS)の見出し"

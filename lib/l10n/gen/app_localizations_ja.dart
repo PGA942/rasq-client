@@ -4861,6 +4861,669 @@ class AppLocalizationsJa extends AppLocalizations {
   String get onboardingTourRaiBubble => 'TL にリストを足したい';
 
   @override
+  String get pluginsCancel => 'キャンセル';
+
+  @override
+  String get pluginsClose => '閉じる';
+
+  @override
+  String get pluginsSwingNotPackage => 'Swing のプラグインは .rasqpkg か .wasm です';
+
+  @override
+  String get pluginsSwingNoRequires => 'Swing では、ほかのプラグインを土台にする子プラグインは配れません';
+
+  @override
+  String get pluginsSwingSingleOnly => 'Swing で配れるのは、プラグイン 1 つだけの入れ物です';
+
+  @override
+  String get pluginsPageNotPage => 'ページ型のプラグインではありません';
+
+  @override
+  String pluginsPageSwingRequires(String ids) {
+    return 'ほかのプラグイン($ids)を土台にしているため、Swing では配れません';
+  }
+
+  @override
+  String get pluginsPageSwingChild =>
+      'ほかのプラグインの入れ物に入っている子プラグインのため、Swing では配れません';
+
+  @override
+  String pluginsPageSwingSiblings(String names) {
+    return '子プラグイン($names)と一緒の入れ物のため、Swing では配れません';
+  }
+
+  @override
+  String pluginsArtifactMismatch(String pluginId) {
+    return '$pluginId: 取り直した配布物がインストール時と違うため読み込みません(ストアで入れ直してください)';
+  }
+
+  @override
+  String pluginsIsSnsPlugin(String id) {
+    return '$id は SNS プラグインです(スロットには登録できません)';
+  }
+
+  @override
+  String get pluginsManifestMissing => 'plugin.manifest がありません';
+
+  @override
+  String get pluginsManifestIdEmpty => 'plugin.manifest.id が空です';
+
+  @override
+  String get pluginsSwingSurfaceOnly =>
+      'Swing で配れるのは、Swing の面(surfaces: swing、solo)のページ型だけです';
+
+  @override
+  String get pluginsRasqPageSurfaceOnly =>
+      'RASQ のページに置けるのは、プロフィールの面(surfaces: profile、solo)のページ型だけです';
+
+  @override
+  String pluginsIdMismatch(String expected, String actual) {
+    return '配布物の目次は $expected なのに、wasm は $actual を名乗っています';
+  }
+
+  @override
+  String pluginsRegistered(String name, String slots) {
+    return '$name を登録しました($slots)';
+  }
+
+  @override
+  String pluginsRegisterFailed(String error) {
+    return '登録できませんでした: $error';
+  }
+
+  @override
+  String pluginsImageReceiveFailed(String name, String error) {
+    return '$name: 画像を受け取れませんでした($error)';
+  }
+
+  @override
+  String pluginsSharedNoSession(String name) {
+    return '$name: 共有セッションに入っていないため、みんなの値は変えられません';
+  }
+
+  @override
+  String get pluginsMuteAddTitle => 'ミュート語に追加';
+
+  @override
+  String pluginsMuteAddMessage(String name, String word) {
+    return '$name が「$word」をミュート語に追加しようとしています。';
+  }
+
+  @override
+  String get pluginsMuteAddConfirm => '追加';
+
+  @override
+  String pluginsMuteAdded(String word) {
+    return '「$word」をミュート語に追加しました';
+  }
+
+  @override
+  String pluginsEffectSendFailed(String name, String error) {
+    return '$name: 効果映像を送れませんでした($error)';
+  }
+
+  @override
+  String pluginsImageScaled(String name) {
+    return '$name: 編集のため画像を小さくしました';
+  }
+
+  @override
+  String get pluginsErrorReturned => 'プラグインがエラーを返しました';
+
+  @override
+  String get pluginsGenreTone => '色調';
+
+  @override
+  String get pluginsGenreProcess => '加工';
+
+  @override
+  String get pluginsGenreTransform => '変形';
+
+  @override
+  String get pluginsGenreAdd => '追加';
+
+  @override
+  String get pluginsGenreDraw => '描画';
+
+  @override
+  String get pluginsTrustFull => 'フル';
+
+  @override
+  String get pluginsTrustBundled => 'フル(同梱)';
+
+  @override
+  String get pluginsTrustRestricted => '制限';
+
+  @override
+  String get pluginsTrustSwing => '制限(Swing)';
+
+  @override
+  String get pluginsTrustHint =>
+      '自分の開発者鍵で署名した .rspkg / .rasqpkg はフル機能。rasq build が署名します';
+
+  @override
+  String get pluginsEditorCancel => 'キャンセル';
+
+  @override
+  String get pluginsEditorUndo => 'ひとつ戻す';
+
+  @override
+  String get pluginsEditorRedo => 'やり直す';
+
+  @override
+  String get pluginsEditorDone => '完了';
+
+  @override
+  String get pluginsEditorRemove => '削除';
+
+  @override
+  String get pluginsEditorBack => '戻る';
+
+  @override
+  String get pluginsEditorMore => 'その他';
+
+  @override
+  String get pluginsEditorApplying => '変更を適用しています';
+
+  @override
+  String get pluginsEditorPreparing => 'エディターを準備しています';
+
+  @override
+  String get pluginsEditorPleaseWait => 'お待ちください…';
+
+  @override
+  String get pluginsEditorCloseWarningTitle => '加工をやめますか？';
+
+  @override
+  String get pluginsEditorCloseWarningMessage => '変更は保存されません。';
+
+  @override
+  String get pluginsEditorCloseWarningConfirm => 'やめる';
+
+  @override
+  String get pluginsEditorCloseWarningCancel => '続ける';
+
+  @override
+  String get pluginsEditorLayerEdit => '編集';
+
+  @override
+  String get pluginsEditorLayerRotateScale => '回転と拡縮';
+
+  @override
+  String get pluginsEditorPaint => 'ペイント';
+
+  @override
+  String get pluginsEditorZoom => 'ズーム';
+
+  @override
+  String get pluginsEditorFreehand => 'フリーハンド';
+
+  @override
+  String get pluginsEditorArrow => '矢印';
+
+  @override
+  String get pluginsEditorLine => '直線';
+
+  @override
+  String get pluginsEditorRectangle => '四角';
+
+  @override
+  String get pluginsEditorCircle => '丸';
+
+  @override
+  String get pluginsEditorDashLine => '点線';
+
+  @override
+  String get pluginsEditorBlur => 'ぼかし';
+
+  @override
+  String get pluginsEditorPixelate => 'モザイク';
+
+  @override
+  String get pluginsEditorLineWidth => '線の太さ';
+
+  @override
+  String get pluginsEditorEraser => '消しゴム';
+
+  @override
+  String get pluginsEditorFill => '塗り';
+
+  @override
+  String get pluginsEditorOpacity => '不透明度';
+
+  @override
+  String get pluginsEditorColor => '色';
+
+  @override
+  String get pluginsEditorTextHint => 'テキストを入力';
+
+  @override
+  String get pluginsEditorText => 'テキスト';
+
+  @override
+  String get pluginsEditorTextAlign => '揃え';
+
+  @override
+  String get pluginsEditorFontScale => '文字の大きさ';
+
+  @override
+  String get pluginsEditorTextBackground => '背景';
+
+  @override
+  String get pluginsEditorCropRotate => 'クロップ / 回転';
+
+  @override
+  String get pluginsEditorRotate => '回転';
+
+  @override
+  String get pluginsEditorFlip => '反転';
+
+  @override
+  String get pluginsEditorTilt => '傾き';
+
+  @override
+  String get pluginsEditorTiltHorizontal => '水平';
+
+  @override
+  String get pluginsEditorTiltVertical => '垂直';
+
+  @override
+  String get pluginsEditorRatio => '比率';
+
+  @override
+  String get pluginsEditorReset => 'リセット';
+
+  @override
+  String get pluginsEditorTune => '調整';
+
+  @override
+  String get pluginsEditorBrightness => '明るさ';
+
+  @override
+  String get pluginsEditorContrast => 'コントラスト';
+
+  @override
+  String get pluginsEditorSaturation => '彩度';
+
+  @override
+  String get pluginsEditorExposure => '露出';
+
+  @override
+  String get pluginsEditorHue => '色相';
+
+  @override
+  String get pluginsEditorTemperature => '色温度';
+
+  @override
+  String get pluginsEditorFade => 'フェード';
+
+  @override
+  String get pluginsEditorTint => 'ティント';
+
+  @override
+  String get pluginsEditorFilter => 'フィルター';
+
+  @override
+  String get pluginsEditorSticker => 'ステッカー';
+
+  @override
+  String get pluginsEditorEmoji => '絵文字';
+
+  @override
+  String get pluginsEditorEmojiSearch => '検索';
+
+  @override
+  String get pluginsEditorEmojiRecent => '最近';
+
+  @override
+  String get pluginsEditorEmojiSmileys => '顔と人';
+
+  @override
+  String get pluginsEditorEmojiAnimals => '動物と自然';
+
+  @override
+  String get pluginsEditorEmojiFood => '食べ物';
+
+  @override
+  String get pluginsEditorEmojiActivities => 'アクティビティ';
+
+  @override
+  String get pluginsEditorEmojiTravel => '旅行と場所';
+
+  @override
+  String get pluginsEditorEmojiObjects => 'もの';
+
+  @override
+  String get pluginsEditorEmojiSymbols => '記号';
+
+  @override
+  String get pluginsEditorEmojiFlags => '旗';
+
+  @override
+  String get pluginsMediaCancel => 'キャンセル';
+
+  @override
+  String get pluginsMediaClose => '閉じる';
+
+  @override
+  String get pluginsMediaApply => '適用';
+
+  @override
+  String pluginsMediaNotSvg(String name) {
+    return '$name が SVG を返さなかったので、使いませんでした';
+  }
+
+  @override
+  String get pluginsMediaPaperDoneMissing => 'いまは使えません(紙の「完了」が見つかりません)';
+
+  @override
+  String get pluginsMediaBarEdit => 'バーの編集';
+
+  @override
+  String get pluginsMediaAudioUnsupported =>
+      'この端末では音声を動画にできません(Android / iOS / macOS だけ)。音声のまま添付できます';
+
+  @override
+  String pluginsMediaOpenAudioFailed(String error) {
+    return '音声を開けませんでした: $error';
+  }
+
+  @override
+  String pluginsMediaOpenVideoFailed(String error) {
+    return '動画を開けませんでした: $error';
+  }
+
+  @override
+  String pluginsMediaReexportFailed(String error) {
+    return '動画を書き出し直せませんでした: $error';
+  }
+
+  @override
+  String get pluginsMediaCropWithMovingObject =>
+      'クロップ / 回転と、動くオブジェクトは一緒に使えません。静止画で入れました';
+
+  @override
+  String pluginsMediaExportFailed(String error) {
+    return '動画を書き出せませんでした: $error';
+  }
+
+  @override
+  String pluginsMediaOverlayFailed(String error) {
+    return '動くオブジェクトを重ねられなかったので、静止画で入れました: $error';
+  }
+
+  @override
+  String pluginsMediaFilterNotReceived(String label) {
+    return '$label: フィルターを受け取れませんでした';
+  }
+
+  @override
+  String pluginsMediaFilterDropped(String label, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 個',
+    );
+    return '$label: 描画が多すぎるので $_temp0を省きました';
+  }
+
+  @override
+  String pluginsMediaFiltersFailed(String names) {
+    return '適用できなかったフィルター: $names(この加工は入っていません)';
+  }
+
+  @override
+  String get pluginsMediaCropWithMovingPost =>
+      'クロップ / 回転と、動く投稿は一緒に使えません。投稿は静止画で入れました';
+
+  @override
+  String get pluginsMediaVideoImageUnreadable =>
+      '動画にできなかったので、静止画で入れました(画像を読めませんでした)';
+
+  @override
+  String pluginsMediaVideoPostFailed(String error) {
+    return '動画にできなかったので、投稿は静止画で入れました: $error';
+  }
+
+  @override
+  String get pluginsMediaToVideoTitle => '動画に変換しますか?';
+
+  @override
+  String pluginsMediaToVideoMessage(String note) {
+    return '$note\n「動画にする」と、置いた場所で動く動画として書き出します。「静止画で貼る」は今の画像だけを貼ります。';
+  }
+
+  @override
+  String get pluginsMediaToVideoConfirm => '動画にする';
+
+  @override
+  String get pluginsMediaToVideoStill => '静止画で貼る';
+
+  @override
+  String get pluginsMediaImageUnreadable => '画像を読めませんでした';
+
+  @override
+  String get pluginsMediaExportOnDone => '完了すると、動画として書き出します';
+
+  @override
+  String get pluginsMediaObjectNote => 'ノート';
+
+  @override
+  String get pluginsMediaObjectVideo => '動画';
+
+  @override
+  String get pluginsMediaObjectImage => '画像';
+
+  @override
+  String get pluginsMediaAddImage => '画像を追加';
+
+  @override
+  String get pluginsMediaAddVideo => '動画を追加';
+
+  @override
+  String get pluginsMediaVideoLoadFailed => '動画を読み込めませんでした';
+
+  @override
+  String pluginsMediaVideoLoadFailedDetail(
+    String ext,
+    int bytes,
+    String error,
+  ) {
+    return '動画(.$ext、$bytes バイト)の最初のコマを取れませんでした: $error';
+  }
+
+  @override
+  String get pluginsMediaFirstFrameFailed => '動画の最初のコマを取れませんでした';
+
+  @override
+  String get pluginsMediaVideoAsObject => '動画をオブジェクトとして置きます。';
+
+  @override
+  String pluginsMediaAddFailed(String error) {
+    return 'メディアを追加できませんでした: $error';
+  }
+
+  @override
+  String get pluginsMediaAudioConverting => '音声を動画に変換しています…';
+
+  @override
+  String pluginsMediaPanelNotEditable(String name) {
+    return '$name はここでは編集できません(プラグインのパネルで操作してください)';
+  }
+
+  @override
+  String get pluginsMediaSnapDragUnset => 'この上にドラッグ(解除)';
+
+  @override
+  String get pluginsMediaSnapDragSet => 'この上にドラッグ(合わせる先にする)';
+
+  @override
+  String get pluginsMediaSnapPick => '合わせる先を選ぶ…';
+
+  @override
+  String get pluginsMediaSnapClearAll => '合わせる先をすべて解除';
+
+  @override
+  String get pluginsMediaSnapTitle => '合わせる先';
+
+  @override
+  String get pluginsMediaSnapEmpty => '名前の付いた枠がありません';
+
+  @override
+  String pluginsMediaSnapSize(int width, int height) {
+    return '$width × $height';
+  }
+
+  @override
+  String pluginsMediaSnapSizeAngle(int width, int height, int angle) {
+    return '$width × $height、$angle°';
+  }
+
+  @override
+  String get pluginsMediaPanelNoResult => '適用できませんでした(プラグインが結果を返しませんでした)';
+
+  @override
+  String get pluginsMediaPanelNoEdits => 'このプラグインに編集はありません';
+
+  @override
+  String pluginsMediaObjectEditSemantics(String title) {
+    return '$title の編集';
+  }
+
+  @override
+  String get pluginsMediaObjectLoop => '繰り返し再生';
+
+  @override
+  String get pluginsMediaObjectLoopSubtitle => 'オフ = 終わったら最後のコマで止まる';
+
+  @override
+  String get pluginsMediaObjectSpeed => '再生の速さ';
+
+  @override
+  String get pluginsMediaObjectVolume => '音';
+
+  @override
+  String get pluginsMediaObjectMuted => '消音';
+
+  @override
+  String get pluginsMediaObjectOpacity => '不透明度';
+
+  @override
+  String get pluginsMediaObjectRemove => 'このオブジェクトを削除';
+
+  @override
+  String pluginsMediaFilterAdjustSemantics(String title) {
+    return '$title の調整';
+  }
+
+  @override
+  String get pluginsMediaFilterObjectHint => '絵の上で、ドラッグで移動、つまんで拡縮 / 回転できます。';
+
+  @override
+  String get pluginsMediaFilterRemove => 'このフィルターを外す';
+
+  @override
+  String get pluginsMediaStickerEmpty => 'ステッカーがありません。ストアで入れると、ここに並びます';
+
+  @override
+  String get pluginsMediaStickerEmptyDetail =>
+      'ステッカーがありません。ストアでアセットパック(カテゴリ「assets」)を入れると、ここに並びます。';
+
+  @override
+  String get pluginsMediaStickerGenerate => 'プラグインで作る';
+
+  @override
+  String get pluginsPaintTitle => '落書き';
+
+  @override
+  String get pluginsPaintCancel => 'キャンセル';
+
+  @override
+  String get pluginsPaintDone => '完了';
+
+  @override
+  String get pluginsPaintCanvasSemantics => '落書きの紙';
+
+  @override
+  String get pluginsPaintFillLeak => '線で閉じた形の中をタップしてください';
+
+  @override
+  String get pluginsPaintFillOnLine => '線の内側をタップしてください';
+
+  @override
+  String get pluginsPaintFillEmpty => '塗れる形がありませんでした';
+
+  @override
+  String get pluginsPaintToolPen => 'ペン';
+
+  @override
+  String get pluginsPaintToolEraser => '消しゴム';
+
+  @override
+  String get pluginsPaintToolLasso => '投げ輪';
+
+  @override
+  String get pluginsPaintToolFill => '塗る';
+
+  @override
+  String get pluginsPaintUndo => '取り消し';
+
+  @override
+  String get pluginsPaintRedo => 'やり直し';
+
+  @override
+  String get pluginsPaintClear => '全部消す';
+
+  @override
+  String get pluginsPaintStabilizer => '手ぶれ補正';
+
+  @override
+  String get pluginsPaintStabilizerOff => '切';
+
+  @override
+  String get pluginsPaintEraserCut => '切る';
+
+  @override
+  String get pluginsPaintEraserWhole => '線ごと';
+
+  @override
+  String get pluginsPaintLassoHint => '囲んで選ぶ(線の半分以上が入ったもの)';
+
+  @override
+  String get pluginsPaintSelectionDelete => '削除';
+
+  @override
+  String get pluginsPaintSelectionDuplicate => '複製';
+
+  @override
+  String get pluginsPaintSelectionRecolor => '色を変える';
+
+  @override
+  String get pluginsPaintSelectionDeselect => '解除';
+
+  @override
+  String get pluginsPaintFillHint => '線で閉じた形の中をタップすると、線の下に塗ります';
+
+  @override
+  String pluginsPaintWidthSemantics(String width) {
+    return '太さ $width';
+  }
+
+  @override
+  String pluginsPaintColorSemantics(String color) {
+    return '色 $color';
+  }
+
+  @override
+  String get pluginsPaintNibMili => 'ミリペン';
+
+  @override
+  String get pluginsPaintNibKabura => 'カプラペン';
+
+  @override
+  String get pluginsPaintNibBrush => 'ブラシニブ';
+
+  @override
   String get profileEditTitle => 'プロフィールの更新';
 
   @override

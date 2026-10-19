@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show immutable;
 import 'package:flutter/painting.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
+import '../../../l10n/l10n.dart';
 import 'geometry.dart';
 import 'nib.dart';
 import 'spline.dart';
@@ -19,16 +20,20 @@ import 'spline.dart';
 /// ペン先。
 enum PaintNib {
   /// ミリペン: 太さが一定、端と角は丸い(`stroke` の曲線)。
-  mili('ミリペン'),
+  mili,
 
   /// カプラペン(G ペン): 筆圧(無ければ速さ、速いほど細い)で太さが変わり、両端が細る(入り・抜き)。輪郭を塗る。
-  kabura('カプラペン'),
+  kabura,
 
   /// ブラシニブ: 太く、太さの変わり方と入り・抜きが強く、進む向きで少し太さが変わる(筆の角度)。輪郭を塗る。
-  brush('ブラシニブ');
+  brush;
 
-  const PaintNib(this.label);
-  final String label;
+  /// 画面に出す名前(表示の言語)。
+  String get label => switch (this) {
+        PaintNib.mili => appL10n.pluginsPaintNibMili,
+        PaintNib.kabura => appL10n.pluginsPaintNibKabura,
+        PaintNib.brush => appL10n.pluginsPaintNibBrush,
+      };
 }
 
 sealed class PaintItem {

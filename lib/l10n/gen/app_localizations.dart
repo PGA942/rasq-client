@@ -8078,6 +8078,1164 @@ abstract class AppLocalizations {
   /// **'TL にリストを足したい'**
   String get onboardingTourRaiBubble;
 
+  /// No description provided for @pluginsCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get pluginsCancel;
+
+  /// No description provided for @pluginsClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get pluginsClose;
+
+  /// No description provided for @pluginsSwingNotPackage.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing のプラグインは .rasqpkg か .wasm です'**
+  String get pluginsSwingNotPackage;
+
+  /// No description provided for @pluginsSwingNoRequires.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing では、ほかのプラグインを土台にする子プラグインは配れません'**
+  String get pluginsSwingNoRequires;
+
+  /// No description provided for @pluginsSwingSingleOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で配れるのは、プラグイン 1 つだけの入れ物です'**
+  String get pluginsSwingSingleOnly;
+
+  /// No description provided for @pluginsPageNotPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページ型のプラグインではありません'**
+  String get pluginsPageNotPage;
+
+  /// ids は土台のプラグインの id を「 / 」でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかのプラグイン({ids})を土台にしているため、Swing では配れません'**
+  String pluginsPageSwingRequires(String ids);
+
+  /// No description provided for @pluginsPageSwingChild.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかのプラグインの入れ物に入っている子プラグインのため、Swing では配れません'**
+  String get pluginsPageSwingChild;
+
+  /// names はプラグインの名前を「 / 」でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'子プラグイン({names})と一緒の入れ物のため、Swing では配れません'**
+  String pluginsPageSwingSiblings(String names);
+
+  /// No description provided for @pluginsArtifactMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'{pluginId}: 取り直した配布物がインストール時と違うため読み込みません(ストアで入れ直してください)'**
+  String pluginsArtifactMismatch(String pluginId);
+
+  /// No description provided for @pluginsIsSnsPlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'{id} は SNS プラグインです(スロットには登録できません)'**
+  String pluginsIsSnsPlugin(String id);
+
+  /// plugin.manifest はプラグインの関数の名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'plugin.manifest がありません'**
+  String get pluginsManifestMissing;
+
+  /// No description provided for @pluginsManifestIdEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'plugin.manifest.id が空です'**
+  String get pluginsManifestIdEmpty;
+
+  /// surfaces: swing、solo はマニフェストの書き方(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で配れるのは、Swing の面(surfaces: swing、solo)のページ型だけです'**
+  String get pluginsSwingSurfaceOnly;
+
+  /// No description provided for @pluginsRasqPageSurfaceOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のページに置けるのは、プロフィールの面(surfaces: profile、solo)のページ型だけです'**
+  String get pluginsRasqPageSurfaceOnly;
+
+  /// No description provided for @pluginsIdMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物の目次は {expected} なのに、wasm は {actual} を名乗っています'**
+  String pluginsIdMismatch(String expected, String actual);
+
+  /// slots はスロットの id を「, 」でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を登録しました({slots})'**
+  String pluginsRegistered(String name, String slots);
+
+  /// No description provided for @pluginsRegisterFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録できませんでした: {error}'**
+  String pluginsRegisterFailed(String error);
+
+  /// No description provided for @pluginsImageReceiveFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}: 画像を受け取れませんでした({error})'**
+  String pluginsImageReceiveFailed(String name, String error);
+
+  /// No description provided for @pluginsSharedNoSession.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}: 共有セッションに入っていないため、みんなの値は変えられません'**
+  String pluginsSharedNoSession(String name);
+
+  /// No description provided for @pluginsMuteAddTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュート語に追加'**
+  String get pluginsMuteAddTitle;
+
+  /// name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} が「{word}」をミュート語に追加しようとしています。'**
+  String pluginsMuteAddMessage(String name, String word);
+
+  /// No description provided for @pluginsMuteAddConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加'**
+  String get pluginsMuteAddConfirm;
+
+  /// No description provided for @pluginsMuteAdded.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{word}」をミュート語に追加しました'**
+  String pluginsMuteAdded(String word);
+
+  /// No description provided for @pluginsEffectSendFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}: 効果映像を送れませんでした({error})'**
+  String pluginsEffectSendFailed(String name, String error);
+
+  /// No description provided for @pluginsImageScaled.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}: 編集のため画像を小さくしました'**
+  String pluginsImageScaled(String name);
+
+  /// No description provided for @pluginsErrorReturned.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインがエラーを返しました'**
+  String get pluginsErrorReturned;
+
+  /// メディアの加工のジャンル(既定の 5 種)
+  ///
+  /// In ja, this message translates to:
+  /// **'色調'**
+  String get pluginsGenreTone;
+
+  /// No description provided for @pluginsGenreProcess.
+  ///
+  /// In ja, this message translates to:
+  /// **'加工'**
+  String get pluginsGenreProcess;
+
+  /// No description provided for @pluginsGenreTransform.
+  ///
+  /// In ja, this message translates to:
+  /// **'変形'**
+  String get pluginsGenreTransform;
+
+  /// No description provided for @pluginsGenreAdd.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加'**
+  String get pluginsGenreAdd;
+
+  /// No description provided for @pluginsGenreDraw.
+  ///
+  /// In ja, this message translates to:
+  /// **'描画'**
+  String get pluginsGenreDraw;
+
+  /// サイドロードしたプラグインの段(フル機能)
+  ///
+  /// In ja, this message translates to:
+  /// **'フル'**
+  String get pluginsTrustFull;
+
+  /// No description provided for @pluginsTrustBundled.
+  ///
+  /// In ja, this message translates to:
+  /// **'フル(同梱)'**
+  String get pluginsTrustBundled;
+
+  /// No description provided for @pluginsTrustRestricted.
+  ///
+  /// In ja, this message translates to:
+  /// **'制限'**
+  String get pluginsTrustRestricted;
+
+  /// No description provided for @pluginsTrustSwing.
+  ///
+  /// In ja, this message translates to:
+  /// **'制限(Swing)'**
+  String get pluginsTrustSwing;
+
+  /// 開発者向けの説明。rasq build はコマンド(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の開発者鍵で署名した .rspkg / .rasqpkg はフル機能。rasq build が署名します'**
+  String get pluginsTrustHint;
+
+  /// 画像 / 動画の加工画面(pro_image_editor)の共通のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get pluginsEditorCancel;
+
+  /// No description provided for @pluginsEditorUndo.
+  ///
+  /// In ja, this message translates to:
+  /// **'ひとつ戻す'**
+  String get pluginsEditorUndo;
+
+  /// No description provided for @pluginsEditorRedo.
+  ///
+  /// In ja, this message translates to:
+  /// **'やり直す'**
+  String get pluginsEditorRedo;
+
+  /// No description provided for @pluginsEditorDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'完了'**
+  String get pluginsEditorDone;
+
+  /// No description provided for @pluginsEditorRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get pluginsEditorRemove;
+
+  /// No description provided for @pluginsEditorBack.
+  ///
+  /// In ja, this message translates to:
+  /// **'戻る'**
+  String get pluginsEditorBack;
+
+  /// 狭い画面で道具をまとめたボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get pluginsEditorMore;
+
+  /// No description provided for @pluginsEditorApplying.
+  ///
+  /// In ja, this message translates to:
+  /// **'変更を適用しています'**
+  String get pluginsEditorApplying;
+
+  /// No description provided for @pluginsEditorPreparing.
+  ///
+  /// In ja, this message translates to:
+  /// **'エディターを準備しています'**
+  String get pluginsEditorPreparing;
+
+  /// No description provided for @pluginsEditorPleaseWait.
+  ///
+  /// In ja, this message translates to:
+  /// **'お待ちください…'**
+  String get pluginsEditorPleaseWait;
+
+  /// No description provided for @pluginsEditorCloseWarningTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'加工をやめますか？'**
+  String get pluginsEditorCloseWarningTitle;
+
+  /// No description provided for @pluginsEditorCloseWarningMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'変更は保存されません。'**
+  String get pluginsEditorCloseWarningMessage;
+
+  /// No description provided for @pluginsEditorCloseWarningConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'やめる'**
+  String get pluginsEditorCloseWarningConfirm;
+
+  /// No description provided for @pluginsEditorCloseWarningCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'続ける'**
+  String get pluginsEditorCloseWarningCancel;
+
+  /// No description provided for @pluginsEditorLayerEdit.
+  ///
+  /// In ja, this message translates to:
+  /// **'編集'**
+  String get pluginsEditorLayerEdit;
+
+  /// No description provided for @pluginsEditorLayerRotateScale.
+  ///
+  /// In ja, this message translates to:
+  /// **'回転と拡縮'**
+  String get pluginsEditorLayerRotateScale;
+
+  /// No description provided for @pluginsEditorPaint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ペイント'**
+  String get pluginsEditorPaint;
+
+  /// No description provided for @pluginsEditorZoom.
+  ///
+  /// In ja, this message translates to:
+  /// **'ズーム'**
+  String get pluginsEditorZoom;
+
+  /// No description provided for @pluginsEditorFreehand.
+  ///
+  /// In ja, this message translates to:
+  /// **'フリーハンド'**
+  String get pluginsEditorFreehand;
+
+  /// No description provided for @pluginsEditorArrow.
+  ///
+  /// In ja, this message translates to:
+  /// **'矢印'**
+  String get pluginsEditorArrow;
+
+  /// No description provided for @pluginsEditorLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'直線'**
+  String get pluginsEditorLine;
+
+  /// No description provided for @pluginsEditorRectangle.
+  ///
+  /// In ja, this message translates to:
+  /// **'四角'**
+  String get pluginsEditorRectangle;
+
+  /// No description provided for @pluginsEditorCircle.
+  ///
+  /// In ja, this message translates to:
+  /// **'丸'**
+  String get pluginsEditorCircle;
+
+  /// No description provided for @pluginsEditorDashLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'点線'**
+  String get pluginsEditorDashLine;
+
+  /// No description provided for @pluginsEditorBlur.
+  ///
+  /// In ja, this message translates to:
+  /// **'ぼかし'**
+  String get pluginsEditorBlur;
+
+  /// No description provided for @pluginsEditorPixelate.
+  ///
+  /// In ja, this message translates to:
+  /// **'モザイク'**
+  String get pluginsEditorPixelate;
+
+  /// No description provided for @pluginsEditorLineWidth.
+  ///
+  /// In ja, this message translates to:
+  /// **'線の太さ'**
+  String get pluginsEditorLineWidth;
+
+  /// No description provided for @pluginsEditorEraser.
+  ///
+  /// In ja, this message translates to:
+  /// **'消しゴム'**
+  String get pluginsEditorEraser;
+
+  /// No description provided for @pluginsEditorFill.
+  ///
+  /// In ja, this message translates to:
+  /// **'塗り'**
+  String get pluginsEditorFill;
+
+  /// No description provided for @pluginsEditorOpacity.
+  ///
+  /// In ja, this message translates to:
+  /// **'不透明度'**
+  String get pluginsEditorOpacity;
+
+  /// No description provided for @pluginsEditorColor.
+  ///
+  /// In ja, this message translates to:
+  /// **'色'**
+  String get pluginsEditorColor;
+
+  /// No description provided for @pluginsEditorTextHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'テキストを入力'**
+  String get pluginsEditorTextHint;
+
+  /// No description provided for @pluginsEditorText.
+  ///
+  /// In ja, this message translates to:
+  /// **'テキスト'**
+  String get pluginsEditorText;
+
+  /// No description provided for @pluginsEditorTextAlign.
+  ///
+  /// In ja, this message translates to:
+  /// **'揃え'**
+  String get pluginsEditorTextAlign;
+
+  /// No description provided for @pluginsEditorFontScale.
+  ///
+  /// In ja, this message translates to:
+  /// **'文字の大きさ'**
+  String get pluginsEditorFontScale;
+
+  /// No description provided for @pluginsEditorTextBackground.
+  ///
+  /// In ja, this message translates to:
+  /// **'背景'**
+  String get pluginsEditorTextBackground;
+
+  /// No description provided for @pluginsEditorCropRotate.
+  ///
+  /// In ja, this message translates to:
+  /// **'クロップ / 回転'**
+  String get pluginsEditorCropRotate;
+
+  /// No description provided for @pluginsEditorRotate.
+  ///
+  /// In ja, this message translates to:
+  /// **'回転'**
+  String get pluginsEditorRotate;
+
+  /// No description provided for @pluginsEditorFlip.
+  ///
+  /// In ja, this message translates to:
+  /// **'反転'**
+  String get pluginsEditorFlip;
+
+  /// No description provided for @pluginsEditorTilt.
+  ///
+  /// In ja, this message translates to:
+  /// **'傾き'**
+  String get pluginsEditorTilt;
+
+  /// No description provided for @pluginsEditorTiltHorizontal.
+  ///
+  /// In ja, this message translates to:
+  /// **'水平'**
+  String get pluginsEditorTiltHorizontal;
+
+  /// No description provided for @pluginsEditorTiltVertical.
+  ///
+  /// In ja, this message translates to:
+  /// **'垂直'**
+  String get pluginsEditorTiltVertical;
+
+  /// No description provided for @pluginsEditorRatio.
+  ///
+  /// In ja, this message translates to:
+  /// **'比率'**
+  String get pluginsEditorRatio;
+
+  /// No description provided for @pluginsEditorReset.
+  ///
+  /// In ja, this message translates to:
+  /// **'リセット'**
+  String get pluginsEditorReset;
+
+  /// No description provided for @pluginsEditorTune.
+  ///
+  /// In ja, this message translates to:
+  /// **'調整'**
+  String get pluginsEditorTune;
+
+  /// No description provided for @pluginsEditorBrightness.
+  ///
+  /// In ja, this message translates to:
+  /// **'明るさ'**
+  String get pluginsEditorBrightness;
+
+  /// No description provided for @pluginsEditorContrast.
+  ///
+  /// In ja, this message translates to:
+  /// **'コントラスト'**
+  String get pluginsEditorContrast;
+
+  /// No description provided for @pluginsEditorSaturation.
+  ///
+  /// In ja, this message translates to:
+  /// **'彩度'**
+  String get pluginsEditorSaturation;
+
+  /// No description provided for @pluginsEditorExposure.
+  ///
+  /// In ja, this message translates to:
+  /// **'露出'**
+  String get pluginsEditorExposure;
+
+  /// No description provided for @pluginsEditorHue.
+  ///
+  /// In ja, this message translates to:
+  /// **'色相'**
+  String get pluginsEditorHue;
+
+  /// No description provided for @pluginsEditorTemperature.
+  ///
+  /// In ja, this message translates to:
+  /// **'色温度'**
+  String get pluginsEditorTemperature;
+
+  /// No description provided for @pluginsEditorFade.
+  ///
+  /// In ja, this message translates to:
+  /// **'フェード'**
+  String get pluginsEditorFade;
+
+  /// No description provided for @pluginsEditorTint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ティント'**
+  String get pluginsEditorTint;
+
+  /// No description provided for @pluginsEditorFilter.
+  ///
+  /// In ja, this message translates to:
+  /// **'フィルター'**
+  String get pluginsEditorFilter;
+
+  /// No description provided for @pluginsEditorSticker.
+  ///
+  /// In ja, this message translates to:
+  /// **'ステッカー'**
+  String get pluginsEditorSticker;
+
+  /// No description provided for @pluginsEditorEmoji.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字'**
+  String get pluginsEditorEmoji;
+
+  /// No description provided for @pluginsEditorEmojiSearch.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索'**
+  String get pluginsEditorEmojiSearch;
+
+  /// No description provided for @pluginsEditorEmojiRecent.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近'**
+  String get pluginsEditorEmojiRecent;
+
+  /// No description provided for @pluginsEditorEmojiSmileys.
+  ///
+  /// In ja, this message translates to:
+  /// **'顔と人'**
+  String get pluginsEditorEmojiSmileys;
+
+  /// No description provided for @pluginsEditorEmojiAnimals.
+  ///
+  /// In ja, this message translates to:
+  /// **'動物と自然'**
+  String get pluginsEditorEmojiAnimals;
+
+  /// No description provided for @pluginsEditorEmojiFood.
+  ///
+  /// In ja, this message translates to:
+  /// **'食べ物'**
+  String get pluginsEditorEmojiFood;
+
+  /// No description provided for @pluginsEditorEmojiActivities.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクティビティ'**
+  String get pluginsEditorEmojiActivities;
+
+  /// No description provided for @pluginsEditorEmojiTravel.
+  ///
+  /// In ja, this message translates to:
+  /// **'旅行と場所'**
+  String get pluginsEditorEmojiTravel;
+
+  /// No description provided for @pluginsEditorEmojiObjects.
+  ///
+  /// In ja, this message translates to:
+  /// **'もの'**
+  String get pluginsEditorEmojiObjects;
+
+  /// No description provided for @pluginsEditorEmojiSymbols.
+  ///
+  /// In ja, this message translates to:
+  /// **'記号'**
+  String get pluginsEditorEmojiSymbols;
+
+  /// No description provided for @pluginsEditorEmojiFlags.
+  ///
+  /// In ja, this message translates to:
+  /// **'旗'**
+  String get pluginsEditorEmojiFlags;
+
+  /// No description provided for @pluginsMediaCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get pluginsMediaCancel;
+
+  /// No description provided for @pluginsMediaClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get pluginsMediaClose;
+
+  /// No description provided for @pluginsMediaApply.
+  ///
+  /// In ja, this message translates to:
+  /// **'適用'**
+  String get pluginsMediaApply;
+
+  /// 落書きの紙から SVG を渡したプラグインが SVG を返さなかった。name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} が SVG を返さなかったので、使いませんでした'**
+  String pluginsMediaNotSvg(String name);
+
+  /// 落書きの紙(SVG の加工)でプラグインのボタンを押したが、今の絵を受け取れなかった
+  ///
+  /// In ja, this message translates to:
+  /// **'いまは使えません(紙の「完了」が見つかりません)'**
+  String get pluginsMediaPaperDoneMissing;
+
+  /// No description provided for @pluginsMediaBarEdit.
+  ///
+  /// In ja, this message translates to:
+  /// **'バーの編集'**
+  String get pluginsMediaBarEdit;
+
+  /// No description provided for @pluginsMediaAudioUnsupported.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では音声を動画にできません(Android / iOS / macOS だけ)。音声のまま添付できます'**
+  String get pluginsMediaAudioUnsupported;
+
+  /// No description provided for @pluginsMediaOpenAudioFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'音声を開けませんでした: {error}'**
+  String pluginsMediaOpenAudioFailed(String error);
+
+  /// No description provided for @pluginsMediaOpenVideoFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を開けませんでした: {error}'**
+  String pluginsMediaOpenVideoFailed(String error);
+
+  /// No description provided for @pluginsMediaReexportFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を書き出し直せませんでした: {error}'**
+  String pluginsMediaReexportFailed(String error);
+
+  /// No description provided for @pluginsMediaCropWithMovingObject.
+  ///
+  /// In ja, this message translates to:
+  /// **'クロップ / 回転と、動くオブジェクトは一緒に使えません。静止画で入れました'**
+  String get pluginsMediaCropWithMovingObject;
+
+  /// No description provided for @pluginsMediaExportFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を書き出せませんでした: {error}'**
+  String pluginsMediaExportFailed(String error);
+
+  /// No description provided for @pluginsMediaOverlayFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動くオブジェクトを重ねられなかったので、静止画で入れました: {error}'**
+  String pluginsMediaOverlayFailed(String error);
+
+  /// label はプラグインのボタンの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{label}: フィルターを受け取れませんでした'**
+  String pluginsMediaFilterNotReceived(String label);
+
+  /// label はプラグインのボタンの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{label}: 描画が多すぎるので {count, plural, other{{count} 個}}を省きました'**
+  String pluginsMediaFilterDropped(String label, int count);
+
+  /// names はフィルターの名前を「 / 」でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'適用できなかったフィルター: {names}(この加工は入っていません)'**
+  String pluginsMediaFiltersFailed(String names);
+
+  /// No description provided for @pluginsMediaCropWithMovingPost.
+  ///
+  /// In ja, this message translates to:
+  /// **'クロップ / 回転と、動く投稿は一緒に使えません。投稿は静止画で入れました'**
+  String get pluginsMediaCropWithMovingPost;
+
+  /// No description provided for @pluginsMediaVideoImageUnreadable.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画にできなかったので、静止画で入れました(画像を読めませんでした)'**
+  String get pluginsMediaVideoImageUnreadable;
+
+  /// No description provided for @pluginsMediaVideoPostFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画にできなかったので、投稿は静止画で入れました: {error}'**
+  String pluginsMediaVideoPostFailed(String error);
+
+  /// No description provided for @pluginsMediaToVideoTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画に変換しますか?'**
+  String get pluginsMediaToVideoTitle;
+
+  /// note は置くもの(動く投稿 / 動画)の説明の 1 行。「動画にする」「静止画で貼る」は pluginsMediaToVideoConfirm / pluginsMediaToVideoStill と同じ語
+  ///
+  /// In ja, this message translates to:
+  /// **'{note}\n「動画にする」と、置いた場所で動く動画として書き出します。「静止画で貼る」は今の画像だけを貼ります。'**
+  String pluginsMediaToVideoMessage(String note);
+
+  /// No description provided for @pluginsMediaToVideoConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画にする'**
+  String get pluginsMediaToVideoConfirm;
+
+  /// No description provided for @pluginsMediaToVideoStill.
+  ///
+  /// In ja, this message translates to:
+  /// **'静止画で貼る'**
+  String get pluginsMediaToVideoStill;
+
+  /// No description provided for @pluginsMediaImageUnreadable.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を読めませんでした'**
+  String get pluginsMediaImageUnreadable;
+
+  /// No description provided for @pluginsMediaExportOnDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'完了すると、動画として書き出します'**
+  String get pluginsMediaExportOnDone;
+
+  /// 加工画面に置いた投稿のオブジェクトの編集の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ノート'**
+  String get pluginsMediaObjectNote;
+
+  /// No description provided for @pluginsMediaObjectVideo.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画'**
+  String get pluginsMediaObjectVideo;
+
+  /// No description provided for @pluginsMediaObjectImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像'**
+  String get pluginsMediaObjectImage;
+
+  /// No description provided for @pluginsMediaAddImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を追加'**
+  String get pluginsMediaAddImage;
+
+  /// No description provided for @pluginsMediaAddVideo.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を追加'**
+  String get pluginsMediaAddVideo;
+
+  /// No description provided for @pluginsMediaVideoLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を読み込めませんでした'**
+  String get pluginsMediaVideoLoadFailed;
+
+  /// 開発者モードの詳しい説明。ext は拡張子、bytes はファイルの大きさ
+  ///
+  /// In ja, this message translates to:
+  /// **'動画(.{ext}、{bytes} バイト)の最初のコマを取れませんでした: {error}'**
+  String pluginsMediaVideoLoadFailedDetail(String ext, int bytes, String error);
+
+  /// No description provided for @pluginsMediaFirstFrameFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画の最初のコマを取れませんでした'**
+  String get pluginsMediaFirstFrameFailed;
+
+  /// No description provided for @pluginsMediaVideoAsObject.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画をオブジェクトとして置きます。'**
+  String get pluginsMediaVideoAsObject;
+
+  /// No description provided for @pluginsMediaAddFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'メディアを追加できませんでした: {error}'**
+  String pluginsMediaAddFailed(String error);
+
+  /// No description provided for @pluginsMediaAudioConverting.
+  ///
+  /// In ja, this message translates to:
+  /// **'音声を動画に変換しています…'**
+  String get pluginsMediaAudioConverting;
+
+  /// name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} はここでは編集できません(プラグインのパネルで操作してください)'**
+  String pluginsMediaPanelNotEditable(String name);
+
+  /// No description provided for @pluginsMediaSnapDragUnset.
+  ///
+  /// In ja, this message translates to:
+  /// **'この上にドラッグ(解除)'**
+  String get pluginsMediaSnapDragUnset;
+
+  /// No description provided for @pluginsMediaSnapDragSet.
+  ///
+  /// In ja, this message translates to:
+  /// **'この上にドラッグ(合わせる先にする)'**
+  String get pluginsMediaSnapDragSet;
+
+  /// No description provided for @pluginsMediaSnapPick.
+  ///
+  /// In ja, this message translates to:
+  /// **'合わせる先を選ぶ…'**
+  String get pluginsMediaSnapPick;
+
+  /// No description provided for @pluginsMediaSnapClearAll.
+  ///
+  /// In ja, this message translates to:
+  /// **'合わせる先をすべて解除'**
+  String get pluginsMediaSnapClearAll;
+
+  /// No description provided for @pluginsMediaSnapTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'合わせる先'**
+  String get pluginsMediaSnapTitle;
+
+  /// No description provided for @pluginsMediaSnapEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'名前の付いた枠がありません'**
+  String get pluginsMediaSnapEmpty;
+
+  /// 合わせる先の枠の大きさ(画素)
+  ///
+  /// In ja, this message translates to:
+  /// **'{width} × {height}'**
+  String pluginsMediaSnapSize(int width, int height);
+
+  /// 合わせる先の枠の大きさ(画素)と傾き(度)
+  ///
+  /// In ja, this message translates to:
+  /// **'{width} × {height}、{angle}°'**
+  String pluginsMediaSnapSizeAngle(int width, int height, int angle);
+
+  /// No description provided for @pluginsMediaPanelNoResult.
+  ///
+  /// In ja, this message translates to:
+  /// **'適用できませんでした(プラグインが結果を返しませんでした)'**
+  String get pluginsMediaPanelNoResult;
+
+  /// No description provided for @pluginsMediaPanelNoEdits.
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインに編集はありません'**
+  String get pluginsMediaPanelNoEdits;
+
+  /// No description provided for @pluginsMediaObjectEditSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'{title} の編集'**
+  String pluginsMediaObjectEditSemantics(String title);
+
+  /// No description provided for @pluginsMediaObjectLoop.
+  ///
+  /// In ja, this message translates to:
+  /// **'繰り返し再生'**
+  String get pluginsMediaObjectLoop;
+
+  /// No description provided for @pluginsMediaObjectLoopSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフ = 終わったら最後のコマで止まる'**
+  String get pluginsMediaObjectLoopSubtitle;
+
+  /// No description provided for @pluginsMediaObjectSpeed.
+  ///
+  /// In ja, this message translates to:
+  /// **'再生の速さ'**
+  String get pluginsMediaObjectSpeed;
+
+  /// No description provided for @pluginsMediaObjectVolume.
+  ///
+  /// In ja, this message translates to:
+  /// **'音'**
+  String get pluginsMediaObjectVolume;
+
+  /// No description provided for @pluginsMediaObjectMuted.
+  ///
+  /// In ja, this message translates to:
+  /// **'消音'**
+  String get pluginsMediaObjectMuted;
+
+  /// No description provided for @pluginsMediaObjectOpacity.
+  ///
+  /// In ja, this message translates to:
+  /// **'不透明度'**
+  String get pluginsMediaObjectOpacity;
+
+  /// No description provided for @pluginsMediaObjectRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'このオブジェクトを削除'**
+  String get pluginsMediaObjectRemove;
+
+  /// No description provided for @pluginsMediaFilterAdjustSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'{title} の調整'**
+  String pluginsMediaFilterAdjustSemantics(String title);
+
+  /// No description provided for @pluginsMediaFilterObjectHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵の上で、ドラッグで移動、つまんで拡縮 / 回転できます。'**
+  String get pluginsMediaFilterObjectHint;
+
+  /// No description provided for @pluginsMediaFilterRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'このフィルターを外す'**
+  String get pluginsMediaFilterRemove;
+
+  /// No description provided for @pluginsMediaStickerEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'ステッカーがありません。ストアで入れると、ここに並びます'**
+  String get pluginsMediaStickerEmpty;
+
+  /// 開発者モードの詳しい説明。assets はストアのカテゴリの id(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'ステッカーがありません。ストアでアセットパック(カテゴリ「assets」)を入れると、ここに並びます。'**
+  String get pluginsMediaStickerEmptyDetail;
+
+  /// No description provided for @pluginsMediaStickerGenerate.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインで作る'**
+  String get pluginsMediaStickerGenerate;
+
+  /// SVG の落書きの画面の既定の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'落書き'**
+  String get pluginsPaintTitle;
+
+  /// No description provided for @pluginsPaintCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get pluginsPaintCancel;
+
+  /// No description provided for @pluginsPaintDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'完了'**
+  String get pluginsPaintDone;
+
+  /// No description provided for @pluginsPaintCanvasSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'落書きの紙'**
+  String get pluginsPaintCanvasSemantics;
+
+  /// No description provided for @pluginsPaintFillLeak.
+  ///
+  /// In ja, this message translates to:
+  /// **'線で閉じた形の中をタップしてください'**
+  String get pluginsPaintFillLeak;
+
+  /// No description provided for @pluginsPaintFillOnLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'線の内側をタップしてください'**
+  String get pluginsPaintFillOnLine;
+
+  /// No description provided for @pluginsPaintFillEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'塗れる形がありませんでした'**
+  String get pluginsPaintFillEmpty;
+
+  /// No description provided for @pluginsPaintToolPen.
+  ///
+  /// In ja, this message translates to:
+  /// **'ペン'**
+  String get pluginsPaintToolPen;
+
+  /// No description provided for @pluginsPaintToolEraser.
+  ///
+  /// In ja, this message translates to:
+  /// **'消しゴム'**
+  String get pluginsPaintToolEraser;
+
+  /// No description provided for @pluginsPaintToolLasso.
+  ///
+  /// In ja, this message translates to:
+  /// **'投げ輪'**
+  String get pluginsPaintToolLasso;
+
+  /// No description provided for @pluginsPaintToolFill.
+  ///
+  /// In ja, this message translates to:
+  /// **'塗る'**
+  String get pluginsPaintToolFill;
+
+  /// No description provided for @pluginsPaintUndo.
+  ///
+  /// In ja, this message translates to:
+  /// **'取り消し'**
+  String get pluginsPaintUndo;
+
+  /// No description provided for @pluginsPaintRedo.
+  ///
+  /// In ja, this message translates to:
+  /// **'やり直し'**
+  String get pluginsPaintRedo;
+
+  /// No description provided for @pluginsPaintClear.
+  ///
+  /// In ja, this message translates to:
+  /// **'全部消す'**
+  String get pluginsPaintClear;
+
+  /// No description provided for @pluginsPaintStabilizer.
+  ///
+  /// In ja, this message translates to:
+  /// **'手ぶれ補正'**
+  String get pluginsPaintStabilizer;
+
+  /// 手ぶれ補正のスライダーが 0 のときの短い表示(1 文字程度)
+  ///
+  /// In ja, this message translates to:
+  /// **'切'**
+  String get pluginsPaintStabilizerOff;
+
+  /// No description provided for @pluginsPaintEraserCut.
+  ///
+  /// In ja, this message translates to:
+  /// **'切る'**
+  String get pluginsPaintEraserCut;
+
+  /// No description provided for @pluginsPaintEraserWhole.
+  ///
+  /// In ja, this message translates to:
+  /// **'線ごと'**
+  String get pluginsPaintEraserWhole;
+
+  /// No description provided for @pluginsPaintLassoHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'囲んで選ぶ(線の半分以上が入ったもの)'**
+  String get pluginsPaintLassoHint;
+
+  /// No description provided for @pluginsPaintSelectionDelete.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get pluginsPaintSelectionDelete;
+
+  /// No description provided for @pluginsPaintSelectionDuplicate.
+  ///
+  /// In ja, this message translates to:
+  /// **'複製'**
+  String get pluginsPaintSelectionDuplicate;
+
+  /// No description provided for @pluginsPaintSelectionRecolor.
+  ///
+  /// In ja, this message translates to:
+  /// **'色を変える'**
+  String get pluginsPaintSelectionRecolor;
+
+  /// No description provided for @pluginsPaintSelectionDeselect.
+  ///
+  /// In ja, this message translates to:
+  /// **'解除'**
+  String get pluginsPaintSelectionDeselect;
+
+  /// No description provided for @pluginsPaintFillHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'線で閉じた形の中をタップすると、線の下に塗ります'**
+  String get pluginsPaintFillHint;
+
+  /// No description provided for @pluginsPaintWidthSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'太さ {width}'**
+  String pluginsPaintWidthSemantics(String width);
+
+  /// color は #rrggbb の色の値
+  ///
+  /// In ja, this message translates to:
+  /// **'色 {color}'**
+  String pluginsPaintColorSemantics(String color);
+
+  /// No description provided for @pluginsPaintNibMili.
+  ///
+  /// In ja, this message translates to:
+  /// **'ミリペン'**
+  String get pluginsPaintNibMili;
+
+  /// No description provided for @pluginsPaintNibKabura.
+  ///
+  /// In ja, this message translates to:
+  /// **'カプラペン'**
+  String get pluginsPaintNibKabura;
+
+  /// No description provided for @pluginsPaintNibBrush.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラシニブ'**
+  String get pluginsPaintNibBrush;
+
   /// プロフィールの編集画面(RASQ アカウント / SNS)の見出し
   ///
   /// In ja, this message translates to:

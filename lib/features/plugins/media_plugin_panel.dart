@@ -11,6 +11,7 @@ import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import 'slot_plugins.dart';
 
 /// プラグインの編集パネル (D-249、契約 v0.10 §2.2): 加工画面([ProMediaEditorScreen])の**上に重ねて**出す、
@@ -156,7 +157,7 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
       _overlayRoot = null;
       _snapKeys.clear();
       _session = s;
-      _note = s == null && !_closing ? '${plugin.manifest.name} はここでは編集できません(プラグインのパネルで操作してください)' : null;
+      _note = s == null && !_closing ? appL10n.pluginsMediaPanelNotEditable(plugin.manifest.name) : null;
     });
     _suspendOthers();
     _onFows();
@@ -276,9 +277,9 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
     final hit = boxes.reversed.where((b) => b.contains(local)).firstOrNull;
     final isTarget = hit != null && _snapKeys.contains(hit.key);
     final pick = await _overlay.showDropdown<String>(id: 'media.editor.snap', anchor: global & const Size(1, 1), dense: true, items: [
-      if (hit != null) RasqDropdownItem(isTarget ? 'この上にドラッグ(解除)' : 'この上にドラッグ(合わせる先にする)', 'toggle', checked: isTarget),
-      const RasqDropdownItem('合わせる先を選ぶ…', 'pick'),
-      if (_snapKeys.isNotEmpty) const RasqDropdownItem('合わせる先をすべて解除', 'clear'),
+      if (hit != null) RasqDropdownItem(isTarget ? context.l10n.pluginsMediaSnapDragUnset : context.l10n.pluginsMediaSnapDragSet, 'toggle', checked: isTarget),
+      RasqDropdownItem(context.l10n.pluginsMediaSnapPick, 'pick'),
+      if (_snapKeys.isNotEmpty) RasqDropdownItem(context.l10n.pluginsMediaSnapClearAll, 'clear'),
     ]);
     if (pick == null || !mounted) return;
     switch (pick) {
@@ -296,17 +297,17 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
   void _openSnapFow() {
     _overlay.showFow<void>(
       id: 'fow.media.snap',
-      spec: FowSpec(type: FowPanelType.widget, title: '合わせる先', cancelText: '閉じる', initialHeightFactor: 0.45, dockAboveFooter: true),
+      spec: FowSpec(type: FowPanelType.widget, title: context.l10n.pluginsMediaSnapTitle, cancelText: context.l10n.pluginsMediaClose, initialHeightFactor: 0.45, dockAboveFooter: true),
       builder: (ctx, handle) => StatefulBuilder(builder: (ctx, setLocal) {
         final root = _overlayRoot;
         final boxes = root == null ? const <_OvBox>[] : _overlayBoxes(root).where((b) => b.label != null).toList();
-        if (boxes.isEmpty) return Center(child: Text('名前の付いた枠がありません', style: RasqTypography.bodySmall));
+        if (boxes.isEmpty) return Center(child: Text(ctx.l10n.pluginsMediaSnapEmpty, style: RasqTypography.bodySmall));
         return ListView(padding: EdgeInsets.zero, children: [
           for (final b in boxes)
             RasqListTile(
               key: ValueKey('media.snap.${b.key}'),
               title: b.label!,
-              subtitle: '${b.rect.width.round()} × ${b.rect.height.round()}${b.angle == 0 ? '' : '、${b.angle.round()}°'}',
+              subtitle: b.angle == 0 ? ctx.l10n.pluginsMediaSnapSize(b.rect.width.round(), b.rect.height.round()) : ctx.l10n.pluginsMediaSnapSizeAngle(b.rect.width.round(), b.rect.height.round(), b.angle.round()),
               chevron: false,
               trailing: Icon(_snapKeys.contains(b.key) ? Icons.check_box : Icons.check_box_outline_blank, color: _snapKeys.contains(b.key) ? RasqColors.accent : null),
               onTap: () {
@@ -340,7 +341,7 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
     final r = await _slots.mediaCommit(s);
     if (!mounted) return;
     if (r == null) {
-      setState(() => _note = '適用できませんでした(プラグインが結果を返しませんでした)');
+      setState(() => _note = appL10n.pluginsMediaPanelNoResult);
       return;
     }
     _finish(MediaEditResult(bytes: r.$1, mimeType: r.$2, name: r.$3));
@@ -397,11 +398,11 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
             child: Padding(
               padding: const EdgeInsets.all(RasqSpacing.sm),
               child: Row(children: [
-                _Circle(child: RasqIconButton(icon: Icons.close, size: 18, color: Colors.white, tooltip: 'キャンセル', onPressed: _cancel)),
+                _Circle(child: RasqIconButton(icon: Icons.close, size: 18, color: Colors.white, tooltip: context.l10n.pluginsMediaCancel, onPressed: _cancel)),
                 const Spacer(),
                 Text(subtitle, style: RasqTypography.bodySmall.copyWith(color: Colors.white70), overflow: TextOverflow.ellipsis),
                 const Spacer(),
-                FilledButton(key: const ValueKey('media.editor.apply'), onPressed: _commit, child: const Text('適用')),
+                FilledButton(key: const ValueKey('media.editor.apply'), onPressed: _commit, child: Text(context.l10n.pluginsMediaApply)),
               ]),
             ),
           ),
@@ -425,7 +426,7 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
             key: mediaEditorStripKey,
             height: 84,
             child: entries.isEmpty
-                ? Center(child: Text(_session == null ? '' : 'このプラグインに編集はありません', style: RasqTypography.caption.copyWith(color: Colors.white54)))
+                ? Center(child: Text(_session == null ? '' : context.l10n.pluginsMediaPanelNoEdits, style: RasqTypography.caption.copyWith(color: Colors.white54)))
                 : LayoutBuilder(builder: (ctx, c) {
                     // 初期はセンター揃え (D-172): 収まるなら中央に並べ、はみ出すなら中央から始める。
                     const itemW = 68.0;

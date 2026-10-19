@@ -35,6 +35,7 @@ import '../home/action_bar_edit_sheet.dart';
 import '../home/action_bundle_fow.dart';
 import '../home/plugin_actions.dart';
 import '../home/post_row.dart';
+import '../../l10n/l10n.dart';
 import 'media_filter.dart';
 import 'media_filter_fow.dart';
 import 'media_object_fow.dart';
@@ -176,51 +177,51 @@ const proMediaEditorBarEditKey = Key('media.pro.bar.edit');
 const proMediaEditorAreaKey = Key('media.pro.area');
 const proMediaEditorAudioNoteKey = Key('media.pro.audio.note');
 
-/// pro_image_editor の日本語。
-const rasqEditorI18n = I18n(
-  cancel: 'キャンセル',
-  undo: 'ひとつ戻す',
-  redo: 'やり直す',
-  done: '完了',
-  remove: '削除',
-  doneLoadingMsg: '変更を適用しています',
-  importStateHistoryMsg: 'エディターを準備しています',
-  various: I18nVarious(loadingDialogMsg: 'お待ちください…', closeEditorWarningTitle: '加工をやめますか？', closeEditorWarningMessage: '変更は保存されません。', closeEditorWarningConfirmBtn: 'やめる', closeEditorWarningCancelBtn: '続ける'),
-  layerInteraction: I18nLayerInteraction(remove: '削除', edit: '編集', rotateScale: '回転と拡縮'),
-  paintEditor: I18nPaintEditor(
-    bottomNavigationBarText: 'ペイント',
-    moveAndZoom: 'ズーム',
-    freestyle: 'フリーハンド',
-    arrow: '矢印',
-    line: '直線',
-    rectangle: '四角',
-    circle: '丸',
-    dashLine: '点線',
-    blur: 'ぼかし',
-    pixelate: 'モザイク',
-    lineWidth: '線の太さ',
-    eraser: '消しゴム',
-    toggleFill: '塗り',
-    changeOpacity: '不透明度',
-    undo: 'ひとつ戻す',
-    redo: 'やり直す',
-    done: '完了',
-    back: '戻る',
-    smallScreenMoreTooltip: 'その他',
-    opacity: '不透明度',
-    color: '色',
-    strokeWidth: '線の太さ',
-    fill: '塗り',
-    cancel: 'キャンセル',
-  ),
-  textEditor: I18nTextEditor(inputHintText: 'テキストを入力', bottomNavigationBarText: 'テキスト', back: '戻る', done: '完了', textAlign: '揃え', fontScale: '文字の大きさ', backgroundMode: '背景', smallScreenMoreTooltip: 'その他'),
-  cropRotateEditor: I18nCropRotateEditor(bottomNavigationBarText: 'クロップ / 回転', rotate: '回転', flip: '反転', tilt: '傾き', tiltRotate: '回転', tiltHorizontal: '水平', tiltVertical: '垂直', ratio: '比率', back: '戻る', done: '完了', cancel: 'キャンセル', undo: 'ひとつ戻す', redo: 'やり直す', smallScreenMoreTooltip: 'その他', reset: 'リセット'),
-  tuneEditor: I18nTuneEditor(bottomNavigationBarText: '調整', back: '戻る', done: '完了', brightness: '明るさ', contrast: 'コントラスト', saturation: '彩度', exposure: '露出', hue: '色相', temperature: '色温度', fade: 'フェード', tint: 'ティント', undo: 'ひとつ戻す', redo: 'やり直す'),
-  filterEditor: I18nFilterEditor(bottomNavigationBarText: 'フィルター', back: '戻る', done: '完了'),
-  blurEditor: I18nBlurEditor(bottomNavigationBarText: 'ぼかし', back: '戻る', done: '完了'),
-  stickerEditor: I18nStickerEditor(bottomNavigationBarText: 'ステッカー'),
-  emojiEditor: I18nEmojiEditor(bottomNavigationBarText: '絵文字', search: '検索', categoryRecent: '最近', categorySmileys: '顔と人', categoryAnimals: '動物と自然', categoryFood: '食べ物', categoryActivities: 'アクティビティ', categoryTravel: '旅行と場所', categoryObjects: 'もの', categorySymbols: '記号', categoryFlags: '旗'),
-);
+/// pro_image_editor の文言(表示の言語)。
+I18n rasqEditorI18nOf(AppLocalizations l) => I18n(
+      cancel: l.pluginsEditorCancel,
+      undo: l.pluginsEditorUndo,
+      redo: l.pluginsEditorRedo,
+      done: l.pluginsEditorDone,
+      remove: l.pluginsEditorRemove,
+      doneLoadingMsg: l.pluginsEditorApplying,
+      importStateHistoryMsg: l.pluginsEditorPreparing,
+      various: I18nVarious(loadingDialogMsg: l.pluginsEditorPleaseWait, closeEditorWarningTitle: l.pluginsEditorCloseWarningTitle, closeEditorWarningMessage: l.pluginsEditorCloseWarningMessage, closeEditorWarningConfirmBtn: l.pluginsEditorCloseWarningConfirm, closeEditorWarningCancelBtn: l.pluginsEditorCloseWarningCancel),
+      layerInteraction: I18nLayerInteraction(remove: l.pluginsEditorRemove, edit: l.pluginsEditorLayerEdit, rotateScale: l.pluginsEditorLayerRotateScale),
+      paintEditor: I18nPaintEditor(
+        bottomNavigationBarText: l.pluginsEditorPaint,
+        moveAndZoom: l.pluginsEditorZoom,
+        freestyle: l.pluginsEditorFreehand,
+        arrow: l.pluginsEditorArrow,
+        line: l.pluginsEditorLine,
+        rectangle: l.pluginsEditorRectangle,
+        circle: l.pluginsEditorCircle,
+        dashLine: l.pluginsEditorDashLine,
+        blur: l.pluginsEditorBlur,
+        pixelate: l.pluginsEditorPixelate,
+        lineWidth: l.pluginsEditorLineWidth,
+        eraser: l.pluginsEditorEraser,
+        toggleFill: l.pluginsEditorFill,
+        changeOpacity: l.pluginsEditorOpacity,
+        undo: l.pluginsEditorUndo,
+        redo: l.pluginsEditorRedo,
+        done: l.pluginsEditorDone,
+        back: l.pluginsEditorBack,
+        smallScreenMoreTooltip: l.pluginsEditorMore,
+        opacity: l.pluginsEditorOpacity,
+        color: l.pluginsEditorColor,
+        strokeWidth: l.pluginsEditorLineWidth,
+        fill: l.pluginsEditorFill,
+        cancel: l.pluginsEditorCancel,
+      ),
+      textEditor: I18nTextEditor(inputHintText: l.pluginsEditorTextHint, bottomNavigationBarText: l.pluginsEditorText, back: l.pluginsEditorBack, done: l.pluginsEditorDone, textAlign: l.pluginsEditorTextAlign, fontScale: l.pluginsEditorFontScale, backgroundMode: l.pluginsEditorTextBackground, smallScreenMoreTooltip: l.pluginsEditorMore),
+      cropRotateEditor: I18nCropRotateEditor(bottomNavigationBarText: l.pluginsEditorCropRotate, rotate: l.pluginsEditorRotate, flip: l.pluginsEditorFlip, tilt: l.pluginsEditorTilt, tiltRotate: l.pluginsEditorRotate, tiltHorizontal: l.pluginsEditorTiltHorizontal, tiltVertical: l.pluginsEditorTiltVertical, ratio: l.pluginsEditorRatio, back: l.pluginsEditorBack, done: l.pluginsEditorDone, cancel: l.pluginsEditorCancel, undo: l.pluginsEditorUndo, redo: l.pluginsEditorRedo, smallScreenMoreTooltip: l.pluginsEditorMore, reset: l.pluginsEditorReset),
+      tuneEditor: I18nTuneEditor(bottomNavigationBarText: l.pluginsEditorTune, back: l.pluginsEditorBack, done: l.pluginsEditorDone, brightness: l.pluginsEditorBrightness, contrast: l.pluginsEditorContrast, saturation: l.pluginsEditorSaturation, exposure: l.pluginsEditorExposure, hue: l.pluginsEditorHue, temperature: l.pluginsEditorTemperature, fade: l.pluginsEditorFade, tint: l.pluginsEditorTint, undo: l.pluginsEditorUndo, redo: l.pluginsEditorRedo),
+      filterEditor: I18nFilterEditor(bottomNavigationBarText: l.pluginsEditorFilter, back: l.pluginsEditorBack, done: l.pluginsEditorDone),
+      blurEditor: I18nBlurEditor(bottomNavigationBarText: l.pluginsEditorBlur, back: l.pluginsEditorBack, done: l.pluginsEditorDone),
+      stickerEditor: I18nStickerEditor(bottomNavigationBarText: l.pluginsEditorSticker),
+      emojiEditor: I18nEmojiEditor(bottomNavigationBarText: l.pluginsEditorEmoji, search: l.pluginsEditorEmojiSearch, categoryRecent: l.pluginsEditorEmojiRecent, categorySmileys: l.pluginsEditorEmojiSmileys, categoryAnimals: l.pluginsEditorEmojiAnimals, categoryFood: l.pluginsEditorEmojiFood, categoryActivities: l.pluginsEditorEmojiActivities, categoryTravel: l.pluginsEditorEmojiTravel, categoryObjects: l.pluginsEditorEmojiObjects, categorySymbols: l.pluginsEditorEmojiSymbols, categoryFlags: l.pluginsEditorEmojiFlags),
+    );
 
 class ProMediaEditorScreen extends StatelessWidget {
   const ProMediaEditorScreen({super.key, required this.args});
@@ -333,7 +334,7 @@ class _SvgModeState extends State<_SvgMode> {
   void _onPlugin(PluginAction a) {
     if (_panel != null || _pending != null) return;
     final done = _findPaperDone();
-    if (done == null) return _toast('いまは使えません(紙の「完了」が見つかりません)');
+    if (done == null) return _toast(appL10n.pluginsMediaPaperDoneMissing);
     _pending = a;
     done();
     // 紙が完了を返さなかった(空の絵を返さない作りなど)。
@@ -365,7 +366,7 @@ class _SvgModeState extends State<_SvgMode> {
     String? next;
     if (r != null) {
       final svg = mediaEditorModeOf(mimeType: r.mimeType, name: r.name ?? '') == MediaEditorMode.svg ? SvgLite.parse(utf8.decode(r.bytes, allowMalformed: true)) : null;
-      if (svg == null) _toast('${a.plugin.manifest.name} が SVG を返さなかったので、使いませんでした');
+      if (svg == null) _toast(appL10n.pluginsMediaNotSvg(a.plugin.manifest.name));
       next = svg?.toSvg();
     }
     setState(() {
@@ -531,7 +532,7 @@ class EditorActionBar extends ConsumerWidget {
                       ),
                   },
                 // バーの編集(並べ替え / バンドル / プラグインボタンの追加・削除)。
-                item('edit', 'バーの編集', const Icon(Icons.dashboard_customize_outlined, size: 22, color: Colors.white54), (_) => showActionBarEditSheet(ref, surfaces: [surface]), color: Colors.white54, key: proMediaEditorBarEditKey),
+                item('edit', context.l10n.pluginsMediaBarEdit, const Icon(Icons.dashboard_customize_outlined, size: 22, color: Colors.white54), (_) => showActionBarEditSheet(ref, surfaces: [surface]), color: Colors.white54, key: proMediaEditorBarEditKey),
               ]),
             ),
           ),
@@ -686,7 +687,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
   Future<void> _initVideo() async {
     try {
       // 変換できない端末では、ファイルを書く前に伝える。
-      if (_isAudio && !audioVideoSupported) throw UnsupportedError('この端末では音声を動画にできません(Android / iOS / macOS だけ)。音声のまま添付できます');
+      if (_isAudio && !audioVideoSupported) throw UnsupportedError(appL10n.pluginsMediaAudioUnsupported);
       var f = await videoEditTempFile(await getTemporaryDirectory(), widget.args.name);
       await f.writeAsBytes(widget.args.bytes, flush: true);
       if (!mounted) {
@@ -703,7 +704,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
       _videoFile = f;
       await _openVideo(f);
     } catch (e) {
-      if (mounted) setState(() => _videoError = e is UnsupportedError ? '${e.message}' : '${_isAudio ? '音声' : '動画'}を開けませんでした: $e');
+      if (mounted) setState(() => _videoError = e is UnsupportedError ? '${e.message}' : (_isAudio ? appL10n.pluginsMediaOpenAudioFailed('$e') : appL10n.pluginsMediaOpenVideoFailed('$e')));
     }
   }
 
@@ -857,7 +858,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
       _videoFile = video;
       await _openVideo(video);
     } catch (e) {
-      if (mounted) setState(() => _videoError = '動画を書き出し直せませんでした: $e');
+      if (mounted) setState(() => _videoError = appL10n.pluginsMediaReexportFailed('$e'));
     }
   }
 
@@ -939,7 +940,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
       final moving = [for (final l in p.layers) if (l is WidgetLayer && _motionPosts.containsKey(l.meta?['rasqPostVideo'])) l];
       if (moving.isNotEmpty) {
         if (p.isTransformed) {
-          _notify('クロップ / 回転と、動くオブジェクトは一緒に使えません。静止画で入れました');
+          _notify(appL10n.pluginsMediaCropWithMovingObject);
         } else {
           bytes = await _overlayOnVideo(bytes, moving) ?? bytes;
           if (!mounted) return;
@@ -951,7 +952,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
     } catch (e) {
       // 失敗を黙って閉じない(変更が入らないまま戻ってしまう): 伝えて、加工画面に留まる。
       _renderFailed = true;
-      _notify('動画を書き出せませんでした: $e');
+      _notify(appL10n.pluginsMediaExportFailed('$e'));
     } finally {
       _renderProgress.value = null;
     }
@@ -975,7 +976,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
       await overlayVideosOnVideo(base: base, canvas: size, length: meta.duration, posts: await _motionFiles(editor, layers, size, files), out: out);
       return await out.readAsBytes();
     } catch (e) {
-      _notify('動くオブジェクトを重ねられなかったので、静止画で入れました: $e');
+      _notify(appL10n.pluginsMediaOverlayFailed('$e'));
       return null;
     } finally {
       for (final f in files) {
@@ -1143,7 +1144,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
       final spec = parseMediaFilterSpec(raw);
       if (!mounted) return;
       if (spec == null || spec.ops.isEmpty) {
-        _notify('${action.decl.label}: フィルターを受け取れませんでした');
+        _notify(appL10n.pluginsMediaFilterNotReceived(action.decl.label));
         return;
       }
       final shown = editor.sizesManager.decodedImageSize;
@@ -1171,7 +1172,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
       }
       editor.addLayer(layer, blockSelectLayer: true);
       added = _filters[action.id] = _ActiveFilter(action: action, seed: seed, spec: live, layer: layer, width: size.width.round(), height: size.height.round(), params: {for (final p in spec.params) p.id: p.value});
-      if (spec.dropped > 0) _notify('${action.decl.label}: 描画が多すぎるので ${spec.dropped} 個を省きました');
+      if (spec.dropped > 0) _notify(appL10n.pluginsMediaFilterDropped(action.decl.label, spec.dropped));
       setState(() {});
     } finally {
       _bypassing = false;
@@ -1245,7 +1246,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
             mime = r.$2;
           }
         }
-        if (failed.isNotEmpty) _notify('適用できなかったフィルター: ${failed.join(' / ')}(この加工は入っていません)');
+        if (failed.isNotEmpty) _notify(appL10n.pluginsMediaFiltersFailed(failed.join(' / ')));
       }
       // 動く投稿 (D-261) が置いてあれば、画像を土台にした動画にする。できなければ静止画のまま(投稿の静止画は焼き込み済み)。
       if (editor != null && _motionPosts.isNotEmpty) {
@@ -1265,14 +1266,14 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
     final layers = [for (final l in editor.activeLayers) if (l is WidgetLayer && _motionPosts.containsKey(l.meta?['rasqPostVideo'])) l];
     if (layers.isEmpty) return null; // 置いたあとで消した
     if (editor.stateManager.transformConfigs.isNotEmpty) {
-      _notify('クロップ / 回転と、動く投稿は一緒に使えません。投稿は静止画で入れました');
+      _notify(appL10n.pluginsMediaCropWithMovingPost);
       return null;
     }
     final files = <File>[];
     try {
       final decoded = await decodeUiImage(image);
       if (decoded == null) {
-        _notify('動画にできなかったので、静止画で入れました(画像を読めませんでした)');
+        _notify(appL10n.pluginsMediaVideoImageUnreadable);
         return null;
       }
       final size = ui.Size(decoded.width.toDouble(), decoded.height.toDouble());
@@ -1285,7 +1286,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
       final n = _outName;
       return MediaEditResult(bytes: bytes, mimeType: 'video/mp4', name: '${n.substring(0, n.lastIndexOf('.'))}.mp4');
     } catch (e) {
-      _notify('動画にできなかったので、投稿は静止画で入れました: $e');
+      _notify(appL10n.pluginsMediaVideoPostFailed('$e'));
       return null;
     } finally {
       for (final f in files) {
@@ -1313,17 +1314,17 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
 
   Future<bool> _confirmToVideo(String note) => _overlay.showAlert(
         id: 'media.pro.postVideo.confirm',
-        title: '動画に変換しますか?',
-        message: '$note\n「動画にする」と、置いた場所で動く動画として書き出します。「静止画で貼る」は今の画像だけを貼ります。',
-        confirmText: '動画にする',
-        cancelText: '静止画で貼る',
+        title: appL10n.pluginsMediaToVideoTitle,
+        message: appL10n.pluginsMediaToVideoMessage(note),
+        confirmText: appL10n.pluginsMediaToVideoConfirm,
+        cancelText: appL10n.pluginsMediaToVideoStill,
       );
 
   /// オブジェクト(レイヤー)を置く。[video] があれば「動くオブジェクト」: 置くのは静止画 [still] のまま、完了で動画を重ねる(回転は不可)。
   Future<void> _addObject(ProImageEditorState editor, {required Uint8List still, Uint8List? video, Map<String, Object?> meta = const {}}) async {
     // 復号してから置く(書き出しの瞬間に復号待ちで空にならないよう、RawImage で同期に描く)。
     final image = await decodeUiImage(still);
-    if (image == null) return _notify('画像を読めませんでした');
+    if (image == null) return _notify(appL10n.pluginsMediaImageUnreadable);
     if (!mounted) return image.dispose();
     _postImages.add(image);
     final shown = editor.sizesManager.decodedImageSize;
@@ -1358,7 +1359,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
       ),
       meta: {...meta, 'rasqObject': id, if (video != null) 'rasqPostVideo': id},
     ));
-    if (video != null && !_isVideo) _notify('完了すると、動画として書き出します');
+    if (video != null && !_isVideo) _notify(appL10n.pluginsMediaExportOnDone);
   }
 
   /// 動くオブジェクトを、加工画面の中でも再生する (D-264)。繰り返し再生。画像の加工中は音も出す。動画の加工中は無音で、
@@ -1406,7 +1407,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
     final settings = _objectSettings[id];
     if (settings == null || _player?.value.isPlaying == true) return;
     final isVideo = _motionPosts.containsKey(id);
-    final remove = await showMediaObjectFow(_overlay, title: layer.meta?['rasqPost'] != null ? 'ノート' : (isVideo ? '動画' : '画像'), isVideo: isVideo, settings: settings);
+    final remove = await showMediaObjectFow(_overlay, title: layer.meta?['rasqPost'] != null ? appL10n.pluginsMediaObjectNote : (isVideo ? appL10n.pluginsMediaObjectVideo : appL10n.pluginsMediaObjectImage), isVideo: isVideo, settings: settings);
     if (remove != true || !mounted) return;
     final editor = _imageEditor;
     final current = editor?.activeLayers.where((l) => l.meta?['rasqObject'] == id).firstOrNull;
@@ -1441,7 +1442,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
   Future<void> _addMediaObject(ProImageEditorState editor, Rect anchor) async {
     final kind = !audioVideoSupported
         ? 'image'
-        : await _overlay.showDropdown<String>(id: 'media.pro.addMedia', anchor: anchor, dense: true, items: const [RasqDropdownItem('画像を追加', 'image'), RasqDropdownItem('動画を追加', 'video')]);
+        : await _overlay.showDropdown<String>(id: 'media.pro.addMedia', anchor: anchor, dense: true, items: [RasqDropdownItem(appL10n.pluginsMediaAddImage, 'image'), RasqDropdownItem(appL10n.pluginsMediaAddVideo, 'video')]);
     if (kind == null || !mounted) return;
     try {
       if (kind == 'image') {
@@ -1461,18 +1462,18 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
         final frames = await pve.ProVideoEditor.instance.getThumbnails(pve.ThumbnailConfigs(video: pve.EditorVideo.file(tmp.path), outputSize: const Size(1280, 1280), timestamps: const [Duration.zero], boxFit: pve.ThumbnailBoxFit.contain, outputFormat: pve.ThumbnailFormat.png));
         if (frames.isNotEmpty) still = frames.first;
       } catch (e) {
-        if (mounted) _notify(rasqDetail(context, '動画を読み込めませんでした', '動画(.$ext、${bytes.length} バイト)の最初のコマを取れませんでした: $e'));
+        if (mounted) _notify(rasqDetail(context, context.l10n.pluginsMediaVideoLoadFailed, context.l10n.pluginsMediaVideoLoadFailedDetail(ext, bytes.length, '$e')));
         return;
       } finally {
         _deleteQuietly(tmp);
       }
       if (!mounted) return;
-      if (still == null) return _notify('動画の最初のコマを取れませんでした');
-      final asVideo = _isVideo || await _confirmToVideo('動画をオブジェクトとして置きます。');
+      if (still == null) return _notify(appL10n.pluginsMediaFirstFrameFailed);
+      final asVideo = _isVideo || await _confirmToVideo(appL10n.pluginsMediaVideoAsObject);
       if (!mounted) return;
       await _addObject(editor, still: still, video: asVideo ? bytes : null, meta: const {'rasqMedia': 'video'});
     } catch (e) {
-      _notify('メディアを追加できませんでした: $e');
+      _notify(appL10n.pluginsMediaAddFailed('$e'));
     }
   }
 
@@ -1598,7 +1599,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
         },
       ),
       configs: ProImageEditorConfigs(
-        i18n: rasqEditorI18n,
+        i18n: rasqEditorI18nOf(context.l10n),
         stickerEditor: StickerEditorConfigs(
           builder: (setLayer, scrollController) => StickerPicker(
             setLayer: setLayer,
@@ -1636,9 +1637,9 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
                   // 変換の進み具合と、その間だけの広告の枠 (D-327)。
                   ? (_audioProgress == null
                       ? const CircularProgressIndicator()
-                      : SingleChildScrollView(child: MediaExportProgress(progress: _audioProgress, label: '音声を動画に変換しています…', onDark: true, labelKey: proMediaEditorAudioNoteKey)))
+                      : SingleChildScrollView(child: MediaExportProgress(progress: _audioProgress, label: context.l10n.pluginsMediaAudioConverting, onDark: true, labelKey: proMediaEditorAudioNoteKey)))
                   : Padding(padding: const EdgeInsets.all(24), child: Text(err, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center))),
-            Positioned(left: 8, top: 8, child: RasqIconButton(icon: Icons.close, color: Colors.white, tooltip: 'キャンセル', onPressed: () => _finish(null))),
+            Positioned(left: 8, top: 8, child: RasqIconButton(icon: Icons.close, color: Colors.white, tooltip: context.l10n.pluginsMediaCancel, onPressed: () => _finish(null))),
           ]),
         ),
       );
@@ -1680,7 +1681,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
         ),
       ),
       configs: ProImageEditorConfigs(
-        i18n: rasqEditorI18n,
+        i18n: rasqEditorI18nOf(context.l10n),
         stickerEditor: StickerEditorConfigs(
           builder: (setLayer, scrollController) => StickerPicker(
             setLayer: setLayer,
