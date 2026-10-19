@@ -4240,6 +4240,18 @@ abstract class AppLocalizations {
   /// **'新しい投稿を読み込む'**
   String get homeLoadNewer;
 
+  /// TL を更新して新しい投稿が届いたとき、ヘッダーのすぐ下に浮かべる札(左に投稿した人の顔が並ぶ)
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい投稿'**
+  String get homeNewPostsPill;
+
+  /// 「新しい投稿」の札の読み上げ。押すといちばん上へ送る
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい投稿を見る'**
+  String get homeNewPostsPillSemantics;
+
   /// No description provided for @homeLoadingNewer.
   ///
   /// In ja, this message translates to:

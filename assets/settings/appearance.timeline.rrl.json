@@ -2,7 +2,9 @@
   "schema": "rasq.settings-page/1",
   "area": "appearance.timeline",
   "title": "タイムラインの表示",
-  "defaults": {},
+  "defaults": {
+    "newPostsPill": true
+  },
   "root": {
     "t": "Column",
     "c": [
@@ -20,6 +22,19 @@
           "subtitle": "スマホでは既定で出しません(引っ張って更新)",
           "value": "$.settings.edgeTiles",
           "detail": "見えると、新しい投稿 / 続きを読み込みます。既定は、電話のアプリでは出さず(下に引っ張って更新)、Web 版とパソコンでは出します"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "newPostsPill",
+        "p": {
+          "title": "新しい投稿のお知らせを出す",
+          "subtitle": "更新して新しい投稿が届いたら、ヘッダーのすぐ下に「新しい投稿」",
+          "value": "$.settings.newPostsPill",
+          "detail": "投稿した人の顔(3 人まで)と「新しい投稿」を出します。押すといちばん上へ。しばらくたつか、いちばん上まで送ると消えます。ヘッダーをしまっている間は出しません"
         },
         "on": {
           "change": "settings.set"

@@ -6,6 +6,10 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/home/home_header.dart' show homeHeaderArea;
+import 'package:rasq_client/features/home/new_posts_pill.dart';
+import 'package:rasq_client/features/home/timeline_providers.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/scroll_memory.dart';
 import 'package:rasq_client/shell/scroll_to_top.dart';
@@ -156,6 +160,69 @@ void main() {
       expect(scrollToTopIn(root.currentContext!), isTrue);
       await tester.pumpAndSettle();
       expect((a.offset, b.offset, h.offset, o.offset), (0.0, 400.0, 400.0, 400.0));
+    });
+  });
+  group('D-506 新しい投稿の札', () {
+    /// SNS に新しい投稿を足して、TL の自動更新(上に足す)を回す。
+    Future<void> arrive(WidgetTester tester, ProviderContainer c, List<Post> fresh) async {
+      for (final s in plugin.opened) {
+        for (final p in fresh.reversed) {
+          s.prepend(p);
+        }
+      }
+      await c.read(timelineProvider(TimelineKind.social).notifier).prependNewer();
+      await tester.pumpAndSettle();
+    }
+
+    final pill = find.byKey(const ValueKey('tl.newPosts.pill'));
+
+    testWidgets('届くと「顔 新しい投稿」(3 人まで)、押すといちばん上へ送って消える', (tester) async {
+      final c = await pump(tester);
+      await arrive(tester, c, [post(-1, author: 'x'), post(-2, author: 'y'), post(-3, author: 'x'), post(-4, author: 'z'), post(-5, author: 'w')]);
+      expect(pill, findsOneWidget);
+      expect(find.descendant(of: pill, matching: find.text('新しい投稿')), findsOneWidget);
+      for (final a in ['x', 'y', 'z']) {
+        expect(find.byKey(ValueKey('tl.newPosts.face.misskey:example.test:$a')), findsOneWidget, reason: '新しい順に 3 人');
+      }
+      expect(find.byKey(const ValueKey('tl.newPosts.face.misskey:example.test:w')), findsNothing);
+      expect(find.text('投稿 -1'), findsNothing, reason: '見ている位置は動かない(中心より上に足した)');
+      await tester.tap(pill);
+      await tester.pumpAndSettle();
+      expect(pill, findsNothing);
+      expect(find.text('投稿 -1'), findsOneWidget);
+      final pos = tlPosition(tester, 'tl.view.social');
+      expect(pos.pixels, pos.minScrollExtent);
+    });
+
+    testWidgets('しばらくたつと消える / 自分でいちばん上まで送っても消える', (tester) async {
+      NewPostsPillController.duration = const Duration(seconds: 3);
+      addTearDown(() => NewPostsPillController.duration = const Duration(seconds: 10));
+      final c = await pump(tester);
+      await arrive(tester, c, [post(-1, author: 'x')]);
+      expect(pill, findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      expect(pill, findsNothing);
+      await arrive(tester, c, [post(-2, author: 'y')]);
+      expect(pill, findsOneWidget);
+      await tester.drag(find.byKey(const ValueKey('tl.view.social')), const Offset(0, 400));
+      await tester.pumpAndSettle();
+      expect(pill, findsNothing);
+    });
+
+    testWidgets('ヘッダーをしまっている間 / 設定で切ると出さない', (tester) async {
+      final c = await pump(tester);
+      await c.read(settingsAreaProvider(homeHeaderArea).notifier).set('collapsed', true);
+      await tester.pumpAndSettle();
+      await arrive(tester, c, [post(-1, author: 'x')]);
+      expect(pill, findsNothing);
+      await c.read(settingsAreaProvider(homeHeaderArea).notifier).set('collapsed', false);
+      await tester.pumpAndSettle();
+      expect(pill, findsOneWidget, reason: 'ヘッダーを戻せば、まだ消えていない札は出る');
+      await c.read(settingsAreaProvider(timelineDisplayArea).notifier).set('newPostsPill', false);
+      await tester.pumpAndSettle();
+      expect(pill, findsNothing);
+      await arrive(tester, c, [post(-2, author: 'y')]);
+      expect(pill, findsNothing);
     });
   });
 }

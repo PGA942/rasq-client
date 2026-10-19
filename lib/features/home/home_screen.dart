@@ -17,7 +17,7 @@ import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../../shell/scroll_memory.dart';
-import '../../shell/scroll_to_top.dart' show VisibleTabPage;
+import '../../shell/scroll_to_top.dart' show VisibleTabPage, scrollToTopIn;
 import '../settings/settings_dsl.dart';
 import '../nodeprog/node_tabs.dart';
 import '../nodeprog/timeline_temp_fow.dart';
@@ -27,6 +27,7 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'custom_tile_row.dart';
 import 'create_fow.dart';
 import 'home_header.dart';
+import 'new_posts_pill.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
 import 'timeline_search.dart';
@@ -307,6 +308,12 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
   /// 探す語の ↑↓ で飛ぶ (D-341)。
   final _jumper = TimelineJumpController();
 
+  /// 「{顔}{顔} 新しい投稿」(D-506)。
+  final _pill = NewPostsPillController();
+
+  /// このタブがいま見えているか(隠れたタブ = [VisibleTabPage] が TickerMode を切る)。
+  bool _visible = true;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -318,6 +325,11 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
     _scroll = RememberedScrollController(memory: memory, id: () => _memoryId, anchor: () => _baseKey);
     _scroll.addListener(() {
       if (_scroll.position.extentAfter < 600) ref.read(timelineProvider(widget.kind).notifier).loadMore();
+      // いちばん上まで送ったら、「新しい投稿」は消す (D-506)。
+      if (_pill.showing && _atTop) _pill.hide();
+    });
+    _pill.addListener(() {
+      if (mounted) setState(() {});
     });
   }
 
@@ -325,13 +337,42 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
   void dispose() {
     _scroll.dispose();
     _jumper.dispose();
+    _pill.dispose();
     super.dispose();
+  }
+
+  /// いちばん上(中心より上に足した新しい投稿も含めて)が見えているか。
+  bool get _atTop => !_scroll.hasClients || _scroll.positions.length != 1 || _scroll.position.pixels <= _scroll.position.minScrollExtent + 1;
+
+  /// TL が更新された (D-506): 手元の投稿より上に新しい投稿が届き、それがいま見えていなければ「新しい投稿」を出す。
+  /// 全部が置き換わった(手元の投稿が 1 つも残っていない)ときは、先頭へ戻すので出さない。隠れたタブでは出さない。
+  void _onTimeline(TimelineState? before, TimelineState? after) {
+    if (before == null || after == null || before.posts.isEmpty || after.posts.isEmpty || !_visible) return;
+    if (!ref.read(timelineNewPostsPillProvider)) return;
+    final had = {for (final p in before.posts) p.key};
+    final firstOld = after.posts.indexWhere((p) => had.contains(p.key));
+    if (firstOld <= 0) return;
+    final fresh = after.posts.sublist(0, firstOld);
+    // 並べ終えてから、見えているかを確かめる。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_atTop) _pill.show(fresh);
+    });
+  }
+
+  /// 「新しい投稿」を押した: いちばん上へ送って見せる。
+  void _revealNewer() {
+    _pill.hide();
+    if (_scroll.hasClients && _scroll.positions.length == 1) scrollToTopIn(context);
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    _visible = TickerMode.valuesOf(context).enabled;
     final state = ref.watch(timelineProvider(widget.kind));
+    ref.listen(timelineProvider(widget.kind), (prev, next) => _onTimeline(prev?.value, next.value));
+    // しまったヘッダーには D-449 の新着を浮かべるので、「新しい投稿」は出さない。
+    final pillShown = _pill.showing && !ref.watch(homeHeaderCollapsedProvider) && ref.watch(timelineNewPostsPillProvider);
     final session = ref.watch(currentSnsSessionProvider);
     final notifier = ref.read(timelineProvider(widget.kind).notifier);
     final actions = session?.actions ?? const <ActionDescriptor>[];
@@ -356,7 +397,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
       await notifier.refresh();
     }
 
-    return state.when(
+    final body = state.when(
       loading: () => const RasqLoading(),
       error: (e, _) => _ErrorList(error: e, onRetry: notifier.refresh),
       data: (tl) {
@@ -459,6 +500,17 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
         );
       },
     );
+    // ヘッダー(タブの行)のすぐ下に浮かべる。出し入れで一覧を作り直さないよう、いつも Stack の 1 つ目に置く。
+    return Stack(children: [
+      Positioned.fill(child: body),
+      if (pillShown)
+        Positioned(
+        top: RasqSpacing.sm,
+        left: 0,
+        right: 0,
+        child: Center(child: NewPostsPill(key: const ValueKey('tl.newPosts.pill'), authors: _pill.authors, onTap: _revealNewer)),
+      ),
+    ]);
   }
 
   final _centerKey = GlobalKey();

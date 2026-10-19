@@ -2518,6 +2518,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homeLoadNewer => '新しい投稿を読み込む';
 
   @override
+  String get homeNewPostsPill => '新しい投稿';
+
+  @override
+  String get homeNewPostsPillSemantics => '新しい投稿を見る';
+
+  @override
   String get homeLoadingNewer => '更新しています…';
 
   @override

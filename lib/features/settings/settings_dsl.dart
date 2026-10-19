@@ -267,6 +267,9 @@ final timelineEdgeTilesProvider = Provider<bool>((ref) {
   return v is bool ? v : ref.watch(hostSettingDefaultsProvider(timelineDisplayArea))['edgeTiles'] != false;
 });
 
+/// TL を更新して新しい投稿が届いたとき、ヘッダーのすぐ下に「新しい投稿」の札を出すか (D-506)。既定は出す。
+final timelineNewPostsPillProvider = Provider<bool>((ref) => ref.watch(settingsAreaProvider(timelineDisplayArea)).value?['newPostsPill'] != false);
+
 /// area の設定値(既定値マージ済み)を同期的に読むヘルパー。アプリ側で
 /// 値を適用する場所(テーマ/モーション等)から使う。
 Object? settingValue(WidgetRef ref, String area, String key, Object? fallback) => ref.watch(settingsAreaProvider(area)).value?[key] ?? fallback;
