@@ -6,6 +6,7 @@ import 'package:rasq_design/rasq_design.dart';
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../settings/account_security_screen.dart' show accountDeviceLabel;
@@ -39,7 +40,7 @@ class ChildSafeBadge extends StatelessWidget {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.child_care_outlined, size: 12, color: scheme.onTertiaryContainer),
         const SizedBox(width: 2),
-        Text('見守り中', style: RasqTypography.caption.copyWith(color: scheme.onTertiaryContainer)),
+        Text(context.l10n.childSafeScreensBadge, style: RasqTypography.caption.copyWith(color: scheme.onTertiaryContainer)),
       ]),
     );
   }
@@ -54,7 +55,8 @@ class ChildSafeWindowBanner extends ConsumerWidget {
     if (!gate.inTimeWindow) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
     final topics = gate.policy!.time.topics;
-    final list = topics.topics.join('・');
+    final l = context.l10n;
+    final list = topics.topics.join(l.childSafeListSeparator);
     return Material(
       key: const ValueKey('childSafe.windowBanner'),
       color: scheme.tertiaryContainer,
@@ -67,7 +69,8 @@ class ChildSafeWindowBanner extends ConsumerWidget {
             const SizedBox(width: RasqSpacing.sm),
             Expanded(
               child: Text(
-                '見守りの時間(${gate.windowLabel})です。${topics.allow ? (list.isEmpty ? '投稿は流れません' : '「$list」の話題だけが流れます') : (list.isEmpty ? '' : '「$list」の話題は流れません')}',
+                l.childSafeScreensWindowBanner(
+                    gate.windowLabel, topics.allow ? (list.isEmpty ? l.childSafeScreensWindowNothing : l.childSafeScreensWindowAllowOnly(list)) : (list.isEmpty ? '' : l.childSafeScreensWindowDenied(list))),
                 style: RasqTypography.caption.copyWith(color: scheme.onTertiaryContainer),
               ),
             ),
@@ -83,7 +86,7 @@ class ChildSafeBlockedView extends StatelessWidget {
   const ChildSafeBlockedView({super.key, required this.message});
   final String message;
   @override
-  Widget build(BuildContext context) => RasqEmptyView(key: const ValueKey('childSafe.blocked'), title: message, hint: '見守りの設定は保護者が決めています');
+  Widget build(BuildContext context) => RasqEmptyView(key: const ValueKey('childSafe.blocked'), title: message, hint: context.l10n.childSafeScreensBlockedHint);
 }
 
 /// 止めている行 / ボタンを薄くして、押したら理由を出す。
@@ -112,75 +115,87 @@ class ChildSafeHubScreen extends ConsumerWidget {
     final cs = ref.watch(childSafeProvider).value ?? const ChildSafeState();
     final account = ref.watch(orgateAccountProvider).value;
     final gate = ref.watch(childGateProvider);
+    final l = context.l10n;
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'チャイルドセーフ'),
+      appBar: RasqPageHeader(title: l.childSafeScreensHubTitle),
       body: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.xl), children: [
-        _pad(Text(rasqDetail(context, '保護者が、子のアカウントの使い方を決めます。保護者に届くのは数と止めた種類だけで、投稿の本文は送りません。', '保護者の RASQ アカウントが、子の RASQ アカウントの使い方を決めます。投稿の判定はこの端末の中で行い、保護者に届くのは、送った数と止めた数と、送る前に止めた種類だけです(投稿の本文や話題は送りません)。'), style: caption)),
+        _pad(Text(rasqDetail(context, l.childSafeScreensHubIntro, l.childSafeScreensHubIntroDetail), style: caption)),
         if (cs.managed) ...[
-          const RasqSectionHeader(title: '見守られています'),
-          RasqValueListTile(key: const ValueKey('childSafe.hub.parent'), title: '保護者', value: cs.parentDisplayName?.isNotEmpty == true ? '${cs.parentDisplayName} (@${cs.parentHandle})' : '@${cs.parentHandle ?? '—'}'),
-          RasqValueListTile(title: '状態', value: cs.locked ? '設定待ち' : '見守り中(設定 ${cs.revision})'),
-          if (cs.offline) _pad(Text('いまはサーバーに届きません。前の設定のまま見守ります。', style: caption)),
+          RasqSectionHeader(title: l.childSafeScreensHubManagedSection),
+          RasqValueListTile(key: const ValueKey('childSafe.hub.parent'), title: l.childSafeScreensHubParent, value: cs.parentDisplayName?.isNotEmpty == true ? '${cs.parentDisplayName} (@${cs.parentHandle})' : '@${cs.parentHandle ?? '—'}'),
+          RasqValueListTile(title: l.childSafeScreensHubState, value: cs.locked ? l.childSafeStatePending : l.childSafeScreensHubStateActive(cs.revision)),
+          if (cs.offline) _pad(Text(l.childSafeScreensHubOffline, style: caption)),
           if (cs.error != null) _pad(Text(cs.error!, style: caption.copyWith(color: scheme.error))),
-          if (!cs.locked) ...[for (final l in childSafeSummaryLines(gate)) _pad(Text('・$l', style: RasqTypography.bodySmall))],
-          RasqListTile(key: const ValueKey('childSafe.hub.refresh'), title: '保護者の設定を取り直す', chevron: false, onTap: () => ref.read(childSafeProvider.notifier).refresh()),
+          if (!cs.locked) ...[for (final line in childSafeSummaryLines(gate)) _pad(Text(l.childSafeBullet(line), style: RasqTypography.bodySmall))],
+          RasqListTile(key: const ValueKey('childSafe.hub.refresh'), title: l.childSafeScreensHubRefresh, chevron: false, onTap: () => ref.read(childSafeProvider.notifier).refresh()),
         ],
-        const RasqSectionHeader(title: '保護者として'),
+        RasqSectionHeader(title: l.childSafeScreensHubAsGuardian),
         RasqListTile(
           key: const ValueKey('childSafe.hub.guardian'),
-          title: '見守る(保護者)',
-          subtitle: cs.guardian.verified ? '確認済み(${cs.guardian.methodLabel})。子のアカウントを作る / つなぐ / 設定' : '保護者の確認は Web コンソールで(日本はマイナンバーカード、ほかは自己申告)',
+          title: l.childSafeWatchAsGuardian,
+          subtitle: cs.guardian.verified ? l.childSafeScreensHubGuardianVerified(cs.guardian.methodLabel) : l.childSafeScreensHubGuardianUnverified,
           enabled: account != null && !cs.managed,
           onTap: () => context.push('/child-safe/guardian'),
         ),
-        const RasqSectionHeader(title: '子として'),
+        RasqSectionHeader(title: l.childSafeScreensHubAsChild),
         if (!cs.managed)
           RasqListTile(
             key: const ValueKey('childSafe.hub.childMode'),
-            title: 'チャイルドモード',
-            subtitle: account == null ? '保護者からのコードでログインします' : 'このアカウントを、保護者のコードでつなぎます',
+            title: l.childSafeChildMode,
+            subtitle: account == null ? l.childSafeScreensHubChildModeLogin : l.childSafeScreensHubChildModePair,
             onTap: () => context.push(account == null ? '/child-safe/login' : '/child-safe/pair'),
           ),
-        if (account == null) RasqListTile(key: const ValueKey('childSafe.hub.login'), title: '保護者からのコードでログイン', subtitle: '保護者が作った子のアカウントに入ります', onTap: () => context.push('/child-safe/login')),
-        const RasqSectionHeader(title: 'この端末'),
-        RasqListTile(title: 'プライバシーとセーフモード', subtitle: cs.managed ? '見守り中は、閲覧注意のメディアを必ず隠します(変えられません)' : '閲覧注意メディアの扱い', onTap: () => context.push('/settings/dsl/sns.safety')),
+        if (account == null) RasqListTile(key: const ValueKey('childSafe.hub.login'), title: l.childSafeLoginWithCode, subtitle: l.childSafeScreensHubLoginSubtitle, onTap: () => context.push('/child-safe/login')),
+        RasqSectionHeader(title: l.childSafeScreensHubThisDevice),
+        RasqListTile(title: l.childSafeScreensHubSafety, subtitle: cs.managed ? l.childSafeScreensHubSafetyManaged : l.childSafeScreensHubSafetyNormal, onTap: () => context.push('/settings/dsl/sns.safety')),
       ]),
     );
   }
 }
 
 /// 話題の一覧 (D-315) の短い注記(`(流す話題: a・b)`)。空のブラックリストは書かない。
-String _topicsNote(ChildSafeTopics t, {required String allow, required String deny}) =>
-    t.topics.isEmpty && !t.allow ? '' : '(${t.allow ? allow : deny}: ${t.topics.isEmpty ? 'なし' : t.topics.join('・')})';
+String _topicsNote(ChildSafeTopics t, {required String allow, required String deny}) {
+  final l = appL10n;
+  return t.topics.isEmpty && !t.allow ? '' : l.childSafeScreensTopicsNote(t.allow ? allow : deny, t.topics.isEmpty ? l.childSafeScreensTopicsNone : t.topics.join(l.childSafeListSeparator));
+}
 
 /// 見守りの制限を、子に見せる短い行に。
 List<String> childSafeSummaryLines(ChildGate gate) {
   final p = gate.policy;
   if (p == null) return const [];
+  final l = appL10n;
+  final sep = l.childSafeListSeparator;
   final out = <String>[
-    if (p.timeline.enabled) 'タイムライン: ${p.timeline.level.label}${_topicsNote(p.timeline.topics, allow: '流す話題', deny: '見せない話題')}',
-    if (p.composer.enabled) '投稿の判定: ${p.composer.level.label}${_topicsNote(p.composer.topics, allow: '送れる話題', deny: '送れない話題')}',
-    if (p.postsPerDay != null) '1 日に送れる投稿: ${p.postsPerDay} 件',
-    if (p.time.enabled) '見守りの時間: ${p.time.start}〜${p.time.end}${p.time.topics.isEmptyWhitelist ? '(投稿は流れません)' : _topicsNote(p.time.topics, allow: '流す話題', deny: '流さない話題')}',
+    if (p.timeline.enabled) l.childSafeScreensSummaryTimeline(p.timeline.level.label, _topicsNote(p.timeline.topics, allow: l.childSafeScreensTopicsShown, deny: l.childSafeScreensTopicsHidden)),
+    if (p.composer.enabled) l.childSafeScreensSummaryComposer(p.composer.level.label, _topicsNote(p.composer.topics, allow: l.childSafeScreensTopicsSendable, deny: l.childSafeScreensTopicsUnsendable)),
+    if (p.postsPerDay != null) l.childSafeScreensSummaryPostsPerDay(p.postsPerDay!),
+    if (p.time.enabled)
+      l.childSafeScreensSummaryTime(l.childSafeTimeRange(p.time.start, p.time.end),
+          p.time.topics.isEmptyWhitelist ? l.childSafeScreensSummaryTimeNothing : _topicsNote(p.time.topics, allow: l.childSafeScreensTopicsShown, deny: l.childSafeScreensTopicsNotShown)),
   ];
   final a = p.allow;
   if (a != null) {
-    if (a.sns != null) out.add('使える SNS: ${a.sns!.kinds.isEmpty ? 'どれでも' : a.sns!.kinds.join('・')}${a.sns!.instances.isEmpty ? '' : '(${a.sns!.instances.join('・')})'}${a.sns!.addAccounts ? '' : '、追加はできません'}');
+    if (a.sns != null) {
+      out.add(l.childSafeScreensSummarySns(a.sns!.kinds.isEmpty ? l.childSafeScreensSummaryAny : a.sns!.kinds.join(sep), a.sns!.instances.isEmpty ? '' : l.childSafeScreensSummarySnsServers(a.sns!.instances.join(sep)),
+          a.sns!.addAccounts ? '' : l.childSafeScreensSummarySnsNoAdd));
+    }
     final off = [for (final e in {...?a.features}.entries) if (!e.value) ChildSafeCatalog.fallback.features.where((f) => f.id == e.key).firstOrNull?.label ?? e.key];
-    if (off.isNotEmpty) out.add('止めている機能: ${off.join('・')}');
+    if (off.isNotEmpty) out.add(l.childSafeScreensSummaryFeaturesOff(off.join(sep)));
     final searchOff = [for (final e in {...?a.search}.entries) if (!e.value) ChildSafeCatalog.fallback.search.where((f) => f.id == e.key).firstOrNull?.label ?? e.key];
-    if (searchOff.isNotEmpty) out.add('止めている検索: ${searchOff.join('・')}');
+    if (searchOff.isNotEmpty) out.add(l.childSafeScreensSummarySearchOff(searchOff.join(sep)));
     if (a.plugins != null) {
       final ids = a.plugins!.ids.length;
-      out.add('プラグイン: ${switch (a.plugins!.install) {
-        ChildSafeInstall.any => 'どれでも',
-        ChildSafeInstall.examples => '選んだ $ids 個と、許す例に近いもの',
-        _ => '選んだ $ids 個だけ',
-      }}・インストールは${a.plugins!.install.label}');
+      out.add(l.childSafeScreensSummaryPlugins(
+          switch (a.plugins!.install) {
+            ChildSafeInstall.any => l.childSafeScreensSummaryAny,
+            ChildSafeInstall.examples => l.childSafeScreensSummaryPluginsExamples(ids),
+            _ => l.childSafeScreensSummaryPluginsListed(ids),
+          },
+          a.plugins!.install.label));
     }
     final ex = a.examples;
-    if (ex != null && ex.isNotEmpty) out.add('例: 許す例 ${ex.allow.length} / 止める例 ${ex.deny.length}(止める例に近いプラグイン / クリップ / リストは出ません)');
-    if (a.rai != null) out.add(a.rai!.enabled ? 'RAi: ${a.rai!.groups.length} 種類の関数${a.rai!.automation ? '' : '(自動化なし)'}' : 'RAi: 使えません');
+    if (ex != null && ex.isNotEmpty) out.add(l.childSafeScreensSummaryExamples(ex.allow.length, ex.deny.length));
+    if (a.rai != null) out.add(a.rai!.enabled ? l.childSafeScreensSummaryRai(a.rai!.groups.length, a.rai!.automation ? '' : l.childSafeScreensSummaryRaiNoAuto) : l.childSafeScreensSummaryRaiOff);
   }
   return out;
 }
@@ -192,7 +207,7 @@ Widget _fromLinkNote(BuildContext context, String what) {
     key: const ValueKey('childSafe.fromLink'),
     padding: const EdgeInsets.all(RasqSpacing.sm),
     decoration: BoxDecoration(color: scheme.tertiaryContainer, borderRadius: BorderRadius.circular(8)),
-    child: Text('リンク(QR)からコードを入れました。自分の保護者から受け取ったものか確かめてから「$what」を押してください。知らない人のリンクなら、押さずに閉じてください。',
+    child: Text(context.l10n.childSafeScreensFromLink(what),
         style: RasqTypography.caption.copyWith(color: scheme.onTertiaryContainer)),
   ));
 }
@@ -233,7 +248,7 @@ class _ChildPairScreenState extends ConsumerState<ChildPairScreen> {
     });
     try {
       await ref.read(childSafeProvider.notifier).pair(code);
-      _toast(ref, '保護者とつなぎました。保護者が設定を決めるまで待ってください');
+      _toast(ref, appL10n.childSafeScreensPaired);
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) setState(() => _error = childSafeErrorMessage(e));
@@ -247,16 +262,17 @@ class _ChildPairScreenState extends ConsumerState<ChildPairScreen> {
     final scheme = Theme.of(context).colorScheme;
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
     final account = ref.watch(orgateAccountProvider).value;
+    final l = context.l10n;
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'チャイルドモード'),
+      appBar: RasqPageHeader(title: l.childSafeChildMode),
       body: ListView(children: [
         if (account == null) ...[
-          _pad(Text('RASQ アカウントにログインしていません。保護者が作ったアカウントなら、保護者からのコードでログインします。', style: caption)),
-          RasqListTile(title: '保護者からのコードでログイン', onTap: () => context.push('/child-safe/login')),
-          RasqListTile(title: '既存の RASQ アカウントにログイン', onTap: () => context.push('/settings/account-login')),
+          _pad(Text(l.childSafeScreensPairNotLoggedIn, style: caption)),
+          RasqListTile(title: l.childSafeLoginWithCode, onTap: () => context.push('/child-safe/login')),
+          RasqListTile(title: l.childSafeScreensPairExistingLogin, onTap: () => context.push('/settings/account-login')),
         ] else ...[
-          _pad(Text(rasqDetail(context, '@${{account.handle}} を保護者の見守りにつなぎます。保護者の画面に出ているコード(8 字)を入れてください。つないだら、保護者が設定を決めるまで使えません。', '@${account.handle} を、保護者の見守りにつなぎます。保護者の画面(アプリか Web コンソール)に出ているコード(8 字、例 ABCD-EFGH)を入れてください。つないだら、保護者が設定を決めるまでアプリは使えません。'), style: caption)),
-          if (widget.initialCode?.isNotEmpty == true) _fromLinkNote(context, 'つなぐ'),
+          _pad(Text(rasqDetail(context, l.childSafeScreensPairIntro(account.handle), l.childSafeScreensPairIntroDetail(account.handle)), style: caption)),
+          if (widget.initialCode?.isNotEmpty == true) _fromLinkNote(context, l.childSafeScreensPairButton),
           _pad(TextField(
             key: const ValueKey('childSafe.pair.code'),
             controller: _code,
@@ -268,13 +284,13 @@ class _ChildPairScreenState extends ConsumerState<ChildPairScreen> {
             onSubmitted: (_) => _pair(),
           )),
           if (_error != null) _pad(Text(_error!, key: const ValueKey('childSafe.pair.error'), style: caption.copyWith(color: scheme.error))),
-          _pad(FilledButton(key: const ValueKey('childSafe.pair.submit'), onPressed: _busy ? null : _pair, child: const Text('つなぐ'))),
+          _pad(FilledButton(key: const ValueKey('childSafe.pair.submit'), onPressed: _busy ? null : _pair, child: Text(l.childSafeScreensPairButton))),
           // QR (D-309): アプリの中では読まない(カメラのパッケージは入れていない)。Android / iOS は端末のカメラアプリで
           // 読むと `rasq://child-safe/pair?code=…` でこの画面が開く。ほかの面はコードの入力と、リンクの貼り付け。
           _pad(Text(
             childSafeLinksOpenApp
-                ? rasqDetail(context, '保護者の画面の QR を、この端末のカメラアプリで読んでもつなげます。', '保護者の画面の QR は、この端末のカメラアプリで読むと、コードが入った状態でこの画面が開きます。リンク(rasq://child-safe/pair?code=…)を貼り付けても、つなげます。')
-                : rasqDetail(context, 'この端末では QR を読めません。コードを入れてください。', 'この端末では QR を読めません。コードを入れるか、リンク(rasq://child-safe/pair?code=…)を貼り付けてください。'),
+                ? rasqDetail(context, l.childSafeScreensPairQrHint, l.childSafeScreensPairQrHintDetail)
+                : rasqDetail(context, l.childSafeScreensPairNoQr, l.childSafeScreensPairNoQrDetail),
             key: const ValueKey('childSafe.pair.qrHint'),
             style: caption,
           )),
@@ -315,7 +331,7 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
   Future<void> _login() async {
     final api = ref.read(childSafeApiProvider);
     final code = childSafeCodeFromInput(_code.text);
-    if (api == null) return setState(() => _error = 'RASQ サーバーの接続先が未設定です');
+    if (api == null) return setState(() => _error = context.l10n.childSafeNoServer);
     if (code.isEmpty || _busy) return;
     setState(() {
       _busy = true;
@@ -331,9 +347,9 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
       // 台帳にも載せて、いまのアカウントにする(いまのアカウントの SNS は持ち込まない。D-316)。この端末の SNS も、
       // 持ち込むかを聞かずに持ち込まない(画面で「引き継ぎません」と案内している。D-461)。
       final account = await accounts.adoptLogin(res, offerCarry: false);
-      if (account == null) return _toast(ref, 'ログインできませんでした');
+      if (account == null) return _toast(ref, appL10n.childSafeScreensLoginFailed);
       await childSafe.refresh();
-      _toast(ref, '@${account.handle} にログインしました(${accountDeviceLabel()})');
+      _toast(ref, appL10n.childSafeScreensLoggedIn(account.handle, accountDeviceLabel()));
     } on OrgateException catch (e) {
       if (mounted) setState(() => _error = childSafeErrorMessage(e));
     } finally {
@@ -345,23 +361,24 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
+    final l = context.l10n;
     return Scaffold(
-      appBar: const RasqPageHeader(title: '保護者からのコードでログイン'),
+      appBar: RasqPageHeader(title: l.childSafeLoginWithCode),
       body: ListView(children: [
-        _pad(Text('保護者がアプリで子のアカウントを作ると、1 度だけ使えるコードが出ます。そのコードを入れると、この端末がそのアカウントになります。この端末の SNS アカウントは引き継ぎません。', style: caption)),
-        if (widget.initialCode?.isNotEmpty == true) _fromLinkNote(context, 'ログイン'),
+        _pad(Text(l.childSafeScreensLoginIntro, style: caption)),
+        if (widget.initialCode?.isNotEmpty == true) _fromLinkNote(context, l.childSafeScreensLoginButton),
         _pad(TextField(
           key: const ValueKey('childSafe.login.code'),
           controller: _code,
           autocorrect: false,
           enableSuggestions: false,
           textCapitalization: TextCapitalization.characters,
-          decoration: const InputDecoration(hintText: 'ログインのコード', isDense: true),
+          decoration: InputDecoration(hintText: l.childSafeScreensLoginCodeHint, isDense: true),
           style: const TextStyle(letterSpacing: 2),
           onSubmitted: (_) => _login(),
         )),
         if (_error != null) _pad(Text(_error!, key: const ValueKey('childSafe.login.error'), style: caption.copyWith(color: scheme.error))),
-        _pad(FilledButton(key: const ValueKey('childSafe.login.submit'), onPressed: _busy ? null : _login, child: const Text('ログイン'))),
+        _pad(FilledButton(key: const ValueKey('childSafe.login.submit'), onPressed: _busy ? null : _login, child: Text(l.childSafeScreensLoginButton))),
       ]),
     );
   }
@@ -375,7 +392,8 @@ class ChildSafePendingScreen extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final cs = ref.watch(childSafeProvider).value ?? const ChildSafeState();
     final account = ref.watch(orgateAccountProvider).value;
-    final parent = cs.parentDisplayName?.isNotEmpty == true ? cs.parentDisplayName! : (cs.parentHandle == null ? '保護者' : '@${cs.parentHandle}');
+    final l = context.l10n;
+    final parent = cs.parentDisplayName?.isNotEmpty == true ? cs.parentDisplayName! : (cs.parentHandle == null ? l.childSafeScreensPendingParent : '@${cs.parentHandle}');
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -388,23 +406,23 @@ class ChildSafePendingScreen extends ConsumerWidget {
                 child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   Icon(Icons.child_care_outlined, size: 48, color: scheme.primary),
                   const SizedBox(height: RasqSpacing.md),
-                  Text(cs.state == 'unverified' ? '保護者の設定を確かめられません' : '保護者が設定を決めるまで待ってください', key: const ValueKey('childSafe.pending.title'), style: RasqTypography.title, textAlign: TextAlign.center),
+                  Text(cs.state == 'unverified' ? l.childSafeScreensPendingUnverifiedTitle : l.childSafeScreensPendingTitle, key: const ValueKey('childSafe.pending.title'), style: RasqTypography.title, textAlign: TextAlign.center),
                   const SizedBox(height: RasqSpacing.sm),
                   Text(
-                    cs.state == 'unverified' ? (cs.error ?? '設定の署名が合いません。') : '$parent と見守りでつながっています。$parent が使い方を決めると、使えるようになります。',
+                    cs.state == 'unverified' ? (cs.error ?? l.childSafeScreensPendingSignatureMismatch) : l.childSafeScreensPendingBody(parent),
                     style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
                     textAlign: TextAlign.center,
                   ),
-                  if (cs.offline) Text('いまはサーバーに届きません。', style: RasqTypography.caption.copyWith(color: scheme.error), textAlign: TextAlign.center),
+                  if (cs.offline) Text(l.childSafeScreensPendingOffline, style: RasqTypography.caption.copyWith(color: scheme.error), textAlign: TextAlign.center),
                   const SizedBox(height: RasqSpacing.lg),
                   if (account != null) ...[
-                    FilledButton(key: const ValueKey('childSafe.pending.refresh'), onPressed: () => ref.read(childSafeProvider.notifier).refresh(), child: const Text('更新')),
+                    FilledButton(key: const ValueKey('childSafe.pending.refresh'), onPressed: () => ref.read(childSafeProvider.notifier).refresh(), child: Text(l.childSafeScreensPendingRefresh)),
                     const SizedBox(height: RasqSpacing.sm),
-                    OutlinedButton(key: const ValueKey('childSafe.pending.logout'), onPressed: () => childSafeSignOut(ref), child: const Text('ログアウト')),
+                    OutlinedButton(key: const ValueKey('childSafe.pending.logout'), onPressed: () => childSafeSignOut(ref), child: Text(l.childSafeScreensPendingLogout)),
                   ] else ...[
-                    FilledButton(onPressed: () => context.push('/child-safe/login'), child: const Text('保護者からのコードでログイン')),
+                    FilledButton(onPressed: () => context.push('/child-safe/login'), child: Text(l.childSafeLoginWithCode)),
                     const SizedBox(height: RasqSpacing.sm),
-                    OutlinedButton(onPressed: () => context.push('/settings/account-login'), child: const Text('RASQ アカウントにログイン')),
+                    OutlinedButton(onPressed: () => context.push('/settings/account-login'), child: Text(l.childSafeScreensPendingRasqLogin)),
                   ],
                 ]),
               ),

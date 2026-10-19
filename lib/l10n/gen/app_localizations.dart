@@ -94,6 +94,1644 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('ja')];
 
+  /// 見守りの判定の強さ(プリセット / タイムライン / 投稿の強さの選択肢)
+  ///
+  /// In ja, this message translates to:
+  /// **'きびしめ'**
+  String get childSafeLevelStrict;
+
+  /// 見守りの判定の強さ
+  ///
+  /// In ja, this message translates to:
+  /// **'ふつう'**
+  String get childSafeLevelStandard;
+
+  /// 見守りの判定の強さ
+  ///
+  /// In ja, this message translates to:
+  /// **'ゆるめ'**
+  String get childSafeLevelMild;
+
+  /// 話題の一覧の見方: どれかの話題に当たるものだけ通す
+  ///
+  /// In ja, this message translates to:
+  /// **'ホワイトリスト'**
+  String get childSafeTopicModeAllow;
+
+  /// 話題の一覧の見方: 当たるものを止める
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラックリスト'**
+  String get childSafeTopicModeDeny;
+
+  /// 子のプラグインのインストールの範囲の選択肢
+  ///
+  /// In ja, this message translates to:
+  /// **'入れられない'**
+  String get childSafeInstallNone;
+
+  /// 子のプラグインのインストールの範囲の選択肢(保護者が名前で選んだものだけ)
+  ///
+  /// In ja, this message translates to:
+  /// **'選んだものだけ'**
+  String get childSafeInstallListed;
+
+  /// 子のプラグインのインストールの範囲の選択肢
+  ///
+  /// In ja, this message translates to:
+  /// **'自由'**
+  String get childSafeInstallAny;
+
+  /// 子のプラグインのインストールの範囲の選択肢(許す例に近いもの)
+  ///
+  /// In ja, this message translates to:
+  /// **'例に近いもの'**
+  String get childSafeInstallExamples;
+
+  /// 保護者の設定の保存の前の確かめ: 有効な面の話題のホワイトリストが空
+  ///
+  /// In ja, this message translates to:
+  /// **'ホワイトリストが空です。話題を 1 つ以上入れるか、ブラックリストにしてください'**
+  String get childSafeEmptyWhitelistError;
+
+  /// 保護者の確認の方法
+  ///
+  /// In ja, this message translates to:
+  /// **'マイナンバーカード (JPKI)'**
+  String get childSafeMethodJpki;
+
+  /// 保護者の確認の方法
+  ///
+  /// In ja, this message translates to:
+  /// **'自己申告'**
+  String get childSafeMethodSelfDeclared;
+
+  /// つなぐ / ログインのコードが見つからない(サーバーの 404)
+  ///
+  /// In ja, this message translates to:
+  /// **'コードが違うか、期限が切れています'**
+  String get childSafeErrorCodeInvalid;
+
+  /// 子のアカウントを作るときのハンドルの重複
+  ///
+  /// In ja, this message translates to:
+  /// **'そのハンドルは使われています'**
+  String get childSafeErrorHandleTaken;
+
+  /// つなげないアカウント(サーバーの 409)
+  ///
+  /// In ja, this message translates to:
+  /// **'もう見守られている(か、だれかを見守っている)アカウントです'**
+  String get childSafeErrorAlreadyLinked;
+
+  /// コードが使えない(サーバーの 410)
+  ///
+  /// In ja, this message translates to:
+  /// **'コードの期限が切れたか、もう使われています。保護者に出し直してもらってください'**
+  String get childSafeErrorCodeGone;
+
+  /// 子のログインを端末の理由で断られた
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末ではログインできません'**
+  String get childSafeErrorDevice;
+
+  /// 試行の回数の上限(サーバーの 429)
+  ///
+  /// In ja, this message translates to:
+  /// **'試行が多すぎます。しばらく待ってから、やり直してください'**
+  String get childSafeErrorTooMany;
+
+  /// RASQ サーバー(Central)の接続先が無いときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ サーバーの接続先が未設定です'**
+  String get childSafeNoServer;
+
+  /// チャイルドセーフの知らせのトーストの末尾。count はほかに届いた知らせの数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{(ほか {count} 件)}}'**
+  String childSafeNoticeMore(int count);
+
+  /// 子の端末の知らせのトースト(知らせに題が無いとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'チャイルドセーフ: 保護者の設定を取り直しました'**
+  String get childSafeNoticeRefreshed;
+
+  /// 保護者への知らせのトーストのボタン(保護者の画面を開く)
+  ///
+  /// In ja, this message translates to:
+  /// **'見る'**
+  String get childSafeNoticeView;
+
+  /// 保護者が止めている機能を使おうとしたときの決まり文句
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が止めています'**
+  String get childSafeBlocked;
+
+  /// 保護者が止めている機能。label は機能の名前(RAi の関数のときは関数の名前)
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が止めています({label})'**
+  String childSafeBlockedWith(String label);
+
+  /// 見守りの時間の範囲。start / end は HH:MM
+  ///
+  /// In ja, this message translates to:
+  /// **'{start}〜{end}'**
+  String childSafeTimeRange(String start, String end);
+
+  /// 保護者が設定を決める前の子の端末
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が設定を決めるまで使えません'**
+  String get childSafeLockedUntilSetup;
+
+  /// window は見守りの時間の範囲(21:00〜06:00 など)
+  ///
+  /// In ja, this message translates to:
+  /// **'見守りの時間({window})は DM を使えません'**
+  String childSafeWindowNoDm(String window);
+
+  /// No description provided for @childSafeBlockedAstell.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が ASTell を止めています'**
+  String get childSafeBlockedAstell;
+
+  /// window は見守りの時間の範囲
+  ///
+  /// In ja, this message translates to:
+  /// **'見守りの時間({window})は ASTell を使えません'**
+  String childSafeWindowNoAstell(String window);
+
+  /// No description provided for @childSafeBlockedDm.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が DM を止めています'**
+  String get childSafeBlockedDm;
+
+  /// window は見守りの時間の範囲
+  ///
+  /// In ja, this message translates to:
+  /// **'見守りの時間({window})は通知を見られません'**
+  String childSafeWindowNoNotifications(String window);
+
+  /// No description provided for @childSafeBlockedRai.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が RAi を止めています'**
+  String get childSafeBlockedRai;
+
+  /// No description provided for @childSafeBlockedStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がプラグインストアを止めています'**
+  String get childSafeBlockedStore;
+
+  /// No description provided for @childSafeBlockedSearch.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が検索を止めています'**
+  String get childSafeBlockedSearch;
+
+  /// No description provided for @childSafeBlockedAddAccount.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が SNS アカウントの追加を止めています'**
+  String get childSafeBlockedAddAccount;
+
+  /// No description provided for @childSafeBlockedCustomPlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がカスタムプラグインを止めています'**
+  String get childSafeBlockedCustomPlugins;
+
+  /// No description provided for @childSafeBlockedPlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がプラグインを止めています'**
+  String get childSafeBlockedPlugins;
+
+  /// window は見守りの時間の範囲
+  ///
+  /// In ja, this message translates to:
+  /// **'見守りの時間({window})は投稿の詳細を開けません'**
+  String childSafeWindowNoPostDetail(String window);
+
+  /// 見守りの判定で隠した投稿の詳細を開こうとした
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿は表示できません'**
+  String get childSafePostHidden;
+
+  /// 話題・機能などを並べるときの区切り
+  ///
+  /// In ja, this message translates to:
+  /// **'・'**
+  String get childSafeListSeparator;
+
+  /// 箇条書きの 1 行
+  ///
+  /// In ja, this message translates to:
+  /// **'・{text}'**
+  String childSafeBullet(String text);
+
+  /// 話題が多くて一部だけ見せるとき。topics は並べた話題
+  ///
+  /// In ja, this message translates to:
+  /// **'{topics} など'**
+  String childSafeTopicsEtc(String topics);
+
+  /// 投稿の話題のホワイトリストが空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の設定により、いまは投稿を送れません'**
+  String get childSafeComposeNoTopicsAllowed;
+
+  /// 投稿の話題のホワイトリストに当たらない。topics は話題(5 つまで)
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の設定により、決められた話題({topics})の投稿だけ送れます。話題に合うように書いてください'**
+  String childSafeComposeTopicsOnly(String topics);
+
+  /// 投稿の話題のブラックリストに当たった。topic は当たった話題
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の設定により、「{topic}」の話題の投稿は送れません。書き換えてください'**
+  String childSafeComposeTopicDenied(String topic);
+
+  /// 本文から引いた語
+  ///
+  /// In ja, this message translates to:
+  /// **'「{text}」'**
+  String childSafeQuoted(String text);
+
+  /// 強い言葉で止めた。level は判定の強さ、word は当たった語(「…」の形。無ければ空)
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の設定({level})により、この表現{word}は送れません。言い換えてください'**
+  String childSafeComposeStimulus(String level, String word);
+
+  /// No description provided for @childSafeBlockedThisPlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がこのプラグインを止めています'**
+  String get childSafeBlockedThisPlugin;
+
+  /// どのプラグインか分からない読み込み方(素の .wasm など)で動かそうとした
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が選んだプラグインだけ動かせます(この読み込み方では、どのプラグインか確かめられません)'**
+  String get childSafeDevPreviewUnknown;
+
+  /// No description provided for @childSafeBlockedInstall.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がプラグインのインストールを止めています'**
+  String get childSafeBlockedInstall;
+
+  /// No description provided for @childSafeNearDenyPlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が止めている例に近いプラグインです'**
+  String get childSafeNearDenyPlugin;
+
+  /// No description provided for @childSafeInstallListedOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が選んだプラグインだけ入れられます'**
+  String get childSafeInstallListedOnly;
+
+  /// No description provided for @childSafeInstallExamplesOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が選んだプラグインと、許す例に近いものだけ入れられます'**
+  String get childSafeInstallExamplesOnly;
+
+  /// 端末に控えた保護者の設定の署名が合わない
+  ///
+  /// In ja, this message translates to:
+  /// **'控えた制限の署名を確かめられません。オンラインで取り直してください'**
+  String get childSafeCacheUnverified;
+
+  /// No description provided for @childSafeNewSettingsUnverified.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の新しい設定の署名を確かめられませんでした(前の設定のまま)'**
+  String get childSafeNewSettingsUnverified;
+
+  /// No description provided for @childSafeComposeLocked.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が設定を決めるまで送れません'**
+  String get childSafeComposeLocked;
+
+  /// 1 日に送れる投稿の数に達した。count はその数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{今日はもう {count} 件送りました(保護者が決めた 1 日の数)。また明日}}'**
+  String childSafeComposeDailyLimit(int count);
+
+  /// 送る前の加工(テキスト加工プラグイン)のあとの本文で止めた。message は止めた理由
+  ///
+  /// In ja, this message translates to:
+  /// **'{message}(送る前の加工のあとの本文)'**
+  String childSafeComposeAfterTransform(String message);
+
+  /// 見守りの状態: 保護者が設定を決める前
+  ///
+  /// In ja, this message translates to:
+  /// **'設定待ち'**
+  String get childSafeStatePending;
+
+  /// 保護者の画面の見出し / 入口の行
+  ///
+  /// In ja, this message translates to:
+  /// **'見守る(保護者)'**
+  String get childSafeWatchAsGuardian;
+
+  /// 保護者が作った子のアカウントへログインする画面の見出し / 入口
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者からのコードでログイン'**
+  String get childSafeLoginWithCode;
+
+  /// 子の端末で保護者のコードでつなぐ画面の見出し / 入口
+  ///
+  /// In ja, this message translates to:
+  /// **'チャイルドモード'**
+  String get childSafeChildMode;
+
+  /// 見守っている子の状態: 最新の設定が子の端末に届いている
+  ///
+  /// In ja, this message translates to:
+  /// **'見守り中(端末に届いています)'**
+  String get childSafeGuardianStateApplied;
+
+  /// revision は保護者の設定の版の番号
+  ///
+  /// In ja, this message translates to:
+  /// **'見守り中(設定 {revision} はまだ端末に届いていません)'**
+  String childSafeGuardianStateNotApplied(int revision);
+
+  /// version は誓約の版(日付)
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の誓約(版 {version})'**
+  String childSafeGuardianPledgeTitle(String version);
+
+  /// pledge は誓約の文(箇条書き)
+  ///
+  /// In ja, this message translates to:
+  /// **'{pledge}\n\n同意すると、マイナンバーカード(デジタル認証アプリ)での確認に進みます(日本にお住まいの方)。'**
+  String childSafeGuardianPledgeMessage(String pledge);
+
+  /// No description provided for @childSafeGuardianPledgeConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'同意して進む'**
+  String get childSafeGuardianPledgeConfirm;
+
+  /// No description provided for @childSafeGuardianCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get childSafeGuardianCancel;
+
+  /// No description provided for @childSafeGuardianLoadError.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした'**
+  String get childSafeGuardianLoadError;
+
+  /// No description provided for @childSafeGuardianReload.
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get childSafeGuardianReload;
+
+  /// No description provided for @childSafeGuardianVerifySection.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の確認'**
+  String get childSafeGuardianVerifySection;
+
+  /// No description provided for @childSafeGuardianVerified.
+  ///
+  /// In ja, this message translates to:
+  /// **'確認済み'**
+  String get childSafeGuardianVerified;
+
+  /// No description provided for @childSafeGuardianNotVerified.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ確認していません'**
+  String get childSafeGuardianNotVerified;
+
+  /// No description provided for @childSafeGuardianVerifyIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'子のアカウントを作る / つなぐ前に、保護者の確認をします(日本はマイナンバーカード)。'**
+  String get childSafeGuardianVerifyIntro;
+
+  /// No description provided for @childSafeGuardianVerifyIntroDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'子のアカウントを作る / つなぐ前に、保護者の確認をします(日本はマイナンバーカード (JPKI)、ほかの国は Web コンソールでの自己申告)。'**
+  String get childSafeGuardianVerifyIntroDetail;
+
+  /// No description provided for @childSafeGuardianVerifyJpki.
+  ///
+  /// In ja, this message translates to:
+  /// **'マイナンバーカードで確認する'**
+  String get childSafeGuardianVerifyJpki;
+
+  /// No description provided for @childSafeGuardianVerifyJpkiSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'日本にお住まいの方。誓約に同意してから、外のブラウザで開きます'**
+  String get childSafeGuardianVerifyJpkiSubtitle;
+
+  /// No description provided for @childSafeGuardianVerifyWeb.
+  ///
+  /// In ja, this message translates to:
+  /// **'Web コンソールで確認する'**
+  String get childSafeGuardianVerifyWeb;
+
+  /// No description provided for @childSafeGuardianOpensInBrowser.
+  ///
+  /// In ja, this message translates to:
+  /// **'外のブラウザで開きます'**
+  String get childSafeGuardianOpensInBrowser;
+
+  /// count は見守っている子の数、max は上限
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{見守っている子({count} / {max})}}'**
+  String childSafeGuardianChildrenSection(int count, int max);
+
+  /// No description provided for @childSafeGuardianNoChildren.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだいません。'**
+  String get childSafeGuardianNoChildren;
+
+  /// 子の行の末尾(保護者が作った子のアカウント)
+  ///
+  /// In ja, this message translates to:
+  /// **'・保護者が作成'**
+  String get childSafeGuardianCreatedByGuardian;
+
+  /// No description provided for @childSafeGuardianAddSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'子を足す'**
+  String get childSafeGuardianAddSection;
+
+  /// No description provided for @childSafeGuardianCreate.
+  ///
+  /// In ja, this message translates to:
+  /// **'子のアカウントを作る'**
+  String get childSafeGuardianCreate;
+
+  /// No description provided for @childSafeGuardianCreateSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ハンドル / 名前 / 年齢の帯を決めると、子の端末でログインするためのコードが 1 度だけ出ます'**
+  String get childSafeGuardianCreateSubtitle;
+
+  /// No description provided for @childSafeGuardianHandleHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ハンドル(英数字)'**
+  String get childSafeGuardianHandleHint;
+
+  /// No description provided for @childSafeGuardianNameHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示名'**
+  String get childSafeGuardianNameHint;
+
+  /// No description provided for @childSafeGuardianCreateButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'作る'**
+  String get childSafeGuardianCreateButton;
+
+  /// No description provided for @childSafeGuardianNewLoginCodeTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} のログインのコード(子の端末の「保護者からのコードでログイン」に入れるか、子の端末のカメラで QR を読む)'**
+  String childSafeGuardianNewLoginCodeTitle(String handle);
+
+  /// No description provided for @childSafeGuardianPair.
+  ///
+  /// In ja, this message translates to:
+  /// **'コードでつなぐ'**
+  String get childSafeGuardianPair;
+
+  /// No description provided for @childSafeGuardianPairSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'子がもう持っている RASQ アカウントを、子の端末の「チャイルドモード」でつなぎます(10 分・1 回だけ)'**
+  String get childSafeGuardianPairSubtitle;
+
+  /// No description provided for @childSafeGuardianPairCodeTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'つなぐコード(子の端末の「チャイルドモード」に入れるか、子の端末のカメラで QR を読む)'**
+  String get childSafeGuardianPairCodeTitle;
+
+  /// time はコードの期限(月/日 時:分)
+  ///
+  /// In ja, this message translates to:
+  /// **'{time} まで。この画面を閉じると、もう出せません(出し直すと前のコードは使えなくなります)。'**
+  String childSafeGuardianCodeExpires(String time);
+
+  /// No description provided for @childSafeGuardianCodeQr.
+  ///
+  /// In ja, this message translates to:
+  /// **'コードの QR'**
+  String get childSafeGuardianCodeQr;
+
+  /// No description provided for @childSafeGuardianCopy.
+  ///
+  /// In ja, this message translates to:
+  /// **'コピー'**
+  String get childSafeGuardianCopy;
+
+  /// No description provided for @childSafeGuardianCopyLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピー'**
+  String get childSafeGuardianCopyLink;
+
+  /// No description provided for @childSafeGuardianClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get childSafeGuardianClose;
+
+  /// 保護者の設定のページのタブ(タイムライン)
+  ///
+  /// In ja, this message translates to:
+  /// **'TL'**
+  String get childSafeGuardianPageTimeline;
+
+  /// No description provided for @childSafeGuardianPageComposer.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get childSafeGuardianPageComposer;
+
+  /// No description provided for @childSafeGuardianPageAstell.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell'**
+  String get childSafeGuardianPageAstell;
+
+  /// No description provided for @childSafeGuardianPagePlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン'**
+  String get childSafeGuardianPagePlugins;
+
+  /// No description provided for @childSafeGuardianPageSns.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS'**
+  String get childSafeGuardianPageSns;
+
+  /// No description provided for @childSafeGuardianPageScreenTime.
+  ///
+  /// In ja, this message translates to:
+  /// **'スクリーンタイム'**
+  String get childSafeGuardianPageScreenTime;
+
+  /// No description provided for @childSafeGuardianPageOther.
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get childSafeGuardianPageOther;
+
+  /// No description provided for @childSafeGuardianTimeFormatError.
+  ///
+  /// In ja, this message translates to:
+  /// **'時刻は HH:MM で入れてください'**
+  String get childSafeGuardianTimeFormatError;
+
+  /// No description provided for @childSafeGuardianConfirmTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'この設定を送る'**
+  String get childSafeGuardianConfirmTitle;
+
+  /// No description provided for @childSafeGuardianConfirmSend.
+  ///
+  /// In ja, this message translates to:
+  /// **'送る'**
+  String get childSafeGuardianConfirmSend;
+
+  /// No description provided for @childSafeGuardianConfirmIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} の端末に、この設定が届きます。'**
+  String childSafeGuardianConfirmIntro(String handle);
+
+  /// No description provided for @childSafeGuardianConfirmIntroDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} の端末には、Central が署名した設定が届きます(端末で確かめてから当てはめます)。'**
+  String childSafeGuardianConfirmIntroDetail(String handle);
+
+  /// No description provided for @childSafeGuardianSaved.
+  ///
+  /// In ja, this message translates to:
+  /// **'保存しました(設定 {revision})。子の端末に届くと「届いています」になります'**
+  String childSafeGuardianSaved(int revision);
+
+  /// band は年齢の帯(13-15 など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{band} の既定を読み込む'**
+  String childSafeGuardianImportPreset(String band);
+
+  /// No description provided for @childSafeGuardianImportCopy.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかの子の設定をコピー'**
+  String get childSafeGuardianImportCopy;
+
+  /// No description provided for @childSafeGuardianImportedPreset.
+  ///
+  /// In ja, this message translates to:
+  /// **'{band} の既定を読み込みました'**
+  String childSafeGuardianImportedPreset(String band);
+
+  /// No description provided for @childSafeGuardianCopyWhich.
+  ///
+  /// In ja, this message translates to:
+  /// **'どの子の設定をコピーしますか'**
+  String get childSafeGuardianCopyWhich;
+
+  /// No description provided for @childSafeGuardianNotSetUp.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} は、まだ設定が済んでいません'**
+  String childSafeGuardianNotSetUp(String handle);
+
+  /// No description provided for @childSafeGuardianCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} の設定をコピーしました'**
+  String childSafeGuardianCopied(String handle);
+
+  /// what は読み込んだ / コピーした知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'{what}(まだ保存していません)'**
+  String childSafeGuardianNotSavedYet(String what);
+
+  /// No description provided for @childSafeGuardianEnd.
+  ///
+  /// In ja, this message translates to:
+  /// **'見守りを終える'**
+  String get childSafeGuardianEnd;
+
+  /// No description provided for @childSafeGuardianEndMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} の制限をすべて外します。子の端末は、次につながったときに外れます。元に戻すには、もう一度つなぎます。'**
+  String childSafeGuardianEndMessage(String handle);
+
+  /// No description provided for @childSafeGuardianEndMessageDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} の制限をすべて外します。子の端末は、次に Central に届いたときに外れます。元に戻すには、もう一度つなぎます。'**
+  String childSafeGuardianEndMessageDetail(String handle);
+
+  /// No description provided for @childSafeGuardianEndConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'終える'**
+  String get childSafeGuardianEndConfirm;
+
+  /// No description provided for @childSafeGuardianEndSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'制限をすべて外します'**
+  String get childSafeGuardianEndSubtitle;
+
+  /// No description provided for @childSafeGuardianSummarySection.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近の発信内容の要約(14 日)'**
+  String get childSafeGuardianSummarySection;
+
+  /// No description provided for @childSafeGuardianLoginSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'子の端末のログイン'**
+  String get childSafeGuardianLoginSection;
+
+  /// No description provided for @childSafeGuardianReissue.
+  ///
+  /// In ja, this message translates to:
+  /// **'コードを出し直す'**
+  String get childSafeGuardianReissue;
+
+  /// No description provided for @childSafeGuardianReissueSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'子の端末の「保護者からのコードでログイン」に入れるコード(10 分・1 回だけ。前のコードは使えなくなります)'**
+  String get childSafeGuardianReissueSubtitle;
+
+  /// No description provided for @childSafeGuardianLoginCodeTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} のログインのコード'**
+  String childSafeGuardianLoginCodeTitle(String handle);
+
+  /// No description provided for @childSafeGuardianSaveButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'保存して子の端末へ送る'**
+  String get childSafeGuardianSaveButton;
+
+  /// No description provided for @childSafeGuardianImportTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'設定をインポート'**
+  String get childSafeGuardianImportTooltip;
+
+  /// No description provided for @childSafeGuardianPresetCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'強さを選ぶと、タイムラインと投稿の判定の強さがそろいます。右の丸いボタンで、{band} の既定やほかの子の設定を読み込めます。'**
+  String childSafeGuardianPresetCaption(String band);
+
+  /// No description provided for @childSafeGuardianSummaryEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ報告はありません(子の端末は、終わった日の数を 1 日 1 回送ります)。'**
+  String get childSafeGuardianSummaryEmpty;
+
+  /// No description provided for @childSafeGuardianSummaryCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'送った数 / 止めた数 / 止めた種類だけです(投稿の本文や話題は届きません。送る前の判定はお子さんの端末で行います)。'**
+  String get childSafeGuardianSummaryCaption;
+
+  /// 1 日の要約。trips は止めた種類ごとの数の注記(無ければ空)
+  ///
+  /// In ja, this message translates to:
+  /// **'送った {posts}・止めた {blocked}{trips}'**
+  String childSafeGuardianSummaryDay(int posts, int blocked, String trips);
+
+  /// No description provided for @childSafeGuardianSummaryTrips.
+  ///
+  /// In ja, this message translates to:
+  /// **'({list})'**
+  String childSafeGuardianSummaryTrips(String list);
+
+  /// No description provided for @childSafeGuardianSummaryTripsSeparator.
+  ///
+  /// In ja, this message translates to:
+  /// **'、'**
+  String get childSafeGuardianSummaryTripsSeparator;
+
+  /// No description provided for @childSafeGuardianTimelineEnabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインを絞る'**
+  String get childSafeGuardianTimelineEnabled;
+
+  /// No description provided for @childSafeGuardianTimelineEnabledSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'強い言葉の投稿を見せず、話題で絞ります'**
+  String get childSafeGuardianTimelineEnabledSubtitle;
+
+  /// No description provided for @childSafeGuardianTimelineLevel.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインの強さ'**
+  String get childSafeGuardianTimelineLevel;
+
+  /// No description provided for @childSafeGuardianTimelineTopics.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインの話題'**
+  String get childSafeGuardianTimelineTopics;
+
+  /// No description provided for @childSafeGuardianTimelineAllowHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'流す話題(語やタグを「,」で区切る)'**
+  String get childSafeGuardianTimelineAllowHint;
+
+  /// No description provided for @childSafeGuardianTimelineDenyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'見せない話題(語やタグを「,」で区切る)'**
+  String get childSafeGuardianTimelineDenyHint;
+
+  /// No description provided for @childSafeGuardianTimelineAllowNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホワイトリスト: どれかの話題に当たる投稿だけが、タイムラインに流れます。'**
+  String get childSafeGuardianTimelineAllowNote;
+
+  /// No description provided for @childSafeGuardianTimelineDenyNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラックリスト: 当たる投稿を見せません(空 = 話題では絞りません)。'**
+  String get childSafeGuardianTimelineDenyNote;
+
+  /// No description provided for @childSafeGuardianComposerEnabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿を判定する'**
+  String get childSafeGuardianComposerEnabled;
+
+  /// No description provided for @childSafeGuardianComposerEnabledSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'強い言葉と話題で、送る前に止めます(当たった語に印を付けて止める)'**
+  String get childSafeGuardianComposerEnabledSubtitle;
+
+  /// No description provided for @childSafeGuardianComposerLevel.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿の強さ'**
+  String get childSafeGuardianComposerLevel;
+
+  /// No description provided for @childSafeGuardianPostsPerDayHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'1 日に送れる投稿の数(空 = 決めない、0〜1000)'**
+  String get childSafeGuardianPostsPerDayHint;
+
+  /// No description provided for @childSafeGuardianComposerTopics.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿の話題'**
+  String get childSafeGuardianComposerTopics;
+
+  /// No description provided for @childSafeGuardianComposerAllowHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'送れる話題(語やタグを「,」で区切る)'**
+  String get childSafeGuardianComposerAllowHint;
+
+  /// No description provided for @childSafeGuardianComposerDenyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'送れない話題(語やタグを「,」で区切る)'**
+  String get childSafeGuardianComposerDenyHint;
+
+  /// No description provided for @childSafeGuardianComposerAllowNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホワイトリスト: どれかの話題に当たる投稿だけ送れます(DM には当てません)。'**
+  String get childSafeGuardianComposerAllowNote;
+
+  /// No description provided for @childSafeGuardianComposerDenyNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラックリスト: 当たる投稿は送れません(空 = 話題では止めません。DM には当てません)。'**
+  String get childSafeGuardianComposerDenyNote;
+
+  /// No description provided for @childSafeGuardianAstellCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell(ルームの通話・チャット・共有)で、子ができること。'**
+  String get childSafeGuardianAstellCaption;
+
+  /// No description provided for @childSafeGuardianInstallSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール'**
+  String get childSafeGuardianInstallSection;
+
+  /// No description provided for @childSafeGuardianInstallCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'子が自分で入れられる範囲。プラグインは増えていくので、ひとつずつではなく、下の「例」で大まかに決めます。'**
+  String get childSafeGuardianInstallCaption;
+
+  /// No description provided for @childSafeGuardianNamedSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'名前で許しているプラグイン'**
+  String get childSafeGuardianNamedSection;
+
+  /// No description provided for @childSafeGuardianNamedNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'ありません。'**
+  String get childSafeGuardianNamedNone;
+
+  /// No description provided for @childSafeGuardianNamedCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'ここにあるものは、止める例に近くても使えます(✕ で外す)。'**
+  String get childSafeGuardianNamedCaption;
+
+  /// No description provided for @childSafeGuardianRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'外す'**
+  String get childSafeGuardianRemove;
+
+  /// No description provided for @childSafeGuardianAddIdHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'id で足す(例: jp.example.quiz)'**
+  String get childSafeGuardianAddIdHint;
+
+  /// No description provided for @childSafeGuardianAddIdButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'足す'**
+  String get childSafeGuardianAddIdButton;
+
+  /// No description provided for @childSafeGuardianIdShapeError.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの id の形ではありません(英小文字・数字・「.」「_」「-」、例: jp.example.quiz)'**
+  String get childSafeGuardianIdShapeError;
+
+  /// No description provided for @childSafeGuardianSnsCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'子が使ってよい SNS の種類とサーバー(あなたのバンドルから)。サーバーを選ばなければ、その種類ならどこでも。保護者の SNS のログインは貸しません。'**
+  String get childSafeGuardianSnsCaption;
+
+  /// No description provided for @childSafeGuardianSnsAdd.
+  ///
+  /// In ja, this message translates to:
+  /// **'子が SNS アカウントを足せる'**
+  String get childSafeGuardianSnsAdd;
+
+  /// No description provided for @childSafeGuardianTimeEnabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'見守りの時間'**
+  String get childSafeGuardianTimeEnabled;
+
+  /// No description provided for @childSafeGuardianTimeEnabledSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'その間は、1 本のタイムラインになります(子の端末の時計)'**
+  String get childSafeGuardianTimeEnabledSubtitle;
+
+  /// No description provided for @childSafeGuardianTimeStartHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'始まり 21:00'**
+  String get childSafeGuardianTimeStartHint;
+
+  /// No description provided for @childSafeGuardianTimeEndHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'終わり 06:00'**
+  String get childSafeGuardianTimeEndHint;
+
+  /// No description provided for @childSafeGuardianTimeRangeSeparator.
+  ///
+  /// In ja, this message translates to:
+  /// **'〜'**
+  String get childSafeGuardianTimeRangeSeparator;
+
+  /// No description provided for @childSafeGuardianTimeLegacyNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'いまの設定は、以前の形の「その間は何も流さない」です。この形は新しく保存できないので、流す話題を入れるか、ブラックリストにしてから保存してください。'**
+  String get childSafeGuardianTimeLegacyNote;
+
+  /// No description provided for @childSafeGuardianTimeTopics.
+  ///
+  /// In ja, this message translates to:
+  /// **'その間の話題'**
+  String get childSafeGuardianTimeTopics;
+
+  /// No description provided for @childSafeGuardianTimeAllowHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'その間に流す話題(語やタグを「,」で区切る)'**
+  String get childSafeGuardianTimeAllowHint;
+
+  /// No description provided for @childSafeGuardianTimeDenyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'その間に流さない話題(語やタグを「,」で区切る)'**
+  String get childSafeGuardianTimeDenyHint;
+
+  /// No description provided for @childSafeGuardianTimeAllowNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホワイトリスト: その間は、どれかの話題に当たる投稿だけが流れます。'**
+  String get childSafeGuardianTimeAllowNote;
+
+  /// No description provided for @childSafeGuardianTimeDenyNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラックリスト: その間は、当たる投稿を流しません(空 = 話題では絞りません)。'**
+  String get childSafeGuardianTimeDenyNote;
+
+  /// No description provided for @childSafeGuardianHideNotifications.
+  ///
+  /// In ja, this message translates to:
+  /// **'通知を隠す'**
+  String get childSafeGuardianHideNotifications;
+
+  /// No description provided for @childSafeGuardianHidePostDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿の詳細を開かせない'**
+  String get childSafeGuardianHidePostDetail;
+
+  /// No description provided for @childSafeGuardianHideDm.
+  ///
+  /// In ja, this message translates to:
+  /// **'DM を隠す'**
+  String get childSafeGuardianHideDm;
+
+  /// No description provided for @childSafeGuardianRaiEnabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi を使える'**
+  String get childSafeGuardianRaiEnabled;
+
+  /// まだ効かない RAi の関数のまとまりの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中(いまは効きません)'**
+  String get childSafeGuardianRaiComingSoon;
+
+  /// No description provided for @childSafeGuardianRaiAutomation.
+  ///
+  /// In ja, this message translates to:
+  /// **'関数での自動化'**
+  String get childSafeGuardianRaiAutomation;
+
+  /// No description provided for @childSafeGuardianRaiAutomationSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフなら、案内(指差し)だけで進めます'**
+  String get childSafeGuardianRaiAutomationSubtitle;
+
+  /// No description provided for @childSafeGuardianSearchSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索'**
+  String get childSafeGuardianSearchSection;
+
+  /// No description provided for @childSafeGuardianFeaturesSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'機能'**
+  String get childSafeGuardianFeaturesSection;
+
+  /// No description provided for @childSafeGuardianExamplesTitlePlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'例で決める(プラグイン)'**
+  String get childSafeGuardianExamplesTitlePlugins;
+
+  /// No description provided for @childSafeGuardianExamplesTitleTl.
+  ///
+  /// In ja, this message translates to:
+  /// **'例で決める(クリップ / リスト)'**
+  String get childSafeGuardianExamplesTitleTl;
+
+  /// No description provided for @childSafeGuardianExamplesCaptionPlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'「こういうプラグインは許す / 止める」を例で選びます。子の端末は、プラグインの名前・説明が例に近いかで決めます。止める例に近いものは「自由」でも使えません。「例に近いもの」にすると、名前で許したものと、許す例に近いものを使えます。'**
+  String get childSafeGuardianExamplesCaptionPlugins;
+
+  /// No description provided for @childSafeGuardianExamplesCaptionTl.
+  ///
+  /// In ja, this message translates to:
+  /// **'「こういうものは許す / 止める」を、あなたの最近のアクション / クリップ / リストから選びます。子のクリップ / リストのうち、中身が止める例に近いものは、一覧にもタイムラインにも出ません。'**
+  String get childSafeGuardianExamplesCaptionTl;
+
+  /// No description provided for @childSafeGuardianPickPlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'例を選ぶ(プラグイン / ストア)'**
+  String get childSafeGuardianPickPlugins;
+
+  /// No description provided for @childSafeGuardianPickTl.
+  ///
+  /// In ja, this message translates to:
+  /// **'例を選ぶ(最近のアクション / クリップ / リスト)'**
+  String get childSafeGuardianPickTl;
+
+  /// No description provided for @childSafeGuardianPickCounts.
+  ///
+  /// In ja, this message translates to:
+  /// **'許す例 {allow} / 止める例 {deny}'**
+  String childSafeGuardianPickCounts(int allow, int deny);
+
+  /// No description provided for @childSafeGuardianPickTitlePlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの例(@{handle})'**
+  String childSafeGuardianPickTitlePlugins(String handle);
+
+  /// No description provided for @childSafeGuardianPickTitleTl.
+  ///
+  /// In ja, this message translates to:
+  /// **'TL の例(@{handle})'**
+  String childSafeGuardianPickTitleTl(String handle);
+
+  /// No description provided for @childSafeGuardianAllowLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'許す例'**
+  String get childSafeGuardianAllowLabel;
+
+  /// No description provided for @childSafeGuardianDenyLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'止める例'**
+  String get childSafeGuardianDenyLabel;
+
+  /// No description provided for @childSafeGuardianPickIntroPlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、新しいプラグインを例との近さで分けます。'**
+  String get childSafeGuardianPickIntroPlugins;
+
+  /// No description provided for @childSafeGuardianPickIntroTl.
+  ///
+  /// In ja, this message translates to:
+  /// **'中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、クリップ / リストを例との近さで分けます。'**
+  String get childSafeGuardianPickIntroTl;
+
+  /// 見守られているアカウントの印
+  ///
+  /// In ja, this message translates to:
+  /// **'見守り中'**
+  String get childSafeScreensBadge;
+
+  /// 見守りの時間の帯(シェルの上)。window は時間の範囲、detail は流れる話題の説明(無ければ空)
+  ///
+  /// In ja, this message translates to:
+  /// **'見守りの時間({window})です。{detail}'**
+  String childSafeScreensWindowBanner(String window, String detail);
+
+  /// No description provided for @childSafeScreensWindowNothing.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿は流れません'**
+  String get childSafeScreensWindowNothing;
+
+  /// No description provided for @childSafeScreensWindowAllowOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{topics}」の話題だけが流れます'**
+  String childSafeScreensWindowAllowOnly(String topics);
+
+  /// No description provided for @childSafeScreensWindowDenied.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{topics}」の話題は流れません'**
+  String childSafeScreensWindowDenied(String topics);
+
+  /// 止めている画面の代わりに出す表示の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'見守りの設定は保護者が決めています'**
+  String get childSafeScreensBlockedHint;
+
+  /// No description provided for @childSafeScreensHubTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'チャイルドセーフ'**
+  String get childSafeScreensHubTitle;
+
+  /// No description provided for @childSafeScreensHubIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が、子のアカウントの使い方を決めます。保護者に届くのは数と止めた種類だけで、投稿の本文は送りません。'**
+  String get childSafeScreensHubIntro;
+
+  /// No description provided for @childSafeScreensHubIntroDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の RASQ アカウントが、子の RASQ アカウントの使い方を決めます。投稿の判定はこの端末の中で行い、保護者に届くのは、送った数と止めた数と、送る前に止めた種類だけです(投稿の本文や話題は送りません)。'**
+  String get childSafeScreensHubIntroDetail;
+
+  /// No description provided for @childSafeScreensHubManagedSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'見守られています'**
+  String get childSafeScreensHubManagedSection;
+
+  /// No description provided for @childSafeScreensHubParent.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者'**
+  String get childSafeScreensHubParent;
+
+  /// No description provided for @childSafeScreensHubState.
+  ///
+  /// In ja, this message translates to:
+  /// **'状態'**
+  String get childSafeScreensHubState;
+
+  /// revision は保護者の設定の版の番号
+  ///
+  /// In ja, this message translates to:
+  /// **'見守り中(設定 {revision})'**
+  String childSafeScreensHubStateActive(int revision);
+
+  /// No description provided for @childSafeScreensHubOffline.
+  ///
+  /// In ja, this message translates to:
+  /// **'いまはサーバーに届きません。前の設定のまま見守ります。'**
+  String get childSafeScreensHubOffline;
+
+  /// No description provided for @childSafeScreensHubRefresh.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の設定を取り直す'**
+  String get childSafeScreensHubRefresh;
+
+  /// No description provided for @childSafeScreensHubAsGuardian.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者として'**
+  String get childSafeScreensHubAsGuardian;
+
+  /// method は保護者の確認の方法
+  ///
+  /// In ja, this message translates to:
+  /// **'確認済み({method})。子のアカウントを作る / つなぐ / 設定'**
+  String childSafeScreensHubGuardianVerified(String method);
+
+  /// No description provided for @childSafeScreensHubGuardianUnverified.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の確認は Web コンソールで(日本はマイナンバーカード、ほかは自己申告)'**
+  String get childSafeScreensHubGuardianUnverified;
+
+  /// No description provided for @childSafeScreensHubAsChild.
+  ///
+  /// In ja, this message translates to:
+  /// **'子として'**
+  String get childSafeScreensHubAsChild;
+
+  /// No description provided for @childSafeScreensHubChildModeLogin.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者からのコードでログインします'**
+  String get childSafeScreensHubChildModeLogin;
+
+  /// No description provided for @childSafeScreensHubChildModePair.
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントを、保護者のコードでつなぎます'**
+  String get childSafeScreensHubChildModePair;
+
+  /// No description provided for @childSafeScreensHubLoginSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が作った子のアカウントに入ります'**
+  String get childSafeScreensHubLoginSubtitle;
+
+  /// No description provided for @childSafeScreensHubThisDevice.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末'**
+  String get childSafeScreensHubThisDevice;
+
+  /// No description provided for @childSafeScreensHubSafety.
+  ///
+  /// In ja, this message translates to:
+  /// **'プライバシーとセーフモード'**
+  String get childSafeScreensHubSafety;
+
+  /// No description provided for @childSafeScreensHubSafetyManaged.
+  ///
+  /// In ja, this message translates to:
+  /// **'見守り中は、閲覧注意のメディアを必ず隠します(変えられません)'**
+  String get childSafeScreensHubSafetyManaged;
+
+  /// No description provided for @childSafeScreensHubSafetyNormal.
+  ///
+  /// In ja, this message translates to:
+  /// **'閲覧注意メディアの扱い'**
+  String get childSafeScreensHubSafetyNormal;
+
+  /// 見守りの要約の行の話題の注記。label は「流す話題」など、topics は並べた話題
+  ///
+  /// In ja, this message translates to:
+  /// **'({label}: {topics})'**
+  String childSafeScreensTopicsNote(String label, String topics);
+
+  /// No description provided for @childSafeScreensTopicsNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'なし'**
+  String get childSafeScreensTopicsNone;
+
+  /// No description provided for @childSafeScreensTopicsShown.
+  ///
+  /// In ja, this message translates to:
+  /// **'流す話題'**
+  String get childSafeScreensTopicsShown;
+
+  /// No description provided for @childSafeScreensTopicsHidden.
+  ///
+  /// In ja, this message translates to:
+  /// **'見せない話題'**
+  String get childSafeScreensTopicsHidden;
+
+  /// No description provided for @childSafeScreensTopicsSendable.
+  ///
+  /// In ja, this message translates to:
+  /// **'送れる話題'**
+  String get childSafeScreensTopicsSendable;
+
+  /// No description provided for @childSafeScreensTopicsUnsendable.
+  ///
+  /// In ja, this message translates to:
+  /// **'送れない話題'**
+  String get childSafeScreensTopicsUnsendable;
+
+  /// No description provided for @childSafeScreensTopicsNotShown.
+  ///
+  /// In ja, this message translates to:
+  /// **'流さない話題'**
+  String get childSafeScreensTopicsNotShown;
+
+  /// 見守りの要約の行。level は判定の強さ、note は話題の注記(無ければ空)
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムライン: {level}{note}'**
+  String childSafeScreensSummaryTimeline(String level, String note);
+
+  /// No description provided for @childSafeScreensSummaryComposer.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿の判定: {level}{note}'**
+  String childSafeScreensSummaryComposer(String level, String note);
+
+  /// No description provided for @childSafeScreensSummaryPostsPerDay.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{1 日に送れる投稿: {count} 件}}'**
+  String childSafeScreensSummaryPostsPerDay(int count);
+
+  /// window は時間の範囲、note は話題の注記
+  ///
+  /// In ja, this message translates to:
+  /// **'見守りの時間: {window}{note}'**
+  String childSafeScreensSummaryTime(String window, String note);
+
+  /// No description provided for @childSafeScreensSummaryTimeNothing.
+  ///
+  /// In ja, this message translates to:
+  /// **'(投稿は流れません)'**
+  String get childSafeScreensSummaryTimeNothing;
+
+  /// kinds は SNS の種類(または「どれでも」)、servers はサーバーの注記、noAdd は追加できないときの注記
+  ///
+  /// In ja, this message translates to:
+  /// **'使える SNS: {kinds}{servers}{noAdd}'**
+  String childSafeScreensSummarySns(String kinds, String servers, String noAdd);
+
+  /// No description provided for @childSafeScreensSummaryAny.
+  ///
+  /// In ja, this message translates to:
+  /// **'どれでも'**
+  String get childSafeScreensSummaryAny;
+
+  /// No description provided for @childSafeScreensSummarySnsServers.
+  ///
+  /// In ja, this message translates to:
+  /// **'({servers})'**
+  String childSafeScreensSummarySnsServers(String servers);
+
+  /// No description provided for @childSafeScreensSummarySnsNoAdd.
+  ///
+  /// In ja, this message translates to:
+  /// **'、追加はできません'**
+  String get childSafeScreensSummarySnsNoAdd;
+
+  /// No description provided for @childSafeScreensSummaryFeaturesOff.
+  ///
+  /// In ja, this message translates to:
+  /// **'止めている機能: {list}'**
+  String childSafeScreensSummaryFeaturesOff(String list);
+
+  /// No description provided for @childSafeScreensSummarySearchOff.
+  ///
+  /// In ja, this message translates to:
+  /// **'止めている検索: {list}'**
+  String childSafeScreensSummarySearchOff(String list);
+
+  /// scope は使えるプラグインの範囲、install はインストールの範囲
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン: {scope}・インストールは{install}'**
+  String childSafeScreensSummaryPlugins(String scope, String install);
+
+  /// No description provided for @childSafeScreensSummaryPluginsExamples.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{選んだ {count} 個と、許す例に近いもの}}'**
+  String childSafeScreensSummaryPluginsExamples(int count);
+
+  /// No description provided for @childSafeScreensSummaryPluginsListed.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{選んだ {count} 個だけ}}'**
+  String childSafeScreensSummaryPluginsListed(int count);
+
+  /// No description provided for @childSafeScreensSummaryExamples.
+  ///
+  /// In ja, this message translates to:
+  /// **'例: 許す例 {allow} / 止める例 {deny}(止める例に近いプラグイン / クリップ / リストは出ません)'**
+  String childSafeScreensSummaryExamples(int allow, int deny);
+
+  /// count は使える関数のまとまりの数、noAuto は自動化なしの注記(無ければ空)
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{RAi: {count} 種類の関数{noAuto}}}'**
+  String childSafeScreensSummaryRai(int count, String noAuto);
+
+  /// No description provided for @childSafeScreensSummaryRaiNoAuto.
+  ///
+  /// In ja, this message translates to:
+  /// **'(自動化なし)'**
+  String get childSafeScreensSummaryRaiNoAuto;
+
+  /// No description provided for @childSafeScreensSummaryRaiOff.
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi: 使えません'**
+  String get childSafeScreensSummaryRaiOff;
+
+  /// リンクから開いたときの注意。action は押すボタンの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'リンク(QR)からコードを入れました。自分の保護者から受け取ったものか確かめてから「{action}」を押してください。知らない人のリンクなら、押さずに閉じてください。'**
+  String childSafeScreensFromLink(String action);
+
+  /// No description provided for @childSafeScreensPaired.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者とつなぎました。保護者が設定を決めるまで待ってください'**
+  String get childSafeScreensPaired;
+
+  /// No description provided for @childSafeScreensPairNotLoggedIn.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインしていません。保護者が作ったアカウントなら、保護者からのコードでログインします。'**
+  String get childSafeScreensPairNotLoggedIn;
+
+  /// No description provided for @childSafeScreensPairExistingLogin.
+  ///
+  /// In ja, this message translates to:
+  /// **'既存の RASQ アカウントにログイン'**
+  String get childSafeScreensPairExistingLogin;
+
+  /// No description provided for @childSafeScreensPairIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} を保護者の見守りにつなぎます。保護者の画面に出ているコード(8 字)を入れてください。つないだら、保護者が設定を決めるまで使えません。'**
+  String childSafeScreensPairIntro(String handle);
+
+  /// No description provided for @childSafeScreensPairIntroDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} を、保護者の見守りにつなぎます。保護者の画面(アプリか Web コンソール)に出ているコード(8 字、例 ABCD-EFGH)を入れてください。つないだら、保護者が設定を決めるまでアプリは使えません。'**
+  String childSafeScreensPairIntroDetail(String handle);
+
+  /// No description provided for @childSafeScreensPairButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'つなぐ'**
+  String get childSafeScreensPairButton;
+
+  /// No description provided for @childSafeScreensPairQrHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の画面の QR を、この端末のカメラアプリで読んでもつなげます。'**
+  String get childSafeScreensPairQrHint;
+
+  /// No description provided for @childSafeScreensPairQrHintDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の画面の QR は、この端末のカメラアプリで読むと、コードが入った状態でこの画面が開きます。リンク(rasq://child-safe/pair?code=…)を貼り付けても、つなげます。'**
+  String get childSafeScreensPairQrHintDetail;
+
+  /// No description provided for @childSafeScreensPairNoQr.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では QR を読めません。コードを入れてください。'**
+  String get childSafeScreensPairNoQr;
+
+  /// No description provided for @childSafeScreensPairNoQrDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では QR を読めません。コードを入れるか、リンク(rasq://child-safe/pair?code=…)を貼り付けてください。'**
+  String get childSafeScreensPairNoQrDetail;
+
+  /// No description provided for @childSafeScreensLoginFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインできませんでした'**
+  String get childSafeScreensLoginFailed;
+
+  /// device は端末の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} にログインしました({device})'**
+  String childSafeScreensLoggedIn(String handle, String device);
+
+  /// No description provided for @childSafeScreensLoginIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がアプリで子のアカウントを作ると、1 度だけ使えるコードが出ます。そのコードを入れると、この端末がそのアカウントになります。この端末の SNS アカウントは引き継ぎません。'**
+  String get childSafeScreensLoginIntro;
+
+  /// No description provided for @childSafeScreensLoginCodeHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインのコード'**
+  String get childSafeScreensLoginCodeHint;
+
+  /// No description provided for @childSafeScreensLoginButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログイン'**
+  String get childSafeScreensLoginButton;
+
+  /// No description provided for @childSafeScreensPendingUnverifiedTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の設定を確かめられません'**
+  String get childSafeScreensPendingUnverifiedTitle;
+
+  /// No description provided for @childSafeScreensPendingTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が設定を決めるまで待ってください'**
+  String get childSafeScreensPendingTitle;
+
+  /// No description provided for @childSafeScreensPendingSignatureMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'設定の署名が合いません。'**
+  String get childSafeScreensPendingSignatureMismatch;
+
+  /// parent は保護者の名前か @ハンドル
+  ///
+  /// In ja, this message translates to:
+  /// **'{parent} と見守りでつながっています。{parent} が使い方を決めると、使えるようになります。'**
+  String childSafeScreensPendingBody(String parent);
+
+  /// 保護者の名前が分からないときの呼び方
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者'**
+  String get childSafeScreensPendingParent;
+
+  /// No description provided for @childSafeScreensPendingOffline.
+  ///
+  /// In ja, this message translates to:
+  /// **'いまはサーバーに届きません。'**
+  String get childSafeScreensPendingOffline;
+
+  /// No description provided for @childSafeScreensPendingRefresh.
+  ///
+  /// In ja, this message translates to:
+  /// **'更新'**
+  String get childSafeScreensPendingRefresh;
+
+  /// No description provided for @childSafeScreensPendingLogout.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログアウト'**
+  String get childSafeScreensPendingLogout;
+
+  /// No description provided for @childSafeScreensPendingRasqLogin.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログイン'**
+  String get childSafeScreensPendingRasqLogin;
+
   /// コンポーザーの題(新しい投稿)
   ///
   /// In ja, this message translates to:

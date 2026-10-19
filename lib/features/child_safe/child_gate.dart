@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../../l10n/l10n.dart';
 import '../../session/sanctions.dart';
 import '../trend/example_match.dart';
 import '../trend/tendency_profile.dart';
@@ -67,7 +68,7 @@ class ChildSafeState {
 }
 
 /// 止めたときの決まり文句(RAi の関数など)。
-const childSafeBlockedText = '保護者が止めています';
+String get childSafeBlockedText => appL10n.childSafeBlocked;
 
 /// コンポーザーの判定の結果: 止めた理由と、印を付ける範囲。
 /// [type] = 本文の判定で止めた種類(`stimulus` = 強い言葉 / `topic` = 決められた話題。Central S-102 の種類)。機能 / 1 日の数 /
@@ -99,7 +100,7 @@ class ChildGate {
 
   /// 見守りの時間の中か。
   bool get inTimeWindow => policy?.time.contains(now) ?? false;
-  String get windowLabel => policy == null ? '' : '${policy!.time.start}〜${policy!.time.end}';
+  String get windowLabel => policy == null ? '' : appL10n.childSafeTimeRange(policy!.time.start, policy!.time.end);
 
   // ── 機能 / 検索 ──
 
@@ -112,10 +113,10 @@ class ChildGate {
     final s = sanctions.blockedMessage(feature);
     if (s != null) return s;
     if (!supervised) return null;
-    if (locked) return '保護者が設定を決めるまで使えません';
+    if (locked) return appL10n.childSafeLockedUntilSetup;
     final label = RasqSanctions.featureLabels[feature] ?? feature;
-    if (!featureAllowed(feature)) return '$childSafeBlockedText($label)';
-    if (feature == 'dm' && inTimeWindow && policy!.time.hideDirectMessages) return '見守りの時間($windowLabel)は DM を使えません';
+    if (!featureAllowed(feature)) return appL10n.childSafeBlockedWith(label);
+    if (feature == 'dm' && inTimeWindow && policy!.time.hideDirectMessages) return appL10n.childSafeWindowNoDm(windowLabel);
     return null;
   }
 
@@ -139,25 +140,25 @@ class ChildGate {
     bool under(String p) => loc == p || loc.startsWith('$p/');
     // リンクから開く AsTell ルーム (`/astell/<ref>`、D-456) も AsTell。
     if (under('/vc') || under('/astell')) {
-      if (!featureAllowed('astell.join')) return '保護者が ASTell を止めています';
-      if (inTimeWindow) return '見守りの時間($windowLabel)は ASTell を使えません';
+      if (!featureAllowed('astell.join')) return appL10n.childSafeBlockedAstell;
+      if (inTimeWindow) return appL10n.childSafeWindowNoAstell(windowLabel);
     }
     if (under('/dm')) {
-      if (!featureAllowed('dm')) return '保護者が DM を止めています';
-      if (inTimeWindow && policy!.time.hideDirectMessages) return '見守りの時間($windowLabel)は DM を使えません';
+      if (!featureAllowed('dm')) return appL10n.childSafeBlockedDm;
+      if (inTimeWindow && policy!.time.hideDirectMessages) return appL10n.childSafeWindowNoDm(windowLabel);
     }
-    if (under('/notifications') && inTimeWindow && policy!.time.hideNotifications) return '見守りの時間($windowLabel)は通知を見られません';
+    if (under('/notifications') && inTimeWindow && policy!.time.hideNotifications) return appL10n.childSafeWindowNoNotifications(windowLabel);
     // SNS 探しの「RAi に聞く」(セキュリティ確認 2026-10-09 の [13]) も RAi。
-    if ((under('/rai') || under('/sns-discover/ask')) && !raiEnabled) return '保護者が RAi を止めています';
-    if (under('/store') && !under('/store/installed') && !searchAllowed('store')) return '保護者がプラグインストアを止めています';
-    if ((under('/search') || under('/trend')) && !const ['posts', 'users', 'trend'].any(searchAllowed)) return '保護者が検索を止めています';
-    if (loc.startsWith('/login/') && !canAddAccounts) return '保護者が SNS アカウントの追加を止めています';
+    if ((under('/rai') || under('/sns-discover/ask')) && !raiEnabled) return appL10n.childSafeBlockedRai;
+    if (under('/store') && !under('/store/installed') && !searchAllowed('store')) return appL10n.childSafeBlockedStore;
+    if ((under('/search') || under('/trend')) && !const ['posts', 'users', 'trend'].any(searchAllowed)) return appL10n.childSafeBlockedSearch;
+    if (loc.startsWith('/login/') && !canAddAccounts) return appL10n.childSafeBlockedAddAccount;
     // カスタムプラグインのページ (D-357 / D-451): ページ型をどれも使えないときは画面ごと。1 つずつの可否は中身(マニフェスト)が
     // 分かってから開く側([pluginPageBlockReason])が決める(ルートの id はストアの id で、例 (D-314) の近さも中身が要る)。
-    if (under('/custom/page') && !_anyPagePluginAllowed) return '保護者がカスタムプラグインを止めています';
+    if (under('/custom/page') && !_anyPagePluginAllowed) return appL10n.childSafeBlockedCustomPlugins;
     // WASM 試験画面 (dev、セキュリティ確認 2026-10-09 の [12]): どのプラグインも動かせないときは画面ごと。
     // 1 つずつの可否は読み込む側([devPreviewBlockReason])が決める。
-    if (under('/dev/wasm') && !_anyPluginAllowed) return '保護者がプラグインを止めています';
+    if (under('/dev/wasm') && !_anyPluginAllowed) return appL10n.childSafeBlockedPlugins;
     return null;
   }
 
@@ -232,8 +233,8 @@ class ChildGate {
   /// 投稿の詳細を開けない理由。開けるなら null。
   String? postDetailBlockReason(Post? p) {
     if (!supervised) return null;
-    if (inTimeWindow && policy!.time.hidePostDetail) return '見守りの時間($windowLabel)は投稿の詳細を開けません';
-    if (p != null && postHidden(p)) return 'この投稿は表示できません';
+    if (inTimeWindow && policy!.time.hidePostDetail) return appL10n.childSafeWindowNoPostDetail(windowLabel);
+    if (p != null && postHidden(p)) return appL10n.childSafePostHidden;
     return null;
   }
 
@@ -259,8 +260,9 @@ class ChildGate {
     final post = _textPost(text);
     if (t.allow) {
       if (matchesTopic(post, t.topics)) return null;
-      final shown = t.topics.take(5).join('・');
-      return ChildComposeVerdict(t.topics.isEmpty ? '保護者の設定により、いまは投稿を送れません' : '保護者の設定により、決められた話題($shown${t.topics.length > 5 ? ' など' : ''})の投稿だけ送れます。話題に合うように書いてください', type: 'topic');
+      final l = appL10n;
+      final shown = t.topics.take(5).join(l.childSafeListSeparator);
+      return ChildComposeVerdict(t.topics.isEmpty ? l.childSafeComposeNoTopicsAllowed : l.childSafeComposeTopicsOnly(t.topics.length > 5 ? l.childSafeTopicsEtc(shown) : shown), type: 'topic');
     }
     if (!matchesTopic(post, t.topics)) return null;
     // 当たった話題のうち、本文にそのまま出てくる最初のものに印を付ける(特徴語だけで当たったときは印なし)。
@@ -272,7 +274,7 @@ class ChildGate {
       if (i >= 0 && (hit == null || i < hit.start)) hit = (topic: topic, start: i, end: i + key.length);
     }
     final label = hit?.topic ?? t.topics.firstWhere((x) => matchesTopic(post, [x]), orElse: () => t.topics.first);
-    return ChildComposeVerdict('保護者の設定により、「$label」の話題の投稿は送れません。書き換えてください', start: hit?.start, end: hit?.end, type: 'topic');
+    return ChildComposeVerdict(appL10n.childSafeComposeTopicDenied(label), start: hit?.start, end: hit?.end, type: 'topic');
   }
 
   ChildComposeVerdict? _judgeStimulus(ChildSafePolicy pol, String text) {
@@ -280,8 +282,8 @@ class ChildGate {
     // 上限を超えた感情の語のうち、先頭のもの。
     final emo = emotionLexiconOf(text);
     final hit = emotionLexiconMatches(text).where((m) => (emo[m.emotion] ?? 0) > stimulusProfile.stimulusCap(m.emotion)).firstOrNull;
-    final word = hit == null ? '' : '「${text.substring(hit.start, hit.end)}」';
-    return ChildComposeVerdict('保護者の設定(${pol.composer.level.label})により、この表現$wordは送れません。言い換えてください', start: hit?.start, end: hit?.end, type: 'stimulus');
+    final word = hit == null ? '' : appL10n.childSafeQuoted(text.substring(hit.start, hit.end));
+    return ChildComposeVerdict(appL10n.childSafeComposeStimulus(pol.composer.level.label, word), start: hit?.start, end: hit?.end, type: 'stimulus');
   }
 
   int? get postsPerDay => policy?.postsPerDay;
@@ -322,8 +324,8 @@ class ChildGate {
   /// [text] はマニフェストの中身(分からないうちは null: 例 (D-314) で決める `examples` では、名指しが無ければ開けない)。
   String? pluginPageBlockReason(String pluginId, {List<String>? text}) {
     if (!supervised) return null;
-    if (locked) return '保護者が設定を決めるまで使えません';
-    return pluginAllowed(pluginId, pagePluginSlot, text: text) ? null : '保護者がこのプラグインを止めています';
+    if (locked) return appL10n.childSafeLockedUntilSetup;
+    return pluginAllowed(pluginId, pagePluginSlot, text: text) ? null : appL10n.childSafeBlockedThisPlugin;
   }
 
   /// WASM 試験画面 (dev) で動かせない理由(セキュリティ確認 2026-10-09 の [12])。動かせるなら null。**ゲストのコードを動かす前に**聞く。
@@ -332,31 +334,32 @@ class ChildGate {
   /// id の分からないものは、名指し / 例で決める設定(`none`・`listed`・`examples`、止める例がある)では動かさない。
   String? devPreviewBlockReason(String? pluginId, {List<String>? text}) {
     if (!supervised) return null;
-    if (locked) return '保護者が設定を決めるまで使えません';
+    if (locked) return appL10n.childSafeLockedUntilSetup;
     final pl = allow?.plugins;
     if (pluginId == null) {
       final open = (pl == null || pl.install == ChildSafeInstall.any) && !hasDenyExamples;
-      return open ? null : '保護者が選んだプラグインだけ動かせます(この読み込み方では、どのプラグインか確かめられません)';
+      return open ? null : appL10n.childSafeDevPreviewUnknown;
     }
     final scores = _scores(text);
     final ok = pl == null ? !(scores?.nearDeny ?? false) : pl.permitsPlugin(pluginId, scores: scores);
-    return ok ? null : '保護者がこのプラグインを止めています';
+    return ok ? null : appL10n.childSafeBlockedThisPlugin;
   }
 
   /// インストールできない理由。[text] はマニフェストの中身(ストアから構成を取ったあとに、もう 1 度確かめる)。
   /// `examples` の決めは、中身が分からないうち([text] が null)は通す(構成を取ってから決める)。
   String? installBlockReason(String pluginId, {List<String>? text}) {
     if (!supervised) return null;
-    if (locked) return '保護者が設定を決めるまで使えません';
-    if (!featureAllowed('store.install')) return '保護者がプラグインのインストールを止めています';
+    if (locked) return appL10n.childSafeLockedUntilSetup;
+    final l = appL10n;
+    if (!featureAllowed('store.install')) return l.childSafeBlockedInstall;
     final pl = allow?.plugins;
     final scores = _scores(text);
-    const nearDeny = '保護者が止めている例に近いプラグインです';
+    final nearDeny = l.childSafeNearDenyPlugin;
     if (pl == null) return (scores?.nearDeny ?? false) ? nearDeny : null;
-    if (pl.ids.contains(pluginId)) return pl.install == ChildSafeInstall.none ? '保護者がプラグインのインストールを止めています' : null;
+    if (pl.ids.contains(pluginId)) return pl.install == ChildSafeInstall.none ? l.childSafeBlockedInstall : null;
     return switch (pl.install) {
-      ChildSafeInstall.none => '保護者がプラグインのインストールを止めています',
-      ChildSafeInstall.listed => '保護者が選んだプラグインだけ入れられます',
+      ChildSafeInstall.none => l.childSafeBlockedInstall,
+      ChildSafeInstall.listed => l.childSafeInstallListedOnly,
       ChildSafeInstall.any => (scores?.nearDeny ?? false) ? nearDeny : null,
       ChildSafeInstall.examples => text == null
           ? null
@@ -364,7 +367,7 @@ class ChildGate {
               ? nearDeny
               : (scores?.nearAllow ?? false)
                   ? null
-                  : '保護者が選んだプラグインと、許す例に近いものだけ入れられます',
+                  : l.childSafeInstallExamplesOnly,
     };
   }
 
@@ -396,7 +399,7 @@ class ChildGate {
   bool get raiEnabled => !supervised || (!locked && (allow?.rai?.enabled ?? true));
 
   /// 関数を呼べない理由(「保護者が止めています」)。呼べるなら null。**まとまりの分からない関数は、見守り中は呼ばない。**
-  String? raiBlockReason(String fn) => _raiGroupBlocked(fn, raiFunctionGroups[fn]) ? '$childSafeBlockedText($fn)' : null;
+  String? raiBlockReason(String fn) => _raiGroupBlocked(fn, raiFunctionGroups[fn]) ? appL10n.childSafeBlockedWith(fn) : null;
 
   /// まとまり [group] の関数 [fn] を止めているか(実行 [raiBlockReason] と案内 [raiGuideAllowed] で同じ規則)。
   bool _raiGroupBlocked(String fn, String? group) {

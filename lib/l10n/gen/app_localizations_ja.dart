@@ -10,6 +10,1027 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get childSafeLevelStrict => 'きびしめ';
+
+  @override
+  String get childSafeLevelStandard => 'ふつう';
+
+  @override
+  String get childSafeLevelMild => 'ゆるめ';
+
+  @override
+  String get childSafeTopicModeAllow => 'ホワイトリスト';
+
+  @override
+  String get childSafeTopicModeDeny => 'ブラックリスト';
+
+  @override
+  String get childSafeInstallNone => '入れられない';
+
+  @override
+  String get childSafeInstallListed => '選んだものだけ';
+
+  @override
+  String get childSafeInstallAny => '自由';
+
+  @override
+  String get childSafeInstallExamples => '例に近いもの';
+
+  @override
+  String get childSafeEmptyWhitelistError =>
+      'ホワイトリストが空です。話題を 1 つ以上入れるか、ブラックリストにしてください';
+
+  @override
+  String get childSafeMethodJpki => 'マイナンバーカード (JPKI)';
+
+  @override
+  String get childSafeMethodSelfDeclared => '自己申告';
+
+  @override
+  String get childSafeErrorCodeInvalid => 'コードが違うか、期限が切れています';
+
+  @override
+  String get childSafeErrorHandleTaken => 'そのハンドルは使われています';
+
+  @override
+  String get childSafeErrorAlreadyLinked => 'もう見守られている(か、だれかを見守っている)アカウントです';
+
+  @override
+  String get childSafeErrorCodeGone =>
+      'コードの期限が切れたか、もう使われています。保護者に出し直してもらってください';
+
+  @override
+  String get childSafeErrorDevice => 'この端末ではログインできません';
+
+  @override
+  String get childSafeErrorTooMany => '試行が多すぎます。しばらく待ってから、やり直してください';
+
+  @override
+  String get childSafeNoServer => 'RASQ サーバーの接続先が未設定です';
+
+  @override
+  String childSafeNoticeMore(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '(ほか $count 件)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get childSafeNoticeRefreshed => 'チャイルドセーフ: 保護者の設定を取り直しました';
+
+  @override
+  String get childSafeNoticeView => '見る';
+
+  @override
+  String get childSafeBlocked => '保護者が止めています';
+
+  @override
+  String childSafeBlockedWith(String label) {
+    return '保護者が止めています($label)';
+  }
+
+  @override
+  String childSafeTimeRange(String start, String end) {
+    return '$start〜$end';
+  }
+
+  @override
+  String get childSafeLockedUntilSetup => '保護者が設定を決めるまで使えません';
+
+  @override
+  String childSafeWindowNoDm(String window) {
+    return '見守りの時間($window)は DM を使えません';
+  }
+
+  @override
+  String get childSafeBlockedAstell => '保護者が ASTell を止めています';
+
+  @override
+  String childSafeWindowNoAstell(String window) {
+    return '見守りの時間($window)は ASTell を使えません';
+  }
+
+  @override
+  String get childSafeBlockedDm => '保護者が DM を止めています';
+
+  @override
+  String childSafeWindowNoNotifications(String window) {
+    return '見守りの時間($window)は通知を見られません';
+  }
+
+  @override
+  String get childSafeBlockedRai => '保護者が RAi を止めています';
+
+  @override
+  String get childSafeBlockedStore => '保護者がプラグインストアを止めています';
+
+  @override
+  String get childSafeBlockedSearch => '保護者が検索を止めています';
+
+  @override
+  String get childSafeBlockedAddAccount => '保護者が SNS アカウントの追加を止めています';
+
+  @override
+  String get childSafeBlockedCustomPlugins => '保護者がカスタムプラグインを止めています';
+
+  @override
+  String get childSafeBlockedPlugins => '保護者がプラグインを止めています';
+
+  @override
+  String childSafeWindowNoPostDetail(String window) {
+    return '見守りの時間($window)は投稿の詳細を開けません';
+  }
+
+  @override
+  String get childSafePostHidden => 'この投稿は表示できません';
+
+  @override
+  String get childSafeListSeparator => '・';
+
+  @override
+  String childSafeBullet(String text) {
+    return '・$text';
+  }
+
+  @override
+  String childSafeTopicsEtc(String topics) {
+    return '$topics など';
+  }
+
+  @override
+  String get childSafeComposeNoTopicsAllowed => '保護者の設定により、いまは投稿を送れません';
+
+  @override
+  String childSafeComposeTopicsOnly(String topics) {
+    return '保護者の設定により、決められた話題($topics)の投稿だけ送れます。話題に合うように書いてください';
+  }
+
+  @override
+  String childSafeComposeTopicDenied(String topic) {
+    return '保護者の設定により、「$topic」の話題の投稿は送れません。書き換えてください';
+  }
+
+  @override
+  String childSafeQuoted(String text) {
+    return '「$text」';
+  }
+
+  @override
+  String childSafeComposeStimulus(String level, String word) {
+    return '保護者の設定($level)により、この表現$wordは送れません。言い換えてください';
+  }
+
+  @override
+  String get childSafeBlockedThisPlugin => '保護者がこのプラグインを止めています';
+
+  @override
+  String get childSafeDevPreviewUnknown =>
+      '保護者が選んだプラグインだけ動かせます(この読み込み方では、どのプラグインか確かめられません)';
+
+  @override
+  String get childSafeBlockedInstall => '保護者がプラグインのインストールを止めています';
+
+  @override
+  String get childSafeNearDenyPlugin => '保護者が止めている例に近いプラグインです';
+
+  @override
+  String get childSafeInstallListedOnly => '保護者が選んだプラグインだけ入れられます';
+
+  @override
+  String get childSafeInstallExamplesOnly => '保護者が選んだプラグインと、許す例に近いものだけ入れられます';
+
+  @override
+  String get childSafeCacheUnverified => '控えた制限の署名を確かめられません。オンラインで取り直してください';
+
+  @override
+  String get childSafeNewSettingsUnverified =>
+      '保護者の新しい設定の署名を確かめられませんでした(前の設定のまま)';
+
+  @override
+  String get childSafeComposeLocked => '保護者が設定を決めるまで送れません';
+
+  @override
+  String childSafeComposeDailyLimit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '今日はもう $count 件送りました(保護者が決めた 1 日の数)。また明日',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String childSafeComposeAfterTransform(String message) {
+    return '$message(送る前の加工のあとの本文)';
+  }
+
+  @override
+  String get childSafeStatePending => '設定待ち';
+
+  @override
+  String get childSafeWatchAsGuardian => '見守る(保護者)';
+
+  @override
+  String get childSafeLoginWithCode => '保護者からのコードでログイン';
+
+  @override
+  String get childSafeChildMode => 'チャイルドモード';
+
+  @override
+  String get childSafeGuardianStateApplied => '見守り中(端末に届いています)';
+
+  @override
+  String childSafeGuardianStateNotApplied(int revision) {
+    return '見守り中(設定 $revision はまだ端末に届いていません)';
+  }
+
+  @override
+  String childSafeGuardianPledgeTitle(String version) {
+    return '保護者の誓約(版 $version)';
+  }
+
+  @override
+  String childSafeGuardianPledgeMessage(String pledge) {
+    return '$pledge\n\n同意すると、マイナンバーカード(デジタル認証アプリ)での確認に進みます(日本にお住まいの方)。';
+  }
+
+  @override
+  String get childSafeGuardianPledgeConfirm => '同意して進む';
+
+  @override
+  String get childSafeGuardianCancel => 'キャンセル';
+
+  @override
+  String get childSafeGuardianLoadError => '読み込めませんでした';
+
+  @override
+  String get childSafeGuardianReload => '再読み込み';
+
+  @override
+  String get childSafeGuardianVerifySection => '保護者の確認';
+
+  @override
+  String get childSafeGuardianVerified => '確認済み';
+
+  @override
+  String get childSafeGuardianNotVerified => 'まだ確認していません';
+
+  @override
+  String get childSafeGuardianVerifyIntro =>
+      '子のアカウントを作る / つなぐ前に、保護者の確認をします(日本はマイナンバーカード)。';
+
+  @override
+  String get childSafeGuardianVerifyIntroDetail =>
+      '子のアカウントを作る / つなぐ前に、保護者の確認をします(日本はマイナンバーカード (JPKI)、ほかの国は Web コンソールでの自己申告)。';
+
+  @override
+  String get childSafeGuardianVerifyJpki => 'マイナンバーカードで確認する';
+
+  @override
+  String get childSafeGuardianVerifyJpkiSubtitle =>
+      '日本にお住まいの方。誓約に同意してから、外のブラウザで開きます';
+
+  @override
+  String get childSafeGuardianVerifyWeb => 'Web コンソールで確認する';
+
+  @override
+  String get childSafeGuardianOpensInBrowser => '外のブラウザで開きます';
+
+  @override
+  String childSafeGuardianChildrenSection(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '見守っている子($count / $max)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get childSafeGuardianNoChildren => 'まだいません。';
+
+  @override
+  String get childSafeGuardianCreatedByGuardian => '・保護者が作成';
+
+  @override
+  String get childSafeGuardianAddSection => '子を足す';
+
+  @override
+  String get childSafeGuardianCreate => '子のアカウントを作る';
+
+  @override
+  String get childSafeGuardianCreateSubtitle =>
+      'ハンドル / 名前 / 年齢の帯を決めると、子の端末でログインするためのコードが 1 度だけ出ます';
+
+  @override
+  String get childSafeGuardianHandleHint => 'ハンドル(英数字)';
+
+  @override
+  String get childSafeGuardianNameHint => '表示名';
+
+  @override
+  String get childSafeGuardianCreateButton => '作る';
+
+  @override
+  String childSafeGuardianNewLoginCodeTitle(String handle) {
+    return '@$handle のログインのコード(子の端末の「保護者からのコードでログイン」に入れるか、子の端末のカメラで QR を読む)';
+  }
+
+  @override
+  String get childSafeGuardianPair => 'コードでつなぐ';
+
+  @override
+  String get childSafeGuardianPairSubtitle =>
+      '子がもう持っている RASQ アカウントを、子の端末の「チャイルドモード」でつなぎます(10 分・1 回だけ)';
+
+  @override
+  String get childSafeGuardianPairCodeTitle =>
+      'つなぐコード(子の端末の「チャイルドモード」に入れるか、子の端末のカメラで QR を読む)';
+
+  @override
+  String childSafeGuardianCodeExpires(String time) {
+    return '$time まで。この画面を閉じると、もう出せません(出し直すと前のコードは使えなくなります)。';
+  }
+
+  @override
+  String get childSafeGuardianCodeQr => 'コードの QR';
+
+  @override
+  String get childSafeGuardianCopy => 'コピー';
+
+  @override
+  String get childSafeGuardianCopyLink => 'リンクをコピー';
+
+  @override
+  String get childSafeGuardianClose => '閉じる';
+
+  @override
+  String get childSafeGuardianPageTimeline => 'TL';
+
+  @override
+  String get childSafeGuardianPageComposer => '投稿';
+
+  @override
+  String get childSafeGuardianPageAstell => 'ASTell';
+
+  @override
+  String get childSafeGuardianPagePlugins => 'プラグイン';
+
+  @override
+  String get childSafeGuardianPageSns => 'SNS';
+
+  @override
+  String get childSafeGuardianPageScreenTime => 'スクリーンタイム';
+
+  @override
+  String get childSafeGuardianPageOther => 'その他';
+
+  @override
+  String get childSafeGuardianTimeFormatError => '時刻は HH:MM で入れてください';
+
+  @override
+  String get childSafeGuardianConfirmTitle => 'この設定を送る';
+
+  @override
+  String get childSafeGuardianConfirmSend => '送る';
+
+  @override
+  String childSafeGuardianConfirmIntro(String handle) {
+    return '@$handle の端末に、この設定が届きます。';
+  }
+
+  @override
+  String childSafeGuardianConfirmIntroDetail(String handle) {
+    return '@$handle の端末には、Central が署名した設定が届きます(端末で確かめてから当てはめます)。';
+  }
+
+  @override
+  String childSafeGuardianSaved(int revision) {
+    return '保存しました(設定 $revision)。子の端末に届くと「届いています」になります';
+  }
+
+  @override
+  String childSafeGuardianImportPreset(String band) {
+    return '$band の既定を読み込む';
+  }
+
+  @override
+  String get childSafeGuardianImportCopy => 'ほかの子の設定をコピー';
+
+  @override
+  String childSafeGuardianImportedPreset(String band) {
+    return '$band の既定を読み込みました';
+  }
+
+  @override
+  String get childSafeGuardianCopyWhich => 'どの子の設定をコピーしますか';
+
+  @override
+  String childSafeGuardianNotSetUp(String handle) {
+    return '@$handle は、まだ設定が済んでいません';
+  }
+
+  @override
+  String childSafeGuardianCopied(String handle) {
+    return '@$handle の設定をコピーしました';
+  }
+
+  @override
+  String childSafeGuardianNotSavedYet(String what) {
+    return '$what(まだ保存していません)';
+  }
+
+  @override
+  String get childSafeGuardianEnd => '見守りを終える';
+
+  @override
+  String childSafeGuardianEndMessage(String handle) {
+    return '@$handle の制限をすべて外します。子の端末は、次につながったときに外れます。元に戻すには、もう一度つなぎます。';
+  }
+
+  @override
+  String childSafeGuardianEndMessageDetail(String handle) {
+    return '@$handle の制限をすべて外します。子の端末は、次に Central に届いたときに外れます。元に戻すには、もう一度つなぎます。';
+  }
+
+  @override
+  String get childSafeGuardianEndConfirm => '終える';
+
+  @override
+  String get childSafeGuardianEndSubtitle => '制限をすべて外します';
+
+  @override
+  String get childSafeGuardianSummarySection => '最近の発信内容の要約(14 日)';
+
+  @override
+  String get childSafeGuardianLoginSection => '子の端末のログイン';
+
+  @override
+  String get childSafeGuardianReissue => 'コードを出し直す';
+
+  @override
+  String get childSafeGuardianReissueSubtitle =>
+      '子の端末の「保護者からのコードでログイン」に入れるコード(10 分・1 回だけ。前のコードは使えなくなります)';
+
+  @override
+  String childSafeGuardianLoginCodeTitle(String handle) {
+    return '@$handle のログインのコード';
+  }
+
+  @override
+  String get childSafeGuardianSaveButton => '保存して子の端末へ送る';
+
+  @override
+  String get childSafeGuardianImportTooltip => '設定をインポート';
+
+  @override
+  String childSafeGuardianPresetCaption(String band) {
+    return '強さを選ぶと、タイムラインと投稿の判定の強さがそろいます。右の丸いボタンで、$band の既定やほかの子の設定を読み込めます。';
+  }
+
+  @override
+  String get childSafeGuardianSummaryEmpty =>
+      'まだ報告はありません(子の端末は、終わった日の数を 1 日 1 回送ります)。';
+
+  @override
+  String get childSafeGuardianSummaryCaption =>
+      '送った数 / 止めた数 / 止めた種類だけです(投稿の本文や話題は届きません。送る前の判定はお子さんの端末で行います)。';
+
+  @override
+  String childSafeGuardianSummaryDay(int posts, int blocked, String trips) {
+    return '送った $posts・止めた $blocked$trips';
+  }
+
+  @override
+  String childSafeGuardianSummaryTrips(String list) {
+    return '($list)';
+  }
+
+  @override
+  String get childSafeGuardianSummaryTripsSeparator => '、';
+
+  @override
+  String get childSafeGuardianTimelineEnabled => 'タイムラインを絞る';
+
+  @override
+  String get childSafeGuardianTimelineEnabledSubtitle => '強い言葉の投稿を見せず、話題で絞ります';
+
+  @override
+  String get childSafeGuardianTimelineLevel => 'タイムラインの強さ';
+
+  @override
+  String get childSafeGuardianTimelineTopics => 'タイムラインの話題';
+
+  @override
+  String get childSafeGuardianTimelineAllowHint => '流す話題(語やタグを「,」で区切る)';
+
+  @override
+  String get childSafeGuardianTimelineDenyHint => '見せない話題(語やタグを「,」で区切る)';
+
+  @override
+  String get childSafeGuardianTimelineAllowNote =>
+      'ホワイトリスト: どれかの話題に当たる投稿だけが、タイムラインに流れます。';
+
+  @override
+  String get childSafeGuardianTimelineDenyNote =>
+      'ブラックリスト: 当たる投稿を見せません(空 = 話題では絞りません)。';
+
+  @override
+  String get childSafeGuardianComposerEnabled => '投稿を判定する';
+
+  @override
+  String get childSafeGuardianComposerEnabledSubtitle =>
+      '強い言葉と話題で、送る前に止めます(当たった語に印を付けて止める)';
+
+  @override
+  String get childSafeGuardianComposerLevel => '投稿の強さ';
+
+  @override
+  String get childSafeGuardianPostsPerDayHint => '1 日に送れる投稿の数(空 = 決めない、0〜1000)';
+
+  @override
+  String get childSafeGuardianComposerTopics => '投稿の話題';
+
+  @override
+  String get childSafeGuardianComposerAllowHint => '送れる話題(語やタグを「,」で区切る)';
+
+  @override
+  String get childSafeGuardianComposerDenyHint => '送れない話題(語やタグを「,」で区切る)';
+
+  @override
+  String get childSafeGuardianComposerAllowNote =>
+      'ホワイトリスト: どれかの話題に当たる投稿だけ送れます(DM には当てません)。';
+
+  @override
+  String get childSafeGuardianComposerDenyNote =>
+      'ブラックリスト: 当たる投稿は送れません(空 = 話題では止めません。DM には当てません)。';
+
+  @override
+  String get childSafeGuardianAstellCaption =>
+      'ASTell(ルームの通話・チャット・共有)で、子ができること。';
+
+  @override
+  String get childSafeGuardianInstallSection => 'インストール';
+
+  @override
+  String get childSafeGuardianInstallCaption =>
+      '子が自分で入れられる範囲。プラグインは増えていくので、ひとつずつではなく、下の「例」で大まかに決めます。';
+
+  @override
+  String get childSafeGuardianNamedSection => '名前で許しているプラグイン';
+
+  @override
+  String get childSafeGuardianNamedNone => 'ありません。';
+
+  @override
+  String get childSafeGuardianNamedCaption => 'ここにあるものは、止める例に近くても使えます(✕ で外す)。';
+
+  @override
+  String get childSafeGuardianRemove => '外す';
+
+  @override
+  String get childSafeGuardianAddIdHint => 'id で足す(例: jp.example.quiz)';
+
+  @override
+  String get childSafeGuardianAddIdButton => '足す';
+
+  @override
+  String get childSafeGuardianIdShapeError =>
+      'プラグインの id の形ではありません(英小文字・数字・「.」「_」「-」、例: jp.example.quiz)';
+
+  @override
+  String get childSafeGuardianSnsCaption =>
+      '子が使ってよい SNS の種類とサーバー(あなたのバンドルから)。サーバーを選ばなければ、その種類ならどこでも。保護者の SNS のログインは貸しません。';
+
+  @override
+  String get childSafeGuardianSnsAdd => '子が SNS アカウントを足せる';
+
+  @override
+  String get childSafeGuardianTimeEnabled => '見守りの時間';
+
+  @override
+  String get childSafeGuardianTimeEnabledSubtitle =>
+      'その間は、1 本のタイムラインになります(子の端末の時計)';
+
+  @override
+  String get childSafeGuardianTimeStartHint => '始まり 21:00';
+
+  @override
+  String get childSafeGuardianTimeEndHint => '終わり 06:00';
+
+  @override
+  String get childSafeGuardianTimeRangeSeparator => '〜';
+
+  @override
+  String get childSafeGuardianTimeLegacyNote =>
+      'いまの設定は、以前の形の「その間は何も流さない」です。この形は新しく保存できないので、流す話題を入れるか、ブラックリストにしてから保存してください。';
+
+  @override
+  String get childSafeGuardianTimeTopics => 'その間の話題';
+
+  @override
+  String get childSafeGuardianTimeAllowHint => 'その間に流す話題(語やタグを「,」で区切る)';
+
+  @override
+  String get childSafeGuardianTimeDenyHint => 'その間に流さない話題(語やタグを「,」で区切る)';
+
+  @override
+  String get childSafeGuardianTimeAllowNote =>
+      'ホワイトリスト: その間は、どれかの話題に当たる投稿だけが流れます。';
+
+  @override
+  String get childSafeGuardianTimeDenyNote =>
+      'ブラックリスト: その間は、当たる投稿を流しません(空 = 話題では絞りません)。';
+
+  @override
+  String get childSafeGuardianHideNotifications => '通知を隠す';
+
+  @override
+  String get childSafeGuardianHidePostDetail => '投稿の詳細を開かせない';
+
+  @override
+  String get childSafeGuardianHideDm => 'DM を隠す';
+
+  @override
+  String get childSafeGuardianRaiEnabled => 'RAi を使える';
+
+  @override
+  String get childSafeGuardianRaiComingSoon => '準備中(いまは効きません)';
+
+  @override
+  String get childSafeGuardianRaiAutomation => '関数での自動化';
+
+  @override
+  String get childSafeGuardianRaiAutomationSubtitle => 'オフなら、案内(指差し)だけで進めます';
+
+  @override
+  String get childSafeGuardianSearchSection => '検索';
+
+  @override
+  String get childSafeGuardianFeaturesSection => '機能';
+
+  @override
+  String get childSafeGuardianExamplesTitlePlugins => '例で決める(プラグイン)';
+
+  @override
+  String get childSafeGuardianExamplesTitleTl => '例で決める(クリップ / リスト)';
+
+  @override
+  String get childSafeGuardianExamplesCaptionPlugins =>
+      '「こういうプラグインは許す / 止める」を例で選びます。子の端末は、プラグインの名前・説明が例に近いかで決めます。止める例に近いものは「自由」でも使えません。「例に近いもの」にすると、名前で許したものと、許す例に近いものを使えます。';
+
+  @override
+  String get childSafeGuardianExamplesCaptionTl =>
+      '「こういうものは許す / 止める」を、あなたの最近のアクション / クリップ / リストから選びます。子のクリップ / リストのうち、中身が止める例に近いものは、一覧にもタイムラインにも出ません。';
+
+  @override
+  String get childSafeGuardianPickPlugins => '例を選ぶ(プラグイン / ストア)';
+
+  @override
+  String get childSafeGuardianPickTl => '例を選ぶ(最近のアクション / クリップ / リスト)';
+
+  @override
+  String childSafeGuardianPickCounts(int allow, int deny) {
+    return '許す例 $allow / 止める例 $deny';
+  }
+
+  @override
+  String childSafeGuardianPickTitlePlugins(String handle) {
+    return 'プラグインの例(@$handle)';
+  }
+
+  @override
+  String childSafeGuardianPickTitleTl(String handle) {
+    return 'TL の例(@$handle)';
+  }
+
+  @override
+  String get childSafeGuardianAllowLabel => '許す例';
+
+  @override
+  String get childSafeGuardianDenyLabel => '止める例';
+
+  @override
+  String get childSafeGuardianPickIntroPlugins =>
+      '中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、新しいプラグインを例との近さで分けます。';
+
+  @override
+  String get childSafeGuardianPickIntroTl =>
+      '中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、クリップ / リストを例との近さで分けます。';
+
+  @override
+  String get childSafeScreensBadge => '見守り中';
+
+  @override
+  String childSafeScreensWindowBanner(String window, String detail) {
+    return '見守りの時間($window)です。$detail';
+  }
+
+  @override
+  String get childSafeScreensWindowNothing => '投稿は流れません';
+
+  @override
+  String childSafeScreensWindowAllowOnly(String topics) {
+    return '「$topics」の話題だけが流れます';
+  }
+
+  @override
+  String childSafeScreensWindowDenied(String topics) {
+    return '「$topics」の話題は流れません';
+  }
+
+  @override
+  String get childSafeScreensBlockedHint => '見守りの設定は保護者が決めています';
+
+  @override
+  String get childSafeScreensHubTitle => 'チャイルドセーフ';
+
+  @override
+  String get childSafeScreensHubIntro =>
+      '保護者が、子のアカウントの使い方を決めます。保護者に届くのは数と止めた種類だけで、投稿の本文は送りません。';
+
+  @override
+  String get childSafeScreensHubIntroDetail =>
+      '保護者の RASQ アカウントが、子の RASQ アカウントの使い方を決めます。投稿の判定はこの端末の中で行い、保護者に届くのは、送った数と止めた数と、送る前に止めた種類だけです(投稿の本文や話題は送りません)。';
+
+  @override
+  String get childSafeScreensHubManagedSection => '見守られています';
+
+  @override
+  String get childSafeScreensHubParent => '保護者';
+
+  @override
+  String get childSafeScreensHubState => '状態';
+
+  @override
+  String childSafeScreensHubStateActive(int revision) {
+    return '見守り中(設定 $revision)';
+  }
+
+  @override
+  String get childSafeScreensHubOffline => 'いまはサーバーに届きません。前の設定のまま見守ります。';
+
+  @override
+  String get childSafeScreensHubRefresh => '保護者の設定を取り直す';
+
+  @override
+  String get childSafeScreensHubAsGuardian => '保護者として';
+
+  @override
+  String childSafeScreensHubGuardianVerified(String method) {
+    return '確認済み($method)。子のアカウントを作る / つなぐ / 設定';
+  }
+
+  @override
+  String get childSafeScreensHubGuardianUnverified =>
+      '保護者の確認は Web コンソールで(日本はマイナンバーカード、ほかは自己申告)';
+
+  @override
+  String get childSafeScreensHubAsChild => '子として';
+
+  @override
+  String get childSafeScreensHubChildModeLogin => '保護者からのコードでログインします';
+
+  @override
+  String get childSafeScreensHubChildModePair => 'このアカウントを、保護者のコードでつなぎます';
+
+  @override
+  String get childSafeScreensHubLoginSubtitle => '保護者が作った子のアカウントに入ります';
+
+  @override
+  String get childSafeScreensHubThisDevice => 'この端末';
+
+  @override
+  String get childSafeScreensHubSafety => 'プライバシーとセーフモード';
+
+  @override
+  String get childSafeScreensHubSafetyManaged =>
+      '見守り中は、閲覧注意のメディアを必ず隠します(変えられません)';
+
+  @override
+  String get childSafeScreensHubSafetyNormal => '閲覧注意メディアの扱い';
+
+  @override
+  String childSafeScreensTopicsNote(String label, String topics) {
+    return '($label: $topics)';
+  }
+
+  @override
+  String get childSafeScreensTopicsNone => 'なし';
+
+  @override
+  String get childSafeScreensTopicsShown => '流す話題';
+
+  @override
+  String get childSafeScreensTopicsHidden => '見せない話題';
+
+  @override
+  String get childSafeScreensTopicsSendable => '送れる話題';
+
+  @override
+  String get childSafeScreensTopicsUnsendable => '送れない話題';
+
+  @override
+  String get childSafeScreensTopicsNotShown => '流さない話題';
+
+  @override
+  String childSafeScreensSummaryTimeline(String level, String note) {
+    return 'タイムライン: $level$note';
+  }
+
+  @override
+  String childSafeScreensSummaryComposer(String level, String note) {
+    return '投稿の判定: $level$note';
+  }
+
+  @override
+  String childSafeScreensSummaryPostsPerDay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '1 日に送れる投稿: $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String childSafeScreensSummaryTime(String window, String note) {
+    return '見守りの時間: $window$note';
+  }
+
+  @override
+  String get childSafeScreensSummaryTimeNothing => '(投稿は流れません)';
+
+  @override
+  String childSafeScreensSummarySns(
+    String kinds,
+    String servers,
+    String noAdd,
+  ) {
+    return '使える SNS: $kinds$servers$noAdd';
+  }
+
+  @override
+  String get childSafeScreensSummaryAny => 'どれでも';
+
+  @override
+  String childSafeScreensSummarySnsServers(String servers) {
+    return '($servers)';
+  }
+
+  @override
+  String get childSafeScreensSummarySnsNoAdd => '、追加はできません';
+
+  @override
+  String childSafeScreensSummaryFeaturesOff(String list) {
+    return '止めている機能: $list';
+  }
+
+  @override
+  String childSafeScreensSummarySearchOff(String list) {
+    return '止めている検索: $list';
+  }
+
+  @override
+  String childSafeScreensSummaryPlugins(String scope, String install) {
+    return 'プラグイン: $scope・インストールは$install';
+  }
+
+  @override
+  String childSafeScreensSummaryPluginsExamples(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '選んだ $count 個と、許す例に近いもの',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String childSafeScreensSummaryPluginsListed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '選んだ $count 個だけ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String childSafeScreensSummaryExamples(int allow, int deny) {
+    return '例: 許す例 $allow / 止める例 $deny(止める例に近いプラグイン / クリップ / リストは出ません)';
+  }
+
+  @override
+  String childSafeScreensSummaryRai(int count, String noAuto) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'RAi: $count 種類の関数$noAuto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get childSafeScreensSummaryRaiNoAuto => '(自動化なし)';
+
+  @override
+  String get childSafeScreensSummaryRaiOff => 'RAi: 使えません';
+
+  @override
+  String childSafeScreensFromLink(String action) {
+    return 'リンク(QR)からコードを入れました。自分の保護者から受け取ったものか確かめてから「$action」を押してください。知らない人のリンクなら、押さずに閉じてください。';
+  }
+
+  @override
+  String get childSafeScreensPaired => '保護者とつなぎました。保護者が設定を決めるまで待ってください';
+
+  @override
+  String get childSafeScreensPairNotLoggedIn =>
+      'RASQ アカウントにログインしていません。保護者が作ったアカウントなら、保護者からのコードでログインします。';
+
+  @override
+  String get childSafeScreensPairExistingLogin => '既存の RASQ アカウントにログイン';
+
+  @override
+  String childSafeScreensPairIntro(String handle) {
+    return '@$handle を保護者の見守りにつなぎます。保護者の画面に出ているコード(8 字)を入れてください。つないだら、保護者が設定を決めるまで使えません。';
+  }
+
+  @override
+  String childSafeScreensPairIntroDetail(String handle) {
+    return '@$handle を、保護者の見守りにつなぎます。保護者の画面(アプリか Web コンソール)に出ているコード(8 字、例 ABCD-EFGH)を入れてください。つないだら、保護者が設定を決めるまでアプリは使えません。';
+  }
+
+  @override
+  String get childSafeScreensPairButton => 'つなぐ';
+
+  @override
+  String get childSafeScreensPairQrHint =>
+      '保護者の画面の QR を、この端末のカメラアプリで読んでもつなげます。';
+
+  @override
+  String get childSafeScreensPairQrHintDetail =>
+      '保護者の画面の QR は、この端末のカメラアプリで読むと、コードが入った状態でこの画面が開きます。リンク(rasq://child-safe/pair?code=…)を貼り付けても、つなげます。';
+
+  @override
+  String get childSafeScreensPairNoQr => 'この端末では QR を読めません。コードを入れてください。';
+
+  @override
+  String get childSafeScreensPairNoQrDetail =>
+      'この端末では QR を読めません。コードを入れるか、リンク(rasq://child-safe/pair?code=…)を貼り付けてください。';
+
+  @override
+  String get childSafeScreensLoginFailed => 'ログインできませんでした';
+
+  @override
+  String childSafeScreensLoggedIn(String handle, String device) {
+    return '@$handle にログインしました($device)';
+  }
+
+  @override
+  String get childSafeScreensLoginIntro =>
+      '保護者がアプリで子のアカウントを作ると、1 度だけ使えるコードが出ます。そのコードを入れると、この端末がそのアカウントになります。この端末の SNS アカウントは引き継ぎません。';
+
+  @override
+  String get childSafeScreensLoginCodeHint => 'ログインのコード';
+
+  @override
+  String get childSafeScreensLoginButton => 'ログイン';
+
+  @override
+  String get childSafeScreensPendingUnverifiedTitle => '保護者の設定を確かめられません';
+
+  @override
+  String get childSafeScreensPendingTitle => '保護者が設定を決めるまで待ってください';
+
+  @override
+  String get childSafeScreensPendingSignatureMismatch => '設定の署名が合いません。';
+
+  @override
+  String childSafeScreensPendingBody(String parent) {
+    return '$parent と見守りでつながっています。$parent が使い方を決めると、使えるようになります。';
+  }
+
+  @override
+  String get childSafeScreensPendingParent => '保護者';
+
+  @override
+  String get childSafeScreensPendingOffline => 'いまはサーバーに届きません。';
+
+  @override
+  String get childSafeScreensPendingRefresh => '更新';
+
+  @override
+  String get childSafeScreensPendingLogout => 'ログアウト';
+
+  @override
+  String get childSafeScreensPendingRasqLogin => 'RASQ アカウントにログイン';
+
+  @override
   String get composeTargetNormalTitle => 'ノートの作成';
 
   @override
