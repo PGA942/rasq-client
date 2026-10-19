@@ -15,6 +15,8 @@ import '../../backend/rasq_account_page_api.dart';
 import '../home/action_bar_config.dart';
 import '../home/action_bundle_fow.dart';
 import 'fow_avoid.dart';
+import 'media_reveal.dart';
+import '../settings/safety.dart';
 import '../home/plugin_actions.dart';
 import '../home/post_row.dart';
 import '../post/post_menu.dart';
@@ -30,6 +32,9 @@ import 'viewer_plugin_overlay.dart';
 /// FOW が伸び縮みする / 動くたびに、メディアは FOW の**逆サイド**へ寄る (D-326)。
 /// 動画と音声は開くと自動再生(全画面表示プラグインが**オン**のときだけ止める)。**下向きスワイプで閉じる** (D-326)。
 /// `…` → 「オーバーレイに移動」(動画のみ、VC・動画オーバーレイへ昇格 = M5 以降).
+/// センシティブ / 注釈(CW)のメディアは**1 枚ずつ**クッション (D-510): タイルで開いた 1 枚は開いたまま、スワイプした先の
+/// ほかの 1 枚は押すまでクッション(押すまでは自動再生も全画面表示プラグインへの受け渡しもしない)。セーフモード / 見守り中で
+/// タイルから取り除いたメディアは、外せないクッション。開いた記録はタイルと共有([mediaRevealProvider])。
 class MediaViewerScreen extends ConsumerStatefulWidget {
   const MediaViewerScreen({super.key, required this.post, this.initialIndex = 0});
   final Post post;
@@ -62,7 +67,35 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
 
   /// 動画のセッション(ページごと、D-201)。ページを離れると一時停止、開くと自動再生 (D-202)。
   final _sessions = <int, VideoSession>{};
-  VideoSession _session(int i) => _sessions.putIfAbsent(i, () => VideoSession(widget.post.media[i], autoplay: true));
+  VideoSession _session(int i) => _sessions.putIfAbsent(i, () {
+        final s = VideoSession(widget.post.media[i], autoplay: true);
+        // クッションの下では再生しない(開いたら [_reveal] が外す)。
+        if (_gate(i) != _ViewerGate.open) s.hold = true;
+        return s;
+      });
+
+  /// その 1 枚をいま見せてよいか (D-510)。タイルと同じ答え([SafetySettings.applyToPost] + 開いた記録)。
+  _ViewerGate _gate(int i) {
+    final post = widget.post;
+    if (i < 0 || i >= post.media.length) return _ViewerGate.locked;
+    final (items, map) = ref.read(safetySettingsProvider).applyToPost(post);
+    final j = map.indexOf(i);
+    if (j < 0) return _ViewerGate.locked; // セーフモード / 見守り中: タイルから取り除いたもの
+    if (!items[j].sensitive) return _ViewerGate.open;
+    return (ref.read(mediaRevealProvider)[post.key]?.contains(post.media[i].id) ?? false) ? _ViewerGate.open : _ViewerGate.cushion;
+  }
+
+  /// クッションを外す(その 1 枚だけ)。外してから全画面表示プラグインへ渡し、動画 / 音声は自動再生 (D-326)。
+  void _reveal(int i) {
+    final post = widget.post;
+    ref.read(mediaRevealProvider.notifier).reveal(post, post.media[i].id);
+    _sessions[i]?.hold = false;
+    _askOverlay(i);
+    final m = post.media[i];
+    if (i == _page.value && (m.type == MediaType.video || isAudioMedia(m))) _session(i).play();
+    _manager?.requestRebuild();
+    if (mounted) setState(() {});
+  }
   bool _chrome = true;
 
   /// 下側の FOW (D-202)。最初に開くときに作る(上側のボタン群に**被さらない**最大の高さを画面から決める、D-329)。
@@ -257,7 +290,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
       barrierBehavior: OverlayBarrierBehavior.dismiss,
       onBarrierTap: _collapse,
       barrierEnabled: _barrier,
-      builder: (_, _) => _ViewerPanel(post: widget.post, page: _page, sessionOf: _session, spec: _spec),
+      builder: (_, _) => _ViewerPanel(post: widget.post, page: _page, sessionOf: _session, isOpen: (i) => _gate(i) == _ViewerGate.open, spec: _spec),
     );
   }
 
@@ -342,7 +375,8 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   Future<void> _toggleViewerPlugin(String pluginId) async {
     final i = _page.value;
     final m = widget.post.media[i];
-    final url = m.type == MediaType.video ? m.thumbnailUrl : (m.type == MediaType.image || m.type == MediaType.gif ? m.url : null);
+    // クッションの下の 1 枚は渡さない(開いたときに [_reveal] が渡す、D-510)。
+    final url = _gate(i) != _ViewerGate.open ? null : m.type == MediaType.video ? m.thumbnailUrl : (m.type == MediaType.image || m.type == MediaType.gif ? m.url : null);
     await _overlays.toggle(pluginId, i, url);
     if (mounted) setState(() {});
   }
@@ -351,11 +385,21 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   void _toPip() {
     final i = _page.value;
     final m = widget.post.media[i];
-    if (m.type != MediaType.video) return;
+    if (m.type != MediaType.video || _gate(i) != _ViewerGate.open) return;
     final manager = ref.read(overlayManagerProvider);
     final at = VideoPrefs.pipKeepPosition ? _sessions[i]?.position : null; // 再生位置の引き継ぎ (D-238 の設定)
     Navigator.of(context).maybePop();
     WidgetsBinding.instance.addPostFrameCallback((_) => showVideoFowWith(manager, m, post: widget.post, startAt: at));
+  }
+
+  /// クッションの面 (D-510): サムネイル(動画はサムネイル、画像は本体)をぼかした上に、文言と「表示する」。
+  /// 外せない面は何も読まない(黒地に文言だけ)。
+  Widget _cushionPage(int i, MediaItem m, {required bool locked}) {
+    final thumb = m.thumbnailUrl ?? (m.type == MediaType.image || m.type == MediaType.gif ? m.url : null);
+    return Stack(key: ValueKey('viewer.cushion.${m.id}'), fit: StackFit.expand, children: [
+      if (!locked && thumb != null) Image.network(webHtmlElementStrategy: rasqWebImageStrategy, thumb.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+      Positioned.fill(child: RasqSensitiveCushion(large: true, onReveal: locked ? null : () => _reveal(i))),
+    ]);
   }
 
   void _collapse() {
@@ -365,6 +409,8 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
 
   void _askOverlay(int i) {
     if (i >= widget.post.media.length) return;
+    // クッションの下の 1 枚はプラグインへ渡さない(開いたら渡す、D-510)。
+    if (_gate(i) != _ViewerGate.open) return;
     final m = widget.post.media[i];
     if (m.type == MediaType.video) {
       // 全画面表示プラグインが**オン**なら再生を止め(D-202 → D-326: 登録があるだけでは止めない = 自動再生)、
@@ -383,6 +429,9 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   Widget build(BuildContext context) {
     final post = widget.post;
     final manager = ref.watch(overlayManagerProvider);
+    // 閲覧注意の設定 / 開いた記録が変わったら描き直す (D-510)。
+    ref.watch(safetySettingsProvider);
+    ref.watch(mediaRevealProvider.select((s) => s[post.key]));
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(children: [
@@ -424,11 +473,13 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                   _syncZoomed(i);
                   _askOverlay(i);
                   final m = post.media[i];
-                  // 動画と音声は開くと自動再生 (D-326)。
-                  if (m.type == MediaType.video || isAudioMedia(m)) _session(i).play();
+                  // 動画と音声は開くと自動再生 (D-326)。クッションの下では押すまで再生しない (D-510)。
+                  if ((m.type == MediaType.video || isAudioMedia(m)) && _gate(i) == _ViewerGate.open) _session(i).play();
                 },
                 itemBuilder: (_, i) {
                   final m = post.media[i];
+                  final gate = _gate(i);
+                  if (gate != _ViewerGate.open) return _cushionPage(i, m, locked: gate == _ViewerGate.locked);
                   return InteractiveViewer(
                     transformationController: _zoomOf(i),
                     minScale: 1,
@@ -459,7 +510,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
               // Flexible にすると使い切らない余白が末尾に残って右端から離れるので、幅の上限を LayoutBuilder で
               // 計算して枚数の Expanded に残りを渡す。
               child: LayoutBuilder(builder: (context, c) {
-                final video = post.media[_page.value].type == MediaType.video;
+                final video = post.media[_page.value].type == MediaType.video && _gate(_page.value) == _ViewerGate.open;
                 final fixed = 40.0 + 2 + 40 + (video ? 42 : 0) + 56; // 戻る / … / PiP / 枚数の最低幅
                 final barMax = math.max(0.0, c.maxWidth - fixed);
                 return Row(children: [
@@ -488,7 +539,8 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                           final box = ctx.findRenderObject() as RenderBox;
                           final rect = box.localToGlobal(Offset.zero) & box.size;
                           final m = post.media[_page.value];
-                          showPostMenu(ctx, ref, post, rect, media: m);
+                          // クッションの下の 1 枚は保存させない (D-510)。
+                          showPostMenu(ctx, ref, post, rect, media: _gate(_page.value) == _ViewerGate.open ? m : null);
                         },
                       ),
                     ),
@@ -502,13 +554,28 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   }
 }
 
+/// 全画面表示の 1 枚の見せ方 (D-510)。
+enum _ViewerGate {
+  /// そのまま見せる。
+  open,
+
+  /// センシティブ / 注釈(CW): 押すまでクッション。
+  cushion,
+
+  /// セーフモード / 見守り中でタイルから取り除いたもの: 外せないクッション。
+  locked,
+}
+
 /// 下側の FOW の中身 (D-202): [動画の操作] / [アクションバー] / [投稿のインライン表示(添付は無し)]。
 /// 折りたたみの段は上 2 つの実測高さに合わせる(AsTell のルーム FOW と同じ作法)。
 class _ViewerPanel extends ConsumerStatefulWidget {
-  const _ViewerPanel({required this.post, required this.page, required this.sessionOf, required this.spec});
+  const _ViewerPanel({required this.post, required this.page, required this.sessionOf, required this.isOpen, required this.spec});
   final Post post;
   final ValueListenable<int> page;
   final VideoSession Function(int) sessionOf;
+
+  /// その 1 枚がクッションの下でないか (D-510)。クッションの下の動画 / 音声には操作を出さない(押すまで再生させない)。
+  final bool Function(int) isOpen;
   final FowSpec spec;
   @override
   ConsumerState<_ViewerPanel> createState() => _ViewerPanelState();
@@ -554,6 +621,8 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
       prefs: ref.watch(actionButtonPrefsProvider),
     );
     final entries = merged.config.apply(merged.actions);
+    // クッションを外したら操作を出し直す (D-510)。
+    ref.watch(mediaRevealProvider.select((s) => s[post.key]));
     return ValueListenableBuilder<int>(
       key: viewerPanelKey,
       valueListenable: widget.page,
@@ -564,7 +633,7 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
         return ListView(padding: EdgeInsets.zero, children: [
           Column(key: _topKey, mainAxisSize: MainAxisSize.min, children: [
             // 動画 / 音声の操作 (D-201 → D-202、音声は D-326): 左にシークバー、右にボタン類(小画面では下の行)。
-            if (m != null && (m.type == MediaType.video || isAudioMedia(m))) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), child: VideoControls(session: widget.sessionOf(i))),
+            if (m != null && (m.type == MediaType.video || isAudioMedia(m)) && widget.isOpen(i)) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), child: VideoControls(session: widget.sessionOf(i))),
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
               for (final e in entries)
                 switch (e) {

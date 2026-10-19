@@ -21,6 +21,7 @@ import '../compose/emoji_picker_fow.dart';
 import 'reaction_history.dart';
 import 'reaction_mode.dart';
 import '../post/post_menu.dart';
+import '../media/media_reveal.dart';
 import '../media/video_player.dart';
 import '../post/share_fow.dart';
 import '../plugins/slot_plugins.dart';
@@ -272,7 +273,9 @@ class _PostRowState extends ConsumerState<PostRow> {
     // otherwise they fill the tile's own slots.
     final hasCw = !collapsible && (post.contentWarning?.isNotEmpty ?? false);
     // 閲覧注意メディアの表示設定 (D-044: sns.safety) を適用。
-    final (mediaItems, mediaIndex) = safety.applyTo(post.media);
+    final (mediaItems, mediaIndex) = safety.applyToPost(post);
+    // 開いたメディアは 1 枚ずつ、全画面表示と共有 (D-510)。
+    final revealed = watchRevealedMedia(ref, post);
 
     // アクションバー編集(ホスト構成): リスト束ね・並び替え・非表示を適用して Props 化。
     // プラグインのボタン (D-176): このアカウントのスロット設定で有効なものを、タグの近い既存ボタンのバンドルへ。
@@ -313,7 +316,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       bannerText: widget.bannerText,
       dense: widget.dense,
       content: content,
-      media: !collapsible && !hasCw && !widget.hideMedia && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, maxVisible: widget.showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i]), onPlayTile: (i) => showVideoFow(ref, mediaItems[i], post: post, column: fowColumnOf(context))) : null,
+      media: !collapsible && !hasCw && !widget.hideMedia && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, revealed: revealed, onReveal: (id) => ref.read(mediaRevealProvider.notifier).reveal(post, id), maxVisible: widget.showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i]), onPlayTile: (i) => showVideoFow(ref, mediaItems[i], post: post, column: fowColumnOf(context))) : null,
       poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
       quote: !collapsible && !hasCw && post.quote != null ? (widget.compactQuote ? InlinePostFrame(post: post.quote!) : quoteTile(context, post.quote!, emojis: emojis, safety: safety)) : null,
       actionBar: widget.actions.isEmpty && !showChips
@@ -588,7 +591,7 @@ class _PostRowState extends ConsumerState<PostRow> {
 
   /// 引用: 投稿カード(埋め込みサイズ)を再利用.
   static Widget quoteTile(BuildContext context, Post q, {Map<String, Uri?> emojis = const {}, SafetySettings safety = const SafetySettings()}) {
-    final (mediaItems, _) = safety.applyTo(q.media);
+    final (mediaItems, _) = safety.applyToPost(q);
     return RasqPostTile(
       variant: RasqPostTileVariant.embedded,
       author: q.author,
@@ -668,10 +671,11 @@ class _CwBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final emojis = ref.watch(emojiCacheProvider);
     final safety = ref.watch(safetySettingsProvider);
-    final (mediaItems, mediaIndex) = safety.applyTo(post.media);
+    final (mediaItems, mediaIndex) = safety.applyToPost(post);
+    final revealed = watchRevealedMedia(ref, post);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       body,
-      if (mediaItems.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: mediaItems, maxVisible: showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i]))],
+      if (mediaItems.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: mediaItems, revealed: revealed, onReveal: (id) => ref.read(mediaRevealProvider.notifier).reveal(post, id), maxVisible: showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i]))],
       if (post.poll != null) ...[const SizedBox(height: RasqSpacing.sm), RasqPollWidget(poll: post.poll!)],
       if (post.quote != null) ...[const SizedBox(height: RasqSpacing.sm), _PostRowState.quoteTile(context, post.quote!, emojis: emojis, safety: safety)],
     ]);

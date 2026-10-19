@@ -193,6 +193,12 @@ abstract class RasqDesignLocalizations {
   /// **'表示する'**
   String get designMediaReveal;
 
+  /// 全画面表示で、セーフモード / 見守り中のため出さないメディアの面(表示するボタンは無い)
+  ///
+  /// In ja, this message translates to:
+  /// **'表示しない設定のメディアです'**
+  String get designMediaHidden;
+
   /// No description provided for @designReactionMorePeople.
   ///
   /// In ja, this message translates to:

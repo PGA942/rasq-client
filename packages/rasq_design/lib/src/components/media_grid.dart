@@ -18,12 +18,15 @@ import '../l10n/design_l10n.dart';
 ///
 /// Reveal state is ephemeral UI state, so it lives inside the widget
 /// (emit/on scope); it is **not** business state and never reaches the store.
+/// 全画面表示と揃えたいとき (D-510) は [revealed] / [onReveal] でホストが持つ(1 枚ずつ。1 枚を開いても他は開かない)。
 class RasqMediaGrid extends StatefulWidget {
   const RasqMediaGrid({
     super.key,
     required this.items,
     this.onTapTile,
     this.onPlayTile,
+    this.revealed,
+    this.onReveal,
     this.maxVisible = 4,
     this.borderRadius = RasqSizes.radiusMd,
     this.singleAspectRatio = 16 / 9,
@@ -37,6 +40,12 @@ class RasqMediaGrid extends StatefulWidget {
 
   /// 動画タイルの再生バッジ(インライン再生、D-201)。null ならバッジは飾り(タイルのタップと同じ)。
   final ValueChanged<int>? onPlayTile;
+
+  /// 開いた(クッションを外した)タイルの [MediaItem.id]。null ならウィジェットの中で持つ。
+  final Set<String>? revealed;
+
+  /// タイルのクッションを外したとき([MediaItem.id])。[revealed] を渡すならこれも渡す。
+  final ValueChanged<String>? onReveal;
   final int maxVisible;
   final double borderRadius;
   final double singleAspectRatio;
@@ -58,9 +67,13 @@ class _RasqMediaGridState extends State<RasqMediaGrid> {
     final visible = items.length > widget.maxVisible ? widget.maxVisible : items.length;
     Widget tile(int i) => _MediaTile(
           item: items[i],
-          revealed: _revealed.contains(items[i].id),
+          revealed: (widget.revealed ?? _revealed).contains(items[i].id),
           overflow: i == widget.maxVisible - 1 && items.length > widget.maxVisible ? items.length - widget.maxVisible : 0,
-          onReveal: () => setState(() => _revealed.add(items[i].id)),
+          onReveal: () {
+            final id = items[i].id;
+            if (widget.revealed == null) setState(() => _revealed.add(id));
+            widget.onReveal?.call(id);
+          },
           onTap: widget.onTapTile == null ? null : () => widget.onTapTile!(i),
           onPlay: widget.onPlayTile == null ? null : () => widget.onPlayTile!(i),
         );
@@ -116,7 +129,6 @@ class _MediaTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final tokens = RasqTokens.of(context);
     final hidden = item.sensitive && !revealed;
 
     // プラグインの面では、その権限で読めない URL は読まない (D-407)。
@@ -171,36 +183,7 @@ class _MediaTile extends StatelessWidget {
       ));
     }
 
-    if (hidden) {
-      overlays.add(Positioned.fill(
-        child: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: ColoredBox(
-              color: tokens.sensitiveOverlay,
-              child: Stack(children: [
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Text(context.designL10n.designMediaSensitive, textAlign: TextAlign.center, style: const TextStyle(color: RasqColors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                  ),
-                ),
-                Positioned(
-                  right: 4,
-                  bottom: 4,
-                  child: IconButton(
-                    onPressed: onReveal,
-                    icon: const Icon(Icons.visibility, color: RasqColors.white),
-                    tooltip: context.designL10n.designMediaReveal,
-                    constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-        ),
-      ));
-    }
+    if (hidden) overlays.add(Positioned.fill(child: RasqSensitiveCushion(key: ValueKey('media.cushion.${item.id}'), onReveal: onReveal)));
 
     return Semantics(
       label: item.alt ?? (item.type == MediaType.file ? item.fileName : null),
@@ -218,6 +201,66 @@ class _MediaTile extends StatelessWidget {
     final m = d.inMinutes.remainder(60).toString().padLeft(d.inHours > 0 ? 2 : 1, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return d.inHours > 0 ? '${d.inHours}:$m:$s' : '$m:$s';
+  }
+}
+
+/// センシティブ / CW のメディアに被せるクッション (D-510): ぼかし + 「センシティブな可能性のあるメディアです」+ 表示するボタン。
+/// タイル(RasqMediaGrid)と全画面表示で同じもの。メディアの上に `Positioned.fill` で重ねる(背面をぼかす)。
+/// [onReveal] が null なら外せない面(セーフモード / 見守り中で出さないメディア): 文言だけで、ボタンは無い。
+class RasqSensitiveCushion extends StatelessWidget {
+  const RasqSensitiveCushion({super.key, this.onReveal, this.large = false});
+  final VoidCallback? onReveal;
+
+  /// 全画面表示向け(文字とボタンを大きく)。
+  final bool large;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = RasqTokens.of(context);
+    final l = context.designL10n;
+    final locked = onReveal == null;
+    final cushion = ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: large ? 32 : 16, sigmaY: large ? 32 : 16),
+        child: ColoredBox(
+          color: tokens.sensitiveOverlay,
+          child: Stack(children: [
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  if (large) Icon(locked ? Icons.visibility_off_outlined : Icons.warning_amber_rounded, color: RasqColors.white, size: 40),
+                  if (large) const SizedBox(height: 8),
+                  Text(locked ? l.designMediaHidden : l.designMediaSensitive, textAlign: TextAlign.center, style: TextStyle(color: RasqColors.white, fontSize: large ? 15 : 12, fontWeight: FontWeight.w600)),
+                  if (large && !locked) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: onReveal,
+                      icon: const Icon(Icons.visibility, color: RasqColors.white),
+                      label: Text(l.designMediaReveal, style: const TextStyle(color: RasqColors.white)),
+                      style: OutlinedButton.styleFrom(side: const BorderSide(color: RasqColors.white), minimumSize: const Size(RasqSizes.minTap, RasqSizes.minTap)),
+                    ),
+                  ],
+                ]),
+              ),
+            ),
+            if (!large && !locked)
+              Positioned(
+                right: 4,
+                bottom: 4,
+                child: IconButton(
+                  onPressed: onReveal,
+                  icon: const Icon(Icons.visibility, color: RasqColors.white),
+                  tooltip: l.designMediaReveal,
+                  constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
+                ),
+              ),
+          ]),
+        ),
+      ),
+    );
+    // 全画面表示では面のどこを押しても開く(タイルはタイルの GestureDetector が開く)。
+    return large && !locked ? GestureDetector(behavior: HitTestBehavior.opaque, onTap: onReveal, child: cushion) : cushion;
   }
 }
 

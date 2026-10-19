@@ -36,6 +36,8 @@
   "designMediaPlay": "再生",
   "designMediaSensitive": "センシティブな可能性のあるメディアです",
   "designMediaReveal": "表示する",
+  "designMediaHidden": "表示しない設定のメディアです",
+  "@designMediaHidden": {"description": "全画面表示で、セーフモード / 見守り中のため出さないメディアの面(表示するボタンは無い)"},
   "designReactionMorePeople": "+{count}人",
   "@designReactionMorePeople": {
     "placeholders": {
