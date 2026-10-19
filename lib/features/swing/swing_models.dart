@@ -1,17 +1,25 @@
 import 'package:flutter/foundation.dart';
 import 'package:rasq_models/rasq_models.dart';
+import '../../l10n/l10n.dart';
 
 /// Swing (D-377 / Central S-056): RASQ の短命の配信。正本は `rasq-central/docs/API.md` §4i。
 
 enum SwingKind {
-  text('text', 'テキスト'),
-  image('image', '画像'),
-  video('video', '動画'),
-  plugin('plugin', 'プラグイン');
+  text('text'),
+  image('image'),
+  video('video'),
+  plugin('plugin');
 
-  const SwingKind(this.wire, this.label);
+  const SwingKind(this.wire);
   final String wire;
-  final String label;
+
+  /// 表示の名前(表示の言語)。
+  String get label => switch (this) {
+        text => appL10n.swingKindText,
+        image => appL10n.swingKindImage,
+        video => appL10n.swingKindVideo,
+        plugin => appL10n.swingKindPlugin,
+      };
 
   static SwingKind? parse(Object? v) => SwingKind.values.where((k) => k.wire == v).firstOrNull;
 }

@@ -27,6 +27,7 @@ import '../store/store_providers.dart' show installedPluginsProvider;
 import 'swing_models.dart';
 import 'swing_providers.dart';
 import 'wagara.dart';
+import '../../l10n/l10n.dart';
 
 /// Swing を作る (D-377 / D-380 → D-386)。
 ///
@@ -60,13 +61,13 @@ String? swingMediaMimeFor(String name, {String? reported}) {
 /// 選択ダイアログ(テストで差し替える)。[video] = 動画を選ぶ。
 final swingMediaPickerProvider = Provider<Future<XFile?> Function({required bool video})>((ref) => ({required bool video}) => openFile(acceptedTypeGroups: [
       video
-          ? const XTypeGroup(label: '動画', extensions: mediaVideoExtensions, mimeTypes: ['video/*'], uniformTypeIdentifiers: ['public.movie'])
-          : const XTypeGroup(label: '画像', extensions: swingImageExtensions, mimeTypes: ['image/*'], uniformTypeIdentifiers: ['public.image']),
+          ? XTypeGroup(label: appL10n.swingKindVideo, extensions: mediaVideoExtensions, mimeTypes: ['video/*'], uniformTypeIdentifiers: ['public.movie'])
+          : XTypeGroup(label: appL10n.swingKindImage, extensions: swingImageExtensions, mimeTypes: ['image/*'], uniformTypeIdentifiers: ['public.image']),
     ]));
 
 /// 未審査のプラグインの入れ物を選ぶ(テストで差し替える)。
-final swingPackagePickerProvider = Provider<Future<XFile?> Function()>((ref) => () => openFile(acceptedTypeGroups: const [
-      XTypeGroup(label: 'プラグイン', extensions: ['rspkg', 'rasqpkg', 'wasm']), // .rspkg = SDK の既定の拡張子(中身は .rasqpkg と同じ)
+final swingPackagePickerProvider = Provider<Future<XFile?> Function()>((ref) => () => openFile(acceptedTypeGroups: [
+      XTypeGroup(label: appL10n.swingKindPlugin, extensions: ['rspkg', 'rasqpkg', 'wasm']), // .rspkg = SDK の既定の拡張子(中身は .rasqpkg と同じ)
     ]));
 
 /// Swing に使えるプラグイン (D-424、契約 v0.20): 入っているページ型(カスタムプラグイン)のうち、**親子関係の無い**もの
@@ -96,9 +97,9 @@ final swingBlockedPluginsProvider = Provider<List<({SlotPlugin plugin, String re
 /// Swing で配るときの説明(作る画面の行の下の文、D-424)。
 String swingPluginSubtitle(SlotPlugin p) {
   final page = p.manifest.page;
-  if (page?.isShared ?? false) return 'みんなで使う: 見た人は、あなたが作る同じページに入ります';
-  if (page?.allows(PluginPageDecl.surfaceSwing) ?? false) return '見る人の端末で全画面で動きます';
-  return '見る人の端末でページとして動きます';
+  if (page?.isShared ?? false) return appL10n.swingComposerPluginShared;
+  if (page?.allows(PluginPageDecl.surfaceSwing) ?? false) return appL10n.swingComposerPluginFullscreen;
+  return appL10n.swingComposerPluginPage;
 }
 
 /// 送る画面に渡す下書き: 編集し終えた画像 / 動画、またはプラグインを選ぶところから。
@@ -163,7 +164,7 @@ const swingTtlActionId = 'swing.ttl';
 /// 消えるまでの時間の選び方 (D-410)。
 const swingTtlChoices = [1, 6, 12, 24];
 
-String swingTtlLabel(int hours) => '$hours 時間で消える';
+String swingTtlLabel(int hours) => appL10n.swingTtlLabel(hours);
 
 /// 編集画面の「N 時間で消える」(D-410): 押すと時間を選ぶシート。[ttl] を書き換える。
 ProEditorExtraAction swingTtlAction(ValueNotifier<int> ttl) {
@@ -184,12 +185,12 @@ Future<void> pickSwingTtl(BuildContext context, ValueNotifier<int> ttl) async {
     context: context,
     builder: (ctx) => SafeArea(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        ListTile(title: Text('消えるまで', style: RasqTypography.bodySmall)),
+        ListTile(title: Text(context.l10n.swingTtl, style: RasqTypography.bodySmall)),
         for (final h in swingTtlChoices)
           ListTile(
             key: ValueKey('swing.ttl.$h'),
             leading: const Icon(Icons.timer_outlined),
-            title: Text('$h 時間'),
+            title: Text(context.l10n.swingTtlHours(h)),
             trailing: ttl.value == h ? const Icon(Icons.check) : null,
             onTap: () => Navigator.of(ctx).pop(h),
           ),
@@ -224,8 +225,8 @@ Future<SwingDraft?> editSwing(BuildContext context, WidgetRef ref) async {
         context: h.context,
         builder: (ctx) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            ListTile(key: swingPickImageKey, leading: const Icon(Icons.image_outlined), title: const Text('画像を背景にする'), onTap: () => Navigator.of(ctx).pop(false)),
-            ListTile(key: swingPickVideoKey, leading: const Icon(Icons.movie_outlined), title: const Text('動画を背景にする'), onTap: () => Navigator.of(ctx).pop(true)),
+            ListTile(key: swingPickImageKey, leading: const Icon(Icons.image_outlined), title: Text(ctx.l10n.swingBackgroundImage), onTap: () => Navigator.of(ctx).pop(false)),
+            ListTile(key: swingPickVideoKey, leading: const Icon(Icons.movie_outlined), title: Text(ctx.l10n.swingBackgroundVideo), onTap: () => Navigator.of(ctx).pop(true)),
           ]),
         ),
       );
@@ -234,7 +235,7 @@ Future<SwingDraft?> editSwing(BuildContext context, WidgetRef ref) async {
       if (f == null) return;
       final mime = swingMediaMimeFor(f.name, reported: f.mimeType);
       if (mime == null || !mime.startsWith(video ? 'video/' : 'image/')) {
-        if (h.context.mounted) ScaffoldMessenger.maybeOf(h.context)?.showSnackBar(SnackBar(content: Text(video ? '動画のファイルを選んでください' : '画像のファイルを選んでください')));
+        if (h.context.mounted) ScaffoldMessenger.maybeOf(h.context)?.showSnackBar(SnackBar(content: Text(video ? appL10n.swingPickVideoFile : appL10n.swingPickImageFile)));
         return;
       }
       final bytes = await f.readAsBytes();
@@ -246,7 +247,7 @@ Future<SwingDraft?> editSwing(BuildContext context, WidgetRef ref) async {
     final edited = await ref.read(swingEditorProvider)(context, bytes: base.bytes, name: base.name, mime: base.mime, actions: [
       ProEditorExtraAction(
         id: swingPluginActionId,
-        label: 'プラグイン',
+        label: appL10n.swingKindPlugin,
         icon: Icons.extension_outlined,
         onTap: (h) {
           plugin = true;
@@ -255,7 +256,7 @@ Future<SwingDraft?> editSwing(BuildContext context, WidgetRef ref) async {
       ),
       ProEditorExtraAction(
         id: swingBackgroundActionId,
-        label: '背景を変える',
+        label: appL10n.swingChangeBackground,
         icon: Icons.shuffle,
         onTap: (h) async {
           final bytes = await background();
@@ -289,7 +290,7 @@ const swingAudienceFowHeight = 0.34;
 const swingMediaAreaKey = ValueKey('swing.media.area');
 
 /// CW の文の既定 (D-410)。
-const swingDefaultCw = 'センシティブな内容';
+String get swingDefaultCw => appL10n.swingSensitive;
 
 /// 届け先の選び方 (D-410): フォロワーと RASQ リスト。送る画面と届け先の FOW で分け合う。
 class SwingAudienceSelection extends ChangeNotifier {
@@ -432,7 +433,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
     if (_fowSpec != null && manager.contains(swingAudienceFowId)) return;
     final next = _fowSpec = FowSpec(
       type: FowPanelType.widget,
-      title: '届け先',
+      title: context.l10n.swingAudience,
       columnIndex: _column,
       initialHeightFactor: swingAudienceFowHeight,
       minHeightFactor: 0.12,
@@ -441,7 +442,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
     unawaited(manager.showFow<void>(
       id: swingAudienceFowId,
       spec: next,
-      semanticsLabel: '届け先',
+      semanticsLabel: context.l10n.swingAudience,
       builder: (ctx, handle) => SwingAudienceFowBody(selection: _audience),
     ).whenComplete(() {
       if (identical(_fowSpec, next)) _fowSpec = null;
@@ -481,7 +482,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
     try {
       checkSwingPackage(bytes, decompress: ref.read(rasqpkgZstdProvider));
       p = await slots.register('${swingSlotSourcePrefix}preview', bytes: bytes, persist: false, temporary: true);
-      if (p == null) throw StateError(ref.read(slotPluginsNoticeProvider) ?? '読み込めませんでした');
+      if (p == null) throw StateError(ref.read(slotPluginsNoticeProvider) ?? appL10n.swingLoadFailedShort);
       setState(() {
         _package = (name: f.name, bytes: bytes, id: p!.manifest.id, version: p.manifest.version, title: p.manifest.page?.title ?? p.manifest.name);
         _pluginId = null;
@@ -528,12 +529,12 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       ));
       ref.invalidate(mySwingsProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Swing を出しました($ttl 時間で消えます)')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.swingSent(ttl))));
       _close();
     } on OrgateException catch (e) {
-      setState(() => _error = e.message.contains('swing_limit') || e.toString().contains('429') ? '同時に出しておける Swing は 20 個までです' : '出せませんでした: ${e.message}');
+      setState(() => _error = e.message.contains('swing_limit') || e.toString().contains('429') ? appL10n.swingErrorLimit : appL10n.swingSendFailed(e.message));
     } catch (e) {
-      setState(() => _error = '出せませんでした: $e');
+      setState(() => _error = appL10n.swingSendFailed(e is StateError ? e.message : '$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -556,7 +557,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
           );
     return Scaffold(
       appBar: RasqPageHeader(
-        title: 'Swing を作る',
+        title: context.l10n.swingComposerTitle,
         showMore: false,
         // プラグインの送る前の段から戻る = 選ぶ段へ。ほかは閉じる(カラムに重ねていれば元のカラムへ)。
         onBack: ready && d.plugin && !_editing ? () => _setEditing(true) : _close,
@@ -565,17 +566,17 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
             Padding(
               padding: const EdgeInsets.only(right: RasqSpacing.sm),
               child: _editing
-                  ? FilledButton(key: const ValueKey('swing.next'), onPressed: _hasContent ? () => _setEditing(false) : null, child: const Text('次へ'))
+                  ? FilledButton(key: const ValueKey('swing.next'), onPressed: _hasContent ? () => _setEditing(false) : null, child: Text(context.l10n.swingNext))
                   : FilledButton(
                       key: const ValueKey('swing.send'),
                       onPressed: _ready && !_busy ? _send : null,
-                      child: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('出す'),
+                      child: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : Text(context.l10n.swingSend),
                     ),
             ),
         ],
       ),
       body: !hasApi
-          ? const RasqEmptyView(key: ValueKey('swing.composer.noAccount'), title: 'RASQ アカウントが要ります', hint: 'Swing は RASQ アカウントから出します。サイドバーからログインしてください')
+          ? RasqEmptyView(key: const ValueKey('swing.composer.noAccount'), title: context.l10n.swingNeedsAccount, hint: context.l10n.swingNeedsAccountHint)
           : d == null
               ? const RasqLoading(key: ValueKey('swing.composer.starting'))
               : _editing
@@ -605,17 +606,17 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
     final Widget content;
     if (d.plugin) {
       final plugin = _pluginId == null ? null : ref.watch(swingPluginsProvider).where((p) => (p.storePluginId ?? p.id) == _pluginId).firstOrNull;
-      final title = _package != null ? '${_package!.title}(未審査)' : (plugin?.manifest.page?.title ?? plugin?.manifest.name ?? 'プラグイン');
+      final title = _package != null ? context.l10n.swingUnreviewed(_package!.title) : (plugin?.manifest.page?.title ?? plugin?.manifest.name ?? context.l10n.swingKindPlugin);
       content = Column(mainAxisSize: MainAxisSize.min, children: [
         const Icon(Icons.extension_outlined, color: Colors.white70, size: 40),
         const SizedBox(height: RasqSpacing.xs),
         Text(title, key: const ValueKey('swing.preview.plugin'), style: RasqTypography.body.copyWith(color: Colors.white)),
-        Text(plugin == null ? '見る人の端末で全画面で動きます' : swingPluginSubtitle(plugin), style: RasqTypography.caption.copyWith(color: Colors.white70)),
+        Text(plugin == null ? context.l10n.swingComposerPluginFullscreen : swingPluginSubtitle(plugin), style: RasqTypography.caption.copyWith(color: Colors.white70)),
       ]);
     } else if (video) {
       content = Column(mainAxisSize: MainAxisSize.min, children: [
         const Icon(Icons.movie_outlined, color: Colors.white70, size: 40),
-        Text(d.name ?? '動画', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+        Text(d.name ?? context.l10n.swingKindVideo, style: RasqTypography.caption.copyWith(color: Colors.white70)),
       ]);
     } else {
       content = Image.memory(d.bytes!, fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.image_outlined, color: Colors.white70, size: 40));
@@ -632,10 +633,10 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
             top: RasqSpacing.xs,
             right: RasqSpacing.xs,
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text('${_ttl.value} 時間で消えます', key: const ValueKey('swing.ttl.label'), style: RasqTypography.caption.copyWith(color: Colors.white70)),
+              Text(context.l10n.swingTtlRemaining(_ttl.value), key: const ValueKey('swing.ttl.label'), style: RasqTypography.caption.copyWith(color: Colors.white70)),
               d.plugin
-                  ? RasqIconButton(key: const ValueKey('swing.plugin.change'), icon: Icons.edit_outlined, tooltip: '選び直す', color: Colors.white, onPressed: _busy ? null : () => _setEditing(true))
-                  : RasqIconButton(key: const ValueKey('swing.reedit'), icon: Icons.edit_outlined, tooltip: '編集し直す', color: Colors.white, onPressed: _busy ? null : _reedit),
+                  ? RasqIconButton(key: const ValueKey('swing.plugin.change'), icon: Icons.edit_outlined, tooltip: context.l10n.swingRepick, color: Colors.white, onPressed: _busy ? null : () => _setEditing(true))
+                  : RasqIconButton(key: const ValueKey('swing.reedit'), icon: Icons.edit_outlined, tooltip: context.l10n.swingReedit, color: Colors.white, onPressed: _busy ? null : _reedit),
             ]),
           ),
           // 下: CW の文(左)+ オン / オフ(右下)。
@@ -655,7 +656,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
               Padding(
                 key: const ValueKey('swing.cw.tooLong'),
                 padding: const EdgeInsets.only(bottom: RasqSpacing.xs),
-                child: Text('CW は ${SwingComposerScreen.maxCwChars} 文字までです', style: RasqTypography.caption.copyWith(color: RasqColors.salmon)),
+                child: Text(context.l10n.swingCwTooLong(SwingComposerScreen.maxCwChars), style: RasqTypography.caption.copyWith(color: RasqColors.salmon)),
               ),
             Row(children: [
               Expanded(
@@ -670,7 +671,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
                       isDense: true,
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: 0.12),
-                      hintText: 'CW の文',
+                      hintText: context.l10n.swingCwHint,
                       hintStyle: RasqTypography.bodySmall.copyWith(color: Colors.white38),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(RasqSizes.radiusMd), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
@@ -680,7 +681,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
               ),
               const SizedBox(width: RasqSpacing.xs),
               Tooltip(
-                message: _cwOn ? 'CW をはずす' : 'CW を付ける(センシティブな内容)',
+                message: _cwOn ? context.l10n.swingCwOff : context.l10n.swingCwOn,
                 child: Semantics(
                   label: 'CW',
                   child: Switch(key: const ValueKey('swing.cw.toggle'), value: _cwOn, onChanged: _busy ? null : (v) => setState(() => _cwOn = v)),
@@ -696,9 +697,9 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
     final blocked = ref.watch(swingBlockedPluginsProvider);
     final scheme = Theme.of(context).colorScheme;
     return [
-      const RasqSectionHeader(title: '配るプラグイン'),
+      RasqSectionHeader(title: context.l10n.swingPluginSection),
       if (plugins.isEmpty)
-        const RasqNotice(key: ValueKey('swing.plugin.none'), text: 'Swing で配れるカスタムプラグインが入っていません。ストアで入れるか、下の「ファイルから」で自分のプラグインを配れます。', detail: 'ページ型(カスタムプラグイン)のうち、ほかのプラグインと親子関係の無いもの(契約 v0.20。solo / shared どちらも)。'),
+        RasqNotice(key: const ValueKey('swing.plugin.none'), text: context.l10n.swingPluginNone, detail: context.l10n.swingPluginNoneDetail),
       for (final p in plugins)
         RasqRadioListTile<String>(
           key: ValueKey('swing.plugin.${p.storePluginId ?? p.id}'),
@@ -724,9 +725,9 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       // 未審査のまま配る (D-379)。見る人の端末では制限モード(通信なし、GPU は可)。
       RasqListTile(
         key: const ValueKey('swing.plugin.file'),
-        title: _package == null ? 'ファイルから(未審査)' : '${_package!.title}(未審査)',
-        subtitle: _package == null ? '自分で作った .rspkg / .rasqpkg / .wasm を配ります' : _package!.name,
-        detail: '審査していないプラグインは、見る人の端末で通信できない状態で動きます(GPU は使えます)。ほかのプラグインを土台にする子プラグインは配れません。',
+        title: _package == null ? context.l10n.swingFromFile : context.l10n.swingUnreviewed(_package!.title),
+        subtitle: _package == null ? context.l10n.swingFromFileSubtitle : _package!.name,
+        detail: context.l10n.swingFromFileDetail,
         leading: Icon(_package == null ? Icons.file_open_outlined : Icons.check_circle_outline),
         onTap: _busy ? null : _pickPackage,
       ),
@@ -735,12 +736,12 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
 
   /// 消えるまで (D-410: 編集の段。プラグインはここ、画像 / 動画は編集画面のバー)。
   List<Widget> _ttlSection() => [
-        const RasqSectionHeader(title: '消えるまで'),
+        RasqSectionHeader(title: context.l10n.swingTtl),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: Wrap(spacing: RasqSpacing.xs, children: [
             for (final h in swingTtlChoices)
-              ChoiceChip(key: ValueKey('swing.ttl.$h'), label: Text('$h 時間'), selected: _ttl.value == h, onSelected: (_) => _ttl.value = h),
+              ChoiceChip(key: ValueKey('swing.ttl.$h'), label: Text(context.l10n.swingTtlHours(h)), selected: _ttl.value == h, onSelected: (_) => _ttl.value = h),
           ]),
         ),
       ];
@@ -757,12 +758,12 @@ class SwingAudienceFowBody extends ConsumerWidget {
     return ListenableBuilder(
       listenable: selection,
       builder: (context, _) => ListView(key: const ValueKey('swing.audience'), padding: EdgeInsets.zero, children: [
-        if (selection.isEmpty) const RasqNotice.warning(key: ValueKey('swing.audience.empty'), text: '届け先を 1 つ以上選んでください'),
+        if (selection.isEmpty) RasqNotice.warning(key: const ValueKey('swing.audience.empty'), text: context.l10n.swingAudienceEmpty),
         RasqSwitchListTile(
           key: const ValueKey('swing.audience.followers'),
           leading: const Icon(Icons.people_outline),
-          title: 'フォロワー',
-          subtitle: 'RASQ アカウントをフォローしている人',
+          title: context.l10n.swingAudienceFollowers,
+          subtitle: context.l10n.swingAudienceFollowersSubtitle,
           value: selection.followers,
           onChanged: (v) => selection.followers = v,
         ),
@@ -771,11 +772,11 @@ class SwingAudienceFowBody extends ConsumerWidget {
             key: ValueKey('swing.audience.list.${l.id}'),
             leading: const Icon(Icons.list_alt_outlined),
             title: l.name,
-            subtitle: 'RASQ リスト',
+            subtitle: context.l10n.swingAudienceList,
             value: selection.lists.contains(l.id),
             onChanged: (v) => selection.setList(l.id, v),
           ),
-        if (lists.isEmpty) const RasqCaption('RASQ リストを作ると、リストに入れた人にも届けられます', padding: EdgeInsets.all(RasqSpacing.page)),
+        if (lists.isEmpty) RasqCaption(context.l10n.swingAudienceNoLists, padding: EdgeInsets.all(RasqSpacing.page)),
       ]),
     );
   }

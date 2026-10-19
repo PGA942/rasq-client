@@ -12,6 +12,7 @@ import '../vc/astell_actions.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
 import 'live_events.dart';
+import '../../l10n/l10n.dart';
 
 /// ホームのヘッダー (D-377)。
 ///
@@ -173,7 +174,7 @@ class SwingAuthorBundle extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     const ring = 3.0;
     return Tooltip(
-      message: unseen ? '${swing.author.displayName} の Swing' : '${swing.author.displayName} の Swing(見終えました)',
+      message: unseen ? context.l10n.homeSwingOf(swing.author.displayName) : context.l10n.homeSwingOfSeen(swing.author.displayName),
       child: InkResponse(
         key: ValueKey('swing.bundle.${swing.authorAccountId}'),
         onTap: () => openSwingViewer(context, author: swing.authorAccountId),
@@ -213,10 +214,10 @@ class MySwingBundle extends StatelessWidget {
     const ring = 3.0;
     final outer = size + ring * 2 + 2;
     return Tooltip(
-      message: '自分の Swing(${swings.length} 個)',
+      message: context.l10n.homeMySwingCount(swings.length),
       child: Semantics(
         button: true,
-        label: '自分の Swing',
+        label: context.l10n.homeMySwing,
         child: InkResponse(
           key: const ValueKey('swing.bundle.me'),
           onTap: () => openSwingViewer(context, mine: true),

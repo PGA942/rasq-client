@@ -12,6 +12,7 @@ import '../compose/composer_sheet.dart' show EmbeddedComposer;
 import '../media/video_player.dart' show VideoSession, fmtDuration;
 import '../profile/rasq_post_tile.dart' show RasqPostTileView, pickRasqQueue;
 import 'swing_models.dart';
+import '../../l10n/l10n.dart';
 
 /// Swing のビューワーの下の **stick FOW** (D-420)。D-389 / D-413 の左下の欄(ハンドル + 「返信を送る…」+ Que)と
 /// Swing の下に続くスレッドを、ビューワーのカラムの下端に付く 1 つの FOW にまとめた。
@@ -287,7 +288,7 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
     try {
       await f(api);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('できませんでした: $e')));
+      if (mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(context.l10n.swingActionFailed('$e'))));
     }
     _refresh();
   }
@@ -408,7 +409,7 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
     final replies = thread?.replies.length ?? s.replyCount;
     // 返信のスレッドに入っていれば、その返信への返信 (D-424)。
     final open = showCount ? null : _c.openReply;
-    final hint = open == null ? '返信を送る…' : '@${open.author?.handle ?? ''} に返信…';
+    final hint = open == null ? context.l10n.swingReplyHint : context.l10n.swingReplyToHint(open.author?.handle ?? '');
     return Row(children: [
       Expanded(
         child: Material(
@@ -432,7 +433,7 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
           key: const ValueKey('swing.reply.count'),
           onPressed: () => _c.setMode(SwingBarMode.thread),
           icon: const Icon(Icons.forum_outlined, size: 18),
-          label: Text('返信 $replies'),
+          label: Text(context.l10n.swingReplyCount(replies)),
         )
       else
         const SizedBox(width: RasqSpacing.sm),
@@ -456,7 +457,7 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
                 width: 40,
                 height: 40,
                 child: Tooltip(
-                  message: 'キュー(長押しで絵を選ぶ)',
+                  message: context.l10n.swingQueueTooltip,
                   triggerMode: TooltipTriggerMode.manual,
                   child: Icon(mine != null ? Icons.favorite : Icons.add_reaction_outlined, size: 20, color: mine != null ? Colors.white : scheme.onSurface),
                 ),
@@ -532,11 +533,11 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
           if (open == null)
             Icon(Icons.forum_outlined, size: 18, color: scheme.onSurfaceVariant)
           else
-            RasqIconButton(key: const ValueKey('swing.thread.back'), icon: Icons.arrow_back, tooltip: _c.depth > 1 ? '前の返信へ戻る' : 'Swing の返信へ戻る', onPressed: _c.back),
+            RasqIconButton(key: const ValueKey('swing.thread.back'), icon: Icons.arrow_back, tooltip: _c.depth > 1 ? context.l10n.swingThreadBackReply : context.l10n.swingThreadBackSwing, onPressed: _c.back),
           const SizedBox(width: RasqSpacing.xs),
           Flexible(
             child: Text(
-              open == null ? '返信 $count' : '@${open.author?.handle ?? ''} への返信 $count',
+              open == null ? context.l10n.swingReplyCount(count) : context.l10n.swingRepliesTo(open.author?.handle ?? '', count),
               key: const ValueKey('swing.thread.count'),
               style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700),
               maxLines: 1,
@@ -544,7 +545,7 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
             ),
           ),
           const Spacer(),
-          RasqIconButton(key: const ValueKey('swing.thread.close'), icon: Icons.expand_more, tooltip: '返信をしまう', onPressed: () => _c.setMode(SwingBarMode.compact)),
+          RasqIconButton(key: const ValueKey('swing.thread.close'), icon: Icons.expand_more, tooltip: context.l10n.swingThreadClose, onPressed: () => _c.setMode(SwingBarMode.compact)),
         ]),
       ),
       Divider(height: 1, color: scheme.outlineVariant),
@@ -556,14 +557,14 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
               ? [Padding(key: const ValueKey('childSafe.postHidden'), padding: const EdgeInsets.all(RasqSpacing.page), child: Text(childBlocked, style: muted))]
               : thread.when(
             loading: () => const [Padding(padding: EdgeInsets.all(RasqSpacing.page), child: RasqLoading())],
-            error: (e, _) => [Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('読み込めませんでした: ${e is OrgateException ? e.message : e}', style: muted))],
+            error: (e, _) => [Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(context.l10n.swingLoadFailed(e is OrgateException ? e.message : '$e'), style: muted))],
             data: (_) => [
               // 入っている返信そのもの(主役)。その下に、その返信への返信 (D-424)。
               if (focus != null) ...[
                 RasqPostTileView(key: ValueKey('swing.thread.focus.${focus.id}'), post: focus, focused: true, onChanged: _refresh, onReply: () => _c.compose(to: focus)),
                 Divider(height: 1, color: scheme.outlineVariant),
               ],
-              if (replies.isEmpty) Padding(key: const ValueKey('swing.thread.empty'), padding: const EdgeInsets.all(RasqSpacing.page), child: Text('返信はまだありません。', style: muted)),
+              if (replies.isEmpty) Padding(key: const ValueKey('swing.thread.empty'), padding: const EdgeInsets.all(RasqSpacing.page), child: Text(context.l10n.swingNoReplies, style: muted)),
               for (final r in replies) ...[
                 // タイルを押す / 「返信 N 件を見る」= その返信のスレッドへ。「返信」ボタン = その返信への返信(この FOW のコンポーザー)。
                 RasqPostTileView(key: ValueKey('swing.thread.reply.${r.id}'), post: r, onChanged: _refresh, onOpen: () => _c.openReplies(r), onReply: () => _c.compose(to: r)),
@@ -577,7 +578,7 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
                         style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                         onPressed: () => _c.openReplies(r),
                         icon: const Icon(Icons.subdirectory_arrow_right, size: 16),
-                        label: Text('返信 ${r.replyCount} 件を見る'),
+                        label: Text(context.l10n.swingViewReplies(r.replyCount)),
                       ),
                     ),
                   ),
@@ -620,7 +621,7 @@ class SwingReplyTargetPostTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final p = post;
     final who = p.author?.label ?? '';
-    final summary = p.body.trim().isNotEmpty ? p.body.trim() : (p.images.isNotEmpty ? '添付 ${p.images.length} 件' : (p.poll != null ? '投票' : ''));
+    final summary = p.body.trim().isNotEmpty ? p.body.trim() : (p.images.isNotEmpty ? context.l10n.swingAttachments(p.images.length) : (p.poll != null ? context.l10n.swingPoll : ''));
     return Container(
       height: 64,
       padding: const EdgeInsets.all(RasqSpacing.sm),
@@ -634,7 +635,7 @@ class SwingReplyTargetPostTile extends StatelessWidget {
         const SizedBox(width: RasqSpacing.sm),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text('$who の返信', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(context.l10n.swingReplyOf(who), style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
             Row(children: [
               Icon(Icons.reply, size: 14, color: scheme.onSurfaceVariant),
               const SizedBox(width: 4),
@@ -658,9 +659,9 @@ class SwingReplyTargetTile extends StatelessWidget {
     final s = swing;
     final summary = switch (s.kind) {
       SwingKind.text => s.text,
-      SwingKind.image => s.text.isEmpty ? '画像の Swing' : s.text,
-      SwingKind.video => s.text.isEmpty ? '動画の Swing' : s.text,
-      SwingKind.plugin => 'プラグインの Swing',
+      SwingKind.image => s.text.isEmpty ? context.l10n.swingImageSwing : s.text,
+      SwingKind.video => s.text.isEmpty ? context.l10n.swingVideoSwing : s.text,
+      SwingKind.plugin => context.l10n.swingPluginSwing,
     };
     final icon = switch (s.kind) {
       SwingKind.text => Icons.notes,
@@ -682,7 +683,7 @@ class SwingReplyTargetTile extends StatelessWidget {
         const SizedBox(width: RasqSpacing.sm),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text('${s.author.displayName} の Swing', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(context.l10n.swingOf(s.author.displayName), style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
             Row(children: [
               Icon(icon, size: 14, color: scheme.onSurfaceVariant),
               const SizedBox(width: 4),

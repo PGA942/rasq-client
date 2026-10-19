@@ -10,6 +10,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
 import '../../backend/rasq_account.dart' show orgateAccountProvider;
+import '../../l10n/l10n.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
@@ -104,14 +105,14 @@ AccountSession? _sessionOf(WidgetRef ref, String key) => ref.read(sessionsProvid
 ({IconData icon, String label, AccountSession? account, bool available}) createActionInfo(WidgetRef ref, String id) {
   if (id.startsWith('post:')) {
     final s = _sessionOf(ref, id.substring(5));
-    return (icon: Icons.edit_outlined, label: s == null ? '(いないアカウント)' : (s.displayName?.isNotEmpty == true ? s.displayName! : '@${s.account.handle}'), account: s, available: s != null);
+    return (icon: Icons.edit_outlined, label: s == null ? appL10n.homeCreateMissingAccount : (s.displayName?.isNotEmpty == true ? s.displayName! : '@${s.account.handle}'), account: s, available: s != null);
   }
   return switch (id) {
-    'post' => (icon: Icons.edit_outlined, label: '投稿', account: null, available: true),
+    'post' => (icon: Icons.edit_outlined, label: appL10n.homeCreatePost, account: null, available: true),
     'rasq' => (icon: Icons.person_pin_outlined, label: 'RASQ', account: null, available: ref.read(orgateAccountProvider).value != null),
     'astell' => (icon: Icons.graphic_eq, label: 'ASTell', account: null, available: ref.read(childGateProvider).featureAllowed('astell.join')),
     'swing' => (icon: Icons.bolt_outlined, label: 'Swing', account: null, available: ref.read(swingApiProvider) != null),
-    _ => (icon: Icons.block, label: 'なし', account: null, available: false),
+    _ => (icon: Icons.block, label: appL10n.homeCreateNone, account: null, available: false),
   };
 }
 
@@ -148,9 +149,9 @@ Future<void> runCreateAction(BuildContext context, WidgetRef ref, String id, {St
   final info = createActionInfo(ref, id);
   if (!info.available) {
     final why = switch (id) {
-      'rasq' || 'swing' => '${info.label}には RASQ アカウントが要ります',
-      'astell' => '見守りの設定で ASTell が止められています',
-      _ => 'このアカウントはもうありません',
+      'rasq' || 'swing' => context.l10n.homeCreateNeedsRasqAccount(info.label),
+      'astell' => context.l10n.homeCreateAstellBlocked,
+      _ => context.l10n.homeCreateAccountGone,
     };
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(why)));
     return;
@@ -193,15 +194,15 @@ int? fabSlotFor(Offset delta, int n, {double arm = 56}) {
 
 /// ＋ (D-383 / D-385)。[scope] = `home` / `trend` / `astell`(設定のキーの頭)。
 class RadialCreateFab extends ConsumerStatefulWidget {
-  const RadialCreateFab({super.key, required this.scope, required this.heroTag, this.postText, this.onPosted, this.tooltip = '作成'});
+  const RadialCreateFab({super.key, required this.scope, required this.heroTag, this.postText, this.onPosted, this.tooltip});
 
   final String scope;
   final Object heroTag;
   final String? postText;
   final VoidCallback? onPosted;
 
-  /// RAi の案内が指す名前 (D-378)。長押しは展開に使うので、ツールチップは長押しでは出さない。
-  final String tooltip;
+  /// RAi の案内が指す名前 (D-378)。長押しは展開に使うので、ツールチップは長押しでは出さない。null = 「作成」。
+  final String? tooltip;
 
   /// 押したまま動かさずにこれだけたつと長押し。
   static const longPress = Duration(milliseconds: 450);
@@ -324,10 +325,10 @@ class _RadialCreateFabState extends ConsumerState<RadialCreateFab> with SingleTi
         minHeightFactor: 0.4,
         maxHeightFactor: 0.9,
         // 上に ×。
-        headerLeading: RasqIconButton(key: const ValueKey('fab.editor.close'), icon: Icons.close, tooltip: '閉じる', onPressed: () => manager.close(fabEditorFowId)),
-        title: '＋ のボタン',
+        headerLeading: RasqIconButton(key: const ValueKey('fab.editor.close'), icon: Icons.close, tooltip: context.l10n.homeClose, onPressed: () => manager.close(fabEditorFowId)),
+        title: context.l10n.homeFabEditorTitle,
       ),
-      semanticsLabel: '＋ のボタン',
+      semanticsLabel: context.l10n.homeFabEditorTitle,
       builder: (ctx, handle) => _FabEditor(scope: widget.scope),
     );
   }
@@ -434,7 +435,7 @@ class _RadialCreateFabState extends ConsumerState<RadialCreateFab> with SingleTi
             onPointerUp: _onUp,
             onPointerCancel: _onUp,
             child: Tooltip(
-              message: widget.tooltip,
+              message: widget.tooltip ?? context.l10n.homeCreate,
               triggerMode: TooltipTriggerMode.manual,
               child: FloatingActionButton(
                 heroTag: widget.heroTag,
@@ -531,7 +532,7 @@ class _FabEditor extends ConsumerWidget {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       RasqCaption(
-        '下のボタンを枠へドラッグすると入ります(枠どうしは入れ替え、下の列へ戻すと外れます)。内側に 3 つ、外側に 4 つまで ・ $n / $fabMaxSlots',
+        context.l10n.homeFabEditorHelp(n, fabMaxSlots),
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
       ),
       // プレビュー: 右下に ＋、左上の扇に枠。

@@ -2230,6 +2230,277 @@
   "customAstellRemove": "ルームから外す",
   "customAstellAdd": "プラグインを追加",
   "customAstellPropose": "プラグインを提案",
+  "homeCreateMissingAccount": "(いないアカウント)",
+  "@homeCreateMissingAccount": {
+    "description": "＋ のボタンに置いた投稿のアカウントが、もうログインしていないとき"
+  },
+  "homeCreatePost": "投稿",
+  "homeCreateNone": "なし",
+  "homeCreateNeedsRasqAccount": "{label}には RASQ アカウントが要ります",
+  "@homeCreateNeedsRasqAccount": {
+    "description": "label はボタンの名前(RASQ / Swing)",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "homeCreateAstellBlocked": "見守りの設定で ASTell が止められています",
+  "homeCreateAccountGone": "このアカウントはもうありません",
+  "homeCreate": "作成",
+  "homeClose": "閉じる",
+  "homeFabEditorTitle": "＋ のボタン",
+  "homeFabEditorHelp": "下のボタンを枠へドラッグすると入ります(枠どうしは入れ替え、下の列へ戻すと外れます)。内側に 3 つ、外側に 4 つまで ・ {count} / {max}",
+  "@homeFabEditorHelp": {
+    "description": "count は置いている数、max は置ける数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "homeHeaderCollapse": "ヘッダーをしまう",
+  "homeTimelineTemp": "タイムラインを一時変更",
+  "homeTimelineSettings": "タイムライン設定",
+  "homeTabRecommended": "おすすめ",
+  "homeEmpty": "投稿はありません",
+  "homePullToRefresh": "下に引っ張って更新",
+  "homeLoadNewer": "新しい投稿を読み込む",
+  "homeLoadingNewer": "更新しています…",
+  "homeLoadMoreFailed": "読み込みに失敗しました。再試行",
+  "homeLoadMore": "続きを読み込む",
+  "homeLoadingMore": "読み込んでいます…",
+  "homeReload": "再読み込み",
+  "homeSwingOf": "{name} の Swing",
+  "@homeSwingOf": {
+    "description": "ヘッダーの Swing の輪の説明。name は出した人の表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeSwingOfSeen": "{name} の Swing(見終えました)",
+  "@homeSwingOfSeen": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeMySwingCount": "自分の Swing({count, plural, other{{count} 個}})",
+  "@homeMySwingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMySwing": "自分の Swing",
+  "homeLiveNoToken": "RASQ アカウントのトークンがありません",
+  "homePostAttachmentFiles": "{count, plural, other{{count}件の添付ファイル}}",
+  "@homePostAttachmentFiles": {
+    "description": "リプライ元の投稿の添付のまとめ",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homePostAttachmentLink": "1件の添付リンク",
+  "homePostShare": "共有",
+  "homePostSelectAccount": "アカウント選択",
+  "homePostLike": "いいね",
+  "homePostReaction": "リアクション",
+  "homePostRepostVia": "(@{handle}@{instance} で)",
+  "@homePostRepostVia": {
+    "description": "リノート / 引用ノートの行の名前の後ろ。どのアカウントで行うか(handle@instance)",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      },
+      "instance": {
+        "type": "String"
+      }
+    }
+  },
+  "homePostUndoRepost": "リノートを取り消す",
+  "homePostCw": "【CW: {cw}】",
+  "@homePostCw": {
+    "description": "注釈(CW)つきの投稿を 1 行で見せるとき。cw は注釈の文",
+    "placeholders": {
+      "cw": {
+        "type": "String"
+      }
+    }
+  },
+  "homePostAttachments": "{count, plural, other{{count}件の添付}}",
+  "@homePostAttachments": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeActionReply": "返信",
+  "homeActionRebroad": "リブロード",
+  "homeActionQueue": "キュー",
+  "homeEditorCropRotate": "クロップ / 回転",
+  "homeEditorPaint": "ペイント",
+  "homeEditorText": "テキスト",
+  "homeEditorPost": "ノート",
+  "homeEditorMedia": "メディア",
+  "homeEditorSticker": "ステッカー",
+  "homeEditorEmoji": "絵文字",
+  "homeEditorFilter": "フィルター",
+  "homeEditorBlur": "ぼかし",
+  "homeEditorTune": "調整",
+  "homeActionAutoOn": "次からも自動でオン",
+  "homeActionAutoOff": "次からも自動でオフ",
+  "homeActionAutoReset": "プラグインの既定に戻す",
+  "homeChildSafeWindowTab": "見守りの時間",
+  "@homeChildSafeWindowTab": {
+    "description": "子の端末で見守りの時間のあいだ、ホームに出る 1 本のタイムラインのタブの名前"
+  },
+  "homeCancel": "キャンセル",
+  "homeBarPost": "投稿アクションバー",
+  "homeBarViewer": "全画面アクションバー",
+  "homeBarEditorImage": "加工画面のバー(画像)",
+  "homeBarEditorVideo": "加工画面のバー(動画 / 音声)",
+  "homeBarEditorSvg": "加工画面のバー(SVG)",
+  "homeBarRasqViewer": "全画面アクションバー(Swing)",
+  "homeBarAstell": "ASTell のルームの下段",
+  "homeBarEditAstellTitle": "ルームのボタンの編集",
+  "homeBarEditTitle": "アクションバーの編集",
+  "homeBarSearchPlugins": "プラグインを検索",
+  "homeBarSearchPluginButtons": "プラグインボタンを検索",
+  "homeBarSearchSubtitle": "{source} · {detail}",
+  "@homeBarSearchSubtitle": {
+    "description": "ボタンを検索する FOW の行の補足。source は出どころ(プラグインの名前 / SNS のアクション など)、detail はジャンルや種類",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "homeBarBuiltinEditor": "内蔵の編集",
+  "homeBarRasqActions": "RASQ のアクション",
+  "homeBarAstellButtons": "ASTell のボタン",
+  "homeBarSnsActions": "SNS のアクション",
+  "homeBarViewerTogglePlugin": "全画面表示プラグイン(ON / OFF のボタン)",
+  "homeBarAstellPlugin": "ASTell プラグイン(押すとそのプラグインを開く)",
+  "homeBarPluginTags": "タグ: {tags}",
+  "@homeBarPluginTags": {
+    "placeholders": {
+      "tags": {
+        "type": "String"
+      }
+    }
+  },
+  "homeBarManualPlacement": " · 手動配置",
+  "homeBarAllGenres": "すべて",
+  "homeBarSearchHint": "ボタン名 / プラグイン名 / タグ",
+  "homeBarSearchEmptyAstell": "追加できるボタンがありません。プラグインはストアから追加できます",
+  "homeBarSearchEmpty": "ここに置けるプラグインがありません。ストアから追加できます",
+  "homeBarSearchEmptyEditorDetail": "composer.media を宣言したプラグインがありません(ストアから追加)",
+  "@homeBarSearchEmptyEditorDetail": {
+    "description": "開発者モードの詳しい説明。composer.media はスロットの名前(訳さない)"
+  },
+  "homeBarSearchEmptyAstellDetail": "非表示にしたボタン / ASTell のプラグイン(astell.action)がありません(プラグインはストアから追加)",
+  "@homeBarSearchEmptyAstellDetail": {
+    "description": "開発者モードの詳しい説明。astell.action はスロットの名前(訳さない)"
+  },
+  "homeBarSearchEmptyViewerDetail": "全画面表示プラグイン / post.action を宣言したプラグインがありません(ストアから追加)",
+  "@homeBarSearchEmptyViewerDetail": {
+    "description": "開発者モードの詳しい説明。post.action はスロットの名前(訳さない)"
+  },
+  "homeBarSearchEmptyPostDetail": "post.action を宣言したプラグインがありません(ストアから追加)",
+  "@homeBarSearchEmptyPostDetail": {
+    "description": "開発者モードの詳しい説明。post.action はスロットの名前(訳さない)"
+  },
+  "homeBarSearchNoHits": "見つかりません",
+  "homeBarDetailTitle": "アクションの詳細",
+  "homeBarDetailUnknownDeveloper": "提供元不明",
+  "homeBarDetailStats": "★{rating} ・ {downloads} DL",
+  "@homeBarDetailStats": {
+    "description": "rating は評価(小数 1 桁の文字)、downloads はダウンロード数",
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      },
+      "downloads": {
+        "type": "int"
+      }
+    }
+  },
+  "homeBarDetailAction": "アクション",
+  "homeBarDetailSlot": "スロット(ジャンル)",
+  "homeBarDetailConfirm": "確認",
+  "homeBarDetailAutomation": "自動化",
+  "homeBarDetailTags": "タグ",
+  "homeBarIconSearchHint": "アイコン名で検索(例: star, bolt)",
+  "homeBarBundleTitle": "バンドルの設定",
+  "homeBarBundleDissolved": "解除しました",
+  "homeBarPlugin": "プラグイン",
+  "homeBarBundleAstellMember": "ルームの下段のボタン({label})",
+  "@homeBarBundleAstellMember": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "homeBarBundleSnsMember": "SNS プラグインが提供するアクション({genre})",
+  "@homeBarBundleSnsMember": {
+    "description": "genre はアクションのジャンル(英字のタグ)",
+    "placeholders": {
+      "genre": {
+        "type": "String"
+      }
+    }
+  },
+  "homeBarBundleName": "リスト名",
+  "homeBarBundleIcon": "アイコン",
+  "homeBarBundlePhoto": "写真",
+  "homeBarBundlePhotoFailed": "写真を使えません",
+  "homeBarBundleMembers": "メンバー",
+  "homeBarMenuDetail": "詳細",
+  "homeBarBundleRemoveMember": "バンドルから外す",
+  "homeBarDissolveList": "リストの解除",
+  "homeBarMemberMenu": "メンバーの操作",
+  "homeBarRasqAccount": "RASQ アカウント",
+  "homeBarHelpAstell": "(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。(+) でボタンを追加。",
+  "homeBarHelp": "(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。",
+  "homeBarHelpAstellDetail": "(…) / shift + クリック / 右クリックでメニュー(非表示 / バンドル)。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。(+) で非表示にしたボタンや ASTell のプラグインを足す。幅に収まらないときは、先頭から入るだけと最後の 1 つ(入力欄の隣)を出し、残りはルームの歯車のメニューへ。",
+  "homeBarHelpDetail": "(…) / shift + クリック / 右クリックでメニュー。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。宣言されたプラグインボタンと束ねる閾値は 設定 → SNSプラグイン →「プラグインボタン」。",
+  "homeBarRasqBuiltinEditor": "RASQ(内蔵の編集)",
+  "homeBarNewBundleName": "マイリスト",
+  "@homeBarNewBundleName": {
+    "description": "新しく作ったバンドル(アクションリスト)の名前の既定。あとで利用者が変えられる"
+  },
+  "homeBarMenuMakeList": "アクションリスト化",
+  "homeBarMenuHide": "非表示にする",
+  "homeBarMenuDelete": "削除",
+  "homeBarMenuListSettings": "アクションリストの設定",
+  "homeBarMenuPinList": "固定リストにする",
+  "homeBarAddButton": "ボタンを追加",
+  "homeBarNoHidden": "非表示のボタンはありません",
+  "homeBarHiddenLabel": "非表示(押すと表示):",
+  "homeBarShowHidden": "{label} を表示",
+  "@homeBarShowHidden": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "homeBarResetOrder": "既定の並びに戻す",
   "languageSelfName": "日本語",
   "@languageSelfName": {
     "description": "この言語の、その言語での名前(設定の「言語」の一覧に出す)。訳すときは、その言語での自分の名前にする(English / 한국어 など)。"
@@ -11128,6 +11399,334 @@
   },
   "storePkgKindTheme": "着せ替え",
   "storePkgKindAssets": "アセットパック",
+  "swingActionFailed": "できませんでした: {error}",
+  "@swingActionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "swingReplyHint": "返信を送る…",
+  "swingReplyToHint": "@{handle} に返信…",
+  "@swingReplyToHint": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "swingReplyCount": "返信 {count}",
+  "@swingReplyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "swingQueueTooltip": "キュー(長押しで絵を選ぶ)",
+  "swingThreadBackReply": "前の返信へ戻る",
+  "swingThreadBackSwing": "Swing の返信へ戻る",
+  "swingRepliesTo": "@{handle} への返信 {count}",
+  "@swingRepliesTo": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "swingThreadClose": "返信をしまう",
+  "swingLoadFailed": "読み込めませんでした: {error}",
+  "@swingLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "swingNoReplies": "返信はまだありません。",
+  "swingViewReplies": "返信 {count, plural, other{{count} 件}}を見る",
+  "@swingViewReplies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "swingAttachments": "添付 {count, plural, other{{count} 件}}",
+  "@swingAttachments": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "swingPoll": "投票",
+  "swingReplyOf": "{name} の返信",
+  "@swingReplyOf": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "swingImageSwing": "画像の Swing",
+  "swingVideoSwing": "動画の Swing",
+  "swingPluginSwing": "プラグインの Swing",
+  "swingOf": "{name} の Swing",
+  "@swingOf": {
+    "description": "name は Swing を出した人の表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "swingBarSemantics": "Swing の返信とシークバー",
+  "swingReportIntro": "{name} の Swing を通報します。RASQ の審査で確認します。",
+  "@swingReportIntro": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "swingReported": "通報しました。審査で確認します",
+  "swingReportFailed": "通報できませんでした: {error}",
+  "@swingReportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "swingDeleteTitle": "Swing を削除",
+  "swingDeleteMessage": "この Swing と、付いている返信を削除します。元に戻せません。",
+  "swingDeleteConfirm": "削除する",
+  "swingCancel": "キャンセル",
+  "swingDeleteFailed": "削除できませんでした: {error}",
+  "@swingDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "swingDeleted": "Swing を削除しました",
+  "swingViewerEmptyMine": "出している Swing はありません",
+  "swingViewerEmptyMineHint": "＋ を上へスワイプすると Swing を作れます",
+  "swingViewerEmpty": "Swing はありません",
+  "swingViewerEmptyHint": "フォローしている人や、RASQ リストに入れてくれた人の Swing がここに流れます",
+  "swingClose": "閉じる",
+  "swingRemainingHours": "あと {hours, plural, other{{hours} 時間}}",
+  "@swingRemainingHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "swingRemainingMinutes": "あと {minutes, plural, other{{minutes} 分}}",
+  "@swingRemainingMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "swingRemainingSoon": "まもなく消えます",
+  "swingRemainingAndPosition": "{remaining} ・ {position}",
+  "@swingRemainingAndPosition": {
+    "description": "remaining は残りの時間(あと 3 時間 など)、position は何枚目か(2 / 5)",
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "swingViewCount": "見た人 {count, plural, other{{count} 人}}",
+  "@swingViewCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "swingReport": "通報",
+  "swingMenu": "メニュー",
+  "swingDelete": "削除",
+  "swingSensitive": "センシティブな内容",
+  "swingReveal": "表示する",
+  "swingPluginJoinNote": "{name} さんのページにみんなで入ります。インストールせずに、この Swing を見ている間だけ動かします。",
+  "@swingPluginJoinNote": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "swingPluginJoin": "参加する",
+  "swingPluginConsent": "審査されていないプラグインです。通信はできない状態で、この Swing を見ている間だけ動かします。",
+  "swingPluginConsentDetail": "制限モード(network / storage.unsafe / interstitial・system の FOW / URL を開くなどは閉、GPU は可)。子プラグインを持たない 1 つだけ。",
+  "@swingPluginConsentDetail": {
+    "description": "開発者モードの詳しい説明。network などは権限の名前(訳さない)"
+  },
+  "swingPluginRun": "動かす",
+  "swingPluginNeedsInstall": "{name} を入れると見られます",
+  "@swingPluginNeedsInstall": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "swingPluginNeedsInstallHint": "プラグインの Swing です。ストアからインストールしてください",
+  "swingViewInStore": "ストアで見る",
+  "swingPluginOpenFailed": "開けませんでした",
+  "swingPluginTapToExpand": "押すと全画面に戻ります",
+  "swingPluginSwipeHint": "左右・上下にスワイプで次の Swing へ",
+  "swingPluginShrink": "全画面から縮小",
+  "swingAd": "広告",
+  "swingAdSwipeHint": "スワイプで次の Swing へ",
+  "swingKindText": "テキスト",
+  "swingKindImage": "画像",
+  "swingKindVideo": "動画",
+  "swingKindPlugin": "プラグイン",
+  "swingKindSwing": "{kind}の Swing",
+  "@swingKindSwing": {
+    "description": "文の無い Swing のバナーの文。kind は種類の名前(画像 / 動画 など)",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "swingBannerNew": "新着 {count}",
+  "@swingBannerNew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "swingBannerTotal": "{count, plural, other{{count} 件}}",
+  "@swingBannerTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "swingComposerPluginShared": "みんなで使う: 見た人は、あなたが作る同じページに入ります",
+  "swingComposerPluginFullscreen": "見る人の端末で全画面で動きます",
+  "swingComposerPluginPage": "見る人の端末でページとして動きます",
+  "swingTtlLabel": "{hours, plural, other{{hours} 時間で消える}}",
+  "@swingTtlLabel": {
+    "description": "編集画面のバーのボタン",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "swingTtl": "消えるまで",
+  "swingTtlHours": "{hours, plural, other{{hours} 時間}}",
+  "@swingTtlHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "swingBackgroundImage": "画像を背景にする",
+  "swingBackgroundVideo": "動画を背景にする",
+  "swingPickVideoFile": "動画のファイルを選んでください",
+  "swingPickImageFile": "画像のファイルを選んでください",
+  "swingChangeBackground": "背景を変える",
+  "swingAudience": "届け先",
+  "swingLoadFailedShort": "読み込めませんでした",
+  "swingSent": "Swing を出しました({hours, plural, other{{hours} 時間で消えます}})",
+  "@swingSent": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "swingErrorLimit": "同時に出しておける Swing は 20 個までです",
+  "swingSendFailed": "出せませんでした: {error}",
+  "@swingSendFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "swingComposerTitle": "Swing を作る",
+  "swingNext": "次へ",
+  "swingSend": "出す",
+  "swingNeedsAccount": "RASQ アカウントが要ります",
+  "swingNeedsAccountHint": "Swing は RASQ アカウントから出します。サイドバーからログインしてください",
+  "swingUnreviewed": "{name}(未審査)",
+  "@swingUnreviewed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "swingTtlRemaining": "{hours, plural, other{{hours} 時間で消えます}}",
+  "@swingTtlRemaining": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "swingRepick": "選び直す",
+  "swingReedit": "編集し直す",
+  "swingCwTooLong": "CW は {max} 文字までです",
+  "@swingCwTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "swingCwHint": "CW の文",
+  "swingCwOff": "CW をはずす",
+  "swingCwOn": "CW を付ける(センシティブな内容)",
+  "swingPluginSection": "配るプラグイン",
+  "swingPluginNone": "Swing で配れるカスタムプラグインが入っていません。ストアで入れるか、下の「ファイルから」で自分のプラグインを配れます。",
+  "swingPluginNoneDetail": "ページ型(カスタムプラグイン)のうち、ほかのプラグインと親子関係の無いもの(solo / shared どちらも)。",
+  "@swingPluginNoneDetail": {
+    "description": "開発者モードの詳しい説明。solo / shared はページの使い方の名前(訳さない)"
+  },
+  "swingFromFile": "ファイルから(未審査)",
+  "swingFromFileSubtitle": "自分で作った .rspkg / .rasqpkg / .wasm を配ります",
+  "swingFromFileDetail": "審査していないプラグインは、見る人の端末で通信できない状態で動きます(GPU は使えます)。ほかのプラグインを土台にする子プラグインは配れません。",
+  "swingAudienceEmpty": "届け先を 1 つ以上選んでください",
+  "swingAudienceFollowers": "フォロワー",
+  "swingAudienceFollowersSubtitle": "RASQ アカウントをフォローしている人",
+  "swingAudienceList": "RASQ リスト",
+  "swingAudienceNoLists": "RASQ リストを作ると、リストに入れた人にも届けられます",
+  "swingPackageFetchFailed": "プラグインを取れませんでした(HTTP {status})",
+  "@swingPackageFetchFailed": {
+    "description": "status は HTTP の状態の番号",
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "swingNotLoggedIn": "RASQ アカウントにログインしていません",
+  "swingUnreadable": "Swing を読めませんでした",
   "trendTitle": "トレンド",
   "trendTabNotes": "ノート",
   "trendTabFollowing": "フォロー中",

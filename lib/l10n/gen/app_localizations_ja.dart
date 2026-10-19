@@ -2394,6 +2394,430 @@ class AppLocalizationsJa extends AppLocalizations {
   String get customAstellPropose => 'プラグインを提案';
 
   @override
+  String get homeCreateMissingAccount => '(いないアカウント)';
+
+  @override
+  String get homeCreatePost => '投稿';
+
+  @override
+  String get homeCreateNone => 'なし';
+
+  @override
+  String homeCreateNeedsRasqAccount(String label) {
+    return '$labelには RASQ アカウントが要ります';
+  }
+
+  @override
+  String get homeCreateAstellBlocked => '見守りの設定で ASTell が止められています';
+
+  @override
+  String get homeCreateAccountGone => 'このアカウントはもうありません';
+
+  @override
+  String get homeCreate => '作成';
+
+  @override
+  String get homeClose => '閉じる';
+
+  @override
+  String get homeFabEditorTitle => '＋ のボタン';
+
+  @override
+  String homeFabEditorHelp(int count, int max) {
+    return '下のボタンを枠へドラッグすると入ります(枠どうしは入れ替え、下の列へ戻すと外れます)。内側に 3 つ、外側に 4 つまで ・ $count / $max';
+  }
+
+  @override
+  String get homeHeaderCollapse => 'ヘッダーをしまう';
+
+  @override
+  String get homeTimelineTemp => 'タイムラインを一時変更';
+
+  @override
+  String get homeTimelineSettings => 'タイムライン設定';
+
+  @override
+  String get homeTabRecommended => 'おすすめ';
+
+  @override
+  String get homeEmpty => '投稿はありません';
+
+  @override
+  String get homePullToRefresh => '下に引っ張って更新';
+
+  @override
+  String get homeLoadNewer => '新しい投稿を読み込む';
+
+  @override
+  String get homeLoadingNewer => '更新しています…';
+
+  @override
+  String get homeLoadMoreFailed => '読み込みに失敗しました。再試行';
+
+  @override
+  String get homeLoadMore => '続きを読み込む';
+
+  @override
+  String get homeLoadingMore => '読み込んでいます…';
+
+  @override
+  String get homeReload => '再読み込み';
+
+  @override
+  String homeSwingOf(String name) {
+    return '$name の Swing';
+  }
+
+  @override
+  String homeSwingOfSeen(String name) {
+    return '$name の Swing(見終えました)';
+  }
+
+  @override
+  String homeMySwingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 個',
+    );
+    return '自分の Swing($_temp0)';
+  }
+
+  @override
+  String get homeMySwing => '自分の Swing';
+
+  @override
+  String get homeLiveNoToken => 'RASQ アカウントのトークンがありません';
+
+  @override
+  String homePostAttachmentFiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件の添付ファイル',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homePostAttachmentLink => '1件の添付リンク';
+
+  @override
+  String get homePostShare => '共有';
+
+  @override
+  String get homePostSelectAccount => 'アカウント選択';
+
+  @override
+  String get homePostLike => 'いいね';
+
+  @override
+  String get homePostReaction => 'リアクション';
+
+  @override
+  String homePostRepostVia(String handle, String instance) {
+    return '(@$handle@$instance で)';
+  }
+
+  @override
+  String get homePostUndoRepost => 'リノートを取り消す';
+
+  @override
+  String homePostCw(String cw) {
+    return '【CW: $cw】';
+  }
+
+  @override
+  String homePostAttachments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件の添付',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeActionReply => '返信';
+
+  @override
+  String get homeActionRebroad => 'リブロード';
+
+  @override
+  String get homeActionQueue => 'キュー';
+
+  @override
+  String get homeEditorCropRotate => 'クロップ / 回転';
+
+  @override
+  String get homeEditorPaint => 'ペイント';
+
+  @override
+  String get homeEditorText => 'テキスト';
+
+  @override
+  String get homeEditorPost => 'ノート';
+
+  @override
+  String get homeEditorMedia => 'メディア';
+
+  @override
+  String get homeEditorSticker => 'ステッカー';
+
+  @override
+  String get homeEditorEmoji => '絵文字';
+
+  @override
+  String get homeEditorFilter => 'フィルター';
+
+  @override
+  String get homeEditorBlur => 'ぼかし';
+
+  @override
+  String get homeEditorTune => '調整';
+
+  @override
+  String get homeActionAutoOn => '次からも自動でオン';
+
+  @override
+  String get homeActionAutoOff => '次からも自動でオフ';
+
+  @override
+  String get homeActionAutoReset => 'プラグインの既定に戻す';
+
+  @override
+  String get homeChildSafeWindowTab => '見守りの時間';
+
+  @override
+  String get homeCancel => 'キャンセル';
+
+  @override
+  String get homeBarPost => '投稿アクションバー';
+
+  @override
+  String get homeBarViewer => '全画面アクションバー';
+
+  @override
+  String get homeBarEditorImage => '加工画面のバー(画像)';
+
+  @override
+  String get homeBarEditorVideo => '加工画面のバー(動画 / 音声)';
+
+  @override
+  String get homeBarEditorSvg => '加工画面のバー(SVG)';
+
+  @override
+  String get homeBarRasqViewer => '全画面アクションバー(Swing)';
+
+  @override
+  String get homeBarAstell => 'ASTell のルームの下段';
+
+  @override
+  String get homeBarEditAstellTitle => 'ルームのボタンの編集';
+
+  @override
+  String get homeBarEditTitle => 'アクションバーの編集';
+
+  @override
+  String get homeBarSearchPlugins => 'プラグインを検索';
+
+  @override
+  String get homeBarSearchPluginButtons => 'プラグインボタンを検索';
+
+  @override
+  String homeBarSearchSubtitle(String source, String detail) {
+    return '$source · $detail';
+  }
+
+  @override
+  String get homeBarBuiltinEditor => '内蔵の編集';
+
+  @override
+  String get homeBarRasqActions => 'RASQ のアクション';
+
+  @override
+  String get homeBarAstellButtons => 'ASTell のボタン';
+
+  @override
+  String get homeBarSnsActions => 'SNS のアクション';
+
+  @override
+  String get homeBarViewerTogglePlugin => '全画面表示プラグイン(ON / OFF のボタン)';
+
+  @override
+  String get homeBarAstellPlugin => 'ASTell プラグイン(押すとそのプラグインを開く)';
+
+  @override
+  String homeBarPluginTags(String tags) {
+    return 'タグ: $tags';
+  }
+
+  @override
+  String get homeBarManualPlacement => ' · 手動配置';
+
+  @override
+  String get homeBarAllGenres => 'すべて';
+
+  @override
+  String get homeBarSearchHint => 'ボタン名 / プラグイン名 / タグ';
+
+  @override
+  String get homeBarSearchEmptyAstell => '追加できるボタンがありません。プラグインはストアから追加できます';
+
+  @override
+  String get homeBarSearchEmpty => 'ここに置けるプラグインがありません。ストアから追加できます';
+
+  @override
+  String get homeBarSearchEmptyEditorDetail =>
+      'composer.media を宣言したプラグインがありません(ストアから追加)';
+
+  @override
+  String get homeBarSearchEmptyAstellDetail =>
+      '非表示にしたボタン / ASTell のプラグイン(astell.action)がありません(プラグインはストアから追加)';
+
+  @override
+  String get homeBarSearchEmptyViewerDetail =>
+      '全画面表示プラグイン / post.action を宣言したプラグインがありません(ストアから追加)';
+
+  @override
+  String get homeBarSearchEmptyPostDetail =>
+      'post.action を宣言したプラグインがありません(ストアから追加)';
+
+  @override
+  String get homeBarSearchNoHits => '見つかりません';
+
+  @override
+  String get homeBarDetailTitle => 'アクションの詳細';
+
+  @override
+  String get homeBarDetailUnknownDeveloper => '提供元不明';
+
+  @override
+  String homeBarDetailStats(String rating, int downloads) {
+    return '★$rating ・ $downloads DL';
+  }
+
+  @override
+  String get homeBarDetailAction => 'アクション';
+
+  @override
+  String get homeBarDetailSlot => 'スロット(ジャンル)';
+
+  @override
+  String get homeBarDetailConfirm => '確認';
+
+  @override
+  String get homeBarDetailAutomation => '自動化';
+
+  @override
+  String get homeBarDetailTags => 'タグ';
+
+  @override
+  String get homeBarIconSearchHint => 'アイコン名で検索(例: star, bolt)';
+
+  @override
+  String get homeBarBundleTitle => 'バンドルの設定';
+
+  @override
+  String get homeBarBundleDissolved => '解除しました';
+
+  @override
+  String get homeBarPlugin => 'プラグイン';
+
+  @override
+  String homeBarBundleAstellMember(String label) {
+    return 'ルームの下段のボタン($label)';
+  }
+
+  @override
+  String homeBarBundleSnsMember(String genre) {
+    return 'SNS プラグインが提供するアクション($genre)';
+  }
+
+  @override
+  String get homeBarBundleName => 'リスト名';
+
+  @override
+  String get homeBarBundleIcon => 'アイコン';
+
+  @override
+  String get homeBarBundlePhoto => '写真';
+
+  @override
+  String get homeBarBundlePhotoFailed => '写真を使えません';
+
+  @override
+  String get homeBarBundleMembers => 'メンバー';
+
+  @override
+  String get homeBarMenuDetail => '詳細';
+
+  @override
+  String get homeBarBundleRemoveMember => 'バンドルから外す';
+
+  @override
+  String get homeBarDissolveList => 'リストの解除';
+
+  @override
+  String get homeBarMemberMenu => 'メンバーの操作';
+
+  @override
+  String get homeBarRasqAccount => 'RASQ アカウント';
+
+  @override
+  String get homeBarHelpAstell =>
+      '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。(+) でボタンを追加。';
+
+  @override
+  String get homeBarHelp => '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。';
+
+  @override
+  String get homeBarHelpAstellDetail =>
+      '(…) / shift + クリック / 右クリックでメニュー(非表示 / バンドル)。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。(+) で非表示にしたボタンや ASTell のプラグインを足す。幅に収まらないときは、先頭から入るだけと最後の 1 つ(入力欄の隣)を出し、残りはルームの歯車のメニューへ。';
+
+  @override
+  String get homeBarHelpDetail =>
+      '(…) / shift + クリック / 右クリックでメニュー。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。宣言されたプラグインボタンと束ねる閾値は 設定 → SNSプラグイン →「プラグインボタン」。';
+
+  @override
+  String get homeBarRasqBuiltinEditor => 'RASQ(内蔵の編集)';
+
+  @override
+  String get homeBarNewBundleName => 'マイリスト';
+
+  @override
+  String get homeBarMenuMakeList => 'アクションリスト化';
+
+  @override
+  String get homeBarMenuHide => '非表示にする';
+
+  @override
+  String get homeBarMenuDelete => '削除';
+
+  @override
+  String get homeBarMenuListSettings => 'アクションリストの設定';
+
+  @override
+  String get homeBarMenuPinList => '固定リストにする';
+
+  @override
+  String get homeBarAddButton => 'ボタンを追加';
+
+  @override
+  String get homeBarNoHidden => '非表示のボタンはありません';
+
+  @override
+  String get homeBarHiddenLabel => '非表示(押すと表示):';
+
+  @override
+  String homeBarShowHidden(String label) {
+    return '$label を表示';
+  }
+
+  @override
+  String get homeBarResetOrder => '既定の並びに戻す';
+
+  @override
   String get languageSelfName => '日本語';
 
   @override
@@ -12920,6 +13344,445 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get storePkgKindAssets => 'アセットパック';
+
+  @override
+  String swingActionFailed(String error) {
+    return 'できませんでした: $error';
+  }
+
+  @override
+  String get swingReplyHint => '返信を送る…';
+
+  @override
+  String swingReplyToHint(String handle) {
+    return '@$handle に返信…';
+  }
+
+  @override
+  String swingReplyCount(int count) {
+    return '返信 $count';
+  }
+
+  @override
+  String get swingQueueTooltip => 'キュー(長押しで絵を選ぶ)';
+
+  @override
+  String get swingThreadBackReply => '前の返信へ戻る';
+
+  @override
+  String get swingThreadBackSwing => 'Swing の返信へ戻る';
+
+  @override
+  String swingRepliesTo(String handle, int count) {
+    return '@$handle への返信 $count';
+  }
+
+  @override
+  String get swingThreadClose => '返信をしまう';
+
+  @override
+  String swingLoadFailed(String error) {
+    return '読み込めませんでした: $error';
+  }
+
+  @override
+  String get swingNoReplies => '返信はまだありません。';
+
+  @override
+  String swingViewReplies(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '返信 $_temp0を見る';
+  }
+
+  @override
+  String swingAttachments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '添付 $_temp0';
+  }
+
+  @override
+  String get swingPoll => '投票';
+
+  @override
+  String swingReplyOf(String name) {
+    return '$name の返信';
+  }
+
+  @override
+  String get swingImageSwing => '画像の Swing';
+
+  @override
+  String get swingVideoSwing => '動画の Swing';
+
+  @override
+  String get swingPluginSwing => 'プラグインの Swing';
+
+  @override
+  String swingOf(String name) {
+    return '$name の Swing';
+  }
+
+  @override
+  String get swingBarSemantics => 'Swing の返信とシークバー';
+
+  @override
+  String swingReportIntro(String name) {
+    return '$name の Swing を通報します。RASQ の審査で確認します。';
+  }
+
+  @override
+  String get swingReported => '通報しました。審査で確認します';
+
+  @override
+  String swingReportFailed(String error) {
+    return '通報できませんでした: $error';
+  }
+
+  @override
+  String get swingDeleteTitle => 'Swing を削除';
+
+  @override
+  String get swingDeleteMessage => 'この Swing と、付いている返信を削除します。元に戻せません。';
+
+  @override
+  String get swingDeleteConfirm => '削除する';
+
+  @override
+  String get swingCancel => 'キャンセル';
+
+  @override
+  String swingDeleteFailed(String error) {
+    return '削除できませんでした: $error';
+  }
+
+  @override
+  String get swingDeleted => 'Swing を削除しました';
+
+  @override
+  String get swingViewerEmptyMine => '出している Swing はありません';
+
+  @override
+  String get swingViewerEmptyMineHint => '＋ を上へスワイプすると Swing を作れます';
+
+  @override
+  String get swingViewerEmpty => 'Swing はありません';
+
+  @override
+  String get swingViewerEmptyHint =>
+      'フォローしている人や、RASQ リストに入れてくれた人の Swing がここに流れます';
+
+  @override
+  String get swingClose => '閉じる';
+
+  @override
+  String swingRemainingHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours 時間',
+    );
+    return 'あと $_temp0';
+  }
+
+  @override
+  String swingRemainingMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes 分',
+    );
+    return 'あと $_temp0';
+  }
+
+  @override
+  String get swingRemainingSoon => 'まもなく消えます';
+
+  @override
+  String swingRemainingAndPosition(String remaining, String position) {
+    return '$remaining ・ $position';
+  }
+
+  @override
+  String swingViewCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人',
+    );
+    return '見た人 $_temp0';
+  }
+
+  @override
+  String get swingReport => '通報';
+
+  @override
+  String get swingMenu => 'メニュー';
+
+  @override
+  String get swingDelete => '削除';
+
+  @override
+  String get swingSensitive => 'センシティブな内容';
+
+  @override
+  String get swingReveal => '表示する';
+
+  @override
+  String swingPluginJoinNote(String name) {
+    return '$name さんのページにみんなで入ります。インストールせずに、この Swing を見ている間だけ動かします。';
+  }
+
+  @override
+  String get swingPluginJoin => '参加する';
+
+  @override
+  String get swingPluginConsent =>
+      '審査されていないプラグインです。通信はできない状態で、この Swing を見ている間だけ動かします。';
+
+  @override
+  String get swingPluginConsentDetail =>
+      '制限モード(network / storage.unsafe / interstitial・system の FOW / URL を開くなどは閉、GPU は可)。子プラグインを持たない 1 つだけ。';
+
+  @override
+  String get swingPluginRun => '動かす';
+
+  @override
+  String swingPluginNeedsInstall(String name) {
+    return '$name を入れると見られます';
+  }
+
+  @override
+  String get swingPluginNeedsInstallHint => 'プラグインの Swing です。ストアからインストールしてください';
+
+  @override
+  String get swingViewInStore => 'ストアで見る';
+
+  @override
+  String get swingPluginOpenFailed => '開けませんでした';
+
+  @override
+  String get swingPluginTapToExpand => '押すと全画面に戻ります';
+
+  @override
+  String get swingPluginSwipeHint => '左右・上下にスワイプで次の Swing へ';
+
+  @override
+  String get swingPluginShrink => '全画面から縮小';
+
+  @override
+  String get swingAd => '広告';
+
+  @override
+  String get swingAdSwipeHint => 'スワイプで次の Swing へ';
+
+  @override
+  String get swingKindText => 'テキスト';
+
+  @override
+  String get swingKindImage => '画像';
+
+  @override
+  String get swingKindVideo => '動画';
+
+  @override
+  String get swingKindPlugin => 'プラグイン';
+
+  @override
+  String swingKindSwing(String kind) {
+    return '$kindの Swing';
+  }
+
+  @override
+  String swingBannerNew(int count) {
+    return '新着 $count';
+  }
+
+  @override
+  String swingBannerTotal(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get swingComposerPluginShared => 'みんなで使う: 見た人は、あなたが作る同じページに入ります';
+
+  @override
+  String get swingComposerPluginFullscreen => '見る人の端末で全画面で動きます';
+
+  @override
+  String get swingComposerPluginPage => '見る人の端末でページとして動きます';
+
+  @override
+  String swingTtlLabel(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours 時間で消える',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get swingTtl => '消えるまで';
+
+  @override
+  String swingTtlHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours 時間',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get swingBackgroundImage => '画像を背景にする';
+
+  @override
+  String get swingBackgroundVideo => '動画を背景にする';
+
+  @override
+  String get swingPickVideoFile => '動画のファイルを選んでください';
+
+  @override
+  String get swingPickImageFile => '画像のファイルを選んでください';
+
+  @override
+  String get swingChangeBackground => '背景を変える';
+
+  @override
+  String get swingAudience => '届け先';
+
+  @override
+  String get swingLoadFailedShort => '読み込めませんでした';
+
+  @override
+  String swingSent(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours 時間で消えます',
+    );
+    return 'Swing を出しました($_temp0)';
+  }
+
+  @override
+  String get swingErrorLimit => '同時に出しておける Swing は 20 個までです';
+
+  @override
+  String swingSendFailed(String error) {
+    return '出せませんでした: $error';
+  }
+
+  @override
+  String get swingComposerTitle => 'Swing を作る';
+
+  @override
+  String get swingNext => '次へ';
+
+  @override
+  String get swingSend => '出す';
+
+  @override
+  String get swingNeedsAccount => 'RASQ アカウントが要ります';
+
+  @override
+  String get swingNeedsAccountHint =>
+      'Swing は RASQ アカウントから出します。サイドバーからログインしてください';
+
+  @override
+  String swingUnreviewed(String name) {
+    return '$name(未審査)';
+  }
+
+  @override
+  String swingTtlRemaining(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours 時間で消えます',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get swingRepick => '選び直す';
+
+  @override
+  String get swingReedit => '編集し直す';
+
+  @override
+  String swingCwTooLong(int max) {
+    return 'CW は $max 文字までです';
+  }
+
+  @override
+  String get swingCwHint => 'CW の文';
+
+  @override
+  String get swingCwOff => 'CW をはずす';
+
+  @override
+  String get swingCwOn => 'CW を付ける(センシティブな内容)';
+
+  @override
+  String get swingPluginSection => '配るプラグイン';
+
+  @override
+  String get swingPluginNone =>
+      'Swing で配れるカスタムプラグインが入っていません。ストアで入れるか、下の「ファイルから」で自分のプラグインを配れます。';
+
+  @override
+  String get swingPluginNoneDetail =>
+      'ページ型(カスタムプラグイン)のうち、ほかのプラグインと親子関係の無いもの(solo / shared どちらも)。';
+
+  @override
+  String get swingFromFile => 'ファイルから(未審査)';
+
+  @override
+  String get swingFromFileSubtitle => '自分で作った .rspkg / .rasqpkg / .wasm を配ります';
+
+  @override
+  String get swingFromFileDetail =>
+      '審査していないプラグインは、見る人の端末で通信できない状態で動きます(GPU は使えます)。ほかのプラグインを土台にする子プラグインは配れません。';
+
+  @override
+  String get swingAudienceEmpty => '届け先を 1 つ以上選んでください';
+
+  @override
+  String get swingAudienceFollowers => 'フォロワー';
+
+  @override
+  String get swingAudienceFollowersSubtitle => 'RASQ アカウントをフォローしている人';
+
+  @override
+  String get swingAudienceList => 'RASQ リスト';
+
+  @override
+  String get swingAudienceNoLists => 'RASQ リストを作ると、リストに入れた人にも届けられます';
+
+  @override
+  String swingPackageFetchFailed(int status) {
+    return 'プラグインを取れませんでした(HTTP $status)';
+  }
+
+  @override
+  String get swingNotLoggedIn => 'RASQ アカウントにログインしていません';
+
+  @override
+  String get swingUnreadable => 'Swing を読めませんでした';
 
   @override
   String get trendTitle => 'トレンド';

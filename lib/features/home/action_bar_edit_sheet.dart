@@ -21,6 +21,7 @@ import 'action_bar_config.dart';
 import 'material_icons.dart';
 import 'plugin_actions.dart';
 import 'post_row.dart';
+import '../../l10n/l10n.dart';
 
 /// 「アクションバーの編集」FOW (D-208 → D-210、ワイヤーフレーム p.7)。
 ///
@@ -40,22 +41,32 @@ const actionBarDetailFowId = 'actionbar.detail';
 /// バー(面)の種類 (D-210): 投稿タイル / 全画面ビューワー / 加工画面の下段バー(画像・動画、D-249)/
 /// AsTell のルームの下段の丸いボタン(D-324)。
 enum ActionBarSurface {
-  post('', '投稿アクションバー'),
-  viewer('.viewer', '全画面アクションバー'),
-  editorImage('.editor.image', '加工画面のバー(画像)'),
-  editorVideo('.editor.video', '加工画面のバー(動画 / 音声)'),
+  post(''),
+  viewer('.viewer'),
+  editorImage('.editor.image'),
+  editorVideo('.editor.video'),
   // SVG (D-472): 加工画面の SVG モード(落書き)のバー。SVG を受けるプラグインのボタンだけ(加工画面の「バーの編集」から開く)。
-  editorSvg('.editor.svg', '加工画面のバー(SVG)'),
+  editorSvg('.editor.svg'),
   // RASQ のバー (D-446): RASQ アカウントを選んで編集する(SNS のアカウントのバーとは別)。Swing の上のボタンは全画面アクションバー。
-  rasqViewer('.rasq.viewer', '全画面アクションバー(Swing)'),
-  rasqPost('.rasq', '投稿アクションバー'),
-  astell('.astell', 'ASTell のルームの下段');
+  rasqViewer('.rasq.viewer'),
+  rasqPost('.rasq'),
+  astell('.astell');
 
-  const ActionBarSurface(this.keySuffix, this.title);
+  const ActionBarSurface(this.keySuffix);
 
   /// タイル / 隙間のキーの接尾辞。
   final String keySuffix;
-  final String title;
+
+  /// 見出し(表示の言語)。
+  String get title => switch (this) {
+        post || rasqPost => appL10n.homeBarPost,
+        viewer => appL10n.homeBarViewer,
+        editorImage => appL10n.homeBarEditorImage,
+        editorVideo => appL10n.homeBarEditorVideo,
+        editorSvg => appL10n.homeBarEditorSvg,
+        rasqViewer => appL10n.homeBarRasqViewer,
+        astell => appL10n.homeBarAstell,
+      };
   bool get isEditor => this == editorImage || this == editorVideo || this == editorSvg;
 
   /// 土台が SNS のアクションではないバー(加工画面 / RASQ の投稿 D-279 / AsTell の下段 D-324)。
@@ -88,10 +99,10 @@ const actionBarTileSize = 56.0;
 Future<void> showActionBarEditSheet(WidgetRef ref, {int column = 0, List<ActionBarSurface>? surfaces, String? accountKey, bool rasq = false}) async {
   final manager = ref.read(overlayManagerProvider);
   if (manager.contains(actionBarEditFowId)) return;
-  final title = _astellOnly(surfaces) ? 'ルームのボタンの編集' : 'アクションバーの編集';
+  final title = _astellOnly(surfaces) ? appL10n.homeBarEditAstellTitle : appL10n.homeBarEditTitle;
   await manager.showFow<void>(
     id: actionBarEditFowId,
-    spec: FowSpec(title: title, cancelText: '閉じる', initialHeightFactor: 0.85, maxHeightFactor: 0.92, maxWidth: 640, columnIndex: column),
+    spec: FowSpec(title: title, cancelText: appL10n.homeClose, initialHeightFactor: 0.85, maxHeightFactor: 0.92, maxWidth: 640, columnIndex: column),
     semanticsLabel: title,
     builder: (_, _) => _ActionBarEditBody(surfaces: surfaces, accountKey: accountKey, rasq: rasq || (surfaces?.any((s) => s.isRasq) ?? false)),
   );
@@ -104,47 +115,50 @@ bool _astellOnly(List<ActionBarSurface>? surfaces) => surfaces != null && surfac
 
 /// プラグインボタン / アクションを検索する FOW (D-176 → D-210: 「ノードを検索」に近い作り)。
 /// 登録済みプラグインの `post.action` 宣言と SNS のアクションから選ぶ。戻りは選んだ id(キャンセルは null)。
-Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグインを検索', Set<String> exclude = const {}, bool pluginsOnly = false, String? ownerId, String configKey = '', List<ActionDescriptor>? snsCandidates}) async {
+Future<String?> showActionSearchFow(WidgetRef ref, {String? title, Set<String> exclude = const {}, bool pluginsOnly = false, String? ownerId, String configKey = '', List<ActionDescriptor>? snsCandidates}) async {
   final manager = ref.read(overlayManagerProvider);
+  final l10n = appL10n;
+  final fowTitle = title ?? l10n.homeBarSearchPlugins;
   // 全画面バーの構成 (D-214) なら全画面表示プラグイン(QR コード検出など)のトグルも候補。
   final plugins = ref.read(pluginActionsForProvider(configKey));
   // SNS のボタン: 指定があればそれ(バーから外したもの、D-215)。無ければ現在のアカウントの全部(pluginsOnly なら無し)。
   final sns = snsCandidates ?? (pluginsOnly ? const <ActionDescriptor>[] : (isBuiltinConfigKey(configKey) ? builtinActionsFor(configKey) : (ref.read(sessionForAccountProvider(accountKeyOfConfigKey(configKey)))?.actions ?? const <ActionDescriptor>[])));
   final query = TextEditingController();
-  var genre = 'すべて';
+  const allGenres = '\u0000all';
+  var genre = allGenres;
   try {
     return await manager.showFow<String>(
       id: actionBarPluginSearchFowId,
       ownerId: ownerId,
-      spec: FowSpec(title: title, cancelText: 'キャンセル', initialHeightFactor: 0.8, maxWidth: 640),
-      semanticsLabel: title,
+      spec: FowSpec(title: fowTitle, cancelText: l10n.homeCancel, initialHeightFactor: 0.8, maxWidth: 640),
+      semanticsLabel: fowTitle,
       builder: (ctx, _) => StatefulBuilder(
         builder: (ctx, setLocal) {
           final scheme = Theme.of(ctx).colorScheme;
           final q = query.text.trim().toLowerCase();
           final rows = <({String id, String label, String subtitle, String genre, IconData icon})>[
             for (final a in sns)
-              if (!exclude.contains(a.id)) (id: a.id, label: a.label, subtitle: '${isEditorConfigKey(configKey) ? '内蔵の編集' : isRasqConfigKey(configKey) ? 'RASQ のアクション' : configKey == astellBarConfigKey ? 'ASTell のボタン' : 'SNS のアクション'} · ${a.genreTag}', genre: a.genreTag, icon: PostRow.iconFor(a.icon, Icons.circle_outlined)),
+              if (!exclude.contains(a.id)) (id: a.id, label: a.label, subtitle: l10n.homeBarSearchSubtitle(isEditorConfigKey(configKey) ? l10n.homeBarBuiltinEditor : isRasqConfigKey(configKey) ? l10n.homeBarRasqActions : configKey == astellBarConfigKey ? l10n.homeBarAstellButtons : l10n.homeBarSnsActions, a.genreTag), genre: a.genreTag, icon: PostRow.iconFor(a.icon, Icons.circle_outlined)),
             for (final p in plugins)
               if (!exclude.contains(p.id))
                 (
                   id: p.id,
                   label: p.decl.label,
                   // 手動配置 (契約 v0.14 placement): 宣言だけでは置かれないので、ここで足す。
-                  subtitle: '${isViewerToggleActionId(p.id) ? '${p.plugin.manifest.name} · 全画面表示プラグイン(ON / OFF のボタン)' : isAstellPluginAction(p) ? '${p.plugin.manifest.name} · ASTell プラグイン(押すとそのプラグインを開く)' : '${p.plugin.manifest.name} · タグ: ${p.decl.tags.join(' / ')}'}${p.isManual ? ' · 手動配置' : ''}',
+                  subtitle: l10n.homeBarSearchSubtitle(p.plugin.manifest.name, isViewerToggleActionId(p.id) ? l10n.homeBarViewerTogglePlugin : isAstellPluginAction(p) ? l10n.homeBarAstellPlugin : l10n.homeBarPluginTags(p.decl.tags.join(' / '))) + (p.isManual ? l10n.homeBarManualPlacement : ''),
                   genre: p.decl.tags.isEmpty ? 'Plugin' : p.decl.tags.first,
                   icon: PostRow.iconFor(p.decl.icon, Icons.extension_outlined),
                 ),
           ];
-          final genres = ['すべて', ...{for (final r in rows) r.genre}];
+          final genres = [allGenres, ...{for (final r in rows) r.genre}];
           final hits = [
             for (final r in rows)
-              if ((genre == 'すべて' || r.genre == genre) && (q.isEmpty || r.label.toLowerCase().contains(q) || r.subtitle.toLowerCase().contains(q))) r,
+              if ((genre == allGenres || r.genre == genre) && (q.isEmpty || r.label.toLowerCase().contains(q) || r.subtitle.toLowerCase().contains(q))) r,
           ];
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xs),
-              child: RasqInput(key: actionBarPluginSearchKey, controller: query, hintText: 'ボタン名 / プラグイン名 / タグ', onChanged: (_) => setLocal(() {})),
+              child: RasqInput(key: actionBarPluginSearchKey, controller: query, hintText: l10n.homeBarSearchHint, onChanged: (_) => setLocal(() {})),
             ),
             SizedBox(
               height: 40,
@@ -152,7 +166,7 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
                 for (final g in genres)
                   Padding(
                     padding: const EdgeInsets.only(right: RasqSpacing.xs),
-                    child: ChoiceChip(key: ValueKey('actionbar.search.genre.$g'), label: Text(g, style: RasqTypography.caption), selected: genre == g, onSelected: (_) => setLocal(() => genre = g)),
+                    child: ChoiceChip(key: ValueKey('actionbar.search.genre.${g == allGenres ? 'all' : g}'), label: Text(g == allGenres ? l10n.homeBarAllGenres : g, style: RasqTypography.caption), selected: genre == g, onSelected: (_) => setLocal(() => genre = g)),
                   ),
               ]),
             ),
@@ -164,10 +178,10 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
                           rows.isEmpty
                               ? rasqDetail(
                                   ctx,
-                                  configKey == astellBarConfigKey ? '追加できるボタンがありません。プラグインはストアから追加できます' : 'ここに置けるプラグインがありません。ストアから追加できます',
-                                  isEditorConfigKey(configKey) ? 'composer.media を宣言したプラグインがありません(ストアから追加)' : configKey == astellBarConfigKey ? '非表示にしたボタン / ASTell のプラグイン(astell.action)がありません(プラグインはストアから追加)' : configKey.startsWith('viewer:') ? '全画面表示プラグイン / post.action を宣言したプラグインがありません(ストアから追加)' : 'post.action を宣言したプラグインがありません(ストアから追加)',
+                                  configKey == astellBarConfigKey ? l10n.homeBarSearchEmptyAstell : l10n.homeBarSearchEmpty,
+                                  isEditorConfigKey(configKey) ? l10n.homeBarSearchEmptyEditorDetail : configKey == astellBarConfigKey ? l10n.homeBarSearchEmptyAstellDetail : configKey.startsWith('viewer:') ? l10n.homeBarSearchEmptyViewerDetail : l10n.homeBarSearchEmptyPostDetail,
                                 )
-                              : '見つかりません', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+                              : l10n.homeBarSearchNoHits, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
                     )
                   : ListView(children: [
                       for (final r in hits)
@@ -190,8 +204,8 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
 }
 
 /// 旧 API 互換 (D-176): プラグインボタンだけを選ぶ。
-Future<PluginAction?> showPluginActionSearchFow(WidgetRef ref, {String title = 'プラグインボタンを検索', String? ownerId}) async {
-  final id = await showActionSearchFow(ref, title: title, pluginsOnly: true, ownerId: ownerId);
+Future<PluginAction?> showPluginActionSearchFow(WidgetRef ref, {String? title, String? ownerId}) async {
+  final id = await showActionSearchFow(ref, title: title ?? appL10n.homeBarSearchPluginButtons, pluginsOnly: true, ownerId: ownerId);
   if (id == null) return null;
   return ref.read(pluginActionsProvider).where((p) => p.id == id).firstOrNull;
 }
@@ -204,12 +218,12 @@ Future<void> showActionDetailFow(WidgetRef ref, {required ActionDescriptor actio
   final manager = ref.read(overlayManagerProvider);
   await manager.showFow<void>(
     id: actionBarDetailFowId,
-    spec: FowSpec(title: action.label, cancelText: '閉じる', initialHeightFactor: 0.7, maxWidth: 600),
-    semanticsLabel: 'アクションの詳細',
+    spec: FowSpec(title: action.label, cancelText: appL10n.homeClose, initialHeightFactor: 0.7, maxWidth: 600),
+    semanticsLabel: appL10n.homeBarDetailTitle,
     builder: (ctx, _) => Consumer(
       builder: (ctx, ref, _) {
         final store = ref.watch(storePluginProvider(pluginId)).value;
-        final node = actionDetailRrl(action: action, pluginId: pluginId, pluginName: store?.name ?? pluginName, developer: store == null ? null : (store.developerName.isEmpty ? '提供元不明' : store.developerName), iconUrl: store?.iconUrl, rating: store?.rating, downloads: store?.downloads, summary: store?.summary ?? description, tags: tags);
+        final node = actionDetailRrl(action: action, pluginId: pluginId, pluginName: store?.name ?? pluginName, developer: store == null ? null : (store.developerName.isEmpty ? appL10n.homeBarDetailUnknownDeveloper : store.developerName), iconUrl: store?.iconUrl, rating: store?.rating, downloads: store?.downloads, summary: store?.summary ?? description, tags: tags);
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.lg),
           child: RrlRenderer(key: const ValueKey('actionbar.detail.rrl'), node: node, host: RrlHost(instanceScope: 'host:actionbar:detail', scope: RrlScope({}), mediaPolicy: RasqMediaPolicy.unrestricted)),
@@ -229,16 +243,16 @@ RrlNode actionDetailRrl({required ActionDescriptor action, required String plugi
       RrlNode(t: 'Column', k: 'title', c: [
         text('name', pluginName, bold: true, size: 18),
         text('dev', developer ?? pluginId, color: '#6B7280'),
-        if (rating != null) text('stat', '★${rating.toStringAsFixed(1)} ・ ${downloads ?? 0} DL', color: '#6B7280', size: 12),
+        if (rating != null) text('stat', appL10n.homeBarDetailStats(rating.toStringAsFixed(1), downloads ?? 0), color: '#6B7280', size: 12),
       ]),
     ]),
     if (summary != null && summary.isNotEmpty) text('summary', summary),
-    const RrlNode(t: 'SectionHeader', k: 'sec', p: {'title': 'アクション'}),
+    RrlNode(t: 'SectionHeader', k: 'sec', p: {'title': appL10n.homeBarDetailAction}),
     RrlNode(t: 'ListTile', k: 'label', p: {'title': action.label, 'subtitle': 'id: ${action.id}'}),
-    RrlNode(t: 'ListTile', k: 'slot', p: {'title': 'スロット(ジャンル)', 'subtitle': action.genreTag}),
-    RrlNode(t: 'ListTile', k: 'confirm', p: {'title': '確認', 'subtitle': action.confirmMode.name}),
-    RrlNode(t: 'ListTile', k: 'auto', p: {'title': '自動化', 'subtitle': action.automation.name}),
-    if (tags.isNotEmpty) RrlNode(t: 'ListTile', k: 'tags', p: {'title': 'タグ', 'subtitle': tags.join(' / ')}),
+    RrlNode(t: 'ListTile', k: 'slot', p: {'title': appL10n.homeBarDetailSlot, 'subtitle': action.genreTag}),
+    RrlNode(t: 'ListTile', k: 'confirm', p: {'title': appL10n.homeBarDetailConfirm, 'subtitle': action.confirmMode.name}),
+    RrlNode(t: 'ListTile', k: 'auto', p: {'title': appL10n.homeBarDetailAutomation, 'subtitle': action.automation.name}),
+    if (tags.isNotEmpty) RrlNode(t: 'ListTile', k: 'tags', p: {'title': appL10n.homeBarDetailTags, 'subtitle': tags.join(' / ')}),
   ]);
 }
 
@@ -266,7 +280,7 @@ Future<String?> showMaterialIconPickerFow(WidgetRef ref, {String? initial, Strin
     return await manager.showFow<String>(
       id: materialIconPickerFowId,
       ownerId: ownerId,
-      spec: FowSpec(title: 'Material Icon', cancelText: 'キャンセル', initialHeightFactor: 0.7, maxWidth: 600),
+      spec: FowSpec(title: 'Material Icon', cancelText: appL10n.homeCancel, initialHeightFactor: 0.7, maxWidth: 600),
       semanticsLabel: 'Material Icon',
       builder: (ctx, _) => StatefulBuilder(
         builder: (ctx, setLocal) {
@@ -276,7 +290,7 @@ Future<String?> showMaterialIconPickerFow(WidgetRef ref, {String? initial, Strin
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xs),
-              child: RasqInput(key: const ValueKey('actionbar.icon.search'), controller: query, hintText: 'アイコン名で検索(例: star, bolt)', onChanged: (_) => setLocal(() {})),
+              child: RasqInput(key: const ValueKey('actionbar.icon.search'), controller: query, hintText: appL10n.homeBarIconSearchHint, onChanged: (_) => setLocal(() {})),
             ),
             Expanded(
               child: GridView.builder(
@@ -324,14 +338,14 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
   try {
     await manager.showFow<void>(
       id: actionBarBundleFowId,
-      spec: FowSpec(title: 'バンドルの設定', cancelText: '閉じる', initialHeightFactor: 0.85, maxWidth: 600),
-      semanticsLabel: 'バンドルの設定',
+      spec: FowSpec(title: appL10n.homeBarBundleTitle, cancelText: appL10n.homeClose, initialHeightFactor: 0.85, maxWidth: 600),
+      semanticsLabel: appL10n.homeBarBundleTitle,
       builder: (_, _) => Consumer(
         builder: (ctx, ref, _) {
           final scheme = Theme.of(ctx).colorScheme;
           final config = ref.watch(actionBarConfigProvider(configKey));
           final list = config.lists.where((l) => l.id == listId).firstOrNull;
-          if (list == null) return const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: Text('解除しました'));
+          if (list == null) return Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(ctx.l10n.homeBarBundleDissolved));
           // そのバーのアカウントの SNS のアクション (D-284)。
           final session = ref.watch(sessionForAccountProvider(accountKeyOfConfigKey(configKey)));
           final plugins = ref.watch(pluginActionsForProvider(configKey));
@@ -343,14 +357,14 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
           final members = [for (final id in memberIds) if (byId.containsKey(id)) byId[id]!];
           void update(ActionListDef next) => store.set(config.copyWith(lists: [for (final l in config.lists) l.id == listId ? next : l]));
           final astell = configKey == astellBarConfigKey;
-          String providerOf(String id) => isPluginActionId(id) ? (plugins.where((p) => p.id == id).firstOrNull?.plugin.manifest.name ?? 'プラグイン') : (astell ? 'ASTell' : 'SNS のアクション');
-          String describe(String id) => isPluginActionId(id) ? (plugins.where((p) => p.id == id).firstOrNull?.plugin.manifest.description ?? '') : (astell ? 'ルームの下段のボタン(${byId[id]?.label ?? ''})' : 'SNS プラグインが提供するアクション(${byId[id]?.genreTag ?? ''})');
+          String providerOf(String id) => isPluginActionId(id) ? (plugins.where((p) => p.id == id).firstOrNull?.plugin.manifest.name ?? ctx.l10n.homeBarPlugin) : (astell ? 'ASTell' : ctx.l10n.homeBarSnsActions);
+          String describe(String id) => isPluginActionId(id) ? (plugins.where((p) => p.id == id).firstOrNull?.plugin.manifest.description ?? '') : (astell ? ctx.l10n.homeBarBundleAstellMember(byId[id]?.label ?? '') : ctx.l10n.homeBarBundleSnsMember(byId[id]?.genreTag ?? ''));
           return ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
-              child: RasqInput(key: const ValueKey('actionbar.bundle.name'), controller: name, hintText: 'リスト名', onChanged: (v) => update(list.copyWith(name: v.trim().isEmpty ? list.name : v.trim()))),
+              child: RasqInput(key: const ValueKey('actionbar.bundle.name'), controller: name, hintText: ctx.l10n.homeBarBundleName, onChanged: (v) => update(list.copyWith(name: v.trim().isEmpty ? list.name : v.trim()))),
             ),
-            const RasqSectionHeader(title: 'アイコン'),
+            RasqSectionHeader(title: ctx.l10n.homeBarBundleIcon),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
               child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, crossAxisAlignment: WrapCrossAlignment.center, children: [
@@ -379,7 +393,7 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
                 ChoiceChip(
                   key: const ValueKey('actionbar.bundle.icon.photo'),
                   avatar: list.icon?.startsWith('file:') ?? false ? SizedBox(width: 18, height: 18, child: bundleIconWidget(list, members, size: 18)) : const Icon(Icons.photo_outlined, size: 16),
-                  label: const Text('写真'),
+                  label: Text(ctx.l10n.homeBarBundlePhoto),
                   selected: list.icon?.startsWith('file:') ?? false,
                   onSelected: (_) async {
                     final Future<XFile?> Function() pick = pickPhoto ?? ref.read(bundlePhotoPickerProvider);
@@ -393,14 +407,14 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
                       // 同じパスの画像を差し替えたときにキャッシュが残らないように。
                       imageCache.clear();
                     } catch (e) {
-                      manager.showAlert(id: 'actionbar.icon.error', title: '写真を使えません', message: '$e', confirmText: 'OK');
+                      manager.showAlert(id: 'actionbar.icon.error', title: appL10n.homeBarBundlePhotoFailed, message: '$e', confirmText: 'OK');
                     }
                   },
                 ),
                 SizedBox(width: 32, height: 32, child: Center(child: bundleIconWidget(list, members, size: 26, color: scheme.onSurface))),
               ]),
             ),
-            const RasqSectionHeader(title: 'メンバー'),
+            RasqSectionHeader(title: ctx.l10n.homeBarBundleMembers),
             ReorderableListView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -422,7 +436,7 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
                     pluginName: providerOf(id),
                     description: describe(id),
                     onMenu: (rect) async {
-                      final pick = await manager.showDropdown<String>(id: 'actionbar.bundle.member.menu', ownerId: actionBarBundleFowId, anchor: rect, dense: true, items: const [RasqDropdownItem('詳細', 'detail'), RasqDropdownItem('バンドルから外す', 'remove', destructive: true)]);
+                      final pick = await manager.showDropdown<String>(id: 'actionbar.bundle.member.menu', ownerId: actionBarBundleFowId, anchor: rect, dense: true, items: [RasqDropdownItem(appL10n.homeBarMenuDetail, 'detail'), RasqDropdownItem(appL10n.homeBarBundleRemoveMember, 'remove', destructive: true)]);
                       final a = byId[id];
                       if (pick == 'detail' && a != null) {
                         final p = plugins.where((x) => x.id == id).firstOrNull;
@@ -453,7 +467,7 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
                     store.set(config.copyWith(order: order, hidden: {...config.hidden}..remove(id), lists: [for (final l in config.lists) l.id == listId ? l.copyWith(memberIds: [...l.memberIds, id]) : l]));
                   },
                   icon: const Icon(Icons.search, size: 18),
-                  label: const Text('プラグインを検索'),
+                  label: Text(ctx.l10n.homeBarSearchPlugins),
                 ),
                 TextButton(
                   key: const ValueKey('actionbar.bundle.dissolve'),
@@ -465,7 +479,7 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
                     store.set(config.copyWith(order: order, lists: [for (final l in config.lists) if (l.id != listId) l]));
                     manager.close(actionBarBundleFowId);
                   },
-                  child: const Text('リストの解除'),
+                  child: Text(ctx.l10n.homeBarDissolveList),
                 ),
               ]),
             ),
@@ -520,7 +534,7 @@ class _MemberTileState extends State<_MemberTile> {
             builder: (ctx) => RasqIconButton(
               icon: Icons.more_horiz,
               size: 20,
-              tooltip: 'メンバーの操作',
+              tooltip: context.l10n.homeBarMemberMenu,
               onPressed: () {
                 final box = ctx.findRenderObject() as RenderBox;
                 widget.onMenu(box.localToGlobal(Offset.zero) & box.size);
@@ -557,7 +571,7 @@ class _ActionBarEditBodyState extends ConsumerState<_ActionBarEditBody> {
     final sessions = ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[];
     final hasRasq = ref.read(orgateAccountProvider).value != null;
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'actionbar.account.pick', anchor: anchor, dense: true, items: [
-      if (hasRasq) RasqDropdownItem('RASQ アカウント', '', checked: _rasq),
+      if (hasRasq) RasqDropdownItem(context.l10n.homeBarRasqAccount, '', checked: _rasq),
       for (final s in sessions) RasqDropdownItem('@${s.account.handle}@${s.account.instance}', s.account.key, checked: !_rasq && s.account.key == (_accountKey ?? ref.read(currentAccountProvider)?.key)),
     ]);
     if (pick == null || !mounted) return;
@@ -606,7 +620,7 @@ class _ActionBarEditBodyState extends ConsumerState<_ActionBarEditBody> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(me.displayName, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
                 if (_rasq)
-                  Text('RASQ アカウント', key: const ValueKey('actionbar.account.rasq'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
+                  Text(context.l10n.homeBarRasqAccount, key: const ValueKey('actionbar.account.rasq'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
                 else
                 Row(children: [
                   Flexible(child: Text('@${me.account.handle}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
@@ -626,10 +640,8 @@ class _ActionBarEditBodyState extends ConsumerState<_ActionBarEditBody> {
           _ActionBarTiles(key: ValueKey('actionbar.surface.${surface.name}'), surface: surface, accountKey: accountKey),
         ],
         RasqCaption(
-          astellOnly ? '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。(+) でボタンを追加。' : '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。',
-          detail: astellOnly
-              ? '(…) / shift + クリック / 右クリックでメニュー(非表示 / バンドル)。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。(+) で非表示にしたボタンや ASTell のプラグインを足す。幅に収まらないときは、先頭から入るだけと最後の 1 つ(入力欄の隣)を出し、残りはルームの歯車のメニューへ。'
-              : '(…) / shift + クリック / 右クリックでメニュー。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。宣言されたプラグインボタンと束ねる閾値は 設定 → SNSプラグイン →「プラグインボタン」。',
+          astellOnly ? context.l10n.homeBarHelpAstell : context.l10n.homeBarHelp,
+          detail: astellOnly ? context.l10n.homeBarHelpAstellDetail : context.l10n.homeBarHelpDetail,
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.lg),
         ),
       ]),
@@ -679,8 +691,8 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
     final actions = merged.actions;
     final entries = merged.config.apply(actions);
     final isAstell = widget.surface == ActionBarSurface.astell;
-    final pluginName = isEditor ? 'RASQ(内蔵の編集)' : widget.surface.isRasq ? 'RASQ' : isAstell ? 'ASTell' : (registry.plugins.where((p) => p.manifest.id == session?.pluginId).firstOrNull?.manifest.name ?? session?.pluginId ?? '');
-    String providerOf(ActionDescriptor a) => isPluginActionId(a.id) ? (plugins.where((p) => p.id == a.id).firstOrNull?.plugin.manifest.name ?? 'プラグイン') : pluginName;
+    final pluginName = isEditor ? context.l10n.homeBarRasqBuiltinEditor : widget.surface.isRasq ? 'RASQ' : isAstell ? 'ASTell' : (registry.plugins.where((p) => p.manifest.id == session?.pluginId).firstOrNull?.manifest.name ?? session?.pluginId ?? '');
+    String providerOf(ActionDescriptor a) => isPluginActionId(a.id) ? (plugins.where((p) => p.id == a.id).firstOrNull?.plugin.manifest.name ?? context.l10n.homeBarPlugin) : pluginName;
     Future<void> setEnabled(String id, bool on) => settingsStore.set('enabled', {...settings.enabled, id: on});
 
     /// 自動バンドルは並べ替え / 編集で固定リストに昇格する(order に残せるように)。
@@ -706,7 +718,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
 
     /// 新規バンドル (D-210): 先頭メンバーの位置に置いて設定 FOW を開く。
     Future<void> newBundle(List<String> memberIds) async {
-      final def = ActionListDef(id: DateTime.now().millisecondsSinceEpoch.toRadixString(36), name: 'マイリスト', memberIds: ActionListDef.uniq(memberIds));
+      final def = ActionListDef(id: DateTime.now().millisecondsSinceEpoch.toRadixString(36), name: context.l10n.homeBarNewBundleName, memberIds: ActionListDef.uniq(memberIds));
       final order = orderOf();
       final first = order.indexWhere(memberIds.contains);
       order.removeWhere(memberIds.contains);
@@ -739,10 +751,10 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
             anchor: rect,
             dense: true,
             items: [
-              const RasqDropdownItem('詳細', 'detail'),
-              const RasqDropdownItem('アクションリスト化', 'bundle'),
+              RasqDropdownItem(context.l10n.homeBarMenuDetail, 'detail'),
+              RasqDropdownItem(context.l10n.homeBarMenuMakeList, 'bundle'),
               // AsTell の下段は「非表示」(下の「非表示のボタン」/ (+) から戻す、D-324)。
-              RasqDropdownItem(isAstell ? '非表示にする' : '削除', 'delete', destructive: true),
+              RasqDropdownItem(isAstell ? context.l10n.homeBarMenuHide : context.l10n.homeBarMenuDelete, 'delete', destructive: true),
             ],
           );
           switch (pick) {
@@ -768,9 +780,9 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
             anchor: rect,
             dense: true,
             items: [
-              const RasqDropdownItem('アクションリストの設定', 'edit'),
-              if (auto) const RasqDropdownItem('固定リストにする', 'pin'),
-              const RasqDropdownItem('リストの解除', 'dissolve', destructive: true),
+              RasqDropdownItem(context.l10n.homeBarMenuListSettings, 'edit'),
+              if (auto) RasqDropdownItem(context.l10n.homeBarMenuPinList, 'pin'),
+              RasqDropdownItem(context.l10n.homeBarDissolveList, 'dissolve', destructive: true),
             ],
           );
           switch (pick) {
@@ -895,11 +907,11 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
             key: ValueKey('actionbar.plugins.open$_sfx'),
             icon: Icons.add_circle_outline,
             size: 28,
-            tooltip: isAstell ? 'ボタンを追加' : 'プラグインを検索',
+            tooltip: isAstell ? context.l10n.homeBarAddButton : context.l10n.homeBarSearchPlugins,
             onPressed: () async {
               // 候補 = バーから外した SNS のボタン (D-215) + プラグインボタン。
               final removed = [for (final a in snsActions) if (config.hidden.contains(a.id)) a];
-              final id = await showActionSearchFow(ref, title: isAstell ? 'ボタンを追加' : 'プラグインを検索', pluginsOnly: true, ownerId: actionBarEditFowId, configKey: configKey, snsCandidates: removed);
+              final id = await showActionSearchFow(ref, title: isAstell ? context.l10n.homeBarAddButton : context.l10n.homeBarSearchPlugins, pluginsOnly: true, ownerId: actionBarEditFowId, configKey: configKey, snsCandidates: removed);
               if (id == null) return;
               if (config.hidden.contains(id)) {
                 store.set(config.copyWith(hidden: {...config.hidden}..remove(id)));
@@ -931,13 +943,13 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
         child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          Text(hiddenActions.isEmpty ? '非表示のボタンはありません' : '非表示(押すと表示):', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text(hiddenActions.isEmpty ? context.l10n.homeBarNoHidden : context.l10n.homeBarHiddenLabel, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           for (final a in hiddenActions)
             ActionChip(
               key: ValueKey('actionbar.hidden.${a.id}$_sfx'),
               avatar: Icon(PostRow.iconFor(a.icon, Icons.circle_outlined), size: 16),
               label: Text(a.label, style: RasqTypography.caption),
-              tooltip: '${a.label} を表示',
+              tooltip: context.l10n.homeBarShowHidden(a.label),
               onPressed: () async {
                 if (isPluginActionId(a.id)) {
                   await setEnabled(a.id, true);
@@ -958,7 +970,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
               store.reset();
               await settingsStore.set('enabled', <String, bool>{});
             },
-            child: const Text('既定の並びに戻す'),
+            child: Text(context.l10n.homeBarResetOrder),
           ),
         ),
       ),

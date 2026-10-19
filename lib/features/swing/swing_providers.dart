@@ -9,6 +9,7 @@ import '../../backend/rasq_account.dart' show orgateAccountProvider;
 import '../child_safe/child_safe_providers.dart';
 import 'swing_client.dart';
 import 'swing_models.dart';
+import '../../l10n/l10n.dart';
 
 /// Swing (D-377 / Central S-056) の状態。
 ///
@@ -86,7 +87,7 @@ class SwingFeed extends AsyncNotifier<List<Swing>> {
 /// 未審査のプラグインの入れ物を取る (D-379)。URL は Central の署名つき(テストで差し替える)。
 final swingPackageFetcherProvider = Provider<Future<Uint8List> Function(Uri url)>((ref) => (url) async {
       final r = await http.get(url).timeout(const Duration(seconds: 60));
-      if (r.statusCode != 200) throw StateError('プラグインを取れませんでした(HTTP ${r.statusCode})');
+      if (r.statusCode != 200) throw StateError(appL10n.swingPackageFetchFailed(r.statusCode));
       return r.bodyBytes;
     });
 
@@ -96,7 +97,7 @@ final swingFeedProvider = AsyncNotifierProvider<SwingFeed, List<Swing>>(SwingFee
 /// (前はビューワーの … の「削除」が根の投稿だけを消し、Swing は残り続けていた)。消せなければ例外のまま。
 Future<void> deleteSwing(WidgetRef ref, String id) async {
   final api = ref.read(swingApiProvider);
-  if (api == null) throw StateError('RASQ アカウントにログインしていません');
+  if (api == null) throw StateError(appL10n.swingNotLoggedIn);
   await api.delete(id);
   ref.read(swingFeedProvider.notifier).removeLocal(id);
   ref.read(mySwingsProvider.notifier).removeLocal(id);

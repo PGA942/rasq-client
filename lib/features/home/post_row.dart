@@ -40,6 +40,7 @@ import 'account_affinity.dart';
 import 'action_bundle_fow.dart';
 import 'material_icons.dart';
 import 'post_duplicates.dart';
+import '../../l10n/l10n.dart';
 
 /// Action handler: `args` carries e.g. `{'reaction': '🎉'}` from the picker.
 typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<String, Object?> args});
@@ -109,8 +110,8 @@ class PostRow extends ConsumerStatefulWidget {
 
   /// リプライ元の添付サマリー(「N件の添付ファイル」「1件の添付リンク」)。
   static String? attachmentSummaryOf(Post p) {
-    if (p.media.isNotEmpty) return '${p.media.length}件の添付ファイル';
-    if (p.linkUrl != null) return '1件の添付リンク';
+    if (p.media.isNotEmpty) return appL10n.homePostAttachmentFiles(p.media.length);
+    if (p.linkUrl != null) return appL10n.homePostAttachmentLink;
     return null;
   }
 
@@ -347,7 +348,7 @@ class _PostRowState extends ConsumerState<PostRow> {
                     }
                   },
                 ),
-              if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context)))]),
+              if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.homePostShare, onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context)))]),
             ]),
       // ↓ で別アカウントを選んでいる間は、そのコピーで以降の画面を開く (D-155)。
       onTap: _actAs != null && widget.onActAs == null ? () => context.pushPost(_actAs!) : widget.onTap,
@@ -364,7 +365,7 @@ class _PostRowState extends ConsumerState<PostRow> {
               return RasqIconButton(
                 icon: Icons.keyboard_arrow_down,
                 size: 20,
-                tooltip: 'アカウント選択',
+                tooltip: context.l10n.homePostSelectAccount,
                 onPressed: () async {
                   final box = ctx.findRenderObject() as RenderBox;
                   final manager = ref.read(overlayManagerProvider);
@@ -434,7 +435,7 @@ class _PostRowState extends ConsumerState<PostRow> {
     }
     return RasqActionBarItem(
       id: a.id,
-      label: likeOnly ? 'いいね' : a.label,
+      label: likeOnly ? appL10n.homePostLike : a.label,
       icon: icon,
       // リノートのボタンは、済みでも無効にしない (D-274): 完了アイコンの宣言が無いと部品が無効化するので、同じアイコンを渡す
       // (何度でもリノート / 引用でき、取り消しはリノートの帯の … やドロップダウンから)。
@@ -508,7 +509,7 @@ class _PostRowState extends ConsumerState<PostRow> {
     final handler = _onAction;
     // 行が作り直されて(TL の取り直しなど)この State が捨てられたあとに選ばれても動くよう、ref もここで読んでおく。
     final history = ref.read(reactionHistoryProvider.notifier);
-    openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context), anchor: anchor, accountKey: target.account.key,
+    openEmojiPicker(ref, closeOnPick: true, title: context.l10n.homePostReaction, column: fowColumnOf(context), anchor: anchor, accountKey: target.account.key,
         predictionContext: '${target.contentWarning ?? ''} ${target.body} ${target.quote?.body ?? ''}',
         existingReactions: target.reactions, onPick: (e) {
       handler(a, args: {'reaction': e}).then((_) => history.record(e)).catchError((_) {});
@@ -547,10 +548,10 @@ class _PostRowState extends ConsumerState<PostRow> {
     // だまって切り替えない: 別のアカウントになるときは、行の名前に「(@… で)」と出す。
     final target = _predictedCopy();
     final handler = target == null ? _onAction : widget.actionsFor!(target);
-    final via = target == null ? '' : '(@${target.account.handle}@${target.account.instance} で)';
+    final via = target == null ? '' : context.l10n.homePostRepostVia(target.account.handle, target.account.instance);
     // 名前はリテラルのまま持つ(RAi の操作リファレンスが、この文字列でボタンを探す)。
-    const renoteLabel = 'リノート';
-    const quoteLabel = '引用ノート';
+    const renoteLabel = 'リノート'; // l10n-ignore(RAi の操作リファレンスが探す名前)
+    const quoteLabel = '引用ノート'; // l10n-ignore(RAi の操作リファレンスが探す名前)
     final picked = await showBundleMenuFow<String>(
       ref.read(overlayManagerProvider),
       id: 'actionbar.repost.${post.key}',
@@ -558,7 +559,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       anchor: anchor,
       column: fowColumnOf(context),
       items: [
-        if (_canUndoRepost) const BundleMenuItem(value: 'undo', label: 'リノートを取り消す', icon: Icons.repeat, destructive: true) else BundleMenuItem(value: 'renote', label: '$renoteLabel$via', icon: Icons.repeat),
+        if (_canUndoRepost) BundleMenuItem(value: 'undo', label: context.l10n.homePostUndoRepost, icon: Icons.repeat, destructive: true) else BundleMenuItem(value: 'renote', label: '$renoteLabel$via', icon: Icons.repeat),
         BundleMenuItem(value: 'quote', label: '$quoteLabel$via', icon: Icons.format_quote),
       ],
     );
@@ -617,14 +618,14 @@ class InlinePostFrame extends ConsumerWidget {
     final safety = ref.watch(safetySettingsProvider);
     final (mediaItems, _) = safety.applyTo(post.media);
     final cw = post.contentWarning;
-    final body = (cw != null && cw.isNotEmpty) ? '【CW: $cw】' : post.body;
+    final body = (cw != null && cw.isNotEmpty) ? context.l10n.homePostCw(cw) : post.body;
     final thumbs = <Uri>[for (final m in mediaItems) if (m.type == MediaType.image || m.type == MediaType.video || m.type == MediaType.gif) m.thumbnailUrl ?? m.url];
     return RasqInlinePostCard(
       author: post.author,
       nameSpans: InlineSpans.parse(post.author.displayName, emojis: emojis),
       content: body.isNotEmpty
           ? RasqRichText(InlineSpans.parse(body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: maxLines, overflow: TextOverflow.ellipsis)
-          : Text(mediaItems.isNotEmpty ? '${mediaItems.length}件の添付' : '', style: RasqTypography.caption),
+          : Text(mediaItems.isNotEmpty ? context.l10n.homePostAttachments(mediaItems.length) : '', style: RasqTypography.caption),
       thumbnails: thumbs,
       mediaCount: mediaItems.length,
       badge: badge,
@@ -647,7 +648,7 @@ class ReplyParentRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final emojis = ref.watch(emojiCacheProvider);
     final cw = post.contentWarning;
-    final spans = InlineSpans.parse(cw != null && cw.isNotEmpty ? '【CW: $cw】' : post.body, emojis: emojis);
+    final spans = InlineSpans.parse(cw != null && cw.isNotEmpty ? context.l10n.homePostCw(cw) : post.body, emojis: emojis);
     return RasqReplyParentTile(
       author: post.author,
       attachmentSummary: PostRow.attachmentSummaryOf(post),

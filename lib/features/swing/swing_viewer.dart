@@ -33,6 +33,7 @@ import 'swing_providers.dart';
 import 'swing_bar.dart';
 import '../../backend/rasq_account_page_api.dart' show rasqAccountPageApiProvider, rasqThreadProvider;
 import '../profile/rasq_post_tile.dart' show RasqPostOverlayActions;
+import '../../l10n/l10n.dart';
 
 /// Swing のビューワー (D-377 / D-379)。全画面、**左右のスワイプ**で次 / 前の Swing(と広告)へ。マウス / トラックパッドの
 /// ドラッグでも動く(Mac 版で縦のスワイプが効かなかった)。
@@ -289,7 +290,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     unawaited(manager.showFow<void>(
       id: SwingBar.fowId,
       spec: spec,
-      semanticsLabel: 'Swing の返信とシークバー',
+      semanticsLabel: appL10n.swingBarSemantics,
       builder: (ctx, handle) => SwingViewerBar(controller: _bar, spec: spec),
     ).whenComplete(() {
       spec.heightFactor.removeListener(_onBarDrag);
@@ -371,7 +372,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(title: Text('${s.author.displayName} の Swing を通報します。RASQ の審査で確認します。', style: RasqTypography.bodySmall)),
+          ListTile(title: Text(context.l10n.swingReportIntro(s.author.displayName), style: RasqTypography.bodySmall)),
           for (final r in astellReportReasons)
             ListTile(key: ValueKey('swing.report.${r.id}'), title: Text(r.label), onTap: () => Navigator.of(ctx).pop(r.id)),
         ]),
@@ -384,9 +385,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     try {
       await api.report(s.id, reason: reason);
       _reported.add(s.id);
-      messenger?.showSnackBar(const SnackBar(content: Text('通報しました。審査で確認します')));
+      messenger?.showSnackBar(SnackBar(content: Text(appL10n.swingReported)));
     } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text('通報できませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(appL10n.swingReportFailed('$e'))));
     }
   }
 
@@ -566,7 +567,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
   Future<void> _delete(Swing s) async {
     _hold('delete', true);
     final manager = ref.read(overlayManagerProvider);
-    final ok = await manager.showAlert(id: 'swing.delete', title: 'Swing を削除', message: 'この Swing と、付いている返信を削除します。元に戻せません。', confirmText: '削除する', cancelText: 'キャンセル', destructive: true);
+    final ok = await manager.showAlert(id: 'swing.delete', title: context.l10n.swingDeleteTitle, message: context.l10n.swingDeleteMessage, confirmText: context.l10n.swingDeleteConfirm, cancelText: context.l10n.swingCancel, destructive: true);
     if (!mounted) return;
     _hold('delete', false);
     if (!ok) return;
@@ -574,11 +575,11 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     try {
       await deleteSwing(ref, s.id);
     } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text('削除できませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(appL10n.swingDeleteFailed('$e'))));
       return;
     }
     if (!mounted) return;
-    messenger?.showSnackBar(const SnackBar(content: Text('Swing を削除しました')));
+    messenger?.showSnackBar(SnackBar(content: Text(appL10n.swingDeleted)));
     final i = _items.indexWhere((x) => x.swing?.id == s.id);
     if (i < 0) return;
     _items.removeAt(i);
@@ -653,9 +654,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
         body: _items.isEmpty
             ? Stack(children: [
                 widget.mine
-                    ? const RasqEmptyView(key: ValueKey('swing.viewer.empty'), title: '出している Swing はありません', hint: '＋ を上へスワイプすると Swing を作れます')
-                    : const RasqEmptyView(key: ValueKey('swing.viewer.empty'), title: 'Swing はありません', hint: 'フォローしている人や、RASQ リストに入れてくれた人の Swing がここに流れます'),
-                Positioned(top: 8, right: 8, child: SafeArea(child: RasqIconButton(icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: _close))),
+                    ? RasqEmptyView(key: const ValueKey('swing.viewer.empty'), title: context.l10n.swingViewerEmptyMine, hint: context.l10n.swingViewerEmptyMineHint)
+                    : RasqEmptyView(key: const ValueKey('swing.viewer.empty'), title: context.l10n.swingViewerEmpty, hint: context.l10n.swingViewerEmptyHint),
+                Positioned(top: 8, right: 8, child: SafeArea(child: RasqIconButton(icon: Icons.close, tooltip: context.l10n.swingClose, color: Colors.white, onPressed: _close))),
               ])
             : Stack(children: [
                 // Swing の面は、下の FOW(畳んだ形 / コンポーザー / スレッド)の残りへ縮む (D-420)。
@@ -745,9 +746,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 }
 
 String swingRemainingLabel(Duration d) {
-  if (d.inHours >= 1) return 'あと ${d.inHours} 時間';
-  if (d.inMinutes >= 1) return 'あと ${d.inMinutes} 分';
-  return 'まもなく消えます';
+  if (d.inHours >= 1) return appL10n.swingRemainingHours(d.inHours);
+  if (d.inMinutes >= 1) return appL10n.swingRemainingMinutes(d.inMinutes);
+  return appL10n.swingRemainingSoon;
 }
 
 /// 動画の再生ができた([alive] = true)/ 無くなった。
@@ -835,12 +836,12 @@ class _SwingPage extends StatelessWidget {
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                     Text(swing.author.displayName, key: const ValueKey('swing.author'), style: RasqTypography.bodySmall.copyWith(color: Colors.white, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Text('${swingRemainingLabel(swing.remaining(DateTime.now()))} ・ $position', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+                    Text(context.l10n.swingRemainingAndPosition(swingRemainingLabel(swing.remaining(DateTime.now())), position), style: RasqTypography.caption.copyWith(color: Colors.white70)),
                     if (viewCount != null)
                       Row(key: const ValueKey('swing.viewCount'), mainAxisSize: MainAxisSize.min, children: [
                         const Icon(Icons.visibility_outlined, size: 14, color: Colors.white70),
                         const SizedBox(width: 4),
-                        Flexible(child: Text('見た人 $viewCount 人', maxLines: 1, overflow: TextOverflow.ellipsis, style: RasqTypography.caption.copyWith(color: Colors.white70))),
+                        Flexible(child: Text(context.l10n.swingViewCount(viewCount!), maxLines: 1, overflow: TextOverflow.ellipsis, style: RasqTypography.caption.copyWith(color: Colors.white70))),
                       ]),
                   ]),
                 ),
@@ -851,8 +852,8 @@ class _SwingPage extends StatelessWidget {
                     constraints: BoxConstraints(maxWidth: box.maxWidth * 0.6),
                     child: SingleChildScrollView(scrollDirection: Axis.horizontal, reverse: true, child: a),
                   ),
-                if (onReport != null) RasqIconButton(key: const ValueKey('swing.report'), icon: Icons.flag_outlined, tooltip: '通報', color: Colors.white, onPressed: onReport),
-                RasqIconButton(key: const ValueKey('swing.close'), icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: onClose),
+                if (onReport != null) RasqIconButton(key: const ValueKey('swing.report'), icon: Icons.flag_outlined, tooltip: context.l10n.swingReport, color: Colors.white, onPressed: onReport),
+                RasqIconButton(key: const ValueKey('swing.close'), icon: Icons.close, tooltip: context.l10n.swingClose, color: Colors.white, onPressed: onClose),
               ])),
               ]),
             ),
@@ -895,11 +896,11 @@ class _SwingHeaderActions extends ConsumerWidget {
             key: const ValueKey('overlay.action.more'),
             icon: Icons.more_horiz,
             color: Colors.white,
-            tooltip: 'メニュー',
+            tooltip: context.l10n.swingMenu,
             onPressed: () async {
               final box = bctx.findRenderObject() as RenderBox;
-              final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'swing.orphan.menu', anchor: box.localToGlobal(Offset.zero) & box.size, dense: true, items: const [
-                RasqDropdownItem('削除', 'delete', destructive: true),
+              final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'swing.orphan.menu', anchor: box.localToGlobal(Offset.zero) & box.size, dense: true, items: [
+                RasqDropdownItem(context.l10n.swingDelete, 'delete', destructive: true),
               ]);
               if (pick == 'delete') await onDelete();
             },
@@ -930,10 +931,10 @@ class _Cover extends StatelessWidget {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Icons.visibility_off_outlined, color: Colors.white70, size: 40),
                   const SizedBox(height: RasqSpacing.sm),
-                  Text(swing.cw ?? 'センシティブな内容', key: const ValueKey('swing.cover.text'), textAlign: TextAlign.center, style: RasqTypography.title.copyWith(color: Colors.white)),
-                  if (swing.cw != null && swing.sensitive) Text('センシティブな内容', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+                  Text(swing.cw ?? context.l10n.swingSensitive, key: const ValueKey('swing.cover.text'), textAlign: TextAlign.center, style: RasqTypography.title.copyWith(color: Colors.white)),
+                  if (swing.cw != null && swing.sensitive) Text(context.l10n.swingSensitive, style: RasqTypography.caption.copyWith(color: Colors.white70)),
                   const SizedBox(height: RasqSpacing.md),
-                  FilledButton.tonal(key: const ValueKey('swing.cover.reveal'), onPressed: onReveal, child: const Text('表示する')),
+                  FilledButton.tonal(key: const ValueKey('swing.cover.reveal'), onPressed: onReveal, child: Text(context.l10n.swingReveal)),
                 ]),
               ),
             ),
@@ -1191,10 +1192,10 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
               const SizedBox(height: RasqSpacing.sm),
               Text(c.detail?.name ?? widget.swing.plugin!.id, style: RasqTypography.title.copyWith(color: Colors.white)),
               const SizedBox(height: RasqSpacing.sm),
-              Text('${widget.swing.author.displayName} さんのページにみんなで入ります。インストールせずに、この Swing を見ている間だけ動かします。',
+              Text(context.l10n.swingPluginJoinNote(widget.swing.author.displayName),
                   key: const ValueKey('swing.plugin.join.note'), textAlign: TextAlign.center, style: RasqTypography.bodySmall.copyWith(color: Colors.white70)),
               const SizedBox(height: RasqSpacing.md),
-              FilledButton(key: const ValueKey('swing.plugin.join'), onPressed: c.acceptTemporary, child: const Text('参加する')),
+              FilledButton(key: const ValueKey('swing.plugin.join'), onPressed: c.acceptTemporary, child: Text(context.l10n.swingPluginJoin)),
             ]),
           ),
         );
@@ -1208,25 +1209,25 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
               const SizedBox(height: RasqSpacing.sm),
               Text(widget.swing.plugin!.id, style: RasqTypography.title.copyWith(color: Colors.white)),
               const SizedBox(height: RasqSpacing.sm),
-              const RasqNotice.warning(
-                key: ValueKey('swing.plugin.consent'),
-                text: '審査されていないプラグインです。通信はできない状態で、この Swing を見ている間だけ動かします。',
-                detail: 'D-379 / S-057。制限モード(network / storage.unsafe / interstitial・system の FOW / URL を開くなどは閉、GPU は可)。子プラグインを持たない 1 つだけ。',
+              RasqNotice.warning(
+                key: const ValueKey('swing.plugin.consent'),
+                text: context.l10n.swingPluginConsent,
+                detail: context.l10n.swingPluginConsentDetail,
               ),
               const SizedBox(height: RasqSpacing.md),
-              FilledButton(key: const ValueKey('swing.plugin.run'), onPressed: c.acceptTemporary, child: const Text('動かす')),
+              FilledButton(key: const ValueKey('swing.plugin.run'), onPressed: c.acceptTemporary, child: Text(context.l10n.swingPluginRun)),
             ]),
           ),
         );
       case CustomPagePhase.needsInstall:
         return RasqEmptyView(
           key: const ValueKey('swing.plugin.needsInstall'),
-          title: '${c.detail?.name ?? widget.swing.plugin!.id} を入れると見られます',
-          hint: 'プラグインの Swing です。ストアからインストールしてください',
-          action: FilledButton(onPressed: () => context.push(Routes.storePlugin(widget.swing.plugin!.id)), child: const Text('ストアで見る')),
+          title: context.l10n.swingPluginNeedsInstall(c.detail?.name ?? widget.swing.plugin!.id),
+          hint: context.l10n.swingPluginNeedsInstallHint,
+          action: FilledButton(onPressed: () => context.push(Routes.storePlugin(widget.swing.plugin!.id)), child: Text(context.l10n.swingViewInStore)),
         );
       case CustomPagePhase.failed:
-        return RasqEmptyView(key: const ValueKey('swing.plugin.failed'), title: '開けませんでした', hint: c.error);
+        return RasqEmptyView(key: const ValueKey('swing.plugin.failed'), title: context.l10n.swingPluginOpenFailed, hint: c.error);
       case CustomPagePhase.blocked:
         // チャイルドセーフ (D-451): 保護者が止めているプラグイン。
         return ChildSafeBlockedView(message: c.error ?? childSafeBlockedText);
@@ -1262,8 +1263,8 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Icons.play_circle_outline, color: Colors.white, size: 48),
                   const SizedBox(height: RasqSpacing.xs),
-                  Text('押すと全画面に戻ります', style: RasqTypography.caption.copyWith(color: Colors.white)),
-                  Text('左右・上下にスワイプで次の Swing へ', key: const ValueKey('swing.plugin.shrunk.hint'), style: RasqTypography.caption.copyWith(color: Colors.white70)),
+                  Text(context.l10n.swingPluginTapToExpand, style: RasqTypography.caption.copyWith(color: Colors.white)),
+                  Text(context.l10n.swingPluginSwipeHint, key: const ValueKey('swing.plugin.shrunk.hint'), style: RasqTypography.caption.copyWith(color: Colors.white70)),
                 ]),
               ),
             ]),
@@ -1293,7 +1294,7 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
             key: const ValueKey('swing.plugin.shrink'),
             onPressed: () => _setShrunk(true),
             icon: const Icon(Icons.close_fullscreen, size: 18),
-            label: const Text('全画面から縮小'),
+            label: Text(context.l10n.swingPluginShrink),
           ),
         ),
       ),
@@ -1375,7 +1376,7 @@ class _AdPageState extends ConsumerState<_AdPage> {
         key: const ValueKey('swing.ad.preview'),
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.lg, vertical: RasqSpacing.sm),
         decoration: BoxDecoration(border: Border.all(color: Colors.white54), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-        child: Text('広告', style: RasqTypography.title.copyWith(color: Colors.white)),
+        child: Text(context.l10n.swingAd, style: RasqTypography.title.copyWith(color: Colors.white)),
       ),
     );
     return Stack(children: [
@@ -1390,11 +1391,11 @@ class _AdPageState extends ConsumerState<_AdPage> {
               else
                 ExportAdSlot(key: const ValueKey('swing.ad.banner'), onDark: true, maxHeight: c.maxHeight * SwingViewerScreen.adBannerHeightFactor, onFailed: widget.onDone),
               const SizedBox(height: RasqSpacing.md),
-              Text('スワイプで次の Swing へ', style: RasqTypography.caption.copyWith(color: Colors.white54)),
+              Text(context.l10n.swingAdSwipeHint, style: RasqTypography.caption.copyWith(color: Colors.white54)),
             ]),
           ),
         ),
-      Positioned(top: 8, right: 8, child: SafeArea(child: RasqIconButton(icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: widget.onClose))),
+      Positioned(top: 8, right: 8, child: SafeArea(child: RasqIconButton(icon: Icons.close, tooltip: context.l10n.swingClose, color: Colors.white, onPressed: widget.onClose))),
     ]);
   }
 }
