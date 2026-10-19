@@ -40,6 +40,7 @@ class _ReviewTimelineScreenState extends ConsumerState<ReviewTimelineScreen> {
     final detail = ref.watch(storePluginProvider(widget.pluginId)).value;
     final reviews = ref.watch(storeReviewsProvider(widget.pluginId));
     final me = ref.watch(rasqAccountProvider);
+    final canReview = canWriteStoreReview(ref, widget.pluginId);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -62,12 +63,21 @@ class _ReviewTimelineScreenState extends ConsumerState<ReviewTimelineScreen> {
         body: reviews.when(
           loading: () => const RasqLoading(),
           error: (e, _) => RasqEmptyView(title: context.l10n.storeReviewsLoadFailed, hint: '$e'),
-          data: (all) => TabBarView(children: [
-            _ReviewList(pluginId: widget.pluginId, reviews: StoreReview.sorted(all, _leftSort)),
-            _ReviewList(pluginId: widget.pluginId, reviews: StoreReview.sorted(all, ReviewSort.recent)),
-          ]),
+          data: (all) {
+            final tabs = TabBarView(children: [
+              _ReviewList(pluginId: widget.pluginId, reviews: StoreReview.sorted(all, _leftSort), canReview: canReview),
+              _ReviewList(pluginId: widget.pluginId, reviews: StoreReview.sorted(all, ReviewSort.recent), canReview: canReview),
+            ]);
+            if (canReview) return tabs;
+            return Column(children: [
+              const Padding(padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm), child: StoreReviewNeedsInstallNote()),
+              const Divider(height: 1),
+              Expanded(child: tabs),
+            ]);
+          },
         ),
-        floatingActionButton: detail == null
+        // レビューを書けるのはインストールしたプラグインだけ (D-515): 入れていなければ + を出さず、一覧の上に案内。
+        floatingActionButton: detail == null || !canReview
             ? null
             : FloatingActionButton(
         // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
@@ -82,13 +92,16 @@ class _ReviewTimelineScreenState extends ConsumerState<ReviewTimelineScreen> {
 }
 
 class _ReviewList extends ConsumerWidget {
-  const _ReviewList({required this.pluginId, required this.reviews});
+  const _ReviewList({required this.pluginId, required this.reviews, required this.canReview});
   final String pluginId;
   final List<StoreReview> reviews;
 
+  /// レビューを書けるか (D-515)。書けなければ空の案内に「右下の +」を出さない。
+  final bool canReview;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (reviews.isEmpty) return RasqEmptyView(title: context.l10n.storeReviewsEmpty, hint: context.l10n.storeReviewsEmptyHint);
+    if (reviews.isEmpty) return RasqEmptyView(title: context.l10n.storeReviewsEmpty, hint: canReview ? context.l10n.storeReviewsEmptyHint : null);
     final manager = ref.read(overlayManagerProvider);
     return ListView.separated(
       itemCount: reviews.length,

@@ -10808,6 +10808,14 @@
       }
     }
   },
+  "storeReviewNeedsInstall": "インストールしたプラグインにだけレビューを書けます",
+  "@storeReviewNeedsInstall": {
+    "description": "インストールしていないプラグインのストアのページ / レビュー TL に出す案内。レビューを書く欄の代わり (D-515)"
+  },
+  "storeReviewNeedsInstallServer": "インストールしたプラグインにだけレビューを書けます。ログインした状態でインストール(または更新)し直すと書けるようになります",
+  "@storeReviewNeedsInstallServer": {
+    "description": "端末には入っているが、サーバーにインストールの記録が無い(ログインせずに入れた など)とき (review_requires_install、D-515)"
+  },
   "storeSafetyNoPermissions": "必要な権限: なし",
   "storeSafetyExternalHeader": "外部通信とデータ",
   "storeSafetyNoHosts": "外部通信先: なし",
