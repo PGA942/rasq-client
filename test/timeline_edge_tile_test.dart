@@ -156,8 +156,11 @@ void main() {
       t.c.read(routerProvider).push('/settings/dsl/$timelineDisplayArea');
       await tester.pumpAndSettle();
       expect(find.text('TL の上下に「投稿を読み込む」を出す'), findsOneWidget);
-      final sw = find.descendant(of: find.byType(RasqSwitchListTile), matching: find.byType(Switch));
+      final sw = find.descendant(of: find.byType(RasqSwitchListTile), matching: find.byType(Switch)).first;
       expect(tester.widget<Switch>(sw).value, isFalse);
+      // 「新しい投稿」の札 (D-506) は既定で入。
+      expect(find.text('新しい投稿のお知らせを出す'), findsOneWidget);
+      expect(tester.widget<Switch>(find.descendant(of: find.byType(RasqSwitchListTile), matching: find.byType(Switch)).last).value, isTrue);
       await tester.tap(sw);
       await tester.pumpAndSettle();
       expect(t.c.read(settingsAreaProvider(timelineDisplayArea)).value?['edgeTiles'], isTrue);

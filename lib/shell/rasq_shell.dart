@@ -21,6 +21,7 @@ import 'extra_column.dart';
 import 'headers.dart';
 import 'nav.dart';
 import 'pane_swipe_back.dart';
+import 'scroll_to_top.dart';
 import 'sidebar.dart';
 import 'third_column.dart';
 
@@ -74,6 +75,12 @@ void _goTab(WidgetRef ref, StatefulNavigationShell shell, int i) {
     ref.read(rootMessengerKeyProvider).currentState
       ?..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(reason)));
+    return;
+  }
+  // 開いているタブをもう一度押した (D-505): タブの中で別のページを開いていれば一番上の画面へ戻り(今までどおり)、
+  // 一番上の画面ならその画面をいちばん上へ送る。
+  if (i == shell.currentIndex && !(shell.route.branches[i].navigatorKey.currentState?.canPop() ?? false)) {
+    ref.read(scrollToTopHubProvider).scrollToTop(RasqNavTab.values[i]);
     return;
   }
   shell.goBranch(i, initialLocation: i == shell.currentIndex);

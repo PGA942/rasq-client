@@ -206,9 +206,12 @@ class FakeSnsSession extends SnsSessionBase {
     final u = _posts.map((p) => p.author).where((a) => a.handle == handle).firstOrNull;
     return u == null ? null : user(u.id);
   }
+  /// 人の投稿を取りに来た回数(関連 TL のゲスト D-046 など。D-508 のテスト)。
+  int userPostsFetches = 0;
   @override
-  Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20, UserPostsFilter filter = UserPostsFilter.posts}) async =>
-      Page(items: _posts.where((p) {
+  Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20, UserPostsFilter filter = UserPostsFilter.posts}) async {
+    userPostsFetches++;
+    return Page(items: _posts.where((p) {
         if (p.author.id != id) return false;
         final isReply = p.replyTo != null || p.replyToId != null;
         final isQuote = p.quote != null && p.body.isNotEmpty;
@@ -221,6 +224,7 @@ class FakeSnsSession extends SnsSessionBase {
           UserPostsFilter.withReplies => true,
         };
       }).toList());
+  }
   @override
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) async => Page(items: _posts.map((p) => p.author).toSet().toList());
   @override

@@ -11,10 +11,12 @@ import '../../app/providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../../text/inline_spans.dart';
 import '../clips/virtual_index.dart';
+import '../home/own_posts.dart';
 import '../home/timeline_providers.dart';
 import 'relational_engine.dart';
 import 'relational_providers.dart';
 import '../ads/timeline_ads.dart';
+import '../../shell/scroll_memory.dart';
 
 /// 「関連」タブ = リレーショナルTL v1 (D-027、会話イベント方式)。
 /// フォロイーの投稿を「どの直前投稿への暗黙応答か」で会話イベントに束ね、
@@ -35,6 +37,21 @@ class RelationalTimelineView extends ConsumerStatefulWidget {
 class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView> {
   double _dragOverscroll = 0;
   bool _firedThisDrag = false;
+
+  /// 位置を覚える (D-504): 関連 TL は重いので隠れたら捨てる(タブの外では生かしておかない、D-508)。戻ったら前の位置から。
+  late final RememberedScrollController _scroll;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll = RememberedScrollController(memory: ref.read(scrollMemoryProvider), id: () => scrollMemoryKey(ref, 'tl.relational'));
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   /// 末尾方向のオーバースクロール(クランプ物理は Overscroll 通知、バウンス
   /// 物理は maxScrollExtent 超過)を 1 ドラッグ 1 回だけ拾う。
@@ -68,8 +85,19 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
 
   String _lookbackLabel(int minutes) => minutes >= 60 ? (minutes % 60 == 0 ? '${minutes ~/ 60}時間' : '${minutes ~/ 60}時間${minutes % 60}分') : '$minutes分';
 
+  /// 読み直しを済ませた自分の投稿 (D-507)。
+  late int _ownSeq = ref.read(ownPostsProvider)?.seq ?? 0;
+
   @override
   Widget build(BuildContext context) {
+    // 自分が投稿した (D-507): 関連 TL の元(フォロー中の TL)に足す。隠れている間は次に見えたときに。
+    final own = ref.watch(ownPostsProvider)?.seq ?? 0;
+    if (own != _ownSeq && TickerMode.valuesOf(context).enabled) {
+      _ownSeq = own;
+      Future.microtask(() {
+        if (mounted) ref.read(timelineProvider(TimelineKind.home).notifier).prependNewer();
+      });
+    }
     final events = ref.watch(conversationEventsProvider);
     final settings = ref.watch(relationalSettingsProvider);
     final lookback = ref.watch(relationalLookbackProvider);
@@ -118,6 +146,7 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
                       final ads = timelineAdGaps(ref, [for (final e in list) e.root]);
                       final adOrdinal = {for (final (n, g) in (ads.toList()..sort()).indexed) g: n};
                       return ListView.separated(
+                        controller: _scroll,
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: list.length,
                         separatorBuilder: (_, _) => const Divider(),

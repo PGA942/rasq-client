@@ -2361,6 +2361,14 @@
   "homeEmpty": "投稿はありません",
   "homePullToRefresh": "下に引っ張って更新",
   "homeLoadNewer": "新しい投稿を読み込む",
+  "homeNewPostsPill": "新しい投稿",
+  "@homeNewPostsPill": {
+    "description": "TL を更新して新しい投稿が届いたとき、ヘッダーのすぐ下に浮かべる札(左に投稿した人の顔が並ぶ)"
+  },
+  "homeNewPostsPillSemantics": "新しい投稿を見る",
+  "@homeNewPostsPillSemantics": {
+    "description": "「新しい投稿」の札の読み上げ。押すといちばん上へ送る"
+  },
   "homeLoadingNewer": "更新しています…",
   "homeLoadMoreFailed": "読み込みに失敗しました。再試行",
   "homeLoadMore": "続きを読み込む",

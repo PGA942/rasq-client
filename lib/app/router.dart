@@ -86,7 +86,9 @@ import '../features/trend/trend_screen.dart';
 import '../features/vc/astell_open_screen.dart';
 import '../features/vc/vc_screen.dart';
 import '../shell/app_overlay_root.dart';
+import '../shell/nav.dart' show RasqNavTab;
 import '../shell/rasq_shell.dart';
+import '../shell/scroll_to_top.dart' show ScrollToTopScope;
 import 'providers.dart';
 import 'rasq_links.dart';
 
@@ -409,7 +411,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state, navigationShell) => RasqShell(navigationShell: navigationShell),
             branches: [
               StatefulShellBranch(routes: [
-                GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen(), routes: [
+                GoRoute(path: Routes.home, builder: (_, _) => const ScrollToTopScope(tab: RasqNavTab.home, child: HomeScreen()), routes: [
                   _postRoute,
                   _userRoute,
                   _rasqAccountRoute,
@@ -419,7 +421,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 ]),
               ]),
               StatefulShellBranch(routes: [
-                GoRoute(path: Routes.search, builder: (_, _) => const SearchScreen(), routes: [
+                GoRoute(path: Routes.search, builder: (_, _) => const ScrollToTopScope(tab: RasqNavTab.search, child: SearchScreen()), routes: [
                   GoRoute(path: 'trend/:tag', builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!, account: s.uri.queryParameters['account'])),
                   _postRoute,
                   _userRoute,
@@ -427,10 +429,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   _relationalEventRoute,
                 ]),
               ]),
-              StatefulShellBranch(routes: [GoRoute(path: Routes.vc, builder: (_, _) => const VcScreen(), routes: [_postRoute, _userRoute, _rasqAccountRoute, _relationalEventRoute])]),
-              StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen(), routes: [_postRoute, _userRoute, _rasqAccountRoute, _relationalEventRoute, GoRoute(path: 'requests', builder: (_, _) => const FollowRequestsScreen())])]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.vc, builder: (_, _) => const ScrollToTopScope(tab: RasqNavTab.vc, child: VcScreen()), routes: [_postRoute, _userRoute, _rasqAccountRoute, _relationalEventRoute])]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const ScrollToTopScope(tab: RasqNavTab.notifications, child: NotificationsScreen()), routes: [_postRoute, _userRoute, _rasqAccountRoute, _relationalEventRoute, GoRoute(path: 'requests', builder: (_, _) => const FollowRequestsScreen())])]),
               StatefulShellBranch(routes: [
-                GoRoute(path: Routes.dm, builder: (_, _) => const DmScreen(), routes: [
+                GoRoute(path: Routes.dm, builder: (_, _) => const ScrollToTopScope(tab: RasqNavTab.dm, child: DmScreen()), routes: [
                   GoRoute(path: 'room/:peerId', builder: (_, s) => DmRoomScreen(peerId: s.pathParameters['peerId']!, room: s.extra is DmRoom ? s.extra as DmRoom : null)),
                   _postRoute,
                   _userRoute,

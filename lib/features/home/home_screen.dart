@@ -16,6 +16,8 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
+import '../../shell/scroll_memory.dart';
+import '../../shell/scroll_to_top.dart' show VisibleTabPage, scrollToTopIn;
 import '../settings/settings_dsl.dart';
 import '../nodeprog/node_tabs.dart';
 import '../nodeprog/timeline_temp_fow.dart';
@@ -25,6 +27,8 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'custom_tile_row.dart';
 import 'create_fow.dart';
 import 'home_header.dart';
+import 'new_posts_pill.dart';
+import 'own_posts.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
 import 'timeline_search.dart';
@@ -148,12 +152,16 @@ class HomeScreen extends ConsumerWidget {
           ),
           Expanded(
             child: TabBarView(children: [
-              for (final k in kinds)
-                if (k == TimelineKind.relational)
-                  const RelationalTimelineView(key: ValueKey('tl.view.relational')) // D-022 v0 (ルールベース段)
-                else
-                  // 並べ替え (D-339) で位置が変わっても、TL ごとの State(スクロール位置)を取り違えない。
-                  _TimelineView(key: ValueKey('tl.view.${k.id}'), kind: k),
+              // 見えているタブだけ動かす (D-505 / D-508): 隠れたタブは、いちばん上へ送らない / 読み直さない。
+              for (final (i, k) in kinds.indexed)
+                // 並べ替え (D-339) で位置が変わっても、TL ごとの State(スクロール位置)を取り違えない。
+                VisibleTabPage(
+                  key: ValueKey('tl.page.${k.id}'),
+                  index: i,
+                  child: k == TimelineKind.relational
+                      ? const RelationalTimelineView(key: ValueKey('tl.view.relational')) // D-022 v0 (ルールベース段)
+                      : _TimelineView(key: ValueKey('tl.view.${k.id}'), kind: k),
+                ),
             ]),
           ),
           ]),
@@ -174,7 +182,9 @@ class HomeScreen extends ConsumerWidget {
         ]),
         // ＋ (D-381): タップ = 投稿、上へスワイプ = Swing、下へスワイプ = AsTell(設定で変えられる)。
         // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
-        floatingActionButton: RadialCreateFab(scope: 'home', heroTag: 'fab.home', onPosted: () => ref.read(timelineProvider(TimelineKind.home).notifier).prependNewer()),
+        // 投稿したら見えている TL を読み直す (D-507): ＋ に限らずコンポーザーが [ownPostsProvider] で知らせ、各 TL が自分で読み直す
+        // (前はここで「フォロー中」の TL だけを読み直していた)。
+        floatingActionButton: const RadialCreateFab(scope: 'home', heroTag: 'fab.home'),
       )),
     );
   }
@@ -292,10 +302,26 @@ class _TimelineView extends ConsumerStatefulWidget {
 }
 
 class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeepAliveClientMixin {
-  final _scroll = ScrollController();
+  /// 位置を覚える (D-504): 作り直されても(並びが変わる / 総合表示の出入り / 見守りの時間)TL ごとに前の位置から。
+  /// 中心の投稿 ([_baseKey]、D-298) も一緒に覚える(中心が同じときだけ、位置がそのまま使える)。
+  late final RememberedScrollController _scroll;
+
+  String get _memoryId => scrollMemoryKey(ref, 'tl.${widget.kind.id}');
 
   /// 探す語の ↑↓ で飛ぶ (D-341)。
   final _jumper = TimelineJumpController();
+
+  /// 「{顔}{顔} 新しい投稿」(D-506)。
+  final _pill = NewPostsPillController();
+
+  /// このタブがいま見えているか(隠れたタブ = [VisibleTabPage] が TickerMode を切る)。
+  bool _visible = true;
+
+  /// 前に組み立てたときの TL (D-506 の見比べ)。
+  TimelineState? _lastTl;
+
+  /// 読み直しを済ませた自分の投稿 (D-507、[OwnPost.seq])。
+  late int _ownSeq;
 
   @override
   bool get wantKeepAlive => true;
@@ -303,8 +329,17 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
   @override
   void initState() {
     super.initState();
+    final memory = ref.read(scrollMemoryProvider);
+    _baseKey = memory[_memoryId]?.anchor;
+    _scroll = RememberedScrollController(memory: memory, id: () => _memoryId, anchor: () => _baseKey);
+    _ownSeq = ref.read(ownPostsProvider)?.seq ?? 0;
     _scroll.addListener(() {
       if (_scroll.position.extentAfter < 600) ref.read(timelineProvider(widget.kind).notifier).loadMore();
+      // いちばん上まで送ったら、「新しい投稿」は消す (D-506)。
+      if (_pill.showing && _atTop) _pill.hide();
+    });
+    _pill.addListener(() {
+      if (mounted) setState(() {});
     });
   }
 
@@ -312,13 +347,75 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
   void dispose() {
     _scroll.dispose();
     _jumper.dispose();
+    _pill.dispose();
     super.dispose();
+  }
+
+  /// いちばん上(中心より上に足した新しい投稿も含めて)が見えているか。
+  bool get _atTop => !_scroll.hasClients || _scroll.positions.length != 1 || _scroll.position.pixels <= _scroll.position.minScrollExtent + 1;
+
+  /// TL が更新された (D-506): 手元の投稿より上に新しい投稿が届き、それがいま見えていなければ「新しい投稿」を出す。
+  /// 全部が置き換わった(手元の投稿が 1 つも残っていない)ときは、先頭へ戻すので出さない。隠れたタブでは出さない。
+  void _onTimeline(TimelineState? before, TimelineState? after) {
+    if (before == null || after == null || before.posts.isEmpty || after.posts.isEmpty || !_visible) return;
+    if (!ref.read(timelineNewPostsPillProvider)) return;
+    final had = {for (final p in before.posts) p.key};
+    final firstOld = after.posts.indexWhere((p) => had.contains(p.key));
+    if (firstOld <= 0) return;
+    final fresh = after.posts.sublist(0, firstOld);
+    // 並べ終えてから、見えているかを確かめる。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_atTop) _pill.show(fresh);
+    });
+  }
+
+  /// 自分が投稿した (D-507): この TL を読み直し(上に足す)、いちばん上の近くを見ていたら、足した投稿が見えるところまで送る。
+  /// 下のほうを読んでいたら位置は動かさない(「新しい投稿」の札 D-506 で知らせる)。
+  Future<void> _refreshForOwnPost() async {
+    final nearTop = !_scroll.hasClients || _scroll.positions.length != 1 || _scroll.position.pixels - _scroll.position.minScrollExtent < _scroll.position.viewportDimension / 2;
+    await ref.read(timelineProvider(widget.kind).notifier).prependNewer();
+    if (!mounted || !nearTop) return;
+    // 足した投稿を並べ終えてから(「新しい投稿」の札はそのフレームのあとで出るので、それより後で消す)。
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    _pill.hide();
+    scrollToTopIn(context);
+  }
+
+  /// 「新しい投稿」を押した: いちばん上へ送って見せる。
+  void _revealNewer() {
+    _pill.hide();
+    if (_scroll.hasClients && _scroll.positions.length == 1) scrollToTopIn(context);
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final visible = TickerMode.valuesOf(context).enabled;
+    // 隠れていたタブが見えた (D-508): しばらく取っていなければ上に足す(隠れている間は読み直さない)。
+    if (visible && !_visible) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(timelineProvider(widget.kind).notifier).refreshIfStale();
+      });
+    }
+    _visible = visible;
     final state = ref.watch(timelineProvider(widget.kind));
+    // 更新を見比べる (D-506)。ref.listen だと隠れている間も監視が止まらない(D-508: 止まるのは watch だけ)ので、組み立てのたびに前と比べる。
+    final tlNow = state.value;
+    if (!identical(tlNow, _lastTl)) {
+      _onTimeline(_lastTl, tlNow);
+      _lastTl = tlNow;
+    }
+    // しまったヘッダーには D-449 の新着を浮かべるので、「新しい投稿」は出さない。
+    final pillShown = _pill.showing && !ref.watch(homeHeaderCollapsedProvider) && ref.watch(timelineNewPostsPillProvider);
+    // 自分が投稿した (D-507): 見えていれば読み直す。隠れている間は見ない(Riverpod の監視も止まる)ので、次に見えたときに読み直す。
+    final own = ref.watch(ownPostsProvider)?.seq ?? 0;
+    if (_visible && own != _ownSeq) {
+      _ownSeq = own;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _refreshForOwnPost();
+      });
+    }
     final session = ref.watch(currentSnsSessionProvider);
     final notifier = ref.read(timelineProvider(widget.kind).notifier);
     final actions = session?.actions ?? const <ActionDescriptor>[];
@@ -343,7 +440,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
       await notifier.refresh();
     }
 
-    return state.when(
+    final body = state.when(
       loading: () => const RasqLoading(),
       error: (e, _) => _ErrorList(error: e, onRetry: notifier.refresh),
       data: (tl) {
@@ -446,6 +543,17 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
         );
       },
     );
+    // ヘッダー(タブの行)のすぐ下に浮かべる。出し入れで一覧を作り直さないよう、いつも Stack の 1 つ目に置く。
+    return Stack(children: [
+      Positioned.fill(child: body),
+      if (pillShown)
+        Positioned(
+        top: RasqSpacing.sm,
+        left: 0,
+        right: 0,
+        child: Center(child: NewPostsPill(key: const ValueKey('tl.newPosts.pill'), authors: _pill.authors, onTap: _revealNewer)),
+      ),
+    ]);
   }
 
   final _centerKey = GlobalKey();

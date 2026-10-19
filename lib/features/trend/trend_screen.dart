@@ -18,6 +18,7 @@ import '../search/search_filter_bar_view.dart';
 import '../users/user_list.dart';
 import 'tendency_fows.dart';
 import '../../shell/header_account_button.dart';
+import '../../shell/scroll_memory.dart';
 import 'trend_analysis.dart';
 import 'trend_providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -45,7 +46,8 @@ class TrendScreen extends ConsumerStatefulWidget {
 }
 
 class _TrendScreenState extends ConsumerState<TrendScreen> {
-  final _scroll = ScrollController();
+  /// 位置を覚える (D-504): 第3カラムから第2カラムへ移って作り直されても、同じトレンド(タグ・アカウント)なら前の位置から。
+  late final RememberedScrollController _scroll;
   late final _searchController = TextEditingController(text: widget.tag);
 
   /// この画面で読んでいるアカウント (D-397 の `account:`)。ヘッダーのアカウントのボタン (D-411 → D-415) で選び直すと、タグの TL・分析・
@@ -70,6 +72,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
   @override
   void initState() {
     super.initState();
+    _scroll = RememberedScrollController(memory: ref.read(scrollMemoryProvider), id: () => scrollMemoryKey(ref, 'trend.${_account ?? ''}.${widget.tag}'));
     _scroll.addListener(() {
       if (_scroll.position.extentAfter < 600) ref.read(_tl.notifier).loadMore();
     });

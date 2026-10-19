@@ -12,6 +12,7 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/headers.dart';
+import '../../shell/scroll_memory.dart';
 import '../../shell/rasq_shell.dart';
 import '../../text/inline_spans.dart';
 import 'dm_providers.dart';
@@ -142,11 +143,16 @@ class _RoomList extends StatelessWidget {
           onRefresh: onRefresh,
           child: list.isEmpty
               ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 120), RasqEmptyView(title: 'DMはありません', hint: 'ダイレクト投稿(限定公開)がここに並びます')])
-              : ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: list.length,
-                  separatorBuilder: (_, _) => const Divider(),
-                  itemBuilder: (context, i) => _RoomRow(room: list[i], onTap: () => context.pushDmRoom(list[i])),
+              // 位置を覚える (D-504): タブを切り替えて戻っても前の位置から。
+              : RememberScroll(
+                  id: 'dm.rooms',
+                  builder: (context, controller) => ListView.separated(
+                    controller: controller,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: list.length,
+                    separatorBuilder: (_, _) => const Divider(),
+                    itemBuilder: (context, i) => _RoomRow(room: list[i], onTap: () => context.pushDmRoom(list[i])),
+                  ),
                 ),
         ),
       );

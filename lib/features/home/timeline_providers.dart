@@ -123,11 +123,33 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   Timer? _clockTimer;
   Duration? _clockInterval;
 
+  /// 見えていない (D-508): この TL を見ている画面が全部隠れた(隠れたタブ = TickerMode が切れて Riverpod の監視が止まった /
+  /// 画面が閉じた)。止まっている間はクロックの自動更新も止め、読み直しを頼まれても取りに行かない(Riverpod が止める)。
+  bool _paused = false;
+
+  /// 最後に取った時刻(見えたときに読み直すかの判定)。
+  DateTime? _fetchedAt;
+
+  /// 隠れていた TL が見えたとき、最後に取ってからこれだけたっていれば新しい投稿を上に足す (D-508)。
+  static Duration staleAfter = const Duration(minutes: 2);
+
+  /// テストで時計を差し替える。
+  static DateTime Function() now = DateTime.now;
+
+  void _markFetched() => _fetchedAt = now();
+
   void _armClock(Duration? interval) {
     if (interval == null) {
       _clockTimer?.cancel();
       _clockTimer = null;
       _clockInterval = null;
+      return;
+    }
+    if (_paused) {
+      // 見えていない間は回さない(見えたら [_resume] で回し直す)。
+      _clockTimer?.cancel();
+      _clockTimer = null;
+      _clockInterval = interval;
       return;
     }
     if (_clockTimer != null && _clockInterval == interval) return; // 周期そのまま — 位相を保つ
@@ -146,6 +168,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
 
   /// 見守りの時間 (D-307): 全アカウントのグローバル TL を 1 本に合流し、許された話題だけを流す。
   Future<List<Post>> _fetchChildWindow() async {
+    _markFetched();
     final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
     final registry = ref.read(pluginRegistryProvider);
     final out = <Post>[];
@@ -168,8 +191,36 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     return ref.read(childGateProvider).filterPosts(out);
   }
 
+  /// 見えなくなった (D-508)。
+  void _pause() {
+    _paused = true;
+    _clockTimer?.cancel();
+    _clockTimer = null;
+  }
+
+  /// また見えた (D-508): クロックを回し直す。隠れている間に読み直しを頼まれていれば、Riverpod がここで作り直す。
+  void _resume() {
+    _paused = false;
+    final clock = _clockInterval;
+    if (clock != null) {
+      _clockInterval = null;
+      _armClock(clock);
+    }
+  }
+
+  /// 隠れていた TL が見えたとき (D-508): 最後に取ってから [staleAfter] たっていれば、新しい投稿を上に足す
+  /// (作り直している最中 = 隠れている間に読み直しを頼まれていたときは、そちらで新しくなるので何もしない)。
+  Future<void> refreshIfStale() async {
+    final at = _fetchedAt;
+    if (at == null || !state.hasValue || state.isLoading || now().difference(at) < staleAfter) return;
+    await prependNewer();
+  }
+
   @override
   Future<TimelineState> build() async {
+    // 見えている間だけ動かす (D-508)。作り直しでも、隠れたままなら止めたまま。
+    ref.onCancel(_pause);
+    ref.onResume(_resume);
     // rebuild per account(アカウント指定ならそのアカウントのセッションが変わったとき)
     if (accountKey == null) {
       ref.watch(currentAccountProvider);
@@ -237,6 +288,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   /// [more] (D-117) は続き読み: 自動構成は済んでいる前提でグラフだけ読み、
   /// 各取得ノードが自分のカーソルから次ページを読む。
   Future<List<Post>?> _runBundleGraph({bool more = false}) async {
+    if (!more) _markFetched();
     final session = _session;
     if (session == null) return null;
     final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
@@ -355,6 +407,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   /// `著者キー/投稿id` で除外(同一インスタンスの複数アカウントで同じ投稿を
   /// 見る場合は最初のアカウント側に寄せる)。取得に失敗したアカウントは無視。
   Future<(Page<Post>, Map<String, Map<String, ActionResult>>, TimelineDecorations)> _fetchBundle({required bool first}) async {
+    if (first) _markFetched();
     final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
     final registry = ref.read(pluginRegistryProvider);
     final out = <Post>[];
@@ -410,6 +463,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   }
 
   Future<(Page<Post>, Map<String, Map<String, ActionResult>>, TimelineDecorations)> _fetch(SnsSession session, String? cursor) async {
+    if (cursor == null) _markFetched();
     // DM / チャットの TL ([21]): 続き読み / 取り直しでも、DM を止めていれば取らない。
     if (ref.read(childGateProvider).timelineKindBlockReason(kind.id) != null) return (Page<Post>(items: const []), <String, Map<String, ActionResult>>{}, const TimelineDecorations());
     // カスタム TL (M5e / D-080): データ取得はホスト(基礎 TL)、TL プラグインは
@@ -480,13 +534,10 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
         if (raw is String) {
           final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
           // SigLIP ゲートウェイ (D-097): あれば類似度ノードが実埋め込みを使う。無ければ端末の埋め込み (D-390)、
-          // それも無ければ executor が n-gram 類似度へ縮退。
-          MlGateway? gateway;
-          PostEmbedder? device;
-          try {
-            gateway = await ref.read(mlGatewayProvider.future);
-            if (gateway == null) device = await ref.read(postEmbedderProvider.future);
-          } catch (_) {}
+          // それも無ければ executor が n-gram 類似度へ縮退(埋め込みの関数が投げると縮退する)。
+          // 埋め込みは**使うノードが来たときに初めて**用意する (D-508): 前は構成のある TL を開くたびに、類似度のノードが無くても
+          // 端末の埋め込みのモデル(文 + 画像)を読み込んでいた。
+          final embeds = _LazyEmbedders(() => ref.read(mlGatewayProvider.future), () => ref.read(postEmbedderProvider.future));
           final storageArea = storageSafeAreaFor(graphAccKey);
           // アカウント指定 (D-109) の解決: 表記(@handle@instance)かキーで探す。
           SnsSession? sessionForAccount(String label) {
@@ -508,8 +559,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
             selfQuery: kind.id.startsWith('tag:') ? kind.id.substring(4) : null,
             fetchTrends: () async => [for (final t in await graphSession.trendingTags()) t.tag],
             // サーバーの SigLIP が無ければ、端末の埋め込み(本文 + 画像、D-390)。
-            embedTexts: gateway != null ? (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()] : device?.embedTexts,
-            embedPosts: gateway == null ? device?.embedPosts : null,
+            embedTexts: embeds.embedTexts,
+            embedPosts: embeds.embedPosts,
             // TL プラグインのソートノード (D-102): tl.sort/compose の実体。
             // プラグインの並べ替えは、このグラフの持ち主のアカウントで使う版で (D-355)。
             pluginSort: (id, posts, params) => id.startsWith('slot:') ? ref.read(slotPluginsProvider.notifier).sortById(id, posts, params: params, accountKey: graphAccKey) : (graphSession is WasmSnsSession ? graphSession.timelinePlugin.compose(id, posts) : Future.value(posts)),
@@ -703,6 +754,39 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       debugPrint('action ${action.id} failed: $e');
       rethrow;
     }
+  }
+}
+
+/// 埋め込みを使うときに初めて用意する (D-508)。ゲートウェイ (D-097) があればそれ、無ければ端末の埋め込み (D-390)。
+/// どちらも無ければ投げる(ノードの実行は n-gram 類似度へ縮退する。前の「関数を渡さない」と同じ結果)。
+class _LazyEmbedders {
+  _LazyEmbedders(this._gateway, this._device);
+  final Future<MlGateway?> Function() _gateway;
+  final Future<PostEmbedder?> Function() _device;
+  Future<(MlGateway?, PostEmbedder?)>? _ready;
+
+  Future<(MlGateway?, PostEmbedder?)> _resolve() => _ready ??= () async {
+        MlGateway? g;
+        PostEmbedder? d;
+        try {
+          g = await _gateway();
+          if (g == null) d = await _device();
+        } catch (_) {}
+        return (g, d);
+      }();
+
+  Future<List<List<double>>> embedTexts(List<String> texts) async {
+    final (g, d) = await _resolve();
+    if (g != null) return [for (final e in await g.embedTexts(texts)) e.toList()];
+    if (d != null) return d.embedTexts(texts);
+    throw StateError('no embedder');
+  }
+
+  /// 投稿の埋め込み: 端末なら本文 + 画像。ゲートウェイなら本文(前と同じ)。
+  Future<List<List<double>>> embedPosts(List<Post> posts) async {
+    final (g, d) = await _resolve();
+    if (g == null && d != null) return d.embedPosts(posts);
+    return embedTexts([for (final p in posts) p.body]);
   }
 }
 

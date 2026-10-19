@@ -172,7 +172,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('@second@example.test'));
     await tester.pumpAndSettle();
-    expect(find.text('連動ドラフトです'), findsOneWidget);
+    // 本体(tester)へ送った投稿は後ろの TL にも出る (D-507) ので、コンポーザーの欄で見る。
+    expect(find.widgetWithText(TextField, '連動ドラフトです'), findsOneWidget);
   });
 
   testWidgets('RASQ への連動投稿 (D-286): 設定で有効にすると RASQ の行も選べ、送信で SNS と同時に RASQ へも届く', (tester) async {
