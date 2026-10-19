@@ -15,12 +15,12 @@ import 'package:rasq_client/features/users/user_tab_view.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
-import 'package:rasq_overlay/rasq_overlay.dart' show FowFooter;
+import 'package:rasq_overlay/rasq_overlay.dart' show FowFooter, TetheredPanel, isFrontmostFowPanel;
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
 
-/// D-514: ユーザーページの選んでいるタブをもう一度押すと、タブにつながった並べ替え・絞り込みのパネル
+/// D-514: ユーザーページの選んでいるタブをもう一度押すと、並べ替え・絞り込みのパネル(D-521 でフッター付きのふつうの FOW)
 /// (検索 / 指向性・刺激性 / 表示 / 並べ替え)。一覧が下へ進んでいれば、まずいちばん上へ。
 void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
@@ -111,7 +111,7 @@ void main() {
     Finder tab(String label) => find.descendant(of: find.byType(TabBar), matching: find.text(label));
     List<String> shownBodies(WidgetTester tester) => [for (final r in tester.widgetList<PostRow>(find.byType(PostRow))) r.post.body];
 
-    testWidgets('選んでいるタブを押すとパネル、別のタブを押すと切り替えるだけ。首 / 閉じるで閉じる', (tester) async {
+    testWidgets('選んでいるタブを押すとフッター付きの FOW (D-521)、別のタブを押すと切り替えるだけ。タブ / 閉じるで閉じる', (tester) async {
       await pump(tester);
       await tester.tap(tab('返信'));
       await tester.pumpAndSettle();
@@ -131,9 +131,18 @@ void main() {
       expect(find.byKey(const ValueKey('user.tabView.digest')), findsOneWidget);
       expect(find.byKey(const ValueKey('user.tabView.pinned')), findsNothing, reason: 'ピン留めの無い人');
       expect(find.text('4 件中 4 件'), findsOneWidget);
-      // D-517: 下は FOW の標準のフッター(件数 + リセット / 閉じる)。
-      final footer = find.descendant(of: panel, matching: find.byType(FowFooter));
+      // D-521: タブにつながらない、ふつうの FOW(見出し + ハンドル、カラムの下にドック)。
+      expect(find.byType(TetheredPanel), findsNothing);
+      final fow = find.ancestor(of: panel, matching: find.byWidgetPredicate(isFrontmostFowPanel));
+      expect(fow, findsOneWidget);
+      expect(find.descendant(of: fow, matching: find.byKey(const ValueKey('rasqOverlay.fow.header'))), findsOneWidget);
+      expect(find.descendant(of: fow, matching: find.byKey(const ValueKey('rasqOverlay.fow.handle.top'))), findsOneWidget);
+      final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+      expect(tester.getRect(fow).bottom, greaterThan(screen.height - 120), reason: '下にドック');
+      // D-517: 下は FOW の標準のフッター(件数 + リセット / 閉じる)。パネルの下の辺。
+      final footer = find.descendant(of: fow, matching: find.byType(FowFooter));
       expect(footer, findsOneWidget);
+      expect(tester.getRect(footer).bottom, closeTo(tester.getRect(fow).bottom, 1));
       for (final k in ['user.tabView.count', 'user.tabView.reset', 'user.tabView.close']) {
         expect(find.descendant(of: footer, matching: find.byKey(ValueKey(k))), findsOneWidget, reason: k);
       }
@@ -144,9 +153,9 @@ void main() {
       expect(find.byKey(const ValueKey('user.tabView.tendency.stacked')), findsOneWidget);
       expect(tester.getTopLeft(find.byKey(const ValueKey('user.tabView.tendency.stimulus'))).dy, greaterThan(tester.getBottomLeft(find.byKey(const ValueKey('user.tabView.tendency.directivity'))).dy - 1));
 
-      await tester.tap(find.byKey(const ValueKey('rasqOverlay.tether.hit')));
+      await tester.tap(tab('ノート'));
       await tester.pumpAndSettle();
-      expect(panel, findsNothing, reason: '首(元のタブ)のタップで閉じる');
+      expect(panel, findsNothing, reason: 'タブをもう一度押すと閉じる');
 
       await tester.tap(tab('ノート'));
       await tester.pumpAndSettle();

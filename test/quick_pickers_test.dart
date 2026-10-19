@@ -19,7 +19,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'support/fakes.dart';
 
 /// D-512: 長押しして滑らせて選ぶ(リアクションのすぐ選べる絵文字 / リノートのバンドル / コンポーザーの絵文字)と、その設定。
-/// D-513: ボタンから開く FOW(バンドル / 共有 / 「…」)はボタンにつながった形。
+/// D-513: ボタンから開く FOW(バンドル / 「…」)はボタンにつながった形。共有は D-521 でふつうのフッター付きの FOW。
 void main() {
   late FakeSnsPlugin plugin;
   late MemorySessionStorage storage;
@@ -180,19 +180,30 @@ void main() {
   });
 
   group('FOW のフッター / ボタンから出る絵文字ピッカー (D-517)', () {
-    testWidgets('共有 FOW: 下に標準のフッター(リンク + ブラウザで開く / 閉じる)、閉じるで閉じる', (tester) async {
+    testWidgets('共有 FOW (D-521): ボタンにつながらず、ふつうの FOW(カラムの下にドック・ハンドル)。下に標準のフッター(リンク + ブラウザで開く / 閉じる)、閉じるで閉じる', (tester) async {
       await pump(tester);
       await tester.tap(find.byTooltip('共有').first);
       await tester.pumpAndSettle();
-      final footer = find.descendant(of: find.byType(TetheredPanel), matching: find.byType(FowFooter));
+      expect(find.byType(TetheredPanel), findsNothing);
+      expect(find.byKey(const ValueKey('post.share.copyLink')), findsOneWidget);
+      final panel = find.byWidgetPredicate(isFrontmostFowPanel);
+      expect(panel, findsOneWidget);
+      // 見出し(アカウントのピル)とハンドルのある、ふつうの FOW。
+      expect(find.descendant(of: panel, matching: find.byKey(const ValueKey('rasqOverlay.fow.header'))), findsOneWidget);
+      expect(find.descendant(of: panel, matching: find.byKey(const ValueKey('rasqOverlay.fow.handle.top'))), findsOneWidget);
+      final footer = find.descendant(of: panel, matching: find.byType(FowFooter));
       expect(footer, findsOneWidget);
       expect(find.descendant(of: footer, matching: find.byKey(const ValueKey('post.share.browser'))), findsOneWidget);
       expect(find.descendant(of: footer, matching: find.byKey(const ValueKey('post.share.link'))), findsOneWidget);
-      // フッターはパネルのいちばん下。
-      expect(tester.getRect(footer).bottom, closeTo(tester.getRect(find.byKey(kTetherPanelKey)).bottom, 1));
+      // フッターはパネルのいちばん下(下付きなのでハンドルは上)。パネルは画面の幅いっぱい・下にドック、高さは 0.6 から。
+      final rect = tester.getRect(panel);
+      expect(tester.getRect(footer).bottom, closeTo(rect.bottom, 1));
+      final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+      expect(rect.width, greaterThan(screen.width - 40));
+      expect(rect.top, greaterThan(screen.height * 0.2));
       await tester.tap(find.descendant(of: footer, matching: find.byKey(const ValueKey('post.share.close'))));
       await tester.pumpAndSettle();
-      expect(find.byType(TetheredPanel), findsNothing);
+      expect(find.byKey(const ValueKey('post.share.copyLink')), findsNothing);
     });
 
     testWidgets('リアクションのボタンのタップ(予測が無い)でも、ピッカー全体はボタンにつながった形。検索欄でキーボードが出ても見える', (tester) async {
@@ -250,7 +261,7 @@ void main() {
   });
 
   group('ボタンにつながった FOW (D-513)', () {
-    testWidgets('リノート(タップ)/ 共有 / 「…」は、ボタンにつながった形で開き、中身はそのまま', (tester) async {
+    testWidgets('リノート(タップ)/ 「…」は、ボタンにつながった形で開き、中身はそのまま(共有は D-521 でふつうの FOW)', (tester) async {
       await pump(tester);
       Future<void> expectTethered(Finder button, Finder inside) async {
         await tester.tap(button);
@@ -269,7 +280,6 @@ void main() {
       }
 
       await expectTethered(find.byTooltip('リノート').first, find.byKey(const ValueKey('actionbar.bundle.pick.renote')));
-      await expectTethered(find.byTooltip('共有').first, find.byKey(const ValueKey('post.share.copyLink')));
       await expectTethered(find.byTooltip('メニュー').first, find.text('リンクをコピー'));
     });
 

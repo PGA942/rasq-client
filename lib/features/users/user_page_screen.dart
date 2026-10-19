@@ -17,6 +17,7 @@ import '../../app/providers.dart';
 import '../../l10n/l10n.dart';
 import '../settings/settings_dsl.dart' show settingsAreaProvider;
 import '../../shell/headers.dart';
+import '../../shell/third_column.dart' show fowColumnOf;
 import '../../text/inline_spans.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../clips/clip_providers.dart';
@@ -65,47 +66,67 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
   /// タブごとの検索の語 (D-514)。保存しない(このページを開いている間だけ)。
   final _queries = {for (final f in _postTabs) f: ValueNotifier('')};
 
+  /// 開いている並べ替え・絞り込みの FOW (D-521)。ページが閉じたら閉じて、閉じ終わってから下の値を捨てる
+  /// (ふつうの FOW は後ろを触れるので、開いたままページを離れられる)。
+  Future<void>? _panel;
+  late final OverlayManager _manager;
+
+  @override
+  void initState() {
+    super.initState();
+    // dispose で ref を使わないよう、先に掴む。
+    _manager = ref.read(overlayManagerProvider);
+  }
+
   @override
   void dispose() {
-    _chartHeld.dispose();
-    for (final q in _queries.values) {
-      q.dispose();
+    void release() {
+      _chartHeld.dispose();
+      for (final q in _queries.values) {
+        q.dispose();
+      }
+    }
+
+    final panel = _panel;
+    if (panel == null) {
+      release();
+    } else {
+      _manager.close(userTabViewPanelId);
+      panel.whenComplete(release);
     }
     super.dispose();
   }
 
   /// 選んでいるタブをもう一度押した (D-514)。一覧が下へ進んでいれば、まずいちばん上へ(下のナビの D-505 と同じ「押し直すと上へ」)。
-  /// いちばん上なら、そのタブにつながった並べ替え・絞り込みのパネルを開く(開いていれば閉じる)。ヘッダーが出ていれば先に畳む。
-  Future<void> _onSelectedTabTap(int i, Rect anchor, UserProfile p, String label) async {
+  /// いちばん上なら、並べ替え・絞り込みの FOW を開く(開いていれば閉じる)。D-521: ふつうのフッター付きの FOW(カラムの下に
+  /// ドック)なので、タブにつながった形のときのようにヘッダーを畳んでタブを上に留めることはしない。
+  Future<void> _onSelectedTabTap(int i, UserProfile p, String label) async {
     if (i >= _postTabs.length) return;
     final inner = _nested.currentState?.innerController;
     if (inner != null && inner.hasClients && inner.positions.any((x) => x.pixels > 0.5)) {
       await inner.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
       return;
     }
-    // ヘッダーが出ていれば畳んで、タブを上に留めてから開く(パネルの入る高さを取る)。タブの矩形はその分だけ上へ。
-    final outer = _nested.currentState?.outerController;
-    if (outer != null && outer.hasClients) {
-      final rest = outer.position.maxScrollExtent - outer.position.pixels;
-      if (rest > 0.5) {
-        await outer.animateTo(outer.position.maxScrollExtent, duration: const Duration(milliseconds: 200), curve: Curves.easeOutCubic);
-        if (!mounted) return;
-        anchor = anchor.shift(Offset(0, -rest));
-      }
+    if (_panel != null) {
+      _manager.close(userTabViewPanelId);
+      return;
     }
     final f = _postTabs[i];
     if (!mounted) return;
-    await showUserTabViewPanel(
+    final panel = showUserTabViewPanel(
       context,
       ref,
-      anchor: anchor,
       tab: f,
       tabLabel: label,
       query: _queries[f]!,
       chartHeld: _chartHeld,
       postsKey: (id: p.summary.id, filter: f, account: widget.accountKey),
+      column: fowColumnOf(context),
       hasPinned: f == UserPostsFilter.posts && p.pinnedPosts.isNotEmpty,
     );
+    _panel = panel;
+    await panel;
+    _panel = null;
   }
 
   @override
@@ -177,7 +198,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
               // この人の RASQ アカウントと、ほかにつないでいるアカウント (D-312)。制限中 / 凍結中は出さない。
               if (!restricted && !p.isSuspended) RasqLinksOnSnsProfile(profile: p),
             ]),
-            tabs: RasqTabs(items: tabs, onSelectedTabTap: restricted ? null : (i, anchor) => _onSelectedTabTap(i, anchor, p, labels[i])),
+            tabs: RasqTabs(items: tabs, onSelectedTabTap: restricted ? null : (i, _) => _onSelectedTabTap(i, p, labels[i])),
             tabViews: restricted
                 ? [for (final _ in tabs) const RasqEmptyView(title: '制限されたユーザーです', hint: '「表示」を押すと内容を表示します')]
                 : [

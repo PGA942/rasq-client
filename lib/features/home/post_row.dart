@@ -353,8 +353,8 @@ class _PostRowState extends ConsumerState<PostRow> {
                   },
                 ),
               if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [
-                // 共有の FOW はボタンにつながった形で (D-513)。
-                Builder(builder: (bctx) => RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.homePostShare, onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context), anchor: anchorRectOf(bctx)))),
+                // 共有の FOW はふつうのフッター付きの FOW (D-521。D-513 ではボタンにつながった形だった)。
+                RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.homePostShare, onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context))),
               ]),
             ]),
       // ↓ で別アカウントを選んでいる間は、そのコピーで以降の画面を開く (D-155)。
