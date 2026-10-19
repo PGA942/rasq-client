@@ -306,6 +306,43 @@ void main() {
     expect(c.read(actionButtonPrefsProvider).autoOverride(pluginActionId('t.text', SlotIds.composerText)), isFalse);
   });
 
+  testWidgets('D-475: # を打つと、@ の補完と同じ帯に SNS プラグインのハッシュタグの候補が出て、押すとその場のタグに置き換わる', (tester) async {
+    await pump(tester, posts: [post('p1', '今日は #打ち上げ と #打上会'), post('p2', '#rocket の写真')]);
+    await openHomeComposer(tester);
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('composer.input'));
+    await tester.enterText(field, '花火 #打');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('composer.hashtags')), findsOneWidget);
+    expect(find.byKey(const ValueKey('composer.hashtag.打ち上げ')), findsOneWidget);
+    expect(find.byKey(const ValueKey('composer.hashtag.打上会')), findsOneWidget);
+    expect(find.byKey(const ValueKey('composer.hashtag.rocket')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('composer.hashtag.打上会')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(field).controller!.text, '花火 #打上会 ');
+    expect(find.byKey(const ValueKey('composer.hashtags')), findsNothing);
+    // タグを打ち終えたあと / # の無い語では出ない。
+    await tester.enterText(field, '花火 #打上会 です');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('composer.hashtags')), findsNothing);
+  });
+
+  testWidgets('D-475: ハッシュタグの検索を持たない SNS(非対応 / 失敗)では、候補を出さないだけ', (tester) async {
+    await pump(tester, posts: [post('p1', '#打ち上げ')]);
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    (c.read(currentSnsSessionProvider)! as FakeSnsSession).hashtagsUnsupported = true;
+    await openHomeComposer(tester);
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('composer.input'));
+    await tester.enterText(field, '#打');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('composer.hashtags')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('投稿加工 (§2.5) とトレンド (§2.7)', (tester) async {
     fakes['tl'] = () => FakeSlotRuntime(
           manifest: manifest('t.tl', ['post.transform', 'tl', 'trend.suggest']),

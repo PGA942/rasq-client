@@ -497,7 +497,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     if (content == null || toolbar == null) return;
     final headerAnim = _stickHeaderAnimKey.currentContext?.size?.height ?? 0;
     final headerInner = _stickHeaderInnerKey.currentContext?.size?.height ?? 0;
-    final px = (content - headerAnim + headerInner) + toolbar + (_mentionHits.isEmpty ? 0 : 44) + RasqSpacing.sm + 2;
+    final px = (content - headerAnim + headerInner) + toolbar + (_mentionHits.isEmpty && _tagHits.isEmpty ? 0 : 44) + RasqSpacing.sm + 2;
     if (_lastFit != null && (px - _lastFit!).abs() < 0.5) return;
     _lastFit = px;
     widget.onFitHeight?.call(px);
@@ -757,6 +757,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   void dispose() {
     _textPluginTimer?.cancel();
     _mentionTimer?.cancel();
+    _tagTimer?.cancel();
     _slots?.textDone(_textToken);
     // 余白クリック/ページ遷移などで閉じたときの自動下書き (D-051)。
     // unmount 中は provider を変更できないためマイクロタスクへ遅延する。
@@ -1447,6 +1448,68 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     _focus.requestFocus();
   }
 
+  // ── # 補完 (D-475) ── @ 補完と同じ作り。候補は投稿するアカウントの SNS プラグインから(`sns.search {kind: hashtags}`)。
+  List<TrendTag> _tagHits = const [];
+  Timer? _tagTimer;
+  int _tagSeq = 0;
+
+  /// キャレットの直前の `#…`(打っている途中のハッシュタグ)。無ければ null。戻り = (# の位置, 打った文字)。
+  (int, String)? get _tagAtCaret {
+    final v = _text.value;
+    if (!v.selection.isValid || !v.selection.isCollapsed) return null;
+    return hashtagQueryAt(v.text, v.selection.start);
+  }
+
+  void _scheduleTagSearch() {
+    _tagTimer?.cancel();
+    final q = _tagAtCaret;
+    // RASQ 指定のときは引く先が無い(Central にタグの検索は無い)。
+    if (q == null || q.$2.isEmpty || _rasqTarget) {
+      if (_tagHits.isNotEmpty) setState(() => _tagHits = const []);
+      return;
+    }
+    _tagTimer = Timer(const Duration(milliseconds: 250), () => _searchTags(q.$2));
+  }
+
+  /// 候補を引く: 投稿するアカウントの SNS の `searchHashtags`。持たない SNS(Bluesky など)/ 古いプラグイン / 通信の失敗は、
+  /// 候補を出さないだけ(@ 補完と同じ)。
+  Future<void> _searchTags(String q) async {
+    final seq = ++_tagSeq;
+    var hits = const <TrendTag>[];
+    try {
+      hits = await _session?.searchHashtags(q, limit: 10) ?? const [];
+    } catch (_) {
+      // 非対応 / 失敗: 候補なし。
+    }
+    final seen = <String>{};
+    hits = [for (final t in hits) if (seen.add(t.tag.toLowerCase())) t];
+    if (!mounted || seq != _tagSeq) return;
+    // 打ったままの 1 件だけなら出さない(もう入っている)。
+    if (hits.length == 1 && hits.single.tag == q) hits = const [];
+    setState(() => _tagHits = hits);
+  }
+
+  /// 打っている途中の `#…` を、選んだタグに置き換える。
+  void _applyHashtag(String tag) {
+    final q = _tagAtCaret;
+    final v = _text.value;
+    final start = q?.$1 ?? (v.selection.isValid ? v.selection.start : v.text.length);
+    final end = v.selection.isValid ? v.selection.start : v.text.length;
+    final insert = '#$tag ';
+    _text.value = TextEditingValue(text: v.text.replaceRange(start, end, insert), selection: TextSelection.collapsed(offset: start + insert.length));
+    setState(() => _tagHits = const []);
+    _focus.requestFocus();
+  }
+
+  /// @ / # の候補の帯(ツールバーの上)。
+  Widget _suggestStrip(Key key, List<Widget> chips) => SizedBox(
+        key: key,
+        height: 44,
+        child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), children: [
+          for (final c in chips) Padding(padding: const EdgeInsets.only(right: 6, top: 4, bottom: 4), child: c),
+        ]),
+      );
+
   void _insert(String s) {
     final v = _text.value;
     final sel = v.selection.isValid ? v.selection : TextSelection.collapsed(offset: v.text.length);
@@ -1920,6 +1983,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     decoration: InputDecoration(hintText: _isDm ? 'メッセージを入力..' : 'いいことがありますように！', border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none),
                     onChanged: (_) {
                       _scheduleMentionSearch(); // @ 補完 (D-285)
+                      _scheduleTagSearch(); // # 補完 (D-475)
                       _syncStickHeight();
                       _scheduleTargetEval(); // ポスト先の条件を打ち直し毎に再評価 (D-116)
                       _scheduleTextPlugins(); // テキスト加工プラグイン (D-167)
@@ -1960,22 +2024,26 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       if ((widget.spec ?? widget.hostSpec) case final gap?) FowChildGap(spec: gap, top: true),
       // @ 補完の候補 (D-285): 本文で `@…` を打っている間だけ、ツールバーの上に並ぶ。押すと、その場のメンションに置き換わる。
       if (_mentionHits.isNotEmpty)
-        SizedBox(
-          key: const ValueKey('composer.mentions'),
-          height: 44,
-          child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), children: [
-            for (final h in _mentionHits)
-              Padding(
-                padding: const EdgeInsets.only(right: 6, top: 4, bottom: 4),
-                child: ActionChip(
-                  key: ValueKey('composer.mention.${h.insert}'),
-                  avatar: RasqAvatar(imageUrl: h.avatarUrl, size: 20, fallbackLabel: h.name),
-                  label: Text('${h.name}  ${h.insert}', style: RasqTypography.caption),
-                  onPressed: () => _applyMention(h.insert),
-                ),
-              ),
-          ]),
-        ),
+        _suggestStrip(const ValueKey('composer.mentions'), [
+          for (final h in _mentionHits)
+            ActionChip(
+              key: ValueKey('composer.mention.${h.insert}'),
+              avatar: RasqAvatar(imageUrl: h.avatarUrl, size: 20, fallbackLabel: h.name),
+              label: Text('${h.name}  ${h.insert}', style: RasqTypography.caption),
+              onPressed: () => _applyMention(h.insert),
+            ),
+        ]),
+      // # 補完の候補 (D-475): 本文で `#…` を打っている間だけ、@ 補完と同じ場所に並ぶ。件数は分かる SNS(Mastodon)だけ。
+      if (_tagHits.isNotEmpty)
+        _suggestStrip(const ValueKey('composer.hashtags'), [
+          for (final t in _tagHits)
+            ActionChip(
+              key: ValueKey('composer.hashtag.${t.tag}'),
+              avatar: Icon(Icons.tag, size: 16, color: scheme.primary),
+              label: Text(t.usersCount == null ? t.tag : '${t.tag}  ${t.usersCount}人', style: RasqTypography.caption),
+              onPressed: () => _applyHashtag(t.tag),
+            ),
+        ]),
       // Toolbar (コンポーザーツールバー = アクションバーの左寄せバリエーション)
       // FOW 内フッター = 掴んで左右カラム間移動 (D-062)。
       _grip(Container(
@@ -2130,6 +2198,16 @@ enum _CloseChoice { overwrite, saveNew, discard }
   final m = RegExp(r'(?:^|[^A-Za-z0-9_.@])@([^\s@]*)(?:@[A-Za-z0-9_.-]*)?$').firstMatch(text.substring(0, caret));
   if (m == null) return null;
   return (text.substring(0, caret).indexOf('@', m.start), m.group(1)!);
+}
+
+/// [caret] の直前で打っている途中のハッシュタグ (D-475): `(# の位置, # のあとの文字)`。考え方は [mentionQueryAt] と同じ。
+/// - `#` のあとは、空白 / `#` / `@` と、文の区切りの記号(、。,.!?! ?)「」())以外。
+/// - `#` の前は、行頭 / 空白 / 日本語の文字 / 記号。英数字・`&`・`/` の直後は拾わない(`C#`、`&#123;`、URL の `#frag`)。
+(int, String)? hashtagQueryAt(String text, int caret) {
+  if (caret < 0 || caret > text.length) return null;
+  final m = RegExp(r'(?:^|[^A-Za-z0-9_&/#])#([^\s#@、。,.!?！？「」()（）]*)$').firstMatch(text.substring(0, caret));
+  if (m == null) return null;
+  return (caret - m.group(1)!.length - 1, m.group(1)!);
 }
 
 /// 連動の計画の中で、RASQ アカウントを表す仮のセッションの pluginId (D-286)。

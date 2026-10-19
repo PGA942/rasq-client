@@ -23,6 +23,22 @@ void main() {
     expect(mentionQueryAt('@taro と @hanako', 3), (0, 'ta'));
   });
 
+  test('打っている途中のハッシュタグを、キャレットの位置から拾う (D-475)', () {
+    expect(hashtagQueryAt('今日は #打ち', 7), (4, '打ち'));
+    expect(hashtagQueryAt('#rocket', 7), (0, 'rocket'));
+    expect(hashtagQueryAt('花火#打上', 5), (2, '打上')); // 日本語の直後(空白なし)でも拾う
+    expect(hashtagQueryAt('#', 1), (0, '')); // # だけ(候補は引かない)
+    // 打ち終わったあと / 区切りの記号のあと / C# / 文字参照 / URL の #frag は拾わない。
+    expect(hashtagQueryAt('#rocket ', 8), isNull);
+    expect(hashtagQueryAt('#打上、', 4), isNull);
+    expect(hashtagQueryAt('C#', 2), isNull);
+    expect(hashtagQueryAt('&#123', 5), isNull);
+    expect(hashtagQueryAt('https://ex.test/a#frag', 22), isNull);
+    expect(hashtagQueryAt('##x', 3), isNull);
+    // キャレットが途中にあるときは、そこまでを見る。
+    expect(hashtagQueryAt('#rocket と #打', 4), (0, 'roc'));
+  });
+
   test('本文のうち、実在するアカウントのメンションだけを区切る', () {
     expect(splitMentions('やあ @Taro と @nobody、a@taro.example', ['taro']), [('やあ ', null), ('@Taro', 'Taro'), (' と @nobody、a@taro.example', null)]);
     expect(splitMentions('@taro@mk.example は他の SNS', ['taro']), [('@taro@mk.example は他の SNS', null)]);

@@ -165,6 +165,14 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30}) async =>
       Page(items: _posts.where((p) => p.quote?.id == postId && p.body.isNotEmpty).toList());
+  /// ハッシュタグの候補 (D-475): 投稿の本文の `#タグ` から前方一致。[hashtagsUnsupported] なら持たない SNS(Bluesky など)の真似。
+  bool hashtagsUnsupported = false;
+  @override
+  Future<List<TrendTag>> searchHashtags(String query, {int limit = 10}) async {
+    if (hashtagsUnsupported) throw UnsupportedError('fake does not support searchHashtags');
+    final tags = <String>{for (final p in _posts) for (final m in RegExp(r'#([^\s#@]+)').allMatches(p.body)) m.group(1)!};
+    return [for (final t in tags) if (t.toLowerCase().startsWith(query.toLowerCase())) TrendTag(tag: t)].take(limit).toList();
+  }
   @override
   Future<Page<UserSummary>> searchUsers(String query, {String? cursor, int limit = 20}) async {
     final unique = {for (final p in _posts) p.author.key: p.author};

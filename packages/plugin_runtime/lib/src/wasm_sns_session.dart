@@ -432,6 +432,19 @@ class WasmSnsSession extends SnsSessionBase {
     return SnsWire.userPageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>());
   }
 
+  /// D-475: `sns.search {kind: hashtags}` → `{tags: [{tag, count?}]}`。この kind を知らない古いプラグインは posts の
+  /// `{page}` を返す(`kind` が users 以外は投稿の検索に倒していた)ので、`tags` が無ければ非対応として扱う。
+  @override
+  Future<List<TrendTag>> searchHashtags(String query, {int limit = 10}) async {
+    final value = await _call('sns.search', {'kind': 'hashtags', 'q': query, 'limit': limit});
+    final tags = value['tags'];
+    if (tags is! List) throw UnsupportedError('$pluginId does not support searchHashtags');
+    return [
+      for (final t in tags)
+        if (t is Map && t['tag'] is String && (t['tag'] as String).isNotEmpty) TrendTag(tag: (t['tag'] as String).replaceFirst(RegExp('^#'), ''), usersCount: (t['count'] as num?)?.toInt()),
+    ];
+  }
+
   @override
   Future<List<TrendTag>> trendingTags() async {
     final value = await _call('sns.trendingTags', const {});

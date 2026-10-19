@@ -535,6 +535,13 @@ class MisskeySession extends SnsSessionBase {
     return Page(items: [for (final u in list) MisskeyMappers.user(u, account: account, host: host)]);
   }
 
+  /// D-475: `hashtags/search` はタグ名(文字列)の配列。
+  @override
+  Future<List<TrendTag>> searchHashtags(String query, {int limit = 10}) async => [
+        for (final t in (await api.call('hashtags/search', {'query': query, 'limit': limit}) as List? ?? const []))
+          if (t is String && t.isNotEmpty) TrendTag(tag: t),
+      ];
+
   @override
   Future<List<TrendTag>> trendingTags() async => [for (final t in await api.callList('hashtags/trend')) MisskeyMappers.trend(t)];
 
