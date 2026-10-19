@@ -180,11 +180,15 @@ class MisskeySession extends SnsSessionBase {
     );
   }
 
+  /// 空白だけの文字列は「無し」(D-494)。Misskey の `text` / `cw` は minLength 1 で、空文字を送ると 400 INVALID_PARAM になる。
+  static String? _nonBlank(String? s) => s == null || s.trim().isEmpty ? null : s;
+
   @override
   Future<Post> createPost(NewPost draft) async {
     final body = <String, Object?>{
-      if (draft.repostOfId == null) 'text': draft.text,
-      if (draft.contentWarning != null) 'cw': draft.contentWarning,
+      // 本文なし(メディア / 投票 / 引用だけ)は `text` を送らない (D-494): 空文字は minLength 1 に当たって 400 になる。
+      if (draft.repostOfId == null) 'text': ?_nonBlank(draft.text),
+      'cw': ?_nonBlank(draft.contentWarning),
       if (draft.replyToId != null) 'replyId': draft.replyToId,
       if (draft.quoteOfId != null) 'renoteId': draft.quoteOfId,
       if (draft.repostOfId != null) 'renoteId': draft.repostOfId,
@@ -623,16 +627,16 @@ class MisskeySession extends SnsSessionBase {
       final me = await _meUser();
       final res = await api.callMap('chat/messages/create-to-user', {
         'toUserId': room.peer.id,
-        if (draft.text.isNotEmpty) 'text': draft.text,
+        'text': ?_nonBlank(draft.text),
         if (draft.mediaIds.isNotEmpty) 'fileId': draft.mediaIds.first,
       });
       return MisskeyMappers.chatMessage(res, viewer: account, host: host, me: me, peer: room.peer);
     }
     final res = await api.callMap('notes/create', {
-      'text': draft.text,
+      'text': ?_nonBlank(draft.text), // D-494
       'visibility': 'specified',
       'visibleUserIds': [room.peer.id],
-      if (draft.contentWarning != null) 'cw': draft.contentWarning,
+      'cw': ?_nonBlank(draft.contentWarning),
       if (draft.mediaIds.isNotEmpty) 'fileIds': draft.mediaIds,
     });
     return MisskeyMappers.note((res['createdNote'] as Map).cast<String, Object?>(), viewer: account, host: host);

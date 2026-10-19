@@ -342,6 +342,82 @@ void main() {
       expect(seen['visibleUserIds'], ['peer1', 'peer2']);
     });
 
+    // 本文なしのメディアだけの投稿 (D-494): Misskey の notes/create は `text` / `cw` が minLength 1、`fileIds` が minItems 1。
+    // 空文字 / 空配列を送ると 400 INVALID_PARAM(Bad Request)になる。サーバーと同じ検査をするフェイクで確かめる。
+    group('本文なしの投稿 (D-494)', () {
+      late List<Map<String, Object?>> sent;
+      http.Response strict(Map<String, Object?> b, Map<String, Object?> created) {
+        sent.add(b);
+        String? invalid;
+        for (final k in ['text', 'cw']) {
+          if (b.containsKey(k) && b[k] is String && (b[k] as String).isEmpty) invalid = k;
+        }
+        if (b['fileIds'] is List && (b['fileIds'] as List).isEmpty) invalid = 'fileIds';
+        final hasContent = (b['text'] is String) || b['fileIds'] is List || b['poll'] != null || b['renoteId'] != null;
+        if (invalid != null) return http.Response(jsonEncode({'error': {'message': 'Invalid param.', 'code': 'INVALID_PARAM', 'info': {'param': invalid}}}), 400);
+        if (!hasContent) return http.Response(jsonEncode({'error': {'message': 'No content.', 'code': 'INVALID_PARAM'}}), 400);
+        return http.Response(jsonEncode(created), 200, headers: {'content-type': 'application/json'});
+      }
+
+      MisskeySession session(String endpoint, Map<String, Object?> created) {
+        sent = [];
+        final c = MockClient((req) async {
+          final path = req.url.path.replaceFirst('/api/', '');
+          final body = req.body.isEmpty ? <String, Object?>{} : (jsonDecode(req.body) as Map).cast<String, Object?>();
+          if (path != endpoint) return http.Response(jsonEncode({'error': {'message': 'no route $path', 'code': 'NOT_FOUND'}}), 404);
+          return strict(body, created);
+        });
+        return MisskeySession(AccountSession(account: viewer, pluginId: MisskeyPlugin.pluginId, token: 'T', createdAt: DateTime(2026)), client: c);
+      }
+
+      test('メディアだけ: text を送らず fileIds だけ', () async {
+        final s = session('notes/create', {'createdNote': note('m1', text: null)});
+        final p = await s.createPost(const NewPost(text: '', mediaIds: ['f1', 'f2']));
+        expect(p.id, 'm1');
+        expect(sent.single.containsKey('text'), isFalse);
+        expect(sent.single['fileIds'], ['f1', 'f2']);
+      });
+
+      test('空白だけの本文も送らない / 空の注釈も送らない', () async {
+        final s = session('notes/create', {'createdNote': note('m2', text: null)});
+        await s.createPost(const NewPost(text: '  \n', contentWarning: '', mediaIds: ['f1']));
+        expect(sent.single.containsKey('text'), isFalse);
+        expect(sent.single.containsKey('cw'), isFalse);
+      });
+
+      test('返信 / 引用 + メディアだけ、投票だけ', () async {
+        final s = session('notes/create', {'createdNote': note('m3', text: null)});
+        await s.createPost(const NewPost(text: '', replyToId: 'p1', mediaIds: ['f1']));
+        expect(sent.last['replyId'], 'p1');
+        expect(sent.last.containsKey('text'), isFalse);
+        await s.createPost(const NewPost(text: '', quoteOfId: 'q1', mediaIds: ['f1']));
+        expect(sent.last['renoteId'], 'q1');
+        expect(sent.last.containsKey('text'), isFalse);
+        await s.createPost(const NewPost(text: '', poll: NewPoll(choices: ['a', 'b'])));
+        expect(sent.last.containsKey('text'), isFalse);
+        expect((sent.last['poll'] as Map)['choices'], ['a', 'b']);
+        // 注釈だけ付けた(本文なし)メディア投稿でも、注釈は送る。
+        await s.createPost(const NewPost(text: '', contentWarning: '注意', mediaIds: ['f1']));
+        expect(sent.last['cw'], '注意');
+        expect(sent.last.containsKey('text'), isFalse);
+      });
+
+      test('本文は空白を含めてそのまま送る(前後の改行を削らない)', () async {
+        final s = session('notes/create', {'createdNote': note('m4')});
+        await s.createPost(const NewPost(text: 'a\n', mediaIds: ['f1']));
+        expect(sent.single['text'], 'a\n');
+      });
+
+      test('ダイレクト(限定公開ノート)の DM もメディアだけで送れる', () async {
+        final s = session('notes/create', {'createdNote': {...note('d2', text: null), 'visibility': 'specified', 'visibleUserIds': ['alice']}});
+        final room = DmRoom(id: 'alice', peer: MisskeyMappers.user(user('alice'), account: viewer, host: 'misskey.test'));
+        await s.sendDm(room, const NewPost(text: '', contentWarning: '', mediaIds: ['f1']));
+        expect(sent.single.containsKey('text'), isFalse);
+        expect(sent.single.containsKey('cw'), isFalse);
+        expect(sent.single['fileIds'], ['f1']);
+      });
+    });
+
     test('mapper (D-047): localOnly / visibleUserIds を Post に写す', () {
       final p = MisskeyMappers.note({...note('n1'), 'visibility': 'specified', 'localOnly': true, 'visibleUserIds': ['peer1']}, viewer: viewer, host: 'misskey.test');
       expect(p.isDirect, isTrue);
