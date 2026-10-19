@@ -1939,6 +1939,1027 @@ class AppLocalizationsJa extends AppLocalizations {
   String get nodeprogTimelinePaletteEmptyHint => '検索ワードを変えてみてください';
 
   @override
+  String get onboardingBack => '戻る';
+
+  @override
+  String get onboardingHandleTooShort => '3 文字以上にしてください';
+
+  @override
+  String get onboardingHandleTooLong => '32 文字までです';
+
+  @override
+  String get onboardingHandleInvalid => '半角の英小文字・数字・_ だけ使えます';
+
+  @override
+  String get onboardingAccountTitleNew => '新しい RASQ アカウントを作る';
+
+  @override
+  String get onboardingAccountTitle => 'RASQ アカウントを作る';
+
+  @override
+  String get onboardingAccountDescription =>
+      'RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。入れたプラグイン・設定・アカウントのまとまりを、ほかの端末でも使えます。';
+
+  @override
+  String get onboardingHandleLabel => 'ユーザー名(@ のあとの名前)';
+
+  @override
+  String get onboardingHandleHelper => '半角の英小文字・数字・_ で 3〜32 文字';
+
+  @override
+  String onboardingPasswordLabel(int min) {
+    return 'パスワード($min 文字以上)';
+  }
+
+  @override
+  String get onboardingPasswordHide => '隠す';
+
+  @override
+  String get onboardingPasswordShow => '表示';
+
+  @override
+  String get onboardingPasswordConfirmLabel => 'パスワード(確認)';
+
+  @override
+  String get onboardingPasswordMismatch => '一致しません';
+
+  @override
+  String get onboardingPasswordCaption =>
+      'ほかの端末や Web 版から、このアカウントにログインするときに使います。';
+
+  @override
+  String get onboardingAgeHeading => '年齢';
+
+  @override
+  String get onboardingAgeCaption =>
+      'RASQ は 13 歳以上で使えます。18 歳未満の人は、次のページで保護者の同意を確かめます。';
+
+  @override
+  String get onboardingNoCentral => 'RASQ Central の接続先が未設定です';
+
+  @override
+  String get onboardingSetCentral => '接続先を設定';
+
+  @override
+  String get onboardingNext => '次へ';
+
+  @override
+  String onboardingCreateFailed(String error) {
+    return 'RASQ アカウントを作成できませんでした: $error';
+  }
+
+  @override
+  String get onboardingTermsTitle => '利用規約とプライバシーポリシー';
+
+  @override
+  String get onboardingTermsNoDraft => '先に ① のページでユーザー名などを入れてください';
+
+  @override
+  String get onboardingTermsRead => '利用規約を読む';
+
+  @override
+  String get onboardingPrivacyRead => 'プライバシーポリシーを読む';
+
+  @override
+  String get onboardingAgree => '利用規約とプライバシーポリシーに同意する';
+
+  @override
+  String get onboardingChildSafeHeading => 'チャイルドセーフ(18 歳未満)';
+
+  @override
+  String onboardingChildSafeNote(String age) {
+    return '$ageの人は、保護者の同意が必要です。保護者の RASQ アカウントとつなぐと、保護者が使い方(見られる投稿の強さ・時間・使える機能)を決められます(設定 → チャイルドセーフ → チャイルドモード)。';
+  }
+
+  @override
+  String get onboardingGuardianConsent => '保護者の同意を得ています';
+
+  @override
+  String get onboardingChildLogin => '保護者からのコードでログインする';
+
+  @override
+  String get onboardingChildLoginCaption =>
+      '保護者があなたのアカウントを作ってくれた場合は、ここで登録せず、受け取ったコードでログインしてください。';
+
+  @override
+  String get onboardingBundleHeading => 'アカウントバンドル';
+
+  @override
+  String get onboardingBundleReplace => 'この端末の SNS アカウントで置き換える';
+
+  @override
+  String onboardingBundleReplaceSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ログイン中の $count 件を、この RASQ アカウントにまとめます',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get onboardingBundleKeep => '置き換えない';
+
+  @override
+  String get onboardingBundleKeepSubtitle => 'SNS アカウントはこの端末だけに残します';
+
+  @override
+  String get onboardingTermsContributionNote =>
+      '「アルゴリズムとコミュニティへの貢献」は、この登録には含まれません(別の任意の同意で、既定は「提供しない」です)。RASQ アカウントはいつでも削除できます。';
+
+  @override
+  String get onboardingRegister => '同意して登録する';
+
+  @override
+  String get onboardingSnsTitle => 'SNS アカウントでログイン';
+
+  @override
+  String get onboardingSnsDescription =>
+      'RASQ アカウントができました。使っている SNS のアカウントでログインしてください。まだ SNS を使っていなければ、「SNS サービスを探す」から合うサーバーやリストを探せます。';
+
+  @override
+  String onboardingSnsLoginWith(String service) {
+    return '$serviceでログイン';
+  }
+
+  @override
+  String get onboardingSnsPluginLoadNote =>
+      '初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。';
+
+  @override
+  String onboardingSignupGuideClosed(String name) {
+    return '$name はいま新しい登録を受け付けていないか、招待制です。招待のリンクを持っていなければ、別のサーバーを選んでください。';
+  }
+
+  @override
+  String onboardingSignupGuideMastodonOpened(String name) {
+    return '$name の登録ページを開きました。サーバーのルールが出たら読んで、「同意する」を押してください。';
+  }
+
+  @override
+  String get onboardingSignupGuideMastodonForm =>
+      '表示名・ユーザー名・メールアドレス・パスワードを入れます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。';
+
+  @override
+  String get onboardingSignupGuideMastodonMail =>
+      '登録を押すと、確認のメールが届きます。メールのリンクを開いて、メールアドレスを確かめてください。';
+
+  @override
+  String onboardingSignupGuideOpened(String name) {
+    return '$name のページを開きました。ページの「新規登録」を押してください。';
+  }
+
+  @override
+  String get onboardingSignupGuideForm =>
+      'ユーザー名とパスワードを決めます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。';
+
+  @override
+  String get onboardingSignupGuideChecks =>
+      'サーバーによっては、メールアドレス・招待コード・ロボットでないことの確認を聞かれます。画面の案内のとおりに入れてください。';
+
+  @override
+  String get onboardingSignupGuideRules =>
+      'サーバーのルール(利用規約)を読んで同意します。メールの確認を求められたら、届いたメールのリンクを開いてください。';
+
+  @override
+  String get onboardingSignupGuideDone =>
+      '登録が終わったら、下の「登録できた」を押してください。RASQ からこのサーバーにログインします。';
+
+  @override
+  String get onboardingSignupGuideThenPost => 'ログインできたら、さっきの投稿を開きます。';
+
+  @override
+  String onboardingSignupGuideThenList(String name) {
+    return 'ログインできたら、RASQ リスト「$name」を開きます。';
+  }
+
+  @override
+  String get onboardingSignupGuideRasqLater =>
+      'RASQ アカウントは、あとからサイドバーの … で作れます。';
+
+  @override
+  String get onboardingSignupTitleFallback => 'サーバーに登録';
+
+  @override
+  String get onboardingSignupNoTarget => '登録するサーバーが選ばれていません';
+
+  @override
+  String get onboardingSignupDone => '登録できた(ログインへ)';
+
+  @override
+  String onboardingSignupTitle(String name) {
+    return '$name に登録';
+  }
+
+  @override
+  String get onboardingSignupGuideHeading => 'RAi の案内';
+
+  @override
+  String get onboardingSignupGuidePrev => '前へ';
+
+  @override
+  String get onboardingSignupNoWebView =>
+      'この端末では、アプリの中で登録ページを開けません。ブラウザで開いて登録し、終わったらこの画面に戻ってください。';
+
+  @override
+  String get onboardingSignupOpenBrowser => 'ブラウザで登録ページを開く';
+
+  @override
+  String onboardingSignupPostNotFound(String account) {
+    return '$account では、さっきの投稿を見つけられませんでした';
+  }
+
+  @override
+  String get onboardingEntryCreateNew => '新しく RASQ アカウントを作成';
+
+  @override
+  String get onboardingEntryCreate => 'RASQ アカウントを作成';
+
+  @override
+  String get onboardingEntryLogin => 'RASQ アカウントにログイン';
+
+  @override
+  String get onboardingEntryDiscover => 'SNS サービスを探す(画像・人・RAi から)';
+
+  @override
+  String onboardingEntryResume(String name) {
+    return '$nameで続ける';
+  }
+
+  @override
+  String onboardingEntryResumeWithHandle(String name, String handle) {
+    return '$name(@$handle)で続ける';
+  }
+
+  @override
+  String get onboardingEntryResumeFallbackName => 'RASQ アカウント';
+
+  @override
+  String get onboardingEntrySnsOnly => 'SNS アカウントだけで使う';
+
+  @override
+  String get onboardingEntrySkip => 'スキップしてこの端末だけで使う';
+
+  @override
+  String get onboardingEntryHaveAccount => 'RASQ アカウントを持っている';
+
+  @override
+  String get onboardingEntryLoginQuestion => 'RASQ アカウントにログインしますか?';
+
+  @override
+  String get onboardingEntryCreateQuestion => 'RASQ アカウントを作成しますか?';
+
+  @override
+  String get onboardingEntryLoginBody =>
+      'RASQ アカウントに入ると、束ねた SNS アカウント・導入したプラグイン・設定が、この端末に戻ります。';
+
+  @override
+  String get onboardingEntryCreateBody =>
+      'RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。作成すると、導入したプラグイン・設定・アカウントの束ね方が RASQ Central に保存され、別の端末からも同じ状態で使えます。';
+
+  @override
+  String get onboardingEntryWebNote =>
+      'Web 版では、SNS のログイン情報を RASQ のサーバーの保管庫に預けます(サーバーの鍵で暗号化し、RASQ のサーバーは復号できます)。SNS だけで使うこともできますが、そのときはこのタブを閉じるとログインが消えます。';
+
+  @override
+  String get onboardingEntrySnsOnlyNote =>
+      'SNS アカウントだけで使うこともできます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます。';
+
+  @override
+  String get onboardingEntrySkipNote =>
+      'スキップしても RASQ は使えます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます(あとからサイドバーの … で作成できます)。';
+
+  @override
+  String get onboardingShowcaseTitle => 'サーバーとリストを見てみる';
+
+  @override
+  String get onboardingShowcaseServersHint => 'タップすると、そのサーバーに登録できます';
+
+  @override
+  String get onboardingShowcaseOpenServer => 'サーバーを開く';
+
+  @override
+  String get onboardingShowcaseSignupServer => 'このサーバーに登録';
+
+  @override
+  String get onboardingShowcaseListsHint =>
+      'SNS をまたいだ人のリストです。タップすると、リストの人がいるサーバーに登録できます';
+
+  @override
+  String get onboardingShowcaseListCannotSignup => 'このリストのサーバーには、アプリから登録できません';
+
+  @override
+  String get onboardingShowcasePickServer => 'どのサーバーに登録しますか?';
+
+  @override
+  String onboardingShowcasePickServerSubtitle(String host, String kind) {
+    return '$host ・ $kind';
+  }
+
+  @override
+  String onboardingShowcasePostImages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '画像 $count 枚',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get onboardingGenreGame => 'ゲーム';
+
+  @override
+  String get onboardingGenreAnime => 'アニメ・マンガ';
+
+  @override
+  String get onboardingGenreMusic => '音楽';
+
+  @override
+  String get onboardingGenreArt => 'イラスト・創作';
+
+  @override
+  String get onboardingGenrePhoto => '写真';
+
+  @override
+  String get onboardingGenreFood => '食べ物';
+
+  @override
+  String get onboardingGenreTech => 'IT・プログラミング';
+
+  @override
+  String get onboardingGenreAnimal => '動物・ペット';
+
+  @override
+  String get onboardingGenreSports => 'スポーツ';
+
+  @override
+  String get onboardingGenreTravel => '旅行・おでかけ';
+
+  @override
+  String get onboardingGenreBooks => '本・読書';
+
+  @override
+  String get onboardingGenreMovie => '映画・ドラマ';
+
+  @override
+  String get onboardingGenreNature => '季節・自然';
+
+  @override
+  String onboardingPasswordTooShort(int min) {
+    return '$min 文字以上にしてください';
+  }
+
+  @override
+  String get onboardingPasswordTooLong => '256 文字までです';
+
+  @override
+  String get onboardingPasswordRepeated => '同じ字の繰り返しは使えません';
+
+  @override
+  String get onboardingTermsOutdated =>
+      '利用規約が新しくなっています。アプリを更新してから、もう一度登録してください';
+
+  @override
+  String get onboardingNoServer => 'RASQ サーバーの接続先が設定されていません';
+
+  @override
+  String get onboardingHandleTaken => 'このユーザー名はもう使われています';
+
+  @override
+  String onboardingHandleUnusable(String error) {
+    return 'このユーザー名は使えません($error)';
+  }
+
+  @override
+  String onboardingHandleKept(String reason, String handle) {
+    return '$reason。ユーザー名は @$handle のままです(プロフィールの編集で変えられます)';
+  }
+
+  @override
+  String onboardingPasswordSetFailed(String error) {
+    return 'アカウントは作成しましたが、パスワードを設定できませんでした($error)。設定 →「アカウントの保護」から設定してください';
+  }
+
+  @override
+  String get onboardingRestored => 'この端末の RASQ アカウントへ戻りました';
+
+  @override
+  String get onboardingNudgeTitle => 'RASQ アカウントを作りますか?';
+
+  @override
+  String get onboardingNudgeMessage =>
+      'RASQ アカウントがあると、入れたプラグインや設定・SNS のアカウントのまとまりを、ほかの端末でも使えます。Swing や RASQ リストも RASQ アカウントから使います。あとからサイドバーの … でも作れます。';
+
+  @override
+  String get onboardingNudgeCreate => '作る';
+
+  @override
+  String get onboardingNudgeLogin => 'ログイン(持っている人)';
+
+  @override
+  String get onboardingNudgeLater => 'あとで';
+
+  @override
+  String onboardingNudgeCreated(String handle) {
+    return 'RASQ アカウント @$handle を作成しました';
+  }
+
+  @override
+  String get onboardingFeedTitle => '公開 RASQ リストから';
+
+  @override
+  String get onboardingFeedCaption => 'SNS をまたいだ人のリストで、よく読まれている投稿です';
+
+  @override
+  String get onboardingFeedEmpty => 'いまは表示できる投稿がありません';
+
+  @override
+  String onboardingFeedListName(String name) {
+    return 'リスト「$name」';
+  }
+
+  @override
+  String get onboardingDiscoverTitle => 'SNS サービスを探す';
+
+  @override
+  String get onboardingDiscoverIntro =>
+      '好きなものから、合いそうな SNS のサーバーと RASQ リスト(SNS をまたいだ人のリスト)を探します。';
+
+  @override
+  String get onboardingDiscoverContentTitle => '好きな画像やコンテンツから探す';
+
+  @override
+  String get onboardingDiscoverContentSubtitle => '画像を選んで、探したい部分を囲んで';
+
+  @override
+  String get onboardingDiscoverPeopleTitle => '有力なユーザー / インフルエンサーから探す';
+
+  @override
+  String get onboardingDiscoverPeopleSubtitle => '好きな人の名前や分野から';
+
+  @override
+  String get onboardingDiscoverExportTitle => '外部 SNS のエクスポートデータから探す';
+
+  @override
+  String get onboardingDiscoverExportSubtitle => '準備中';
+
+  @override
+  String get onboardingDiscoverAskTitle => 'RAi に聞く';
+
+  @override
+  String get onboardingDiscoverAskSubtitle => 'どんな SNS が合うか、話しながら探します';
+
+  @override
+  String get onboardingDiscoverRaiBlocked => '保護者が RAi を止めています';
+
+  @override
+  String onboardingDiscoverCannotLogin(String host) {
+    return '$host には、アプリからログインできません';
+  }
+
+  @override
+  String onboardingDiscoverCannotSignup(String host) {
+    return '$host には、アプリから登録できません';
+  }
+
+  @override
+  String get onboardingDiscoverAddAccountBlocked => '保護者が SNS アカウントの追加を止めています';
+
+  @override
+  String get onboardingDiscoverDummyResult => '見本の結果です(サーバーの外部サービスが未設定)';
+
+  @override
+  String get onboardingDiscoverPeopleWebHeading => 'SNS の人(Web 検索)';
+
+  @override
+  String get onboardingDiscoverListsHeading => 'RASQ リスト';
+
+  @override
+  String get onboardingDiscoverServersHeading => 'サーバー';
+
+  @override
+  String onboardingDiscoverListMembers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String onboardingDiscoverListOwner(String handle) {
+    return '@$handle のリスト';
+  }
+
+  @override
+  String onboardingDiscoverListHosts(String hosts) {
+    return 'サーバー: $hosts';
+  }
+
+  @override
+  String get onboardingDiscoverListSeparator => '、';
+
+  @override
+  String get onboardingDiscoverListOpenImport => 'リストを開いて取り込む';
+
+  @override
+  String get onboardingDiscoverListSignup => 'リストの人のサーバーに登録';
+
+  @override
+  String get onboardingDiscoverLoginButton => 'ログイン';
+
+  @override
+  String get onboardingDiscoverSignupButton => '登録する';
+
+  @override
+  String get onboardingDiscoverSearchFailed => 'うまく探せませんでした。時間をおいて、もう一度試してください';
+
+  @override
+  String get onboardingDiscoverGlimpseStoppedSystem =>
+      '画面の読み取りが止められました(端末の「共有を停止」や画面のロック)。もう一度「いつものブラウザで見て探す」から始めてください';
+
+  @override
+  String get onboardingDiscoverGlimpseStoppedShort =>
+      '配信がすぐに止まったので、読み取れませんでした。ブラウザで探したい画面を開いてから止めてください';
+
+  @override
+  String get onboardingDiscoverGlimpseStoppedTimeout =>
+      '10 分たったので、画面の読み取りの準備を止めました';
+
+  @override
+  String get onboardingDiscoverGlimpseStoppedKilled =>
+      '画面の読み取りが端末に止められました。もう一度始めてください';
+
+  @override
+  String get onboardingDiscoverGlimpseStoppedEmpty =>
+      '画面を読み取れませんでした(写しが取れませんでした)';
+
+  @override
+  String get onboardingDiscoverGlimpseFailed => '画面を読み取れませんでした';
+
+  @override
+  String get onboardingDiscoverGlimpseBroadcastDenied =>
+      '画面の配信が始まりませんでした。読み取るには、もう一度押して「ブロードキャストを開始」を選んでください(読み取るのは配信を止める直前の 3 秒だけです)';
+
+  @override
+  String get onboardingDiscoverGlimpseDenied =>
+      '画面の読み取りが許可されませんでした。読み取るには、もう一度押して「開始」を選んでください(読み取るのはボタンを押したあとの 3 秒だけです)';
+
+  @override
+  String get onboardingDiscoverGlimpseNotificationsDenied =>
+      '通知を出せませんでした。読み取りのボタンは通知に出るので、端末の設定で RASQ の通知を許可してください';
+
+  @override
+  String get onboardingDiscoverGlimpseUnavailable =>
+      'この端末では画面を読み取れません。画像を選ぶか、アプリの中のブラウザで探してください';
+
+  @override
+  String get onboardingDiscoverNotificationFailed =>
+      '通知を出せませんでした。端末の設定で RASQ の通知を許可してください';
+
+  @override
+  String get onboardingDiscoverGlimpseResultMissing =>
+      '読み取った画面が見つかりませんでした(時間がたって消えたか、もう送りました)';
+
+  @override
+  String onboardingDiscoverPicksFull(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: '画像は $max 枚までです。外してから追加してください',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get onboardingDiscoverPickFailed => '画像を読み込めませんでした';
+
+  @override
+  String onboardingDiscoverPicksOver(int over, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      over,
+      locale: localeName,
+      other: '画像は $max 枚までです。$over 枚は追加しませんでした',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String onboardingDiscoverPicksUnreadable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '読み込めない画像が $count 枚ありました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get onboardingDiscoverNoticeSeparator => '。';
+
+  @override
+  String onboardingDiscoverPicksSkipped(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '送れる大きさ(1 枚 10 MiB・合計 24 MiB・$max 枚まで)に収まらない画像を $count 枚外しました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get onboardingDiscoverImageFormat => 'JPEG / PNG / WebP の画像を選んでください';
+
+  @override
+  String get onboardingDiscoverImageFormatSize =>
+      'JPEG / PNG / WebP の 10 MiB までの画像を選んでください';
+
+  @override
+  String get onboardingDiscoverNoCentral => 'RASQ Central の接続先が未設定です';
+
+  @override
+  String get onboardingDiscoverContentIntro =>
+      '好きな画像を選んで、探したい部分を囲むと、探す言葉を RAi が作ります。画像はサーバーに保存しません(探し終えたら捨てます)。';
+
+  @override
+  String onboardingDiscoverPicksCount(int count, int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count / $max 枚。タップで囲み直し、長押しで並べ替えます',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get onboardingDiscoverPickImages => '画像を選ぶ';
+
+  @override
+  String get onboardingDiscoverAddImages => '画像を追加';
+
+  @override
+  String get onboardingDiscoverTakePhoto => '写真を撮る';
+
+  @override
+  String get onboardingDiscoverSearchOne => 'この画像で探す';
+
+  @override
+  String onboardingDiscoverSearchMany(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'この $count 枚で探す',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get onboardingDiscoverOtherWays => 'ほかの方法';
+
+  @override
+  String get onboardingDiscoverGlimpseButton => 'いつものブラウザで見て探す';
+
+  @override
+  String get onboardingDiscoverBrowseButton => 'アプリの中のブラウザで探す';
+
+  @override
+  String get onboardingDiscoverGlimpseCancel => 'やめる';
+
+  @override
+  String onboardingDiscoverGlimpseCapturing(int elapsed, int total) {
+    return '画面を読み取っています($elapsed / $total 秒)';
+  }
+
+  @override
+  String onboardingDiscoverGlimpseDone(int seconds, int frames) {
+    String _temp0 = intl.Intl.pluralLogic(
+      frames,
+      locale: localeName,
+      other: '画面を $seconds 秒読み取りました($frames コマ)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String onboardingDiscoverGlimpseDoneDummy(int seconds, int frames) {
+    String _temp0 = intl.Intl.pluralLogic(
+      frames,
+      locale: localeName,
+      other: '画面を $seconds 秒読み取りました($frames コマ)。いまは試作のため、ダミーの写しです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String onboardingDiscoverPictureIndex(int index) {
+    return '$index 枚目';
+  }
+
+  @override
+  String onboardingDiscoverFrameIndex(int index) {
+    return '$index コマ目';
+  }
+
+  @override
+  String get onboardingDiscoverQueryHeading => '探す言葉';
+
+  @override
+  String get onboardingDiscoverNoResults => '合うリストやサーバーは見つかりませんでした';
+
+  @override
+  String get onboardingDiscoverPickWhole => '全体';
+
+  @override
+  String get onboardingDiscoverPickRect => '四角';
+
+  @override
+  String get onboardingDiscoverPickLasso => 'なぞり';
+
+  @override
+  String get onboardingDiscoverPickRemove => '外す';
+
+  @override
+  String get onboardingDiscoverGlimpseDummyNote =>
+      'いまは試作のため、画面は読まずにダミーの写しを送ります';
+
+  @override
+  String get onboardingDiscoverCaptureFailed => 'この画面を読み取れませんでした';
+
+  @override
+  String get onboardingDiscoverBrowseAddressHint => '調べたい言葉 / URL';
+
+  @override
+  String get onboardingDiscoverBrowseCapture => 'この画面から探す';
+
+  @override
+  String get onboardingDiscoverManualIntro =>
+      'この端末では、アプリの中でブラウザを開けません。いつものブラウザで見て、ページの URL と気になった文を貼り付けてください。';
+
+  @override
+  String get onboardingDiscoverManualOpenBrowser => 'ブラウザを開く';
+
+  @override
+  String get onboardingDiscoverManualUrl => 'ページの URL';
+
+  @override
+  String get onboardingDiscoverManualText => '気になった文(任意)';
+
+  @override
+  String get onboardingDiscoverManualSubmit => 'この内容で探す';
+
+  @override
+  String get onboardingDiscoverPeopleIntro =>
+      '好きな人の名前や、気になる分野を入れてください。まず公開の RASQ リストの中から探します。';
+
+  @override
+  String get onboardingDiscoverPeopleQueryLabel => '人の名前 / 分野';
+
+  @override
+  String get onboardingDiscoverPeopleQueryHint => '例: 鉄道写真、イラストレーター';
+
+  @override
+  String get onboardingDiscoverPeopleSearch => '探す';
+
+  @override
+  String get onboardingDiscoverPeopleNotFound => 'RASQ リストでは見つかりませんでした';
+
+  @override
+  String get onboardingDiscoverPeopleNotFoundHint =>
+      '好きな画像やページから探すか、RAi に聞いてみてください。';
+
+  @override
+  String get onboardingDiscoverPeopleTryContent => '画像やコンテンツから探す';
+
+  @override
+  String get onboardingDiscoverPeopleBrave =>
+      'RASQ リストに無かったので、Web 検索から見つけた候補です';
+
+  @override
+  String get onboardingDiscoverPersonOpenProfile => 'プロフィールをブラウザで開く';
+
+  @override
+  String get onboardingDiscoverPersonLists => 'この人が入っている RASQ リスト';
+
+  @override
+  String get onboardingDiscoverAskFailed => 'うまく答えられませんでした。時間をおいて、もう一度聞いてください';
+
+  @override
+  String get onboardingDiscoverAskEmptyTitle => '合う SNS、一緒に探します！';
+
+  @override
+  String get onboardingDiscoverAskEmptyBody =>
+      '好きなこと・見たいもの・どんな人とつながりたいかを教えてください。合いそうな SNS のサーバーと RASQ リストを探します。';
+
+  @override
+  String get onboardingDiscoverAskEmptyCloud =>
+      '会話は RASQ のサーバーの RAi(クラウド)に送ります。';
+
+  @override
+  String get onboardingDiscoverAskModelLabel => 'クラウド版 RAi';
+
+  @override
+  String get onboardingDiscoverAskHint => 'どんなことが好きですか?';
+
+  @override
+  String get onboardingDiscoverEditorTitle => '囲って検索';
+
+  @override
+  String onboardingDiscoverEditorTitleStep(String step) {
+    return '囲って検索($step)';
+  }
+
+  @override
+  String get onboardingDiscoverEditorHint =>
+      '探したい部分を囲んでください。囲まずに決定すると、画像全体で探します。2 本の指で拡大・移動できます。';
+
+  @override
+  String get onboardingDiscoverEditorHintSelected =>
+      '囲んだ部分だけを切り抜いて探します。描き直すと囲みを置き換えます。';
+
+  @override
+  String get onboardingDiscoverEditorToolRect => '四角';
+
+  @override
+  String get onboardingDiscoverEditorToolLasso => 'なぞる';
+
+  @override
+  String get onboardingDiscoverEditorResetView => '元の大きさに戻す';
+
+  @override
+  String get onboardingDiscoverEditorClear => '囲みを消す';
+
+  @override
+  String get onboardingDiscoverEditorDoneWhole => '決定(画像全体)';
+
+  @override
+  String get onboardingDiscoverEditorDone => '決定';
+
+  @override
+  String get onboardingDiscoverGlimpseArmedBroadcast =>
+      '画面の配信を始めました。ブラウザで探したい画面を開いたら、画面上部の赤い表示(またはコントロールセンター)から配信を止めてください。止める直前の 3 秒だけを読み取り、RASQ に戻ると結果が出ます。';
+
+  @override
+  String get onboardingDiscoverGlimpseArmedNotification =>
+      '通知を出しました。ブラウザで探したい画面を開いてから、通知をタップしてください。タップすると、その画面を 3 秒だけ読み取ります。';
+
+  @override
+  String get onboardingDiscoverGlimpseNotificationTitle => 'RASQ で探す';
+
+  @override
+  String get onboardingDiscoverGlimpseNotificationBody =>
+      'タップすると、いま見ている画面を 3 秒だけ読み取ります';
+
+  @override
+  String get onboardingDiscoverApiImageFormat => 'jpeg / png / webp の画像だけ送れます';
+
+  @override
+  String get onboardingDiscoverApiImageSize => '画像は 10 MiB までです';
+
+  @override
+  String get onboardingDiscoverApiImageAndFrames => '画像とコマは一緒に送れません';
+
+  @override
+  String onboardingDiscoverApiFramesCount(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'コマは $max 枚までです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get onboardingDiscoverApiFrameFormat => 'jpeg / png / webp のコマだけ送れます';
+
+  @override
+  String get onboardingDiscoverApiFrameSize => 'コマは 1 枚 10 MiB までです';
+
+  @override
+  String get onboardingDiscoverApiFramesTotal => 'コマは合計 24 MiB までです';
+
+  @override
+  String get onboardingDiscoverApiEmpty => '画像・本文・URL のどれかが要ります';
+
+  @override
+  String get onboardingTourPageSnsTitle => 'いくつもの SNS を、ひとつの場所で';
+
+  @override
+  String get onboardingTourPageSnsBody =>
+      'Misskey・Mastodon・Bluesky などのアカウントを、まとめて使えます。RASQ アカウントがあれば、設定やアカウントのまとまりを、ほかの端末でも使えます。';
+
+  @override
+  String get onboardingTourPageSnsPicture =>
+      'Bluesky・Misskey・mixi2・Mastodon が RASQ にまとまる絵';
+
+  @override
+  String get onboardingTourPageTimelineTitle => 'タイムラインは、ノードで組み立てる';
+
+  @override
+  String get onboardingTourPageTimelineBody =>
+      'ホームの TL は、ノードを並べて自分好みに組み立てられます。トレンドや Today も、ノードとして TL に置けます。';
+
+  @override
+  String get onboardingTourPageTimelineNote => 'TL の歯車から変えられます。';
+
+  @override
+  String get onboardingTourPageTimelinePicture =>
+      '「SNS タイムライン」「トレンドを取得」「Today」のノードが縦に並んだ絵';
+
+  @override
+  String get onboardingTourPageTrendTitle => 'トレンドと Today';
+
+  @override
+  String get onboardingTourPageTrendBody =>
+      'いま話題の言葉と投稿を、トレンドと Today で見られます。はじめは恐れ・嫌悪・怒りを 45% までに抑えているので、強い怒りや嫌悪の投稿は、おすすめ / トレンド / Today / 関連 TL で下がるか、出なくなります。';
+
+  @override
+  String get onboardingTourPageTrendNoteSupervised =>
+      'この上限はいつでも変えられます。見守り中は、保護者の設定でさらに抑えます。';
+
+  @override
+  String get onboardingTourPageTrendNote => 'この上限はいつでも変えられます。';
+
+  @override
+  String get onboardingTourPageTrendPicture => '刺激性のレーダー';
+
+  @override
+  String get onboardingTourPageAstellTitle => 'ASTell で、声でつながる';
+
+  @override
+  String get onboardingTourPageAstellBody =>
+      'ASTell は、声で話せるルームです。聞くだけの参加もでき、下の ASTell のタブから入れます。';
+
+  @override
+  String get onboardingTourPageAstellPicture => 'ASTell のアンテナと、話している印の波形';
+
+  @override
+  String get onboardingTourPageSwingTitle => 'Swing で、気軽に流す';
+
+  @override
+  String get onboardingTourPageSwingBody =>
+      'Swing は、時間がたつと消える投稿です。フォロワーや RASQ リストの人に届き、1〜24 時間で消えます。';
+
+  @override
+  String get onboardingTourPageSwingNote => 'RASQ アカウントで使えます。';
+
+  @override
+  String get onboardingTourPageSwingPicture => 'Swing の丸いアイコンが並んだ絵';
+
+  @override
+  String get onboardingTourPageRaiTitle => '迷ったら RAi に';
+
+  @override
+  String get onboardingTourPageRaiBody =>
+      'RAi は RASQ のアシスタントです。やりたいことを聞くと、ボタンの場所まで案内したり、代わりに操作したりします。';
+
+  @override
+  String get onboardingTourPageRaiPicture => 'RAi と吹き出し';
+
+  @override
+  String get onboardingTourPagePluginsTitle => 'プラグインで、広げる';
+
+  @override
+  String get onboardingTourPagePluginsBody =>
+      'SNS も、表示も、機能も、プラグインで足せます。プラグインストアで探して入れられます。';
+
+  @override
+  String get onboardingTourPagePluginsPicture => 'プラグインのタイルが並んだ絵';
+
+  @override
+  String get onboardingTourTitle => 'RASQ の使い方';
+
+  @override
+  String get onboardingTourSkip => 'スキップ';
+
+  @override
+  String get onboardingTourBack => '戻る';
+
+  @override
+  String onboardingTourPageSemantics(int number, int total) {
+    return '$number / $total ページ';
+  }
+
+  @override
+  String get onboardingTourStart => 'はじめる';
+
+  @override
+  String get onboardingTourNext => '次へ';
+
+  @override
+  String get onboardingTourOpenTendency => 'いま設定を見る';
+
+  @override
+  String get onboardingTourNodeSnsTimeline => 'SNS タイムライン';
+
+  @override
+  String get onboardingTourNodeTrend => 'トレンドを取得';
+
+  @override
+  String get onboardingTourRaiBubble => 'TL にリストを足したい';
+
+  @override
   String get settingsActionBarTitle => 'プラグインボタン';
 
   @override

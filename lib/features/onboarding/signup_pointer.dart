@@ -91,7 +91,7 @@ SignupPointSpec? signupPointSpec(ServerSignupTarget t, SignupPointIntent intent)
     return switch (intent) {
       SignupPointIntent.rules => const SignupPointSpec(
           selectors: ['a.button[href*="accept="]', '.stacked-actions .button', 'form[action*="/auth/sign_up"] .actions button'],
-          text: r'^(同意する|同意して|Accept|I agree)',
+          text: r'^(同意する|同意して|Accept|I agree)', // l10n-ignore
         ),
       SignupPointIntent.accountFields => const SignupPointSpec(selectors: [
           'input[name="user[account_attributes][display_name]"]',
@@ -107,12 +107,12 @@ SignupPointSpec? signupPointSpec(ServerSignupTarget t, SignupPointIntent intent)
           'form[action*="/auth/sign_in"] input[name="user[password]"]',
           'form[action*="/auth/sign_in"] button[type="submit"]',
         ]),
-      SignupPointIntent.authorize => const SignupPointSpec(selectors: ['form[action*="/oauth/authorize"] button[type="submit"]:not(.negative)'], text: r'^(承認|許可|Authorize)'),
+      SignupPointIntent.authorize => const SignupPointSpec(selectors: ['form[action*="/oauth/authorize"] button[type="submit"]:not(.negative)'], text: r'^(承認|許可|Authorize)'), // l10n-ignore
       _ => null,
     };
   }
   return switch (intent) {
-    SignupPointIntent.openSignup => const SignupPointSpec(selectors: ['[data-cy-signup]'], text: r'^(新規登録|アカウント作成|Sign ?up)'),
+    SignupPointIntent.openSignup => const SignupPointSpec(selectors: ['[data-cy-signup]'], text: r'^(新規登録|アカウント作成|Sign ?up)'), // l10n-ignore
     SignupPointIntent.accountFields => const SignupPointSpec(selectors: [
         '[data-cy-signup-username] input',
         '[data-cy-signup-password] input',
@@ -127,9 +127,9 @@ SignupPointSpec? signupPointSpec(ServerSignupTarget t, SignupPointIntent intent)
         '.cf-turnstile',
         'iframe[src*="captcha"]',
       ]),
-    SignupPointIntent.agreement => const SignupPointSpec(selectors: ['[data-cy-signup-rules-notes-agree]', '[data-cy-signup-rules-continue]'], text: r'(同意する|Agree)'),
-    SignupPointIntent.login => const SignupPointSpec(selectors: ['[data-cy-signin-username] input', '[data-cy-signin-password] input', '[data-cy-signin-page-input] input', '[data-cy-signin-page-password-continue]'], text: r'^(ログイン|Sign ?in)$'),
-    SignupPointIntent.authorize => const SignupPointSpec(selectors: ['[data-cy-miauth-allow]'], text: r'^(許可|Allow|Accept)'),
+    SignupPointIntent.agreement => const SignupPointSpec(selectors: ['[data-cy-signup-rules-notes-agree]', '[data-cy-signup-rules-continue]'], text: r'(同意する|Agree)'), // l10n-ignore
+    SignupPointIntent.login => const SignupPointSpec(selectors: ['[data-cy-signin-username] input', '[data-cy-signin-password] input', '[data-cy-signin-page-input] input', '[data-cy-signin-page-password-continue]'], text: r'^(ログイン|Sign ?in)$'), // l10n-ignore
+    SignupPointIntent.authorize => const SignupPointSpec(selectors: ['[data-cy-miauth-allow]'], text: r'^(許可|Allow|Accept)'), // l10n-ignore
     _ => null,
   };
 }

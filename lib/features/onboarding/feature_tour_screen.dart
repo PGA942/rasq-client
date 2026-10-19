@@ -7,6 +7,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart' show SnsKind;
 
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../child_safe/child_gate.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../rai/rai_widgets.dart' show RaiIcon;
@@ -49,59 +50,60 @@ class FeatureTourPage {
 }
 
 /// 見せるページ。見守り中は、使えない機能のページを外し、刺激性のページに一言足す。
-List<FeatureTourPage> featureTourPages(ChildGate gate) {
+List<FeatureTourPage> featureTourPages(ChildGate gate, [AppLocalizations? l10n]) {
+  final l = l10n ?? appL10n;
   final supervised = gate.supervised;
   return [
-    const FeatureTourPage(
+    FeatureTourPage(
       id: 'sns',
-      title: 'いくつもの SNS を、ひとつの場所で',
-      body: 'Misskey・Mastodon・Bluesky などのアカウントを、まとめて使えます。RASQ アカウントがあれば、設定やアカウントのまとまりを、ほかの端末でも使えます。',
-      picture: 'Bluesky・Misskey・mixi2・Mastodon が RASQ にまとまる絵',
+      title: l.onboardingTourPageSnsTitle,
+      body: l.onboardingTourPageSnsBody,
+      picture: l.onboardingTourPageSnsPicture,
     ),
-    const FeatureTourPage(
+    FeatureTourPage(
       id: 'timeline',
-      title: 'タイムラインは、ノードで組み立てる',
-      body: 'ホームの TL は、ノードを並べて自分好みに組み立てられます。トレンドや Today も、ノードとして TL に置けます。',
-      note: 'TL の歯車から変えられます。',
-      picture: '「SNS タイムライン」「トレンドを取得」「Today」のノードが縦に並んだ絵',
+      title: l.onboardingTourPageTimelineTitle,
+      body: l.onboardingTourPageTimelineBody,
+      note: l.onboardingTourPageTimelineNote,
+      picture: l.onboardingTourPageTimelinePicture,
     ),
     if (gate.featureAllowed('trend'))
       FeatureTourPage(
         id: 'trend',
-        title: 'トレンドと Today',
-        body: 'いま話題の言葉と投稿を、トレンドと Today で見られます。はじめは恐れ・嫌悪・怒りを 45% までに抑えているので、強い怒りや嫌悪の投稿は、おすすめ / トレンド / Today / 関連 TL で下がるか、出なくなります。',
-        note: supervised ? 'この上限はいつでも変えられます。見守り中は、保護者の設定でさらに抑えます。' : 'この上限はいつでも変えられます。',
-        picture: '刺激性のレーダー',
+        title: l.onboardingTourPageTrendTitle,
+        body: l.onboardingTourPageTrendBody,
+        note: supervised ? l.onboardingTourPageTrendNoteSupervised : l.onboardingTourPageTrendNote,
+        picture: l.onboardingTourPageTrendPicture,
       ),
     if (gate.featureAllowed('astell.join'))
-      const FeatureTourPage(
+      FeatureTourPage(
         id: 'astell',
-        title: 'ASTell で、声でつながる',
-        body: 'ASTell は、声で話せるルームです。聞くだけの参加もでき、下の ASTell のタブから入れます。',
-        picture: 'ASTell のアンテナと、話している印の波形',
+        title: l.onboardingTourPageAstellTitle,
+        body: l.onboardingTourPageAstellBody,
+        picture: l.onboardingTourPageAstellPicture,
       ),
     // Swing は見守り中は出していない(swing_providers.dart)。
     if (!supervised)
-      const FeatureTourPage(
+      FeatureTourPage(
         id: 'swing',
-        title: 'Swing で、気軽に流す',
-        body: 'Swing は、時間がたつと消える投稿です。フォロワーや RASQ リストの人に届き、1〜24 時間で消えます。',
-        note: 'RASQ アカウントで使えます。',
-        picture: 'Swing の丸いアイコンが並んだ絵',
+        title: l.onboardingTourPageSwingTitle,
+        body: l.onboardingTourPageSwingBody,
+        note: l.onboardingTourPageSwingNote,
+        picture: l.onboardingTourPageSwingPicture,
       ),
     if (gate.raiEnabled)
-      const FeatureTourPage(
+      FeatureTourPage(
         id: 'rai',
-        title: '迷ったら RAi に',
-        body: 'RAi は RASQ のアシスタントです。やりたいことを聞くと、ボタンの場所まで案内したり、代わりに操作したりします。',
-        picture: 'RAi と吹き出し',
+        title: l.onboardingTourPageRaiTitle,
+        body: l.onboardingTourPageRaiBody,
+        picture: l.onboardingTourPageRaiPicture,
       ),
     if (gate.routeBlockReason('/store') == null)
-      const FeatureTourPage(
+      FeatureTourPage(
         id: 'plugins',
-        title: 'プラグインで、広げる',
-        body: 'SNS も、表示も、機能も、プラグインで足せます。プラグインストアで探して入れられます。',
-        picture: 'プラグインのタイルが並んだ絵',
+        title: l.onboardingTourPagePluginsTitle,
+        body: l.onboardingTourPagePluginsBody,
+        picture: l.onboardingTourPagePluginsPicture,
       ),
   ];
 }
@@ -141,7 +143,7 @@ class _FeatureTourScreenState extends ConsumerState<FeatureTourScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pages = featureTourPages(ref.watch(childGateProvider));
+    final pages = featureTourPages(ref.watch(childGateProvider), context.l10n);
     final index = _index.clamp(0, pages.length - 1);
     final last = index == pages.length - 1;
     final scheme = Theme.of(context).colorScheme;
@@ -160,9 +162,9 @@ class _FeatureTourScreenState extends ConsumerState<FeatureTourScreen> {
         appBar: AppBar(
           automaticallyImplyLeading: false,
           centerTitle: false,
-          title: Text('RASQ の使い方', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+          title: Text(context.l10n.onboardingTourTitle, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
           actions: [
-            if (_skippable) TextButton(key: const ValueKey('tour.skip'), onPressed: _finish, child: const Text('スキップ')),
+            if (_skippable) TextButton(key: const ValueKey('tour.skip'), onPressed: _finish, child: Text(context.l10n.onboardingTourSkip)),
             const SizedBox(width: RasqSpacing.sm),
           ],
         ),
@@ -185,11 +187,11 @@ class _FeatureTourScreenState extends ConsumerState<FeatureTourScreen> {
                     width: 96,
                     child: index == 0
                         ? const SizedBox.shrink()
-                        : TextButton(key: const ValueKey('tour.back'), onPressed: () => _goTo(index - 1), child: const Text('戻る')),
+                        : TextButton(key: const ValueKey('tour.back'), onPressed: () => _goTo(index - 1), child: Text(context.l10n.onboardingTourBack)),
                   ),
                   Expanded(
                     child: Semantics(
-                      label: '${index + 1} / ${pages.length} ページ',
+                      label: context.l10n.onboardingTourPageSemantics(index + 1, pages.length),
                       excludeSemantics: true,
                       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                         for (var i = 0; i < pages.length; i++)
@@ -209,7 +211,7 @@ class _FeatureTourScreenState extends ConsumerState<FeatureTourScreen> {
                       key: const ValueKey('tour.next'),
                       onPressed: last ? _finish : () => _goTo(index + 1),
                       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(RasqSizes.minTap)),
-                      child: Text(last ? 'はじめる' : '次へ'),
+                      child: Text(last ? context.l10n.onboardingTourStart : context.l10n.onboardingTourNext),
                     ),
                   ),
                 ]),
@@ -247,14 +249,14 @@ class _TourPageView extends ConsumerWidget {
           // 刺激性の設定 (D-470) をツアーの上に開く。閉じると同じページに戻る。
           onPressed: () => openTendencyFow(context, ref),
           icon: const Icon(Icons.tune, size: 18),
-          label: const Text('いま設定を見る'),
+          label: Text(context.l10n.onboardingTourOpenTendency),
         ),
       ],
     ]);
     final picture = Semantics(label: page.picture, image: true, excludeSemantics: true, child: _TourPicture(id: page.id));
     return Semantics(
       key: ValueKey('tour.page.${page.id}'),
-      label: '$number / $total ページ',
+      label: context.l10n.onboardingTourPageSemantics(number, total),
       container: true,
       child: LayoutBuilder(builder: (context, c) {
         final wide = c.maxWidth >= RasqSizes.tabletBreakpoint;
@@ -327,9 +329,9 @@ class _TourPicture extends ConsumerWidget {
         ]));
       case 'timeline':
         return card(Column(mainAxisSize: MainAxisSize.min, children: [
-          node('SNS タイムライン', Icons.dynamic_feed_outlined),
+          node(context.l10n.onboardingTourNodeSnsTimeline, Icons.dynamic_feed_outlined),
           Icon(Icons.add, size: 18, color: scheme.outline),
-          node('トレンドを取得', Icons.trending_up, accent: true),
+          node(context.l10n.onboardingTourNodeTrend, Icons.trending_up, accent: true),
           Icon(Icons.add, size: 18, color: scheme.outline),
           node('Today', Icons.today_outlined, accent: true),
         ]));
@@ -383,7 +385,7 @@ class _TourPicture extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.all(RasqSpacing.sm),
               decoration: BoxDecoration(color: scheme.surface, borderRadius: BorderRadius.circular(RasqSizes.radiusMd), border: Border.all(color: scheme.outlineVariant)),
-              child: Text('TL にリストを足したい', style: RasqTypography.bodySmall),
+              child: Text(context.l10n.onboardingTourRaiBubble, style: RasqTypography.bodySmall),
             ),
           ),
         ]));

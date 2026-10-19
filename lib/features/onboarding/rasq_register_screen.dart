@@ -7,6 +7,7 @@ import '../../backend/account_security_api.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_consent.dart';
+import '../../l10n/l10n.dart';
 import '../../session/rasq_account_logout.dart' show RasqProviderRead;
 
 /// RASQ アカウントの登録の手続き (D-241 → D-414 → D-419)。画面はオンボーディング v2 の ①② のページ(`onboarding_steps.dart`)。
@@ -18,9 +19,9 @@ const rasqPasswordMinChars = 8;
 /// パスワードの手前の確かめ(サーバーの決まり S-019 と同じ: 8〜256 文字、1 種類の字だけは不可)。空なら null(まだ入れていない)。
 String? rasqPasswordProblem(String p) {
   if (p.isEmpty) return null;
-  if (p.characters.length < rasqPasswordMinChars) return '$rasqPasswordMinChars 文字以上にしてください';
-  if (p.characters.length > 256) return '256 文字までです';
-  if (p.characters.toSet().length == 1) return '同じ字の繰り返しは使えません';
+  if (p.characters.length < rasqPasswordMinChars) return appL10n.onboardingPasswordTooShort(rasqPasswordMinChars);
+  if (p.characters.length > 256) return appL10n.onboardingPasswordTooLong;
+  if (p.characters.toSet().length == 1) return appL10n.onboardingPasswordRepeated;
   return null;
 }
 
@@ -46,7 +47,7 @@ Future<RasqAccountRecord?> openRasqAccountCreation(GoRouter router, RasqProvider
   try {
     return await completeRasqRegistration(read, req.choice, handle: req.handle, another: true, keepOnHandleRejected: true, onMessage: onMessage);
   } on OrgateException catch (e) {
-    onMessage('RASQ アカウントを作成できませんでした: ${e.message}');
+    onMessage(appL10n.onboardingCreateFailed(e.message));
     return null;
   }
 }
@@ -86,13 +87,13 @@ Future<RasqAccountRecord?> completeRasqRegistration(RasqProviderRead read, RasqR
     account = await notifier.createAccount(displayName: displayName, consents: choice.toConsentsJson(), another: another, resume: attempt?.accountId);
   } on OrgateException catch (e) {
     if (isTermsVersionError(e)) {
-      onMessage('利用規約が新しくなっています。アプリを更新してから、もう一度登録してください');
+      onMessage(appL10n.onboardingTermsOutdated);
       return null;
     }
     rethrow;
   }
   if (account == null) {
-    onMessage('RASQ サーバーの接続先が設定されていません');
+    onMessage(appL10n.onboardingNoServer);
     return null;
   }
   return _finishRegistration(read, notifier, account, choice, handle: handle, attempt: attempt, keepOnHandleRejected: keepOnHandleRejected, onMessage: onMessage);
@@ -116,13 +117,13 @@ Future<RasqAccountRecord?> _finishRegistration(RasqProviderRead read, OrgateAcco
     } on OrgateException catch (e) {
       final code = e.code.code;
       final rejected = switch (code) {
-        '409' => 'このユーザー名はもう使われています',
-        '400' || '422' => 'このユーザー名は使えません(${e.message})',
+        '409' => appL10n.onboardingHandleTaken,
+        '400' || '422' => appL10n.onboardingHandleUnusable(e.message),
         _ => null,
       };
       if (rejected == null) rethrow;
       if (!keepOnHandleRejected) throw RasqHandleRejected(rejected);
-      onMessage('$rejected。ユーザー名は @${account.handle} のままです(プロフィールの編集で変えられます)');
+      onMessage(appL10n.onboardingHandleKept(rejected, account.handle));
     }
   }
   // パスワード (D-299)。すでに設定済みのアカウントへ戻ったとき(この端末の前のアカウント)は、変えない。
@@ -132,10 +133,10 @@ Future<RasqAccountRecord?> _finishRegistration(RasqProviderRead read, OrgateAcco
       await security.setPassword(choice.password);
       await notifier.refresh();
     } on OrgateException catch (e) {
-      onMessage('アカウントは作成しましたが、パスワードを設定できませんでした(${accountSecurityMessage(e)})。設定 →「アカウントの保護」から設定してください');
+      onMessage(appL10n.onboardingPasswordSetFailed(accountSecurityMessage(e)));
     }
   }
-  if (notifier.lastRestored) onMessage('この端末の RASQ アカウントへ戻りました');
+  if (notifier.lastRestored) onMessage(appL10n.onboardingRestored);
   return read(rasqAccountsProvider.notifier).attachCentral(
         centralAccountId: account.id,
         handle: account.handle,

@@ -6,6 +6,7 @@ import 'package:rasq_models/rasq_models.dart';
 
 import '../../backend/rasq_collections_api.dart';
 import '../../backend/server_info_api.dart';
+import '../../l10n/l10n.dart';
 import '../collections/rasq_collection_tile.dart';
 import '../servers/server_info_tile.dart';
 import 'server_signup.dart';
@@ -40,8 +41,8 @@ class OnboardingShowcaseScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: () => context.pop()),
-          title: const Text('サーバーとリストを見てみる'),
+          leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: context.l10n.onboardingBack, onPressed: () => context.pop()),
+          title: Text(context.l10n.onboardingShowcaseTitle),
           centerTitle: false,
         ),
         body: const SafeArea(child: OnboardingPreviewColumn()),
@@ -62,8 +63,8 @@ class _ServerPreviews extends ConsumerWidget {
     final shown = [for (final h in hosts) if (ref.watch(serverInfoProvider(h)).value != null) h];
     if (shown.isEmpty) return const SizedBox.shrink();
     return Column(key: const ValueKey('onboarding.previews.servers'), crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-      const RasqSectionHeader(title: 'サーバー'),
-      _hint(context, 'タップすると、そのサーバーに登録できます'),
+      RasqSectionHeader(title: context.l10n.onboardingDiscoverServersHeading),
+      _hint(context, context.l10n.onboardingShowcaseServersHint),
       SizedBox(
         height: _rowHeight,
         child: ListView.separated(
@@ -101,7 +102,7 @@ class ServerShowcaseTile extends ConsumerWidget {
     }
 
     return Column(key: ValueKey('onboarding.server.$host'), crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-      ServerInfoTile(host: host, withRai: false, openLabel: target == null ? 'サーバーを開く' : 'このサーバーに登録', onOpen: target == null ? null : signup),
+      ServerInfoTile(host: host, withRai: false, openLabel: target == null ? context.l10n.onboardingShowcaseOpenServer : context.l10n.onboardingShowcaseSignupServer, onOpen: target == null ? null : signup),
       for (final p in picks)
         Padding(
           padding: const EdgeInsets.only(top: RasqSpacing.xs),
@@ -120,8 +121,8 @@ class _ListPreviews extends ConsumerWidget {
     final lists = ref.watch(onboardingRasqListsProvider).value ?? const <RasqCollection>[];
     if (lists.isEmpty) return const SizedBox.shrink();
     return Column(key: const ValueKey('onboarding.previews.lists'), crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-      const RasqSectionHeader(title: 'RASQ リスト'),
-      _hint(context, 'SNS をまたいだ人のリストです。タップすると、リストの人がいるサーバーに登録できます'),
+      RasqSectionHeader(title: context.l10n.onboardingDiscoverListsHeading),
+      _hint(context, context.l10n.onboardingShowcaseListsHint),
       SizedBox(
         height: _rowHeight,
         child: ListView.separated(
@@ -148,7 +149,7 @@ class RasqListShowcaseTile extends ConsumerWidget {
     final c = collection;
     final picks = ref.watch(rasqListShowcasePicksProvider(c.id)).value ?? const <ShowcasePick>[];
     return Column(key: ValueKey('onboarding.list.${c.id}'), crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-      RasqCollectionTile(collection: c, openLabel: '登録する', onOpen: () => signupFromList(context, ref, c)),
+      RasqCollectionTile(collection: c, openLabel: context.l10n.onboardingDiscoverSignupButton, onOpen: () => signupFromList(context, ref, c)),
       for (final p in picks)
         Padding(
           padding: const EdgeInsets.only(top: RasqSpacing.xs),
@@ -162,7 +163,7 @@ class RasqListShowcaseTile extends ConsumerWidget {
     final t = info == null ? null : signupTargetFor(info, post: post);
     if (!context.mounted) return;
     if (t == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${post.author.account.instance} には、アプリから登録できません')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.onboardingDiscoverCannotSignup(post.author.account.instance))));
       return;
     }
     startServerSignup(context, ref, t);
@@ -180,7 +181,7 @@ Future<void> signupFromList(BuildContext context, WidgetRef ref, RasqCollection 
   }
   if (!context.mounted) return;
   if (targets.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('このリストのサーバーには、アプリから登録できません')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.onboardingShowcaseListCannotSignup)));
     return;
   }
   final picked = targets.length == 1
@@ -189,12 +190,12 @@ Future<void> signupFromList(BuildContext context, WidgetRef ref, RasqCollection 
           context: context,
           builder: (sheet) => SafeArea(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('どのサーバーに登録しますか?', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700))),
+              Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(context.l10n.onboardingShowcasePickServer, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700))),
               for (final t in targets)
                 RasqListTile(
                   key: ValueKey('onboarding.list.server.${t.host}'),
                   title: t.displayName,
-                  subtitle: '${t.host} ・ ${t.kind.label}',
+                  subtitle: context.l10n.onboardingShowcasePickServerSubtitle(t.host, t.kind.label),
                   leading: const Icon(Icons.dns_outlined),
                   onTap: () => Navigator.of(sheet).pop(t),
                 ),
@@ -219,7 +220,7 @@ class ShowcasePostCard extends StatelessWidget {
     final caption = [
       if (reactions > 0) '♡ $reactions',
       if (renotes > 0) '↻ $renotes',
-      if (p.media.isNotEmpty) '画像 ${p.media.length} 枚',
+      if (p.media.isNotEmpty) context.l10n.onboardingShowcasePostImages(p.media.length),
     ].join('  ');
     return Material(
       color: scheme.surface,

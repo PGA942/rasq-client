@@ -6,6 +6,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import 'feature_tour.dart' show featureTourHoldNudge, featureTourHoldsProvider;
 import 'rasq_register_screen.dart' show openRasqAccountCreation;
@@ -87,13 +88,13 @@ class _RasqAccountNudgeListenerState extends ConsumerState<RasqAccountNudgeListe
       await storage.write(rasqAccountNudgeKey, DateTime.now().toUtc().toIso8601String());
       final picked = await ref.read(overlayManagerProvider).showChoiceAlert<RasqAccountNudgeChoice>(
         id: rasqAccountNudgeId,
-        title: 'RASQ アカウントを作りますか?',
-        message: 'RASQ アカウントがあると、入れたプラグインや設定・SNS のアカウントのまとまりを、ほかの端末でも使えます。Swing や RASQ リストも RASQ アカウントから使います。あとからサイドバーの … でも作れます。',
+        title: appL10n.onboardingNudgeTitle,
+        message: appL10n.onboardingNudgeMessage,
         cancelText: null,
-        choices: const [
-          RasqAlertChoice('作る', RasqAccountNudgeChoice.create, primary: true, key: ValueKey('rasqNudge.create')),
-          RasqAlertChoice('ログイン(持っている人)', RasqAccountNudgeChoice.login, key: ValueKey('rasqNudge.login')),
-          RasqAlertChoice('あとで', RasqAccountNudgeChoice.later, key: ValueKey('rasqNudge.later')),
+        choices: [
+          RasqAlertChoice(appL10n.onboardingNudgeCreate, RasqAccountNudgeChoice.create, primary: true, key: const ValueKey('rasqNudge.create')),
+          RasqAlertChoice(appL10n.onboardingNudgeLogin, RasqAccountNudgeChoice.login, key: const ValueKey('rasqNudge.login')),
+          RasqAlertChoice(appL10n.onboardingNudgeLater, RasqAccountNudgeChoice.later, key: const ValueKey('rasqNudge.later')),
         ],
       );
       if (!mounted) return;
@@ -101,7 +102,7 @@ class _RasqAccountNudgeListenerState extends ConsumerState<RasqAccountNudgeListe
         case RasqAccountNudgeChoice.create:
           // 作る流れ (D-419): オンボーディング v2 の ①② のページ(ユーザー名・パスワード・年齢 → 規約)。作れたら元の画面へ戻る。
           final rec = await openRasqAccountCreation(ref.read(routerProvider), ProviderScope.containerOf(context, listen: false).read, onMessage: _toast);
-          if (rec != null) _toast('RASQ アカウント @${rec.handle ?? ''} を作成しました');
+          if (rec != null) _toast(appL10n.onboardingNudgeCreated(rec.handle ?? ''));
         case RasqAccountNudgeChoice.login:
           unawaited(ref.read(routerProvider).push('${Routes.settings}/account-login'));
         case RasqAccountNudgeChoice.later || null:

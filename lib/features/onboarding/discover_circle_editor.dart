@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import 'discover_image_crop.dart';
 
@@ -161,7 +162,7 @@ class _DiscoverCircleEditorState extends State<DiscoverCircleEditor> {
         : _selection;
     return Scaffold(
       key: const ValueKey('discover.editor'),
-      appBar: RasqPageHeader(title: widget.step == null ? '囲って検索' : '囲って検索(${widget.step})', showMore: false, onBack: () => Navigator.of(context).pop()),
+      appBar: RasqPageHeader(title: widget.step == null ? context.l10n.onboardingDiscoverEditorTitle : context.l10n.onboardingDiscoverEditorTitleStep(widget.step!), showMore: false, onBack: () => Navigator.of(context).pop()),
       body: SafeArea(
         top: false,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -221,7 +222,7 @@ class _DiscoverCircleEditorState extends State<DiscoverCircleEditor> {
                 padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
                   Text(
-                    _selection == null ? '探したい部分を囲んでください。囲まずに決定すると、画像全体で探します。2 本の指で拡大・移動できます。' : '囲んだ部分だけを切り抜いて探します。描き直すと囲みを置き換えます。',
+                    _selection == null ? context.l10n.onboardingDiscoverEditorHint : context.l10n.onboardingDiscoverEditorHintSelected,
                     key: const ValueKey('discover.editor.hint'),
                     style: caption,
                   ),
@@ -232,9 +233,9 @@ class _DiscoverCircleEditorState extends State<DiscoverCircleEditor> {
                         alignment: Alignment.centerLeft,
                         child: SegmentedButton<DiscoverSelectionKind>(
                           showSelectedIcon: false,
-                          segments: const [
-                            ButtonSegment(value: DiscoverSelectionKind.rect, icon: Icon(Icons.crop_square, key: ValueKey('discover.editor.tool.rect')), label: Text('四角')),
-                            ButtonSegment(value: DiscoverSelectionKind.lasso, icon: Icon(Icons.gesture, key: ValueKey('discover.editor.tool.lasso')), label: Text('なぞる')),
+                          segments: [
+                            ButtonSegment(value: DiscoverSelectionKind.rect, icon: const Icon(Icons.crop_square, key: ValueKey('discover.editor.tool.rect')), label: Text(context.l10n.onboardingDiscoverEditorToolRect)),
+                            ButtonSegment(value: DiscoverSelectionKind.lasso, icon: const Icon(Icons.gesture, key: ValueKey('discover.editor.tool.lasso')), label: Text(context.l10n.onboardingDiscoverEditorToolLasso)),
                           ],
                           selected: {_tool},
                           onSelectionChanged: (s) => setState(() => _tool = s.first),
@@ -242,10 +243,10 @@ class _DiscoverCircleEditorState extends State<DiscoverCircleEditor> {
                       ),
                     ),
                     if (_scale != 1 || _offset != Offset.zero)
-                      IconButton(key: const ValueKey('discover.editor.reset'), tooltip: '元の大きさに戻す', icon: const Icon(Icons.fit_screen), onPressed: _resetView),
+                      IconButton(key: const ValueKey('discover.editor.reset'), tooltip: context.l10n.onboardingDiscoverEditorResetView, icon: const Icon(Icons.fit_screen), onPressed: _resetView),
                     IconButton(
                       key: const ValueKey('discover.editor.clear'),
-                      tooltip: '囲みを消す',
+                      tooltip: context.l10n.onboardingDiscoverEditorClear,
                       icon: const Icon(Icons.layers_clear_outlined),
                       onPressed: _selection == null ? null : () => setState(() => _selection = null),
                     ),
@@ -255,7 +256,7 @@ class _DiscoverCircleEditorState extends State<DiscoverCircleEditor> {
                     key: const ValueKey('discover.editor.done'),
                     onPressed: () => Navigator.of(context).pop(DiscoverEditorResult(_selection)),
                     style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-                    child: Text(_selection == null ? '決定(画像全体)' : '決定'),
+                    child: Text(_selection == null ? context.l10n.onboardingDiscoverEditorDoneWhole : context.l10n.onboardingDiscoverEditorDone),
                   ),
                 ]),
               ),

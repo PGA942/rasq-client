@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart' show StringCharacters;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../l10n/l10n.dart';
 import 'orgate_client.dart';
 import 'rasq_collections_api.dart';
 
@@ -290,16 +291,16 @@ class OnboardingDiscoverApi {
   /// [source] は `screen` / `picker` / `browser`、[capturedAt] は読み取った時刻。
   Future<ContentDiscoverResult> content({List<int>? image, List<List<int>> frames = const [], String? source, DateTime? capturedAt, String? text, Uri? url}) async {
     final mime = image == null ? null : discoverImageMime(image);
-    if (image != null && mime == null) throw ArgumentError('jpeg / png / webp の画像だけ送れます');
-    if (image != null && image.length > discoverImageMaxBytes) throw ArgumentError('画像は 10 MiB までです');
-    if (image != null && frames.isNotEmpty) throw ArgumentError('画像とコマは一緒に送れません');
-    if (frames.length > discoverFramesMax) throw ArgumentError('コマは $discoverFramesMax 枚までです');
+    if (image != null && mime == null) throw ArgumentError(appL10n.onboardingDiscoverApiImageFormat);
+    if (image != null && image.length > discoverImageMaxBytes) throw ArgumentError(appL10n.onboardingDiscoverApiImageSize);
+    if (image != null && frames.isNotEmpty) throw ArgumentError(appL10n.onboardingDiscoverApiImageAndFrames);
+    if (frames.length > discoverFramesMax) throw ArgumentError(appL10n.onboardingDiscoverApiFramesCount(discoverFramesMax));
     final frameMimes = [for (final f in frames) discoverImageMime(f)];
-    if (frameMimes.any((m) => m == null)) throw ArgumentError('jpeg / png / webp のコマだけ送れます');
-    if (frames.any((f) => f.length > discoverImageMaxBytes)) throw ArgumentError('コマは 1 枚 10 MiB までです');
-    if (frames.fold<int>(0, (n, f) => n + f.length) > discoverFramesMaxTotalBytes) throw ArgumentError('コマは合計 24 MiB までです');
+    if (frameMimes.any((m) => m == null)) throw ArgumentError(appL10n.onboardingDiscoverApiFrameFormat);
+    if (frames.any((f) => f.length > discoverImageMaxBytes)) throw ArgumentError(appL10n.onboardingDiscoverApiFrameSize);
+    if (frames.fold<int>(0, (n, f) => n + f.length) > discoverFramesMaxTotalBytes) throw ArgumentError(appL10n.onboardingDiscoverApiFramesTotal);
     final t = text?.trim() ?? '';
-    if (image == null && frames.isEmpty && t.isEmpty && url == null) throw ArgumentError('画像・本文・URL のどれかが要ります');
+    if (image == null && frames.isEmpty && t.isEmpty && url == null) throw ArgumentError(appL10n.onboardingDiscoverApiEmpty);
     return ContentDiscoverResult.fromJson(await client.postMultipart(
       '/onboarding/discover/content',
       fields: {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../../backend/onboarding_discover_api.dart';
+import '../../l10n/l10n.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'onboarding_previews.dart' show showcasePlainText;
 import 'showcase_genres.dart' show showcaseEligible;
@@ -22,10 +23,10 @@ class OnboardingFeedColumn extends ConsumerWidget {
     final gate = ref.watch(childGateProvider);
     final items = [for (final i in feed.value?.items ?? const <OnboardingFeedItem>[]) if (showcaseEligible(i.post, gate: gate)) i];
     return Column(key: const ValueKey('onboarding.feed'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const RasqSectionHeader(title: '公開 RASQ リストから'),
+      RasqSectionHeader(title: context.l10n.onboardingFeedTitle),
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-        child: Text('SNS をまたいだ人のリストで、よく読まれている投稿です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        child: Text(context.l10n.onboardingFeedCaption, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
       ),
       Expanded(
         child: feed.isLoading && items.isEmpty
@@ -33,7 +34,7 @@ class OnboardingFeedColumn extends ConsumerWidget {
             : items.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.all(RasqSpacing.page),
-                    child: Text('いまは表示できる投稿がありません', key: const ValueKey('onboarding.feed.empty'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                    child: Text(context.l10n.onboardingFeedEmpty, key: const ValueKey('onboarding.feed.empty'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xl),
@@ -77,12 +78,12 @@ class OnboardingFeedCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(color: RasqColors.sub.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-              child: Text('リスト「${item.listName}」', style: RasqTypography.caption.copyWith(color: RasqColors.sub), maxLines: 1, overflow: TextOverflow.ellipsis),
+              child: Text(context.l10n.onboardingFeedListName(item.listName), style: RasqTypography.caption.copyWith(color: RasqColors.sub), maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
           ),
           const SizedBox(width: RasqSpacing.xs),
           if (n > 0) Text('♡ $n', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-          if (p.media.isNotEmpty) Text('  画像 ${p.media.length} 枚', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          if (p.media.isNotEmpty) Text('  ${context.l10n.onboardingShowcasePostImages(p.media.length)}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ]),
       ]),
     );
