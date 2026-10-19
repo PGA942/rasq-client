@@ -34,6 +34,7 @@ import '../settings/settings_dsl.dart';
 import '../../l10n/ui_locale.dart' show uiLocaleTagProvider;
 import '../child_safe/child_gate.dart' show ChildGate;
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
+import '../../l10n/l10n.dart';
 
 /// カスタム TL の宣言 (M5e / D-080): 現在のセッションが wasm 境界
 /// ([WasmSnsSession])のとき、その TL レンダラー契約(`tl.timelines`)から
@@ -716,7 +717,7 @@ final accountTimelineProvider = AsyncNotifierProvider.family<TimelineNotifier, T
 AsyncNotifierProvider<TimelineNotifier, TimelineState> timelineFor(TimelineKind kind, {String? account}) => account == null ? timelineProvider(kind) : accountTimelineProvider((account: account, kind: kind));
 
 /// 見守りの時間の 1 本の TL (D-307)。ホームのタブはこれだけになる(フォロー中 / AsTell もここへ畳む)。
-const childSafeWindowKind = TimelineKind('childsafe.window', '見守りの時間', extensible: false);
+TimelineKind get childSafeWindowKind => TimelineKind('childsafe.window', appL10n.homeChildSafeWindowTab, extensible: false);
 
 /// 取得ノードの kind の見守りの関所 ([21]、[resolveNodeFetch] の `kindBlocked`): DM / チャットの TL は DM を止めていれば取らない。
 bool Function(String kind) childKindBlocked(ChildGate gate) => (kind) => gate.timelineKindBlockReason(kind) != null;

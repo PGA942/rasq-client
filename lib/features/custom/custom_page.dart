@@ -16,6 +16,7 @@ import '../../app/router.dart';
 import '../../backend/orgate_client.dart' show centralBaseUrlProvider;
 import '../../backend/rasq_account.dart';
 import '../../backend/redact.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart' show fowColumnOf;
 import '../child_safe/child_gate.dart';
@@ -88,6 +89,9 @@ String normalizeEditorAspect(Object? aspect) {
 
 /// [blocked] = チャイルドセーフで保護者が止めている(D-451。理由は [CustomPageController.error])。
 enum CustomPagePhase { resolving, needsConsent, needsInstall, loading, ready, failed, blocked }
+
+/// 失敗の 1 行: `StateError` は「Bad state: 」を付けずに理由の文だけ。
+String _failureText(Object e) => e is StateError ? e.message : '$e';
 
 /// 端末に登録済みのページ型プラグイン(ストアから入れた / サイドロード)。[version] があればその版を優先。
 SlotPlugin? registeredPagePlugin(List<SlotPlugin> all, String pluginId, {String? version}) {
@@ -245,10 +249,10 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         return;
       }
       if (childBlocked case final blocked?) return _block(blocked);
-      if (p == null) throw StateError(container.read(slotPluginsNoticeProvider) ?? '読み込めませんでした');
+      if (p == null) throw StateError(container.read(slotPluginsNoticeProvider) ?? appL10n.customPageLoadFailed);
       if (!p.has(SlotIds.page)) {
         _slots.disposeTemporary(p);
-        throw StateError('${p.manifest.name} はページ型のプラグインではありません');
+        throw StateError(appL10n.customPageNotPagePlugin(p.manifest.name));
       }
       plugin = p;
       temporary = true;
@@ -256,7 +260,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     } catch (e) {
       _set(() {
         phase = CustomPagePhase.failed;
-        error = '$e';
+        error = _failureText(e);
       });
     }
   }
@@ -267,13 +271,13 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     if (_slots.pageBlockReason(p) case final blocked?) return _block(blocked);
     _set(() => phase = CustomPagePhase.loading);
     final account = container.read(orgateAccountProvider).value;
-    me = account == null ? const CustomParticipant(accountId: 'me', handle: 'me', displayName: 'あなた') : CustomParticipant(accountId: account.id, handle: account.handle, displayName: account.displayName);
+    me = account == null ? const CustomParticipant(accountId: 'me', handle: 'me', displayName: 'あなた') : CustomParticipant(accountId: account.id, handle: account.handle, displayName: account.displayName); // l10n-ignore(プラグインへ渡す自分の表示名の既定)
     final sessionId = args.sessionId;
     if (sessionId != null) {
       if (p.manifest.page?.isShared != true) {
         _set(() {
           phase = CustomPagePhase.failed;
-          error = '${p.manifest.name} は 1 人で使うプラグインです(みんなでは使えません)';
+          error = appL10n.customPageSoloPlugin(p.manifest.name);
         });
         return;
       }
@@ -283,7 +287,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         _leave();
         _set(() {
           phase = CustomPagePhase.failed;
-          error = 'セッションに入れませんでした: ${redactSecrets('$e')}';
+          error = appL10n.customPageJoinFailed(redactSecrets(_failureText(e)));
         });
         return;
       }
@@ -295,7 +299,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     _set(() {
       if (r.error != null || r.root == null) {
         phase = CustomPagePhase.failed;
-        error = r.error ?? 'プラグインがページを返しませんでした';
+        error = r.error ?? appL10n.customPageNoPage;
       } else {
         phase = CustomPagePhase.ready;
         root = r.root;
@@ -376,10 +380,10 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         if (next == null || !sessionBelongsTo(next, p)) {
           // 別のプラグインのセッション(または名乗りが無い): 値を受け取らずに抜ける。開いた後に来ても同じ。
           if (!welcome.isCompleted) {
-            welcome.completeError(StateError('${p.manifest.name} のセッションではありません'));
+            welcome.completeError(StateError(appL10n.customPageWrongSession(p.manifest.name)));
           } else if (_conn == conn) {
             _leave();
-            _set(() => notice = '${p.manifest.name} のセッションではないため抜けました');
+            _set(() => notice = appL10n.customPageLeftWrongSession(p.manifest.name));
           }
           return;
         }
@@ -402,10 +406,10 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
       _onMessage(m);
     }, onError: (Object e) {
       if (!welcome.isCompleted) welcome.completeError(e);
-      _set(() => notice = '接続が切れました: ${redactSecrets('$e')}');
+      _set(() => notice = appL10n.customPageDisconnectedWithError(redactSecrets(_failureText(e))));
     }, onDone: () {
-      if (!welcome.isCompleted) welcome.completeError(StateError('接続が切れました'));
-      if (closedReason == null) _set(() => notice = '接続が切れました');
+      if (!welcome.isCompleted) welcome.completeError(StateError(appL10n.customPageDisconnected));
+      if (closedReason == null) _set(() => notice = appL10n.customPageDisconnected);
     });
     await welcome.future.timeout(const Duration(seconds: 10));
   }
@@ -451,7 +455,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         closedReason = '${m['reason'] ?? 'closed'}';
         _event({'type': 'closed', 'reason': closedReason});
       case 'error':
-        notice = '${m['message'] ?? 'エラー'}';
+        notice = '${m['message'] ?? appL10n.customPageError}';
       default:
         return;
     }
@@ -615,14 +619,15 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
     // 招待 (D-424): Swing で送る。セッションが無ければ Swing のセッションを作り、link / profile のセッションならそこへ招く
     // (ルーム / Swing のセッションはそこにいる人だけのもの)。
     final invitable = d != null && d.isShared && !c.temporary && c.plugin?.storePluginId != null && (s == null || s.scopeKind == 'link' || s.scopeKind == 'profile');
+    final l10n = context.l10n;
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'custom.page.menu', anchor: anchor, items: [
-      if (invitable) const RasqDropdownItem('招待(Swing で送る)', 'invite'),
-      if (s?.inviteCode != null) const RasqDropdownItem('招待コードをコピー', 'copy'),
+      if (invitable) RasqDropdownItem(l10n.customPageMenuInvite, 'invite'),
+      if (s?.inviteCode != null) RasqDropdownItem(l10n.customPageMenuCopyCode, 'copy'),
       // 招待リンク (D-456): Central のページから Web クライアント / アプリで開ける。
-      if (s?.inviteCode != null && ref.read(centralBaseUrlProvider) != null) const RasqDropdownItem('招待リンクをコピー', 'copyLink'),
-      if (s != null) RasqDropdownItem('参加者(${c.participants.length})', 'people'),
-      if (isOwner) const RasqDropdownItem('セッションを閉じる', 'close', destructive: true),
-      const RasqDropdownItem('ストアで見る', 'store'),
+      if (s?.inviteCode != null && ref.read(centralBaseUrlProvider) != null) RasqDropdownItem(l10n.customPageMenuCopyLink, 'copyLink'),
+      if (s != null) RasqDropdownItem(l10n.customPageMenuParticipants(c.participants.length), 'people'),
+      if (isOwner) RasqDropdownItem(l10n.customPageMenuCloseSession, 'close', destructive: true),
+      RasqDropdownItem(l10n.customPageViewInStore, 'store'),
     ]);
     if (!mounted) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
@@ -632,32 +637,32 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
         final swing = await showCustomSwingInvite(ref, pluginId: widget.args.pluginId, title: name, version: c.plugin?.storeVersion, sessionId: s?.id, column: fowColumnOf(context));
         if (swing == null || !mounted) return;
         final n = swing.notified ?? 0;
-        messenger?.showSnackBar(SnackBar(content: Text(n > 0 ? 'Swing で招待しました(RASQ の通知 $n 人)' : 'Swing で招待しました')));
+        messenger?.showSnackBar(SnackBar(content: Text(n > 0 ? l10n.customInvitedBySwingNotified(n) : l10n.customInvitedBySwing)));
         // Swing のセッションを作ったら、自分もそこに入り直す(見た人と同じページ)。
         final joined = swing.plugin?.sessionId;
         if (s == null && joined != null) context.pushReplacement(Routes.customPage(widget.args.pluginId, widget.args.withSession(joined).query));
       case 'copy':
         await Clipboard.setData(ClipboardData(text: s!.inviteCode!));
-        messenger?.showSnackBar(SnackBar(content: Text('招待コード ${s.inviteCode} をコピーしました')));
+        messenger?.showSnackBar(SnackBar(content: Text(l10n.customPageCodeCopied(s.inviteCode!))));
       case 'copyLink':
         final central = ref.read(centralBaseUrlProvider);
         if (central == null) return;
         await Clipboard.setData(ClipboardData(text: centralCustomInviteUrl(central, s!.inviteCode!)));
-        messenger?.showSnackBar(const SnackBar(content: Text('招待リンクをコピーしました')));
+        messenger?.showSnackBar(SnackBar(content: Text(l10n.customPageLinkCopied)));
       case 'people':
         await ref.read(overlayManagerProvider).showAlert(
               id: 'custom.page.people',
-              title: '参加者',
+              title: l10n.customPageParticipants,
               message: [for (final p in c.participants) '${p.displayName ?? p.handle} (@${p.handle})'].join('\n'),
-              confirmText: '閉じる',
+              confirmText: l10n.customClose,
             );
       case 'close':
-        final ok = await ref.read(overlayManagerProvider).showAlert(id: 'custom.page.closeConfirm', title: 'セッションを閉じますか?', message: '参加している全員のページで、共有の値が止まります。', confirmText: '閉じる', cancelText: 'キャンセル', destructive: true);
+        final ok = await ref.read(overlayManagerProvider).showAlert(id: 'custom.page.closeConfirm', title: l10n.customPageCloseConfirmTitle, message: l10n.customPageCloseConfirmMessage, confirmText: l10n.customClose, cancelText: l10n.customCancel, destructive: true);
         if (ok) {
           try {
             await ref.read(customSessionClientProvider).close(s!.id);
           } catch (e) {
-            messenger?.showSnackBar(SnackBar(content: Text('閉じられませんでした: $e')));
+            messenger?.showSnackBar(SnackBar(content: Text(l10n.customPageCloseFailed('$e'))));
           }
         }
       case 'store':
@@ -685,14 +690,14 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
                 visualDensity: VisualDensity.compact,
               ),
             ),
-          Builder(builder: (bctx) => RasqIconButton(key: const ValueKey('custom.page.more'), icon: Icons.more_horiz, tooltip: 'メニュー', onPressed: () => _menu(bctx))),
+          Builder(builder: (bctx) => RasqIconButton(key: const ValueKey('custom.page.more'), icon: Icons.more_horiz, tooltip: context.l10n.customMenu, onPressed: () => _menu(bctx))),
         ],
       ),
       body: LayoutBuilder(builder: (ctx, box) {
         WidgetsBinding.instance.addPostFrameCallback((_) => c.resized(Size(box.maxWidth, box.maxHeight)));
         return Column(children: [
           if (c.closedReason != null)
-            _Banner(key: const ValueKey('custom.page.closed'), icon: Icons.stop_circle_outlined, text: 'このセッションは閉じられました(共有の値はもう変わりません)', color: scheme.errorContainer),
+            _Banner(key: const ValueKey('custom.page.closed'), icon: Icons.stop_circle_outlined, text: context.l10n.customPageClosedBanner, color: scheme.errorContainer),
           if (c.notice != null) _Banner(icon: Icons.info_outline, text: c.notice!, color: scheme.secondaryContainer, onClose: c.dismissNotice),
           Expanded(child: _body(c, scheme)),
         ]);
@@ -709,25 +714,25 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
         return ListView(padding: const EdgeInsets.all(RasqSpacing.page), children: [
           Text(d?.name ?? widget.args.pluginId, style: RasqTypography.title),
           const SizedBox(height: RasqSpacing.xs),
-          Text('このページを開いている間だけ、インストールせずに動かします(閉じると消えます)。', style: RasqTypography.body.copyWith(color: scheme.onSurfaceVariant)),
+          Text(context.l10n.customPageConsentBody, style: RasqTypography.body.copyWith(color: scheme.onSurfaceVariant)),
           if (d != null && d.safety.permissions.isNotEmpty) ...[
             const SizedBox(height: RasqSpacing.md),
-            Text('使う権限', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(context.l10n.customPageConsentPermissions, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             for (final p in d.safety.permissions) ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: const Icon(Icons.shield_outlined, size: 18), title: Text(p.permission), subtitle: p.reason.isEmpty ? null : Text(p.reason)),
           ],
           const SizedBox(height: RasqSpacing.lg),
-          FilledButton(key: const ValueKey('custom.consent.accept'), onPressed: c.acceptTemporary, child: const Text('使う')),
-          TextButton(onPressed: () => context.pop(), child: const Text('やめる')),
+          FilledButton(key: const ValueKey('custom.consent.accept'), onPressed: c.acceptTemporary, child: Text(context.l10n.customPageConsentAccept)),
+          TextButton(onPressed: () => context.pop(), child: Text(context.l10n.customPageConsentDecline)),
         ]);
       case CustomPagePhase.needsInstall:
         return RasqEmptyView(
           key: const ValueKey('custom.page.needsInstall'),
-          title: 'インストールされていません',
-          hint: 'ストアからインストールすると開けます',
-          action: FilledButton(onPressed: () => context.push(Routes.storePlugin(widget.args.pluginId)), child: const Text('ストアで見る')),
+          title: context.l10n.customPageNotInstalled,
+          hint: context.l10n.customPageNotInstalledHint,
+          action: FilledButton(onPressed: () => context.push(Routes.storePlugin(widget.args.pluginId)), child: Text(context.l10n.customPageViewInStore)),
         );
       case CustomPagePhase.failed:
-        return RasqEmptyView(key: const ValueKey('custom.page.failed'), title: '開けませんでした', hint: c.error);
+        return RasqEmptyView(key: const ValueKey('custom.page.failed'), title: context.l10n.customPageOpenFailed, hint: c.error);
       case CustomPagePhase.blocked:
         return ChildSafeBlockedView(message: c.error ?? childSafeBlockedText);
       case CustomPagePhase.ready:

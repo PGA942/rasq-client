@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import '../home/home_header.dart' show SwingAuthorBundle, swingBundleColor;
 import 'swing_providers.dart';
 import 'swing_viewer.dart' show openSwingViewer, swingRemainingLabel;
+import '../../l10n/l10n.dart';
 
 /// Swing の角丸バナー (D-386、検索の結果): リング付きのアイコン + 名前 + @ハンドル、右に件数 / 残り時間、下に文字。
 /// 押すとその人の Swing のビューワー。
@@ -16,7 +17,7 @@ class SwingBanner extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final s = entry.first;
     final unseen = entry.unseen > 0;
-    final text = s.text.trim().isNotEmpty ? s.text.trim() : '${s.kind.label}の Swing';
+    final text = s.text.trim().isNotEmpty ? s.text.trim() : context.l10n.swingKindSwing(s.kind.label);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -51,7 +52,7 @@ class SwingBanner extends StatelessWidget {
             ),
             const SizedBox(width: RasqSpacing.xs),
             Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-              Text(unseen ? '新着 ${entry.unseen}' : '${entry.total} 件', style: RasqTypography.caption.copyWith(color: unseen ? swingBundleColor : scheme.onSurfaceVariant, fontWeight: FontWeight.w700)),
+              Text(unseen ? context.l10n.swingBannerNew(entry.unseen) : context.l10n.swingBannerTotal(entry.total), style: RasqTypography.caption.copyWith(color: unseen ? swingBundleColor : scheme.onSurfaceVariant, fontWeight: FontWeight.w700)),
               Text(swingRemainingLabel(s.remaining(DateTime.now())), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ]),
           ]),

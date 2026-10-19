@@ -3238,6 +3238,1512 @@ abstract class AppLocalizations {
   /// **'「{label}」に当たるかもしれません({who})。このまま送りますか?'**
   String composePolicyWarn(String label, String who);
 
+  /// ストアのプラグインページの共有メニュー。room は参加中の AsTell のルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{room}」に追加'**
+  String customShareAddToRoom(String room);
+
+  /// No description provided for @customShareProposeToRoom.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{room}」で提案'**
+  String customShareProposeToRoom(String room);
+
+  /// No description provided for @customSharePlaceOnProfile.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィールに置く'**
+  String get customSharePlaceOnProfile;
+
+  /// No description provided for @customShareInviteBySwing.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で招待(みんなで使う)'**
+  String get customShareInviteBySwing;
+
+  /// No description provided for @customShareInstallToShare.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールするとプロフィールや招待で共有できます'**
+  String get customShareInstallToShare;
+
+  /// name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」をルームに追加しました'**
+  String customAddedToRoom(String name);
+
+  /// No description provided for @customAddToRoomFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加できませんでした: {error}'**
+  String customAddToRoomFailed(String error);
+
+  /// No description provided for @customShareProposedToRoom.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」をルームで提案しました'**
+  String customShareProposedToRoom(String name);
+
+  /// No description provided for @customSharePlacedOnProfile.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィールに置きました'**
+  String get customSharePlacedOnProfile;
+
+  /// No description provided for @customPlaceFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'置けませんでした: {error}'**
+  String customPlaceFailed(String error);
+
+  /// count は RASQ の通知でも知らせた人の数
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で招待しました(RASQ の通知 {count, plural, other{{count} 人}})'**
+  String customInvitedBySwingNotified(int count);
+
+  /// No description provided for @customInvitedBySwing.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で招待しました'**
+  String get customInvitedBySwing;
+
+  /// No description provided for @customInviteTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で招待'**
+  String get customInviteTitle;
+
+  /// No description provided for @customInviteSendFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'送れませんでした: {error}'**
+  String customInviteSendFailed(String error);
+
+  /// title はプラグインのページの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」に招待'**
+  String customInviteHeading(String title);
+
+  /// No description provided for @customInviteIntroOwnPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で届けます。見た人は、あなたのページに一緒に入ります。'**
+  String get customInviteIntroOwnPage;
+
+  /// No description provided for @customInviteIntroCurrentPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で届けます。見た人は、いま開いているページに一緒に入ります。'**
+  String get customInviteIntroCurrentPage;
+
+  /// No description provided for @customInviteHelp.
+  ///
+  /// In ja, this message translates to:
+  /// **'届け先: 押す = Swing を届ける ・ 2 回続けて押す = RASQ の通知でも知らせる 🔔'**
+  String get customInviteHelp;
+
+  /// No description provided for @customInviteFollowers.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワー'**
+  String get customInviteFollowers;
+
+  /// No description provided for @customInviteNoLists.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストを作ると、リストに入れた人も招待できます'**
+  String get customInviteNoLists;
+
+  /// No description provided for @customInviteTextHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ひとこと(なくてもよい)'**
+  String get customInviteTextHint;
+
+  /// No description provided for @customInviteTtl.
+  ///
+  /// In ja, this message translates to:
+  /// **'消えるまで'**
+  String get customInviteTtl;
+
+  /// No description provided for @customInviteTtlHours.
+  ///
+  /// In ja, this message translates to:
+  /// **'{hours, plural, other{{hours} 時間}}'**
+  String customInviteTtlHours(int hours);
+
+  /// No description provided for @customInviteSendWithNotify.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で招待(通知も送る)'**
+  String get customInviteSendWithNotify;
+
+  /// No description provided for @customInviteErrorVersionNotAvailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインは、つないでいる RASQ サーバーのストアで配られていません(審査を通った版がありません)。アプリに入っているサンプルのままでは、みんなで使えません'**
+  String get customInviteErrorVersionNotAvailable;
+
+  /// No description provided for @customInviteErrorNotShared.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなで使うプラグインではありません'**
+  String get customInviteErrorNotShared;
+
+  /// No description provided for @customInviteErrorSessionNotShareable.
+  ///
+  /// In ja, this message translates to:
+  /// **'このページのセッションは Swing では招待できません'**
+  String get customInviteErrorSessionNotShareable;
+
+  /// No description provided for @customInviteErrorSwingLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'同時に出しておける Swing は 20 個までです'**
+  String get customInviteErrorSwingLimit;
+
+  /// 届け先のボタンの読み上げ。label はフォロワー / リストの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{label}(通知も送る)'**
+  String customInviteTargetWithNotify(String label);
+
+  /// No description provided for @customInviteTargetHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'押すと選ぶ / 外す。2 回続けて押すと、通知も送る'**
+  String get customInviteTargetHint;
+
+  /// No description provided for @customProfileLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページに置けるのは 8 個までです'**
+  String get customProfileLimit;
+
+  /// No description provided for @customProfileSideloadReplace.
+  ///
+  /// In ja, this message translates to:
+  /// **'上げ直す(新しい版)'**
+  String get customProfileSideloadReplace;
+
+  /// No description provided for @customProfileSideloadRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページから外す'**
+  String get customProfileSideloadRemove;
+
+  /// No description provided for @customProfileRemoveFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'外せませんでした: {error}'**
+  String customProfileRemoveFailed(String error);
+
+  /// No description provided for @customLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした: {error}'**
+  String customLoadFailed(String error);
+
+  /// No description provided for @customProfileEmptyMine.
+  ///
+  /// In ja, this message translates to:
+  /// **'「+ 追加」で Markdown のページや、カスタムプラグインを置けます。訪れた人がここから開けます。'**
+  String get customProfileEmptyMine;
+
+  /// No description provided for @customProfileEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページはまだありません。'**
+  String get customProfileEmpty;
+
+  /// No description provided for @customProfileSharedNotStarted.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなで使う(まだ始まっていません)'**
+  String get customProfileSharedNotStarted;
+
+  /// No description provided for @customProfileShared.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなで使う'**
+  String get customProfileShared;
+
+  /// No description provided for @customSolo.
+  ///
+  /// In ja, this message translates to:
+  /// **'1 人で使う'**
+  String get customSolo;
+
+  /// title はプラグインのページの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{title} のホスト用ページ'**
+  String customProfileHostPage(String title);
+
+  /// No description provided for @customProfileHostPageSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'あなたにだけ出ます'**
+  String get customProfileHostPageSubtitle;
+
+  /// No description provided for @customProfileMdPageWithDraft.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページ ・ 書きかけの下書きあり'**
+  String get customProfileMdPageWithDraft;
+
+  /// No description provided for @customProfileMdPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページ'**
+  String get customProfileMdPage;
+
+  /// No description provided for @customProfileUntitled.
+  ///
+  /// In ja, this message translates to:
+  /// **'(無題)'**
+  String get customProfileUntitled;
+
+  /// No description provided for @customProfileDraft.
+  ///
+  /// In ja, this message translates to:
+  /// **'下書き(この端末だけ)'**
+  String get customProfileDraft;
+
+  /// No description provided for @customProfileSideloadSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'自作プラグイン ・ 制限モード ・ v{version}'**
+  String customProfileSideloadSubtitle(String version);
+
+  /// No description provided for @customMenu.
+  ///
+  /// In ja, this message translates to:
+  /// **'メニュー'**
+  String get customMenu;
+
+  /// No description provided for @customProfileAdd.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加'**
+  String get customProfileAdd;
+
+  /// No description provided for @customProfileLoginToPlace.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインすると置けます'**
+  String get customProfileLoginToPlace;
+
+  /// No description provided for @customProfileSideloadPlaced.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を置きました(訪れた人の端末では制限モードで動きます)'**
+  String customProfileSideloadPlaced(String name);
+
+  /// No description provided for @customProfileSideloadErrorNotProfilePage.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のページに置けるのは、プロフィールの面を持つ 1 人で使うページ型だけです'**
+  String get customProfileSideloadErrorNotProfilePage;
+
+  /// No description provided for @customProfileSideloadErrorLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'自作プラグインは 4 つまでです'**
+  String get customProfileSideloadErrorLimit;
+
+  /// No description provided for @customProfileSideloadErrorInvalidPackage.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物を読めませんでした(.rspkg / .rasqpkg)'**
+  String get customProfileSideloadErrorInvalidPackage;
+
+  /// No description provided for @customClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get customClose;
+
+  /// No description provided for @customProfileAddTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページを追加'**
+  String get customProfileAddTitle;
+
+  /// No description provided for @customProfileAddMd.
+  ///
+  /// In ja, this message translates to:
+  /// **'Markdown のページを書く'**
+  String get customProfileAddMd;
+
+  /// No description provided for @customProfileAddMdSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'下書きはこの端末に残し、「公開」で出します。MFM は HTML 風のタグで'**
+  String get customProfileAddMdSubtitle;
+
+  /// No description provided for @customProfileAddSideload.
+  ///
+  /// In ja, this message translates to:
+  /// **'自作プラグインを置く(.rspkg / .rasqpkg)'**
+  String get customProfileAddSideload;
+
+  /// No description provided for @customProfileAddSideloadSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'審査していないプラグイン。訪れた人の端末では制限モード(通信などなし)で動きます'**
+  String get customProfileAddSideloadSubtitle;
+
+  /// No description provided for @customProfileAddStoreSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアのカスタムプラグイン'**
+  String get customProfileAddStoreSection;
+
+  /// No description provided for @customProfileAddStoreEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページに置けるカスタムプラグインを入れていません'**
+  String get customProfileAddStoreEmpty;
+
+  /// No description provided for @customProfileAddStorePlaced.
+  ///
+  /// In ja, this message translates to:
+  /// **'置いています(押すと外す)'**
+  String get customProfileAddStorePlaced;
+
+  /// No description provided for @customProfileAddStoreTapToPlace.
+  ///
+  /// In ja, this message translates to:
+  /// **'押すと置く'**
+  String get customProfileAddStoreTapToPlace;
+
+  /// No description provided for @customProfileAddStoreHasHostPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホスト用ページあり'**
+  String get customProfileAddStoreHasHostPage;
+
+  /// 一覧の補足の項目をつなぐ区切り
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get customListSeparator;
+
+  /// No description provided for @customProfileChangeFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'変えられませんでした: {error}'**
+  String customProfileChangeFailed(String error);
+
+  /// No description provided for @customSearchStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアで探す'**
+  String get customSearchStore;
+
+  /// No description provided for @customPluginsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムプラグイン'**
+  String get customPluginsTitle;
+
+  /// No description provided for @customPluginsJoinByCode.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードで参加'**
+  String get customPluginsJoinByCode;
+
+  /// No description provided for @customPluginsInviteCode.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コード'**
+  String get customPluginsInviteCode;
+
+  /// No description provided for @customPluginsJoin.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加'**
+  String get customPluginsJoin;
+
+  /// No description provided for @customPluginsInstalled.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール済み'**
+  String get customPluginsInstalled;
+
+  /// No description provided for @customPluginsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだありません。ストアの「カスタム」から探せます。'**
+  String get customPluginsEmpty;
+
+  /// No description provided for @customPluginsShared.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなで使える'**
+  String get customPluginsShared;
+
+  /// No description provided for @customPluginsProfile.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィール'**
+  String get customPluginsProfile;
+
+  /// No description provided for @customPluginsSearchStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアでカスタムプラグインを探す'**
+  String get customPluginsSearchStore;
+
+  /// No description provided for @customPluginsInviteNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'この招待コードのセッションは見つかりません(閉じられたかもしれません)'**
+  String get customPluginsInviteNotFound;
+
+  /// No description provided for @customPluginsInviteTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待'**
+  String get customPluginsInviteTitle;
+
+  /// No description provided for @customPluginsJoinFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加できませんでした'**
+  String get customPluginsJoinFailed;
+
+  /// No description provided for @customPageLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした'**
+  String get customPageLoadFailed;
+
+  /// name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} はページ型のプラグインではありません'**
+  String customPageNotPagePlugin(String name);
+
+  /// No description provided for @customPageSoloPlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} は 1 人で使うプラグインです(みんなでは使えません)'**
+  String customPageSoloPlugin(String name);
+
+  /// No description provided for @customPageJoinFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションに入れませんでした: {error}'**
+  String customPageJoinFailed(String error);
+
+  /// No description provided for @customPageNoPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインがページを返しませんでした'**
+  String get customPageNoPage;
+
+  /// No description provided for @customPageWrongSession.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} のセッションではありません'**
+  String customPageWrongSession(String name);
+
+  /// No description provided for @customPageLeftWrongSession.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} のセッションではないため抜けました'**
+  String customPageLeftWrongSession(String name);
+
+  /// No description provided for @customPageDisconnectedWithError.
+  ///
+  /// In ja, this message translates to:
+  /// **'接続が切れました: {error}'**
+  String customPageDisconnectedWithError(String error);
+
+  /// No description provided for @customPageDisconnected.
+  ///
+  /// In ja, this message translates to:
+  /// **'接続が切れました'**
+  String get customPageDisconnected;
+
+  /// サーバーが文を付けずに誤りを知らせたときの既定
+  ///
+  /// In ja, this message translates to:
+  /// **'エラー'**
+  String get customPageError;
+
+  /// No description provided for @customPageMenuInvite.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待(Swing で送る)'**
+  String get customPageMenuInvite;
+
+  /// No description provided for @customPageMenuCopyCode.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードをコピー'**
+  String get customPageMenuCopyCode;
+
+  /// No description provided for @customPageMenuCopyLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待リンクをコピー'**
+  String get customPageMenuCopyLink;
+
+  /// No description provided for @customPageMenuParticipants.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加者({count})'**
+  String customPageMenuParticipants(int count);
+
+  /// No description provided for @customPageMenuCloseSession.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションを閉じる'**
+  String get customPageMenuCloseSession;
+
+  /// No description provided for @customPageViewInStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアで見る'**
+  String get customPageViewInStore;
+
+  /// No description provided for @customPageCodeCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コード {code} をコピーしました'**
+  String customPageCodeCopied(String code);
+
+  /// No description provided for @customPageLinkCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待リンクをコピーしました'**
+  String get customPageLinkCopied;
+
+  /// No description provided for @customPageParticipants.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加者'**
+  String get customPageParticipants;
+
+  /// No description provided for @customPageCloseConfirmTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションを閉じますか?'**
+  String get customPageCloseConfirmTitle;
+
+  /// No description provided for @customPageCloseConfirmMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加している全員のページで、共有の値が止まります。'**
+  String get customPageCloseConfirmMessage;
+
+  /// No description provided for @customCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get customCancel;
+
+  /// No description provided for @customPageCloseFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じられませんでした: {error}'**
+  String customPageCloseFailed(String error);
+
+  /// No description provided for @customPageClosedBanner.
+  ///
+  /// In ja, this message translates to:
+  /// **'このセッションは閉じられました(共有の値はもう変わりません)'**
+  String get customPageClosedBanner;
+
+  /// No description provided for @customPageConsentBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'このページを開いている間だけ、インストールせずに動かします(閉じると消えます)。'**
+  String get customPageConsentBody;
+
+  /// No description provided for @customPageConsentPermissions.
+  ///
+  /// In ja, this message translates to:
+  /// **'使う権限'**
+  String get customPageConsentPermissions;
+
+  /// No description provided for @customPageConsentAccept.
+  ///
+  /// In ja, this message translates to:
+  /// **'使う'**
+  String get customPageConsentAccept;
+
+  /// No description provided for @customPageConsentDecline.
+  ///
+  /// In ja, this message translates to:
+  /// **'やめる'**
+  String get customPageConsentDecline;
+
+  /// No description provided for @customPageNotInstalled.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールされていません'**
+  String get customPageNotInstalled;
+
+  /// No description provided for @customPageNotInstalledHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアからインストールすると開けます'**
+  String get customPageNotInstalledHint;
+
+  /// No description provided for @customPageOpenFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'開けませんでした'**
+  String get customPageOpenFailed;
+
+  /// No description provided for @customClientHostOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホストだけがデプロイできます'**
+  String get customClientHostOnly;
+
+  /// No description provided for @customClientSessionClosed.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションが閉じています'**
+  String get customClientSessionClosed;
+
+  /// No description provided for @customClientNoToken.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントのトークンがありません'**
+  String get customClientNoToken;
+
+  /// No description provided for @customAstellWaitingApproval.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」はホストの承認を待っています'**
+  String customAstellWaitingApproval(String name);
+
+  /// No description provided for @customAstellApproveTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」をこのルームで使いますか?'**
+  String customAstellApproveTitle(String name);
+
+  /// name は提案した人の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} さんからの提案です。承認すると、参加している全員が開けるようになります(インストールしていない人は、開くときに一時的に読み込みます)。'**
+  String customAstellApproveMessage(String name);
+
+  /// No description provided for @customAstellApprove.
+  ///
+  /// In ja, this message translates to:
+  /// **'承認する'**
+  String get customAstellApprove;
+
+  /// No description provided for @customAstellProposed.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を提案しました(ホストが承認すると使えます)'**
+  String customAstellProposed(String name);
+
+  /// No description provided for @customAstellEmptyHost.
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームで動くプラグインはまだありません。下の「プラグインを追加」から足せます。'**
+  String get customAstellEmptyHost;
+
+  /// No description provided for @customAstellEmptyMember.
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームで動くプラグインはまだありません。「プラグインを提案」でホストに頼めます。'**
+  String get customAstellEmptyMember;
+
+  /// No description provided for @customAstellInUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 人が使用中}}'**
+  String customAstellInUse(int count);
+
+  /// handle はルームに追加した人のハンドル(@ なし)
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 人が使用中}} ・ @{handle} が追加'**
+  String customAstellInUseAddedBy(int count, String handle);
+
+  /// No description provided for @customAstellOpen.
+  ///
+  /// In ja, this message translates to:
+  /// **'開く'**
+  String get customAstellOpen;
+
+  /// No description provided for @customAstellRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームから外す'**
+  String get customAstellRemove;
+
+  /// No description provided for @customAstellAdd.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインを追加'**
+  String get customAstellAdd;
+
+  /// No description provided for @customAstellPropose.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインを提案'**
+  String get customAstellPropose;
+
+  /// ＋ のボタンに置いた投稿のアカウントが、もうログインしていないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'(いないアカウント)'**
+  String get homeCreateMissingAccount;
+
+  /// No description provided for @homeCreatePost.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get homeCreatePost;
+
+  /// No description provided for @homeCreateNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'なし'**
+  String get homeCreateNone;
+
+  /// label はボタンの名前(RASQ / Swing)
+  ///
+  /// In ja, this message translates to:
+  /// **'{label}には RASQ アカウントが要ります'**
+  String homeCreateNeedsRasqAccount(String label);
+
+  /// No description provided for @homeCreateAstellBlocked.
+  ///
+  /// In ja, this message translates to:
+  /// **'見守りの設定で ASTell が止められています'**
+  String get homeCreateAstellBlocked;
+
+  /// No description provided for @homeCreateAccountGone.
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントはもうありません'**
+  String get homeCreateAccountGone;
+
+  /// No description provided for @homeCreate.
+  ///
+  /// In ja, this message translates to:
+  /// **'作成'**
+  String get homeCreate;
+
+  /// No description provided for @homeClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get homeClose;
+
+  /// No description provided for @homeFabEditorTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'＋ のボタン'**
+  String get homeFabEditorTitle;
+
+  /// count は置いている数、max は置ける数
+  ///
+  /// In ja, this message translates to:
+  /// **'下のボタンを枠へドラッグすると入ります(枠どうしは入れ替え、下の列へ戻すと外れます)。内側に 3 つ、外側に 4 つまで ・ {count} / {max}'**
+  String homeFabEditorHelp(int count, int max);
+
+  /// No description provided for @homeHeaderCollapse.
+  ///
+  /// In ja, this message translates to:
+  /// **'ヘッダーをしまう'**
+  String get homeHeaderCollapse;
+
+  /// No description provided for @homeTimelineTemp.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインを一時変更'**
+  String get homeTimelineTemp;
+
+  /// No description provided for @homeTimelineSettings.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムライン設定'**
+  String get homeTimelineSettings;
+
+  /// No description provided for @homeTabRecommended.
+  ///
+  /// In ja, this message translates to:
+  /// **'おすすめ'**
+  String get homeTabRecommended;
+
+  /// No description provided for @homeEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿はありません'**
+  String get homeEmpty;
+
+  /// No description provided for @homePullToRefresh.
+  ///
+  /// In ja, this message translates to:
+  /// **'下に引っ張って更新'**
+  String get homePullToRefresh;
+
+  /// No description provided for @homeLoadNewer.
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい投稿を読み込む'**
+  String get homeLoadNewer;
+
+  /// No description provided for @homeLoadingNewer.
+  ///
+  /// In ja, this message translates to:
+  /// **'更新しています…'**
+  String get homeLoadingNewer;
+
+  /// No description provided for @homeLoadMoreFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込みに失敗しました。再試行'**
+  String get homeLoadMoreFailed;
+
+  /// No description provided for @homeLoadMore.
+  ///
+  /// In ja, this message translates to:
+  /// **'続きを読み込む'**
+  String get homeLoadMore;
+
+  /// No description provided for @homeLoadingMore.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込んでいます…'**
+  String get homeLoadingMore;
+
+  /// No description provided for @homeReload.
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get homeReload;
+
+  /// ヘッダーの Swing の輪の説明。name は出した人の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の Swing'**
+  String homeSwingOf(String name);
+
+  /// No description provided for @homeSwingOfSeen.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の Swing(見終えました)'**
+  String homeSwingOfSeen(String name);
+
+  /// No description provided for @homeMySwingCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の Swing({count, plural, other{{count} 個}})'**
+  String homeMySwingCount(int count);
+
+  /// No description provided for @homeMySwing.
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の Swing'**
+  String get homeMySwing;
+
+  /// No description provided for @homeLiveNoToken.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントのトークンがありません'**
+  String get homeLiveNoToken;
+
+  /// リプライ元の投稿の添付のまとめ
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}件の添付ファイル}}'**
+  String homePostAttachmentFiles(int count);
+
+  /// No description provided for @homePostAttachmentLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'1件の添付リンク'**
+  String get homePostAttachmentLink;
+
+  /// No description provided for @homePostShare.
+  ///
+  /// In ja, this message translates to:
+  /// **'共有'**
+  String get homePostShare;
+
+  /// No description provided for @homePostSelectAccount.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウント選択'**
+  String get homePostSelectAccount;
+
+  /// No description provided for @homePostLike.
+  ///
+  /// In ja, this message translates to:
+  /// **'いいね'**
+  String get homePostLike;
+
+  /// No description provided for @homePostReaction.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション'**
+  String get homePostReaction;
+
+  /// リノート / 引用ノートの行の名前の後ろ。どのアカウントで行うか(handle@instance)
+  ///
+  /// In ja, this message translates to:
+  /// **'(@{handle}@{instance} で)'**
+  String homePostRepostVia(String handle, String instance);
+
+  /// No description provided for @homePostUndoRepost.
+  ///
+  /// In ja, this message translates to:
+  /// **'リノートを取り消す'**
+  String get homePostUndoRepost;
+
+  /// 注釈(CW)つきの投稿を 1 行で見せるとき。cw は注釈の文
+  ///
+  /// In ja, this message translates to:
+  /// **'【CW: {cw}】'**
+  String homePostCw(String cw);
+
+  /// No description provided for @homePostAttachments.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}件の添付}}'**
+  String homePostAttachments(int count);
+
+  /// No description provided for @homeActionReply.
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get homeActionReply;
+
+  /// No description provided for @homeActionRebroad.
+  ///
+  /// In ja, this message translates to:
+  /// **'リブロード'**
+  String get homeActionRebroad;
+
+  /// No description provided for @homeActionQueue.
+  ///
+  /// In ja, this message translates to:
+  /// **'キュー'**
+  String get homeActionQueue;
+
+  /// No description provided for @homeEditorCropRotate.
+  ///
+  /// In ja, this message translates to:
+  /// **'クロップ / 回転'**
+  String get homeEditorCropRotate;
+
+  /// No description provided for @homeEditorPaint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ペイント'**
+  String get homeEditorPaint;
+
+  /// No description provided for @homeEditorText.
+  ///
+  /// In ja, this message translates to:
+  /// **'テキスト'**
+  String get homeEditorText;
+
+  /// No description provided for @homeEditorPost.
+  ///
+  /// In ja, this message translates to:
+  /// **'ノート'**
+  String get homeEditorPost;
+
+  /// No description provided for @homeEditorMedia.
+  ///
+  /// In ja, this message translates to:
+  /// **'メディア'**
+  String get homeEditorMedia;
+
+  /// No description provided for @homeEditorSticker.
+  ///
+  /// In ja, this message translates to:
+  /// **'ステッカー'**
+  String get homeEditorSticker;
+
+  /// No description provided for @homeEditorEmoji.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字'**
+  String get homeEditorEmoji;
+
+  /// No description provided for @homeEditorFilter.
+  ///
+  /// In ja, this message translates to:
+  /// **'フィルター'**
+  String get homeEditorFilter;
+
+  /// No description provided for @homeEditorBlur.
+  ///
+  /// In ja, this message translates to:
+  /// **'ぼかし'**
+  String get homeEditorBlur;
+
+  /// No description provided for @homeEditorTune.
+  ///
+  /// In ja, this message translates to:
+  /// **'調整'**
+  String get homeEditorTune;
+
+  /// No description provided for @homeActionAutoOn.
+  ///
+  /// In ja, this message translates to:
+  /// **'次からも自動でオン'**
+  String get homeActionAutoOn;
+
+  /// No description provided for @homeActionAutoOff.
+  ///
+  /// In ja, this message translates to:
+  /// **'次からも自動でオフ'**
+  String get homeActionAutoOff;
+
+  /// No description provided for @homeActionAutoReset.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの既定に戻す'**
+  String get homeActionAutoReset;
+
+  /// 子の端末で見守りの時間のあいだ、ホームに出る 1 本のタイムラインのタブの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'見守りの時間'**
+  String get homeChildSafeWindowTab;
+
+  /// No description provided for @homeCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get homeCancel;
+
+  /// No description provided for @homeBarPost.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿アクションバー'**
+  String get homeBarPost;
+
+  /// No description provided for @homeBarViewer.
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面アクションバー'**
+  String get homeBarViewer;
+
+  /// No description provided for @homeBarEditorImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'加工画面のバー(画像)'**
+  String get homeBarEditorImage;
+
+  /// No description provided for @homeBarEditorVideo.
+  ///
+  /// In ja, this message translates to:
+  /// **'加工画面のバー(動画 / 音声)'**
+  String get homeBarEditorVideo;
+
+  /// No description provided for @homeBarEditorSvg.
+  ///
+  /// In ja, this message translates to:
+  /// **'加工画面のバー(SVG)'**
+  String get homeBarEditorSvg;
+
+  /// No description provided for @homeBarRasqViewer.
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面アクションバー(Swing)'**
+  String get homeBarRasqViewer;
+
+  /// No description provided for @homeBarAstell.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell のルームの下段'**
+  String get homeBarAstell;
+
+  /// No description provided for @homeBarEditAstellTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームのボタンの編集'**
+  String get homeBarEditAstellTitle;
+
+  /// No description provided for @homeBarEditTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションバーの編集'**
+  String get homeBarEditTitle;
+
+  /// No description provided for @homeBarSearchPlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインを検索'**
+  String get homeBarSearchPlugins;
+
+  /// No description provided for @homeBarSearchPluginButtons.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインボタンを検索'**
+  String get homeBarSearchPluginButtons;
+
+  /// ボタンを検索する FOW の行の補足。source は出どころ(プラグインの名前 / SNS のアクション など)、detail はジャンルや種類
+  ///
+  /// In ja, this message translates to:
+  /// **'{source} · {detail}'**
+  String homeBarSearchSubtitle(String source, String detail);
+
+  /// No description provided for @homeBarBuiltinEditor.
+  ///
+  /// In ja, this message translates to:
+  /// **'内蔵の編集'**
+  String get homeBarBuiltinEditor;
+
+  /// No description provided for @homeBarRasqActions.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のアクション'**
+  String get homeBarRasqActions;
+
+  /// No description provided for @homeBarAstellButtons.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell のボタン'**
+  String get homeBarAstellButtons;
+
+  /// No description provided for @homeBarSnsActions.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS のアクション'**
+  String get homeBarSnsActions;
+
+  /// No description provided for @homeBarViewerTogglePlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面表示プラグイン(ON / OFF のボタン)'**
+  String get homeBarViewerTogglePlugin;
+
+  /// No description provided for @homeBarAstellPlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell プラグイン(押すとそのプラグインを開く)'**
+  String get homeBarAstellPlugin;
+
+  /// No description provided for @homeBarPluginTags.
+  ///
+  /// In ja, this message translates to:
+  /// **'タグ: {tags}'**
+  String homeBarPluginTags(String tags);
+
+  /// No description provided for @homeBarManualPlacement.
+  ///
+  /// In ja, this message translates to:
+  /// **' · 手動配置'**
+  String get homeBarManualPlacement;
+
+  /// No description provided for @homeBarAllGenres.
+  ///
+  /// In ja, this message translates to:
+  /// **'すべて'**
+  String get homeBarAllGenres;
+
+  /// No description provided for @homeBarSearchHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ボタン名 / プラグイン名 / タグ'**
+  String get homeBarSearchHint;
+
+  /// No description provided for @homeBarSearchEmptyAstell.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加できるボタンがありません。プラグインはストアから追加できます'**
+  String get homeBarSearchEmptyAstell;
+
+  /// No description provided for @homeBarSearchEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'ここに置けるプラグインがありません。ストアから追加できます'**
+  String get homeBarSearchEmpty;
+
+  /// 開発者モードの詳しい説明。composer.media はスロットの名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'composer.media を宣言したプラグインがありません(ストアから追加)'**
+  String get homeBarSearchEmptyEditorDetail;
+
+  /// 開発者モードの詳しい説明。astell.action はスロットの名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'非表示にしたボタン / ASTell のプラグイン(astell.action)がありません(プラグインはストアから追加)'**
+  String get homeBarSearchEmptyAstellDetail;
+
+  /// 開発者モードの詳しい説明。post.action はスロットの名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面表示プラグイン / post.action を宣言したプラグインがありません(ストアから追加)'**
+  String get homeBarSearchEmptyViewerDetail;
+
+  /// 開発者モードの詳しい説明。post.action はスロットの名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'post.action を宣言したプラグインがありません(ストアから追加)'**
+  String get homeBarSearchEmptyPostDetail;
+
+  /// No description provided for @homeBarSearchNoHits.
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりません'**
+  String get homeBarSearchNoHits;
+
+  /// No description provided for @homeBarDetailTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションの詳細'**
+  String get homeBarDetailTitle;
+
+  /// No description provided for @homeBarDetailUnknownDeveloper.
+  ///
+  /// In ja, this message translates to:
+  /// **'提供元不明'**
+  String get homeBarDetailUnknownDeveloper;
+
+  /// rating は評価(小数 1 桁の文字)、downloads はダウンロード数
+  ///
+  /// In ja, this message translates to:
+  /// **'★{rating} ・ {downloads} DL'**
+  String homeBarDetailStats(String rating, int downloads);
+
+  /// No description provided for @homeBarDetailAction.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクション'**
+  String get homeBarDetailAction;
+
+  /// No description provided for @homeBarDetailSlot.
+  ///
+  /// In ja, this message translates to:
+  /// **'スロット(ジャンル)'**
+  String get homeBarDetailSlot;
+
+  /// No description provided for @homeBarDetailConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'確認'**
+  String get homeBarDetailConfirm;
+
+  /// No description provided for @homeBarDetailAutomation.
+  ///
+  /// In ja, this message translates to:
+  /// **'自動化'**
+  String get homeBarDetailAutomation;
+
+  /// No description provided for @homeBarDetailTags.
+  ///
+  /// In ja, this message translates to:
+  /// **'タグ'**
+  String get homeBarDetailTags;
+
+  /// No description provided for @homeBarIconSearchHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'アイコン名で検索(例: star, bolt)'**
+  String get homeBarIconSearchHint;
+
+  /// No description provided for @homeBarBundleTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'バンドルの設定'**
+  String get homeBarBundleTitle;
+
+  /// No description provided for @homeBarBundleDissolved.
+  ///
+  /// In ja, this message translates to:
+  /// **'解除しました'**
+  String get homeBarBundleDissolved;
+
+  /// No description provided for @homeBarPlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン'**
+  String get homeBarPlugin;
+
+  /// No description provided for @homeBarBundleAstellMember.
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームの下段のボタン({label})'**
+  String homeBarBundleAstellMember(String label);
+
+  /// genre はアクションのジャンル(英字のタグ)
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS プラグインが提供するアクション({genre})'**
+  String homeBarBundleSnsMember(String genre);
+
+  /// No description provided for @homeBarBundleName.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト名'**
+  String get homeBarBundleName;
+
+  /// No description provided for @homeBarBundleIcon.
+  ///
+  /// In ja, this message translates to:
+  /// **'アイコン'**
+  String get homeBarBundleIcon;
+
+  /// No description provided for @homeBarBundlePhoto.
+  ///
+  /// In ja, this message translates to:
+  /// **'写真'**
+  String get homeBarBundlePhoto;
+
+  /// No description provided for @homeBarBundlePhotoFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'写真を使えません'**
+  String get homeBarBundlePhotoFailed;
+
+  /// No description provided for @homeBarBundleMembers.
+  ///
+  /// In ja, this message translates to:
+  /// **'メンバー'**
+  String get homeBarBundleMembers;
+
+  /// No description provided for @homeBarMenuDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'詳細'**
+  String get homeBarMenuDetail;
+
+  /// No description provided for @homeBarBundleRemoveMember.
+  ///
+  /// In ja, this message translates to:
+  /// **'バンドルから外す'**
+  String get homeBarBundleRemoveMember;
+
+  /// No description provided for @homeBarDissolveList.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストの解除'**
+  String get homeBarDissolveList;
+
+  /// No description provided for @homeBarMemberMenu.
+  ///
+  /// In ja, this message translates to:
+  /// **'メンバーの操作'**
+  String get homeBarMemberMenu;
+
+  /// No description provided for @homeBarRasqAccount.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウント'**
+  String get homeBarRasqAccount;
+
+  /// No description provided for @homeBarHelpAstell.
+  ///
+  /// In ja, this message translates to:
+  /// **'(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。(+) でボタンを追加。'**
+  String get homeBarHelpAstell;
+
+  /// No description provided for @homeBarHelp.
+  ///
+  /// In ja, this message translates to:
+  /// **'(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。'**
+  String get homeBarHelp;
+
+  /// No description provided for @homeBarHelpAstellDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'(…) / shift + クリック / 右クリックでメニュー(非表示 / バンドル)。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。(+) で非表示にしたボタンや ASTell のプラグインを足す。幅に収まらないときは、先頭から入るだけと最後の 1 つ(入力欄の隣)を出し、残りはルームの歯車のメニューへ。'**
+  String get homeBarHelpAstellDetail;
+
+  /// No description provided for @homeBarHelpDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'(…) / shift + クリック / 右クリックでメニュー。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。宣言されたプラグインボタンと束ねる閾値は 設定 → SNSプラグイン →「プラグインボタン」。'**
+  String get homeBarHelpDetail;
+
+  /// No description provided for @homeBarRasqBuiltinEditor.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ(内蔵の編集)'**
+  String get homeBarRasqBuiltinEditor;
+
+  /// 新しく作ったバンドル(アクションリスト)の名前の既定。あとで利用者が変えられる
+  ///
+  /// In ja, this message translates to:
+  /// **'マイリスト'**
+  String get homeBarNewBundleName;
+
+  /// No description provided for @homeBarMenuMakeList.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションリスト化'**
+  String get homeBarMenuMakeList;
+
+  /// No description provided for @homeBarMenuHide.
+  ///
+  /// In ja, this message translates to:
+  /// **'非表示にする'**
+  String get homeBarMenuHide;
+
+  /// No description provided for @homeBarMenuDelete.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get homeBarMenuDelete;
+
+  /// No description provided for @homeBarMenuListSettings.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションリストの設定'**
+  String get homeBarMenuListSettings;
+
+  /// No description provided for @homeBarMenuPinList.
+  ///
+  /// In ja, this message translates to:
+  /// **'固定リストにする'**
+  String get homeBarMenuPinList;
+
+  /// No description provided for @homeBarAddButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'ボタンを追加'**
+  String get homeBarAddButton;
+
+  /// No description provided for @homeBarNoHidden.
+  ///
+  /// In ja, this message translates to:
+  /// **'非表示のボタンはありません'**
+  String get homeBarNoHidden;
+
+  /// No description provided for @homeBarHiddenLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'非表示(押すと表示):'**
+  String get homeBarHiddenLabel;
+
+  /// No description provided for @homeBarShowHidden.
+  ///
+  /// In ja, this message translates to:
+  /// **'{label} を表示'**
+  String homeBarShowHidden(String label);
+
+  /// No description provided for @homeBarResetOrder.
+  ///
+  /// In ja, this message translates to:
+  /// **'既定の並びに戻す'**
+  String get homeBarResetOrder;
+
   /// この言語の、その言語での名前(設定の「言語」の一覧に出す)。訳すときは、その言語での自分の名前にする(English / 한국어 など)。
   ///
   /// In ja, this message translates to:
@@ -20451,6 +21957,654 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'アセットパック'**
   String get storePkgKindAssets;
+
+  /// No description provided for @swingActionFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'できませんでした: {error}'**
+  String swingActionFailed(String error);
+
+  /// No description provided for @swingReplyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'返信を送る…'**
+  String get swingReplyHint;
+
+  /// No description provided for @swingReplyToHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} に返信…'**
+  String swingReplyToHint(String handle);
+
+  /// No description provided for @swingReplyCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'返信 {count}'**
+  String swingReplyCount(int count);
+
+  /// No description provided for @swingQueueTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'キュー(長押しで絵を選ぶ)'**
+  String get swingQueueTooltip;
+
+  /// No description provided for @swingThreadBackReply.
+  ///
+  /// In ja, this message translates to:
+  /// **'前の返信へ戻る'**
+  String get swingThreadBackReply;
+
+  /// No description provided for @swingThreadBackSwing.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing の返信へ戻る'**
+  String get swingThreadBackSwing;
+
+  /// No description provided for @swingRepliesTo.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} への返信 {count}'**
+  String swingRepliesTo(String handle, int count);
+
+  /// No description provided for @swingThreadClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'返信をしまう'**
+  String get swingThreadClose;
+
+  /// No description provided for @swingLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした: {error}'**
+  String swingLoadFailed(String error);
+
+  /// No description provided for @swingNoReplies.
+  ///
+  /// In ja, this message translates to:
+  /// **'返信はまだありません。'**
+  String get swingNoReplies;
+
+  /// No description provided for @swingViewReplies.
+  ///
+  /// In ja, this message translates to:
+  /// **'返信 {count, plural, other{{count} 件}}を見る'**
+  String swingViewReplies(int count);
+
+  /// No description provided for @swingAttachments.
+  ///
+  /// In ja, this message translates to:
+  /// **'添付 {count, plural, other{{count} 件}}'**
+  String swingAttachments(int count);
+
+  /// No description provided for @swingPoll.
+  ///
+  /// In ja, this message translates to:
+  /// **'投票'**
+  String get swingPoll;
+
+  /// No description provided for @swingReplyOf.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の返信'**
+  String swingReplyOf(String name);
+
+  /// No description provided for @swingImageSwing.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像の Swing'**
+  String get swingImageSwing;
+
+  /// No description provided for @swingVideoSwing.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画の Swing'**
+  String get swingVideoSwing;
+
+  /// No description provided for @swingPluginSwing.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの Swing'**
+  String get swingPluginSwing;
+
+  /// name は Swing を出した人の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の Swing'**
+  String swingOf(String name);
+
+  /// No description provided for @swingBarSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing の返信とシークバー'**
+  String get swingBarSemantics;
+
+  /// No description provided for @swingReportIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の Swing を通報します。RASQ の審査で確認します。'**
+  String swingReportIntro(String name);
+
+  /// No description provided for @swingReported.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報しました。審査で確認します'**
+  String get swingReported;
+
+  /// No description provided for @swingReportFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報できませんでした: {error}'**
+  String swingReportFailed(String error);
+
+  /// No description provided for @swingDeleteTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing を削除'**
+  String get swingDeleteTitle;
+
+  /// No description provided for @swingDeleteMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'この Swing と、付いている返信を削除します。元に戻せません。'**
+  String get swingDeleteMessage;
+
+  /// No description provided for @swingDeleteConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除する'**
+  String get swingDeleteConfirm;
+
+  /// No description provided for @swingCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get swingCancel;
+
+  /// No description provided for @swingDeleteFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除できませんでした: {error}'**
+  String swingDeleteFailed(String error);
+
+  /// No description provided for @swingDeleted.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing を削除しました'**
+  String get swingDeleted;
+
+  /// No description provided for @swingViewerEmptyMine.
+  ///
+  /// In ja, this message translates to:
+  /// **'出している Swing はありません'**
+  String get swingViewerEmptyMine;
+
+  /// No description provided for @swingViewerEmptyMineHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'＋ を上へスワイプすると Swing を作れます'**
+  String get swingViewerEmptyMineHint;
+
+  /// No description provided for @swingViewerEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing はありません'**
+  String get swingViewerEmpty;
+
+  /// No description provided for @swingViewerEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォローしている人や、RASQ リストに入れてくれた人の Swing がここに流れます'**
+  String get swingViewerEmptyHint;
+
+  /// No description provided for @swingClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get swingClose;
+
+  /// No description provided for @swingRemainingHours.
+  ///
+  /// In ja, this message translates to:
+  /// **'あと {hours, plural, other{{hours} 時間}}'**
+  String swingRemainingHours(int hours);
+
+  /// No description provided for @swingRemainingMinutes.
+  ///
+  /// In ja, this message translates to:
+  /// **'あと {minutes, plural, other{{minutes} 分}}'**
+  String swingRemainingMinutes(int minutes);
+
+  /// No description provided for @swingRemainingSoon.
+  ///
+  /// In ja, this message translates to:
+  /// **'まもなく消えます'**
+  String get swingRemainingSoon;
+
+  /// remaining は残りの時間(あと 3 時間 など)、position は何枚目か(2 / 5)
+  ///
+  /// In ja, this message translates to:
+  /// **'{remaining} ・ {position}'**
+  String swingRemainingAndPosition(String remaining, String position);
+
+  /// No description provided for @swingViewCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'見た人 {count, plural, other{{count} 人}}'**
+  String swingViewCount(int count);
+
+  /// No description provided for @swingReport.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報'**
+  String get swingReport;
+
+  /// No description provided for @swingMenu.
+  ///
+  /// In ja, this message translates to:
+  /// **'メニュー'**
+  String get swingMenu;
+
+  /// No description provided for @swingDelete.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get swingDelete;
+
+  /// No description provided for @swingSensitive.
+  ///
+  /// In ja, this message translates to:
+  /// **'センシティブな内容'**
+  String get swingSensitive;
+
+  /// No description provided for @swingReveal.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示する'**
+  String get swingReveal;
+
+  /// No description provided for @swingPluginJoinNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} さんのページにみんなで入ります。インストールせずに、この Swing を見ている間だけ動かします。'**
+  String swingPluginJoinNote(String name);
+
+  /// No description provided for @swingPluginJoin.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加する'**
+  String get swingPluginJoin;
+
+  /// No description provided for @swingPluginConsent.
+  ///
+  /// In ja, this message translates to:
+  /// **'審査されていないプラグインです。通信はできない状態で、この Swing を見ている間だけ動かします。'**
+  String get swingPluginConsent;
+
+  /// 開発者モードの詳しい説明。network などは権限の名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'制限モード(network / storage.unsafe / interstitial・system の FOW / URL を開くなどは閉、GPU は可)。子プラグインを持たない 1 つだけ。'**
+  String get swingPluginConsentDetail;
+
+  /// No description provided for @swingPluginRun.
+  ///
+  /// In ja, this message translates to:
+  /// **'動かす'**
+  String get swingPluginRun;
+
+  /// No description provided for @swingPluginNeedsInstall.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を入れると見られます'**
+  String swingPluginNeedsInstall(String name);
+
+  /// No description provided for @swingPluginNeedsInstallHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの Swing です。ストアからインストールしてください'**
+  String get swingPluginNeedsInstallHint;
+
+  /// No description provided for @swingViewInStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアで見る'**
+  String get swingViewInStore;
+
+  /// No description provided for @swingPluginOpenFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'開けませんでした'**
+  String get swingPluginOpenFailed;
+
+  /// No description provided for @swingPluginTapToExpand.
+  ///
+  /// In ja, this message translates to:
+  /// **'押すと全画面に戻ります'**
+  String get swingPluginTapToExpand;
+
+  /// No description provided for @swingPluginSwipeHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'左右・上下にスワイプで次の Swing へ'**
+  String get swingPluginSwipeHint;
+
+  /// No description provided for @swingPluginShrink.
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面から縮小'**
+  String get swingPluginShrink;
+
+  /// No description provided for @swingAd.
+  ///
+  /// In ja, this message translates to:
+  /// **'広告'**
+  String get swingAd;
+
+  /// No description provided for @swingAdSwipeHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'スワイプで次の Swing へ'**
+  String get swingAdSwipeHint;
+
+  /// No description provided for @swingKindText.
+  ///
+  /// In ja, this message translates to:
+  /// **'テキスト'**
+  String get swingKindText;
+
+  /// No description provided for @swingKindImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像'**
+  String get swingKindImage;
+
+  /// No description provided for @swingKindVideo.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画'**
+  String get swingKindVideo;
+
+  /// No description provided for @swingKindPlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン'**
+  String get swingKindPlugin;
+
+  /// 文の無い Swing のバナーの文。kind は種類の名前(画像 / 動画 など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{kind}の Swing'**
+  String swingKindSwing(String kind);
+
+  /// No description provided for @swingBannerNew.
+  ///
+  /// In ja, this message translates to:
+  /// **'新着 {count}'**
+  String swingBannerNew(int count);
+
+  /// No description provided for @swingBannerTotal.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 件}}'**
+  String swingBannerTotal(int count);
+
+  /// No description provided for @swingComposerPluginShared.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなで使う: 見た人は、あなたが作る同じページに入ります'**
+  String get swingComposerPluginShared;
+
+  /// No description provided for @swingComposerPluginFullscreen.
+  ///
+  /// In ja, this message translates to:
+  /// **'見る人の端末で全画面で動きます'**
+  String get swingComposerPluginFullscreen;
+
+  /// No description provided for @swingComposerPluginPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'見る人の端末でページとして動きます'**
+  String get swingComposerPluginPage;
+
+  /// 編集画面のバーのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'{hours, plural, other{{hours} 時間で消える}}'**
+  String swingTtlLabel(int hours);
+
+  /// No description provided for @swingTtl.
+  ///
+  /// In ja, this message translates to:
+  /// **'消えるまで'**
+  String get swingTtl;
+
+  /// No description provided for @swingTtlHours.
+  ///
+  /// In ja, this message translates to:
+  /// **'{hours, plural, other{{hours} 時間}}'**
+  String swingTtlHours(int hours);
+
+  /// No description provided for @swingBackgroundImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を背景にする'**
+  String get swingBackgroundImage;
+
+  /// No description provided for @swingBackgroundVideo.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を背景にする'**
+  String get swingBackgroundVideo;
+
+  /// No description provided for @swingPickVideoFile.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画のファイルを選んでください'**
+  String get swingPickVideoFile;
+
+  /// No description provided for @swingPickImageFile.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像のファイルを選んでください'**
+  String get swingPickImageFile;
+
+  /// No description provided for @swingChangeBackground.
+  ///
+  /// In ja, this message translates to:
+  /// **'背景を変える'**
+  String get swingChangeBackground;
+
+  /// No description provided for @swingAudience.
+  ///
+  /// In ja, this message translates to:
+  /// **'届け先'**
+  String get swingAudience;
+
+  /// No description provided for @swingLoadFailedShort.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした'**
+  String get swingLoadFailedShort;
+
+  /// No description provided for @swingSent.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing を出しました({hours, plural, other{{hours} 時間で消えます}})'**
+  String swingSent(int hours);
+
+  /// No description provided for @swingErrorLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'同時に出しておける Swing は 20 個までです'**
+  String get swingErrorLimit;
+
+  /// No description provided for @swingSendFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'出せませんでした: {error}'**
+  String swingSendFailed(String error);
+
+  /// No description provided for @swingComposerTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing を作る'**
+  String get swingComposerTitle;
+
+  /// No description provided for @swingNext.
+  ///
+  /// In ja, this message translates to:
+  /// **'次へ'**
+  String get swingNext;
+
+  /// No description provided for @swingSend.
+  ///
+  /// In ja, this message translates to:
+  /// **'出す'**
+  String get swingSend;
+
+  /// No description provided for @swingNeedsAccount.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントが要ります'**
+  String get swingNeedsAccount;
+
+  /// No description provided for @swingNeedsAccountHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing は RASQ アカウントから出します。サイドバーからログインしてください'**
+  String get swingNeedsAccountHint;
+
+  /// No description provided for @swingUnreviewed.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}(未審査)'**
+  String swingUnreviewed(String name);
+
+  /// No description provided for @swingTtlRemaining.
+  ///
+  /// In ja, this message translates to:
+  /// **'{hours, plural, other{{hours} 時間で消えます}}'**
+  String swingTtlRemaining(int hours);
+
+  /// No description provided for @swingRepick.
+  ///
+  /// In ja, this message translates to:
+  /// **'選び直す'**
+  String get swingRepick;
+
+  /// No description provided for @swingReedit.
+  ///
+  /// In ja, this message translates to:
+  /// **'編集し直す'**
+  String get swingReedit;
+
+  /// No description provided for @swingCwTooLong.
+  ///
+  /// In ja, this message translates to:
+  /// **'CW は {max} 文字までです'**
+  String swingCwTooLong(int max);
+
+  /// No description provided for @swingCwHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'CW の文'**
+  String get swingCwHint;
+
+  /// No description provided for @swingCwOff.
+  ///
+  /// In ja, this message translates to:
+  /// **'CW をはずす'**
+  String get swingCwOff;
+
+  /// No description provided for @swingCwOn.
+  ///
+  /// In ja, this message translates to:
+  /// **'CW を付ける(センシティブな内容)'**
+  String get swingCwOn;
+
+  /// No description provided for @swingPluginSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'配るプラグイン'**
+  String get swingPluginSection;
+
+  /// No description provided for @swingPluginNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で配れるカスタムプラグインが入っていません。ストアで入れるか、下の「ファイルから」で自分のプラグインを配れます。'**
+  String get swingPluginNone;
+
+  /// 開発者モードの詳しい説明。solo / shared はページの使い方の名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'ページ型(カスタムプラグイン)のうち、ほかのプラグインと親子関係の無いもの(solo / shared どちらも)。'**
+  String get swingPluginNoneDetail;
+
+  /// No description provided for @swingFromFile.
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルから(未審査)'**
+  String get swingFromFile;
+
+  /// No description provided for @swingFromFileSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'自分で作った .rspkg / .rasqpkg / .wasm を配ります'**
+  String get swingFromFileSubtitle;
+
+  /// No description provided for @swingFromFileDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'審査していないプラグインは、見る人の端末で通信できない状態で動きます(GPU は使えます)。ほかのプラグインを土台にする子プラグインは配れません。'**
+  String get swingFromFileDetail;
+
+  /// No description provided for @swingAudienceEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'届け先を 1 つ以上選んでください'**
+  String get swingAudienceEmpty;
+
+  /// No description provided for @swingAudienceFollowers.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワー'**
+  String get swingAudienceFollowers;
+
+  /// No description provided for @swingAudienceFollowersSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントをフォローしている人'**
+  String get swingAudienceFollowersSubtitle;
+
+  /// No description provided for @swingAudienceList.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト'**
+  String get swingAudienceList;
+
+  /// No description provided for @swingAudienceNoLists.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストを作ると、リストに入れた人にも届けられます'**
+  String get swingAudienceNoLists;
+
+  /// status は HTTP の状態の番号
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインを取れませんでした(HTTP {status})'**
+  String swingPackageFetchFailed(int status);
+
+  /// No description provided for @swingNotLoggedIn.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインしていません'**
+  String get swingNotLoggedIn;
+
+  /// No description provided for @swingUnreadable.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing を読めませんでした'**
+  String get swingUnreadable;
 
   /// No description provided for @trendTitle.
   ///

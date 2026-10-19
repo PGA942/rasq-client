@@ -220,13 +220,15 @@ final childSafeApiProvider = Provider<ChildSafeApi?>((ref) {
   return client == null ? null : ChildSafeApi(client);
 });
 
-/// サーバーのエラーを 1 行に。Central のメッセージは日本語なので、決まった言い換えが無いものはそのまま出す。
+/// サーバーのエラーを 1 行に。Central のメッセージは表示の言語に合わせて訳されるので(S-111)、決まった言い換えが無いものはそのまま出す。
+/// D-503: ここの言い換えは Central に名前つきの理由(`error.code`)がまだ無いので、HTTP の番号と文の一部で見ている
+/// (ハンドルの重複の 409、端末の 403、コードが無いときの 404 `not found`)。Central が名前を返すようになったら [OrgateException.isReason] に替える。
 String childSafeErrorMessage(Object e) {
   if (e is! OrgateException) return '$e';
   return switch (e.code.code) {
     '404' when e.message.isEmpty || e.message == 'not found' => appL10n.childSafeErrorCodeInvalid,
-    // 「ハンドル」は Central の日本語のメッセージとの照合(訳さない)。
-    '409' when e.message.contains('taken') || e.message.contains('handle') || e.message.contains('ハンドル') => appL10n.childSafeErrorHandleTaken, // l10n-ignore
+    // 「ハンドル」は Central の日本語のメッセージとの照合(訳さない)。名前つきの理由が来れば文は見ない。
+    '409' when !e.hasNamedReason && (e.message.contains('taken') || e.message.contains('handle') || e.message.contains('ハンドル')) => appL10n.childSafeErrorHandleTaken, // l10n-ignore
     '409' when e.message.isEmpty => appL10n.childSafeErrorAlreadyLinked,
     '410' => appL10n.childSafeErrorCodeGone,
     '403' when e.message.contains('device') => appL10n.childSafeErrorDevice,

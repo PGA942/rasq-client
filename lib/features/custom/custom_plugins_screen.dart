@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../home/material_icons.dart';
 import '../plugins/slot_plugins.dart';
@@ -38,11 +39,12 @@ class _CustomPluginsScreenState extends ConsumerState<CustomPluginsScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final plugins = ref.watch(installedPagePluginsProvider);
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'カスタムプラグイン', showMore: false),
+      appBar: RasqPageHeader(title: l10n.customPluginsTitle, showMore: false),
       body: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
-        const RasqSectionHeader(title: '招待コードで参加', topMargin: 0),
+        RasqSectionHeader(title: l10n.customPluginsJoinByCode, topMargin: 0),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: Row(children: [
@@ -50,19 +52,19 @@ class _CustomPluginsScreenState extends ConsumerState<CustomPluginsScreen> {
               child: TextField(
                 key: const ValueKey('custom.invite.code'),
                 controller: _code,
-                decoration: const InputDecoration(hintText: '招待コード', isDense: true),
+                decoration: InputDecoration(hintText: l10n.customPluginsInviteCode, isDense: true),
                 onSubmitted: (_) => _join(),
               ),
             ),
             const SizedBox(width: RasqSpacing.xs),
-            FilledButton(key: const ValueKey('custom.invite.join'), onPressed: _join, child: const Text('参加')),
+            FilledButton(key: const ValueKey('custom.invite.join'), onPressed: _join, child: Text(l10n.customPluginsJoin)),
           ]),
         ),
-        const RasqSectionHeader(title: 'インストール済み'),
+        RasqSectionHeader(title: l10n.customPluginsInstalled),
         if (plugins.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-            child: Text('まだありません。ストアの「カスタム」から探せます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            child: Text(l10n.customPluginsEmpty, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
         for (final p in plugins)
           RasqListTile(
@@ -70,13 +72,13 @@ class _CustomPluginsScreenState extends ConsumerState<CustomPluginsScreen> {
             leading: Icon(materialIconByName(p.manifest.page?.icon) ?? Icons.dashboard_customize_outlined),
             title: p.manifest.page?.title ?? p.manifest.name,
             subtitle: [
-              p.manifest.page?.isShared == true ? 'みんなで使える' : '1 人で使う',
+              p.manifest.page?.isShared == true ? l10n.customPluginsShared : l10n.customSolo,
               if (p.manifest.page?.allows('astell') == true) 'ASTell',
-              if (p.manifest.page?.allows('profile') == true) 'プロフィール',
-            ].join(' ・ '),
+              if (p.manifest.page?.allows('profile') == true) l10n.customPluginsProfile,
+            ].join(l10n.customListSeparator),
             onTap: () => context.push(Routes.customPage(p.storePluginId ?? p.id)),
           ),
-        RasqListTile(leading: const Icon(Icons.storefront_outlined), title: 'ストアでカスタムプラグインを探す', onTap: () => context.push(Routes.storeSearch())),
+        RasqListTile(leading: const Icon(Icons.storefront_outlined), title: l10n.customPluginsSearchStore, onTap: () => context.push(Routes.storeSearch())),
       ]),
     );
   }
@@ -109,7 +111,7 @@ class _CustomInviteScreenState extends ConsumerState<CustomInviteScreen> {
     try {
       final s = await ref.read(customSessionClientProvider).invite(widget.code);
       if (!mounted) return;
-      if (s == null) return setState(() => _error = 'この招待コードのセッションは見つかりません(閉じられたかもしれません)');
+      if (s == null) return setState(() => _error = context.l10n.customPluginsInviteNotFound);
       context.pushReplacement(Routes.customPage(s.pluginId, CustomPageArgs(pluginId: s.pluginId, version: s.version, sessionId: s.id).query));
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
@@ -118,9 +120,9 @@ class _CustomInviteScreenState extends ConsumerState<CustomInviteScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const RasqPageHeader(title: '招待', showMore: false),
+        appBar: RasqPageHeader(title: context.l10n.customPluginsInviteTitle, showMore: false),
         body: _error == null
             ? const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5)))
-            : RasqEmptyView(key: const ValueKey('custom.invite.error'), title: '参加できませんでした', hint: _error),
+            : RasqEmptyView(key: const ValueKey('custom.invite.error'), title: context.l10n.customPluginsJoinFailed, hint: _error),
       );
 }

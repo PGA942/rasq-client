@@ -30,6 +30,7 @@ import 'timeline_providers.dart';
 import 'timeline_search.dart';
 import '../nodeprog/tl_components.dart' show TlDisplayMode;
 import '../nodeprog/tl_sections_view.dart';
+import '../../l10n/l10n.dart';
 
 /// タイムライン一時変更 FOW (D-338) を開いている間の、FOW のタブ(スコープ `tl.<id>`)。ホームのタブと揃える。
 final homeTimelineFowScope = ValueNotifier<String?>(null);
@@ -58,7 +59,7 @@ class HomeScreen extends ConsumerWidget {
     // タブの並び (D-339): 「タイムラインをカスタマイズ」のタブ行で並べ替えた順。
     final order = ref.watch(tlTabOrderProvider);
     final kinds = window
-        ? const [childSafeWindowKind]
+        ? [childSafeWindowKind]
         : applyTlTabOrder(
             bundle
                 ? [
@@ -105,7 +106,7 @@ class HomeScreen extends ConsumerWidget {
                 // Tell タイル (D-238、設定 `astell.tiles`): 出す / 出さないと並べる数。
                 vcWidget: HomeHeaderStrip(astell: astellInHeader, max: ((settingValue(ref, 'astell.tiles', 'headerMax', 4) as num).round()).clamp(1, 8)),
                 trailingIcon: Icons.keyboard_arrow_up,
-                trailingTooltip: 'ヘッダーをしまう',
+                trailingTooltip: context.l10n.homeHeaderCollapse,
                 trailingKey: const ValueKey('home.header.collapse'),
                 onTrailingTap: () => setHomeHeaderCollapsed(ref, true),
               ),
@@ -118,7 +119,7 @@ class HomeScreen extends ConsumerWidget {
                 child: RasqTabs(
                   items: tabs,
                   // RAi の案内が指す名前 (D-384): 選んでいるタブの ∨ = タイムラインを一時変更。
-                  chevronTooltip: 'タイムラインを一時変更',
+                  chevronTooltip: context.l10n.homeTimelineTemp,
                   onSelectedTabTap: (i, _) => showTimelineTempFow(
                     ref,
                     tabs: [for (final k in kinds) if (_hasTempFow(k)) ('tl.${k.id}', _label(k))],
@@ -136,7 +137,7 @@ class HomeScreen extends ConsumerWidget {
                 return RasqIconButton(
                   icon: Icons.settings,
                   size: 20,
-                  tooltip: 'タイムライン設定',
+                  tooltip: context.l10n.homeTimelineSettings,
                   onPressed: () {
                     final i = DefaultTabController.of(ctx).index.clamp(0, kinds.length - 1);
                     ctx.push(Routes.tlConfig('tl.${kinds[i].id}'));
@@ -201,7 +202,7 @@ class HomeScreen extends ConsumerWidget {
     return out.take(RasqTabs.maxExtensible).toList();
   }
 
-  static String _label(TimelineKind k) => k == TimelineKind.social ? 'おすすめ' : k.label;
+  static String _label(TimelineKind k) => k == TimelineKind.social ? appL10n.homeTabRecommended : k.label;
 }
 
 /// 開いているタブを揃える: 並べ替え (D-339) のあとも同じ TL を開いたまま、一時変更 FOW (D-338) のタブとホームのタブを
@@ -356,7 +357,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
         if (tl.posts.isEmpty) {
           return RefreshIndicator(
             onRefresh: refresh,
-            child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [sections, const SizedBox(height: 120), const RasqEmptyView(title: '投稿はありません', hint: '下に引っ張って更新'), after]),
+            child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [sections, const SizedBox(height: 120), RasqEmptyView(title: context.l10n.homeEmpty, hint: context.l10n.homePullToRefresh), after]),
           );
         }
         if (view != null && view.display != TlDisplayMode.timeline) {
@@ -407,7 +408,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, j) => j == newer.length
-                      ? TimelineEdgeTile(key: const ValueKey('tl.edge.top'), scroll: _scroll, label: '新しい投稿を読み込む', busyLabel: '更新しています…', onLoad: () => _reloadAll(notifier), onAutoLoad: notifier.prependNewer)
+                      ? TimelineEdgeTile(key: const ValueKey('tl.edge.top'), scroll: _scroll, label: context.l10n.homeLoadNewer, busyLabel: context.l10n.homeLoadingNewer, onLoad: () => _reloadAll(notifier), onAutoLoad: notifier.prependNewer)
                       : row(newer[newer.length - 1 - j]),
                   childCount: newer.length + (edgeTiles ? 1 : 0),
                 ),
@@ -419,7 +420,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                   (context, i) {
                     if (i == base.length) {
                       // いちばん下の更新タイル: 見えたら続きを読む(スクロールでも読むが、届かなかった / 失敗したときの手がかり)。
-                      if (tl.error != null) return Padding(padding: const EdgeInsets.all(16), child: Center(child: TextButton(onPressed: notifier.loadMore, child: const Text('読み込みに失敗しました。再試行'))));
+                      if (tl.error != null) return Padding(padding: const EdgeInsets.all(16), child: Center(child: TextButton(onPressed: notifier.loadMore, child: Text(context.l10n.homeLoadMoreFailed))));
                       // 本体の TL の後ろに置いたセクション / ブロック (D-442) は、最後まで読んだところに。
                       if (!tl.hasMore) return Column(mainAxisSize: MainAxisSize.min, children: [after, const SizedBox(height: 80)]);
                       // タイルを出さないとき: 続きはスクロールで読む。読んでいるあいだだけ、くるくるを出す。
@@ -430,7 +431,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                           child: tl.loadingMore ? const Align(alignment: Alignment.topCenter, child: Padding(padding: EdgeInsets.all(16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))) : null,
                         );
                       }
-                      return Padding(padding: const EdgeInsets.only(bottom: 80), child: TimelineEdgeTile(key: const ValueKey('tl.edge.bottom'), scroll: _scroll, label: '続きを読み込む', busyLabel: '読み込んでいます…', busy: tl.loadingMore, onLoad: notifier.loadMore));
+                      return Padding(padding: const EdgeInsets.only(bottom: 80), child: TimelineEdgeTile(key: const ValueKey('tl.edge.bottom'), scroll: _scroll, label: context.l10n.homeLoadMore, busyLabel: context.l10n.homeLoadingMore, busy: tl.loadingMore, onLoad: notifier.loadMore));
                     }
                     if (adGapsSet.contains(i)) {
                       return Column(mainAxisSize: MainAxisSize.min, children: [TimelineAdSlot(key: ValueKey('tl.ad.$i'), ordinal: adOrdinal[i]!), row(base[i])]);
@@ -500,7 +501,7 @@ class _ErrorList extends StatelessWidget {
     final code = error is SnsApiException ? (error as SnsApiException).code : ErrorCode.internalServerError.copyWith(message: '$error');
     return RefreshIndicator(
       onRefresh: onRetry,
-      child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 80), RasqErrorView(code: code, onRetry: onRetry, retryLabel: '再読み込み')]),
+      child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 80), RasqErrorView(code: code, onRetry: onRetry, retryLabel: context.l10n.homeReload)]),
     );
   }
 }

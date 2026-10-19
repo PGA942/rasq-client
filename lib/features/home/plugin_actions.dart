@@ -11,6 +11,7 @@ import '../plugins/slot_plugins.dart';
 import '../settings/settings_dsl.dart';
 import '../vc/astell_bar.dart';
 import 'action_bar_config.dart';
+import '../../l10n/l10n.dart';
 
 /// 投稿のアクションボタンをプラグインが足す (D-176、契約 v0.7 §2.9)。
 ///
@@ -93,9 +94,9 @@ Future<void> showActionTempMenu(WidgetRef ref, {required Rect anchor, required P
     anchor: anchor,
     dense: true,
     items: [
-      RasqDropdownItem('次からも自動でオン', 'on', checked: current),
-      RasqDropdownItem('次からも自動でオフ', 'off', checked: !current),
-      if (prefs.autoOverride(action.id) != null) const RasqDropdownItem('プラグインの既定に戻す', 'reset'),
+      RasqDropdownItem(appL10n.homeActionAutoOn, 'on', checked: current),
+      RasqDropdownItem(appL10n.homeActionAutoOff, 'off', checked: !current),
+      if (prefs.autoOverride(action.id) != null) RasqDropdownItem(appL10n.homeActionAutoReset, 'reset'),
     ],
   );
   if (pick == null) return;
@@ -227,7 +228,7 @@ SlotActionDecl viewerToggleDecl(SlotManifest m) {
     id: viewerToggleActionId,
     label: declared?.label ?? m.name,
     icon: declared?.icon ?? viewerToggleDefaultIcon,
-    tags: {'全画面表示', ...?declared?.tags}.toList(),
+    tags: {'全画面表示', ...?declared?.tags}.toList(), // l10n-ignore(ジャンルのタグ。照合に使う値)
     slot: SlotIds.viewerOverlay,
     auto: declared?.auto,
     placement: declared?.placement ?? SlotActionDecl.placementAuto,
@@ -290,10 +291,10 @@ const rasqPostConfigKey = 'rasq:post';
 const rasqReplyActionId = 'rasq.reply';
 const rasqRebroadActionId = 'rasq.rebroad';
 const rasqQueueActionId = 'rasq.queue';
-const rasqPostBuiltinActions = [
-  ActionDescriptor(id: rasqReplyActionId, genreTag: 'Reply', label: '返信', icon: 'chat_bubble_outline'),
-  ActionDescriptor(id: rasqRebroadActionId, genreTag: 'Repost', label: 'リブロード', icon: 'repeat', doneIcon: 'repeat'),
-  ActionDescriptor(id: rasqQueueActionId, genreTag: 'Reaction', label: 'キュー', icon: 'add_reaction_outlined', doneIcon: 'add_reaction', iconPerPost: true, countSource: CountSource.none),
+List<ActionDescriptor> get rasqPostBuiltinActions => [
+  ActionDescriptor(id: rasqReplyActionId, genreTag: 'Reply', label: appL10n.homeActionReply, icon: 'chat_bubble_outline'),
+  ActionDescriptor(id: rasqRebroadActionId, genreTag: 'Repost', label: appL10n.homeActionRebroad, icon: 'repeat', doneIcon: 'repeat'),
+  ActionDescriptor(id: rasqQueueActionId, genreTag: 'Reaction', label: appL10n.homeActionQueue, icon: 'add_reaction_outlined', doneIcon: 'add_reaction', iconPerPost: true, countSource: CountSource.none),
 ];
 
 /// 構成キー → どのアカウントのバーか (D-284)。投稿バー = アカウントの key、全画面バー = `viewer:<key>`。内蔵のバー / 旧来の共通構成は null。
@@ -332,17 +333,17 @@ String slotSettingsKeyFor(String configKey, String accountKey) => isEditorConfig
 const mediaEditDefaultActionId = 'composer.media';
 
 /// 内蔵の編集(pro_image_editor)。id は `editor:<tool>`。動画にも同じものが出る。
-const editorBuiltinActions = <ActionDescriptor>[
-  ActionDescriptor(id: 'editor:cropRotate', genreTag: 'Transform', label: 'クロップ / 回転', icon: 'crop_rotate', doneIcon: 'crop_rotate', countSource: CountSource.none),
-  ActionDescriptor(id: 'editor:paint', genreTag: 'Draw', label: 'ペイント', icon: 'edit', doneIcon: 'edit', countSource: CountSource.none),
-  ActionDescriptor(id: 'editor:text', genreTag: 'Text', label: 'テキスト', icon: 'text_fields', doneIcon: 'text_fields', countSource: CountSource.none),
-  ActionDescriptor(id: 'editor:post', genreTag: 'Post', label: 'ノート', icon: 'article', doneIcon: 'article', countSource: CountSource.none),
-  ActionDescriptor(id: 'editor:media', genreTag: 'Media', label: 'メディア', icon: 'add_photo_alternate', doneIcon: 'add_photo_alternate', countSource: CountSource.none),
-  ActionDescriptor(id: 'editor:sticker', genreTag: 'Sticker', label: 'ステッカー', icon: 'auto_awesome_mosaic', doneIcon: 'auto_awesome_mosaic', countSource: CountSource.none),
-  ActionDescriptor(id: 'editor:emoji', genreTag: 'Emoji', label: '絵文字', icon: 'sentiment_satisfied_alt', doneIcon: 'sentiment_satisfied_alt', countSource: CountSource.none),
-  ActionDescriptor(id: 'editor:filter', genreTag: 'Filter', label: 'フィルター', icon: 'filter', doneIcon: 'filter', countSource: CountSource.none),
-  ActionDescriptor(id: 'editor:blur', genreTag: 'Blur', label: 'ぼかし', icon: 'blur_on', doneIcon: 'blur_on', countSource: CountSource.none),
-  ActionDescriptor(id: 'editor:tune', genreTag: 'Tune', label: '調整', icon: 'tune', doneIcon: 'tune', countSource: CountSource.none),
+List<ActionDescriptor> get editorBuiltinActions => <ActionDescriptor>[
+  ActionDescriptor(id: 'editor:cropRotate', genreTag: 'Transform', label: appL10n.homeEditorCropRotate, icon: 'crop_rotate', doneIcon: 'crop_rotate', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:paint', genreTag: 'Draw', label: appL10n.homeEditorPaint, icon: 'edit', doneIcon: 'edit', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:text', genreTag: 'Text', label: appL10n.homeEditorText, icon: 'text_fields', doneIcon: 'text_fields', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:post', genreTag: 'Post', label: appL10n.homeEditorPost, icon: 'article', doneIcon: 'article', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:media', genreTag: 'Media', label: appL10n.homeEditorMedia, icon: 'add_photo_alternate', doneIcon: 'add_photo_alternate', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:sticker', genreTag: 'Sticker', label: appL10n.homeEditorSticker, icon: 'auto_awesome_mosaic', doneIcon: 'auto_awesome_mosaic', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:emoji', genreTag: 'Emoji', label: appL10n.homeEditorEmoji, icon: 'sentiment_satisfied_alt', doneIcon: 'sentiment_satisfied_alt', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:filter', genreTag: 'Filter', label: appL10n.homeEditorFilter, icon: 'filter', doneIcon: 'filter', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:blur', genreTag: 'Blur', label: appL10n.homeEditorBlur, icon: 'blur_on', doneIcon: 'blur_on', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:tune', genreTag: 'Tune', label: appL10n.homeEditorTune, icon: 'tune', doneIcon: 'tune', countSource: CountSource.none),
 ];
 
 /// 音声の Visualizer の設定 (D-251)。動画のバーの先頭。音声を開いているときだけ出る。
@@ -351,7 +352,7 @@ const editorVisualizerAction = ActionDescriptor(id: editorVisualizerActionId, ge
 
 /// バー(構成キー)ごとの内蔵の編集。
 List<ActionDescriptor> editorBuiltinActionsFor(String configKey) => switch (configKey) {
-      editorVideoConfigKey => const [editorVisualizerAction, ...editorBuiltinActions],
+      editorVideoConfigKey => [editorVisualizerAction, ...editorBuiltinActions],
       editorSvgConfigKey => const <ActionDescriptor>[],
       _ => editorBuiltinActions,
     };

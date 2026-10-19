@@ -95,7 +95,7 @@ class FetchShapeTelemetry {
           sent = true;
         } on OrgateException catch (err) {
           // 404 = ストアに無い版(サイドロード / 同梱)。覚えて、二度と送らない。
-          if (err.code.code == '404' || err.message.contains('no approved version')) {
+          if (err.code.code == '404' || err.isReason('no_approved_version', legacyText: 'no approved version')) {
             await _remember(e.key, chunk.map((s) => s['hash'] as String));
           } else {
             debugPrint('fetch shapes: not reported (${err.code.code}): ${err.message}');

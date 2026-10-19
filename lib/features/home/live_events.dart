@@ -14,6 +14,7 @@ import '../swing/swing_providers.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
 import 'home_header.dart';
+import '../../l10n/l10n.dart';
 
 /// フォロー中の人の Swing / AsTell を、出たときにすぐヘッダーへ (D-449)。
 ///
@@ -37,7 +38,7 @@ final liveEventsConnectProvider = Provider<LiveEventsConnect?>((ref) {
   return () async {
     await holder.ensureFresh();
     final t = holder.token;
-    if (t == null) throw StateError('RASQ アカウントのトークンがありません');
+    if (t == null) throw StateError(appL10n.homeLiveNoToken);
     // ほかの WS と同じく Bearer はクエリで(Web 版でも繋がる)。
     final url = base.replace(scheme: base.scheme == 'https' ? 'wss' : 'ws', path: '${base.path}/api/v1/me/events', queryParameters: {'token': t});
     final ws = WebSocketChannel.connect(url);

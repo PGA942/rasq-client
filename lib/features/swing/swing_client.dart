@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../../backend/orgate_client.dart';
 import 'swing_models.dart';
+import '../../l10n/l10n.dart';
 
 /// Central の Swing (S-056)。`docs/API.md` §4i。
 class SwingApi {
@@ -26,7 +27,7 @@ class SwingApi {
   Future<Swing> create(NewSwing s) async {
     final j = await _c.postJson('/swings', s.toJson());
     final swing = Swing.tryParse(j);
-    if (swing == null) throw StateError('Swing を読めませんでした');
+    if (swing == null) throw StateError(appL10n.swingUnreadable);
     return swing;
   }
 

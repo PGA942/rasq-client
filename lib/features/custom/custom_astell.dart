@@ -6,6 +6,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../plugins/slot_plugins.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
@@ -30,7 +31,7 @@ Future<String?> deployToRoom(WidgetRef ref, {required String roomId, required St
     ref.read(astellCustomRevProvider.notifier).bump();
     return null;
   } catch (e) {
-    return '$e';
+    return e is StateError ? e.message : '$e';
   }
 }
 
@@ -46,31 +47,33 @@ Future<void> openCustomPluginShare(BuildContext context, WidgetRef ref, AstellSh
   final p = CustomPluginProposal.fromPayload(share.payload);
   if (p == null) return;
   final messenger = ScaffoldMessenger.maybeOf(context);
+  final l10n = context.l10n;
   final deployed = (await ref.read(roomCustomSessionsProvider(s.room.id).future)).where((x) => x.pluginId == p.pluginId).firstOrNull;
   if (!context.mounted) return;
   if (deployed != null) return openRoomCustomSession(context, deployed);
   if (!s.isModerator) {
-    messenger?.showSnackBar(SnackBar(content: Text('「${p.name}」はホストの承認を待っています')));
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.customAstellWaitingApproval(p.name))));
     return;
   }
   final ok = await ref.read(overlayManagerProvider).showAlert(
         id: 'astell.custom.approve',
-        title: '「${p.name}」をこのルームで使いますか?',
-        message: '${share.displayName} さんからの提案です。承認すると、参加している全員が開けるようになります(インストールしていない人は、開くときに一時的に読み込みます)。',
-        confirmText: '承認する',
-        cancelText: 'やめる',
+        title: l10n.customAstellApproveTitle(p.name),
+        message: l10n.customAstellApproveMessage(share.displayName),
+        confirmText: l10n.customAstellApprove,
+        cancelText: l10n.customPageConsentDecline,
       );
   if (!ok) return;
   final error = await deployToRoom(ref, roomId: s.room.id, pluginId: p.pluginId, version: p.version);
-  messenger?.showSnackBar(SnackBar(content: Text(error == null ? '「${p.name}」をルームに追加しました' : '追加できませんでした: $error')));
+  messenger?.showSnackBar(SnackBar(content: Text(error == null ? l10n.customAddedToRoom(p.name) : l10n.customAddToRoomFailed(error))));
 }
 
 /// ルームにプラグインを足す: ホストはデプロイ、ほかは提案。候補 = 登録済みで AsTell に対応したもの。
 Future<void> pickCustomPluginForRoom(BuildContext context, WidgetRef ref, AstellSessionState s, Rect anchor) async {
   final candidates = astellDeployablePlugins(ref.read(installedPagePluginsProvider));
+  final l10n = context.l10n;
   final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'astell.custom.pick', anchor: anchor, items: [
     for (final p in candidates) RasqDropdownItem(p.manifest.page?.title ?? p.manifest.name, p.storePluginId ?? p.id),
-    const RasqDropdownItem('ストアで探す', '\u0000store'),
+    RasqDropdownItem(l10n.customSearchStore, '\u0000store'),
   ]);
   if (pick == null || !context.mounted) return;
   if (pick == '\u0000store') {
@@ -82,10 +85,10 @@ Future<void> pickCustomPluginForRoom(BuildContext context, WidgetRef ref, Astell
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (s.isModerator) {
     final error = await deployToRoom(ref, roomId: s.room.id, pluginId: pick, version: p.storeVersion);
-    messenger?.showSnackBar(SnackBar(content: Text(error == null ? '「$name」をルームに追加しました' : '追加できませんでした: $error')));
+    messenger?.showSnackBar(SnackBar(content: Text(error == null ? l10n.customAddedToRoom(name) : l10n.customAddToRoomFailed(error))));
   } else {
     proposeToRoom(ref, CustomPluginProposal(pluginId: pick, version: p.storeVersion, name: name, icon: p.manifest.page?.icon));
-    messenger?.showSnackBar(SnackBar(content: Text('「$name」を提案しました(ホストが承認すると使えます)')));
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.customAstellProposed(name))));
   }
 }
 
@@ -97,6 +100,7 @@ class AstellCustomPluginsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final s = session;
     final list = ref.watch(roomCustomSessionsProvider(s.room.id));
     final sessions = list.value ?? const <CustomSession>[];
@@ -107,7 +111,7 @@ class AstellCustomPluginsSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: Text(
-            list.hasError ? '読み込めませんでした: ${list.error}' : 'このルームで動くプラグインはまだありません。${s.isModerator ? '下の「プラグインを追加」から足せます。' : '「プラグインを提案」でホストに頼めます。'}',
+            list.hasError ? l10n.customLoadFailed('${list.error}') : (s.isModerator ? l10n.customAstellEmptyHost : l10n.customAstellEmptyMember),
             style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
           ),
         ),
@@ -116,7 +120,7 @@ class AstellCustomPluginsSection extends ConsumerWidget {
           key: ValueKey('astell.custom.${x.pluginId}'),
           leading: const Icon(Icons.dashboard_customize_outlined),
           title: x.title,
-          subtitle: '${x.participantCount} 人が使用中${x.ownerHandle == null ? '' : ' ・ @${x.ownerHandle} が追加'}',
+          subtitle: x.ownerHandle == null ? l10n.customAstellInUse(x.participantCount) : l10n.customAstellInUseAddedBy(x.participantCount, x.ownerHandle!),
           chevron: false,
           onTap: () => openRoomCustomSession(context, x),
           trailing: s.isModerator
@@ -125,13 +129,13 @@ class AstellCustomPluginsSection extends ConsumerWidget {
                     key: ValueKey('astell.custom.more.${x.pluginId}'),
                     icon: Icons.more_horiz,
                     size: 20,
-                    tooltip: 'メニュー',
+                    tooltip: l10n.customMenu,
                     onPressed: () async {
                       final box = bctx.findRenderObject() as RenderBox?;
                       final anchor = box == null ? const Rect.fromLTWH(0, 0, 1, 1) : box.localToGlobal(Offset.zero) & box.size;
-                      final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'astell.custom.menu', anchor: anchor, items: const [
-                        RasqDropdownItem('開く', 'open'),
-                        RasqDropdownItem('ルームから外す', 'close', destructive: true),
+                      final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'astell.custom.menu', anchor: anchor, items: [
+                        RasqDropdownItem(l10n.customAstellOpen, 'open'),
+                        RasqDropdownItem(l10n.customAstellRemove, 'close', destructive: true),
                       ]);
                       if (!context.mounted) return;
                       if (pick == 'open') openRoomCustomSession(context, x);
@@ -154,7 +158,7 @@ class AstellCustomPluginsSection extends ConsumerWidget {
             builder: (bctx) => OutlinedButton.icon(
               key: const ValueKey('astell.custom.add'),
               icon: const Icon(Icons.add, size: 18),
-              label: Text(s.isModerator ? 'プラグインを追加' : 'プラグインを提案'),
+              label: Text(s.isModerator ? l10n.customAstellAdd : l10n.customAstellPropose),
               onPressed: () {
                 final box = bctx.findRenderObject() as RenderBox?;
                 final anchor = box == null ? const Rect.fromLTWH(0, 0, 1, 1) : box.localToGlobal(Offset.zero) & box.size;

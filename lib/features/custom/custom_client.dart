@@ -7,6 +7,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/redact.dart';
 import '../../backend/rasq_account.dart';
+import '../../l10n/l10n.dart';
 import 'custom_models.dart';
 
 /// カスタムプラグインの共有セッションの口(rasq-central S-048、D-357)。
@@ -100,7 +101,7 @@ Object? applyCustomOp(Object? current, String op, Object? value) {
 // ── モック(Central に繋がっていないとき / テスト)──────────────────────
 
 class MockCustomSessionClient implements CustomSessionClient {
-  MockCustomSessionClient({this.me = const CustomParticipant(accountId: 'me', handle: 'me', displayName: 'あなた'), DateTime Function()? clock}) : clock = clock ?? DateTime.now;
+  MockCustomSessionClient({this.me = const CustomParticipant(accountId: 'me', handle: 'me', displayName: 'あなた'), DateTime Function()? clock}) : clock = clock ?? DateTime.now; // l10n-ignore(プラグインへ渡す自分の表示名の既定)
 
   /// サーバーの時計(期限と welcome の `now`。テストで差し替える)。
   final DateTime Function() clock;
@@ -125,7 +126,7 @@ class MockCustomSessionClient implements CustomSessionClient {
       'link' => 'link:',
       _ => scope,
     };
-    if (resolved.startsWith('room:') && !isRoomHost) throw StateError('ホストだけがデプロイできます');
+    if (resolved.startsWith('room:') && !isRoomHost) throw StateError(appL10n.customClientHostOnly);
     if (!resolved.startsWith('link:')) {
       final existing = sessions.values.where((s) => s.scope == resolved && s.pluginId == pluginId).firstOrNull;
       if (existing != null) return existing;
@@ -197,7 +198,7 @@ class MockCustomSessionClient implements CustomSessionClient {
 
   @override
   Future<CustomConnection> connect(String sessionId) async {
-    if (!sessions.containsKey(sessionId)) throw StateError('セッションが閉じています');
+    if (!sessions.containsKey(sessionId)) throw StateError(appL10n.customClientSessionClosed);
     final c = _MockCustomConnection(this, sessionId);
     (_conns[sessionId] ??= []).add(c);
     return c;
@@ -391,7 +392,7 @@ class HttpCustomSessionClient implements CustomSessionClient {
   Future<CustomConnection> connect(String sessionId) async {
     await ensureFresh?.call();
     final t = token();
-    if (t == null) throw StateError('RASQ アカウントのトークンがありません');
+    if (t == null) throw StateError(appL10n.customClientNoToken);
     // AsTell の WS と同じく Bearer はクエリで(Web 版でも繋がる web_socket_channel)。
     final url = baseUrl.replace(
       scheme: baseUrl.scheme == 'https' ? 'wss' : 'ws',

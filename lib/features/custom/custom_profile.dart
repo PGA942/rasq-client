@@ -13,6 +13,7 @@ import 'custom_models.dart';
 import 'custom_page.dart';
 import 'custom_plugins_screen.dart';
 import '../../backend/orgate_client.dart' show OrgateException;
+import '../../l10n/l10n.dart';
 import '../profile/rasq_pages.dart';
 
 /// RASQ アカウントのページに置いたカスタムプラグイン(`GET /accounts/{handle}/pages`、S-048、D-357)。
@@ -29,7 +30,7 @@ Future<String?> setProfilePlugin(WidgetRef ref, {required String handle, require
     final now = await client.profilePages(handle);
     final items = [for (final p in now) if (p.pluginId != id) (pluginId: p.pluginId, version: p.version)];
     if (placed) {
-      if (items.length >= 8) return 'ページに置けるのは 8 個までです';
+      if (items.length >= 8) return appL10n.customProfileLimit;
       items.add((pluginId: id, version: plugin.storeVersion));
     }
     await client.setMyPages(items);
@@ -37,7 +38,7 @@ Future<String?> setProfilePlugin(WidgetRef ref, {required String handle, require
     ref.invalidate(profileCustomPagesProvider(handle));
     return null;
   } catch (e) {
-    return '$e';
+    return e is StateError ? e.message : '$e';
   }
 }
 
@@ -75,9 +76,10 @@ class CustomProfilePagesTab extends ConsumerWidget {
   }
 
   Future<void> _sideloadMenu(BuildContext context, WidgetRef ref, RasqSideloadPage p, Rect anchor) async {
+    final l10n = context.l10n;
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasqPage.sideload.menu', anchor: anchor, dense: true, items: [
-      const RasqDropdownItem('上げ直す(新しい版)', 'replace'),
-      const RasqDropdownItem('ページから外す', 'delete', destructive: true),
+      RasqDropdownItem(l10n.customProfileSideloadReplace, 'replace'),
+      RasqDropdownItem(l10n.customProfileSideloadRemove, 'delete', destructive: true),
     ]);
     if (pick == null || !context.mounted) return;
     if (pick == 'replace') return uploadRasqSideloadPage(context, ref, onDone: () => _refresh(ref));
@@ -86,13 +88,14 @@ class CustomProfilePagesTab extends ConsumerWidget {
       await ref.read(rasqPagesApiProvider)?.deleteSideload(p.id);
       _refresh(ref);
     } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text('外せませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.customProfileRemoveFailed('$e'))));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final pages = ref.watch(profileCustomPagesProvider(handle));
     final items = pages.value ?? const <CustomProfilePage>[];
     final md = ref.watch(rasqMdPagesProvider(handle)).value ?? const <RasqMdPageInfo>[];
@@ -111,7 +114,7 @@ class CustomProfilePagesTab extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.all(RasqSpacing.page),
           child: Text(
-            pages.hasError ? '読み込めませんでした: ${pages.error}' : (isMine ? '「+ 追加」で Markdown のページや、カスタムプラグインを置けます。訪れた人がここから開けます。' : 'ページはまだありません。'),
+            pages.hasError ? l10n.customLoadFailed('${pages.error}') : (isMine ? l10n.customProfileEmptyMine : l10n.customProfileEmpty),
             style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
           ),
         ),
@@ -120,7 +123,7 @@ class CustomProfilePagesTab extends ConsumerWidget {
           key: ValueKey('rasqPage.custom.${p.pluginId}'),
           leading: Icon(materialIconByName(p.icon) ?? Icons.dashboard_customize_outlined),
           title: p.name,
-          subtitle: p.isShared ? (p.sessionId == null ? 'みんなで使う(まだ始まっていません)' : 'みんなで使う') : '1 人で使う',
+          subtitle: p.isShared ? (p.sessionId == null ? l10n.customProfileSharedNotStarted : l10n.customProfileShared) : l10n.customSolo,
           onTap: () => context.push(Routes.customPage(
                 p.pluginId,
                 CustomPageArgs(pluginId: p.pluginId, version: p.version, surface: PluginPageDecl.surfaceProfile, sessionId: p.sessionId, profileHandle: handle, profileAccountId: accountId).query,
@@ -130,8 +133,8 @@ class CustomProfilePagesTab extends ConsumerWidget {
           RasqListTile(
             key: ValueKey('rasqPage.host.${p.pluginId}'),
             leading: const Padding(padding: EdgeInsets.only(left: RasqSpacing.md), child: Icon(Icons.admin_panel_settings_outlined)),
-            title: '${host.manifest.page?.title ?? host.manifest.name} のホスト用ページ',
-            subtitle: 'あなたにだけ出ます',
+            title: l10n.customProfileHostPage(host.manifest.page?.title ?? host.manifest.name),
+            subtitle: l10n.customProfileHostPageSubtitle,
             onTap: () => context.push(Routes.customPage(
                   p.pluginId,
                   CustomPageArgs(pluginId: p.pluginId, version: p.version, surface: PluginPageDecl.surfaceProfileHost, sessionId: p.sessionId, profileHandle: handle, profileAccountId: accountId).query,
@@ -143,15 +146,15 @@ class CustomProfilePagesTab extends ConsumerWidget {
           key: ValueKey('rasqPage.md.${m.id}'),
           leading: const Icon(Icons.article_outlined),
           title: m.title,
-          subtitle: drafts.containsKey(m.id) ? 'ページ ・ 書きかけの下書きあり' : 'ページ',
+          subtitle: drafts.containsKey(m.id) ? l10n.customProfileMdPageWithDraft : l10n.customProfileMdPage,
           onTap: () => context.push(Routes.rasqMdPage(handle, m.id, mine: isMine)),
         ),
       for (final d in unpublished)
         RasqListTile(
           key: ValueKey('rasqPage.draft.${d.id}'),
           leading: Icon(Icons.edit_note, color: scheme.onSurfaceVariant),
-          title: d.title.isEmpty ? '(無題)' : d.title,
-          subtitle: '下書き(この端末だけ)',
+          title: d.title.isEmpty ? l10n.customProfileUntitled : d.title,
+          subtitle: l10n.customProfileDraft,
           onTap: () => context.push(Routes.rasqMdPageEdit(d.id)),
         ),
       for (final p in sideload)
@@ -160,14 +163,14 @@ class CustomProfilePagesTab extends ConsumerWidget {
             key: ValueKey('rasqPage.sideload.${p.id}'),
             leading: const Icon(Icons.science_outlined),
             title: p.name,
-            subtitle: '自作プラグイン ・ 制限モード ・ v${p.version}',
+            subtitle: l10n.customProfileSideloadSubtitle(p.version),
             onTap: () => _openSideload(context, ref, p),
             trailing: isMine
                 ? RasqIconButton(
                     key: ValueKey('rasqPage.sideload.${p.id}.more'),
                     icon: Icons.more_horiz,
                     size: 18,
-                    tooltip: 'メニュー',
+                    tooltip: l10n.customMenu,
                     onPressed: () {
                       final box = tctx.findRenderObject() as RenderBox;
                       _sideloadMenu(context, ref, p, box.localToGlobal(Offset.zero) & box.size);
@@ -184,7 +187,7 @@ class CustomProfilePagesTab extends ConsumerWidget {
             child: OutlinedButton.icon(
               key: const ValueKey('rasqPage.add'),
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('追加'),
+              label: Text(l10n.customProfileAdd),
               onPressed: () => showRasqPageAddFow(context, ref, handle: handle, placed: {for (final p in items) p.pluginId}, onChanged: () => _refresh(ref)),
             ),
           ),
@@ -197,8 +200,9 @@ class CustomProfilePagesTab extends ConsumerWidget {
 Future<void> uploadRasqSideloadPage(BuildContext context, WidgetRef ref, {required VoidCallback onDone}) async {
   final api = ref.read(rasqPagesApiProvider);
   final messenger = ScaffoldMessenger.maybeOf(context);
+  final l10n = context.l10n;
   if (api == null) {
-    messenger?.showSnackBar(const SnackBar(content: Text('RASQ アカウントにログインすると置けます')));
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.customProfileLoginToPlace)));
     return;
   }
   final bytes = await ref.read(rasqPagePackagePickerProvider)();
@@ -206,28 +210,30 @@ Future<void> uploadRasqSideloadPage(BuildContext context, WidgetRef ref, {requir
   try {
     final p = await api.uploadSideload(bytes);
     onDone();
-    messenger?.showSnackBar(SnackBar(content: Text('「${p.name}」を置きました(訪れた人の端末では制限モードで動きます)')));
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.customProfileSideloadPlaced(p.name))));
   } on OrgateException catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text(switch (e.message) {
-      final m when m.contains('not_profile_page') => 'RASQ のページに置けるのは、プロフィールの面(surfaces: profile)を持つ 1 人で使うページ型だけです',
-      final m when m.contains('sideload_page_limit') => '自作プラグインは 4 つまでです',
-      final m when m.contains('invalid_package') => '配布物を読めませんでした(.rspkg / .rasqpkg)',
-      _ => '置けませんでした: ${e.message}',
+    // 理由は Central の名前つきの理由(`400 not_profile_page` / `409 sideload_page_limit` / `400 invalid_package`)で見る (D-503)。
+    messenger?.showSnackBar(SnackBar(content: Text(switch (e) {
+      _ when e.isReason('not_profile_page', legacyText: 'not_profile_page') => l10n.customProfileSideloadErrorNotProfilePage,
+      _ when e.isReason('sideload_page_limit', legacyText: 'sideload_page_limit') => l10n.customProfileSideloadErrorLimit,
+      _ when e.isReason('invalid_package', legacyText: 'invalid_package') => l10n.customProfileSideloadErrorInvalidPackage,
+      _ => l10n.customPlaceFailed(e.message),
     })));
   } catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text('置けませんでした: $e')));
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.customPlaceFailed('$e'))));
   }
 }
 
 /// 「+ 追加」の FOW (D-446、前はドロップダウン): Markdown ページを書く / 自作プラグインを置く / ストアのカスタムプラグイン(置く / 外す)。
 Future<void> showRasqPageAddFow(BuildContext context, WidgetRef ref, {required String handle, required Set<String> placed, required VoidCallback onChanged}) async {
   final manager = ref.read(overlayManagerProvider);
+  final l10n = context.l10n;
   const id = 'rasqPage.add.fow';
   if (manager.contains(id)) return;
   await manager.showFow<void>(
     id: id,
-    spec: FowSpec(title: 'ページを追加', cancelText: '閉じる', initialHeightFactor: 0.7, maxHeightFactor: 0.9, maxWidth: 600),
-    semanticsLabel: 'ページを追加',
+    spec: FowSpec(title: l10n.customProfileAddTitle, cancelText: l10n.customClose, initialHeightFactor: 0.7, maxHeightFactor: 0.9, maxWidth: 600),
+    semanticsLabel: l10n.customProfileAddTitle,
     builder: (fctx, _) => Consumer(builder: (cctx, ref, _) {
       final candidates = profilePlaceablePlugins(ref.watch(installedPagePluginsProvider));
       void close() => manager.close(id);
@@ -235,8 +241,8 @@ Future<void> showRasqPageAddFow(BuildContext context, WidgetRef ref, {required S
         RasqListTile(
           key: const ValueKey('rasqPage.add.md'),
           leading: const Icon(Icons.article_outlined),
-          title: 'Markdown のページを書く',
-          subtitle: '下書きはこの端末に残し、「公開」で出します。MFM は HTML 風のタグで',
+          title: l10n.customProfileAddMd,
+          subtitle: l10n.customProfileAddMdSubtitle,
           onTap: () {
             close();
             context.push(Routes.rasqMdPageEdit(newRasqPageId()));
@@ -245,16 +251,16 @@ Future<void> showRasqPageAddFow(BuildContext context, WidgetRef ref, {required S
         RasqListTile(
           key: const ValueKey('rasqPage.add.sideload'),
           leading: const Icon(Icons.science_outlined),
-          title: '自作プラグインを置く(.rspkg / .rasqpkg)',
-          subtitle: '審査していないプラグイン。訪れた人の端末では制限モード(通信などなし)で動きます',
+          title: l10n.customProfileAddSideload,
+          subtitle: l10n.customProfileAddSideloadSubtitle,
           onTap: () {
             close();
             uploadRasqSideloadPage(context, ref, onDone: onChanged);
           },
         ),
-        const RasqSectionHeader(title: 'ストアのカスタムプラグイン'),
+        RasqSectionHeader(title: l10n.customProfileAddStoreSection),
         if (candidates.isEmpty)
-          const RasqCaption('ページに置けるカスタムプラグインを入れていません', padding: EdgeInsets.symmetric(horizontal: RasqSpacing.page)),
+          RasqCaption(l10n.customProfileAddStoreEmpty, padding: EdgeInsets.symmetric(horizontal: RasqSpacing.page)),
         for (final p in candidates)
           Builder(builder: (_) {
             final key = p.storePluginId ?? p.id;
@@ -263,20 +269,20 @@ Future<void> showRasqPageAddFow(BuildContext context, WidgetRef ref, {required S
               key: ValueKey('rasqPage.add.store.$key'),
               leading: Icon(materialIconByName(p.manifest.page?.icon) ?? Icons.dashboard_customize_outlined),
               title: p.manifest.page?.title ?? p.manifest.name,
-              subtitle: [on ? '置いています(押すと外す)' : '押すと置く', if (p.manifest.page?.allows(PluginPageDecl.surfaceProfileHost) ?? false) 'ホスト用ページあり'].join(' ・ '),
+              subtitle: [on ? l10n.customProfileAddStorePlaced : l10n.customProfileAddStoreTapToPlace, if (p.manifest.page?.allows(PluginPageDecl.surfaceProfileHost) ?? false) l10n.customProfileAddStoreHasHostPage].join(l10n.customListSeparator),
               trailing: Icon(on ? Icons.check_circle : Icons.add_circle_outline),
               onTap: () async {
                 close();
                 final error = await setProfilePlugin(ref, handle: handle, plugin: p, placed: !on);
                 onChanged();
-                if (error != null && context.mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('変えられませんでした: $error')));
+                if (error != null && context.mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(l10n.customProfileChangeFailed(error))));
               },
             );
           }),
         RasqListTile(
           key: const ValueKey('rasqPage.add.storeSearch'),
           leading: const Icon(Icons.storefront_outlined),
-          title: 'ストアで探す',
+          title: l10n.customSearchStore,
           onTap: () {
             close();
             context.push(Routes.storeSearch());

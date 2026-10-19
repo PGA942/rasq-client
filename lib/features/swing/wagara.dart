@@ -11,25 +11,25 @@ import 'package:flutter/painting.dart';
 ///   どちらの層も「濃い色 + 補色の淡い色」の 2 色で、2 枚目は 1 枚目と類似色・濃淡を逆に([pickWagaraColors]、D-387)。
 ///   どの 2 つ([swingWagara] から)/ 色 / 大きさかは乱数で決める。
 enum Wagara {
-  seigaiha('青海波'),
-  asanoha('麻の葉'),
-  shippo('七宝'),
-  sayagata('紗綾形'),
-  higaki('檜垣'),
-  yagasuri('矢絣'),
-  ishidatami('石畳'),
-  tatewaku('立涌'),
-  kikko('亀甲'),
-  uroko('鱗'),
-  fundo('分銅繋ぎ'),
-  sankuzushi('三崩し'),
-  hishi('菱'),
-  matsukawabishi('松皮菱'),
-  take('竹'),
-  shima('縞'),
-  koshi('格子'),
-  ryusui('流水'),
-  nami('波');
+  seigaiha('青海波'), // l10n-ignore(柄の名前。画面には出さない)
+  asanoha('麻の葉'), // l10n-ignore(柄の名前。画面には出さない)
+  shippo('七宝'), // l10n-ignore(柄の名前。画面には出さない)
+  sayagata('紗綾形'), // l10n-ignore(柄の名前。画面には出さない)
+  higaki('檜垣'), // l10n-ignore(柄の名前。画面には出さない)
+  yagasuri('矢絣'), // l10n-ignore(柄の名前。画面には出さない)
+  ishidatami('石畳'), // l10n-ignore(柄の名前。画面には出さない)
+  tatewaku('立涌'), // l10n-ignore(柄の名前。画面には出さない)
+  kikko('亀甲'), // l10n-ignore(柄の名前。画面には出さない)
+  uroko('鱗'), // l10n-ignore(柄の名前。画面には出さない)
+  fundo('分銅繋ぎ'), // l10n-ignore(柄の名前。画面には出さない)
+  sankuzushi('三崩し'), // l10n-ignore(柄の名前。画面には出さない)
+  hishi('菱'), // l10n-ignore(柄の名前。画面には出さない)
+  matsukawabishi('松皮菱'), // l10n-ignore(柄の名前。画面には出さない)
+  take('竹'), // l10n-ignore(柄の名前。画面には出さない)
+  shima('縞'), // l10n-ignore(柄の名前。画面には出さない)
+  koshi('格子'), // l10n-ignore(柄の名前。画面には出さない)
+  ryusui('流水'), // l10n-ignore(柄の名前。画面には出さない)
+  nami('波'); // l10n-ignore(柄の名前。画面には出さない)
 
   const Wagara(this.label);
   final String label;

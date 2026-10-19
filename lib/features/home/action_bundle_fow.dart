@@ -7,6 +7,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/providers.dart';
 import 'action_bar_config.dart';
 import 'post_row.dart';
+import '../../l10n/l10n.dart';
 
 /// バンドルのボタンを押したときの FOW (D-210): **アイコンから出現**する横幅の小さい(600px)FOW。
 /// ヘッダーはバンドル名、下にアクションボタン + 名称のタイル(押下判定はタイル全体)。
@@ -54,7 +55,7 @@ Future<T?> showBundleMenuFow<T>(
   final factor = (need / hostH).clamp(0.08, 0.92);
   final spec = FowSpec(
     title: title,
-    cancelText: '閉じる',
+    cancelText: appL10n.homeClose,
     maxWidth: actionBundleMenuMaxWidth,
     anchor: anchor,
     columnIndex: column,
