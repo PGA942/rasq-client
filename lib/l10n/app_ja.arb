@@ -12171,6 +12171,63 @@
       }
     }
   },
+  "userPageViewTitle": "{tab}の表示",
+  "@userPageViewTitle": {
+    "description": "ユーザーページのタブの並べ替え・絞り込みのパネル(選んでいるタブをもう一度押すと開く)の見出し。tab はタブの名前(ノート / 返信 など)",
+    "placeholders": {
+      "tab": {
+        "type": "String"
+      }
+    }
+  },
+  "userPageViewClose": "閉じる",
+  "userPageViewSearchHint": "この人の{tab}から探す",
+  "@userPageViewSearchHint": {
+    "description": "パネルの検索欄の薄い字。読み込んだ投稿の本文を探す。tab はタブの名前",
+    "placeholders": {
+      "tab": {
+        "type": "String"
+      }
+    }
+  },
+  "userPageViewSortLabel": "並べ替え",
+  "userPageViewSortNewest": "新しい順",
+  "userPageViewSortOldest": "古い順",
+  "userPageViewSortReactions": "リアクション数",
+  "userPageViewSortTendency": "傾向に合う順",
+  "userPageViewShowLabel": "表示",
+  "userPageViewShowPinned": "ピン留め",
+  "userPageViewShowRenotes": "リノート",
+  "userPageViewShowQuotes": "引用ノート",
+  "userPageViewShowDigest": "ダイジェスト",
+  "userPageViewDirectivityTitle": "指向性",
+  "@userPageViewDirectivityTitle": {
+    "description": "好きなジャンルへの近さで絞るスライダーの見出し(トレンドの指向性と同じ考え方)"
+  },
+  "userPageViewDirectivityNoGenres": "好きなジャンルを決めると効きます",
+  "@userPageViewDirectivityNoGenres": {
+    "description": "トレンドの設定で好きなジャンル / 好きな例を決めていないとき、指向性の下に出す注意"
+  },
+  "userPageViewStimulusTitle": "刺激性",
+  "@userPageViewStimulusTitle": {
+    "description": "8 つの感情の上限を決めるレーダーの見出し。上限を超える投稿を隠す"
+  },
+  "userPageViewStimulusCaption": "中心に寄せた感情の強い投稿を隠します",
+  "userPageViewReset": "リセット",
+  "userPageViewCount": "{total, plural, other{{total} 件中 {shown} 件}}",
+  "@userPageViewCount": {
+    "description": "パネルの下の、読み込んだ投稿のうち表示している数",
+    "placeholders": {
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "userPageViewEmptyTitle": "条件に合う投稿はありません",
+  "userPageViewEmptyHint": "タブをもう一度押して、表示の設定を変えるかリセットしてください",
   "vcSectionInvited": "招待",
   "@vcSectionInvited": {
     "description": "VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)"

@@ -23542,6 +23542,132 @@ abstract class AppLocalizations {
   /// **'最近のアクションを類似した話題でまとめ、話題性の強いものから {perPage, plural, other{{perPage} 件}}ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。'**
   String trendProfilePickIntroDetail(int perPage);
 
+  /// ユーザーページのタブの並べ替え・絞り込みのパネル(選んでいるタブをもう一度押すと開く)の見出し。tab はタブの名前(ノート / 返信 など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{tab}の表示'**
+  String userPageViewTitle(String tab);
+
+  /// No description provided for @userPageViewClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get userPageViewClose;
+
+  /// パネルの検索欄の薄い字。読み込んだ投稿の本文を探す。tab はタブの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'この人の{tab}から探す'**
+  String userPageViewSearchHint(String tab);
+
+  /// No description provided for @userPageViewSortLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'並べ替え'**
+  String get userPageViewSortLabel;
+
+  /// No description provided for @userPageViewSortNewest.
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい順'**
+  String get userPageViewSortNewest;
+
+  /// No description provided for @userPageViewSortOldest.
+  ///
+  /// In ja, this message translates to:
+  /// **'古い順'**
+  String get userPageViewSortOldest;
+
+  /// No description provided for @userPageViewSortReactions.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション数'**
+  String get userPageViewSortReactions;
+
+  /// No description provided for @userPageViewSortTendency.
+  ///
+  /// In ja, this message translates to:
+  /// **'傾向に合う順'**
+  String get userPageViewSortTendency;
+
+  /// No description provided for @userPageViewShowLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示'**
+  String get userPageViewShowLabel;
+
+  /// No description provided for @userPageViewShowPinned.
+  ///
+  /// In ja, this message translates to:
+  /// **'ピン留め'**
+  String get userPageViewShowPinned;
+
+  /// No description provided for @userPageViewShowRenotes.
+  ///
+  /// In ja, this message translates to:
+  /// **'リノート'**
+  String get userPageViewShowRenotes;
+
+  /// No description provided for @userPageViewShowQuotes.
+  ///
+  /// In ja, this message translates to:
+  /// **'引用ノート'**
+  String get userPageViewShowQuotes;
+
+  /// No description provided for @userPageViewShowDigest.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダイジェスト'**
+  String get userPageViewShowDigest;
+
+  /// 好きなジャンルへの近さで絞るスライダーの見出し(トレンドの指向性と同じ考え方)
+  ///
+  /// In ja, this message translates to:
+  /// **'指向性'**
+  String get userPageViewDirectivityTitle;
+
+  /// トレンドの設定で好きなジャンル / 好きな例を決めていないとき、指向性の下に出す注意
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンルを決めると効きます'**
+  String get userPageViewDirectivityNoGenres;
+
+  /// 8 つの感情の上限を決めるレーダーの見出し。上限を超える投稿を隠す
+  ///
+  /// In ja, this message translates to:
+  /// **'刺激性'**
+  String get userPageViewStimulusTitle;
+
+  /// No description provided for @userPageViewStimulusCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'中心に寄せた感情の強い投稿を隠します'**
+  String get userPageViewStimulusCaption;
+
+  /// No description provided for @userPageViewReset.
+  ///
+  /// In ja, this message translates to:
+  /// **'リセット'**
+  String get userPageViewReset;
+
+  /// パネルの下の、読み込んだ投稿のうち表示している数
+  ///
+  /// In ja, this message translates to:
+  /// **'{total, plural, other{{total} 件中 {shown} 件}}'**
+  String userPageViewCount(int shown, int total);
+
+  /// No description provided for @userPageViewEmptyTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'条件に合う投稿はありません'**
+  String get userPageViewEmptyTitle;
+
+  /// No description provided for @userPageViewEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'タブをもう一度押して、表示の設定を変えるかリセットしてください'**
+  String get userPageViewEmptyHint;
+
   /// VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)
   ///
   /// In ja, this message translates to:
