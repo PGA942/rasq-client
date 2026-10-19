@@ -114,7 +114,7 @@ class RaiAutoStep {
 /// 承認前に組む計画 (D-229): 対応のある手順 / 畳む手順 / 案内に渡す手順。
 @immutable
 class RaiAutoPlan {
-  const RaiAutoPlan({required this.opId, required this.title, required this.steps, required this.question, this.inputs = const {}, this.cursor = 0, this.candidates = const {}});
+  const RaiAutoPlan({required this.opId, required this.title, required this.steps, required this.question, this.inputs = const {}, this.cursor = 0, this.candidates = const {}, this.asking});
   final String opId;
   final String title;
   final List<RaiAutoStep> steps;
@@ -128,6 +128,10 @@ class RaiAutoPlan {
 
   /// 取得結果の候補(ラベル → 候補)。
   final Map<String, List<RaiFunctionItem>> candidates;
+
+  /// いま選択肢タイルで聞いている入力のラベル(`RASQ リスト` など。null = 聞いていない)。答えはこのラベルに入れる
+  /// (D-493: 以前は手順の注記「{label} を選ぶ」の先頭の語を読み戻していて、空白を含むラベルや訳した注記で崩れた)。
+  final String? asking;
 
   bool get entrusted => raiEntrusted(question);
 
@@ -156,7 +160,10 @@ class RaiAutoPlan {
   }
 
   RaiAutoPlan copyWith({List<RaiAutoStep>? steps, Map<String, String>? inputs, int? cursor, Map<String, List<RaiFunctionItem>>? candidates}) =>
-      RaiAutoPlan(opId: opId, title: title, steps: steps ?? this.steps, question: question, inputs: inputs ?? this.inputs, cursor: cursor ?? this.cursor, candidates: candidates ?? this.candidates);
+      RaiAutoPlan(opId: opId, title: title, steps: steps ?? this.steps, question: question, inputs: inputs ?? this.inputs, cursor: cursor ?? this.cursor, candidates: candidates ?? this.candidates, asking: asking);
+
+  /// 聞いている入力を [label] にする(null = 聞き終えた)。
+  RaiAutoPlan askingFor(String? label) => RaiAutoPlan(opId: opId, title: title, steps: steps, question: question, inputs: inputs, cursor: cursor, candidates: candidates, asking: label);
 
   RaiAutoPlan withStep(int i, RaiAutoStep s) => copyWith(steps: [for (final (k, x) in steps.indexed) k == i ? s : x]);
 

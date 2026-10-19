@@ -465,6 +465,8 @@ class RaiController extends Notifier<RaiState> {
 
   /// 選択肢タイル (D-229): 入力タイルの上の FOW。答えが来たら同じ計画を続ける、「やめる」なら止める。
   Future<void> _askInput(RaiAutoAsk ask, int seq) async {
+    // 答えを入れる先は聞いた入力のラベル(D-493: 表示の文から読み戻さない)。
+    _auto = _auto?.askingFor(ask.label);
     state = state.copyWith(busy: false, bubble: ask.question, lineIndex: 0);
     Rect? anchor;
     final barCtx = raiBarContext;
@@ -485,9 +487,9 @@ class RaiController extends Notifier<RaiState> {
     final plan = _auto;
     if (plan == null) return;
     final asking = plan.steps.where((s) => s.status == RaiAutoStatus.asking).firstOrNull;
-    final label = asking?.detail.split(' ').first ?? plan.inputsNeeded.firstOrNull;
+    final label = plan.asking ?? plan.inputsNeeded.firstOrNull;
     if (label == null) return;
-    var next = plan.copyWith(inputs: {...plan.inputs, label: value});
+    var next = plan.copyWith(inputs: {...plan.inputs, label: value}).askingFor(null);
     if (asking != null) next = next.withStep(asking.index, asking.with_(status: RaiAutoStatus.pending, detail: ''));
     _auto = next;
     state = state.copyWith(busy: true);
