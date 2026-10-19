@@ -17,6 +17,7 @@ import '../session/sanctions.dart';
 import '../features/onboarding/rasq_register_screen.dart' show openRasqAccountCreation;
 import '../features/notifications/notifications_screen.dart';
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
+import '../l10n/l10n.dart';
 
 /// RASQ アカウントの選択/編集 FOW (D-138: サイドバー右上の … から)。
 ///
@@ -38,8 +39,8 @@ Future<void> openRasqAccountFow(WidgetRef ref, {int column = 0, VoidCallback? on
     initialHeightFactor: 0.55,
     minHeightFactor: 0.3,
     maxHeightFactor: 0.9,
-    title: 'RASQ アカウント',
-    cancelText: '閉じる',
+    title: appL10n.shellAccountFowTitle,
+    cancelText: appL10n.shellAccountFowCloseButton,
     dockAboveFooter: true,
     columnIndex: column,
     aboveSidebar: overSidebar,
@@ -49,7 +50,7 @@ Future<void> openRasqAccountFow(WidgetRef ref, {int column = 0, VoidCallback? on
   await manager.showFow<void>(
     id: rasqAccountFowId,
     spec: spec,
-    semanticsLabel: 'RASQ アカウント',
+    semanticsLabel: appL10n.shellAccountFowTitle,
     barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
     builder: (ctx, handle) => RasqAccountPanel(onDone: handle.close, onNavigate: onNavigate),
   );
@@ -65,15 +66,15 @@ Future<void> showSanctionAppealSheet(BuildContext context, WidgetRef ref, RasqSa
   var sent = false;
   await manager.showBottomSheet<void>(
     id: 'rasq.sanction.appeal',
-    title: '処置の解除を申請',
+    title: context.l10n.shellAccountAppealSheetTitle,
     builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
       final scheme = Theme.of(ctx).colorScheme;
       return ListView(shrinkWrap: true, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Text('${entry.category} / ${entry.level}${entry.note == null ? '' : ' — ${entry.note}'}\n${rasqDetail(ctx, '運営の担当者が読んで、受理なら処置が解除されます。', '運営(rasq-judge)の担当者が読んで、受理なら処置が解除されます。自動判定は通りません。')}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text('${entry.category} / ${entry.level}${entry.note == null ? '' : ' — ${entry.note}'}\n${rasqDetail(ctx, ctx.l10n.shellAccountAppealCaption, ctx.l10n.shellAccountAppealCaptionDetail)}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
         ),
-        Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqInput(controller: text, hintText: '申請の理由(必須)', maxLines: 4, autofocus: true)),
+        Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqInput(controller: text, hintText: ctx.l10n.shellAccountAppealReasonHint, maxLines: 4, autofocus: true)),
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page),
           child: FilledButton(
@@ -85,17 +86,17 @@ Future<void> showSanctionAppealSheet(BuildContext context, WidgetRef ref, RasqSa
                 sent = true;
                 manager.close('rasq.sanction.appeal');
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('申請できませんでした: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ctx.l10n.shellAccountAppealFailedError('$e'))));
               }
             },
-            child: const Text('申請する'),
+            child: Text(ctx.l10n.shellAccountAppealSubmitButton),
           ),
         ),
       ]);
     }),
   );
   text.dispose();
-  if (sent && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('解除を申請しました。担当者が確認します')));
+  if (sent && context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.shellAccountAppealSentSnack)));
 }
 
 /// 台帳の 1 件を表示用 [UserSummary] に写す。現在のアカウントは
@@ -109,7 +110,7 @@ UserSummary summaryOfRecord(WidgetRef ref, RasqAccountRecord r, {required bool i
   return UserSummary(
     id: 'rasq:${r.id}',
     account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: handle),
-    displayName: r.displayName ?? first?.displayName ?? (r.isCentral ? 'RASQ' : 'この端末'),
+    displayName: r.displayName ?? first?.displayName ?? (r.isCentral ? 'RASQ' : appL10n.shellAccountLocalDisplayName),
     avatarUrl: r.avatarUrl ?? first?.avatarUrl,
   );
 }
@@ -153,15 +154,15 @@ class RasqAccountPanel extends ConsumerWidget {
 
     // ↓ で開く操作の一覧 (D-272 → D-291): ドロップダウンをやめて、**タイルの下に折りたたみで出す**(もう一度 ↓ で畳む)。
     List<RasqDropdownItem<String>> itemsOf(RasqAccountRecord r) => [
-        const RasqDropdownItem('SNS アカウントを追加', 'addSns'),
-        const RasqDropdownItem('設定', 'allSettings'),
-        if (r.isCentral) const RasqDropdownItem('アカウントページ', 'page'),
-        const RasqDropdownItem('プロフィール編集', 'profile'),
-        const RasqDropdownItem('アカウント設定', 'settings'),
-        const RasqDropdownItem('通知設定', 'notifications'),
-        if (r.isCentral) const RasqDropdownItem('セキュリティ(メール / パスワード / 端末)', 'security'),
-        RasqDropdownItem('ログアウト', 'logout', destructive: true, enabled: r.isCentral),
-        if (r.isCentral) const RasqDropdownItem('RASQ アカウントを削除', 'delete', destructive: true),
+        RasqDropdownItem(context.l10n.shellAccountMenuAddSns, 'addSns'),
+        RasqDropdownItem(context.l10n.shellAccountMenuAllSettings, 'allSettings'),
+        if (r.isCentral) RasqDropdownItem(context.l10n.shellAccountMenuAccountPage, 'page'),
+        RasqDropdownItem(context.l10n.shellAccountMenuEditProfile, 'profile'),
+        RasqDropdownItem(context.l10n.shellAccountMenuAccountSettings, 'settings'),
+        RasqDropdownItem(context.l10n.shellAccountMenuNotificationSettings, 'notifications'),
+        if (r.isCentral) RasqDropdownItem(context.l10n.shellAccountMenuSecurity, 'security'),
+        RasqDropdownItem(context.l10n.shellAccountMenuLogout, 'logout', destructive: true, enabled: r.isCentral),
+        if (r.isCentral) RasqDropdownItem(context.l10n.shellAccountMenuDelete, 'delete', destructive: true),
       ];
 
     // そのアカウントの操作は、**そのアカウントに切り替えてから**行う (D-316): 開く画面(アカウントページ / プロフィール /
@@ -207,9 +208,9 @@ class RasqAccountPanel extends ConsumerWidget {
           final sns = await askRasqLogoutSns(
             ref.read,
             id: 'rasq.account.logout',
-            title: 'RASQ アカウントからログアウト',
-            message: 'この端末から RASQ アカウントを外します。',
-            confirmText: 'ログアウト',
+            title: context.l10n.shellAccountLogoutTitle,
+            message: context.l10n.shellAccountLogoutMessage,
+            confirmText: context.l10n.shellAccountLogoutConfirmButton,
           );
           if (sns == null || !context.mounted) return;
           // 台帳が変わると、この FOW が作り直されることがある: コンテナから読む。
@@ -217,13 +218,13 @@ class RasqAccountPanel extends ConsumerWidget {
           // そのアカウントのトークンだけを捨てる(ほかの RASQ アカウントのログインは残る。D-316)。SNS はトークンを捨ててから。
           await ref.read(orgateAccountProvider.notifier).signOut(accountId: r.centralAccountId);
           await releaseRasqAccount(read, r.id, sns: sns);
-          toast(sns == RasqLogoutSns.logout ? 'RASQ アカウントと、その SNS アカウントからログアウトしました' : 'RASQ アカウントからログアウトしました。SNS アカウントは「この端末のみ」に移しました');
+          toast(sns == RasqLogoutSns.logout ? appL10n.shellAccountLoggedOutWithSnsSnack : appL10n.shellAccountLoggedOutKeptSnsSnack);
         case 'delete':
           // アカウント削除 (D-241 / S-015)。学習へのデータ提供の撤回と、提供済みデータの削除も一緒に始まる
           // (「別に撤回しない限り残る」にはしない = ストアのアカウント削除要件)。
           // 切り替えたはずのアカウントと違う(ログインが切れている)なら、消さない。
           if (ref.read(orgateAccountProvider).value?.id != r.centralAccountId) {
-            toast('このアカウントに、もう一度ログインしてから削除してください');
+            toast(context.l10n.shellAccountDeleteReloginRequiredError);
             return;
           }
           // メールが確認済みのアカウントは、確認コードが要る (S-019) → セキュリティの画面で。
@@ -231,18 +232,16 @@ class RasqAccountPanel extends ConsumerWidget {
             if (!context.mounted) return;
             leave();
             context.push('${Routes.settings}/security');
-            toast('削除には、メールの確認コードが要ります。「アカウントの削除」から進めてください');
+            toast(appL10n.shellAccountDeleteNeedsEmailCodeSnack);
             return;
           }
           // SNS アカウントをどうするか (D-409)。確認コードが要るアカウントは、セキュリティの画面で選ぶ(ここで 2 度聞かない)。
           final sns = await askRasqLogoutSns(
             ref.read,
             id: 'rasq.account.delete',
-            title: 'RASQ アカウントを削除',
-            message: 'サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、ASTell のルームと共有、通知トークン、同意の記録を削除します。'
-                '「アルゴリズムとコミュニティへの貢献」に同意していた場合は、提供の停止と提供済みデータの削除も同時に始まります。\n'
-                '元に戻せません。各 SNS 上のアカウントと投稿は消えません。',
-            confirmText: '削除する',
+            title: context.l10n.shellAccountDeleteTitle,
+            message: context.l10n.shellAccountDeleteMessage,
+            confirmText: context.l10n.shellAccountDeleteConfirmButton,
           );
           if (sns == null || !context.mounted) return;
           final read = ProviderScope.containerOf(context, listen: false).read;
@@ -250,9 +249,9 @@ class RasqAccountPanel extends ConsumerWidget {
             await ref.read(orgateAccountProvider.notifier).deleteAccount();
             await releaseRasqAccount(read, r.id, sns: sns);
             ref.invalidate(notifyStoreProvider);
-            toast('RASQ アカウントを削除しました');
+            toast(appL10n.shellAccountDeletedSnack);
           } on OrgateException catch (e) {
-            toast('削除できませんでした: ${e.message}');
+            toast(appL10n.shellAccountDeleteFailedError(e.message));
           }
         default:
           break;
@@ -273,7 +272,7 @@ class RasqAccountPanel extends ConsumerWidget {
         ?..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(m)));
       final rec = await openRasqAccountCreation(router, read, onMessage: say);
-      if (rec != null) say('RASQ アカウント @${rec.handle ?? ''} を作成しました');
+      if (rec != null) say(appL10n.shellAccountCreatedSnack(rec.handle ?? ''));
     }
 
     // ログイン (D-419 → D-425): パスワード + メールのコード(2 段階)の画面へ、そのまま。FOW とサイドバーは閉じる。
@@ -298,28 +297,28 @@ class RasqAccountPanel extends ConsumerWidget {
               padding: const EdgeInsets.all(RasqSpacing.sm),
               decoration: BoxDecoration(color: tokens.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(RasqSizes.radiusSm), border: Border.all(color: tokens.danger.withValues(alpha: 0.4))),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('このアカウントには処置が掛かっています: ${sanctions.levelLabel}', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, color: tokens.danger)),
+                Text(context.l10n.shellAccountSanctionActive(sanctions.levelLabel), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, color: tokens.danger)),
                 if (sanctions.restrictedFeatures.isNotEmpty)
-                  Text('止まっている機能: ${sanctions.restrictedFeatures.map((f) => RasqSanctions.featureLabels[f] ?? f).join(' / ')}', style: RasqTypography.caption),
-                if (sanctions.moderated) Text('発言ごとに ${sanctions.reviewDelaySeconds} 秒の検閲遅延が入ります', style: RasqTypography.caption),
-                for (final n in sanctions.notes) Text('運営より: $n', style: RasqTypography.caption),
-                Text(sanctions.expiresAt == null ? '期限: なし' : '期限: ${sanctions.expiresAt!.toLocal()}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                  Text(context.l10n.shellAccountSanctionRestrictedFeatures(sanctions.restrictedFeatures.map((f) => RasqSanctions.featureLabels[f] ?? f).join(' / ')), style: RasqTypography.caption),
+                if (sanctions.moderated) Text(context.l10n.shellAccountSanctionReviewDelay(sanctions.reviewDelaySeconds), style: RasqTypography.caption),
+                for (final n in sanctions.notes) Text(context.l10n.shellAccountSanctionStaffNote(n), style: RasqTypography.caption),
+                Text(sanctions.expiresAt == null ? context.l10n.shellAccountSanctionNoExpiry : context.l10n.shellAccountSanctionExpiry('${sanctions.expiresAt!.toLocal()}'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 // 解除申請 (D-152): 処置ごとに 1 つ。未処理があれば「申請中」。
                 Wrap(spacing: RasqSpacing.xs, children: [
                   for (final e in sanctions.entries)
                     e.canAppeal
                         ? OutlinedButton(
                             onPressed: () => showSanctionAppealSheet(context, ref, e),
-                            child: Text('解除を申請(${e.category} / ${e.level})', style: RasqTypography.caption),
+                            child: Text(context.l10n.shellAccountSanctionAppealButton(e.category, e.level), style: RasqTypography.caption),
                           )
-                        : RasqPill(label: '申請中(${e.category})', color: RasqColors.sub, textColor: Colors.white),
+                        : RasqPill(label: context.l10n.shellAccountSanctionAppealPending(e.category), color: RasqColors.sub, textColor: Colors.white),
                 ]),
               ]),
             ),
           if (ledger.accounts.isEmpty)
             Padding(
               padding: const EdgeInsets.all(RasqSpacing.page),
-              child: Text('RASQ アカウントはまだありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+              child: Text(context.l10n.shellAccountEmpty, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
             ),
           for (final r in ledger.accounts) ...[
             Builder(builder: (rowContext) {
@@ -332,7 +331,7 @@ class RasqAccountPanel extends ConsumerWidget {
                 color: isCurrent ? tokens.link.withValues(alpha: 0.06) : null,
                 child: RasqUserRow(
                   user: user,
-                  subtitle: '${r.kind.label} ・ SNS $snsCount件${isCurrent ? ' ・ 使用中' : ''}${needsLogin(r) ? ' ・ ログインが必要' : ''}',
+                  subtitle: '${context.l10n.shellAccountRowSubtitle(r.kind.label, snsCount)}${isCurrent ? context.l10n.shellAccountRowInUseSuffix : ''}${needsLogin(r) ? context.l10n.shellAccountRowNeedsLoginSuffix : ''}',
                   leading: SizedBox(
                     width: 24,
                     child: Center(child: RasqBadge(count: badgeCount, dot: false)),
@@ -341,7 +340,7 @@ class RasqAccountPanel extends ConsumerWidget {
                     key: ValueKey('rasq.account.toggle.${r.id}'),
                     icon: expandedId == r.id ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     size: 22,
-                    tooltip: expandedId == r.id ? '操作を畳む' : 'アカウントの操作',
+                    tooltip: expandedId == r.id ? context.l10n.shellAccountCollapseActionsTooltip : context.l10n.shellAccountActionsTooltip,
                     onPressed: () => ref.read(rasqAccountFowExpandedProvider.notifier).toggle(r.id),
                   ),
                   onTap: () async {
@@ -354,7 +353,7 @@ class RasqAccountPanel extends ConsumerWidget {
                     if (relogin) {
                       onNavigate?.call();
                       router.push('${Routes.settings}/account-login');
-                      messenger.currentState?.showSnackBar(SnackBar(content: Text('@${r.handle ?? ''} に、もう一度ログインしてください')));
+                      messenger.currentState?.showSnackBar(SnackBar(content: Text(appL10n.shellAccountReloginSnack(r.handle ?? ''))));
                     }
                   },
                 ),
@@ -404,7 +403,7 @@ class RasqAccountPanel extends ConsumerWidget {
                 context.push(guardian ? Routes.childSafeGuardian : Routes.childSafe);
               },
               icon: const Icon(Icons.child_care_outlined, size: 18),
-              label: compact ? const SizedBox.shrink() : const Text('チャイルドセーフ'),
+              label: compact ? const SizedBox.shrink() : Text(context.l10n.shellAccountChildSafeButton),
             );
             return Row(children: [
               Expanded(
@@ -414,7 +413,7 @@ class RasqAccountPanel extends ConsumerWidget {
                   style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
                   onPressed: !centralOk ? null : create,
                   icon: const RasqBrandIcon(size: 18),
-                  label: const Text('アカウントを新規作成', overflow: TextOverflow.ellipsis),
+                  label: Text(context.l10n.shellAccountCreateButton, overflow: TextOverflow.ellipsis),
                 ),
               ),
               const SizedBox(width: RasqSpacing.xs),
@@ -424,22 +423,22 @@ class RasqAccountPanel extends ConsumerWidget {
                   key: const ValueKey('rasq.account.login'),
                   style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
                   onPressed: !centralOk ? null : login,
-                  child: const Text('ログイン', overflow: TextOverflow.ellipsis),
+                  child: Text(context.l10n.shellAccountLoginButton, overflow: TextOverflow.ellipsis),
                 ),
               ),
               const SizedBox(width: RasqSpacing.xs),
-              compact ? Tooltip(message: 'チャイルドセーフ', child: Semantics(label: 'チャイルドセーフ', child: childSafe)) : childSafe,
+              compact ? Tooltip(message: context.l10n.shellAccountChildSafeButton, child: Semantics(label: context.l10n.shellAccountChildSafeButton, child: childSafe)) : childSafe,
             ]);
           }),
           if (!centralOk)
             Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
-              Text('RASQ サーバーの接続先が未設定です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              Text(context.l10n.shellAccountServerNotConfigured, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               TextButton(
                 onPressed: () {
                   leave();
                   context.push('${Routes.settings}/server');
                 },
-                child: const Text('接続先を設定'),
+                child: Text(context.l10n.shellAccountConfigureServerButton),
               ),
             ]),
         ]),
@@ -465,23 +464,23 @@ Future<void> openRasqProfileSheet(BuildContext context, WidgetRef ref, {required
   final handle = TextEditingController(text: current.account.handle);
   final ok = await manager.showBottomSheet<bool>(
     id: 'rasq.profile.edit',
-    title: 'プロフィール編集',
-    confirmText: '保存',
+    title: context.l10n.shellAccountProfileSheetTitle,
+    confirmText: context.l10n.shellAccountProfileSaveButton,
     builder: (ctx) {
       final scheme = Theme.of(ctx).colorScheme;
       return Padding(
         padding: const EdgeInsets.all(RasqSpacing.page),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('表示名', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text(ctx.l10n.shellAccountProfileDisplayNameLabel, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: 4),
-          RasqInput(controller: name, hintText: '表示名', autofocus: true),
+          RasqInput(controller: name, hintText: ctx.l10n.shellAccountProfileDisplayNameHint, autofocus: true),
           const SizedBox(height: RasqSpacing.sm),
-          Text('ハンドル(@なし、a-z 0-9 _)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text(ctx.l10n.shellAccountProfileHandleLabel, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: 4),
           RasqInput(controller: handle, hintText: 'handle', enabled: record.isCentral),
           const SizedBox(height: RasqSpacing.xs),
           Text(
-            record.isCentral ? 'RASQ のサーバー上のプロフィールを更新します。' : 'この端末だけのアカウントです。ハンドルは RASQ アカウントを作成すると付きます。',
+            record.isCentral ? ctx.l10n.shellAccountProfileCentralCaption : ctx.l10n.shellAccountProfileLocalCaption,
             style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
           ),
         ]),
@@ -503,9 +502,9 @@ Future<void> openRasqProfileSheet(BuildContext context, WidgetRef ref, {required
     } else {
       await ref.read(rasqAccountsProvider.notifier).updateProfile(record.id, displayName: newName.isEmpty ? null : newName);
     }
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('プロフィールを保存しました')));
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.shellAccountProfileSavedSnack)));
   } on OrgateException catch (e) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存できませんでした: ${e.message}')));
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.shellAccountProfileSaveFailedError(e.message))));
   }
 }
 
@@ -530,7 +529,7 @@ class RasqAccountTile extends ConsumerWidget {
               Text('@${rasq.account.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
             ]),
           ),
-          RasqIconButton(icon: Icons.more_horiz, tooltip: 'RASQ アカウント', onPressed: () => openRasqAccountFow(ref)),
+          RasqIconButton(icon: Icons.more_horiz, tooltip: context.l10n.shellAccountTileMenuTooltip, onPressed: () => openRasqAccountFow(ref)),
         ]),
       ),
     );

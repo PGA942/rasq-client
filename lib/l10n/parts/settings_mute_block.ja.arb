@@ -1,0 +1,17 @@
+{
+  "settingsMuteBlockTitle": "ミュート/ブロック",
+  "settingsMuteBlockBlockTab": "ブロック",
+  "settingsMuteBlockMuteTab": "ミュート",
+  "settingsMuteBlockBlockedUsers": "ブロックしたユーザー",
+  "settingsMuteBlockBlockedWords": "ブロックしたワード",
+  "settingsMuteBlockBlockedLists": "ブロックしたリスト",
+  "settingsMuteBlockComingSoonHint": "準備中です",
+  "settingsMuteBlockComingSoonDetail": "ワード/リストのブロックは M2 後半",
+  "settingsMuteBlockRetryButton": "再読み込み",
+  "settingsMuteBlockNoBlockedUsers": "ブロックしたユーザーはいません",
+  "settingsMuteBlockNoMutedUsers": "ミュートしたユーザーはいません",
+  "settingsMuteBlockBlockButton": "ブロック",
+  "settingsMuteBlockMuteButton": "ミュート",
+  "settingsMuteBlockBlockingButton": "ブロック中",
+  "settingsMuteBlockMutingButton": "ミュート中"
+}

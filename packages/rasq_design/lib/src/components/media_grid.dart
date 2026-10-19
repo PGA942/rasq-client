@@ -9,6 +9,7 @@ import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
 import '../platform/media_policy.dart';
 import '../platform/media_image.dart';
+import '../l10n/design_l10n.dart';
 
 /// MediaGrid — layout auto-adjusts by count (1枚フル幅 / 2枚横並び / 3枚以上グリッド、
 /// [maxVisible] を超える分は最後のタイルに「+N」。スレッド展開など全部見せたい所は
@@ -149,7 +150,7 @@ class _MediaTile extends StatelessWidget {
       overlays.add(Center(
         child: onPlay == null
             ? const Icon(Icons.play_circle_fill, color: RasqColors.white, size: 48)
-            : Semantics(button: true, label: '再生', child: GestureDetector(key: ValueKey('media.play.${item.id}'), onTap: onPlay, child: const Icon(Icons.play_circle_fill, color: RasqColors.white, size: 48))),
+            : Semantics(button: true, label: context.designL10n.designMediaPlay, child: GestureDetector(key: ValueKey('media.play.${item.id}'), onTap: onPlay, child: const Icon(Icons.play_circle_fill, color: RasqColors.white, size: 48))),
       ));
       if (item.duration != null) {
         overlays.add(Positioned(right: 6, bottom: 6, child: _Chip(_fmt(item.duration!))));
@@ -181,7 +182,7 @@ class _MediaTile extends StatelessWidget {
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.all(8),
-                    child: Text('センシティブな可能性のあるメディアです', textAlign: TextAlign.center, style: const TextStyle(color: RasqColors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                    child: Text(context.designL10n.designMediaSensitive, textAlign: TextAlign.center, style: const TextStyle(color: RasqColors.white, fontSize: 12, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 Positioned(
@@ -190,7 +191,7 @@ class _MediaTile extends StatelessWidget {
                   child: IconButton(
                     onPressed: onReveal,
                     icon: const Icon(Icons.visibility, color: RasqColors.white),
-                    tooltip: '表示する',
+                    tooltip: context.designL10n.designMediaReveal,
                     constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
                   ),
                 ),

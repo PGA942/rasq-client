@@ -1,0 +1,43 @@
+{
+  "shellTermsSheetTitle": "利用規約への同意",
+  "shellTermsAgreeButton": "同意する",
+  "shellTermsNotice": "RASQ アカウントを使い続けるには、いまの利用規約とプライバシーポリシーへの同意が必要です。同意するまで、ASTell・購入・データの預け入れは使えません。",
+  "shellTermsNoticeDetail": "D-371 / S-053。サーバーの CENTRAL_TERMS_VERSION / CENTRAL_PRIVACY_VERSION と同じ版の承諾がそろうまで「同意待ち」。PUT /me/consents/{endpoints}。",
+  "@shellTermsNoticeDetail": {
+    "description": "開発者モードの詳しい説明。{endpoints} = API のパスの一部「{terms,privacy,age,guardian}」(波かっこを含む固定の文字列。訳さない)。",
+    "placeholders": {
+      "endpoints": {
+        "type": "String"
+      }
+    }
+  },
+  "shellTermsReadTermsButton": "利用規約を読む",
+  "shellTermsReadPrivacyButton": "プライバシーポリシーを読む",
+  "shellTermsAgeHeader": "年齢",
+  "shellTermsGuardianConsentCheck": "保護者の同意を得ています",
+  "shellTermsAgreeCheck": "利用規約とプライバシーポリシーを読み、同意します",
+  "shellTermsVersionCaption": "版: 利用規約 {termsVersion} ・ プライバシーポリシー {privacyVersion}",
+  "@shellTermsVersionCaption": {
+    "description": "{termsVersion} / {privacyVersion} = 利用規約 / プライバシーポリシーの版。",
+    "placeholders": {
+      "termsVersion": {
+        "type": "String"
+      },
+      "privacyVersion": {
+        "type": "String"
+      }
+    }
+  },
+  "shellTermsAcceptedSnack": "利用規約に同意しました",
+  "shellTermsOutdatedError": "利用規約が新しくなっています。アプリを更新してから同意してください",
+  "shellTermsRecordFailedError": "同意を記録できませんでした: {error}",
+  "@shellTermsRecordFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shellTermsBannerText": "利用規約への同意が必要です。同意するまで ASTell・購入などは使えません。",
+  "shellTermsBannerOpenButton": "確認する"
+}

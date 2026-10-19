@@ -1,10 +1,16 @@
+import '../l10n/design_l10n.dart';
+
 /// Sort orders offered by the `∨` sort/filter component
 /// (原典: UI_Elements「ソート/フィルターコンポーネント: 昇順・降順・カスタム項目(未指定なら「デフォルト」)」).
 enum RasqSortOrder {
-  defaultOrder('デフォルト'),
-  reactionsDesc('リアクション数(降順)'),
-  reactionsAsc('リアクション数(昇順)');
+  defaultOrder,
+  reactionsDesc,
+  reactionsAsc;
 
-  const RasqSortOrder(this.label);
-  final String label;
+  /// 表示の名前(いまの表示の言語、D-484)。
+  String get label => switch (this) {
+        RasqSortOrder.defaultOrder => rasqDesignL10n.designSortDefault,
+        RasqSortOrder.reactionsDesc => rasqDesignL10n.designSortReactionsDesc,
+        RasqSortOrder.reactionsAsc => rasqDesignL10n.designSortReactionsAsc,
+      };
 }

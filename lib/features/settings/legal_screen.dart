@@ -5,6 +5,7 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/providers.dart';
 import '../../backend/legal_docs.g.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../login/terms_sheet.dart';
 import '../onboarding/feature_tour.dart' show featureTourLocation;
@@ -21,32 +22,33 @@ class LegalScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final plugins = ref.watch(pluginRegistryProvider).plugins;
     final manager = ref.read(overlayManagerProvider);
+    final l = context.l10n;
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'ヘルプ、法的表示'),
+      appBar: RasqPageHeader(title: l.settingsLegalTitle),
       body: ListView(children: [
         const RasqSectionHeader(title: 'RASQ'),
-        const RasqValueListTile(title: 'バージョン', value: rasqAppVersion),
-        RasqListTile(title: 'ヘルプ', onTap: () => context.push('/settings/dsl/about.help')),
+        RasqValueListTile(title: l.settingsLegalVersionTitle, value: rasqAppVersion),
+        RasqListTile(title: l.settingsLegalHelpTitle, onTap: () => context.push('/settings/dsl/about.help')),
         // RASQ の機能の紹介 (D-471) をもう一度。
-        RasqListTile(key: const ValueKey('legal.tour'), title: 'RASQ の使い方をもう一度見る', onTap: () => context.push(featureTourLocation(again: true))),
+        RasqListTile(key: const ValueKey('legal.tour'), title: l.settingsLegalTourTitle, onTap: () => context.push(featureTourLocation(again: true))),
         // 規約・ポリシー (D-372): 草案の利用者向け本文から作った文書ページ(tool/legal/build_legal.py)。
         for (final d in rasqLegalDocs.values)
           RasqListTile(key: ValueKey('legal.doc.${d.area}'), title: d.title, onTap: () => context.push('/settings/dsl/${d.area}')),
-        RasqListTile(title: 'クッキーについて', onTap: () => context.push('/settings/dsl/about.cookies')),
-        const RasqSectionHeader(title: 'SNS プラグインの規約'),
+        RasqListTile(title: l.settingsLegalCookiesTitle, onTap: () => context.push('/settings/dsl/about.cookies')),
+        RasqSectionHeader(title: l.settingsLegalPluginTermsHeader),
         for (final p in plugins)
           RasqListTile(
             key: ValueKey('legal.plugin.${p.manifest.id}'),
             title: p.manifest.name,
-            subtitle: (p.manifest.termsOfService ?? '').trim().isEmpty ? '規約の記載なし' : 'v${p.manifest.version}',
+            subtitle: (p.manifest.termsOfService ?? '').trim().isEmpty ? l.settingsLegalPluginNoTerms : 'v${p.manifest.version}',
             chevron: (p.manifest.termsOfService ?? '').trim().isNotEmpty,
             onTap: (p.manifest.termsOfService ?? '').trim().isEmpty ? null : () => showTermsSheet(manager, p.manifest),
           ),
-        const RasqSectionHeader(title: 'ライセンス'),
+        RasqSectionHeader(title: l.settingsLegalLicensesHeader),
         RasqListTile(
           key: const ValueKey('legal.licenses'),
-          title: 'オープンソースライセンス',
-          subtitle: 'Flutter と同梱ライブラリ',
+          title: l.settingsLegalLicensesTitle,
+          subtitle: l.settingsLegalLicensesSubtitle,
           onTap: () => showLicensePage(context: context, applicationName: 'RASQ', applicationVersion: rasqAppVersion),
         ),
       ]),

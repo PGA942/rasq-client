@@ -1,0 +1,182 @@
+{
+  "@@locale": "ja",
+  "designSearchHint": "検索",
+  "designFilterReset": "リセット",
+  "designReplyParentSemantics": "{name} のリプライ元投稿",
+  "@designReplyParentSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "designInlinePostSemantics": "{name}の投稿(インラインフレーム)",
+  "@designInlinePostSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "designPostSemantics": "{name}の投稿",
+  "@designPostSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "designFollowedBy": "フォローされています",
+  "designFollow": "フォロー",
+  "designFollowing": "フォロー中",
+  "designFollowRequested": "申請中",
+  "designFollowers": "フォロワー",
+  "designMenu": "メニュー",
+  "designContentWarningHide": "隠す",
+  "designContentWarningShow": "もっと見る",
+  "designMediaPlay": "再生",
+  "designMediaSensitive": "センシティブな可能性のあるメディアです",
+  "designMediaReveal": "表示する",
+  "designReactionMorePeople": "+{count}人",
+  "@designReactionMorePeople": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "designRangeValue": "{start}〜{end}",
+  "@designRangeValue": {
+    "description": "範囲のスライダーの値(下限〜上限)。",
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "designListSeparator": "、",
+  "@designListSeparator": {
+    "description": "名前を並べて読み上げるときの区切り。"
+  },
+  "designThreadReplies": "{count, plural, other{{count}件の返信}}",
+  "@designThreadReplies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "designRepostedBy": "{name}がリノートしました",
+  "@designRepostedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "designActionBarSemantics": "アクションバー",
+  "designRaiComingSoon": "RAi(準備中)",
+  "designVerifiedPerson": "認証済み(個人)",
+  "designVerifiedCompany": "認証済み(法人)",
+  "designVerifiedGovernment": "認証済み(公的機関)",
+  "designExpandPost": "展開する",
+  "designSortDefault": "デフォルト",
+  "designSortReactionsDesc": "リアクション数(降順)",
+  "designSortReactionsAsc": "リアクション数(昇順)",
+  "designProfileBanner": "バナー画像",
+  "designProfileEdit": "編集する",
+  "designProfileNotifications": "通知",
+  "designProfileRestricted": "このユーザーは制限されています。",
+  "designProfileRestrictedShow": "表示",
+  "designProfileJoined": "{date}に登録",
+  "@designProfileJoined": {
+    "description": "{date} = 登録した年月(例: 2017年2月)。",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "designProfileNotes": "{count} ノート",
+  "@designProfileNotes": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "designPollVote": "投票",
+  "designPollSubmit": "投票する",
+  "designPollVotes": "{count, plural, other{{count}票}}",
+  "@designPollVotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "designPollEnded": "終了",
+  "designPollVoted": " 投票済み",
+  "designTimeEnded": "終了",
+  "designTimeRemainingDays": "{count, plural, other{残り {count}日}}",
+  "@designTimeRemainingDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "designTimeRemainingHours": "{count, plural, other{残り {count}時間}}",
+  "@designTimeRemainingHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "designTimeRemainingMinutes": "{count, plural, other{残り {count}分}}",
+  "@designTimeRemainingMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "designTimeRemainingSeconds": "{count, plural, other{残り {count}秒}}",
+  "@designTimeRemainingSeconds": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "designTimeJustNow": "たった今",
+  "designTimeMinutesAgo": "{count, plural, other{{count}分前}}",
+  "@designTimeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "designTimeHoursAgo": "{count, plural, other{{count}時間前}}",
+  "@designTimeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "designTimeDaysAgo": "{count, plural, other{{count}日前}}",
+  "@designTimeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "designErrorRetry": "見てみる"
+}

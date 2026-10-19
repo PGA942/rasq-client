@@ -13,6 +13,10 @@ dependencies:
   web: ^1.1.1
   flutter:
     sdk: flutter
+  # 部品の文言 (D-484): このパッケージの gen-l10n(lib/l10n/gen)と、日付の書式。
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
   rasq_models:
     path: ../rasq_models
 
@@ -22,6 +26,8 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
+  # 部品の文言の生成 (D-484): l10n.yaml → lib/l10n/gen(生成物もコミットする)。
+  generate: true
   # Brand assets (特殊なコンポーネント置き場 → background keyed out, downsized).
   # Referenced with `package: 'rasq_design'` from `RasqLogo` / `RasqBrandIcon` /
   # `RasqVerifiedBadge` / `RasqAsTellIcon` in src/components/brand.dart.

@@ -44,24 +44,47 @@ import 'sideload_trust.dart';
 /// `plugin.manifest` の答え。
 @immutable
 class SlotManifest {
-  const SlotManifest({required this.id, required this.name, this.version = '0.0.0', this.kind = 'action', this.description = '', this.slots = const [], this.permissions = const [], this.actions = const [], this.network, this.page});
+  const SlotManifest({required this.id, required String name, this.version = '0.0.0', this.kind = 'action', String description = '', this.slots = const [], this.permissions = const [], List<SlotActionDecl> actions = const [], this.network, PluginPageDecl? page, this.locales = ManifestLocales.none})
+      : baseName = name,
+        baseDescription = description,
+        baseActions = actions,
+        basePage = page;
   final String id;
-  final String name;
+
+  /// 素の `name` / `description` / `actions` / `page`(`defaultLocale` の文)。画面には表示の言語で引いた [name] などを出す。
+  final String baseName;
+  final String baseDescription;
+  final List<SlotActionDecl> baseActions;
+  final PluginPageDecl? basePage;
+
+  /// ほかの言語の文 (D-484 / 契約 v0.24: `locales.<tag>.{name, description, pageTitle, actions.<id>.label}`)。
+  final ManifestLocales locales;
+
+  String get name => locales.field('name') ?? baseName;
   final String version;
   final String kind;
-  final String description;
+  String get description => locales.field('description') ?? baseDescription;
   final List<String> slots;
   final List<String> permissions;
 
-  /// 投稿のアクションボタン (契約 v0.7 §2.9、D-176): `post.action` の宣言。
-  final List<SlotActionDecl> actions;
+  /// 投稿のアクションボタン (契約 v0.7 §2.9、D-176): `post.action` の宣言(ラベルは表示の言語)。
+  List<SlotActionDecl> get actions => locales.isEmpty
+      ? baseActions
+      : [
+          for (final a in baseActions)
+            if (locales.actionLabel(a.id) case final label?) a.withLabel(label) else a,
+        ];
 
   /// `net.fetch` の接続先 (schema v0.12)。null = 宣言なし = どこにも繋げない。
   /// スロットプラグインにはセッションが無いので `instance` は効かず、`hosts` だけ。
   final PluginNetwork? network;
 
-  /// ページ型(カスタムプラグイン、契約 v0.18 §2.13、D-357)の宣言。スロット `page` を持つときだけ。
-  final PluginPageDecl? page;
+  /// ページ型(カスタムプラグイン、契約 v0.18 §2.13、D-357)の宣言。スロット `page` を持つときだけ。見出しは表示の言語
+  /// (`locales.<tag>.pageTitle`)。
+  PluginPageDecl? get page => switch ((basePage, locales.field('pageTitle'))) {
+        (final p?, final title?) => p.withTitle(title),
+        (final p, _) => p,
+      };
 
   /// ランタイムに渡す接続先の宣言。
   Set<String> get fetchHosts => (network ?? PluginNetwork.none).hosts.toSet();
@@ -95,6 +118,7 @@ class SlotManifest {
                 autoHookForbidden: a['autoHookForbidden'] == true,
               ),
         ],
+        locales: ManifestLocales.fromManifest(j),
       );
 
   /// スロットと権限から、許可するアプリ向けホスト関数を決める。
@@ -171,6 +195,9 @@ class SlotActionDecl {
 
   /// 手動配置か: `placement: "manual"`、または tags を省いた post.action のボタン(契約 v0.14 §2.9)。
   bool get isManual => placement == placementManual || (isPostAction && tags.isEmpty);
+
+  /// ラベルだけ別の言語にしたもの (D-484)。
+  SlotActionDecl withLabel(String label) => SlotActionDecl(id: id, label: label, icon: icon, tags: tags, slot: slot, accepts: accepts, output: output, auto: auto, placement: placement, destructive: destructive, autoHookForbidden: autoHookForbidden);
 }
 
 /// 添付(MIME + ファイル名)が宣言の `accepts` に当てはまるか(契約 v0.10)。空の宣言は `image/*`。
@@ -294,6 +321,9 @@ class PluginPageDecl {
   }
 
   Map<String, Object?> toJson() => {'title': title, 'icon': ?icon, 'mode': mode, 'surfaces': surfaces, 'maxParticipants': maxParticipants};
+
+  /// 見出しだけ別の言語にしたもの (D-484)。
+  PluginPageDecl withTitle(String title) => PluginPageDecl(title: title, icon: icon, mode: mode, surfaces: surfaces, maxParticipants: maxParticipants);
 }
 
 /// 実行中のプラグイン 1 つ(ワーカー isolate 上の wasm、テストでは偽物)。

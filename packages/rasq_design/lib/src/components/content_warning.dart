@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
+import '../l10n/design_l10n.dart';
 
 /// 注釈 (CW) wrapper (RRL tag `cw`): shows the warning text and a
 /// 「もっと見る / 隠す」 toggle; [child] (本文・メディア) is revealed below it.
@@ -29,7 +30,7 @@ class _RasqContentWarningState extends State<RasqContentWarning> {
       OutlinedButton(
         onPressed: () => setState(() => _open = !_open),
         style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12), side: BorderSide(color: scheme.outline), foregroundColor: scheme.onSurface),
-        child: Text(_open ? '隠す' : 'もっと見る'),
+        child: Text(_open ? context.designL10n.designContentWarningHide : context.designL10n.designContentWarningShow),
       ),
       if (_open) ...[const SizedBox(height: RasqSpacing.sm), widget.child],
     ]);

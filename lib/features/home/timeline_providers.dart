@@ -31,6 +31,7 @@ import 'post_duplicates.dart';
 import '../relational/post_embeddings.dart';
 import '../relational/relational_providers.dart' show mlGatewayProvider;
 import '../settings/settings_dsl.dart';
+import '../../l10n/ui_locale.dart' show uiLocaleTagProvider;
 import '../child_safe/child_gate.dart' show ChildGate;
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 
@@ -42,6 +43,8 @@ final customTimelinesProvider = FutureProvider<List<CustomTimelineSpec>>((ref) a
   final session = ref.watch(currentSnsSessionProvider);
   // スロットプラグイン (D-167): `tl` スロットの宣言は `slot:<pluginId>:<id>` で並ぶ。
   ref.watch(activeSlotPluginsProvider); // アカウントを変えたら、そのアカウントの版の TL (D-355)
+  // TL の名前はプラグインが表示の言語(`args.locale`)で選ぶ。言語が変われば読み直す (D-484 / 契約 v0.24)。
+  ref.watch(uiLocaleTagProvider);
   final slots = [for (final (p, t) in await ref.read(slotPluginsProvider.notifier).timelines()) CustomTimelineSpec(id: 'slot:${p.id}:${t.id}', label: t.label, base: t.base)];
   if (session is! WasmSnsSession) return slots;
   return [...await session.timelinePlugin.timelines(), ...slots];

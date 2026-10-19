@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../../l10n/l10n.dart';
 import '../../shell/column_layout.dart';
 import '../../shell/headers.dart';
 import 'settings_dsl.dart';
@@ -57,20 +58,21 @@ class _ColumnLayoutScreenState extends ConsumerState<ColumnLayoutScreen> {
     final screen = MediaQuery.sizeOf(context).width;
     final wide = screen >= RasqSizes.tabletBreakpoint;
     final split = splitColumns(screen - 72, layout);
+    final l = context.l10n;
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'カラムの幅'),
+      appBar: RasqPageHeader(title: l.settingsColumnsTitle),
       body: ListView(children: [
-        const RasqCaption(
-          'タブレットや PC など広い画面で、左右のカラムの幅を決めます。',
-          detail: '幅の広い画面(タブレット / デスクトップ / Web)で、小型カラム(検索や、ページを開いた側)と大型カラム(開いたページ)の幅の比を決めます。',
-          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
+        RasqCaption(
+          l.settingsColumnsIntroCaption,
+          detail: l.settingsColumnsIntroDetail,
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
         ),
-        const RasqSectionHeader(title: '小型 / 大型カラムの比'),
+        RasqSectionHeader(title: l.settingsColumnsSplitHeader),
         for (final s in ColumnSplit.values)
           RasqRadioListTile<ColumnSplit>(
             key: ValueKey('columns.split.${s.name}'),
             title: s.label,
-            subtitle: s == ColumnLayout.standard.split ? '${s.hint}(既定)' : s.hint,
+            subtitle: s == ColumnLayout.standard.split ? l.settingsColumnsSplitDefault(s.hint) : s.hint,
             value: s,
             groupValue: layout.split,
             onChanged: (v) => _store.set('split', v.name),
@@ -79,7 +81,7 @@ class _ColumnLayoutScreenState extends ConsumerState<ColumnLayoutScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(layout.split == ColumnSplit.largeFixed ? '大型カラムの幅' : '小型カラムの幅', style: RasqTypography.listTile),
+              Text(layout.split == ColumnSplit.largeFixed ? l.settingsColumnsLargeWidthLabel : l.settingsColumnsSmallWidthLabel, style: RasqTypography.listTile),
               RasqInput(
                 key: const ValueKey('columns.px'),
                 controller: _px,
@@ -97,8 +99,8 @@ class _ColumnLayoutScreenState extends ConsumerState<ColumnLayoutScreen> {
                   child: Text(_error!, key: const ValueKey('columns.px.error'), style: RasqTypography.caption.copyWith(color: scheme.error)),
                 ),
               RasqCaption(
-                '画面に入らないときは、自動で縮めます。',
-                detail: '画面が狭くて入らないときは、もう片方のカラムを $kMinColumnWidth px 以上残し、小型カラムが大型カラムより広くならないように縮めます。',
+                l.settingsColumnsShrinkCaption,
+                detail: l.settingsColumnsShrinkDetail('$kMinColumnWidth'),
                 padding: const EdgeInsets.only(top: RasqSpacing.xs),
               ),
             ]),
@@ -106,23 +108,23 @@ class _ColumnLayoutScreenState extends ConsumerState<ColumnLayoutScreen> {
         const RasqSectionHeader(title: 'Swing'),
         RasqSwitchListTile(
           key: const ValueKey('columns.swingInColumn'),
-          title: 'Swing を右のカラムで開く',
-          subtitle: 'オフのときは全画面で開きます(はじめはオン。全画面を指定したプラグインの Swing はいつも全画面)',
+          title: l.settingsColumnsSwingInColumnTitle,
+          subtitle: l.settingsColumnsSwingInColumnSubtitle,
           value: ref.watch(swingInColumnProvider),
           onChanged: (v) => _store.set('swingInColumn', v),
         ),
-        const RasqSectionHeader(title: 'いまの画面での幅'),
+        RasqSectionHeader(title: l.settingsColumnsCurrentHeader),
         Padding(
           padding: const EdgeInsets.all(RasqSpacing.page),
           child: wide
               ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   _Preview(small: split.small, large: split.large),
                   const SizedBox(height: RasqSpacing.xs),
-                  Text('小型 ${split.small.round()} px / 大型 ${split.large.round()} px', key: const ValueKey('columns.preview'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                  Text(l.settingsColumnsPreviewWidths('${split.small.round()}', '${split.large.round()}'), key: const ValueKey('columns.preview'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 ])
               : RasqCaption(
-                  'いまの画面は狭いので、カラムは 1 つです。',
-                  detail: 'いまの画面は幅が狭いので、カラムを 1 つだけ出しています(${RasqSizes.tabletBreakpoint.round()} px 以上で小型 / 大型のカラムに分かれます)。',
+                  l.settingsColumnsNarrowCaption,
+                  detail: l.settingsColumnsNarrowDetail('${RasqSizes.tabletBreakpoint.round()}'),
                   padding: EdgeInsets.zero,
                 ),
         ),
@@ -149,6 +151,6 @@ class _Preview extends StatelessWidget {
             child: Text(label, style: RasqTypography.caption, overflow: TextOverflow.ellipsis),
           ),
         );
-    return Row(children: [box('小型', small), const SizedBox(width: RasqSpacing.xs), box('大型', large)]);
+    return Row(children: [box(context.l10n.settingsColumnsPreviewSmall, small), const SizedBox(width: RasqSpacing.xs), box(context.l10n.settingsColumnsPreviewLarge, large)]);
   }
 }

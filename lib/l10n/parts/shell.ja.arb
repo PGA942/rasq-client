@@ -1,0 +1,71 @@
+{
+  "shellColumnSplitSmallFixedLabel": "小型カラムの幅を固定",
+  "shellColumnSplitLargeFixedLabel": "大型カラムの幅を固定",
+  "shellColumnSplitEvenHint": "同じ幅",
+  "shellColumnSplitTwoThreeHint": "小型 2 : 大型 3",
+  "shellColumnSplitThreeFiveHint": "小型 3 : 大型 5",
+  "shellColumnSplitSmallFixedHint": "小型カラムを決めた幅にし、残りを大型カラムに",
+  "shellColumnSplitLargeFixedHint": "大型カラムを決めた幅にし、残りを小型カラムに",
+  "shellColumnWidthErrorEmpty": "幅を入れてください",
+  "shellColumnWidthErrorNotInteger": "数字(整数)で入れてください",
+  "shellColumnWidthErrorRange": "{min}〜{max} px の間で入れてください",
+  "@shellColumnWidthErrorRange": {
+    "description": "カラムの固定幅の入力の検証。{min} / {max} = 入れられる幅の下限 / 上限(px)。",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "shellColumnThirdEmptySearch": "検索",
+  "shellColumnThirdEmptyNotifications": "通知",
+  "shellColumnThirdEmptyNone": "表示しない",
+  "shellColumnThirdSettingsTooltip": "第3カラムの設定",
+  "shellColumnThirdCloseTooltip": "閉じる",
+  "shellColumnThirdEmptyTitle": "第3カラム",
+  "shellColumnThirdEmptyHint": "開いている画面をここへ移動できます",
+  "shellColumnThirdEmptyHintDetail": "FOW をここへ移動できます(M5c)",
+  "shellNavHome": "ホーム",
+  "shellNavSearch": "検索",
+  "shellNavNotifications": "通知",
+  "shellHeaderTimelineSwitchTooltip": "タイムライン切り替え",
+  "shellHeaderExpandTooltip": "ヘッダーを戻す",
+  "shellHeaderScrollToTopTooltip": "先頭へ",
+  "shellHeaderSearchHint": "検索",
+  "shellHeaderBackTooltip": "戻る",
+  "shellHeaderCloseButton": "閉じる",
+  "@shellHeaderCloseButton": {
+    "description": "第3カラムのページの「戻る」を長押ししたときのドロップダウンの最後の項目(カラムを閉じる)。"
+  },
+  "shellHeaderMenuTooltip": "メニュー",
+  "shellHeaderOpenSidebarSemantics": "サイドバーを開く",
+  "shellSidebarSemantics": "サイドバー",
+  "shellSidebarSwitchToAccountTooltip": "{name} に切り替える",
+  "@shellSidebarSwitchToAccountTooltip": {
+    "description": "サイドバー上部の、いま使っていない RASQ アカウントのアイコンのツールチップ。{name} = 表示名。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "shellSidebarRasqAccountTooltip": "RASQ アカウント",
+  "shellSidebarHideAccountsTooltip": "アカウントリストを隠す",
+  "shellSidebarShowAccountsTooltip": "アカウントリストを表示",
+  "shellSidebarAccountSettingsButton": "アカウントの設定",
+  "shellSidebarBookmarks": "ブックマーク",
+  "shellSidebarLists": "リスト",
+  "shellSidebarPlugins": "プラグイン",
+  "shellSidebarCustomPlugins": "カスタムプラグイン",
+  "shellSidebarAllSettings": "全ての設定",
+  "shellSidebarHelp": "ヘルプ",
+  "shellSidebarDevCatalog": "コンポーネントカタログ (dev)",
+  "shellSidebarDevWasmPlugin": "WASMプラグイン試験 (dev)",
+  "shellSidebarWebConsole": "Webコンソール",
+  "shellSidebarAccountActionsTooltip": "アカウントの操作",
+  "shellSidebarShowAccountMenu": "このアカウントを表示",
+  "shellSidebarLogoutMenu": "ログアウト"
+}

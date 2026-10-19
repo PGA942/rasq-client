@@ -5,6 +5,7 @@ import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
 import 'avatar.dart';
 import 'custom_emoji.dart';
+import '../l10n/design_l10n.dart';
 
 /// 投稿内のリアクション数表示 (D-040): アクションバーの上に並ぶ角丸ボタン
 /// タイル(絵文字 + 数)。既定は最大 [maxChips] 個。自分がリアクションした
@@ -158,7 +159,7 @@ class _ReactionUsersState extends State<_ReactionUsers> {
                     Flexible(child: Text(u.displayName, style: style, maxLines: 1, overflow: TextOverflow.ellipsis)),
                   ]),
                 ),
-              if (rest > 0) Padding(padding: const EdgeInsets.only(top: 2), child: Text('+$rest人', style: style)),
+              if (rest > 0) Padding(padding: const EdgeInsets.only(top: 2), child: Text(context.designL10n.designReactionMorePeople(rest), style: style)),
             ]),
           ),
         );

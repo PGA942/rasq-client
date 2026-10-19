@@ -1,0 +1,12 @@
+{
+  "settingsLegalTitle": "ヘルプ、法的表示",
+  "settingsLegalVersionTitle": "バージョン",
+  "settingsLegalHelpTitle": "ヘルプ",
+  "settingsLegalTourTitle": "RASQ の使い方をもう一度見る",
+  "settingsLegalCookiesTitle": "クッキーについて",
+  "settingsLegalPluginTermsHeader": "SNS プラグインの規約",
+  "settingsLegalPluginNoTerms": "規約の記載なし",
+  "settingsLegalLicensesHeader": "ライセンス",
+  "settingsLegalLicensesTitle": "オープンソースライセンス",
+  "settingsLegalLicensesSubtitle": "Flutter と同梱ライブラリ"
+}

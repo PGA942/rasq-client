@@ -9,6 +9,7 @@ import 'badge.dart';
 import 'brand.dart';
 import 'buttons.dart';
 import 'sns_pill.dart';
+import '../l10n/design_l10n.dart';
 
 /// アイテム行コンポーネント (ユーザー版): アイコン + 名前 + @handle●SNS + 自己紹介 + フォローボタン + `…`.
 /// Shared by フォロワー一覧 / ミュート一覧 / リアクション表示 / トレンドのユーザー欄.
@@ -72,15 +73,15 @@ class RasqUserRow extends StatelessWidget {
                       const SizedBox(width: 2),
                       Flexible(child: RasqSnsPill(account: user.account)),
                     ]),
-                    if (followedBy) const Padding(padding: EdgeInsets.only(top: 2), child: RasqPill(label: 'フォローされています')),
+                    if (followedBy) Padding(padding: const EdgeInsets.only(top: 2), child: RasqPill(label: context.designL10n.designFollowedBy)),
                     if (subtitle != null) Text(subtitle!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                   ]),
                 ),
                 if (trailing != null)
                   trailing!
                 else if (following != null)
-                  RasqTogglePillButton(label: 'フォロー', activeLabel: 'フォロー中', active: following!, onPressed: onFollowTap),
-                if (onMore != null) RasqIconButton(icon: Icons.more_horiz, size: 20, onPressed: onMore, tooltip: 'メニュー'),
+                  RasqTogglePillButton(label: context.designL10n.designFollow, activeLabel: context.designL10n.designFollowing, active: following!, onPressed: onFollowTap),
+                if (onMore != null) RasqIconButton(icon: Icons.more_horiz, size: 20, onPressed: onMore, tooltip: context.designL10n.designMenu),
               ]),
               if (text != null && text.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(text, style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
             ]),

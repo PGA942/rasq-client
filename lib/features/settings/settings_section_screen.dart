@@ -15,6 +15,7 @@ import '../theme/theme_packs.dart';
 import '../trend/tendency_fows.dart';
 import 'settings_dsl.dart' show settingsRowVisible;
 import 'settings_sections.dart';
+import '../../l10n/l10n.dart';
 
 /// Generic first-level settings page driven by [settingsSections].
 /// アプリの外観 has live controls (テーマ); everything else is a labelled placeholder.
@@ -24,8 +25,9 @@ class SettingsSectionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final section = settingsSections[sectionId];
-    if (section == null) return Scaffold(appBar: const RasqPageHeader(title: '設定'), body: const RasqEmptyView(title: '不明な設定セクション'));
+    final l = context.l10n;
+    final section = settingsSectionsOf(l)[sectionId];
+    if (section == null) return Scaffold(appBar: RasqPageHeader(title: l.settingsHomeGenericTitle), body: RasqEmptyView(title: l.settingsHomeUnknownSection));
     final mode = ref.watch(themeModeProvider);
     return Scaffold(
       appBar: RasqPageHeader(title: section.title, onMore: () {}),
@@ -35,14 +37,14 @@ class SettingsSectionScreen extends ConsumerWidget {
         if (sectionId == 'about') const RasqAccountTile(key: ValueKey('settings.about.account')),
         // SNS プラグインの設定ページの行は、プラグインが宣言したものだけ (D-482)。
         for (final r in section.rows.where((r) => settingsRowVisible(ref, r.route)))
-          if (sectionId == 'appearance' && r.title == 'フォントやカラースキーム')
+          if (sectionId == 'appearance' && r.route == Routes.settingsTheme)
             // 着せ替えの画面へ (D-375): 以前はここでライト / ダークのシートだけを開き、入れた着せ替えを選ぶ画面に行けなかった。
             // ライト / ダークは着せ替えの画面の上に置いた。
             RasqValueListTile(
               key: const ValueKey('settings.appearance.theme'),
               title: r.title,
               value: [
-                switch (mode) { ThemeModeSetting.system => 'システム', ThemeModeSetting.light => 'ライト', ThemeModeSetting.dark => 'ダーク' },
+                switch (mode) { ThemeModeSetting.system => l.settingsHomeThemeModeSystem, ThemeModeSetting.light => l.settingsHomeThemeModeLight, ThemeModeSetting.dark => l.settingsHomeThemeModeDark },
                 ?ref.watch(themePacksProvider).where((p) => p.id == ref.watch(activeThemeIdProvider)).firstOrNull?.name,
               ].join(' ・ '),
               onTap: () => context.push(Routes.settingsTheme),
@@ -79,7 +81,7 @@ void openSettingsRow(BuildContext context, WidgetRef ref, SettingsRow r) {
       showActionBarEditSheet(ref, surfaces: const [ActionBarSurface.astell]);
     case null:
       ref.read(overlayManagerProvider).showAlert(
-          id: 'settings.placeholder', title: r.title, message: rasqDetail(context, 'この設定は準備中です。', 'この設定は第二階層以降の仕様確定後(M4: FOW/DSL 描画)に実装します。'), confirmText: 'OK');
+          id: 'settings.placeholder', title: r.title, message: rasqDetail(context, context.l10n.settingsHomePlaceholder, context.l10n.settingsHomePlaceholderDetail), confirmText: context.l10n.settingsHomeOk);
     default:
       context.push(r.route!);
   }

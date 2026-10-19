@@ -191,7 +191,8 @@ void main() {
       if (req.method == 'GET' && path == '/me') return json(me);
       if (req.method == 'PATCH' && path == '/me') {
         final body = (jsonDecode(req.body) as Map).cast<String, Object?>();
-        patches.add(body);
+        // 表示の言語の同期 (D-484: ORGATE へ PATCH /me {locale}。このテストは 1 つの URL で兼ねる)は数えない。
+        if (body.keys.toSet().difference({'locale'}).isNotEmpty) patches.add(body);
         me.addAll(body);
         return json(me);
       }

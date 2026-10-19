@@ -18,6 +18,7 @@ import 'settings_dsl.dart' show settingsRowVisible;
 import 'settings_search.dart';
 import 'settings_section_screen.dart' show openSettingsRow;
 import 'settings_sections.dart';
+import '../../l10n/l10n.dart';
 
 /// 設定(ホーム) — 全ての設定 (ワイヤーフレーム P7). SNS plugin sections appear per
 /// installed SNS plugin; 第一階層は `settings/:section`.
@@ -86,8 +87,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     return Scaffold(
-      appBar: RasqPageHeader(title: '全ての設定', onMore: () {}),
+      appBar: RasqPageHeader(title: l.settingsHomeTitle, onMore: () {}),
       body: Column(
         children: [
           Padding(
@@ -97,14 +99,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               expanded: _toggled || _focus.hasFocus || _sections.isNotEmpty,
               controller: _query,
               focusNode: _focus,
-              hintText: '設定や操作を検索',
+              hintText: l.settingsHomeSearchHint,
               onDropdownTap: () => setState(() => _toggled = !_toggled),
               onReset: _sections.isEmpty ? null : () => setState(_sections.clear),
               genreChips: [
-                for (final MapEntry(key: id, value: section) in settingsSections.entries)
+                for (final MapEntry(key: id, value: section) in settingsSectionsOf(l).entries)
                   RasqFilterChipItem(label: section.title, selected: _sections.contains(id), onTap: () => setState(() => _sections.contains(id) ? _sections.remove(id) : _sections.add(id))),
               ],
-              barTrailing: _query.text.isEmpty ? null : RasqIconButton(key: const ValueKey('settings.search.clear'), icon: Icons.close, size: 18, tooltip: '消す', onPressed: _query.clear),
+              barTrailing: _query.text.isEmpty ? null : RasqIconButton(key: const ValueKey('settings.search.clear'), icon: Icons.close, size: 18, tooltip: l.settingsHomeSearchClear, onPressed: _query.clear),
             ),
           ),
           Expanded(child: _searching ? _results(context) : _list(context)),
@@ -114,18 +116,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _results(BuildContext context) {
+    final l = context.l10n;
     final index = ref.watch(settingsSearchIndexProvider);
     final q = _query.text;
     return index.when(
       loading: () => const RasqLoading(),
-      error: (e, _) => RasqEmptyView(title: '設定を探せませんでした', hint: '$e'),
+      error: (e, _) => RasqEmptyView(title: l.settingsHomeSearchError, hint: '$e'),
       data: (entries) {
         // SNS プラグインが持たない設定ページへの当たりは出さない (D-482)。
         final hits = [
           for (final h in searchSettings(entries, q, sections: _sections))
             if (settingsRowVisible(ref, h.entry.row?.route)) h,
         ];
-        if (hits.isEmpty && _ops.isEmpty) return RasqEmptyView(title: '見つかりませんでした', hint: '「$q」に当たる設定はありません。言い方を変えるか、RAi に聞いてみてください');
+        if (hits.isEmpty && _ops.isEmpty) return RasqEmptyView(title: l.settingsHomeSearchEmpty, hint: l.settingsHomeSearchEmptyHint(q));
         return ListView(
           key: const ValueKey('settings.search.results'),
           children: [
@@ -144,7 +147,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
             if (_ops.isNotEmpty) ...[
-              const RasqSectionHeader(title: '操作(RAi が案内します)'),
+              RasqSectionHeader(title: l.settingsHomeSearchOperations),
               for (final o in _ops)
                 RasqListTile(
                   key: ValueKey('settings.search.op.${o.item.id}'),
@@ -164,12 +167,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _list(BuildContext context) {
+    final l = context.l10n;
     final me = ref.watch(currentUserProvider);
     final manager = ref.watch(overlayManagerProvider);
     final registry = ref.watch(pluginRegistryProvider);
     return ListView(
       children: [
-        RasqListTile(title: 'プラグインの構成', onTap: () => context.push('/settings/section/plugins')),
+        RasqListTile(title: l.settingsSectionsPluginsTitle, onTap: () => context.push('/settings/section/plugins')),
         for (final p in registry.plugins)
           RasqListTile(
             title: p.manifest.name,
@@ -179,29 +183,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 : (p.manifest.verified ? const Icon(Icons.verified, color: Color(0xFF1E88E5), size: 18) : null),
             onTap: () => context.push('/settings/section/sns'),
           ),
-        RasqListTile(title: 'アプリの外観', onTap: () => context.push('/settings/section/appearance')),
-        RasqListTile(title: 'ASTell', onTap: () => context.push('/settings/section/astell')),
-        RasqListTile(title: 'リレーショナルタイムライン', onTap: () => context.push('/settings/section/relational')),
-        RasqListTile(title: 'トレンド', onTap: () => context.push('/settings/section/trend')),
-        RasqListTile(title: 'RAi(アシスタント)', onTap: () => context.push('/settings/section/rai')),
-        RasqListTile(title: '通知', onTap: () => context.push('/settings/section/notifications')),
-        RasqListTile(title: 'RASQについて', onTap: () => context.push('/settings/section/about')),
-        RasqListTile(title: 'ミュート/ブロック', onTap: () => context.pushMuteBlock()),
+        RasqListTile(title: l.settingsSectionsAppearanceTitle, onTap: () => context.push('/settings/section/appearance')),
+        RasqListTile(title: l.settingsSectionsAstellTitle, onTap: () => context.push('/settings/section/astell')),
+        RasqListTile(title: l.settingsSectionsRelationalTitle, onTap: () => context.push('/settings/section/relational')),
+        RasqListTile(title: l.settingsSectionsTrendTitle, onTap: () => context.push('/settings/section/trend')),
+        RasqListTile(title: l.settingsSectionsRaiTitle, onTap: () => context.push('/settings/section/rai')),
+        RasqListTile(title: l.settingsSectionsNotificationsTitle, onTap: () => context.push('/settings/section/notifications')),
+        RasqListTile(title: l.settingsSectionsAboutTitle, onTap: () => context.push('/settings/section/about')),
+        RasqListTile(title: l.settingsSectionsSnsMuteBlockTitle, onTap: () => context.pushMuteBlock()),
         // その他の設定 (D-131)。
-        const RasqSectionHeader(title: 'その他の設定'),
-        RasqListTile(title: '投稿コンポーザー', onTap: () => context.push('/settings/composer')),
+        RasqSectionHeader(title: l.settingsHomeOtherHeader),
+        RasqListTile(title: l.settingsHomeComposer, onTap: () => context.push('/settings/composer')),
         RasqListTile(
-          title: 'アカウントの重要設定',
-          subtitle: 'パスワードの変更やアカウント削除は web 版で',
-          detail: 'パスワードの再設定やアカウント削除など、パスワードがいる処理は web 版で行います',
+          title: l.settingsHomeAccountImportant,
+          subtitle: l.settingsHomeAccountImportantSubtitle,
+          detail: l.settingsHomeAccountImportantDetail,
           trailing: const Icon(Icons.north_east, size: 18),
           chevron: false,
           onTap: () => launchUrl(Uri.https(me.account.instance, '/settings'), mode: LaunchMode.externalApplication),
         ),
         RasqDestructiveListTile(
-          title: '@${me.handle}からログアウト',
+          title: l.settingsHomeLogout(me.handle),
           onTap: () async {
-            final ok = await manager.showAlert(id: 'settings.logout', title: 'ログアウトしますか？', message: 'このアカウントのプラグイン構成はデバイスに残ります。', confirmText: 'ログアウト', cancelText: 'キャンセル', destructive: true);
+            final ok = await manager.showAlert(id: 'settings.logout', title: l.settingsHomeLogoutConfirmTitle, message: l.settingsHomeLogoutConfirmMessage, confirmText: l.settingsHomeLogoutConfirm, cancelText: l.settingsHomeCancel, destructive: true);
             final account = ref.read(currentAccountProvider);
             if (ok && account != null) await ref.read(sessionsProvider.notifier).remove(account);
           },

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart' show RrlGeometryRegistry;
 
+import 'host_call_args.dart';
 import 'host_environment.dart' show AppFnRelay;
 import 'wasm_fow.dart';
 import 'wasm_plugin_controller.dart';
@@ -110,7 +111,7 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
 
   Future<Map<String, dynamic>> invoke(String fn, [Map<String, Object?> args = const {}]) async {
     final worker = _require();
-    final result = (jsonDecode(await worker.call(fn: fn, argsJson: jsonEncode(args), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
+    final result = (jsonDecode(await worker.call(fn: fn, argsJson: jsonEncode(withHostCallArgs(args)), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
     _lastResult = result;
     final value = result['ok'] == true ? result['value'] as Map? : null;
     if (value?['treeUpdated'] == true) {

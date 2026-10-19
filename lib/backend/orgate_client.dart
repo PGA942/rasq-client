@@ -101,7 +101,7 @@ class OrgateException implements Exception {
 
 /// `/api/v1` 配下への薄い HTTP 口。認証は Bearer だけで Cookie は使わない。
 class OrgateClient {
-  OrgateClient({required this.baseUrl, http.Client? httpClient, this.tokenProvider}) : _http = httpClient ?? http.Client();
+  OrgateClient({required this.baseUrl, http.Client? httpClient, this.tokenProvider, this.localeProvider}) : _http = httpClient ?? http.Client();
 
   final Uri baseUrl;
   final http.Client _http;
@@ -109,10 +109,14 @@ class OrgateClient {
   /// 呼び出しごとに現在の RASQ アカウントトークンを取りに行く。null なら匿名。
   final String? Function()? tokenProvider;
 
+  /// 呼び出しごとに表示の言語(BCP-47)を取りに行く (D-484)。全部の要求に `Accept-Language` で付ける(サーバーの
+  /// エラーの文・メール・通知の言語)。null なら [RasqUiLocale.tag](アプリが決めた表示の言語の写し)。
+  final String Function()? localeProvider;
+
   static const _timeout = Duration(seconds: 20);
 
   /// 同じ接続先 / HTTP クライアントで、別のトークンを使う口 (D-239: 通知専用のアクセストークンで受信箱を読む)。
-  OrgateClient withToken(String? Function() tokenProvider) => OrgateClient(baseUrl: baseUrl, httpClient: _http, tokenProvider: tokenProvider);
+  OrgateClient withToken(String? Function() tokenProvider) => OrgateClient(baseUrl: baseUrl, httpClient: _http, tokenProvider: tokenProvider, localeProvider: localeProvider);
 
   Uri _url(String path, [Map<String, String?> query = const {}]) {
     final q = {for (final e in query.entries) if (e.value != null && e.value!.isNotEmpty) e.key: e.value!};
@@ -125,6 +129,7 @@ class OrgateClient {
   Map<String, String> _headers({bool json = false}) {
     final token = tokenProvider?.call();
     return {
+      'accept-language': (localeProvider ?? () => RasqUiLocale.tag)(),
       if (json) 'content-type': 'application/json',
       if (token != null && token.isNotEmpty) 'authorization': 'Bearer $token',
     };

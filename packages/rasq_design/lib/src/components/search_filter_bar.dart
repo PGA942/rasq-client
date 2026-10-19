@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
+import '../l10n/design_l10n.dart';
 
 /// One chip of the search filter area. Dropdown-style chips get the tap
 /// anchor rect (for the Overlay-Manager dropdown); toggle chips just flip.
@@ -84,7 +85,7 @@ class RasqExpandableSearchBox extends StatelessWidget {
     required this.expanded,
     this.controller,
     this.focusNode,
-    this.hintText = '検索',
+    this.hintText,
     this.readOnly = false,
     this.onSubmitted,
     this.onTap,
@@ -99,7 +100,8 @@ class RasqExpandableSearchBox extends StatelessWidget {
   final bool expanded;
   final TextEditingController? controller;
   final FocusNode? focusNode;
-  final String hintText;
+  /// 入力欄の薄い字。省略すると「検索」(表示の言語で、D-484)。
+  final String? hintText;
   final bool readOnly;
   final ValueChanged<String>? onSubmitted;
   final VoidCallback? onTap;
@@ -161,7 +163,7 @@ class RasqExpandableSearchBox extends StatelessWidget {
                 textAlign: barTrailing == null ? TextAlign.center : TextAlign.start,
                 style: Theme.of(context).textTheme.bodySmall,
                 decoration: InputDecoration(
-                  hintText: hintText,
+                  hintText: hintText ?? context.designL10n.designSearchHint,
                   isCollapsed: true,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -189,7 +191,7 @@ class RasqExpandableSearchBox extends StatelessWidget {
                           scrollDirection: Axis.horizontal,
                           child: Row(children: [
                             for (final chip in filterChips) Padding(padding: const EdgeInsets.only(right: RasqSpacing.sm), child: RasqFilterChip(item: chip)),
-                            ?switch (onReset) { null => null, final reset => RasqFilterChip(item: RasqFilterChipItem(label: 'リセット', onTap: reset)) },
+                            ?switch (onReset) { null => null, final reset => RasqFilterChip(item: RasqFilterChipItem(label: context.designL10n.designFilterReset, onTap: reset)) },
                           ]),
                         ),
                       ),

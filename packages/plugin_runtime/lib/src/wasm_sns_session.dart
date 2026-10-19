@@ -150,12 +150,17 @@ class WasmSnsSession extends SnsSessionBase {
 
   bool _actionsLoaded = false;
 
+  /// 宣言(アクション / TL)を読んだときの表示の言語 (D-484 / 契約 v0.24)。ラベルはプラグインが `args.locale` で
+  /// 選ぶので、言語が変わったら次の TL 取得の前に読み直す。
+  String? _declarationsLocale;
+
   @override
   Future<Page<Post>> timeline(TimelineKind kind, {String? cursor, int limit = 20}) async {
     // 実登録セッション (D-079): 最初の TL 取得前にアクション宣言を取り込む
     // (TL 画面はこの await 後に session.actions を読むので間に合う)。
-    if (!_actionsLoaded) {
+    if (!_actionsLoaded || _declarationsLocale != RasqUiLocale.tag) {
       _actionsLoaded = true;
+      _declarationsLocale = RasqUiLocale.tag;
       // 宣言が取れなくても TL は出す(バー無し / 既定の TL 一覧)。
       try {
         await loadActions();

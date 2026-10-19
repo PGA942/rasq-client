@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../tokens/sizes.dart';
+import '../l10n/design_l10n.dart';
 
 /// Brand assets shipped with the design system (原典: 特殊なコンポーネント置き場).
 ///
@@ -29,16 +30,17 @@ abstract final class RasqBrandAssets {
 /// RAi ボタン (D-093): TL 選択行・トレンド・ノードパレット等に置く共通の
 /// 入口。RAi 実装までは [onPressed] なし(表示のみ)でも同じ見た目。
 class RasqRaiButton extends StatelessWidget {
-  const RasqRaiButton({super.key, this.onPressed, this.size = 26, this.tooltip = 'RAi(準備中)'});
+  const RasqRaiButton({super.key, this.onPressed, this.size = 26, this.tooltip});
 
   final VoidCallback? onPressed;
   final double size;
-  final String tooltip;
+  /// 省略すると「RAi(準備中)」(表示の言語で、D-484)。
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) => IconButton(
         onPressed: onPressed ?? () {},
-        tooltip: tooltip,
+        tooltip: tooltip ?? context.designL10n.designRaiComingSoon,
         icon: Image.asset(
           RasqBrandAssets.raiButton,
           package: RasqBrandAssets.package,
@@ -107,9 +109,9 @@ class RasqVerifiedBadge extends StatelessWidget {
 
   static String labelOf(UserVerification kind) => switch (kind) {
         UserVerification.none => '',
-        UserVerification.person => '認証済み(個人)',
-        UserVerification.company => '認証済み(法人)',
-        UserVerification.government => '認証済み(公的機関)',
+        UserVerification.person => rasqDesignL10n.designVerifiedPerson,
+        UserVerification.company => rasqDesignL10n.designVerifiedCompany,
+        UserVerification.government => rasqDesignL10n.designVerifiedGovernment,
       };
 
   static String? assetOf(UserVerification kind) => switch (kind) {

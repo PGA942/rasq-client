@@ -7,6 +7,7 @@ import '../tokens/typography.dart';
 import 'action_button.dart';
 import '../platform/media_policy.dart';
 import '../platform/media_image.dart';
+import '../l10n/design_l10n.dart';
 
 /// One registered button of an [RasqActionBar] (L2 composite `ActionBar`).
 ///
@@ -106,7 +107,7 @@ class RasqActionBar extends StatelessWidget {
     final children = <Widget>[for (final i in items) _ActionBarButton(item: i), ...trailing];
     return Semantics(
       container: true,
-      label: 'アクションバー',
+      label: context.designL10n.designActionBarSemantics,
       child: Row(
         mainAxisAlignment: layout == RasqActionBarLayout.spread ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
         children: layout == RasqActionBarLayout.spread ? children : [for (final c in children) Padding(padding: const EdgeInsets.only(right: 4), child: c)],

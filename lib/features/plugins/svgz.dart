@@ -13,8 +13,8 @@ import 'package:rrl_renderer/rrl_renderer.dart' show SvgLite;
 /// `Image.p.src` = `data:image/svg+xml;zstd;base64,<svgz>` にする。ホストは展開して(64 KiB まで)許可リストで消毒してから描く
 /// ([SvgLite.zstdDecompress])。古いプラグインは `svg` だけを使い続けられる。
 
-/// このホストが話す契約の版(`page.open` の `contract`、v0.23)。
-const rasqHostContract = '0.23';
+/// このホストが話す契約の版(`page.open` の `contract`)。v0.24 (D-484): 毎回の call の `args.locale`(表示の言語)。
+const rasqHostContract = '0.24';
 
 /// `svgzEncoding` の値。
 const svgzEncoding = 'zstd';

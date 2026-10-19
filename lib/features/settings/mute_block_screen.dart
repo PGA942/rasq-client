@@ -7,6 +7,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../users/user_providers.dart';
 
@@ -23,12 +24,13 @@ class _MuteBlockScreenState extends ConsumerState<MuteBlockScreen> {
   @override
   Widget build(BuildContext context) {
     final manager = ref.watch(overlayManagerProvider);
-    final tabs = [const RasqTabItem('ブロック'), const RasqTabItem('ミュート')];
+    final l = context.l10n;
+    final tabs = [RasqTabItem(l.settingsMuteBlockBlockTab), RasqTabItem(l.settingsMuteBlockMuteTab)];
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         appBar: RasqPageHeader(
-          title: 'ミュート/ブロック',
+          title: l.settingsMuteBlockTitle,
           onMore: () {},
           bottom: RasqTabs(
             items: tabs,
@@ -36,16 +38,16 @@ class _MuteBlockScreenState extends ConsumerState<MuteBlockScreen> {
             onSelectedTabTap: (i, rect) async {
               if (i != 0) return;
               final pick = await manager.showDropdown<String>(id: 'block.kind', anchor: rect, dense: true, items: [
-                RasqDropdownItem('ブロックしたユーザー', 'users', checked: _blockKind == 'users'),
-                RasqDropdownItem('ブロックしたワード', 'words', checked: _blockKind == 'words'),
-                RasqDropdownItem('ブロックしたリスト', 'lists', checked: _blockKind == 'lists'),
+                RasqDropdownItem(l.settingsMuteBlockBlockedUsers, 'users', checked: _blockKind == 'users'),
+                RasqDropdownItem(l.settingsMuteBlockBlockedWords, 'words', checked: _blockKind == 'words'),
+                RasqDropdownItem(l.settingsMuteBlockBlockedLists, 'lists', checked: _blockKind == 'lists'),
               ]);
               if (pick != null) setState(() => _blockKind = pick);
             },
           ),
         ),
         body: TabBarView(children: [
-          _blockKind == 'users' ? const _Users(blocked: true) : RasqEmptyView(title: _blockKind == 'words' ? 'ブロックしたワード' : 'ブロックしたリスト', hint: rasqDetail(context, '準備中です', 'ワード/リストのブロックは M2 後半')),
+          _blockKind == 'users' ? const _Users(blocked: true) : RasqEmptyView(title: _blockKind == 'words' ? l.settingsMuteBlockBlockedWords : l.settingsMuteBlockBlockedLists, hint: rasqDetail(context, l.settingsMuteBlockComingSoonHint, l.settingsMuteBlockComingSoonDetail)),
           const _Users(blocked: false),
         ]),
       ),
@@ -61,6 +63,7 @@ class _Users extends ConsumerWidget {
     final page = blocked ? ref.watch(blockedUsersProvider) : ref.watch(mutedUsersProvider);
     final s = ref.watch(currentSnsSessionProvider);
     final tokens = RasqTokens.of(context);
+    final l = context.l10n;
     Future<void> undo(UserSummary u) async {
       if (s == null) return;
       blocked ? await s.setBlocked(u.id, false) : await s.setMuted(u.id, false);
@@ -69,16 +72,16 @@ class _Users extends ConsumerWidget {
 
     return page.when(
       loading: () => const RasqLoading(),
-      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(blocked ? blockedUsersProvider : mutedUsersProvider), retryLabel: '再読み込み'),
+      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(blocked ? blockedUsersProvider : mutedUsersProvider), retryLabel: l.settingsMuteBlockRetryButton),
       data: (p) => p.items.isEmpty
-          ? RasqEmptyView(title: blocked ? 'ブロックしたユーザーはいません' : 'ミュートしたユーザーはいません')
+          ? RasqEmptyView(title: blocked ? l.settingsMuteBlockNoBlockedUsers : l.settingsMuteBlockNoMutedUsers)
           : ListView.separated(
               itemCount: p.items.length,
               separatorBuilder: (_, _) => const Divider(),
               itemBuilder: (context, i) => RasqUserRow(
                 user: p.items[i],
                 onTap: () => context.pushUser(p.items[i]),
-                trailing: RasqTogglePillButton(label: blocked ? 'ブロック' : 'ミュート', activeLabel: blocked ? 'ブロック中' : 'ミュート中', active: true, activeColor: blocked ? tokens.danger : null, onPressed: () => undo(p.items[i])),
+                trailing: RasqTogglePillButton(label: blocked ? l.settingsMuteBlockBlockButton : l.settingsMuteBlockMuteButton, activeLabel: blocked ? l.settingsMuteBlockBlockingButton : l.settingsMuteBlockMutingButton, active: true, activeColor: blocked ? tokens.danger : null, onPressed: () => undo(p.items[i])),
                 onMore: () {},
               ),
             ),

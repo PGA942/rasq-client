@@ -21,3 +21,4 @@ export 'src/follow_request.dart';
 export 'src/clip.dart';
 export 'src/play.dart';
 export 'src/user_list_info.dart';
+export 'src/ui_locale.dart';

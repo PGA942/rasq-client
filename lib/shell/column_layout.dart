@@ -1,21 +1,34 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/settings/settings_dsl.dart';
+import '../l10n/l10n.dart';
 
 /// 小型 / 大型カラムのサイズ比 (D-320)。幅の広い画面(≥840dp)の第2 / 第3カラムに使う。
 ///
 /// 第3カラムにページが開いている間は第2カラムが小型・第3カラムが大型、空のときは逆 (D-057)。
 /// 設定は「アプリの外観 → カラムの幅」、KV `appearance.columns.v1`(`split` / `smallPx` / `largePx`)。
 enum ColumnSplit {
-  even('1:1', '同じ幅'),
-  twoThree('2:3', '小型 2 : 大型 3'),
-  threeFive('3:5', '小型 3 : 大型 5'),
-  smallFixed('小型カラムの幅を固定', '小型カラムを決めた幅にし、残りを大型カラムに'),
-  largeFixed('大型カラムの幅を固定', '大型カラムを決めた幅にし、残りを小型カラムに');
+  even,
+  twoThree,
+  threeFive,
+  smallFixed,
+  largeFixed;
 
-  const ColumnSplit(this.label, this.hint);
-  final String label;
-  final String hint;
+  String get label => switch (this) {
+        ColumnSplit.even => '1:1',
+        ColumnSplit.twoThree => '2:3',
+        ColumnSplit.threeFive => '3:5',
+        ColumnSplit.smallFixed => appL10n.shellColumnSplitSmallFixedLabel,
+        ColumnSplit.largeFixed => appL10n.shellColumnSplitLargeFixedLabel,
+      };
+
+  String get hint => switch (this) {
+        ColumnSplit.even => appL10n.shellColumnSplitEvenHint,
+        ColumnSplit.twoThree => appL10n.shellColumnSplitTwoThreeHint,
+        ColumnSplit.threeFive => appL10n.shellColumnSplitThreeFiveHint,
+        ColumnSplit.smallFixed => appL10n.shellColumnSplitSmallFixedHint,
+        ColumnSplit.largeFixed => appL10n.shellColumnSplitLargeFixedHint,
+      };
 
   bool get fixed => this == smallFixed || this == largeFixed;
 
@@ -76,9 +89,9 @@ int? validColumnPx(Object? v) {
 /// 固定幅の入力の検証。問題なければ null、あれば画面に出す文。
 String? columnPxError(String input) {
   final s = input.trim();
-  if (s.isEmpty) return '幅を入れてください';
-  if (int.tryParse(s) == null) return '数字(整数)で入れてください';
-  if (validColumnPx(s) == null) return '$kMinColumnWidth〜$kMaxColumnWidth px の間で入れてください';
+  if (s.isEmpty) return appL10n.shellColumnWidthErrorEmpty;
+  if (int.tryParse(s) == null) return appL10n.shellColumnWidthErrorNotInteger;
+  if (validColumnPx(s) == null) return appL10n.shellColumnWidthErrorRange('$kMinColumnWidth', '$kMaxColumnWidth');
   return null;
 }
 

@@ -1,0 +1,198 @@
+{
+  "settingsLearningTitle": "アルゴリズムとコミュニティへの貢献",
+  "settingsLearningError": "できませんでした — {error}",
+  "@settingsLearningError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningGrantConfirmButton": "同意して参加する",
+  "settingsLearningGrantPointOptional": "任意です。断っても、やめても、RASQ の機能や有料機能はそのまま使えます",
+  "settingsLearningGrantPointScope": "対象は、あなたが自分で書いた公開の投稿と、その投稿どうしが同じ会話かどうかだけです",
+  "settingsLearningGrantPointExcluded": "ほかの人の投稿、DM、限定公開の投稿、ASTell の会話、RAi の質問と答えは送りません",
+  "settingsLearningGrantPointVerifiedOnly": "持ち主の確認が済んだ SNS アカウントの投稿だけを受け付けます",
+  "settingsLearningGrantPointPurpose": "リレーショナルタイムラインの会話のまとめ方の改善に使います",
+  "settingsLearningGrantPointDeletion": "やめたときは、送ったデータをすぐに消します",
+  "settingsLearningGrantExtendedNotice": "検証用の設定です。ほかの人の投稿の判定や RAi のやりとりも送ります。",
+  "settingsLearningGrantExtendedNoticeDetail": "CENTRAL_LEARNING_SCOPE=extended(S-049 / S-050)。正式な環境では使わない。",
+  "settingsLearningGrantScopeDetail": "D-370 / S-051。関連 TL の会話イベントから自分の投稿(公開と分かるもの。Bluesky はすべて公開)だけを POST /me/learning/contributions へ(v2、self = 自分の SNS アカウント)。Central は持ち主の確認(sns_links.verified_at)と、全投稿が a=-1・vis=public かを確かめる。受け取るたびに年齢と保護者の同意も確かめ直す。本文の @メンションと URL は伏せる。",
+  "settingsLearningGrantReadFullButton": "説明の全文を読む",
+  "settingsLearningGrantAgreeCheckbox": "説明を読み、データの提供に同意します",
+  "settingsLearningDocumentVersion": "文書の版: {version}",
+  "@settingsLearningDocumentVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningAgeTitle": "年齢の申告",
+  "settingsLearningAgeConfirmButton": "申告する",
+  "settingsLearningGuardianConsent": "保護者の同意を得ています",
+  "settingsLearningAgeDeclared": "年齢を申告しました",
+  "settingsLearningCodeSheetTitle": "撤回用のコードで撤回",
+  "settingsLearningCodeConfirmButton": "撤回する",
+  "settingsLearningCodeSheetBody": "同意したときに発行されたコードを入れます。提供した RASQ アカウントに入れなくなった場合でも撤回できます。",
+  "settingsLearningCodeHint": "撤回用のコード",
+  "settingsLearningWithdrawnByCode": "やめました。送ったデータは消します",
+  "settingsLearningReasonAgeRequired": "年齢の申告が必要です",
+  "settingsLearningReasonUnder16": "16 歳以上から参加できます",
+  "settingsLearningReasonGuardianRequired": "16〜17 歳の人は、保護者の同意が必要です",
+  "settingsLearningIntroNotice": "あなたが書いた公開の投稿を送って、会話のまとめ方の改善に協力できます。任意で、いつでもやめられます。",
+  "settingsLearningIntroNoticeDetail": "D-243 / D-363 / D-370。同意は Central の account_consents(kind = learning)に記録。既定の範囲(own)では、関連 TL の会話の中の自分の公開投稿だけを POST /me/learning/contributions へ送る。正式な環境では受付を閉じる(CENTRAL_LEARNING_OPEN=false)。",
+  "settingsLearningReadAboutTitle": "説明を読む",
+  "settingsLearningReadAboutSubtitle": "送るもの、使いみち、保存する期間",
+  "settingsLearningStatusSection": "状態",
+  "settingsLearningServerNotConfiguredTitle": "RASQ サーバーの接続先が未設定です",
+  "settingsLearningServerNotConfiguredSubtitle": "接続先を入れると確認できます",
+  "settingsLearningNoAccountTitle": "RASQ アカウントが未作成です",
+  "settingsLearningNoAccountSubtitle": "データの提供は RASQ アカウントごとに記録します",
+  "settingsLearningLoadError": "取得できませんでした: {error}",
+  "@settingsLearningLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningStatusTitle": "貢献",
+  "settingsLearningStatusJoined": "参加中",
+  "settingsLearningStatusNotJoined": "参加していません",
+  "settingsLearningSinceTitle": "同意した日",
+  "settingsLearningOpenTitle": "受付",
+  "settingsLearningOpenYes": "受付中",
+  "settingsLearningOpenNo": "まだ始まっていません",
+  "settingsLearningAgeUndeclared": "未申告",
+  "settingsLearningSentTitle": "送ったデータ",
+  "settingsLearningSentValue": "会話 {relational, plural, other{{relational} 件}} ・ RAi {rai, plural, other{{rai} 件}}",
+  "@settingsLearningSentValue": {
+    "description": "送ったデータの件数。{relational} = 会話の件数、{rai} = RAi の件数。",
+    "placeholders": {
+      "relational": {
+        "type": "int"
+      },
+      "rai": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLearningExamplesTitle": "クラウドの判定の例",
+  "settingsLearningExamplesValue": "{examples, plural, other{{examples} 件}}(怪しいけど違う {hardNegative, plural, other{{hardNegative} 件}})",
+  "@settingsLearningExamplesValue": {
+    "description": "{examples} = クラウドの判定の例の件数、{hardNegative} = そのうち「怪しいけど違う」の件数。",
+    "placeholders": {
+      "examples": {
+        "type": "int"
+      },
+      "hardNegative": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLearningPostsLabelsTitle": "投稿 / ラベル",
+  "settingsLearningModelsTitle": "このデータを使ったモデル",
+  "settingsLearningModelsNone": "なし",
+  "settingsLearningModelsSeparator": "、",
+  "@settingsLearningModelsSeparator": {
+    "description": "モデルの名前を並べるときの区切り。"
+  },
+  "settingsLearningWithdrawTitle": "貢献をやめる",
+  "settingsLearningWithdrawMessage": "データを送るのをすぐに止め、送ったデータも消します。",
+  "settingsLearningWithdrawConfirm": "やめる",
+  "settingsLearningCancel": "キャンセル",
+  "settingsLearningWithdrawn": "撤回しました",
+  "settingsLearningDeclareAgeButton": "年齢を申告する",
+  "settingsLearningGranted": "参加しました。下のコードを控えておくと、ログインできなくなってもやめられます",
+  "settingsLearningGrantButton": "内容を確認して参加する",
+  "settingsLearningGrantClosedButton": "受付はまだ始まっていません",
+  "settingsLearningCodeSection": "撤回用のコード",
+  "settingsLearningCodeSubtitle": "タップでコピー。ログインできなくなっても、このコードでやめられます",
+  "settingsLearningCodeCopied": "撤回用のコードをコピーしました",
+  "settingsLearningCodeStoredOnGrantDevice": "撤回用のコードは、同意した端末に控えてあります。",
+  "settingsLearningOtherSection": "そのほか",
+  "settingsLearningByCodeTitle": "撤回用のコードでやめる",
+  "settingsLearningByCodeSubtitle": "ログインできなくなったとき",
+  "settingsLearningDeletionCaption": "アカウントを削除したときも、送ったデータは消えます。ほかの人が参加しているかは、だれにも調べられません。",
+  "settingsLearningDeletionCaptionDetail": "RASQ アカウントを削除したときも、提供の停止と提供済みデータの削除が同時に始まります(learning_contributions は accounts の削除で消える)。ほかの人がデータを提供しているかどうかは、だれにも調べられません(GET /me/learning は自分の状態だけ)。",
+  "settingsLearningKindsSection": "送るもの",
+  "settingsLearningKindRelationalTitle": "自分の公開投稿",
+  "settingsLearningKindRelationalSubtitleExtended": "タイムラインでまとまった会話",
+  "settingsLearningKindRelationalSubtitle": "タイムラインで会話にまとまった、あなたの公開の投稿",
+  "settingsLearningKindRelationalDetailExtended": "会話イベント(束)の公開の投稿。書き手ごとに学習してよいかを判定し、許可の書き手と自分の投稿だけを送る。本文の @メンションと URL は伏せる。",
+  "settingsLearningKindRelationalDetail": "D-370。会話イベントの中の自分の投稿(公開と分かるもの)と、その投稿どうしが同じ会話であること(関連のラベル)。ほかの人の投稿は数(参加者・投稿数)だけ。",
+  "settingsLearningUnverifiedNotice": "持ち主の確認が済んでいない SNS アカウントの投稿は受け付けられませんでした。プロフィールの編集から確認できます。",
+  "settingsLearningUnverifiedButton": "確認する",
+  "settingsLearningKindCloudTitle": "クラウドでまとめる",
+  "settingsLearningKindCloudSubtitle": "迷う会話のまとまりを、クラウドの RAi が判断します",
+  "settingsLearningKindCloudDetail": "D-367 / S-050。端末のエンジンがしきい値の近くで決めた結び付き(投稿 → 会話)を POST /me/relational/judge に送り、クラウドの LLM の判定で組み直す。書き手が許可済みの組だけ。判定の例(怪しいけど違う = hard_negative、分けたけど同じ = hard_positive)は学習用に残り、やめると消える。",
+  "settingsLearningKindRaiSubtitle": "RAi への質問と答え",
+  "settingsLearningKindRaiDetail": "質問(@メンションと URL は伏せる)、答え、モード、使った関数の名前、モデルの id。ほかの人の投稿は含めない。",
+  "settingsLearningPreloadTitle": "端末のモデルを先に読み込む",
+  "settingsLearningPreloadSubtitle": "判定の下見を早くします(ダウンロード済みのときだけ)",
+  "settingsLearningPreloadDetail": "RAi の端末内モデル(既定 Qwen3.5 2B)を起動の少しあとに読み込み、書き手の下見に使う。未ダウンロードならダウンロードはしない(規則だけで下見)。",
+  "settingsLearningDebugSection": "開発者向けの詳細",
+  "settingsLearningDebugActiveTitle": "集めているか",
+  "settingsLearningDebugActiveYes": "はい",
+  "settingsLearningDebugActiveNo": "いいえ(同意・受付・見守りを確認)",
+  "settingsLearningDebugScopeTitle": "受け付ける範囲",
+  "settingsLearningDebugScopeExtended": "extended(検証用)",
+  "settingsLearningDebugScopeOwn": "own(自分の公開投稿だけ)",
+  "settingsLearningDebugPendingTitle": "送信待ち",
+  "settingsLearningDebugPendingValue": "会話 {relational} ・ RAi {rai}",
+  "@settingsLearningDebugPendingValue": {
+    "placeholders": {
+      "relational": {
+        "type": "String"
+      },
+      "rai": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningDebugSentTitle": "この起動で送った",
+  "settingsLearningDebugSentValue": "会話 {relational} ・ RAi {rai} ・ 見送り {skipped}",
+  "@settingsLearningDebugSentValue": {
+    "placeholders": {
+      "relational": {
+        "type": "String"
+      },
+      "rai": {
+        "type": "String"
+      },
+      "skipped": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningDebugCloudValue": "判定 {decisions}(怪しいけど違う {hardNegative} ・ 分けたけど同じ {hardPositive} ・ 一致 {agree})・ 待ち {pending} ・ 見送り {skipped}",
+  "@settingsLearningDebugCloudValue": {
+    "placeholders": {
+      "decisions": {
+        "type": "String"
+      },
+      "hardNegative": {
+        "type": "String"
+      },
+      "hardPositive": {
+        "type": "String"
+      },
+      "agree": {
+        "type": "String"
+      },
+      "pending": {
+        "type": "String"
+      },
+      "skipped": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningDebugCloudOff": "オフ",
+  "settingsLearningDebugModelTitle": "端末のモデル",
+  "settingsLearningDebugFlushing": "送信中…",
+  "settingsLearningDebugFlushButton": "今すぐ送る",
+  "settingsLearningDebugVerdictsSection": "書き手の判定",
+  "settingsLearningDebugLogSection": "記録"
+}

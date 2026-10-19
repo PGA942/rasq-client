@@ -5,6 +5,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../home/action_bar_edit_sheet.dart';
 import '../home/plugin_actions.dart';
 import '../plugins/slot_plugins.dart';
@@ -33,13 +34,14 @@ class ActionBarPluginsScreen extends ConsumerWidget {
     final prefs = ref.watch(actionButtonPrefsProvider);
     final prefsStore = ref.read(settingsAreaProvider(actionButtonPrefsArea).notifier);
     final postActions = ref.watch(pluginActionsProvider);
+    final l = context.l10n;
     Future<void> setEnabled(String id, bool on) => settingsStore.set('enabled', {...settings.enabled, id: on});
 
     /// バンドル先の説明(投稿タイル / 加工画面)。
     String bundleOf(PluginAction p, List<ActionDescriptor> existing, double threshold) {
-      if (p.isManual) return '手動配置(バーの (+) から足すまで出ない)';
+      if (p.isManual) return l.settingsActionBarBundleManual;
       final m = bestMatch(p.decl.tags, existing);
-      return m == null || m.score < threshold ? '単体で末尾' : '「${m.action.label}」のバンドル(${(m.score * 100).round()}%)';
+      return m == null || m.score < threshold ? l.settingsActionBarBundleAlone : l.settingsActionBarBundleInto(m.action.label, '${(m.score * 100).round()}');
     }
 
     Widget hint(String text, [String? detail]) =>
@@ -49,6 +51,7 @@ class ActionBarPluginsScreen extends ConsumerWidget {
     List<Widget> rows(PluginAction p, String placement) {
       final on = prefs.switchOn(p.id);
       final override = prefs.autoOverride(p.id);
+      final stateLabel = p.declaredAuto ? l.settingsActionBarOn : l.settingsActionBarOff;
       return [
         RasqSwitchListTile(
           key: ValueKey('actionbar.switch.${p.id}'),
@@ -61,8 +64,10 @@ class ActionBarPluginsScreen extends ConsumerWidget {
           RasqSwitchListTile(
             key: ValueKey('actionbar.auto.${p.id}'),
             leading: Icon(Icons.subdirectory_arrow_right, size: 18, color: scheme.onSurfaceVariant),
-            title: '面を開いたとき自動でオン',
-            subtitle: override == null ? '既定(${p.declaredAuto ? 'オン' : 'オフ'}${p.plugin.isReviewed && p.decl.auto != null ? '、プラグインの宣言' : ''})' : '設定で上書き中(既定は ${p.declaredAuto ? 'オン' : 'オフ'})',
+            title: l.settingsActionBarAutoOnTitle,
+            subtitle: override == null
+                ? (p.plugin.isReviewed && p.decl.auto != null ? l.settingsActionBarAutoDefaultDeclared(stateLabel) : l.settingsActionBarAutoDefault(stateLabel))
+                : l.settingsActionBarAutoOverridden(stateLabel),
             value: override ?? p.declaredAuto,
             enabled: on,
             onChanged: (v) => setActionAuto(prefsStore, prefs, p.id, v),
@@ -72,7 +77,7 @@ class ActionBarPluginsScreen extends ConsumerWidget {
 
     List<Widget> section(String title, String emptyDetail, List<PluginAction> actions, String Function(PluginAction) placement) => [
           RasqSectionHeader(title: title),
-          if (actions.isEmpty) hint('ストアで追加したプラグインがここに並びます', emptyDetail),
+          if (actions.isEmpty) hint(l.settingsActionBarEmptyCaption, emptyDetail),
           for (final p in actions) ...rows(p, placement(p)),
         ];
 
@@ -83,30 +88,33 @@ class ActionBarPluginsScreen extends ConsumerWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('プラグインボタン'), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: () => context.pop())),
+      appBar: AppBar(title: Text(l.settingsActionBarTitle), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: l.settingsActionBarBackTooltip, onPressed: () => context.pop())),
       body: ListView(children: [
-        hint('スイッチを切ると、すべてのアカウントで出なくなります。', 'スイッチは端末全体の主電源(オフなら全アカウント・全面で出ず、自動でも動きません)。「面を開いたとき自動でオン」は、その面を開いた瞬間の初期状態です(面の中で切り替えた値は次に持ち越しません)。'),
-        ...section('投稿タイル', 'post.action を宣言したプラグインがここに並びます(ストアから追加)', postActions, (p) => bundleOf(p, snsActions, settings.threshold)),
-        ...section('全画面', 'viewer.overlay を宣言したプラグイン(QR コード検出など)がここに並びます', ref.watch(viewerPluginActionsProvider), (_) => '全画面アクションバーの ON / OFF ボタン'),
-        ...section('加工画面', 'composer.media を宣言したプラグインがここに並びます', ref.watch(mediaPluginActionsProvider), (p) => '${p.decl.isFilterOutput ? 'フィルター · ' : ''}${bundleOf(p, editorBuiltinActions, editorSettings.threshold)}'),
-        ...section('コンポーザー本文', 'composer.text を宣言したプラグインがここに並びます', ref.watch(composerTextPluginActionsProvider), (_) => 'コンポーザーのアクションバーの ON / OFF ボタン(長押しで設定)'),
-        ...section('投稿加工(自動)', 'post.transform を宣言したプラグインがここに並びます', transforms, (_) => '表示前に本文を加工(ボタン無し)'),
-        RasqSectionHeader(title: 'このアカウント(${account == null ? '未選択' : '$account'})'),
-        if (postActions.isEmpty) hint('このアカウントで出すかどうか', '投稿タイルのボタンを、このアカウントで出すかどうか'),
+        hint(l.settingsActionBarIntroCaption, l.settingsActionBarIntroDetail),
+        ...section(l.settingsActionBarPostTileHeader, l.settingsActionBarPostTileEmptyDetail, postActions, (p) => bundleOf(p, snsActions, settings.threshold)),
+        ...section(l.settingsActionBarViewerHeader, l.settingsActionBarViewerEmptyDetail, ref.watch(viewerPluginActionsProvider), (_) => l.settingsActionBarViewerPlacement),
+        ...section(l.settingsActionBarMediaHeader, l.settingsActionBarMediaEmptyDetail, ref.watch(mediaPluginActionsProvider), (p) {
+          final bundle = bundleOf(p, editorBuiltinActions, editorSettings.threshold);
+          return p.decl.isFilterOutput ? l.settingsActionBarFilterPlacement(bundle) : bundle;
+        }),
+        ...section(l.settingsActionBarComposerTextHeader, l.settingsActionBarComposerTextEmptyDetail, ref.watch(composerTextPluginActionsProvider), (_) => l.settingsActionBarComposerTextPlacement),
+        ...section(l.settingsActionBarTransformHeader, l.settingsActionBarTransformEmptyDetail, transforms, (_) => l.settingsActionBarTransformPlacement),
+        RasqSectionHeader(title: l.settingsActionBarThisAccountHeader(account == null ? l.settingsActionBarNoAccount : '$account')),
+        if (postActions.isEmpty) hint(l.settingsActionBarThisAccountEmptyCaption, l.settingsActionBarThisAccountEmptyDetail),
         for (final p in postActions)
           RasqSwitchListTile(
             key: ValueKey('actionbar.slot.${p.id}'),
             title: p.decl.label,
-            subtitle: '${p.plugin.manifest.name} · タグ: ${p.decl.tags.join(' / ')}',
+            subtitle: l.settingsActionBarSlotSubtitle(p.plugin.manifest.name, p.decl.tags.join(' / ')),
             value: settings.isEnabled(p.id),
             enabled: prefs.switchOn(p.id),
             onChanged: (v) => setEnabled(p.id, v),
           ),
         RasqSliderListTile(
           key: const ValueKey('actionbar.slot.threshold'),
-          title: '束ねる閾値',
-          subtitle: '似たボタンをまとめる度合い',
-          detail: 'タグの類似度がこれ以上なら既存ボタンのバンドルに入る',
+          title: l.settingsActionBarThresholdTitle,
+          subtitle: l.settingsActionBarThresholdSubtitle,
+          detail: l.settingsActionBarThresholdDetail,
           value: settings.threshold * 100,
           min: 50,
           max: 100,
@@ -118,7 +126,7 @@ class ActionBarPluginsScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(RasqSpacing.md),
           child: Align(
             alignment: Alignment.centerRight,
-            child: TextButton.icon(key: const ValueKey('actionbar.plugins.edit'), onPressed: () => showActionBarEditSheet(ref), icon: const Icon(Icons.tune, size: 18), label: const Text('アクションバーを編集')),
+            child: TextButton.icon(key: const ValueKey('actionbar.plugins.edit'), onPressed: () => showActionBarEditSheet(ref), icon: const Icon(Icons.tune, size: 18), label: Text(l.settingsActionBarEditButton)),
           ),
         ),
       ]),

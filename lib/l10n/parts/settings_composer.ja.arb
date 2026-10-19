@@ -1,0 +1,9 @@
+{
+  "settingsComposerTitle": "投稿コンポーザー",
+  "settingsComposerAutoAccountTitle": "投稿アカウントの自動選択",
+  "settingsComposerAutoAccountSubtitle": "下書きに合うアカウントへ、投稿先を自動で切り替えます",
+  "settingsComposerAutoAccountDetail": "下書きの内容がポスト先の絞り込みに合うアカウントへ、投稿先を自動で切り替えます(手動選択が常に優先)",
+  "settingsComposerRasqLinkedTitle": "RASQ アカウントへも連動投稿する",
+  "settingsComposerRasqLinkedSubtitle": "複数のアカウントに投稿するとき、RASQ アカウントも選べます",
+  "settingsComposerRasqLinkedDetail": "複数選択モードで、RASQ アカウントの行も選べるようになります(通常投稿 / ノード連動)。届け方と絞り込みは「投稿先のカスタマイズ」の RASQ のタブで決めます。RASQ の上限(1000 文字 / 添付 6 つ / 投票 6 個 / 投稿 3 件)を超える投稿は、RASQ へは送られません"
+}
