@@ -114,7 +114,7 @@ class _ReviewList extends ConsumerWidget {
           // 著者 → RASQ アカウントページ (D-270)。ハンドルの無いレビュー(匿名 / 同梱のサンプル)は行き先が無い。
           onAuthorTap: r.authorHandle.isEmpty ? null : () => context.pushRasqAccount(r.authorHandle),
           onMore: (rect) async {
-            final pick = await manager.showDropdown<String>(id: 'store.review.more', anchor: rect, items: [
+            final pick = await manager.showDropdown<String>(id: 'store.review.more', anchor: rect, tetherAnchorChild: const Icon(Icons.more_horiz, size: 18), items: [
               RasqDropdownItem(context.l10n.storeCopyLink, 'copy'),
               RasqDropdownItem(context.l10n.storeReviewReport, 'report', destructive: true),
             ]);

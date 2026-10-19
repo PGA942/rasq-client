@@ -352,14 +352,17 @@ class _PostRowState extends ConsumerState<PostRow> {
                     }
                   },
                 ),
-              if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.homePostShare, onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context)))]),
+              if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [
+                // 共有の FOW はボタンにつながった形で (D-513)。
+                Builder(builder: (bctx) => RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.homePostShare, onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context), anchor: anchorRectOf(bctx)))),
+              ]),
             ]),
       // ↓ で別アカウントを選んでいる間は、そのコピーで以降の画面を開く (D-155)。
       onTap: _actAs != null && widget.onActAs == null ? () => context.pushPost(_actAs!) : widget.onTap,
       // 作者の id は投稿を引いたサーバーのもの (D-469): 作者自身のアカウント(`post.author.account`)ではなく、
       // 投稿が流れてきたアカウント(↓ で選んだコピーならそのアカウント)のセッションでページを引く。
       onAuthorTap: widget.onAuthorTap ?? () => context.pushUser(post.author, account: post.account.key),
-      onMore: (anchor) => showPostMenu(context, ref, post, anchor, pin: widget.menuPin),
+      onMore: (anchor) => showPostMenu(context, ref, post, anchor, pin: widget.menuPin, tetherIcon: const Icon(Icons.more_horiz, size: 20)),
       // アカウント選択 (D-110/D-111): 複数アカウントに流れてきた同一投稿は
       // 1 枚に畳まれる — ヘッダー右上(… の左)の ↓ でどのアカウントとして
       // 見る/反応するかを選ぶ(アクションバーはずらさない)。

@@ -105,9 +105,10 @@ class RasqPostTileView extends ConsumerWidget {
     return central == null ? null : post.permalink(central);
   }
 
-  Future<void> _more(BuildContext context, WidgetRef ref, Rect anchor, bool isMine) async {
+  /// [tethered] = TL のタイルの右上の「…」から(ボタンにつながった形、D-513)。全画面の重ねたボタンからは false。
+  Future<void> _more(BuildContext context, WidgetRef ref, Rect anchor, bool isMine, {bool tethered = false}) async {
     final l10n = context.l10n;
-    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.more', anchor: anchor, dense: true, items: [
+    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.more', anchor: anchor, dense: true, tetherAnchorChild: tethered ? const Icon(Icons.more_horiz, size: 20) : null, items: [
       RasqDropdownItem(l10n.profilePostMenuReactions, 'reactions'),
       RasqDropdownItem(l10n.profilePostMenuCopyLink, 'copy'),
       RasqDropdownItem(l10n.profilePostMenuOpenBrowser, 'open'),
@@ -398,7 +399,7 @@ class RasqPostTileView extends ConsumerWidget {
         onTap: onOpen,
         onAuthorTap: author == null ? null : () => context.pushRasqAccount(author.handle),
         // … = ほかの SNS の投稿と同じドロップダウン(削除はこの中)。
-        onMore: (anchor) => _more(context, ref, anchor, isMine),
+        onMore: (anchor) => _more(context, ref, anchor, isMine, tethered: true),
         content: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           // 注釈 (CW) つきは、注釈だけ見せて、中身は押すまで畳む(SNS の投稿と同じ)。
           if (post.cw.isNotEmpty) _CwFold(cw: post.cw, child: _body(context, ref))
@@ -448,12 +449,14 @@ class RasqPostTileView extends ConsumerWidget {
                 },
             ],
             trailing: [
-              RasqActionButton.icon(
-                key: ValueKey('rasqPost.${post.id}.share'),
-                icon: Icons.ios_share,
-                tooltip: l10n.profilePostShare,
-                // SNS の投稿と同じ共有 FOW (D-279。リンク / 内容のコピー、引用、DM、共有プラグイン)。
-                onTap: () => showPostShareFow(ref, post.toPost(central: ref.read(centralBaseUrlProvider)), column: fowColumnOf(context)),
+              Builder(
+                builder: (bctx) => RasqActionButton.icon(
+                  key: ValueKey('rasqPost.${post.id}.share'),
+                  icon: Icons.ios_share,
+                  tooltip: l10n.profilePostShare,
+                  // SNS の投稿と同じ共有 FOW (D-279。リンク / 内容のコピー、引用、DM、共有プラグイン)。ボタンにつながった形 (D-513)。
+                  onTap: () => showPostShareFow(ref, post.toPost(central: ref.read(centralBaseUrlProvider)), column: fowColumnOf(context), anchor: anchorRectOf(bctx)),
+                ),
               ),
             ],
           ),

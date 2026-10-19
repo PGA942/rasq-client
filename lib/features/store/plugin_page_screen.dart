@@ -64,7 +64,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
     final manager = ref.read(overlayManagerProvider);
     // レビューはインストールしたプラグインにだけ (D-515)。入れていなければ押せない(押せない理由はレビューの枠に出る)。
     final canReview = ref.read(installedPluginsProvider).any((p) => p.id == d.id);
-    final pick = await manager.showDropdown<String>(id: 'store.plugin.more', anchor: anchor, items: [
+    final pick = await manager.showDropdown<String>(id: 'store.plugin.more', anchor: anchor, tetherAnchorChild: const Icon(Icons.more_horiz, size: 22), items: [
       RasqDropdownItem(context.l10n.storePageMenuPostReview, 'review', enabled: canReview),
       RasqDropdownItem(context.l10n.storeCopyLink, 'copy'),
       RasqDropdownItem(context.l10n.storeShare, 'share'),

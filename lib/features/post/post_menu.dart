@@ -25,11 +25,14 @@ import 'share_fow.dart';
 /// 全画面表示 (D-213): [media] を渡すと投稿のメニューに準拠しつつ「詳細」を消して「画像を保存」を足す。
 /// 「リンクをコピー」は画像のリンク、「共有」の FOW は「内容をコピー」が「画像を保存」になる。
 /// [pin] (D-423) = アカウントページの固定 (S-027)。自分のページの、固定できる投稿にだけ渡す(「固定する / 固定を外す」が出る)。
-Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect anchor, {MediaItem? media, PostMenuPin? pin}) async {
+///
+/// [tetherIcon] (D-513) = 押した「…」のボタンのアイコン。渡すとメニューを**ボタンにつながった形**で出す(TL の投稿の右上の「…」)。
+/// 全画面表示のボタンからは渡さない(暗いビューワーの上の、ボタンから離れたメニューのまま)。
+Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect anchor, {MediaItem? media, PostMenuPin? pin, Widget? tetherIcon}) async {
   final manager = ref.read(overlayManagerProvider);
   // RASQ の投稿 (D-276。全画面表示の … から来る): SNS の操作は効かないので、保存とリンクだけ。
   if (isRasqPost(post)) {
-    final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, items: [
+    final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, tetherAnchorChild: tetherIcon, items: [
       if (media != null && isSavableMedia(media)) RasqDropdownItem(saveMediaLabel(media), 'saveImage'),
       const RasqDropdownItem('リンクをコピー', 'copy'),
     ]);
@@ -47,7 +50,7 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   // 縮退してしまう)ので、リンクと固定だけ。
   final loggedIn = (ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[]).any((x) => accountServes(x.account, post.account.kind.name, post.account.instance));
   if (pin != null && (s == null || viewer == null || !loggedIn)) {
-    final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, items: [
+    final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, tetherAnchorChild: tetherIcon, items: [
       const RasqDropdownItem('リンクをコピー', 'copy'),
       RasqDropdownItem(pin.pinned ? '固定を外す' : '固定する', 'pin'),
     ]);
@@ -61,7 +64,7 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   final st = ref.read(followStateProvider.notifier).of(viewer.key, userKey);
   final fav = ref.read(actionStateProvider.notifier).of(post.key, 'favorite');
 
-  final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, items: [
+  final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, tetherAnchorChild: tetherIcon, items: [
     if (media == null) const RasqDropdownItem('詳細', 'detail') else if (isSavableMedia(media)) RasqDropdownItem(saveMediaLabel(media), 'saveImage'),
     const RasqDropdownItem('リンクをコピー', 'copy'),
     const RasqDropdownItem('共有', 'share'),

@@ -5,6 +5,7 @@ import 'fow.dart';
 import 'overlay_entry.dart';
 import 'overlay_layer.dart';
 import 'overlay_manager.dart';
+import 'tethered_panel.dart';
 
 /// Convenience presets on top of [OverlayManager]. These are host-owned L4
 /// surfaces; plugins reach them only through host functions (fow.open / alert).
@@ -197,57 +198,79 @@ extension OverlayPresets on OverlayManager {
 
   /// Dropdown menu anchored to a widget (長押しメニュー / ソート選択 / アカウント切替).
   /// [dense] = compact variant for small sort menus.
+  ///
+  /// [tetherAnchorChild] を渡すと、**ボタンにつながった形**([TetheredPanel]、D-513)で出す: 「…」などのボタンから開くメニュー。
+  /// 渡すのは元のボタンのアイコン(パネルがボタンを覆うので、首の中に同じものを描く)。[tetherSide] = 開く側(入らなければ反対)。
   Future<T?> showDropdown<T>({
     required String id,
     required Rect anchor,
     required List<RasqDropdownItem<T>> items,
     String? ownerId,
     bool dense = false,
+    Widget? tetherAnchorChild,
+    TetherSide tetherSide = TetherSide.below,
   }) async {
+    final tethered = tetherAnchorChild != null;
     final result = await show(RasqOverlayEntry(
       id: id,
       layer: OverlayLayer.dropdown,
-      anchor: anchor,
+      anchor: tethered ? null : anchor,
       ownerId: ownerId,
       builder: (context, handle) {
         final scheme = Theme.of(context).colorScheme;
+        final list = Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          for (var i = 0; i < items.length; i++) ...[
+            InkWell(
+              onTap: items[i].enabled ? () => handle.close(result: items[i].value) : null,
+              child: Container(
+                constraints: BoxConstraints(minHeight: dense ? 34 : 44, minWidth: dense ? 120 : 160),
+                padding: EdgeInsets.symmetric(horizontal: dense ? 12 : 16),
+                alignment: Alignment.centerLeft,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (items[i].checked) Padding(padding: const EdgeInsets.only(right: 6), child: Icon(Icons.check, size: dense ? 14 : 18)),
+                  // 長いラベルは折り返す(はみ出しで overflow にしない)。
+                  Flexible(
+                    child: Text(
+                      items[i].label,
+                      style: TextStyle(
+                        fontSize: dense ? 12.5 : 14,
+                        fontWeight: FontWeight.w600,
+                        color: items[i].destructive ? scheme.error : (items[i].accent ? scheme.primary : scheme.onSurface),
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
+            ),
+            if (i != items.length - 1) Divider(height: 1, color: scheme.outlineVariant),
+          ],
+        ]);
+        if (tethered) {
+          // ボタンにつながったメニュー (D-513): 首の下に項目を並べる。外 / 首のタップで閉じる。
+          final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+          Widget panel(double t) => TetheredPanel(
+                key: ValueKey('$id.tether'),
+                anchor: anchor,
+                width: dense ? 220 : 260,
+                preferredSide: tetherSide,
+                progress: t,
+                anchorChild: tetherAnchorChild,
+                onAnchorTap: handle.cancel,
+                child: Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: SingleChildScrollView(child: list)),
+              );
+          return SizedBox.expand(
+            child: still
+                ? panel(1)
+                : TweenAnimationBuilder<double>(tween: Tween(begin: 0, end: 1), duration: const Duration(milliseconds: 140), curve: Curves.easeOutCubic, builder: (context, t, _) => panel(t)),
+          );
+        }
         return Material(
           color: scheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(12),
           clipBehavior: Clip.antiAlias,
           elevation: 6,
-          child: IntrinsicWidth(
-            // 項目が多くて高さ上限を超えたらスクロール(はみ出しにしない、D-205)。
-            child: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              for (var i = 0; i < items.length; i++) ...[
-                InkWell(
-                  onTap: items[i].enabled ? () => handle.close(result: items[i].value) : null,
-                  child: Container(
-                    constraints: BoxConstraints(minHeight: dense ? 34 : 44, minWidth: dense ? 120 : 160),
-                    padding: EdgeInsets.symmetric(horizontal: dense ? 12 : 16),
-                    alignment: Alignment.centerLeft,
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      if (items[i].checked) Padding(padding: const EdgeInsets.only(right: 6), child: Icon(Icons.check, size: dense ? 14 : 18)),
-                      // 長いラベルは折り返す(はみ出しで overflow にしない)。
-                      Flexible(
-                        child: Text(
-                          items[i].label,
-                          style: TextStyle(
-                            fontSize: dense ? 12.5 : 14,
-                            fontWeight: FontWeight.w600,
-                            color: items[i].destructive ? scheme.error : (items[i].accent ? scheme.primary : scheme.onSurface),
-                          ),
-                        ),
-                      ),
-                    ]),
-                  ),
-                ),
-                if (i != items.length - 1) Divider(height: 1, color: scheme.outlineVariant),
-              ],
-            ]),
-            ),
-          ),
+          // 項目が多くて高さ上限を超えたらスクロール(はみ出しにしない、D-205)。
+          child: IntrinsicWidth(child: SingleChildScrollView(child: list)),
         );
       },
     ));

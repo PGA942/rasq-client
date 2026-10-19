@@ -853,6 +853,9 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
                   title: list.name,
                   anchor: box.localToGlobal(Offset.zero) & box.size,
                   column: fowColumnOf(ctx),
+                  // ボタンにつながった形 (D-513)。ルームの下段のボタンなので上に開く。
+                  preferredSide: TetherSide.above,
+                  anchorChild: Icon(bundleIconOf(list, [for (final m in members) m.action]), size: 20),
                   items: [for (final m in members) BundleMenuItem(value: m.action.id, label: m.button.tooltip, icon: m.button.icon)],
                 );
                 members.where((m) => m.action.id == picked).firstOrNull?.button.onPressed?.call();

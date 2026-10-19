@@ -173,6 +173,29 @@ void main() {
   });
 
   group('ボタンにつながった FOW (D-513)', () {
+    testWidgets('リノート(タップ)/ 共有 / 「…」は、ボタンにつながった形で開き、中身はそのまま', (tester) async {
+      await pump(tester);
+      Future<void> expectTethered(Finder button, Finder inside) async {
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(find.byType(TetheredPanel), findsOneWidget);
+        expect(inside, findsOneWidget);
+        final panel = tester.getRect(find.byKey(kTetherPanelKey));
+        final b = tester.getCenter(button);
+        // ボタンのすぐ下(上)に、ボタンの真ん中に寄せて置かれる。
+        expect(panel.top > b.dy || panel.bottom < b.dy, isTrue);
+        expect(panel.left <= b.dx && b.dx <= panel.right, isTrue);
+        // 首(元のボタン)を押すと閉じる。
+        await tester.tap(find.byKey(const ValueKey('rasqOverlay.tether.hit')));
+        await tester.pumpAndSettle();
+        expect(find.byType(TetheredPanel), findsNothing);
+      }
+
+      await expectTethered(find.byTooltip('リノート').first, find.byKey(const ValueKey('actionbar.bundle.pick.renote')));
+      await expectTethered(find.byTooltip('共有').first, find.byKey(const ValueKey('post.share.copyLink')));
+      await expectTethered(find.byTooltip('メニュー').first, find.text('リンクをコピー'));
+    });
+
     testWidgets('コンポーザーの絵文字のボタン: 長押しで上に開き、滑らせて離した絵文字を入れる', (tester) async {
       await pump(tester);
       await openHomeComposer(tester);

@@ -191,4 +191,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(TetheredPanel), findsNothing);
   });
+
+  testWidgets('showDropdown(tetherAnchorChild): 「…」のメニューはボタンにつながった形', (tester) async {
+    String? picked;
+    await tester.pumpWidget(host(m, open: (anchor, _) async {
+      picked = await m.showDropdown<String>(id: 'menu', anchor: anchor, tetherAnchorChild: const Icon(Icons.more_horiz, size: 20), items: const [RasqDropdownItem('リンクをコピー', 'copy'), RasqDropdownItem('削除', 'delete', destructive: true)]);
+    }));
+    await tester.tap(find.byKey(buttonKey));
+    await tester.pumpAndSettle();
+    expect(find.byType(TetheredPanel), findsOneWidget);
+    expect(tester.getTopLeft(find.text('リンクをコピー')).dy, greaterThan(tester.getCenter(find.byKey(buttonKey)).dy));
+    await tester.tap(find.text('削除'));
+    await tester.pumpAndSettle();
+    expect(picked, 'delete');
+  });
 }
