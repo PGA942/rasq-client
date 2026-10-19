@@ -15,6 +15,7 @@ import '../home/timeline_providers.dart';
 import 'relational_engine.dart';
 import 'relational_providers.dart';
 import '../ads/timeline_ads.dart';
+import '../../shell/scroll_memory.dart';
 
 /// 「関連」タブ = リレーショナルTL v1 (D-027、会話イベント方式)。
 /// フォロイーの投稿を「どの直前投稿への暗黙応答か」で会話イベントに束ね、
@@ -35,6 +36,21 @@ class RelationalTimelineView extends ConsumerStatefulWidget {
 class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView> {
   double _dragOverscroll = 0;
   bool _firedThisDrag = false;
+
+  /// 位置を覚える (D-504): 関連 TL は重いので隠れたら捨てる(タブの外では生かしておかない、D-508)。戻ったら前の位置から。
+  late final RememberedScrollController _scroll;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll = RememberedScrollController(memory: ref.read(scrollMemoryProvider), id: () => scrollMemoryKey(ref, 'tl.relational'));
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   /// 末尾方向のオーバースクロール(クランプ物理は Overscroll 通知、バウンス
   /// 物理は maxScrollExtent 超過)を 1 ドラッグ 1 回だけ拾う。
@@ -118,6 +134,7 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
                       final ads = timelineAdGaps(ref, [for (final e in list) e.root]);
                       final adOrdinal = {for (final (n, g) in (ads.toList()..sort()).indexed) g: n};
                       return ListView.separated(
+                        controller: _scroll,
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: list.length,
                         separatorBuilder: (_, _) => const Divider(),

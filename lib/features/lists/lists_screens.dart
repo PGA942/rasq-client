@@ -13,6 +13,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/rasq_collections_api.dart';
 import '../../shell/headers.dart';
+import '../../shell/scroll_memory.dart';
 import '../../shell/third_column.dart' show fowColumnOf;
 import '../child_safe/child_safe_collections.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -685,8 +686,15 @@ class _ListTimelinePosts extends ConsumerStatefulWidget {
 }
 
 class _ListTimelinePostsState extends ConsumerState<_ListTimelinePosts> {
-  final _scroll = ScrollController();
+  /// 位置を覚える (D-504): カラムを移って作り直されても、同じリスト / フィードなら前の位置から。
+  late final RememberedScrollController _scroll;
   final _jumper = TimelineJumpController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll = RememberedScrollController(memory: ref.read(scrollMemoryProvider), id: () => scrollMemoryKey(ref, 'list.${widget.scope}'));
+  }
 
   @override
   void dispose() {

@@ -16,6 +16,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
+import '../../shell/scroll_memory.dart';
 import '../settings/settings_dsl.dart';
 import '../nodeprog/node_tabs.dart';
 import '../nodeprog/timeline_temp_fow.dart';
@@ -292,7 +293,11 @@ class _TimelineView extends ConsumerStatefulWidget {
 }
 
 class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeepAliveClientMixin {
-  final _scroll = ScrollController();
+  /// 位置を覚える (D-504): 作り直されても(並びが変わる / 総合表示の出入り / 見守りの時間)TL ごとに前の位置から。
+  /// 中心の投稿 ([_baseKey]、D-298) も一緒に覚える(中心が同じときだけ、位置がそのまま使える)。
+  late final RememberedScrollController _scroll;
+
+  String get _memoryId => scrollMemoryKey(ref, 'tl.${widget.kind.id}');
 
   /// 探す語の ↑↓ で飛ぶ (D-341)。
   final _jumper = TimelineJumpController();
@@ -303,6 +308,9 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
   @override
   void initState() {
     super.initState();
+    final memory = ref.read(scrollMemoryProvider);
+    _baseKey = memory[_memoryId]?.anchor;
+    _scroll = RememberedScrollController(memory: memory, id: () => _memoryId, anchor: () => _baseKey);
     _scroll.addListener(() {
       if (_scroll.position.extentAfter < 600) ref.read(timelineProvider(widget.kind).notifier).loadMore();
     });

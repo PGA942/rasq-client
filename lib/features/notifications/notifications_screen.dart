@@ -14,6 +14,7 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/headers.dart';
+import '../../shell/scroll_memory.dart';
 import '../../shell/rasq_shell.dart';
 import '../../text/inline_spans.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -78,8 +79,8 @@ class NotificationsScreen extends ConsumerWidget {
           if (showReminders) const _AstellReminders(),
           Expanded(
             child: TabBarView(children: [
-              _List(items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future)),
-              _List(items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind) && n.actors.any(isFollowed)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future), emptyTitle: 'フォロー中の通知はありません'),
+              _List(memoryId: 'notifications.all', items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future)),
+              _List(memoryId: 'notifications.following', items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind) && n.actors.any(isFollowed)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future), emptyTitle: 'フォロー中の通知はありません'),
               if (rasq) const _RasqNotices(),
             ]),
           ),
@@ -140,7 +141,10 @@ Future<void> showNotificationQuickMenu(WidgetRef ref, Rect anchor) async {
 }
 
 class _List extends StatelessWidget {
-  const _List({required this.items, required this.onRefresh, this.emptyTitle = '通知はありません'});
+  const _List({required this.memoryId, required this.items, required this.onRefresh, this.emptyTitle = '通知はありません'});
+
+  /// 位置を覚える一覧の名前 (D-504): タブを切り替えて戻っても / 第3カラムで作り直されても、前の位置から。
+  final String memoryId;
   final AsyncValue<List<NotificationItem>> items;
   final Future<void> Function() onRefresh;
   final String emptyTitle;
@@ -153,11 +157,15 @@ class _List extends StatelessWidget {
           onRefresh: onRefresh,
           child: list.isEmpty
               ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 120), RasqEmptyView(title: emptyTitle)])
-              : ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: list.length,
-                  separatorBuilder: (_, _) => const Divider(),
-                  itemBuilder: (context, i) => NotificationTile(item: list[i]),
+              : RememberScroll(
+                  id: memoryId,
+                  builder: (context, controller) => ListView.separated(
+                    controller: controller,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: list.length,
+                    separatorBuilder: (_, _) => const Divider(),
+                    itemBuilder: (context, i) => NotificationTile(item: list[i]),
+                  ),
                 ),
         ),
       );
@@ -415,7 +423,10 @@ class _RasqNotices extends ConsumerWidget {
         error: (e, _) => ListView(children: [const SizedBox(height: 120), RasqEmptyView(title: '読み込めませんでした', hint: '$e')]),
         data: (list) => list.isEmpty
             ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 120), RasqEmptyView(title: 'RASQ の通知はありません', hint: 'メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます')])
-            : ListView.separated(
+            : RememberScroll(
+                id: 'notifications.rasq',
+                builder: (context, controller) => ListView.separated(
+                controller: controller,
                 physics: const AlwaysScrollableScrollPhysics(),
                 itemCount: list.length,
                 separatorBuilder: (_, _) => const Divider(),
@@ -453,6 +464,7 @@ class _RasqNotices extends ConsumerWidget {
                             : () => context.push(Routes.rasqPost(n.postId!)),
                   );
                 },
+              ),
               ),
       ),
     );
