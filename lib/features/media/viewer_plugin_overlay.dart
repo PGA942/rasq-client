@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -34,6 +32,9 @@ final viewerImageFetcherProvider = Provider<Future<Uint8List?> Function(Uri url)
 
 /// 全画面表示プラグインへ渡す画像本体の上限(Web 版プラグインの net.fetch の本文と同じ 32 MiB、D-453)。
 const viewerImageMaxBytes = 32 * 1024 * 1024;
+
+/// 全画面表示プラグインへ渡す画像の長辺 (D-178)。これを超える画像は縮めて渡す(重ねの座標はこの画素系)。
+const viewerPluginMaxSide = 1024;
 
 /// 全画面表示プラグインの ON / OFF (D-205 → D-207 → D-305): 全画面のアクションバーのトグルで切り替える。
 /// 契約 v0.14 §2.4 / §2.11(temp): 切り替えた値は**その全画面限り**で永続しない([ViewerPluginOverlays] が面ローカルに持つ)。
@@ -161,7 +162,7 @@ class ViewerPluginOverlays {
     try {
       final src = await ref.read(viewerImageFetcherProvider)(url);
       if (src == null) return failAll('画像を取得できませんでした');
-      final scaled = await downscalePng(src, 1024);
+      final scaled = await downscalePng(src, viewerPluginMaxSide);
       bytes = scaled.$1;
       width = scaled.$2;
       height = scaled.$3;
@@ -251,20 +252,9 @@ class ViewerPluginOverlays {
   /// 長辺 [max] に縮めた PNG と画素数。
   ///
   /// ここは**常に PNG を渡す**契約(重ねの座標系が画素数で決まる)なので、
-  /// 縮めない場合も PNG へ揃える。渡す前に縮めるだけの
-  /// [fitWithin] とは要求が違うため、復号を 1 回で済ませる形で別に持つ。
-  static Future<(Uint8List, int, int)> downscalePng(Uint8List src, int max) async {
-    final probe = await ui.instantiateImageCodec(src);
-    final frame = await probe.getNextFrame();
-    var image = frame.image;
-    if (image.width > max || image.height > max) {
-      final wide = image.width >= image.height;
-      final codec = await ui.instantiateImageCodec(src, targetWidth: wide ? max : null, targetHeight: wide ? null : max);
-      image = (await codec.getNextFrame()).image;
-    }
-    final data = await image.toByteData(format: ui.ImageByteFormat.png);
-    return (data!.buffer.asUint8List(), image.width, image.height);
-  }
+  /// 縮めない場合も PNG へ揃える。縮める大きさで 1 回だけ復号する([decodeToPngWithin]、D-511: 以前は原寸で
+  /// 復号してから縮めていて、大きな写真で失敗していた)。縦横は向き(Exif)を当てたあとのもの = 画面の見た目と同じ。
+  static Future<(Uint8List, int, int)> downscalePng(Uint8List src, int max) => decodeToPngWithin(src, max);
 }
 
 class ViewerOverlay {

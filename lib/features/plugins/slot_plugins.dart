@@ -1094,15 +1094,21 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final vb = SvgLite.parse(utf8.decode(bytes, allowMalformed: true))?.viewBox;
       return vb == null ? passthrough : ScaledImage(bytes: bytes, mimeType: mimeType, width: vb.width.round(), height: vb.height.round(), scaled: false);
     }
-    final size = imageSizeFromHeader(bytes);
+    final size = orientedImageSizeFromHeader(bytes);
     if (size == null) return passthrough;
     final (width, height) = size;
-    if (width <= mediaEditMaxSide && height <= mediaEditMaxSide) {
+    // Exif の向き(2〜8)のある JPEG (D-511): ヘッダーの幅・高さは向きを当てる前で、多くのプラグインは向きを見ずに
+    // 復号する。そのまま渡すと、ホストの見た目(向きを当てたもの)と縦横が食い違い、プレビュー / 重ね / 結果が
+    // 横倒しになる。向きを画素に焼いた PNG にして、見たままの縦横で渡す。
+    final orientation = jpegExifOrientation(bytes);
+    final rotated = orientation != null && orientation != 1;
+    final oversized = width > mediaEditMaxSide || height > mediaEditMaxSide;
+    if (!oversized && !rotated) {
       return ScaledImage(bytes: bytes, mimeType: mimeType, width: width, height: height, scaled: false);
     }
     try {
-      final fitted = await fitWithin(bytes, mediaEditMaxSide, mimeType: mimeType);
-      if (fitted.scaled) {
+      final fitted = await fitWithin(bytes, mediaEditMaxSide, mimeType: mimeType, normalize: rotated);
+      if (fitted.scaled && oversized) {
         _toast(appL10n.pluginsImageScaled(plugin.manifest.name));
       }
       return fitted;
@@ -1183,7 +1189,13 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       plugin.value('filter.preview', {'actionId': actionId, 'width': width, 'height': height, 'seed': seed, 'params': ?params});
 
   /// カスタムフィルターの `mode: "pixels"`: 焼き込んだ 1 枚を渡して、書き換えた結果を受け取る。失敗は null。
+  ///
+  /// `width` / `height` は**渡す画像そのものの画素数** (D-511)。呼び出し側の値(フィルターを掛けたときの元画像の大きさ)は、
+  /// 焼き込んだ 1 枚(`captureEditorImage` は切り抜き / 書き出しの倍率で大きさが変わる)や、前のフィルターの結果と
+  /// 食い違うことがあり、画素数を信じるプラグインが「大きさが合わない」で失敗していた。読めない形式のときだけ渡された値。
   Future<(Uint8List, String)?> filterApply(SlotPlugin plugin, {required String actionId, required int seed, required int width, required int height, required Uint8List bytes, String mimeType = 'image/png', Map<String, double>? params}) async {
+    final actual = imageSizeFromHeader(bytes);
+    if (actual != null) (width, height) = actual;
     final v = await plugin.value('filter.apply', {'actionId': actionId, 'seed': seed, 'width': width, 'height': height, 'params': ?params, 'mimeType': mimeType, 'bytesB64': base64Encode(bytes)});
     if (v == null || v['bytesB64'] is! String) return null;
     try {
