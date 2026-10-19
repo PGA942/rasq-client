@@ -142,6 +142,15 @@ class FakeSnsSession extends SnsSessionBase {
     return Post(id: 'dm${_posts.length}', account: account, author: me, createdAt: DateTime.now(), body: draft.text, visibility: 'specified', directToIds: [room.peer.id]);
   }
 
+  /// createPost / sendDm の答えに添える知らせ(契約 v0.25 の `notice`、D-500)。null = 知らせ無し(古いプラグイン)。
+  SnsNotice? postNotice;
+
+  @override
+  Future<SentPost> createPostWithNotice(NewPost draft) async => SentPost(await createPost(draft), notice: postNotice);
+
+  @override
+  Future<SentPost> sendDmWithNotice(DmRoom room, NewPost draft) async => SentPost(await sendDm(room, draft), notice: postNotice);
+
   @override
   Future<Post> createPost(NewPost draft) async {
     lastDraft = draft;

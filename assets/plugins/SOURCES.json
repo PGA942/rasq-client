@@ -46,9 +46,9 @@
     },
     "mastodon_wasm.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
-      "commit": "fdc1b490c795bdc54545c47b1f41ae432858bfe0",
+      "commit": "9b41b89c7014c5a8eca58dfa7c86f2480f1fbf8d",
       "version": "0.1.0",
-      "sha256": "7239ef4a642c78f89e14b5e4de1ac07afd28e27dd15fece75d4f0ec437d54748"
+      "sha256": "adc14125dc141d059eb3429232df0e98dc633df2522f13b15419cd93a05f2b4b"
     },
     "media_draw_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/media-draw-plugin.git",

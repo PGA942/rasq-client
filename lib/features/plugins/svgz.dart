@@ -14,7 +14,8 @@ import 'package:rrl_renderer/rrl_renderer.dart' show SvgLite;
 /// ([SvgLite.zstdDecompress])。古いプラグインは `svg` だけを使い続けられる。
 
 /// このホストが話す契約の版(`page.open` の `contract`)。v0.24 (D-484): 毎回の call の `args.locale`(表示の言語)。
-const rasqHostContract = '0.24';
+/// v0.25 (D-500): `sns.createPost` / `sns.sendDm` の答えの `notice` を、送った後にスナックバーで出す。
+const rasqHostContract = '0.25';
 
 /// `svgzEncoding` の値。
 const svgzEncoding = 'zstd';

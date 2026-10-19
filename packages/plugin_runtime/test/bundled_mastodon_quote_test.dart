@@ -58,13 +58,19 @@ void main() {
     expect(s.sent.single['quoted_status_id'], 'q1');
     expect(s.sent.single['status'], 'これ見て');
     expect(post.quote?.id, 'q1');
+    // 引用できたときは知らせ無し(契約 v0.25 の notice、D-500)。
+    expect((await s.session.createPostWithNotice(const NewPost(text: 'もう一回', quoteOfId: 'q1'))).notice, isNull);
   });
 
   test('引用を持たないサーバー: 引用元の URL を本文の末尾の行に足す', () async {
     final s = sessionOf(apiVersion: null);
-    await s.session.createPost(const NewPost(text: 'これ見て', quoteOfId: 'q1'));
+    final sent = await s.session.createPostWithNotice(const NewPost(text: 'これ見て', quoteOfId: 'q1'));
     expect(s.sent.single.containsKey('quoted_status_id'), isFalse);
     expect(s.sent.single['status'], 'これ見て\n$quotedUrl');
+    // URL で送ったことを、答えの notice で知らせる(契約 v0.25、D-500)。コンポーザーがスナックバーで出す。
+    expect(sent.post.id, 's1');
+    expect(sent.notice?.code, 'quote.fallbackUrl');
+    expect(sent.notice?.message, '引用に対応していないサーバーなので、引用元の URL を付けて投稿しました');
   });
 
   test('タイムラインの引用は Post.quote に入り、本文の RE: は外れる', () async {
