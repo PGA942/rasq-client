@@ -10,6 +10,7 @@ import '../../l10n/l10n.dart';
 import '../../session/session_providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/post_row.dart';
+import '../home/own_posts.dart';
 import '../home/timeline_providers.dart';
 import '../relational/relational_engine.dart';
 import '../relational/relational_providers.dart' show relationalSettingsProvider;
@@ -246,6 +247,9 @@ class _TlSnapshotState extends ConsumerState<_TlSnapshot> {
   List<Post>? _snapshot;
   int _tick = 0;
 
+  /// 読み直しを済ませた自分の投稿 (D-507)。
+  late int _ownSeq = ref.read(ownPostsProvider)?.seq ?? 0;
+
   TimelineKind get _kind => TimelineKind(widget.node.tl, widget.node.tl);
 
   @override
@@ -262,6 +266,16 @@ class _TlSnapshotState extends ConsumerState<_TlSnapshot> {
       _snapshot = null;
       Future.microtask(() {
         if (mounted) ref.read(timelineProvider(_kind).notifier).refresh();
+      });
+    }
+    // 自分が投稿した (D-507): 新しい投稿は読み込まない枠でも、自分の投稿は出す(上に足してから写し直す)。隠れたタブでは次に見えたときに。
+    final own = ref.watch(ownPostsProvider)?.seq ?? 0;
+    if (own != _ownSeq && TickerMode.valuesOf(context).enabled) {
+      _ownSeq = own;
+      Future.microtask(() async {
+        if (!mounted) return;
+        await ref.read(timelineProvider(_kind).notifier).prependNewer();
+        if (mounted) setState(() => _snapshot = null);
       });
     }
     final tl = ref.watch(timelineProvider(_kind));

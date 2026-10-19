@@ -35,6 +35,7 @@ import 'compose_providers.dart';
 export 'compose_providers.dart' show ComposerInitialFile;
 import 'account_select.dart';
 import '../home/account_affinity.dart';
+import '../home/own_posts.dart';
 import 'kana_romaji.dart';
 import 'compose_target.dart';
 import 'media_file_pick.dart';
@@ -1629,6 +1630,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         quoteOf: _rasqQuote ? _quoteOf!.id : null,
       );
       ref.invalidate(rasqAccountPageProvider(me.handle));
+      // 見えている TL を読み直す (D-507。TL のソース「RASQ の投稿」に出る)。
+      ref.read(ownPostsProvider.notifier).posted(post: created.toPost(central: ref.read(centralBaseUrlProvider)), rasq: true);
       await childComposeSent(ref);
       if (_draftId != null) _drafts.clear(_draftId!);
       _skipDraftOnDispose = true;
@@ -1846,6 +1849,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         _ => await session.createPostWithNotice(draft),
       };
       final post = sent.post;
+      // 見えている TL を読み直す (D-507)。連動の投稿の一部に失敗しても、本体は送れているので先に知らせる。DM は TL に出ないので知らせない。
+      if (widget.target is! ComposeDm) ref.read(ownPostsProvider.notifier).posted(post: post);
       await childComposeSent(ref);
       // 返信 / 引用した相手を、投稿したアカウントの「やりとり」として覚える (D-280: 共有 / リノートに使うアカウントの予測の材料)。
       final talkedTo = replyTo ?? quoteOf;

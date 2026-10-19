@@ -28,6 +28,7 @@ import 'custom_tile_row.dart';
 import 'create_fow.dart';
 import 'home_header.dart';
 import 'new_posts_pill.dart';
+import 'own_posts.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
 import 'timeline_search.dart';
@@ -181,7 +182,9 @@ class HomeScreen extends ConsumerWidget {
         ]),
         // ＋ (D-381): タップ = 投稿、上へスワイプ = Swing、下へスワイプ = AsTell(設定で変えられる)。
         // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
-        floatingActionButton: RadialCreateFab(scope: 'home', heroTag: 'fab.home', onPosted: () => ref.read(timelineProvider(TimelineKind.home).notifier).prependNewer()),
+        // 投稿したら見えている TL を読み直す (D-507): ＋ に限らずコンポーザーが [ownPostsProvider] で知らせ、各 TL が自分で読み直す
+        // (前はここで「フォロー中」の TL だけを読み直していた)。
+        floatingActionButton: const RadialCreateFab(scope: 'home', heroTag: 'fab.home'),
       )),
     );
   }
@@ -314,6 +317,9 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
   /// このタブがいま見えているか(隠れたタブ = [VisibleTabPage] が TickerMode を切る)。
   bool _visible = true;
 
+  /// 読み直しを済ませた自分の投稿 (D-507、[OwnPost.seq])。
+  late int _ownSeq;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -323,6 +329,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
     final memory = ref.read(scrollMemoryProvider);
     _baseKey = memory[_memoryId]?.anchor;
     _scroll = RememberedScrollController(memory: memory, id: () => _memoryId, anchor: () => _baseKey);
+    _ownSeq = ref.read(ownPostsProvider)?.seq ?? 0;
     _scroll.addListener(() {
       if (_scroll.position.extentAfter < 600) ref.read(timelineProvider(widget.kind).notifier).loadMore();
       // いちばん上まで送ったら、「新しい投稿」は消す (D-506)。
@@ -359,6 +366,19 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
     });
   }
 
+  /// 自分が投稿した (D-507): この TL を読み直し(上に足す)、いちばん上の近くを見ていたら、足した投稿が見えるところまで送る。
+  /// 下のほうを読んでいたら位置は動かさない(「新しい投稿」の札 D-506 で知らせる)。
+  Future<void> _refreshForOwnPost() async {
+    final nearTop = !_scroll.hasClients || _scroll.positions.length != 1 || _scroll.position.pixels - _scroll.position.minScrollExtent < _scroll.position.viewportDimension / 2;
+    await ref.read(timelineProvider(widget.kind).notifier).prependNewer();
+    if (!mounted || !nearTop) return;
+    // 足した投稿を並べ終えてから(「新しい投稿」の札はそのフレームのあとで出るので、それより後で消す)。
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    _pill.hide();
+    scrollToTopIn(context);
+  }
+
   /// 「新しい投稿」を押した: いちばん上へ送って見せる。
   void _revealNewer() {
     _pill.hide();
@@ -373,6 +393,14 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
     ref.listen(timelineProvider(widget.kind), (prev, next) => _onTimeline(prev?.value, next.value));
     // しまったヘッダーには D-449 の新着を浮かべるので、「新しい投稿」は出さない。
     final pillShown = _pill.showing && !ref.watch(homeHeaderCollapsedProvider) && ref.watch(timelineNewPostsPillProvider);
+    // 自分が投稿した (D-507): 見えていれば読み直す。隠れている間は見ない(Riverpod の監視も止まる)ので、次に見えたときに読み直す。
+    final own = ref.watch(ownPostsProvider)?.seq ?? 0;
+    if (_visible && own != _ownSeq) {
+      _ownSeq = own;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _refreshForOwnPost();
+      });
+    }
     final session = ref.watch(currentSnsSessionProvider);
     final notifier = ref.read(timelineProvider(widget.kind).notifier);
     final actions = session?.actions ?? const <ActionDescriptor>[];

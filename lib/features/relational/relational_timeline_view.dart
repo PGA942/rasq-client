@@ -11,6 +11,7 @@ import '../../app/providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../../text/inline_spans.dart';
 import '../clips/virtual_index.dart';
+import '../home/own_posts.dart';
 import '../home/timeline_providers.dart';
 import 'relational_engine.dart';
 import 'relational_providers.dart';
@@ -84,8 +85,19 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
 
   String _lookbackLabel(int minutes) => minutes >= 60 ? (minutes % 60 == 0 ? '${minutes ~/ 60}時間' : '${minutes ~/ 60}時間${minutes % 60}分') : '$minutes分';
 
+  /// 読み直しを済ませた自分の投稿 (D-507)。
+  late int _ownSeq = ref.read(ownPostsProvider)?.seq ?? 0;
+
   @override
   Widget build(BuildContext context) {
+    // 自分が投稿した (D-507): 関連 TL の元(フォロー中の TL)に足す。隠れている間は次に見えたときに。
+    final own = ref.watch(ownPostsProvider)?.seq ?? 0;
+    if (own != _ownSeq && TickerMode.valuesOf(context).enabled) {
+      _ownSeq = own;
+      Future.microtask(() {
+        if (mounted) ref.read(timelineProvider(TimelineKind.home).notifier).prependNewer();
+      });
+    }
     final events = ref.watch(conversationEventsProvider);
     final settings = ref.watch(relationalSettingsProvider);
     final lookback = ref.watch(relationalLookbackProvider);

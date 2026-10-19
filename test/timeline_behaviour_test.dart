@@ -9,6 +9,8 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/home/home_header.dart' show homeHeaderArea;
 import 'package:rasq_client/features/home/new_posts_pill.dart';
 import 'package:rasq_client/features/home/timeline_providers.dart';
+import 'package:rasq_client/features/nodeprog/node_tabs.dart' show nodeprogAreaFor;
+import 'package:rasq_client/features/nodeprog/tl_components.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/scroll_memory.dart';
@@ -223,6 +225,95 @@ void main() {
       expect(pill, findsNothing);
       await arrive(tester, c, [post(-2, author: 'y')]);
       expect(pill, findsNothing);
+    });
+  });
+  group('D-507 自分の投稿が TL に出る(表示モードごと)', () {
+    /// ＋ のボタン(タップ = 投稿)から投稿する。
+    Future<void> postViaFab(WidgetTester tester, String text) async {
+      await tester.tap(find.byKey(const ValueKey('fab.home.gesture')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, text);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('送信'));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> setConfig(ProviderContainer c, String scope, TlConfig cfg, WidgetTester tester) async {
+      await c.read(settingsAreaProvider(nodeprogAreaFor(fakeSession().account.key, scope)).notifier).set('tlcfg', jsonEncode(cfg.toJson()));
+      await tester.pumpAndSettle();
+    }
+
+    Finder shown(String text) => find.text(text).hitTestable();
+
+    testWidgets('通常の表示(いちばん上を見ている): 開いているタブ(フォロー中以外)にも出て、見える位置まで送る', (tester) async {
+      await pump(tester);
+      expect(find.byKey(const ValueKey('tl.view.social')), findsOneWidget);
+      await postViaFab(tester, '自分の投稿 A');
+      expect(shown('自分の投稿 A'), findsOneWidget, reason: '開いているおすすめ(social)の TL');
+    });
+
+    testWidgets('フォロー中のタブ: 上に足した投稿が見える位置まで送る', (tester) async {
+      await pump(tester);
+      await tester.tap(find.text('フォロー中').first);
+      await tester.pumpAndSettle();
+      await postViaFab(tester, '自分の投稿 B');
+      expect(shown('自分の投稿 B'), findsOneWidget);
+    });
+
+    testWidgets('下のほうを読んでいるときは動かさず、「新しい投稿」の札で知らせる', (tester) async {
+      await pump(tester);
+      await tester.drag(find.byKey(const ValueKey('tl.view.social')), const Offset(0, -1500));
+      await tester.pumpAndSettle();
+      final at = tlPosition(tester, 'tl.view.social').pixels;
+      await postViaFab(tester, '自分の投稿 C');
+      expect(tlPosition(tester, 'tl.view.social').pixels, at);
+      expect(find.byKey(const ValueKey('tl.newPosts.pill')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('tl.newPosts.pill')));
+      await tester.pumpAndSettle();
+      expect(shown('自分の投稿 C'), findsOneWidget);
+    });
+
+    testWidgets('表示モード: ユーザー / 関連(会話)でも読み直す', (tester) async {
+      final c = await pump(tester);
+      await setConfig(c, 'tl.social', const TlConfig(sources: [TlSourceComponent(tl: 'social')], display: TlDisplayMode.users), tester);
+      expect(find.text('テスター'), findsNothing);
+      await postViaFab(tester, '自分の投稿 D');
+      expect(find.text('テスター'), findsOneWidget, reason: 'ユーザーの並びに自分');
+    });
+
+    testWidgets('セクションだけの並び(本体の TL なし): セクションの中の TL も読み直す', (tester) async {
+      final c = await pump(tester);
+      await setConfig(
+          c,
+          'tl.social',
+          const TlConfig(sources: [
+            TlSourceComponent(tl: sectionKind, label: 'まとめ', children: [TlSourceComponent(tl: 'home', limit: 3)]),
+          ]),
+          tester);
+      expect(find.text('投稿 0'), findsOneWidget);
+      await postViaFab(tester, '自分の投稿 E');
+      expect(find.text('自分の投稿 E'), findsOneWidget);
+    });
+
+    testWidgets('総合表示: 総合の TL に出る', (tester) async {
+      final c = await pump(tester);
+      await c.read(sessionsProvider.notifier).setBundleView(true);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('tl.view.bundle')), findsOneWidget);
+      await postViaFab(tester, '自分の投稿 F');
+      expect(shown('自分の投稿 F'), findsOneWidget);
+    });
+
+    testWidgets('隠れているタブは、開いたときに読み直す', (tester) async {
+      await pump(tester);
+      await tester.tap(find.text('フォロー中').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('おすすめ').first);
+      await tester.pumpAndSettle();
+      await postViaFab(tester, '自分の投稿 G');
+      await tester.tap(find.text('フォロー中').first);
+      await tester.pumpAndSettle();
+      expect(shown('自分の投稿 G'), findsOneWidget);
     });
   });
 }
