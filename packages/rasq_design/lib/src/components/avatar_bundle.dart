@@ -7,6 +7,7 @@ import '../theme/rasq_tokens_extension.dart';
 import '../tokens/colors.dart';
 import '../tokens/sizes.dart';
 import 'avatar.dart';
+import '../l10n/design_l10n.dart';
 
 /// アイコン&追加情報バンドル (D-140 / D-141、ワイヤーフレーム p.3 の VC タイル左上)。
 ///
@@ -233,7 +234,7 @@ class RasqAvatarBundle extends StatelessWidget {
       ]),
     );
     if (onTap != null) bundle = GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: bundle);
-    return Semantics(label: stacked ? faces.map((f) => f.displayName).join('、') : label == null ? user.displayName : '${user.displayName} ${label.replaceAll('\n', '')}', child: bundle);
+    return Semantics(label: stacked ? faces.map((f) => f.displayName).join(context.designL10n.designListSeparator) : label == null ? user.displayName : '${user.displayName} ${label.replaceAll('\n', '')}', child: bundle);
   }
 
   static double _textWidth(String text, TextStyle style) {

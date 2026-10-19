@@ -1,0 +1,35 @@
+{
+  "settingsColumnsTitle": "カラムの幅",
+  "settingsColumnsIntroCaption": "タブレットや PC など広い画面で、左右のカラムの幅を決めます。",
+  "settingsColumnsIntroDetail": "幅の広い画面(タブレット / デスクトップ / Web)で、小型カラム(検索や、ページを開いた側)と大型カラム(開いたページ)の幅の比を決めます。",
+  "settingsColumnsSplitHeader": "小型 / 大型カラムの比",
+  "settingsColumnsSplitDefault": "{hint}(既定)",
+  "@settingsColumnsSplitDefault": {
+    "description": "既定の比の行の説明。{hint} = その比の説明文。",
+    "placeholders": {"hint": {"type": "String"}}
+  },
+  "settingsColumnsLargeWidthLabel": "大型カラムの幅",
+  "settingsColumnsSmallWidthLabel": "小型カラムの幅",
+  "settingsColumnsShrinkCaption": "画面に入らないときは、自動で縮めます。",
+  "settingsColumnsShrinkDetail": "画面が狭くて入らないときは、もう片方のカラムを {minWidth} px 以上残し、小型カラムが大型カラムより広くならないように縮めます。",
+  "@settingsColumnsShrinkDetail": {
+    "description": "{minWidth} = カラムの最小の幅(px の数)。",
+    "placeholders": {"minWidth": {"type": "String"}}
+  },
+  "settingsColumnsSwingInColumnTitle": "Swing を右のカラムで開く",
+  "settingsColumnsSwingInColumnSubtitle": "オフのときは全画面で開きます(はじめはオン。全画面を指定したプラグインの Swing はいつも全画面)",
+  "settingsColumnsCurrentHeader": "いまの画面での幅",
+  "settingsColumnsPreviewWidths": "小型 {small} px / 大型 {large} px",
+  "@settingsColumnsPreviewWidths": {
+    "description": "いまの画面での小型 / 大型カラムの幅。{small} / {large} = px の数。",
+    "placeholders": {"small": {"type": "String"}, "large": {"type": "String"}}
+  },
+  "settingsColumnsNarrowCaption": "いまの画面は狭いので、カラムは 1 つです。",
+  "settingsColumnsNarrowDetail": "いまの画面は幅が狭いので、カラムを 1 つだけ出しています({breakpoint} px 以上で小型 / 大型のカラムに分かれます)。",
+  "@settingsColumnsNarrowDetail": {
+    "description": "{breakpoint} = カラムが分かれる画面の幅(px の数)。",
+    "placeholders": {"breakpoint": {"type": "String"}}
+  },
+  "settingsColumnsPreviewSmall": "小型",
+  "settingsColumnsPreviewLarge": "大型"
+}

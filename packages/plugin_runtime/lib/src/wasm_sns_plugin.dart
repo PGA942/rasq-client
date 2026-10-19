@@ -156,14 +156,24 @@ class WasmSnsPlugin extends SnsPlugin {
   /// 設定ページ (D-044 / D-482): `sns.settingsPages {}` → `{pages: [rasq.settings-page/1 …]}`。
   /// アカウントに依らないので匿名ワーカーで 1 度だけ読んで持つ。未実装(C01)は「ページ無し」として持つ。
   /// 失敗(ワーカーが起きない等)は持たず、次に開いたときに読み直す。
+  /// 表示の言語ごとに持つ (D-484 / 契約 v0.24): ページの文言はプラグインが `args.locale` で選ぶので、言語が変われば読み直す。
   List<String> _settingsPages = const [];
   Future<List<String>>? _settingsPagesLoad;
+  String? _settingsPagesLocale;
 
   @override
   List<String> get settingsPages => _settingsPages;
 
   @override
-  Future<List<String>> loadSettingsPages() => _settingsPagesLoad ??= () async {
+  Future<List<String>> loadSettingsPages() {
+    if (_settingsPagesLocale != RasqUiLocale.tag) {
+      _settingsPagesLocale = RasqUiLocale.tag;
+      _settingsPagesLoad = null;
+    }
+    return _loadSettingsPages();
+  }
+
+  Future<List<String>> _loadSettingsPages() => _settingsPagesLoad ??= () async {
         try {
           final result = await callAnonymous('sns.settingsPages', const {});
           if (result['ok'] != true) {

@@ -12,6 +12,7 @@ import 'buttons.dart';
 import 'sns_pill.dart';
 import '../platform/media_policy.dart';
 import '../platform/media_image.dart';
+import '../l10n/design_l10n.dart';
 
 /// ユーザータイル（大）— ユーザーページ上部専用の独立コンポーネント
 /// (原典: UI_Elements「アイコン位置ズレ時のダメージが大きいため独立」).
@@ -79,7 +80,7 @@ class RasqUserTileLarge extends StatelessWidget {
                   onTap: onBannerTap,
                   child: Semantics(
                     button: onBannerTap != null,
-                    label: 'バナー画像',
+                    label: context.designL10n.designProfileBanner,
                     child: Image(image: rasqMediaImage(context, profile.bannerUrl!), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
                   ),
                 ),
@@ -98,11 +99,11 @@ class RasqUserTileLarge extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
         child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
           if (isSelf)
-            OutlinedButton(onPressed: onEditTap, style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 14)), child: const Text('編集する'))
+            OutlinedButton(onPressed: onEditTap, style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 14)), child: Text(context.designL10n.designProfileEdit))
           else ...[
-            if (onNotifyTap != null) RasqIconButton(icon: Icons.notifications_none, onPressed: onNotifyTap, tooltip: '通知'),
+            if (onNotifyTap != null) RasqIconButton(icon: Icons.notifications_none, onPressed: onNotifyTap, tooltip: context.designL10n.designProfileNotifications),
             if (following != null)
-              RasqTogglePillButton(label: requested ? '申請中' : 'フォロー', activeLabel: 'フォロー中', active: following!, onPressed: onFollowTap, dense: false),
+              RasqTogglePillButton(label: requested ? context.designL10n.designFollowRequested : context.designL10n.designFollow, activeLabel: context.designL10n.designFollowing, active: following!, onPressed: onFollowTap, dense: false),
           ],
         ]),
       ),
@@ -117,7 +118,7 @@ class RasqUserTileLarge extends StatelessWidget {
             Flexible(child: Text('@${u.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
             const SizedBox(width: 2),
             Flexible(child: RasqSnsPill(account: u.account)),
-            if (followedBy) const Padding(padding: EdgeInsets.only(left: 8), child: RasqPill(label: 'フォローされています')),
+            if (followedBy) Padding(padding: const EdgeInsets.only(left: 8), child: RasqPill(label: context.designL10n.designFollowedBy)),
           ]),
           if (restricted)
             Container(
@@ -127,8 +128,8 @@ class RasqUserTileLarge extends StatelessWidget {
               child: Row(children: [
                 Icon(Icons.warning_amber_rounded, color: tokens.danger, size: 18),
                 const SizedBox(width: 6),
-                const Expanded(child: Text('このユーザーは制限されています。', style: RasqTypography.bodySmall)),
-                TextButton(onPressed: onShowRestricted, child: const Text('表示')),
+                Expanded(child: Text(context.designL10n.designProfileRestricted, style: RasqTypography.bodySmall)),
+                TextButton(onPressed: onShowRestricted, child: Text(context.designL10n.designProfileRestrictedShow)),
               ]),
             ),
           const SizedBox(height: RasqSpacing.sm),
@@ -136,7 +137,7 @@ class RasqUserTileLarge extends StatelessWidget {
           const SizedBox(height: RasqSpacing.sm),
           Wrap(spacing: 16, runSpacing: 4, children: [
             if (profile.location != null && profile.location!.isNotEmpty) _meta(Icons.place_outlined, profile.location!, scheme),
-            if (profile.createdAt != null) _meta(Icons.calendar_today_outlined, '${profile.createdAt!.year}年${profile.createdAt!.month}月に登録', scheme),
+            if (profile.createdAt != null) _meta(Icons.calendar_today_outlined, context.designL10n.designProfileJoined(RasqDateFormat.yearMonth(profile.createdAt!)), scheme),
             if (profile.birthday != null && profile.birthday!.isNotEmpty) _meta(Icons.cake_outlined, _birthday(profile.birthday!), scheme),
             for (final f in profile.fields)
               InkWell(
@@ -155,11 +156,11 @@ class RasqUserTileLarge extends StatelessWidget {
           ]),
           const SizedBox(height: RasqSpacing.sm),
           Row(children: [
-            if (profile.followingCount != null) _count('フォロー中', profile.followingCount!, onFollowingTap),
+            if (profile.followingCount != null) _count(context.designL10n.designFollowing, profile.followingCount!, onFollowingTap),
             const SizedBox(width: 16),
-            if (profile.followersCount != null) _count('フォロワー', profile.followersCount!, onFollowersTap),
+            if (profile.followersCount != null) _count(context.designL10n.designFollowers, profile.followersCount!, onFollowersTap),
             const Spacer(),
-            if (profile.postsCount != null) Text('${profile.postsCount} ノート', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+            if (profile.postsCount != null) Text(context.designL10n.designProfileNotes('${profile.postsCount}'), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
           ]),
           const SizedBox(height: RasqSpacing.sm),
         ]),
@@ -173,9 +174,11 @@ class RasqUserTileLarge extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min, children: [Text('$n', style: RasqTypography.displayName), const SizedBox(width: 4), Text(label, style: RasqTypography.bodySmall)]),
       );
 
+  /// `YYYY-MM-DD` → 表示の言語の年月日(日本語は `2000年1月5日`)。読めなければそのまま。
   static String _birthday(String ymd) {
     final p = ymd.split('-');
-    return p.length == 3 ? '${p[0]}年${int.tryParse(p[1]) ?? p[1]}月${int.tryParse(p[2]) ?? p[2]}日' : ymd;
+    final y = p.length == 3 ? int.tryParse(p[0]) : null, m = p.length == 3 ? int.tryParse(p[1]) : null, d = p.length == 3 ? int.tryParse(p[2]) : null;
+    return y == null || m == null || d == null ? ymd : RasqDateFormat.yearMonthDay(DateTime(y, m, d));
   }
 
   static String _short(String v) {

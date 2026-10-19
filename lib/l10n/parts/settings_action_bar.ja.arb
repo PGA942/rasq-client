@@ -1,0 +1,67 @@
+{
+  "settingsActionBarTitle": "プラグインボタン",
+  "settingsActionBarBackTooltip": "戻る",
+  "settingsActionBarBundleManual": "手動配置(バーの (+) から足すまで出ない)",
+  "settingsActionBarBundleAlone": "単体で末尾",
+  "settingsActionBarBundleInto": "「{label}」のバンドル({percent}%)",
+  "@settingsActionBarBundleInto": {
+    "description": "ボタンがまとめられる先の説明。{label} = 既存のボタンの名前、{percent} = タグの類似度(0〜100 の整数)。",
+    "placeholders": {"label": {"type": "String"}, "percent": {"type": "String"}}
+  },
+  "settingsActionBarAutoOnTitle": "面を開いたとき自動でオン",
+  "settingsActionBarOn": "オン",
+  "settingsActionBarOff": "オフ",
+  "settingsActionBarAutoDefault": "既定({state})",
+  "@settingsActionBarAutoDefault": {
+    "description": "{state} = settingsActionBarOn / settingsActionBarOff の文言。",
+    "placeholders": {"state": {"type": "String"}}
+  },
+  "settingsActionBarAutoDefaultDeclared": "既定({state}、プラグインの宣言)",
+  "@settingsActionBarAutoDefaultDeclared": {
+    "description": "既定値が審査済みプラグインの宣言によるとき。{state} = settingsActionBarOn / settingsActionBarOff の文言。",
+    "placeholders": {"state": {"type": "String"}}
+  },
+  "settingsActionBarAutoOverridden": "設定で上書き中(既定は {state})",
+  "@settingsActionBarAutoOverridden": {
+    "description": "{state} = settingsActionBarOn / settingsActionBarOff の文言。",
+    "placeholders": {"state": {"type": "String"}}
+  },
+  "settingsActionBarEmptyCaption": "ストアで追加したプラグインがここに並びます",
+  "settingsActionBarIntroCaption": "スイッチを切ると、すべてのアカウントで出なくなります。",
+  "settingsActionBarIntroDetail": "スイッチは端末全体の主電源(オフなら全アカウント・全面で出ず、自動でも動きません)。「面を開いたとき自動でオン」は、その面を開いた瞬間の初期状態です(面の中で切り替えた値は次に持ち越しません)。",
+  "settingsActionBarPostTileHeader": "投稿タイル",
+  "settingsActionBarPostTileEmptyDetail": "post.action を宣言したプラグインがここに並びます(ストアから追加)",
+  "settingsActionBarViewerHeader": "全画面",
+  "settingsActionBarViewerEmptyDetail": "viewer.overlay を宣言したプラグイン(QR コード検出など)がここに並びます",
+  "settingsActionBarViewerPlacement": "全画面アクションバーの ON / OFF ボタン",
+  "settingsActionBarMediaHeader": "加工画面",
+  "settingsActionBarMediaEmptyDetail": "composer.media を宣言したプラグインがここに並びます",
+  "settingsActionBarFilterPlacement": "フィルター · {placement}",
+  "@settingsActionBarFilterPlacement": {
+    "description": "フィルターとして出力するボタンの配置の説明。{placement} = バンドル先の説明。",
+    "placeholders": {"placement": {"type": "String"}}
+  },
+  "settingsActionBarComposerTextHeader": "コンポーザー本文",
+  "settingsActionBarComposerTextEmptyDetail": "composer.text を宣言したプラグインがここに並びます",
+  "settingsActionBarComposerTextPlacement": "コンポーザーのアクションバーの ON / OFF ボタン(長押しで設定)",
+  "settingsActionBarTransformHeader": "投稿加工(自動)",
+  "settingsActionBarTransformEmptyDetail": "post.transform を宣言したプラグインがここに並びます",
+  "settingsActionBarTransformPlacement": "表示前に本文を加工(ボタン無し)",
+  "settingsActionBarThisAccountHeader": "このアカウント({account})",
+  "@settingsActionBarThisAccountHeader": {
+    "description": "{account} = いまのアカウントの表示、または settingsActionBarNoAccount。",
+    "placeholders": {"account": {"type": "String"}}
+  },
+  "settingsActionBarNoAccount": "未選択",
+  "settingsActionBarThisAccountEmptyCaption": "このアカウントで出すかどうか",
+  "settingsActionBarThisAccountEmptyDetail": "投稿タイルのボタンを、このアカウントで出すかどうか",
+  "settingsActionBarSlotSubtitle": "{plugin} · タグ: {tags}",
+  "@settingsActionBarSlotSubtitle": {
+    "description": "{plugin} = プラグイン名、{tags} = タグを「 / 」でつないだもの。",
+    "placeholders": {"plugin": {"type": "String"}, "tags": {"type": "String"}}
+  },
+  "settingsActionBarThresholdTitle": "束ねる閾値",
+  "settingsActionBarThresholdSubtitle": "似たボタンをまとめる度合い",
+  "settingsActionBarThresholdDetail": "タグの類似度がこれ以上なら既存ボタンのバンドルに入る",
+  "settingsActionBarEditButton": "アクションバーを編集"
+}

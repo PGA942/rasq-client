@@ -1,0 +1,1436 @@
+{
+  "@@locale": "ja",
+  "languageSelfName": "日本語",
+  "@languageSelfName": {
+    "description": "この言語の、その言語での名前(設定の「言語」の一覧に出す)。訳すときは、その言語での自分の名前にする(English / 한국어 など)。"
+  },
+  "languageSettingsTitle": "言語",
+  "languageSettingsRowSubtitle": "アプリの表示の言語",
+  "languageSettingsCaption": "アプリの文字の言語を選びます。端末の言語に対応していないときは日本語で表示します。",
+  "languageSettingsCaptionDetail": "アプリの文字の言語を選びます。「システムに合わせる」は端末の言語の設定に従い、対応していない言語なら日本語にします。選んだ言語はこの端末に保存し、RASQ アカウントにログインしていれば ORGATE にも伝えます(メールや通知の言語、D-484)。",
+  "languageSettingsSystem": "システムに合わせる",
+  "languageSettingsSystemCurrent": "いまは {language}",
+  "@languageSettingsSystemCurrent": {
+    "description": "「システムに合わせる」の下の説明。{language} = 端末の言語から決まった、いまの表示の言語の名前。",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "日本語"
+      }
+    }
+  },
+  "languageSettingsListHeader": "表示の言語",
+  "settingsActionBarTitle": "プラグインボタン",
+  "settingsActionBarBackTooltip": "戻る",
+  "settingsActionBarBundleManual": "手動配置(バーの (+) から足すまで出ない)",
+  "settingsActionBarBundleAlone": "単体で末尾",
+  "settingsActionBarBundleInto": "「{label}」のバンドル({percent}%)",
+  "@settingsActionBarBundleInto": {
+    "description": "ボタンがまとめられる先の説明。{label} = 既存のボタンの名前、{percent} = タグの類似度(0〜100 の整数)。",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsActionBarAutoOnTitle": "面を開いたとき自動でオン",
+  "settingsActionBarOn": "オン",
+  "settingsActionBarOff": "オフ",
+  "settingsActionBarAutoDefault": "既定({state})",
+  "@settingsActionBarAutoDefault": {
+    "description": "{state} = settingsActionBarOn / settingsActionBarOff の文言。",
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsActionBarAutoDefaultDeclared": "既定({state}、プラグインの宣言)",
+  "@settingsActionBarAutoDefaultDeclared": {
+    "description": "既定値が審査済みプラグインの宣言によるとき。{state} = settingsActionBarOn / settingsActionBarOff の文言。",
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsActionBarAutoOverridden": "設定で上書き中(既定は {state})",
+  "@settingsActionBarAutoOverridden": {
+    "description": "{state} = settingsActionBarOn / settingsActionBarOff の文言。",
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsActionBarEmptyCaption": "ストアで追加したプラグインがここに並びます",
+  "settingsActionBarIntroCaption": "スイッチを切ると、すべてのアカウントで出なくなります。",
+  "settingsActionBarIntroDetail": "スイッチは端末全体の主電源(オフなら全アカウント・全面で出ず、自動でも動きません)。「面を開いたとき自動でオン」は、その面を開いた瞬間の初期状態です(面の中で切り替えた値は次に持ち越しません)。",
+  "settingsActionBarPostTileHeader": "投稿タイル",
+  "settingsActionBarPostTileEmptyDetail": "post.action を宣言したプラグインがここに並びます(ストアから追加)",
+  "settingsActionBarViewerHeader": "全画面",
+  "settingsActionBarViewerEmptyDetail": "viewer.overlay を宣言したプラグイン(QR コード検出など)がここに並びます",
+  "settingsActionBarViewerPlacement": "全画面アクションバーの ON / OFF ボタン",
+  "settingsActionBarMediaHeader": "加工画面",
+  "settingsActionBarMediaEmptyDetail": "composer.media を宣言したプラグインがここに並びます",
+  "settingsActionBarFilterPlacement": "フィルター · {placement}",
+  "@settingsActionBarFilterPlacement": {
+    "description": "フィルターとして出力するボタンの配置の説明。{placement} = バンドル先の説明。",
+    "placeholders": {
+      "placement": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsActionBarComposerTextHeader": "コンポーザー本文",
+  "settingsActionBarComposerTextEmptyDetail": "composer.text を宣言したプラグインがここに並びます",
+  "settingsActionBarComposerTextPlacement": "コンポーザーのアクションバーの ON / OFF ボタン(長押しで設定)",
+  "settingsActionBarTransformHeader": "投稿加工(自動)",
+  "settingsActionBarTransformEmptyDetail": "post.transform を宣言したプラグインがここに並びます",
+  "settingsActionBarTransformPlacement": "表示前に本文を加工(ボタン無し)",
+  "settingsActionBarThisAccountHeader": "このアカウント({account})",
+  "@settingsActionBarThisAccountHeader": {
+    "description": "{account} = いまのアカウントの表示、または settingsActionBarNoAccount。",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsActionBarNoAccount": "未選択",
+  "settingsActionBarThisAccountEmptyCaption": "このアカウントで出すかどうか",
+  "settingsActionBarThisAccountEmptyDetail": "投稿タイルのボタンを、このアカウントで出すかどうか",
+  "settingsActionBarSlotSubtitle": "{plugin} · タグ: {tags}",
+  "@settingsActionBarSlotSubtitle": {
+    "description": "{plugin} = プラグイン名、{tags} = タグを「 / 」でつないだもの。",
+    "placeholders": {
+      "plugin": {
+        "type": "String"
+      },
+      "tags": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsActionBarThresholdTitle": "束ねる閾値",
+  "settingsActionBarThresholdSubtitle": "似たボタンをまとめる度合い",
+  "settingsActionBarThresholdDetail": "タグの類似度がこれ以上なら既存ボタンのバンドルに入る",
+  "settingsActionBarEditButton": "アクションバーを編集",
+  "settingsBackendTitle": "RASQ サーバー",
+  "settingsBackendErrorUnparseable": "接続先を解釈できません。「http://192.168.3.14:8080」や「https://central.example」の形で入れてください。",
+  "settingsBackendSaved": "保存しました",
+  "settingsBackendErrorEnterUrl": "接続先を入力してください(例: http://192.168.3.14:8080)",
+  "settingsBackendCentralNotCentralHint": "Central の欄に、ORGATE ではなく RASQ Central の接続先を入れてください",
+  "settingsBackendCentralConnectFailed": "接続できませんでした({url})— {error}{hint}",
+  "@settingsBackendCentralConnectFailed": {
+    "description": "接続テストの結果(Central)。{url} = Central の接続先、{error} = エラー、{hint} = 改行と補足(無いときは空)。",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      },
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendCentralOk": "接続 OK — 署名鍵 {algorithm} {keyHead}…",
+  "@settingsBackendCentralOk": {
+    "description": "接続テストの結果(Central)。{algorithm} = 署名鍵の方式、{keyHead} = 公開鍵の先頭 12 文字。",
+    "placeholders": {
+      "algorithm": {
+        "type": "String"
+      },
+      "keyHead": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendAccountLine": "RASQ アカウント: @{handle} ({displayName})",
+  "@settingsBackendAccountLine": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      },
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendAccountNotCreatedLine": "RASQ アカウント: 未作成(下の「RASQ アカウントを開く」から作成できます)",
+  "settingsBackendAccountLoadFailedLine": "RASQ アカウントを取得できませんでした — {error}",
+  "@settingsBackendAccountLoadFailedLine": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendOrgateNotConfiguredLine": "ORGATE: 未設定(RASQ アカウントにログインできません)",
+  "settingsBackendOrgateOk": "ORGATE: 接続 OK — トークンの公開鍵 {count, plural, other{{count} 個}}",
+  "@settingsBackendOrgateOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsBackendOrgateNoKeys": "ORGATE: 応答にトークンの公開鍵がありません({url})",
+  "@settingsBackendOrgateNoKeys": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendOrgateConnectFailed": "ORGATE に接続できませんでした({url})— {error}",
+  "@settingsBackendOrgateConnectFailed": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendCaption": "RASQ アカウントやストアのサーバーの接続先です。SNS の投稿やタイムラインは、ここを通りません。",
+  "settingsBackendCaptionDetail": "RASQ Central は公開・共有のもの(プロフィール・ストア・ASTell・投稿・リストなど)のサーバー、ORGATE は本人だけの情報(ログイン・パスワード・メールアドレス)と Mastodon などのログイン(OAuth ブローカー)のサーバーです。RASQ アカウントへのログインは ORGATE で行い、そのトークンを Central にも使います。SNS の投稿やタイムラインはどちらも通らず、プラグインが各インスタンスへ直接接続します。",
+  "settingsBackendCentralLabel": "RASQ Central の接続先(空なら ORGATE を流用)",
+  "settingsBackendOrgateLabel": "ORGATE(ログイン・本人だけの情報)の接続先",
+  "settingsBackendSaveButton": "保存",
+  "settingsBackendTestButton": "接続テスト",
+  "settingsBackendCentralDisconnected": "Central: 未接続(RASQ アカウントは作れません)",
+  "settingsBackendCentralDisconnectedDetail": "Central: 未接続 — プラグインストアは同梱のものだけ、RASQ アカウントは作成できません(この端末のみ)。",
+  "settingsBackendOrgateDisconnected": "ORGATE: 未接続(RASQ アカウントにログインできません)",
+  "settingsBackendTestEndpointsSection": "テスト用の接続先",
+  "settingsBackendTestEndpointsTitle": "ダミーの SNS とデモの Central / ORGATE を使う",
+  "settingsBackendTestEndpointsSubtitle": "プレビューの録画用",
+  "settingsBackendTestEndpointsDetail": "プレビュー録画用。Misskey / Mastodon / Bluesky の {misskeyHost} / {mastodonHost} / {blueskyHost} をこのアドレスのダミーへ向け、Central(:{centralPort})と ORGATE(:{orgatePort})も切り替えます",
+  "@settingsBackendTestEndpointsDetail": {
+    "description": "開発者モードの説明。各 Host = ダミーのホスト名、各 Port = ポート番号。",
+    "placeholders": {
+      "misskeyHost": {
+        "type": "String"
+      },
+      "mastodonHost": {
+        "type": "String"
+      },
+      "blueskyHost": {
+        "type": "String"
+      },
+      "centralPort": {
+        "type": "String"
+      },
+      "orgatePort": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendTestAddressLabel": "ダミー環境のアドレス(同じ機械なら 127.0.0.1、ほかの機械なら その IP)",
+  "settingsBackendTestCaption": "SNS のログイン画面で、サーバーに上のホスト名を入れてください。",
+  "settingsBackendTestCaptionDetail": "SNS は各ログイン画面でサーバーに上のホスト名を入れます(許可ページは自動で通ります。Bluesky の ID / パスワードは何でも可)。RASQ アカウントはアカウントのログインから。切り替えたら、すでにログインしている SNS は次の読み込みから新しい接続先になります。",
+  "settingsBackendAccountSection": "RASQ アカウント",
+  "settingsBackendAccountLoadError": "アカウントを取得できませんでした: {error}",
+  "@settingsBackendAccountLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendNoServer": "接続先が設定されていません。",
+  "settingsBackendAccountNotCreated": "RASQ アカウントは未作成です。",
+  "settingsBackendOpenAccountButton": "RASQ アカウントを開く",
+  "settingsBackendAccountDeviceOnly": "この端末でだけ有効なアカウントです。ハンドルと表示名はプロフィール編集から変更できます。",
+  "settingsBackendBundleSection": "アカウントバンドル",
+  "settingsBackendBundleCaption": "まとめるときに送るのは、SNS アカウントの一覧だけです。ログインの鍵は、端末間の共有・Web 版・アカウントページへの投稿の表示を選んだときだけ送ります。",
+  "settingsBackendBundleCaptionDetail": "束ねるときにサーバーへ送るのは、SNS の種類・サーバー・アカウント・表示名だけ。アクセストークンは、端末間の共有(E2E、サーバーは読めない)、Web 版の保管庫(サーバーの鍵で暗号化、サーバーは復号できる)、アカウントページへの投稿の表示(同上)を選んだときだけ送る(プライバシーポリシー第 4 項)。",
+  "settingsBackendNoSessions": "ログイン中のアカウントはありません。",
+  "settingsColumnsTitle": "カラムの幅",
+  "settingsColumnsIntroCaption": "タブレットや PC など広い画面で、左右のカラムの幅を決めます。",
+  "settingsColumnsIntroDetail": "幅の広い画面(タブレット / デスクトップ / Web)で、小型カラム(検索や、ページを開いた側)と大型カラム(開いたページ)の幅の比を決めます。",
+  "settingsColumnsSplitHeader": "小型 / 大型カラムの比",
+  "settingsColumnsSplitDefault": "{hint}(既定)",
+  "@settingsColumnsSplitDefault": {
+    "description": "既定の比の行の説明。{hint} = その比の説明文。",
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsColumnsLargeWidthLabel": "大型カラムの幅",
+  "settingsColumnsSmallWidthLabel": "小型カラムの幅",
+  "settingsColumnsShrinkCaption": "画面に入らないときは、自動で縮めます。",
+  "settingsColumnsShrinkDetail": "画面が狭くて入らないときは、もう片方のカラムを {minWidth} px 以上残し、小型カラムが大型カラムより広くならないように縮めます。",
+  "@settingsColumnsShrinkDetail": {
+    "description": "{minWidth} = カラムの最小の幅(px の数)。",
+    "placeholders": {
+      "minWidth": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsColumnsSwingInColumnTitle": "Swing を右のカラムで開く",
+  "settingsColumnsSwingInColumnSubtitle": "オフのときは全画面で開きます(はじめはオン。全画面を指定したプラグインの Swing はいつも全画面)",
+  "settingsColumnsCurrentHeader": "いまの画面での幅",
+  "settingsColumnsPreviewWidths": "小型 {small} px / 大型 {large} px",
+  "@settingsColumnsPreviewWidths": {
+    "description": "いまの画面での小型 / 大型カラムの幅。{small} / {large} = px の数。",
+    "placeholders": {
+      "small": {
+        "type": "String"
+      },
+      "large": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsColumnsNarrowCaption": "いまの画面は狭いので、カラムは 1 つです。",
+  "settingsColumnsNarrowDetail": "いまの画面は幅が狭いので、カラムを 1 つだけ出しています({breakpoint} px 以上で小型 / 大型のカラムに分かれます)。",
+  "@settingsColumnsNarrowDetail": {
+    "description": "{breakpoint} = カラムが分かれる画面の幅(px の数)。",
+    "placeholders": {
+      "breakpoint": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsColumnsPreviewSmall": "小型",
+  "settingsColumnsPreviewLarge": "大型",
+  "settingsComposerTitle": "投稿コンポーザー",
+  "settingsComposerAutoAccountTitle": "投稿アカウントの自動選択",
+  "settingsComposerAutoAccountSubtitle": "下書きに合うアカウントへ、投稿先を自動で切り替えます",
+  "settingsComposerAutoAccountDetail": "下書きの内容がポスト先の絞り込みに合うアカウントへ、投稿先を自動で切り替えます(手動選択が常に優先)",
+  "settingsComposerRasqLinkedTitle": "RASQ アカウントへも連動投稿する",
+  "settingsComposerRasqLinkedSubtitle": "複数のアカウントに投稿するとき、RASQ アカウントも選べます",
+  "settingsComposerRasqLinkedDetail": "複数選択モードで、RASQ アカウントの行も選べるようになります(通常投稿 / ノード連動)。届け方と絞り込みは「投稿先のカスタマイズ」の RASQ のタブで決めます。RASQ の上限(1000 文字 / 添付 6 つ / 投票 6 個 / 投稿 3 件)を超える投稿は、RASQ へは送られません",
+  "settingsEmomTitle": "EmoM の閾値",
+  "settingsEmomBandLow": "控えめ — 運営が制限したトレンドを早めに隠します",
+  "settingsEmomBandMiddle": "ふつう",
+  "settingsEmomBandHigh": "広め — 運営が強く制限したトレンドだけを隠します",
+  "settingsEmomStatusSending": "送っています…",
+  "settingsEmomStatusNoAccount": "RASQ アカウントでログインすると公開できます(この端末では使えます)",
+  "settingsEmomStatusFailed": "送れませんでした。次に開いたとき(またはトレンドを読み直したとき)送り直します",
+  "settingsEmomStatusDisclosed": "公開しています(値 {value})",
+  "@settingsEmomStatusDisclosed": {
+    "description": "{value} = 公開している閾値(0〜100 の整数)。",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsEmomStatusPending": "まだ届いていません",
+  "settingsEmomStatusNotDisclosed": "公開していません",
+  "settingsEmomIntro": "EmoM は、投稿やトレンドの気持ちの強さ・刺激の強さを見積もる RASQ のモデルです(準備中)。いまはこの閾値を、RASQ の運営が通報を確かめてトレンドを制限するときの目安にだけ使います。",
+  "settingsEmomThresholdLabel": "閾値",
+  "settingsEmomScaleLow": "低い(隠れやすい)",
+  "settingsEmomScaleHigh": "高い(隠れにくい)",
+  "settingsEmomExplanation": "閾値が高いほど、刺激の強い話題も受け入れる設定です。運営が制限したトレンドが隠れにくくなります。低いほど、制限されたトレンドを早めに隠します。既定は {defaultValue} です。",
+  "@settingsEmomExplanation": {
+    "description": "{defaultValue} = 閾値の既定値(整数)。",
+    "placeholders": {
+      "defaultValue": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsEmomDiscloseTitle": "閾値を公開する(制限の目安に使う)",
+  "settingsEmomDiscloseSubtitle": "値だけを RASQ のサーバーに送ります。運営は、公開された値をまとめた分布(どの値の人が何人いるか)だけを使い、あなたの値を個別に見ることはありません。オフにすると、送った値を消します。",
+  "settingsEmomRestrictionExplanation": "運営がトレンドを「N%」で制限すると、公開された閾値の低いほうから N% ほどの人に、そのトレンドが出なくなります。公開していなくても、この端末の閾値で同じように判定します(閾値はこの端末に保存されます)。「全員に非表示」にされたトレンドは、閾値に関係なく出ません。隠れたトレンドは、検索のトレンドの一覧に並ばなくなるだけです。",
+  "settingsHomeTitle": "全ての設定",
+  "settingsHomeSearchHint": "設定や操作を検索",
+  "settingsHomeSearchClear": "消す",
+  "settingsHomeSearchError": "設定を探せませんでした",
+  "settingsHomeSearchEmpty": "見つかりませんでした",
+  "settingsHomeSearchEmptyHint": "「{query}」に当たる設定はありません。言い方を変えるか、RAi に聞いてみてください",
+  "@settingsHomeSearchEmptyHint": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsHomeSearchOperations": "操作(RAi が案内します)",
+  "settingsHomeOtherHeader": "その他の設定",
+  "settingsHomeComposer": "投稿コンポーザー",
+  "settingsHomeComposerKeywords": "投稿の画面,下書き",
+  "@settingsHomeComposerKeywords": {
+    "description": "設定の検索で「投稿コンポーザー」に当てる語(, 区切り)。"
+  },
+  "settingsHomeThemeKeywords": "着せ替え,テーマ,ダークモード,ライト,色,フォント",
+  "@settingsHomeThemeKeywords": {
+    "description": "設定の検索で「フォントやカラースキーム」に当てる語(, 区切り)。"
+  },
+  "settingsHomeAccountImportant": "アカウントの重要設定",
+  "settingsHomeAccountImportantSubtitle": "パスワードの変更やアカウント削除は web 版で",
+  "settingsHomeAccountImportantDetail": "パスワードの再設定やアカウント削除など、パスワードがいる処理は web 版で行います",
+  "settingsHomeLogout": "@{handle}からログアウト",
+  "@settingsHomeLogout": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsHomeLogoutConfirmTitle": "ログアウトしますか？",
+  "settingsHomeLogoutConfirmMessage": "このアカウントのプラグイン構成はデバイスに残ります。",
+  "settingsHomeLogoutConfirm": "ログアウト",
+  "settingsHomeCancel": "キャンセル",
+  "settingsHomeOk": "OK",
+  "settingsHomeGenericTitle": "設定",
+  "settingsHomeUnknownSection": "不明な設定セクション",
+  "settingsHomeThemeModeSystem": "システム",
+  "settingsHomeThemeModeLight": "ライト",
+  "settingsHomeThemeModeDark": "ダーク",
+  "settingsHomePlaceholder": "この設定は準備中です。",
+  "settingsHomePlaceholderDetail": "この設定は第二階層以降の仕様確定後(M4: FOW/DSL 描画)に実装します。",
+  "settingsHomePageMissing": "このページはありません",
+  "settingsHomePageMissingHint": "このアカウントの SNS には、この設定がありません。",
+  "settingsHomePageLoadError": "設定ページを読み込めません",
+  "settingsHomeRemoteLoadError": "サーバーから設定を取得できません",
+  "settingsHomeRemotePermissionHint": "\n\nアプリの権限が不足しています。一度ログアウトして再ログインすると、新しい権限が付与されます。",
+  "settingsHomeSaveFailed": "保存できませんでした",
+  "settingsHomeChildLocked": "見守り中のため、ここは変えられません(閲覧注意のメディアは必ず隠します)。",
+  "settingsHomeTargetAccount": "設定するアカウント",
+  "settingsHomeMissingSnsPage": "SNS プラグインが設定ページ \"{area}\" を提供していません",
+  "@settingsHomeMissingSnsPage": {
+    "placeholders": {
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningTitle": "アルゴリズムとコミュニティへの貢献",
+  "settingsLearningError": "できませんでした — {error}",
+  "@settingsLearningError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningGrantConfirmButton": "同意して参加する",
+  "settingsLearningGrantPointOptional": "任意です。断っても、やめても、RASQ の機能や有料機能はそのまま使えます",
+  "settingsLearningGrantPointScope": "対象は、あなたが自分で書いた公開の投稿と、その投稿どうしが同じ会話かどうかだけです",
+  "settingsLearningGrantPointExcluded": "ほかの人の投稿、DM、限定公開の投稿、ASTell の会話、RAi の質問と答えは送りません",
+  "settingsLearningGrantPointVerifiedOnly": "持ち主の確認が済んだ SNS アカウントの投稿だけを受け付けます",
+  "settingsLearningGrantPointPurpose": "リレーショナルタイムラインの会話のまとめ方の改善に使います",
+  "settingsLearningGrantPointDeletion": "やめたときは、送ったデータをすぐに消します",
+  "settingsLearningGrantExtendedNotice": "検証用の設定です。ほかの人の投稿の判定や RAi のやりとりも送ります。",
+  "settingsLearningGrantExtendedNoticeDetail": "CENTRAL_LEARNING_SCOPE=extended(S-049 / S-050)。正式な環境では使わない。",
+  "settingsLearningGrantScopeDetail": "D-370 / S-051。関連 TL の会話イベントから自分の投稿(公開と分かるもの。Bluesky はすべて公開)だけを POST /me/learning/contributions へ(v2、self = 自分の SNS アカウント)。Central は持ち主の確認(sns_links.verified_at)と、全投稿が a=-1・vis=public かを確かめる。受け取るたびに年齢と保護者の同意も確かめ直す。本文の @メンションと URL は伏せる。",
+  "settingsLearningGrantReadFullButton": "説明の全文を読む",
+  "settingsLearningGrantAgreeCheckbox": "説明を読み、データの提供に同意します",
+  "settingsLearningDocumentVersion": "文書の版: {version}",
+  "@settingsLearningDocumentVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningAgeTitle": "年齢の申告",
+  "settingsLearningAgeConfirmButton": "申告する",
+  "settingsLearningGuardianConsent": "保護者の同意を得ています",
+  "settingsLearningAgeDeclared": "年齢を申告しました",
+  "settingsLearningCodeSheetTitle": "撤回用のコードで撤回",
+  "settingsLearningCodeConfirmButton": "撤回する",
+  "settingsLearningCodeSheetBody": "同意したときに発行されたコードを入れます。提供した RASQ アカウントに入れなくなった場合でも撤回できます。",
+  "settingsLearningCodeHint": "撤回用のコード",
+  "settingsLearningWithdrawnByCode": "やめました。送ったデータは消します",
+  "settingsLearningReasonAgeRequired": "年齢の申告が必要です",
+  "settingsLearningReasonUnder16": "16 歳以上から参加できます",
+  "settingsLearningReasonGuardianRequired": "16〜17 歳の人は、保護者の同意が必要です",
+  "settingsLearningIntroNotice": "あなたが書いた公開の投稿を送って、会話のまとめ方の改善に協力できます。任意で、いつでもやめられます。",
+  "settingsLearningIntroNoticeDetail": "D-243 / D-363 / D-370。同意は Central の account_consents(kind = learning)に記録。既定の範囲(own)では、関連 TL の会話の中の自分の公開投稿だけを POST /me/learning/contributions へ送る。正式な環境では受付を閉じる(CENTRAL_LEARNING_OPEN=false)。",
+  "settingsLearningReadAboutTitle": "説明を読む",
+  "settingsLearningReadAboutSubtitle": "送るもの、使いみち、保存する期間",
+  "settingsLearningStatusSection": "状態",
+  "settingsLearningServerNotConfiguredTitle": "RASQ サーバーの接続先が未設定です",
+  "settingsLearningServerNotConfiguredSubtitle": "接続先を入れると確認できます",
+  "settingsLearningNoAccountTitle": "RASQ アカウントが未作成です",
+  "settingsLearningNoAccountSubtitle": "データの提供は RASQ アカウントごとに記録します",
+  "settingsLearningLoadError": "取得できませんでした: {error}",
+  "@settingsLearningLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningStatusTitle": "貢献",
+  "settingsLearningStatusJoined": "参加中",
+  "settingsLearningStatusNotJoined": "参加していません",
+  "settingsLearningSinceTitle": "同意した日",
+  "settingsLearningOpenTitle": "受付",
+  "settingsLearningOpenYes": "受付中",
+  "settingsLearningOpenNo": "まだ始まっていません",
+  "settingsLearningAgeUndeclared": "未申告",
+  "settingsLearningSentTitle": "送ったデータ",
+  "settingsLearningSentValue": "会話 {relational, plural, other{{relational} 件}} ・ RAi {rai, plural, other{{rai} 件}}",
+  "@settingsLearningSentValue": {
+    "description": "送ったデータの件数。{relational} = 会話の件数、{rai} = RAi の件数。",
+    "placeholders": {
+      "relational": {
+        "type": "int"
+      },
+      "rai": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLearningExamplesTitle": "クラウドの判定の例",
+  "settingsLearningExamplesValue": "{examples, plural, other{{examples} 件}}(怪しいけど違う {hardNegative, plural, other{{hardNegative} 件}})",
+  "@settingsLearningExamplesValue": {
+    "description": "{examples} = クラウドの判定の例の件数、{hardNegative} = そのうち「怪しいけど違う」の件数。",
+    "placeholders": {
+      "examples": {
+        "type": "int"
+      },
+      "hardNegative": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLearningPostsLabelsTitle": "投稿 / ラベル",
+  "settingsLearningModelsTitle": "このデータを使ったモデル",
+  "settingsLearningModelsNone": "なし",
+  "settingsLearningModelsSeparator": "、",
+  "@settingsLearningModelsSeparator": {
+    "description": "モデルの名前を並べるときの区切り。"
+  },
+  "settingsLearningWithdrawTitle": "貢献をやめる",
+  "settingsLearningWithdrawMessage": "データを送るのをすぐに止め、送ったデータも消します。",
+  "settingsLearningWithdrawConfirm": "やめる",
+  "settingsLearningCancel": "キャンセル",
+  "settingsLearningWithdrawn": "撤回しました",
+  "settingsLearningDeclareAgeButton": "年齢を申告する",
+  "settingsLearningGranted": "参加しました。下のコードを控えておくと、ログインできなくなってもやめられます",
+  "settingsLearningGrantButton": "内容を確認して参加する",
+  "settingsLearningGrantClosedButton": "受付はまだ始まっていません",
+  "settingsLearningCodeSection": "撤回用のコード",
+  "settingsLearningCodeSubtitle": "タップでコピー。ログインできなくなっても、このコードでやめられます",
+  "settingsLearningCodeCopied": "撤回用のコードをコピーしました",
+  "settingsLearningCodeStoredOnGrantDevice": "撤回用のコードは、同意した端末に控えてあります。",
+  "settingsLearningOtherSection": "そのほか",
+  "settingsLearningByCodeTitle": "撤回用のコードでやめる",
+  "settingsLearningByCodeSubtitle": "ログインできなくなったとき",
+  "settingsLearningDeletionCaption": "アカウントを削除したときも、送ったデータは消えます。ほかの人が参加しているかは、だれにも調べられません。",
+  "settingsLearningDeletionCaptionDetail": "RASQ アカウントを削除したときも、提供の停止と提供済みデータの削除が同時に始まります(learning_contributions は accounts の削除で消える)。ほかの人がデータを提供しているかどうかは、だれにも調べられません(GET /me/learning は自分の状態だけ)。",
+  "settingsLearningKindsSection": "送るもの",
+  "settingsLearningKindRelationalTitle": "自分の公開投稿",
+  "settingsLearningKindRelationalSubtitleExtended": "タイムラインでまとまった会話",
+  "settingsLearningKindRelationalSubtitle": "タイムラインで会話にまとまった、あなたの公開の投稿",
+  "settingsLearningKindRelationalDetailExtended": "会話イベント(束)の公開の投稿。書き手ごとに学習してよいかを判定し、許可の書き手と自分の投稿だけを送る。本文の @メンションと URL は伏せる。",
+  "settingsLearningKindRelationalDetail": "D-370。会話イベントの中の自分の投稿(公開と分かるもの)と、その投稿どうしが同じ会話であること(関連のラベル)。ほかの人の投稿は数(参加者・投稿数)だけ。",
+  "settingsLearningUnverifiedNotice": "持ち主の確認が済んでいない SNS アカウントの投稿は受け付けられませんでした。プロフィールの編集から確認できます。",
+  "settingsLearningUnverifiedButton": "確認する",
+  "settingsLearningKindCloudTitle": "クラウドでまとめる",
+  "settingsLearningKindCloudSubtitle": "迷う会話のまとまりを、クラウドの RAi が判断します",
+  "settingsLearningKindCloudDetail": "D-367 / S-050。端末のエンジンがしきい値の近くで決めた結び付き(投稿 → 会話)を POST /me/relational/judge に送り、クラウドの LLM の判定で組み直す。書き手が許可済みの組だけ。判定の例(怪しいけど違う = hard_negative、分けたけど同じ = hard_positive)は学習用に残り、やめると消える。",
+  "settingsLearningKindRaiSubtitle": "RAi への質問と答え",
+  "settingsLearningKindRaiDetail": "質問(@メンションと URL は伏せる)、答え、モード、使った関数の名前、モデルの id。ほかの人の投稿は含めない。",
+  "settingsLearningPreloadTitle": "端末のモデルを先に読み込む",
+  "settingsLearningPreloadSubtitle": "判定の下見を早くします(ダウンロード済みのときだけ)",
+  "settingsLearningPreloadDetail": "RAi の端末内モデル(既定 Qwen3.5 2B)を起動の少しあとに読み込み、書き手の下見に使う。未ダウンロードならダウンロードはしない(規則だけで下見)。",
+  "settingsLearningDebugSection": "開発者向けの詳細",
+  "settingsLearningDebugActiveTitle": "集めているか",
+  "settingsLearningDebugActiveYes": "はい",
+  "settingsLearningDebugActiveNo": "いいえ(同意・受付・見守りを確認)",
+  "settingsLearningDebugScopeTitle": "受け付ける範囲",
+  "settingsLearningDebugScopeExtended": "extended(検証用)",
+  "settingsLearningDebugScopeOwn": "own(自分の公開投稿だけ)",
+  "settingsLearningDebugPendingTitle": "送信待ち",
+  "settingsLearningDebugPendingValue": "会話 {relational} ・ RAi {rai}",
+  "@settingsLearningDebugPendingValue": {
+    "placeholders": {
+      "relational": {
+        "type": "String"
+      },
+      "rai": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningDebugSentTitle": "この起動で送った",
+  "settingsLearningDebugSentValue": "会話 {relational} ・ RAi {rai} ・ 見送り {skipped}",
+  "@settingsLearningDebugSentValue": {
+    "placeholders": {
+      "relational": {
+        "type": "String"
+      },
+      "rai": {
+        "type": "String"
+      },
+      "skipped": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningDebugCloudValue": "判定 {decisions}(怪しいけど違う {hardNegative} ・ 分けたけど同じ {hardPositive} ・ 一致 {agree})・ 待ち {pending} ・ 見送り {skipped}",
+  "@settingsLearningDebugCloudValue": {
+    "placeholders": {
+      "decisions": {
+        "type": "String"
+      },
+      "hardNegative": {
+        "type": "String"
+      },
+      "hardPositive": {
+        "type": "String"
+      },
+      "agree": {
+        "type": "String"
+      },
+      "pending": {
+        "type": "String"
+      },
+      "skipped": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLearningDebugCloudOff": "オフ",
+  "settingsLearningDebugModelTitle": "端末のモデル",
+  "settingsLearningDebugFlushing": "送信中…",
+  "settingsLearningDebugFlushButton": "今すぐ送る",
+  "settingsLearningDebugVerdictsSection": "書き手の判定",
+  "settingsLearningDebugLogSection": "記録",
+  "settingsLegalTitle": "ヘルプ、法的表示",
+  "settingsLegalVersionTitle": "バージョン",
+  "settingsLegalHelpTitle": "ヘルプ",
+  "settingsLegalTourTitle": "RASQ の使い方をもう一度見る",
+  "settingsLegalCookiesTitle": "クッキーについて",
+  "settingsLegalPluginTermsHeader": "SNS プラグインの規約",
+  "settingsLegalPluginNoTerms": "規約の記載なし",
+  "settingsLegalLicensesHeader": "ライセンス",
+  "settingsLegalLicensesTitle": "オープンソースライセンス",
+  "settingsLegalLicensesSubtitle": "Flutter と同梱ライブラリ",
+  "settingsMuteBlockTitle": "ミュート/ブロック",
+  "settingsMuteBlockBlockTab": "ブロック",
+  "settingsMuteBlockMuteTab": "ミュート",
+  "settingsMuteBlockBlockedUsers": "ブロックしたユーザー",
+  "settingsMuteBlockBlockedWords": "ブロックしたワード",
+  "settingsMuteBlockBlockedLists": "ブロックしたリスト",
+  "settingsMuteBlockComingSoonHint": "準備中です",
+  "settingsMuteBlockComingSoonDetail": "ワード/リストのブロックは M2 後半",
+  "settingsMuteBlockRetryButton": "再読み込み",
+  "settingsMuteBlockNoBlockedUsers": "ブロックしたユーザーはいません",
+  "settingsMuteBlockNoMutedUsers": "ミュートしたユーザーはいません",
+  "settingsMuteBlockBlockButton": "ブロック",
+  "settingsMuteBlockMuteButton": "ミュート",
+  "settingsMuteBlockBlockingButton": "ブロック中",
+  "settingsMuteBlockMutingButton": "ミュート中",
+  "settingsNotifyTokenTitle": "通知専用のアクセストークン",
+  "settingsNotifyTokenError": "できませんでした — {error}",
+  "@settingsNotifyTokenError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNotifyTokenCaption": "通知を受け取るためだけの鍵です。投稿やアカウントの操作はできません。",
+  "settingsNotifyTokenCaptionDetail": "通知トークンは、RASQ サーバーからの通知を受け取るためだけのトークンです(読めるのは自分宛ての通知の受信箱だけ。投稿やアカウントの操作はできません)。マクロ / ASTell 用の配下トークンもここから発行します。",
+  "settingsNotifyTokenStatusSection": "状態",
+  "settingsNotifyTokenPushTitle": "プッシュ配信",
+  "settingsNotifyTokenPushPending": "準備中",
+  "settingsNotifyTokenPushPendingDetail": "ダミー(APNs / FCM は未接続)",
+  "settingsNotifyTokenServerNotConfiguredTitle": "RASQ サーバーの接続先が未設定です",
+  "settingsNotifyTokenServerNotConfiguredSubtitle": "接続先を入れると発行できます",
+  "settingsNotifyTokenNoAccountTitle": "RASQ アカウントが未作成です",
+  "settingsNotifyTokenNoAccountSubtitle": "作成すると通知トークンを発行できます",
+  "settingsNotifyTokenLoadError": "取得できませんでした: {error}",
+  "@settingsNotifyTokenLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNotifyTokenLocalTokenTitle": "この端末のトークン",
+  "settingsNotifyTokenLocalTokenActive": "有効",
+  "settingsNotifyTokenLocalTokenNone": "未発行",
+  "settingsNotifyTokenDevicesTitle": "プッシュ登録している端末",
+  "settingsNotifyTokenDevicesValue": "{count, plural, other{{count} 台}}",
+  "@settingsNotifyTokenDevicesValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsNotifyTokenTestNotFound": "テスト通知を積みましたが、受信箱で見つかりませんでした",
+  "settingsNotifyTokenTestFound": "受信箱で確認できました: 「{title}」({status}、端末 {devices, plural, other{{devices} 台}})",
+  "@settingsNotifyTokenTestFound": {
+    "description": "{title} = テスト通知の題、{status} = 配信の状態、{devices} = 届けた端末の数。",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      },
+      "devices": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsNotifyTokenTestButton": "テスト通知を送る",
+  "settingsNotifyTokenLocalRevoked": "この端末のトークンを失効しました",
+  "settingsNotifyTokenRevokeButton": "失効する",
+  "settingsNotifyTokenEnabled": "発行して、この端末をプッシュ登録しました",
+  "settingsNotifyTokenEnableButton": "通知トークンを発行してこの端末を登録",
+  "settingsNotifyTokenTokensSection": "発行済みのトークン",
+  "settingsNotifyTokenKindRoot": "通知トークン",
+  "settingsNotifyTokenKindChild": "配下トークン",
+  "settingsNotifyTokenLabelSuffix": "({label})",
+  "@settingsNotifyTokenLabelSuffix": {
+    "description": "トークンの種類のうしろに付ける名前。",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNotifyTokenThisDevice": "この端末",
+  "settingsNotifyTokenIssuedAt": "発行 {time}",
+  "@settingsNotifyTokenIssuedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNotifyTokenUnused": "未使用",
+  "settingsNotifyTokenLastUsedAt": "最終使用 {time}",
+  "@settingsNotifyTokenLastUsedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNotifyTokenIssueChildTooltip": "配下トークンを発行(マクロ / ASTell 共用)",
+  "settingsNotifyTokenChildIssued": "配下トークンを発行してクリップボードにコピーしました(生の値が見られるのは今だけです)",
+  "settingsNotifyTokenRevoked": "失効しました",
+  "settingsNotifyTokenStorageCaption": "鍵はこの端末の中に安全に保存します。",
+  "settingsNotifyTokenStorageCaptionDetail": "生のトークンは発行時にだけ受け取り、端末内の安全な領域に保存します。サーバーに残るのはハッシュだけです。親のトークンを失効すると配下のトークンも失効します。",
+  "settingsSectionsPluginsTitle": "プラグインの構成",
+  "settingsSectionsPluginsProxyTitle": "RASQプラグインプロキシの購読",
+  "settingsSectionsPluginsProxySubtitle": "準備中",
+  "settingsSectionsPluginsProxyDetail": "未購読(第二期)",
+  "settingsSectionsPluginsActionBarTitle": "投稿にプラグインオートメーションを配置",
+  "settingsSectionsPluginsActionBarSubtitle": "投稿の下に出すプラグインのボタン",
+  "settingsSectionsPluginsActionBarDetail": "投稿のアクションバーに出すプラグインボタン(主電源 / 自動でオン / 配置)",
+  "settingsSectionsPluginsTrendTitle": "カスタムトレンドの配信",
+  "settingsSectionsPluginsComposerTitle": "投稿プラグイン",
+  "settingsSectionsPluginsTimelineTitle": "カスタムタイムラインを配置",
+  "settingsSectionsPluginsStoreTitle": "プラグインの詳細設定",
+  "settingsSectionsPluginsStoreSubtitle": "プラグインストア(インストール済みの管理)",
+  "settingsSectionsPluginsTelemetryTitle": "怪しい通信の通報",
+  "settingsSectionsPluginsTelemetrySubtitle": "既定はオフ",
+  "settingsSectionsPluginsTelemetryDetail": "通信の形の報告: プラグインの通信の形(値は含まない)を、初めて見たときだけストアへ。既定はオフ",
+  "settingsSectionsSnsTitle": "SNSプラグイン",
+  "settingsSectionsSnsAccountTitle": "アカウント",
+  "settingsSectionsSnsTimelineTitle": "タイムライン",
+  "settingsSectionsSnsSecurityTitle": "セキュリティ",
+  "settingsSectionsSnsSafetyTitle": "プライバシーとセーフモード",
+  "settingsSectionsSnsChildSafeTitle": "チャイルドセーフ",
+  "settingsSectionsSnsChildSafeSubtitle": "保護者の見守り / チャイルドモード",
+  "settingsSectionsSnsChildSafeDetail": "保護者として見守る / チャイルドモード(保護者のコードでつなぐ)",
+  "settingsSectionsSnsListsTitle": "リスト",
+  "settingsSectionsSnsMuteBlockTitle": "ミュート/ブロック",
+  "settingsSectionsSnsPluginButtonsTitle": "プラグインボタン",
+  "settingsSectionsSnsPluginButtonsSubtitle": "プラグインのボタンの出し方",
+  "settingsSectionsSnsPluginButtonsDetail": "面ごとの主電源と「開いたとき自動でオン」、このアカウントの有効 / 無効と束ねる閾値",
+  "settingsSectionsSnsEmojiSearchTitle": "絵文字の検索",
+  "settingsSectionsSnsEmojiSearchSubtitle": "意味の近い絵文字も探す",
+  "settingsSectionsSnsEmojiSearchDetail": "意味の近い絵文字も探す(端末内のモデル)",
+  "settingsSectionsSnsReactionPredictTitle": "リアクションの予測",
+  "settingsSectionsSnsReactionPredictSubtitle": "だれも付けていない投稿でも予測するか",
+  "settingsSectionsSnsAccountPickTitle": "共有 / リノートに使うアカウント",
+  "settingsSectionsSnsAccountPickSubtitle": "同じ投稿が複数のアカウントに見えるとき",
+  "settingsSectionsSnsAccountPickDetail": "複数のアカウントに見えている投稿を、どのアカウントで扱うか",
+  "settingsSectionsSnsMfmTitle": "カスタムモーションとアニメーション",
+  "settingsSectionsSnsResourcesTitle": "リソースと広告",
+  "settingsSectionsSnsLegalTitle": "ヘルプ、法的表示",
+  "settingsSectionsSnsNote": "アカウント / タイムライン / セキュリティ / プライバシーは、使っている SNS のプラグインが用意するページです(プラグインが用意していないものは出ません)。",
+  "settingsSectionsSnsNoteDetail": "アカウント / タイムライン / セキュリティ / プライバシーは、設定するアカウントの SNS プラグインが提供する設定ページです(sns.settingsPages。宣言されていないページの行は出さない、D-482)。",
+  "settingsSectionsAppearanceTitle": "アプリの外観",
+  "settingsSectionsAppearanceDisplayTitle": "インターフェースの表示サイズ",
+  "settingsSectionsAppearanceThemeTitle": "フォントやカラースキーム",
+  "settingsSectionsAppearanceThemeSubtitle": "着せ替え(色・アイコン・背景の画像)",
+  "settingsSectionsAppearanceColumnsTitle": "カラムの幅",
+  "settingsSectionsAppearanceColumnsSubtitle": "広い画面での左右のカラムの幅",
+  "settingsSectionsAppearanceColumnsDetail": "幅の広い画面の小型 / 大型カラムの比(1:1 / 2:3 / 3:5 / 幅を固定)",
+  "settingsSectionsAppearanceMotionTitle": "モーションの抑制",
+  "settingsSectionsAppearanceTimelineTitle": "タイムラインの表示",
+  "settingsSectionsAppearanceTimelineSubtitle": "タイムラインの「投稿を読み込む」",
+  "settingsSectionsAppearanceTimelineDetail": "TL の上下の「投稿を読み込む」",
+  "settingsSectionsAppearancePipTitle": "ピクチャインピクチャ",
+  "settingsSectionsAppearanceFabTitle": "＋ ボタンの割り当て",
+  "settingsSectionsAppearanceFabSubtitle": "押したときに始めるもの",
+  "settingsSectionsAppearanceMediaSaveTitle": "画像・動画の保存先",
+  "settingsSectionsAppearanceMediaSaveSubtitle": "写真(カメラロール)/ ファイル / 保存するたびに選ぶ",
+  "settingsSectionsAppearanceNotificationsTitle": "通知の表示形式",
+  "settingsSectionsAstellTitle": "ASTell",
+  "settingsSectionsAstellSubscriptionTitle": "ASTell 4Uを購読",
+  "settingsSectionsAstellSubscriptionSubtitle": "準備中",
+  "settingsSectionsAstellSubscriptionDetail": "未購読(第二期)",
+  "settingsSectionsAstellTilesTitle": "Tellタイル",
+  "settingsSectionsAstellTrendTitle": "トレンドタイムラインへの配信",
+  "settingsSectionsAstellRoomButtonsTitle": "ルームのボタン",
+  "settingsSectionsAstellRoomButtonsSubtitle": "入力欄の左に並ぶボタン",
+  "settingsSectionsAstellRoomButtonsDetail": "ルームの下段、入力欄の左の丸いボタンの並び(並べ替え / 表示 / 非表示 / プラグインのボタンを追加)",
+  "settingsSectionsAstellStoreTitle": "プラグインの詳細設定",
+  "settingsSectionsAstellStoreSubtitle": "ASTell で使うプラグイン",
+  "settingsSectionsAstellStoreDetail": "ASTell のアクションプラグイン(ストア)",
+  "settingsSectionsAstellBackgroundTitle": "画面オフ時の動作",
+  "settingsSectionsRelationalTitle": "リレーショナルタイムライン",
+  "settingsSectionsRelationalClusterTitle": "投稿クラスター",
+  "settingsSectionsRelationalClusterSubtitle": "会話のまとめ方",
+  "settingsSectionsRelationalClusterDetail": "会話イベントの束ね方(束ねやすさ / 重み / 沈むまでの時間)",
+  "settingsSectionsRelationalRelayTitle": "Relayタイル",
+  "settingsSectionsRelationalTrendTitle": "トレンドタイムラインへの配信",
+  "settingsSectionsRelationalPluginsTitle": "プラグインの詳細設定",
+  "settingsSectionsRelationalSamplingTitle": "トレンドのサンプリングレベル",
+  "settingsSectionsRelationalSamplingSubtitle": "候補に入れる時間の幅",
+  "settingsSectionsRelationalSamplingDetail": "候補に入れる時間の幅(束ね判定の詳細設定)",
+  "settingsSectionsRelationalNote": "Relay タイルとトレンドへの配信は準備中です。",
+  "settingsSectionsRelationalNoteDetail": "Relay タイルとトレンドへの配信はアルゴリズム確定後(D-011)。",
+  "settingsSectionsTrendTitle": "トレンド",
+  "settingsSectionsTrendGenresTitle": "ジャンル",
+  "settingsSectionsTrendTendencyTitle": "トレンドの指向性/刺激性",
+  "settingsSectionsTrendEmomTitle": "EmoM の閾値",
+  "settingsSectionsTrendEmomSubtitle": "運営が制限したトレンドの隠し方 / 閾値の公開",
+  "settingsSectionsTrendEmomDetail": "EmoM の閾値(0〜100、既定 50)と「閾値を公開する」(既定オフ)。運営の制限の点数がこの値より大きいトレンドを一覧に出さない (D-404)",
+  "settingsSectionsTrendPluginsTitle": "プラグインの詳細設定",
+  "settingsSectionsTrendCdnTitle": "キャッシュネットワークの設定",
+  "settingsSectionsTrendCdnSubtitle": "準備中",
+  "settingsSectionsTrendCdnDetail": "未提供(第二期)",
+  "settingsSectionsRaiTitle": "RAi(アシスタント)",
+  "settingsSectionsRaiGraphTitle": "工程グラフの自動表示",
+  "settingsSectionsNotificationsTitle": "通知",
+  "settingsSectionsNotificationsProfileTitle": "プロファイル",
+  "settingsSectionsNotificationsAccessTokenTitle": "アクセストークン",
+  "settingsSectionsNotificationsAccessTokenSubtitle": "通知を受け取るための設定",
+  "settingsSectionsNotificationsAccessTokenDetail": "通知専用のトークンの発行 / 失効、端末のプッシュ登録",
+  "settingsSectionsNotificationsSecurityTitle": "セキュリティ",
+  "settingsSectionsNotificationsSecuritySubtitle": "SNS の権限とアクセストークン",
+  "settingsSectionsAboutTitle": "RASQについて",
+  "settingsSectionsAboutServerTitle": "RASQ サーバー",
+  "settingsSectionsAboutServerSubtitle": "つなぐ先のサーバー",
+  "settingsSectionsAboutServerDetail": "プラグインストア / RASQ アカウント / ログインの接続先",
+  "settingsSectionsAboutHelpTitle": "ヘルプ",
+  "settingsSectionsAboutTourTitle": "RASQ の使い方をもう一度見る",
+  "settingsSectionsAboutTourSubtitle": "機能の紹介(TL・トレンド・ASTell・RAi など)",
+  "settingsSectionsAboutSubscriptionTitle": "購読状況",
+  "settingsSectionsAboutCookiesTitle": "クッキーについて",
+  "settingsSectionsAboutPrivacyTitle": "プライバシーポリシー",
+  "settingsSectionsAboutTermsTitle": "利用規約",
+  "settingsSectionsAboutLearningTitle": "アルゴリズムとコミュニティへの貢献",
+  "settingsSectionsAboutLearningSubtitle": "任意。既定は「提供しない」",
+  "settingsSectionsAboutAstellTermsTitle": "ASTell の利用条件",
+  "settingsSectionsAboutRaiTermsTitle": "RAi の利用条件",
+  "settingsSectionsAboutStoreTermsTitle": "プラグインストアの利用条件",
+  "settingsSectionsAboutDevTermsTitle": "プラグイン開発者の掲載・審査条件",
+  "settingsSectionsAboutDevTermsSubtitle": "審査料を含む",
+  "settingsSectionsAboutBillingTitle": "料金・ポイントの条件",
+  "settingsSectionsAboutCommerceTitle": "特定商取引法に基づく表記",
+  "settingsSectionsAboutResourcesTitle": "リソースと広告",
+  "settingsSectionsAboutLegalTitle": "ヘルプ、法的表示",
+  "settingsSectionsAboutDeveloperTitle": "開発者モード",
+  "settingsSectionsAboutDeveloperSubtitle": "画面の説明を詳しく表示する",
+  "settingsSecurityAgoJustNow": "たった今",
+  "settingsSecurityAgoMinutes": "{count, plural, other{{count} 分前}}",
+  "@settingsSecurityAgoMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSecurityAgoHours": "{count, plural, other{{count} 時間前}}",
+  "@settingsSecurityAgoHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSecurityAgoDays": "{count, plural, other{{count} 日前}}",
+  "@settingsSecurityAgoDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSecurityCodeSentTo": "{to} へ確認コードを送りました",
+  "@settingsSecurityCodeSentTo": {
+    "description": "確認コードを送ったときのお知らせ。to は送り先(メールアドレスの目安)",
+    "placeholders": {
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSecurityTitle": "アカウントのセキュリティ",
+  "settingsSecurityNotSignedIn": "RASQ アカウントにログインしていません。",
+  "settingsSecurityToLoginTitle": "既存の RASQ アカウントにログイン",
+  "settingsSecurityToLoginSubtitle": "ハンドル(かメール)とパスワード",
+  "settingsSecurityEmailHeader": "メールアドレス",
+  "settingsSecurityEmailCaption": "パスワードを忘れたときの再設定と、ログインの 2 段階目の確認に使います。ほかの人には見えません。",
+  "settingsSecurityEmailDetail": "登録すると、パスワードを忘れたときの再設定、ほかの端末からログインするときの 2 段階目の確認(パスワードのあとにメールの確認コード)、大事な操作の確認とお知らせに使えます。メールを確認していないと、パスワードを忘れたときに再設定できません。ほかの人には見えません。",
+  "settingsSecurityEmailCurrentTitle": "いまのメール",
+  "settingsSecurityEmailUnregistered": "未登録",
+  "settingsSecurityEmailNewHint": "新しいメールアドレス",
+  "settingsSecurityEmailHint": "メールアドレス",
+  "settingsSecuritySendCodeButton": "コードを送る",
+  "settingsSecurityEmailChangeNeedsPasswordOrCode": "付け替えるには、いまのパスワードか、いまのメールに届く確認コードが要ります。",
+  "settingsSecurityEmailChangeNeedsCode": "付け替えるには、いまのメールに届く確認コードが要ります。",
+  "settingsSecurityCurrentPasswordHint": "いまのパスワード",
+  "settingsSecurityEmailSendCodeToCurrentButton": "いまのメールにコードを送る",
+  "settingsSecurityEmailNeedsPassword": "パスワードを設定したアカウントでは、メールアドレスを付けるのにいまのパスワードが要ります。",
+  "settingsSecurityEmailPendingCaption": "{email} に届いたコードを入れてください(15 分で無効になります)。",
+  "@settingsSecurityEmailPendingCaption": {
+    "description": "email は確認待ちのメールアドレス",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSecurityEmailVerified": "メールアドレスを確認しました",
+  "settingsSecurityVerifyButton": "確認",
+  "settingsSecurityEmailRemoveTitle": "メールアドレスを外す",
+  "settingsSecurityEmailRemoveSubtitle": "確認コードが要ります",
+  "settingsSecurityPasswordHeader": "パスワード",
+  "settingsSecurityPasswordChangeCaption": "変えると、ほかの端末はログアウトになります。いまのパスワードか、メールの確認コードが要ります。",
+  "settingsSecurityPasswordNoneCaption": "パスワードが無いと、ほかの端末からはログインできません(この端末でだけ使えます)。付けると、別の端末からハンドル(かメール)とパスワードで同じアカウントに入れます。",
+  "settingsSecurityPasswordNewHint": "新しいパスワード(8 文字以上)",
+  "settingsSecurityPasswordHint": "パスワード(8 文字以上)",
+  "settingsSecurityPasswordChanged": "パスワードを変えました",
+  "settingsSecurityPasswordSet": "パスワードを設定しました",
+  "settingsSecurityPasswordChangeButton": "パスワードを変える",
+  "settingsSecurityPasswordSetButton": "パスワードを設定",
+  "settingsSecurityPasswordByCodeButton": "メールのコードで変える",
+  "settingsSecurityPasswordResetWarning": "パスワードを「再設定」すると、同期した設定は読めなくなります。",
+  "settingsSecurityPasswordResetWarningDetail": "パスワードは、同期した設定の暗号化にも使います。「パスワードの再設定」(ログイン画面)をすると、前のパスワードで暗号化したデータは復号できなくなります。",
+  "settingsSecuritySecondFactorHeader": "ログインの 2 段階目",
+  "settingsSecuritySecondFactorNeedsEmailCaption": "メールアドレスを確認すると、ほかの端末からログインするとき、パスワードのあとにメールの確認コードも求めます(既定で ON)。",
+  "settingsSecuritySecondFactorActiveCaption": "ほかの端末からログインするとき、パスワードのあとに、メールに届く確認コード(10 分有効)も求めます。",
+  "settingsSecuritySecondFactorOffCaption": "切っています。ほかの端末からは、パスワードだけでログインできます。",
+  "settingsSecuritySecondFactorTitle": "メールの確認コードも求める",
+  "settingsSecuritySecondFactorNeedsEmailSubtitle": "メールアドレスの確認が要ります",
+  "settingsSecuritySecondFactorEnabled": "ログインの 2 段階目を入れました",
+  "settingsSecuritySecondFactorDisableNeedsPasswordOrCode": "切るには、いまのパスワードか、メールに届く確認コードが要ります。",
+  "settingsSecuritySecondFactorDisableNeedsCode": "切るには、メールに届く確認コードが要ります。",
+  "settingsSecuritySendCodeToEmailButton": "メールにコードを送る",
+  "settingsSecurityCancelButton": "やめる",
+  "settingsSecuritySecondFactorDisabled": "ログインの 2 段階目を切りました",
+  "settingsSecuritySecondFactorDisableButton": "2 段階目を切る",
+  "settingsSecuritySessionsHeader": "ログイン中の端末",
+  "settingsSecuritySessionsRevokedOthers": "ほかの {count, plural, other{{count} 台}}をログアウトさせました",
+  "@settingsSecuritySessionsRevokedOthers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSecuritySessionsRevokeOthersButton": "ほかを全部ログアウト",
+  "settingsSecuritySessionUnnamed": "名前のない端末",
+  "settingsSecurityThisDeviceSuffix": "(この端末)",
+  "@settingsSecurityThisDeviceSuffix": {
+    "description": "端末の一覧で、この端末の名前のうしろに付ける"
+  },
+  "settingsSecuritySessionLastUsed": "最後に使った: {ago}",
+  "@settingsSecuritySessionLastUsed": {
+    "description": "ago は「3 分前」などの経過時間",
+    "placeholders": {
+      "ago": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSecuritySessionExpires": "期限 {date}",
+  "@settingsSecuritySessionExpires": {
+    "description": "date はログインの期限の日付(YYYY-MM-DD)",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSecuritySessionRevoked": "ログアウトさせました",
+  "settingsSecuritySessionLogoutButton": "ログアウト",
+  "settingsSecurityConfirmDeleteHeader": "アカウントの削除の確認",
+  "settingsSecurityConfirmEmailRemoveHeader": "メールアドレスを外す確認",
+  "settingsSecurityConfirmCodeCaption": "{to} に届いたコードを入れてください。",
+  "@settingsSecurityConfirmCodeCaption": {
+    "description": "to は確認コードの送り先(メールアドレスの目安)",
+    "placeholders": {
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSecurityDeleteButton": "削除する",
+  "settingsSecurityRemoveButton": "外す",
+  "settingsSecurityDeleteHeader": "アカウントの削除",
+  "settingsSecurityDeleteTitle": "RASQ アカウントを削除",
+  "settingsSecurityDeleteSubtitleWithEmail": "メールの確認コードが要ります。元に戻せません",
+  "settingsSecurityDeleteSubtitle": "元に戻せません",
+  "settingsSecurityRolesHeader": "役割",
+  "settingsSecurityRolesTitle": "このアカウントの役割",
+  "settingsSecurityRoleDeveloper": "開発者",
+  "settingsSecurityRoleReviewer": "審査員",
+  "settingsSecurityEmailReplaceNeedsPasswordOrCodeError": "いまのパスワードを入れるか、いまのメールに届く確認コードで確かめてください",
+  "settingsSecurityEmailReplaceNeedsCodeError": "いまのメールに届く確認コードで確かめてください",
+  "settingsSecurityEnterCurrentPasswordError": "いまのパスワードを入れてください",
+  "settingsSecurityCodeSent": "確認コードを送りました",
+  "settingsSecurityDeleteConfirmMessage": "サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、ASTell のルームと共有、通知トークン、同意の記録を削除します。元に戻せません。",
+  "settingsSecuritySendConfirmCodeButton": "確認コードを送る",
+  "settingsSecurityDeleted": "RASQ アカウントを削除しました",
+  "settingsSecurityEmailRemoved": "メールアドレスを外しました",
+  "settingsSecurityCodeHint": "確認コード(例 3mJr7-AoUXx)",
+  "settingsSecurityCodeHelper": "メールのリンクを貼り付けても確認できます",
+  "settingsSecurityLoginFailedHelp": "ハンドル(メール)かパスワードが違います。\nパスワードを設定していない RASQ アカウントには、ほかの端末からはログインできません。そのアカウントを作った端末(いまもログインしている端末)で「設定 → アカウントのセキュリティ」からパスワードを設定してから、もう一度ログインしてください。",
+  "settingsSecurityServerNotConfiguredError": "RASQ サーバーの接続先が未設定です",
+  "settingsSecurityLoginFailed": "ログインできませんでした",
+  "settingsSecurityLoggedInAs": "@{handle} にログインしました",
+  "@settingsSecurityLoggedInAs": {
+    "description": "handle は RASQ アカウントのハンドル(@ を除く)",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSecurityLoginEnterCredentialsError": "ハンドル(かメール)とパスワードを入れてください",
+  "settingsSecurityVerifiedEmailFallback": "確認済みのメール",
+  "settingsSecurityLoginTitle": "RASQ アカウントにログイン",
+  "settingsSecurityLoginCaption": "ハンドル(@ は無くてもよい)か確認済みのメールアドレスと、パスワードで入ります。",
+  "settingsSecurityLoginDetail": "ハンドル(@ は無くてもよい)か確認済みのメールアドレスと、パスワードで入ります。確認済みのメールがあるアカウントは、そのあとメールに届く確認コードも入れます(2 段階目の確認)。",
+  "settingsSecurityLoginIdentifierHint": "ハンドル または メールアドレス",
+  "settingsSecurityLoginPasswordHint": "パスワード",
+  "settingsSecurityLoginButton": "ログイン",
+  "settingsSecurityLoginForgotButton": "パスワードを忘れた",
+  "settingsSecurityLoginNoPasswordHint": "パスワードを設定していないアカウントは、ほかの端末からはログインできません(作った端末でだけ使えます)。その端末の「設定 → アカウントのセキュリティ」でパスワードを設定してください。",
+  "settingsSecurityLoginCodeHeader": "確認コード",
+  "settingsSecurityLoginChallengeCaption": "{email} に確認コードを送りました({minutes, plural, other{{minutes} 分有効}}、1 回きり)。届いたコードを入れてください。",
+  "@settingsSecurityLoginChallengeCaption": {
+    "description": "email は確認コードの送り先、minutes はコードの有効な分数",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSecurityVerifiedEmailAddressFallback": "確認済みのメールアドレス",
+  "settingsSecurityLoginConfirmButton": "確認してログイン",
+  "settingsSecurityLoginResendButton": "コードを送り直す",
+  "settingsSecurityLoginBackButton": "ハンドル / パスワードに戻る",
+  "settingsSecurityLoginNoMailHint": "メールが届かないときは、迷惑メールのフォルダも見てください。ログインに心当たりが無いメールが届いたら、パスワードを変えてください。",
+  "settingsSecurityLoginChildHeader": "子のアカウント",
+  "settingsSecurityLoginChildTitle": "保護者からのコードでログイン",
+  "settingsSecurityLoginChildSubtitle": "保護者が作った子のアカウントに入ります",
+  "settingsSecurityResetEnterEmailError": "確認済みのメールアドレスを入れてください",
+  "settingsSecurityResetCodeSent": "そのメールアドレスを確認済みのアカウントがあれば、確認コードを送りました(10 分有効)",
+  "settingsSecurityResetDoneKept": "パスワードを再設定しました。ほかの {count, plural, other{{count} 台}}の端末をログアウトしました",
+  "@settingsSecurityResetDoneKept": {
+    "description": "count はログアウトさせた端末の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSecurityResetDone": "パスワードを再設定しました({count, plural, other{{count} 台}}の端末をログアウトしました)。新しいパスワードでログインしてください",
+  "@settingsSecurityResetDone": {
+    "description": "count はログアウトさせた端末の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSecurityResetTitle": "パスワードの再設定",
+  "settingsSecurityResetCaption": "確認済みのメールアドレスへ確認コード(10 分有効、1 回きり)を送り、新しいパスワードを決めます。ほかの端末はすべてログアウトになります。",
+  "settingsSecurityResetNoEmailWarning": "メールアドレスを確認していないアカウントは、パスワードを再設定できません。",
+  "settingsSecurityResetNoEmailDetail": "そのアカウントを作った端末(いまもログインしている端末)で「設定 → アカウントのセキュリティ」から新しいパスワードを設定してください。その端末も無いときは、アカウントに戻る方法はありません。",
+  "settingsSecurityResetEmailHint": "確認済みのメールアドレス",
+  "settingsSecurityResendButton": "送り直す",
+  "settingsSecurityResetNewPasswordHint": "新しいパスワード({count, plural, other{{count} 文字以上}})",
+  "@settingsSecurityResetNewPasswordHint": {
+    "description": "count はパスワードの最小の文字数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSecurityResetConfirmPasswordHint": "新しいパスワード(確認)",
+  "settingsSecurityResetMismatchError": "一致しません",
+  "settingsSecurityResetKeepTitle": "この端末のログインは残す",
+  "settingsSecurityResetKeepSubtitle": "いまこの端末でログインしているアカウントの再設定のときだけ残ります",
+  "settingsSecurityResetSyncWarning": "再設定すると、同期した設定は読めなくなります。",
+  "settingsSecurityResetSyncWarningDetail": "パスワードは、同期した設定の暗号化にも使います。前のパスワードで暗号化したデータは復号できなくなります。",
+  "settingsSecurityResetSubmitButton": "パスワードを再設定",
+  "settingsSnsShareConflictError": "ほかの端末が先に変えました。もう一度お試しください",
+  "settingsSnsShareOffConfirmTitle": "SNS のログインの共有をやめますか?",
+  "settingsSnsShareOffConfirmMessage": "共有のデータと、すべての端末の鍵を消します。各端末の SNS のログインはそのまま残ります。",
+  "settingsSnsShareOffConfirmDetail": "RASQ Central にある共有の中身(暗号化したもの)と、すべての端末の鍵を消します。それぞれの端末の SNS のログインはそのまま残ります。",
+  "settingsSnsShareOffConfirmButton": "やめる",
+  "settingsSnsShareCancelButton": "キャンセル",
+  "settingsSnsShareStopped": "共有をやめました",
+  "settingsSnsShareSubtitleLoading": "読み込み中…",
+  "settingsSnsShareSubtitleUnsupported": "この端末のログインは共有に対応していません。ログインし直してください",
+  "settingsSnsShareSubtitleOffAsk": "オフ(別の端末でログインしたときに聞きます)",
+  "settingsSnsShareSubtitleOff": "オフ",
+  "settingsSnsShareSubtitleOnHolding": "オン ・ この端末は共有しています",
+  "settingsSnsShareSubtitleOnWaiting": "オン ・ 共有している端末での承認を待っています",
+  "settingsSnsShareSubtitleOnNotYet": "オン ・ この端末は、まだ共有していません",
+  "settingsSnsShareHeader": "SNS のログインを端末間で共有",
+  "settingsSnsShareCaption": "新しい端末でも、SNS に自動でログインできます。中身は暗号化され、RASQ のサーバーは読めません。",
+  "settingsSnsShareDetail": "SNS のアクセストークンを、この RASQ アカウントでログインしている端末のあいだで暗号化(E2E)して共有します。新しい端末でログインすると、共有している端末で承認したあと、その端末も SNS アカウントに一斉ログインします。RASQ のサーバーは中身を読めません。",
+  "settingsSnsShareSwitchTitle": "ほかの端末と SNS のログインを共有",
+  "settingsSnsShareRequestTitle": "この端末にも共有してもらう",
+  "settingsSnsShareRequestSubtitle": "共有している端末に、承認の問いが出ます",
+  "settingsSnsShareRequested": "共有している端末に、承認を求めました",
+  "settingsSnsShareDevicesLabel": "端末",
+  "settingsSnsShareThisDeviceSuffix": "(この端末)",
+  "@settingsSnsShareThisDeviceSuffix": {
+    "description": "端末の一覧で、この端末の名前のうしろに付ける"
+  },
+  "settingsSnsShareDeviceShared": "共有しています",
+  "settingsSnsShareDeviceWaiting": "承認を待っています",
+  "settingsSnsShareDeviceNotShared": "共有していません",
+  "settingsSnsShareApproved": "{name} に共有しました",
+  "@settingsSnsShareApproved": {
+    "description": "端末に共有したときのお知らせ。name は端末の名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSnsShareApproveButton": "共有する",
+  "settingsSnsShareDeclineButton": "断る",
+  "settingsSnsShareRemoved": "{name} を共有から外しました",
+  "@settingsSnsShareRemoved": {
+    "description": "端末を共有から外したときのお知らせ。name は端末の名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSnsShareRemoveButton": "外す",
+  "settingsSnsShareRemovedCaption": "外した端末は、それまでのログインを持ったままです。心当たりが無ければ SNS 側でもログアウトしてください。",
+  "settingsSnsShareRemovedDetail": "「ログイン中の端末」でその端末をログアウトさせると、その端末の鍵も消えます。外した端末は、それまでに受け取ったアクセストークンを持っています(心当たりが無ければ、SNS 側でもログアウトしてください)。",
+  "shellColumnSplitSmallFixedLabel": "小型カラムの幅を固定",
+  "shellColumnSplitLargeFixedLabel": "大型カラムの幅を固定",
+  "shellColumnSplitEvenHint": "同じ幅",
+  "shellColumnSplitTwoThreeHint": "小型 2 : 大型 3",
+  "shellColumnSplitThreeFiveHint": "小型 3 : 大型 5",
+  "shellColumnSplitSmallFixedHint": "小型カラムを決めた幅にし、残りを大型カラムに",
+  "shellColumnSplitLargeFixedHint": "大型カラムを決めた幅にし、残りを小型カラムに",
+  "shellColumnWidthErrorEmpty": "幅を入れてください",
+  "shellColumnWidthErrorNotInteger": "数字(整数)で入れてください",
+  "shellColumnWidthErrorRange": "{min}〜{max} px の間で入れてください",
+  "@shellColumnWidthErrorRange": {
+    "description": "カラムの固定幅の入力の検証。{min} / {max} = 入れられる幅の下限 / 上限(px)。",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "shellColumnThirdEmptySearch": "検索",
+  "shellColumnThirdEmptyNotifications": "通知",
+  "shellColumnThirdEmptyNone": "表示しない",
+  "shellColumnThirdSettingsTooltip": "第3カラムの設定",
+  "shellColumnThirdCloseTooltip": "閉じる",
+  "shellColumnThirdEmptyTitle": "第3カラム",
+  "shellColumnThirdEmptyHint": "開いている画面をここへ移動できます",
+  "shellColumnThirdEmptyHintDetail": "FOW をここへ移動できます(M5c)",
+  "shellNavHome": "ホーム",
+  "shellNavSearch": "検索",
+  "shellNavNotifications": "通知",
+  "shellHeaderTimelineSwitchTooltip": "タイムライン切り替え",
+  "shellHeaderExpandTooltip": "ヘッダーを戻す",
+  "shellHeaderScrollToTopTooltip": "先頭へ",
+  "shellHeaderSearchHint": "検索",
+  "shellHeaderBackTooltip": "戻る",
+  "shellHeaderCloseButton": "閉じる",
+  "@shellHeaderCloseButton": {
+    "description": "第3カラムのページの「戻る」を長押ししたときのドロップダウンの最後の項目(カラムを閉じる)。"
+  },
+  "shellHeaderMenuTooltip": "メニュー",
+  "shellHeaderOpenSidebarSemantics": "サイドバーを開く",
+  "shellSidebarSemantics": "サイドバー",
+  "shellSidebarSwitchToAccountTooltip": "{name} に切り替える",
+  "@shellSidebarSwitchToAccountTooltip": {
+    "description": "サイドバー上部の、いま使っていない RASQ アカウントのアイコンのツールチップ。{name} = 表示名。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "shellSidebarRasqAccountTooltip": "RASQ アカウント",
+  "shellSidebarHideAccountsTooltip": "アカウントリストを隠す",
+  "shellSidebarShowAccountsTooltip": "アカウントリストを表示",
+  "shellSidebarAccountSettingsButton": "アカウントの設定",
+  "shellSidebarBookmarks": "ブックマーク",
+  "shellSidebarLists": "リスト",
+  "shellSidebarPlugins": "プラグイン",
+  "shellSidebarCustomPlugins": "カスタムプラグイン",
+  "shellSidebarAllSettings": "全ての設定",
+  "shellSidebarHelp": "ヘルプ",
+  "shellSidebarDevCatalog": "コンポーネントカタログ (dev)",
+  "shellSidebarDevWasmPlugin": "WASMプラグイン試験 (dev)",
+  "shellSidebarWebConsole": "Webコンソール",
+  "shellSidebarAccountActionsTooltip": "アカウントの操作",
+  "shellSidebarShowAccountMenu": "このアカウントを表示",
+  "shellSidebarLogoutMenu": "ログアウト",
+  "shellAccountHeaderPickTooltip": "アカウントを選ぶ",
+  "shellAccountHeaderReadingAsTooltip": "{account} で読んでいます",
+  "@shellAccountHeaderReadingAsTooltip": {
+    "description": "ヘッダーのアカウントのボタンのツールチップ。{account} = 読んでいる SNS アカウント(@handle@instance など)。",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountHeaderSwitchSemantics": "アカウントを切り替える",
+  "shellAccountHeaderAvatarSemantics": "アカウント",
+  "shellAccountPickerSemantics": "アカウントの選択",
+  "shellAccountPickerCloseTooltip": "閉じる",
+  "shellAccountFowTitle": "RASQ アカウント",
+  "shellAccountFowCloseButton": "閉じる",
+  "shellAccountAppealSheetTitle": "処置の解除を申請",
+  "shellAccountAppealCaption": "運営の担当者が読んで、受理なら処置が解除されます。",
+  "shellAccountAppealCaptionDetail": "運営(rasq-judge)の担当者が読んで、受理なら処置が解除されます。自動判定は通りません。",
+  "shellAccountAppealReasonHint": "申請の理由(必須)",
+  "shellAccountAppealFailedError": "申請できませんでした: {error}",
+  "@shellAccountAppealFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountAppealSubmitButton": "申請する",
+  "shellAccountAppealSentSnack": "解除を申請しました。担当者が確認します",
+  "shellAccountLocalDisplayName": "この端末",
+  "@shellAccountLocalDisplayName": {
+    "description": "表示名の無い「この端末のみ」の RASQ アカウントの表示名。"
+  },
+  "shellAccountMenuAddSns": "SNS アカウントを追加",
+  "shellAccountMenuAllSettings": "設定",
+  "shellAccountMenuAccountPage": "アカウントページ",
+  "shellAccountMenuEditProfile": "プロフィール編集",
+  "shellAccountMenuAccountSettings": "アカウント設定",
+  "shellAccountMenuNotificationSettings": "通知設定",
+  "shellAccountMenuSecurity": "セキュリティ(メール / パスワード / 端末)",
+  "shellAccountMenuLogout": "ログアウト",
+  "shellAccountMenuDelete": "RASQ アカウントを削除",
+  "shellAccountLogoutTitle": "RASQ アカウントからログアウト",
+  "shellAccountLogoutMessage": "この端末から RASQ アカウントを外します。",
+  "shellAccountLogoutConfirmButton": "ログアウト",
+  "shellAccountLoggedOutWithSnsSnack": "RASQ アカウントと、その SNS アカウントからログアウトしました",
+  "shellAccountLoggedOutKeptSnsSnack": "RASQ アカウントからログアウトしました。SNS アカウントは「この端末のみ」に移しました",
+  "shellAccountDeleteReloginRequiredError": "このアカウントに、もう一度ログインしてから削除してください",
+  "shellAccountDeleteNeedsEmailCodeSnack": "削除には、メールの確認コードが要ります。「アカウントの削除」から進めてください",
+  "shellAccountDeleteTitle": "RASQ アカウントを削除",
+  "shellAccountDeleteMessage": "サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、ASTell のルームと共有、通知トークン、同意の記録を削除します。「アルゴリズムとコミュニティへの貢献」に同意していた場合は、提供の停止と提供済みデータの削除も同時に始まります。\n元に戻せません。各 SNS 上のアカウントと投稿は消えません。",
+  "shellAccountDeleteConfirmButton": "削除する",
+  "shellAccountDeletedSnack": "RASQ アカウントを削除しました",
+  "shellAccountDeleteFailedError": "削除できませんでした: {error}",
+  "@shellAccountDeleteFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountCreatedSnack": "RASQ アカウント @{handle} を作成しました",
+  "@shellAccountCreatedSnack": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionActive": "このアカウントには処置が掛かっています: {level}",
+  "@shellAccountSanctionActive": {
+    "description": "{level} = 処置の段階の名前。",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionRestrictedFeatures": "止まっている機能: {features}",
+  "@shellAccountSanctionRestrictedFeatures": {
+    "description": "{features} = 止まっている機能の名前を「 / 」でつないだもの。",
+    "placeholders": {
+      "features": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionReviewDelay": "{seconds, plural, other{発言ごとに {seconds} 秒の検閲遅延が入ります}}",
+  "@shellAccountSanctionReviewDelay": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "shellAccountSanctionStaffNote": "運営より: {note}",
+  "@shellAccountSanctionStaffNote": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionNoExpiry": "期限: なし",
+  "shellAccountSanctionExpiry": "期限: {expiresAt}",
+  "@shellAccountSanctionExpiry": {
+    "description": "{expiresAt} = 処置の期限の日時。",
+    "placeholders": {
+      "expiresAt": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionAppealButton": "解除を申請({category} / {level})",
+  "@shellAccountSanctionAppealButton": {
+    "description": "{category} / {level} = 処置の種類 / 段階(サーバーの値)。",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionAppealPending": "申請中({category})",
+  "@shellAccountSanctionAppealPending": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountEmpty": "RASQ アカウントはまだありません。",
+  "shellAccountRowSubtitle": "{kind} ・ SNS {count, plural, other{{count}件}}",
+  "@shellAccountRowSubtitle": {
+    "description": "アカウント FOW の RASQ アカウントの行の下の行。{kind} = アカウントの種類、{count} = 所属する SNS アカウントの数。",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shellAccountRowInUseSuffix": " ・ 使用中",
+  "shellAccountRowNeedsLoginSuffix": " ・ ログインが必要",
+  "shellAccountCollapseActionsTooltip": "操作を畳む",
+  "shellAccountActionsTooltip": "アカウントの操作",
+  "shellAccountReloginSnack": "@{handle} に、もう一度ログインしてください",
+  "@shellAccountReloginSnack": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountChildSafeButton": "チャイルドセーフ",
+  "shellAccountCreateButton": "アカウントを新規作成",
+  "shellAccountLoginButton": "ログイン",
+  "shellAccountServerNotConfigured": "RASQ サーバーの接続先が未設定です",
+  "shellAccountConfigureServerButton": "接続先を設定",
+  "shellAccountProfileSheetTitle": "プロフィール編集",
+  "shellAccountProfileSaveButton": "保存",
+  "shellAccountProfileDisplayNameLabel": "表示名",
+  "shellAccountProfileDisplayNameHint": "表示名",
+  "shellAccountProfileHandleLabel": "ハンドル(@なし、a-z 0-9 _)",
+  "shellAccountProfileCentralCaption": "RASQ のサーバー上のプロフィールを更新します。",
+  "shellAccountProfileLocalCaption": "この端末だけのアカウントです。ハンドルは RASQ アカウントを作成すると付きます。",
+  "shellAccountProfileSavedSnack": "プロフィールを保存しました",
+  "shellAccountProfileSaveFailedError": "保存できませんでした: {error}",
+  "@shellAccountProfileSaveFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountTileMenuTooltip": "RASQ アカウント",
+  "shellTermsSheetTitle": "利用規約への同意",
+  "shellTermsAgreeButton": "同意する",
+  "shellTermsNotice": "RASQ アカウントを使い続けるには、いまの利用規約とプライバシーポリシーへの同意が必要です。同意するまで、ASTell・購入・データの預け入れは使えません。",
+  "shellTermsNoticeDetail": "D-371 / S-053。サーバーの CENTRAL_TERMS_VERSION / CENTRAL_PRIVACY_VERSION と同じ版の承諾がそろうまで「同意待ち」。PUT /me/consents/{endpoints}。",
+  "@shellTermsNoticeDetail": {
+    "description": "開発者モードの詳しい説明。{endpoints} = API のパスの一部「{terms,privacy,age,guardian}」(波かっこを含む固定の文字列。訳さない)。",
+    "placeholders": {
+      "endpoints": {
+        "type": "String"
+      }
+    }
+  },
+  "shellTermsReadTermsButton": "利用規約を読む",
+  "shellTermsReadPrivacyButton": "プライバシーポリシーを読む",
+  "shellTermsAgeHeader": "年齢",
+  "shellTermsGuardianConsentCheck": "保護者の同意を得ています",
+  "shellTermsAgreeCheck": "利用規約とプライバシーポリシーを読み、同意します",
+  "shellTermsVersionCaption": "版: 利用規約 {termsVersion} ・ プライバシーポリシー {privacyVersion}",
+  "@shellTermsVersionCaption": {
+    "description": "{termsVersion} / {privacyVersion} = 利用規約 / プライバシーポリシーの版。",
+    "placeholders": {
+      "termsVersion": {
+        "type": "String"
+      },
+      "privacyVersion": {
+        "type": "String"
+      }
+    }
+  },
+  "shellTermsAcceptedSnack": "利用規約に同意しました",
+  "shellTermsOutdatedError": "利用規約が新しくなっています。アプリを更新してから同意してください",
+  "shellTermsRecordFailedError": "同意を記録できませんでした: {error}",
+  "@shellTermsRecordFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shellTermsBannerText": "利用規約への同意が必要です。同意するまで ASTell・購入などは使えません。",
+  "shellTermsBannerOpenButton": "確認する"
+}

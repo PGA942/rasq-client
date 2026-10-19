@@ -58,5 +58,8 @@ export 'src/layout/tabs.dart';
 export 'src/layout/collapsible_header.dart';
 
 export 'src/feedback/error_view.dart';
+
+// 部品の文言と日付の書式 (D-484)。
+export 'src/l10n/design_l10n.dart';
 export 'src/feedback/empty_view.dart';
 export 'src/feedback/loading.dart';

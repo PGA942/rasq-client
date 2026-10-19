@@ -1,0 +1,135 @@
+{
+  "settingsBackendTitle": "RASQ サーバー",
+  "settingsBackendErrorUnparseable": "接続先を解釈できません。「http://192.168.3.14:8080」や「https://central.example」の形で入れてください。",
+  "settingsBackendSaved": "保存しました",
+  "settingsBackendErrorEnterUrl": "接続先を入力してください(例: http://192.168.3.14:8080)",
+  "settingsBackendCentralNotCentralHint": "Central の欄に、ORGATE ではなく RASQ Central の接続先を入れてください",
+  "settingsBackendCentralConnectFailed": "接続できませんでした({url})— {error}{hint}",
+  "@settingsBackendCentralConnectFailed": {
+    "description": "接続テストの結果(Central)。{url} = Central の接続先、{error} = エラー、{hint} = 改行と補足(無いときは空)。",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      },
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendCentralOk": "接続 OK — 署名鍵 {algorithm} {keyHead}…",
+  "@settingsBackendCentralOk": {
+    "description": "接続テストの結果(Central)。{algorithm} = 署名鍵の方式、{keyHead} = 公開鍵の先頭 12 文字。",
+    "placeholders": {
+      "algorithm": {
+        "type": "String"
+      },
+      "keyHead": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendAccountLine": "RASQ アカウント: @{handle} ({displayName})",
+  "@settingsBackendAccountLine": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      },
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendAccountNotCreatedLine": "RASQ アカウント: 未作成(下の「RASQ アカウントを開く」から作成できます)",
+  "settingsBackendAccountLoadFailedLine": "RASQ アカウントを取得できませんでした — {error}",
+  "@settingsBackendAccountLoadFailedLine": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendOrgateNotConfiguredLine": "ORGATE: 未設定(RASQ アカウントにログインできません)",
+  "settingsBackendOrgateOk": "ORGATE: 接続 OK — トークンの公開鍵 {count, plural, other{{count} 個}}",
+  "@settingsBackendOrgateOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsBackendOrgateNoKeys": "ORGATE: 応答にトークンの公開鍵がありません({url})",
+  "@settingsBackendOrgateNoKeys": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendOrgateConnectFailed": "ORGATE に接続できませんでした({url})— {error}",
+  "@settingsBackendOrgateConnectFailed": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendCaption": "RASQ アカウントやストアのサーバーの接続先です。SNS の投稿やタイムラインは、ここを通りません。",
+  "settingsBackendCaptionDetail": "RASQ Central は公開・共有のもの(プロフィール・ストア・ASTell・投稿・リストなど)のサーバー、ORGATE は本人だけの情報(ログイン・パスワード・メールアドレス)と Mastodon などのログイン(OAuth ブローカー)のサーバーです。RASQ アカウントへのログインは ORGATE で行い、そのトークンを Central にも使います。SNS の投稿やタイムラインはどちらも通らず、プラグインが各インスタンスへ直接接続します。",
+  "settingsBackendCentralLabel": "RASQ Central の接続先(空なら ORGATE を流用)",
+  "settingsBackendOrgateLabel": "ORGATE(ログイン・本人だけの情報)の接続先",
+  "settingsBackendSaveButton": "保存",
+  "settingsBackendTestButton": "接続テスト",
+  "settingsBackendCentralDisconnected": "Central: 未接続(RASQ アカウントは作れません)",
+  "settingsBackendCentralDisconnectedDetail": "Central: 未接続 — プラグインストアは同梱のものだけ、RASQ アカウントは作成できません(この端末のみ)。",
+  "settingsBackendOrgateDisconnected": "ORGATE: 未接続(RASQ アカウントにログインできません)",
+  "settingsBackendTestEndpointsSection": "テスト用の接続先",
+  "settingsBackendTestEndpointsTitle": "ダミーの SNS とデモの Central / ORGATE を使う",
+  "settingsBackendTestEndpointsSubtitle": "プレビューの録画用",
+  "settingsBackendTestEndpointsDetail": "プレビュー録画用。Misskey / Mastodon / Bluesky の {misskeyHost} / {mastodonHost} / {blueskyHost} をこのアドレスのダミーへ向け、Central(:{centralPort})と ORGATE(:{orgatePort})も切り替えます",
+  "@settingsBackendTestEndpointsDetail": {
+    "description": "開発者モードの説明。各 Host = ダミーのホスト名、各 Port = ポート番号。",
+    "placeholders": {
+      "misskeyHost": {
+        "type": "String"
+      },
+      "mastodonHost": {
+        "type": "String"
+      },
+      "blueskyHost": {
+        "type": "String"
+      },
+      "centralPort": {
+        "type": "String"
+      },
+      "orgatePort": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendTestAddressLabel": "ダミー環境のアドレス(同じ機械なら 127.0.0.1、ほかの機械なら その IP)",
+  "settingsBackendTestCaption": "SNS のログイン画面で、サーバーに上のホスト名を入れてください。",
+  "settingsBackendTestCaptionDetail": "SNS は各ログイン画面でサーバーに上のホスト名を入れます(許可ページは自動で通ります。Bluesky の ID / パスワードは何でも可)。RASQ アカウントはアカウントのログインから。切り替えたら、すでにログインしている SNS は次の読み込みから新しい接続先になります。",
+  "settingsBackendAccountSection": "RASQ アカウント",
+  "settingsBackendAccountLoadError": "アカウントを取得できませんでした: {error}",
+  "@settingsBackendAccountLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackendNoServer": "接続先が設定されていません。",
+  "settingsBackendAccountNotCreated": "RASQ アカウントは未作成です。",
+  "settingsBackendOpenAccountButton": "RASQ アカウントを開く",
+  "settingsBackendAccountDeviceOnly": "この端末でだけ有効なアカウントです。ハンドルと表示名はプロフィール編集から変更できます。",
+  "settingsBackendBundleSection": "アカウントバンドル",
+  "settingsBackendBundleCaption": "まとめるときに送るのは、SNS アカウントの一覧だけです。ログインの鍵は、端末間の共有・Web 版・アカウントページへの投稿の表示を選んだときだけ送ります。",
+  "settingsBackendBundleCaptionDetail": "束ねるときにサーバーへ送るのは、SNS の種類・サーバー・アカウント・表示名だけ。アクセストークンは、端末間の共有(E2E、サーバーは読めない)、Web 版の保管庫(サーバーの鍵で暗号化、サーバーは復号できる)、アカウントページへの投稿の表示(同上)を選んだときだけ送る(プライバシーポリシー第 4 項)。",
+  "settingsBackendNoSessions": "ログイン中のアカウントはありません。"
+}

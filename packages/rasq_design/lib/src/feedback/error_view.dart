@@ -3,18 +3,20 @@ import 'package:rasq_models/rasq_models.dart';
 
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
+import '../l10n/design_l10n.dart';
 
 /// Standard error block used by TL / search / store screens.
 ///
 /// Wireframe rules: a (replaceable) image, `Error:CODE Title`, a hint line;
 /// 404/408 use the compact variant; TL errors recover via pull-to-refresh.
 class RasqErrorView extends StatelessWidget {
-  const RasqErrorView({super.key, required this.code, this.image, this.onRetry, this.retryLabel = '見てみる', this.compact});
+  const RasqErrorView({super.key, required this.code, this.image, this.onRetry, this.retryLabel, this.compact});
 
   final ErrorCode code;
   final Widget? image;
   final VoidCallback? onRetry;
-  final String retryLabel;
+  /// 省略すると「見てみる」(表示の言語で、D-484)。
+  final String? retryLabel;
 
   /// Force compact rendering; defaults to [ErrorCode.isCompact].
   final bool? compact;
@@ -46,7 +48,7 @@ class RasqErrorView extends StatelessWidget {
           ],
           if (onRetry != null) ...[
             const SizedBox(height: RasqSpacing.lg),
-            FilledButton.tonal(onPressed: onRetry, child: Text(retryLabel)),
+            FilledButton.tonal(onPressed: onRetry, child: Text(retryLabel ?? context.designL10n.designErrorRetry)),
           ],
         ]),
       ),

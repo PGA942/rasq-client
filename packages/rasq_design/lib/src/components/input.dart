@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
+import '../l10n/design_l10n.dart';
 
 /// Underlined text input (L2 atomic `Input`). Prediction hooks (正規表現/BERT)
 /// are attached by the host through [onChanged]; this widget is dumb.
@@ -59,7 +60,7 @@ class RasqSearchBar extends StatelessWidget {
   const RasqSearchBar({
     super.key,
     this.controller,
-    this.hintText = '検索',
+    this.hintText,
     this.onChanged,
     this.onSubmitted,
     this.onDropdownTap,
@@ -74,7 +75,8 @@ class RasqSearchBar extends StatelessWidget {
 
   /// フォーカス連動 UI(検索フィルタ行 D-021)用。
   final FocusNode? focusNode;
-  final String hintText;
+  /// 入力欄の薄い字。省略すると「検索」(表示の言語で、D-484)。
+  final String? hintText;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
 
@@ -112,7 +114,7 @@ class RasqSearchBar extends StatelessWidget {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
             decoration: InputDecoration(
-              hintText: hintText,
+              hintText: hintText ?? context.designL10n.designSearchHint,
               isDense: true,
               border: InputBorder.none,
               enabledBorder: InputBorder.none,

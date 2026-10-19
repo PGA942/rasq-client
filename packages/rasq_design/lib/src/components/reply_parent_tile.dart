@@ -6,6 +6,7 @@ import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
 import 'avatar.dart';
+import '../l10n/design_l10n.dart';
 
 /// リプライ元投稿の省略タイル (D-069、L2 composite `ReplyParentTile`)。
 ///
@@ -31,7 +32,7 @@ class RasqReplyParentTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
       button: onTap != null,
-      label: '${author.displayName} のリプライ元投稿',
+      label: context.designL10n.designReplyParentSemantics(author.displayName),
       child: InkWell(
         onTap: onTap,
         child: Padding(

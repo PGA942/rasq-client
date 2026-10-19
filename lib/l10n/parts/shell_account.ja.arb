@@ -1,0 +1,183 @@
+{
+  "shellAccountHeaderPickTooltip": "アカウントを選ぶ",
+  "shellAccountHeaderReadingAsTooltip": "{account} で読んでいます",
+  "@shellAccountHeaderReadingAsTooltip": {
+    "description": "ヘッダーのアカウントのボタンのツールチップ。{account} = 読んでいる SNS アカウント(@handle@instance など)。",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountHeaderSwitchSemantics": "アカウントを切り替える",
+  "shellAccountHeaderAvatarSemantics": "アカウント",
+  "shellAccountPickerSemantics": "アカウントの選択",
+  "shellAccountPickerCloseTooltip": "閉じる",
+  "shellAccountFowTitle": "RASQ アカウント",
+  "shellAccountFowCloseButton": "閉じる",
+  "shellAccountAppealSheetTitle": "処置の解除を申請",
+  "shellAccountAppealCaption": "運営の担当者が読んで、受理なら処置が解除されます。",
+  "shellAccountAppealCaptionDetail": "運営(rasq-judge)の担当者が読んで、受理なら処置が解除されます。自動判定は通りません。",
+  "shellAccountAppealReasonHint": "申請の理由(必須)",
+  "shellAccountAppealFailedError": "申請できませんでした: {error}",
+  "@shellAccountAppealFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountAppealSubmitButton": "申請する",
+  "shellAccountAppealSentSnack": "解除を申請しました。担当者が確認します",
+  "shellAccountLocalDisplayName": "この端末",
+  "@shellAccountLocalDisplayName": {
+    "description": "表示名の無い「この端末のみ」の RASQ アカウントの表示名。"
+  },
+  "shellAccountMenuAddSns": "SNS アカウントを追加",
+  "shellAccountMenuAllSettings": "設定",
+  "shellAccountMenuAccountPage": "アカウントページ",
+  "shellAccountMenuEditProfile": "プロフィール編集",
+  "shellAccountMenuAccountSettings": "アカウント設定",
+  "shellAccountMenuNotificationSettings": "通知設定",
+  "shellAccountMenuSecurity": "セキュリティ(メール / パスワード / 端末)",
+  "shellAccountMenuLogout": "ログアウト",
+  "shellAccountMenuDelete": "RASQ アカウントを削除",
+  "shellAccountLogoutTitle": "RASQ アカウントからログアウト",
+  "shellAccountLogoutMessage": "この端末から RASQ アカウントを外します。",
+  "shellAccountLogoutConfirmButton": "ログアウト",
+  "shellAccountLoggedOutWithSnsSnack": "RASQ アカウントと、その SNS アカウントからログアウトしました",
+  "shellAccountLoggedOutKeptSnsSnack": "RASQ アカウントからログアウトしました。SNS アカウントは「この端末のみ」に移しました",
+  "shellAccountDeleteReloginRequiredError": "このアカウントに、もう一度ログインしてから削除してください",
+  "shellAccountDeleteNeedsEmailCodeSnack": "削除には、メールの確認コードが要ります。「アカウントの削除」から進めてください",
+  "shellAccountDeleteTitle": "RASQ アカウントを削除",
+  "shellAccountDeleteMessage": "サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、ASTell のルームと共有、通知トークン、同意の記録を削除します。「アルゴリズムとコミュニティへの貢献」に同意していた場合は、提供の停止と提供済みデータの削除も同時に始まります。\n元に戻せません。各 SNS 上のアカウントと投稿は消えません。",
+  "shellAccountDeleteConfirmButton": "削除する",
+  "shellAccountDeletedSnack": "RASQ アカウントを削除しました",
+  "shellAccountDeleteFailedError": "削除できませんでした: {error}",
+  "@shellAccountDeleteFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountCreatedSnack": "RASQ アカウント @{handle} を作成しました",
+  "@shellAccountCreatedSnack": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionActive": "このアカウントには処置が掛かっています: {level}",
+  "@shellAccountSanctionActive": {
+    "description": "{level} = 処置の段階の名前。",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionRestrictedFeatures": "止まっている機能: {features}",
+  "@shellAccountSanctionRestrictedFeatures": {
+    "description": "{features} = 止まっている機能の名前を「 / 」でつないだもの。",
+    "placeholders": {
+      "features": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionReviewDelay": "{seconds, plural, other{発言ごとに {seconds} 秒の検閲遅延が入ります}}",
+  "@shellAccountSanctionReviewDelay": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "shellAccountSanctionStaffNote": "運営より: {note}",
+  "@shellAccountSanctionStaffNote": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionNoExpiry": "期限: なし",
+  "shellAccountSanctionExpiry": "期限: {expiresAt}",
+  "@shellAccountSanctionExpiry": {
+    "description": "{expiresAt} = 処置の期限の日時。",
+    "placeholders": {
+      "expiresAt": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionAppealButton": "解除を申請({category} / {level})",
+  "@shellAccountSanctionAppealButton": {
+    "description": "{category} / {level} = 処置の種類 / 段階(サーバーの値)。",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountSanctionAppealPending": "申請中({category})",
+  "@shellAccountSanctionAppealPending": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountEmpty": "RASQ アカウントはまだありません。",
+  "shellAccountRowSubtitle": "{kind} ・ SNS {count, plural, other{{count}件}}",
+  "@shellAccountRowSubtitle": {
+    "description": "アカウント FOW の RASQ アカウントの行の下の行。{kind} = アカウントの種類、{count} = 所属する SNS アカウントの数。",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shellAccountRowInUseSuffix": " ・ 使用中",
+  "shellAccountRowNeedsLoginSuffix": " ・ ログインが必要",
+  "shellAccountCollapseActionsTooltip": "操作を畳む",
+  "shellAccountActionsTooltip": "アカウントの操作",
+  "shellAccountReloginSnack": "@{handle} に、もう一度ログインしてください",
+  "@shellAccountReloginSnack": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountChildSafeButton": "チャイルドセーフ",
+  "shellAccountCreateButton": "アカウントを新規作成",
+  "shellAccountLoginButton": "ログイン",
+  "shellAccountServerNotConfigured": "RASQ サーバーの接続先が未設定です",
+  "shellAccountConfigureServerButton": "接続先を設定",
+  "shellAccountProfileSheetTitle": "プロフィール編集",
+  "shellAccountProfileSaveButton": "保存",
+  "shellAccountProfileDisplayNameLabel": "表示名",
+  "shellAccountProfileDisplayNameHint": "表示名",
+  "shellAccountProfileHandleLabel": "ハンドル(@なし、a-z 0-9 _)",
+  "shellAccountProfileCentralCaption": "RASQ のサーバー上のプロフィールを更新します。",
+  "shellAccountProfileLocalCaption": "この端末だけのアカウントです。ハンドルは RASQ アカウントを作成すると付きます。",
+  "shellAccountProfileSavedSnack": "プロフィールを保存しました",
+  "shellAccountProfileSaveFailedError": "保存できませんでした: {error}",
+  "@shellAccountProfileSaveFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shellAccountTileMenuTooltip": "RASQ アカウント"
+}

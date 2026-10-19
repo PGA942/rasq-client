@@ -152,7 +152,9 @@ void main() {
     http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
     final client = MockClient((req) async {
       final path = req.url.path.replaceFirst('/api/v1', '');
-      calls.add('${req.method} $path${req.url.hasQuery ? '?${req.url.query}' : ''}');
+      // 表示の言語の同期 (D-484: ORGATE へ PATCH /me {locale}。このテストは 1 つの URL で兼ねる)は別に数える。
+      final localeOnly = req.method == 'PATCH' && path == '/me' && req.body == '{"locale":"ja"}';
+      calls.add('${req.method} $path${req.url.hasQuery ? '?${req.url.query}' : ''}${localeOnly ? ' (locale)' : ''}');
       if (req.method == 'POST' && path == '/auth/device') {
         // 登録と承諾は一緒に (D-371 / S-053): 承諾は登録の本文で届く。
         final c = (jsonDecode(req.body) as Map)['consents'];

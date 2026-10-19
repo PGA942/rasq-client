@@ -11,6 +11,7 @@ import 'buttons.dart';
 import 'rich_text.dart';
 import 'sns_pill.dart';
 import 'timestamp.dart';
+import '../l10n/design_l10n.dart';
 
 /// The three post-card kinds (原典: UI_Elements「投稿カード系(3種)」).
 enum RasqPostTileVariant {
@@ -142,7 +143,7 @@ class RasqPostTile extends StatelessWidget {
           builder: (ctx) => RasqIconButton(
             icon: Icons.more_horiz,
             size: 20,
-            tooltip: 'メニュー',
+            tooltip: context.designL10n.designMenu,
             onPressed: () {
               final box = ctx.findRenderObject() as RenderBox;
               onMore!(box.localToGlobal(Offset.zero) & box.size);
@@ -166,7 +167,7 @@ class RasqPostTile extends StatelessWidget {
           child: Row(children: [
             Icon(Icons.forum_outlined, size: 14, color: scheme.onSurfaceVariant),
             const SizedBox(width: 4),
-            Text('$threadReplyCount件の返信', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(context.designL10n.designThreadReplies(threadReplyCount!), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ]),
         ),
     ]);
@@ -186,7 +187,7 @@ class RasqPostTile extends StatelessWidget {
 
     Widget tile = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       if (bannerText != null && !embedded) bannerRow(bannerIcon ?? Icons.label_outline, bannerText!),
-      if (repostedBy != null && !embedded) bannerRow(Icons.repeat, '${repostedBy!.displayName}がリノートしました'),
+      if (repostedBy != null && !embedded) bannerRow(Icons.repeat, context.designL10n.designRepostedBy(repostedBy!.displayName)),
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         avatarWidget,
         SizedBox(width: embedded ? RasqSpacing.sm : RasqSpacing.md),
@@ -217,7 +218,7 @@ class RasqPostTile extends StatelessWidget {
     );
     return Semantics(
       container: true,
-      label: '${author.displayName}の投稿',
+      label: context.designL10n.designPostSemantics(author.displayName),
       // 着せ替え (D-335): 投稿タイルの背景(埋め込みの引用には付けない)。
       child: embedded ? tappable : RasqSkinned(surface: RasqSkinSurfaceId.postTile, child: tappable),
     );

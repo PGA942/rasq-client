@@ -6,6 +6,7 @@ import 'wasm_runtime.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart' show RrlGeometryRegistry;
 
+import 'host_call_args.dart';
 import 'host_environment.dart';
 import 'wasm_fow.dart';
 
@@ -119,9 +120,10 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
   }
 
   /// Sends `call {fn, args}` and returns the plugin's `result` message.
+  /// args にはホストの予約の項目(表示の言語 `locale`、D-484)を足して送る([withHostCallArgs])。
   Map<String, dynamic> invoke(String fn, [Map<String, Object?> args = const {}]) {
     final plugin = _require();
-    final result = (jsonDecode(plugin.call(fn: fn, argsJson: jsonEncode(args), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
+    final result = (jsonDecode(plugin.call(fn: fn, argsJson: jsonEncode(withHostCallArgs(args)), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
     _drainShapes();
     _lastResult = result;
     final value = result['ok'] == true ? result['value'] as Map? : null;

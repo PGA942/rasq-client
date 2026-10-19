@@ -1,0 +1,97 @@
+{
+  "settingsNotifyTokenTitle": "通知専用のアクセストークン",
+  "settingsNotifyTokenError": "できませんでした — {error}",
+  "@settingsNotifyTokenError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNotifyTokenCaption": "通知を受け取るためだけの鍵です。投稿やアカウントの操作はできません。",
+  "settingsNotifyTokenCaptionDetail": "通知トークンは、RASQ サーバーからの通知を受け取るためだけのトークンです(読めるのは自分宛ての通知の受信箱だけ。投稿やアカウントの操作はできません)。マクロ / ASTell 用の配下トークンもここから発行します。",
+  "settingsNotifyTokenStatusSection": "状態",
+  "settingsNotifyTokenPushTitle": "プッシュ配信",
+  "settingsNotifyTokenPushPending": "準備中",
+  "settingsNotifyTokenPushPendingDetail": "ダミー(APNs / FCM は未接続)",
+  "settingsNotifyTokenServerNotConfiguredTitle": "RASQ サーバーの接続先が未設定です",
+  "settingsNotifyTokenServerNotConfiguredSubtitle": "接続先を入れると発行できます",
+  "settingsNotifyTokenNoAccountTitle": "RASQ アカウントが未作成です",
+  "settingsNotifyTokenNoAccountSubtitle": "作成すると通知トークンを発行できます",
+  "settingsNotifyTokenLoadError": "取得できませんでした: {error}",
+  "@settingsNotifyTokenLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNotifyTokenLocalTokenTitle": "この端末のトークン",
+  "settingsNotifyTokenLocalTokenActive": "有効",
+  "settingsNotifyTokenLocalTokenNone": "未発行",
+  "settingsNotifyTokenDevicesTitle": "プッシュ登録している端末",
+  "settingsNotifyTokenDevicesValue": "{count, plural, other{{count} 台}}",
+  "@settingsNotifyTokenDevicesValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsNotifyTokenTestNotFound": "テスト通知を積みましたが、受信箱で見つかりませんでした",
+  "settingsNotifyTokenTestFound": "受信箱で確認できました: 「{title}」({status}、端末 {devices, plural, other{{devices} 台}})",
+  "@settingsNotifyTokenTestFound": {
+    "description": "{title} = テスト通知の題、{status} = 配信の状態、{devices} = 届けた端末の数。",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      },
+      "devices": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsNotifyTokenTestButton": "テスト通知を送る",
+  "settingsNotifyTokenLocalRevoked": "この端末のトークンを失効しました",
+  "settingsNotifyTokenRevokeButton": "失効する",
+  "settingsNotifyTokenEnabled": "発行して、この端末をプッシュ登録しました",
+  "settingsNotifyTokenEnableButton": "通知トークンを発行してこの端末を登録",
+  "settingsNotifyTokenTokensSection": "発行済みのトークン",
+  "settingsNotifyTokenKindRoot": "通知トークン",
+  "settingsNotifyTokenKindChild": "配下トークン",
+  "settingsNotifyTokenLabelSuffix": "({label})",
+  "@settingsNotifyTokenLabelSuffix": {
+    "description": "トークンの種類のうしろに付ける名前。",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNotifyTokenThisDevice": "この端末",
+  "settingsNotifyTokenIssuedAt": "発行 {time}",
+  "@settingsNotifyTokenIssuedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNotifyTokenUnused": "未使用",
+  "settingsNotifyTokenLastUsedAt": "最終使用 {time}",
+  "@settingsNotifyTokenLastUsedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNotifyTokenIssueChildTooltip": "配下トークンを発行(マクロ / ASTell 共用)",
+  "settingsNotifyTokenChildIssued": "配下トークンを発行してクリップボードにコピーしました(生の値が見られるのは今だけです)",
+  "settingsNotifyTokenRevoked": "失効しました",
+  "settingsNotifyTokenStorageCaption": "鍵はこの端末の中に安全に保存します。",
+  "settingsNotifyTokenStorageCaptionDetail": "生のトークンは発行時にだけ受け取り、端末内の安全な領域に保存します。サーバーに残るのはハッシュだけです。親のトークンを失効すると配下のトークンも失効します。"
+}

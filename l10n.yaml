@@ -1,0 +1,11 @@
+# 文言の生成 (D-484)。手順は docs/I18N.md。
+# lib/l10n/app_<言語>.arb は tool/l10n_merge.dart が lib/l10n/parts/*.<言語>.arb から作る(手で直さない)。
+# 生成物(lib/l10n/gen)はコミットする(Flutter 3.29 から synthetic package が無くなり、ソースの中に出す形だけになった)。
+arb-dir: lib/l10n
+template-arb-file: app_ja.arb
+output-dir: lib/l10n/gen
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+preferred-supported-locales: [ja]
+nullable-getter: true
+format: true

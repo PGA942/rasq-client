@@ -167,6 +167,17 @@ void main() {
       expect(args['kind'], 'tap');
       expect(args['actionId'], 'reply');
       expect('${args['nodeId']}', contains(':actions'));
+      // ホストの予約の引数 (D-484): 表示の言語が毎回の call に載る(既定は ja)。
+      expect(args['locale'], 'ja');
+
+      // 表示の言語が変われば、次の call から変わった値が載る。args の locale(イベントの payload)はホストの値で上書き。
+      addTearDown(() => RasqUiLocale.tag = RasqUiLocale.defaultTag);
+      RasqUiLocale.tag = 'en-US';
+      controller.invoke('performAction', {'nodeId': 'x:actions', 'kind': 'tap', 'actionId': 'reply'});
+      final echoed = ((controller.lastResult!['value'] as Map)['echo'] as Map)['args'] as Map;
+      expect(echoed['locale'], 'en-US');
+      controller.invoke('performAction', {'nodeId': 'x:actions', 'kind': 'tap', 'actionId': 'reply', 'locale': 'fr'});
+      expect((((controller.lastResult!['value'] as Map)['echo'] as Map)['args'] as Map)['locale'], 'en-US');
     });
 
     testWidgets('MFM in the note body renders as a transform span', (tester) async {

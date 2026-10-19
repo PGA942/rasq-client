@@ -17,6 +17,9 @@ import '../features/settings/developer_mode.dart';
 import '../features/settings/settings_dsl.dart';
 import '../features/store/plugin_updates.dart' show pluginAutoUpdateProvider;
 import '../features/theme/theme_packs.dart';
+import '../l10n/l10n.dart';
+import '../l10n/locale_sync.dart';
+import '../l10n/ui_locale.dart';
 import '../notify/central_inbox.dart';
 import '../shell/rasq_terms_gate.dart';
 import 'app_shortcuts.dart';
@@ -50,6 +53,9 @@ class RasqApp extends ConsumerWidget {
     ref.listen(featureTourProvider, (_, _) {});
     // 同意待ちの RASQ アカウント (D-371 / S-053): いまの版の利用規約を承諾していなければ、1 度だけ承諾のシート。
     ref.listen(orgateAccountProvider, (_, next) => _termsPrompt.onAccount(ref, next.value));
+    // 表示の言語 (D-484): 設定 → 端末の言語 → 日本語。RASQ アカウントにログインしていれば ORGATE にも伝える。
+    final locale = ref.watch(uiLocaleProvider);
+    ref.watch(localeSyncProvider);
     final developerMode = ref.watch(developerModeProvider);
     final mode = ref.watch(themeModeProvider);
     final skin = ref.watch(activeSkinProvider);
@@ -67,13 +73,22 @@ class RasqApp extends ConsumerWidget {
     VideoPrefs.pipKeepPosition = settingValue(ref, 'appearance.video', 'pipKeepPosition', true) != false;
     return MaterialApp.router(
       title: 'RASQ',
+      // 表示の言語 (D-484): アプリの文言(lib/l10n)・部品の文言(rasq_design)・Material / Cupertino / Widgets の訳。
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
       // スロットプラグインのトースト出口 (D-167)。
       scaffoldMessengerKey: ref.watch(rootMessengerKeyProvider),
       debugShowCheckedModeBanner: false,
       // pro_image_editor (D-173) は material_ui の AppBar/Scaffold を使うので、その MaterialLocalizations も要る。
       // iOS / macOS では閉じるときの確認が cupertino_ui のダイアログ(showAdaptiveDialog)になるので、その
       // CupertinoLocalizations も要る (D-253: 無いと × / 戻るで例外になり、閉じられなかった)。
-      localizationsDelegates: const [mui.DefaultMaterialLocalizations.delegate, cui.DefaultCupertinoLocalizations.delegate],
+      localizationsDelegates: const [
+        ...AppLocalizations.localizationsDelegates,
+        RasqDesignLocalizations.delegate,
+        // material_ui / cupertino_ui の訳も表示の言語で(Default は英語だけで、ja では「対応していない」警告になる)。
+        mui.GlobalMaterialLocalizations.delegate,
+        cui.GlobalCupertinoLocalizations.delegate,
+      ],
       // 着せ替え (D-335): 色の上書き(効く明るさだけ)。面とアイコンは RasqSkinScope 経由で各部品が描く。
       theme: skin?.applyTo(RasqTheme.light()) ?? RasqTheme.light(),
       darkTheme: skin?.applyTo(RasqTheme.dark()) ?? RasqTheme.dark(),

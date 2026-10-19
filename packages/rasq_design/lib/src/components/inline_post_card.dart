@@ -8,6 +8,7 @@ import 'avatar.dart';
 import 'rich_text.dart';
 import '../platform/media_policy.dart';
 import '../platform/media_image.dart';
+import '../l10n/design_l10n.dart';
 
 /// インラインフレームの小表示 (D-156、ワイヤーフレーム p.1 右端 / p.5 右端):
 /// 別の面の中に投稿を埋め込むときのコンパクトなカード。小アバター + 名前 +
@@ -40,7 +41,7 @@ class RasqInlinePostCard extends StatelessWidget {
     final thumbs = thumbnails.take(4).toList();
     return Semantics(
       container: true,
-      label: '${author.displayName}の投稿(インラインフレーム)',
+      label: context.designL10n.designInlinePostSemantics(author.displayName),
       child: Material(
         color: Colors.transparent,
         child: InkWell(

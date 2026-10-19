@@ -5,6 +5,7 @@ import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
 import 'timestamp.dart';
+import '../l10n/design_l10n.dart';
 
 /// 投票コンポーネント (L2 composite `PollWidget`, RRL tag `vote` / `vote_option`).
 ///
@@ -53,7 +54,7 @@ class _RasqPollWidgetState extends State<RasqPollWidget> {
     final expired = poll.isExpired(now);
     return Semantics(
       container: true,
-      label: '投票',
+      label: context.designL10n.designPollVote,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         for (var i = 0; i < poll.options.length; i++)
           Padding(
@@ -66,16 +67,16 @@ class _RasqPollWidgetState extends State<RasqPollWidget> {
             child: FilledButton(
               onPressed: widget.onVote == null || _pending.isEmpty ? null : () => widget.onVote!(Set.of(_pending)),
               style: FilledButton.styleFrom(minimumSize: const Size(88, 36)),
-              child: const Text('投票する'),
+              child: Text(context.designL10n.designPollSubmit),
             ),
           ),
         Padding(
           padding: const EdgeInsets.only(top: 2),
           child: Row(children: [
-            Text('${poll.totalVotes}票', style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text(context.designL10n.designPollVotes(poll.totalVotes), style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
             if (poll.expiresAt != null) ...[
               Text(' · ', style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-              if (expired) Text('終了', style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)) else RasqTimestamp(poll.expiresAt!, mode: RasqTimestampMode.remaining, now: () => now),
+              if (expired) Text(context.designL10n.designPollEnded, style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)) else RasqTimestamp(poll.expiresAt!, mode: RasqTimestampMode.remaining, now: () => now),
             ],
           ]),
         ),
@@ -148,7 +149,7 @@ class _ResultRow extends StatelessWidget {
     final ratio = total == 0 ? 0.0 : option.votes / total;
     final percent = (ratio * 100).round();
     return Semantics(
-      label: '${option.text} $percent% ${option.votes}票${chosen ? ' 投票済み' : ''}',
+      label: '${option.text} $percent% ${context.designL10n.designPollVotes(option.votes)}${chosen ? context.designL10n.designPollVoted : ''}',
       child: Container(
         height: 40,
         decoration: BoxDecoration(
@@ -165,7 +166,7 @@ class _ResultRow extends StatelessWidget {
               Expanded(child: Text(option.text, style: RasqTypography.listTile, overflow: TextOverflow.ellipsis)),
               Text('$percent%', style: RasqTypography.listTile),
               const SizedBox(width: RasqSpacing.sm),
-              Text('${option.votes}票', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              Text(context.designL10n.designPollVotes(option.votes), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ]),
           ),
         ]),

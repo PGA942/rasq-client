@@ -1,0 +1,19 @@
+{
+  "languageSelfName": "日本語",
+  "@languageSelfName": {
+    "description": "この言語の、その言語での名前(設定の「言語」の一覧に出す)。訳すときは、その言語での自分の名前にする(English / 한국어 など)。"
+  },
+  "languageSettingsTitle": "言語",
+  "languageSettingsRowSubtitle": "アプリの表示の言語",
+  "languageSettingsCaption": "アプリの文字の言語を選びます。端末の言語に対応していないときは日本語で表示します。",
+  "languageSettingsCaptionDetail": "アプリの文字の言語を選びます。「システムに合わせる」は端末の言語の設定に従い、対応していない言語なら日本語にします。選んだ言語はこの端末に保存し、RASQ アカウントにログインしていれば ORGATE にも伝えます(メールや通知の言語、D-484)。",
+  "languageSettingsSystem": "システムに合わせる",
+  "languageSettingsSystemCurrent": "いまは {language}",
+  "@languageSettingsSystemCurrent": {
+    "description": "「システムに合わせる」の下の説明。{language} = 端末の言語から決まった、いまの表示の言語の名前。",
+    "placeholders": {
+      "language": {"type": "String", "example": "日本語"}
+    }
+  },
+  "languageSettingsListHeader": "表示の言語"
+}

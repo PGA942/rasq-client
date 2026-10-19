@@ -1,4 +1,6 @@
 import 'package:meta/meta.dart';
+
+import 'manifest_locales.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import 'action.dart';
@@ -83,29 +85,46 @@ class PluginNetwork {
 class PluginManifest {
   const PluginManifest({
     required this.id,
-    required this.name,
+    required String name,
     required this.version,
     required this.kind,
     this.author,
-    this.description,
+    String? description,
     this.supportedSns = const [],
     this.permissions = const [],
     this.network,
-    this.actions = const [],
-    this.termsOfService,
+    List<ActionDescriptor> actions = const [],
+    String? termsOfService,
     this.verified = false,
     this.official = false,
-  });
+    this.locales = ManifestLocales.none,
+  })  : baseName = name,
+        baseDescription = description,
+        baseActions = actions,
+        baseTermsOfService = termsOfService;
 
   /// Reverse-DNS-ish stable id, e.g. `rasq.official.misskey`.
   final String id;
-  final String name;
+
+  /// 素の `name`([locales] の `defaultLocale` の文)。画面に出すのは [name](表示の言語で引いたもの)。
+  final String baseName;
+  final String? baseDescription;
+  final List<ActionDescriptor> baseActions;
+  final String? baseTermsOfService;
+
+  /// ほかの言語の文 (D-484 / 契約 v0.24)。
+  final ManifestLocales locales;
+
+  /// 表示の言語の名前(`locales` → 素の `name`)。
+  String get name => locales.field('name') ?? baseName;
 
   /// SemVer string. Per-account versions are resolved by the host.
   final String version;
   final PluginKind kind;
   final String? author;
-  final String? description;
+
+  /// 表示の言語の説明。
+  String? get description => locales.field('description') ?? baseDescription;
   final List<SnsKind> supportedSns;
 
   /// Operation vocabulary (D-004): `network`, `gpu_ml`, `storage.safe`,
@@ -115,10 +134,16 @@ class PluginManifest {
   /// `net.fetch` の接続先の宣言。null = 宣言なし = どこにも繋げない。
   final PluginNetwork? network;
 
-  final List<ActionDescriptor> actions;
+  /// 宣言したアクション(ラベルは表示の言語、`locales.<tag>.actions.<id>.label`)。
+  List<ActionDescriptor> get actions => locales.isEmpty
+      ? baseActions
+      : [
+          for (final a in baseActions)
+            if (locales.actionLabel(a.id) case final label?) ActionDescriptor.fromJson({...a.toJson(), 'label': label}) else a,
+        ];
 
-  /// Markdown shown on the 利用規約画面 before first login.
-  final String? termsOfService;
+  /// Markdown shown on the 利用規約画面 before first login(表示の言語)。
+  String? get termsOfService => locales.field('termsOfService') ?? baseTermsOfService;
 
   /// Store-reviewed (審査済み). Sideloaded plugins are `false`.
   final bool verified;
@@ -126,18 +151,19 @@ class PluginManifest {
 
   Map<String, Object?> toJson() => {
         'id': id,
-        'name': name,
+        'name': baseName,
         'version': version,
         'kind': kind.name,
         if (author != null) 'author': author,
-        if (description != null) 'description': description,
+        if (baseDescription != null) 'description': baseDescription,
         'supportedSns': supportedSns.map((e) => e.name).toList(),
         'permissions': permissions,
         if (network != null) 'network': network!.toJson(),
-        'actions': actions.map((a) => a.toJson()).toList(),
-        if (termsOfService != null) 'termsOfService': termsOfService,
+        'actions': baseActions.map((a) => a.toJson()).toList(),
+        if (baseTermsOfService != null) 'termsOfService': baseTermsOfService,
         'verified': verified,
         'official': official,
+        ...locales.toJson(),
       };
 
   factory PluginManifest.fromJson(Map<String, Object?> json) => PluginManifest(
@@ -154,5 +180,6 @@ class PluginManifest {
         termsOfService: json['termsOfService'] as String?,
         verified: json['verified'] as bool? ?? false,
         official: json['official'] as bool? ?? false,
+        locales: ManifestLocales.fromManifest(json),
       );
 }

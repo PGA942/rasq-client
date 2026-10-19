@@ -6,6 +6,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:plugin_runtime/plugin_runtime.dart' show rasqZstdDecompress;
+import 'package:rasq_plugin_api/rasq_plugin_api.dart' show ManifestLocales;
 
 /// `.rasqpkg`(D-034 / D-244d): zstd 圧縮 tar。先頭が `bundle.json`(`rasq.bundle/1`、rasq-sdk-sample
 /// `schema/bundle.schema.json`)、最後が `SHA512SUMS`。ここは **展開と中身の検証**(`rasq inspect` と同じ手順):
@@ -136,12 +137,12 @@ class RasqPackage {
             if (a is Map && a['use'] == 'theme' && a['id'] is String && assets[a['path']] != null) a['id'] as String: (path: a['path'] as String, bytes: assets[a['path']]!),
       };
 
-  /// アセットパックのステッカー(`use: "sticker"`)。アセットパックでなければ空。
+  /// アセットパックのステッカー(`use: "sticker"`)。アセットパックでなければ空。ラベルは表示の言語(`locales.<tag>.assets.<id>.label`、D-484)。
   List<RasqPackSticker> get stickers => [
         if (root.isAssets)
           for (final a in (root.manifest['assets'] as List? ?? const []))
             if (a is Map && a['use'] == 'sticker' && a['id'] is String && assets[a['path']] != null)
-              RasqPackSticker(id: a['id'] as String, path: a['path'] as String, bytes: assets[a['path']]!, label: a['label'] as String?, tags: [for (final t in (a['tags'] as List? ?? const [])) if (t is String) t]),
+              RasqPackSticker(id: a['id'] as String, path: a['path'] as String, bytes: assets[a['path']]!, label: ManifestLocales.fromManifest(root.manifest).assetLabel(a['id'] as String) ?? a['label'] as String?, tags: [for (final t in (a['tags'] as List? ?? const [])) if (t is String) t]),
       ];
 
   /// id で引く(null / 空 = root)。無ければ例外。

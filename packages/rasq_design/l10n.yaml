@@ -1,0 +1,10 @@
+# 部品(rasq_design)の文言の生成 (D-484)。手順はアプリの docs/I18N.md。
+# lib/l10n/design_<言語>.arb は tool/l10n_merge.dart が lib/l10n/parts/*.<言語>.arb から作る(手で直さない)。
+arb-dir: lib/l10n
+template-arb-file: design_ja.arb
+output-dir: lib/l10n/gen
+output-localization-file: rasq_design_localizations.dart
+output-class: RasqDesignLocalizations
+preferred-supported-locales: [ja]
+nullable-getter: true
+format: true

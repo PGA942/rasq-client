@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
 import 'notice.dart';
+import '../l10n/design_l10n.dart';
 
 /// スライダー設定行 (L2)。トレンドの指向性/刺激性、リレーショナルTLの
 /// 類似度しきい値(50〜100 正規化, D-022)などの数値設定に使う独立部品。
@@ -89,7 +90,7 @@ class RasqRangeSliderListTile extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Expanded(child: Text(title, style: RasqTypography.listTile)),
-          Text(valueLabel ?? '${values.start.round()}〜${values.end.round()}', style: RasqTypography.count.copyWith(color: scheme.onSurfaceVariant)),
+          Text(valueLabel ?? context.designL10n.designRangeValue(values.start.round(), values.end.round()), style: RasqTypography.count.copyWith(color: scheme.onSurfaceVariant)),
         ]),
         if (subtitle != null) Text(rasqDetail(context, subtitle!, detail), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         RangeSlider(
