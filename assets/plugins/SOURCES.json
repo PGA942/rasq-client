@@ -10,9 +10,9 @@
     },
     "bluesky_wasm.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
-      "commit": "0400cae06b722febfc6e7f51afdacaa8392bec3a",
+      "commit": "386857d0137f8edbb66363a0fa2ee6fd3399e3dc",
       "version": "0.1.0",
-      "sha256": "78e5bc010ed00816c8e2cfb77139aa8fd02f6bdfe45294b234890a6627d94cd9"
+      "sha256": "ad8a5d5940e80cdeff26de2bfe4130432f83d0ee2fe1a360514dcf8c1934420e"
     },
     "composer_media_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/composer-media-plugin.git",
@@ -40,15 +40,15 @@
     },
     "hello_rasq_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
-      "commit": "9bfc48852dd6d7aff7cd122752570b3260fca834",
+      "commit": "386857d0137f8edbb66363a0fa2ee6fd3399e3dc",
       "version": "0.1.0",
-      "sha256": "f3dd12aa8ba3420f3867c8947a5070e153c105aa15d2c981e6a1d52591f540df"
+      "sha256": "e13093b12d95322457753b2194262c1a7b07ed40a12c0d63e81e0218fb6bf936"
     },
     "mastodon_wasm.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
-      "commit": "0400cae06b722febfc6e7f51afdacaa8392bec3a",
+      "commit": "386857d0137f8edbb66363a0fa2ee6fd3399e3dc",
       "version": "0.1.0",
-      "sha256": "2da5a3da6fb606d484e5dbb585d5f07a7dec091c1137b9faf8ceba7d88bf0037"
+      "sha256": "a19b0665fba502f86c580e8236a5a5a05cd362c4c4ea6b8d54d875d7829d31f2"
     },
     "media_draw_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/media-draw-plugin.git",
@@ -76,15 +76,15 @@
     },
     "misskey_wasm_sample.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
-      "commit": "0400cae06b722febfc6e7f51afdacaa8392bec3a",
+      "commit": "386857d0137f8edbb66363a0fa2ee6fd3399e3dc",
       "version": "0.1.0",
-      "sha256": "d89919395d538d06d90bdfdae6da9a616dd5926bb4b2bba0c80028ada44a9bbb"
+      "sha256": "c70b362a34a1d53e7d1b820d1d2c70614e9a676ccfb41ff04613318764e838d4"
     },
     "mixi2_wasm.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
-      "commit": "0400cae06b722febfc6e7f51afdacaa8392bec3a",
+      "commit": "386857d0137f8edbb66363a0fa2ee6fd3399e3dc",
       "version": "0.1.0",
-      "sha256": "4247ab71a5c7cb346e351162cc5f291fb41fdbea9997eeb77e20812fc8d28fd9"
+      "sha256": "f5ca10ac9efae723d3d5cfb2f9bb4c7acfbe9decf5d440d702a6edd559f200a4"
     },
     "post_action_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/post-action-plugin.git",
