@@ -98,7 +98,10 @@ void main() {
     // (D-065)、開いた側(第2カラム)の幅に収まる。
     final reactionBtn = find.byIcon(Icons.favorite_border).first;
     final btnRect = tester.getRect(reactionBtn);
+    // 長押しはすぐ選べる絵文字 (D-512)。その「その他」でピッカー全体を開く。
     await tester.longPress(reactionBtn);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('quickEmoji.more')));
     await tester.pumpAndSettle();
     expect(find.byType(EmojiPanel), findsOneWidget);
     Finder fowPanel() => find.byWidgetPredicate(isFrontmostFowPanel);
