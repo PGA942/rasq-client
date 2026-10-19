@@ -1801,6 +1801,75 @@ class AppLocalizationsJa extends AppLocalizations {
   String get composeMfmFnPlain => '装飾を無効化';
 
   @override
+  String get composeMfmFnFont => '書体を変える';
+
+  @override
+  String get composeMfmPropFontSerif => '明朝体(serif)';
+
+  @override
+  String get composeMfmPropFontMonospace => '等幅(monospace)';
+
+  @override
+  String get composeMfmPropFontCursive => '筆記体(cursive)';
+
+  @override
+  String get composeMfmPropFontFantasy => '装飾体(fantasy)';
+
+  @override
+  String get composeMfmFnPosition => '位置をずらす';
+
+  @override
+  String get composeMfmPropPositionX => '横(文字の大きさ単位、例: 0.5)';
+
+  @override
+  String get composeMfmPropPositionY => '縦(文字の大きさ単位、例: -1)';
+
+  @override
+  String get composeMfmFnScale => '拡大・縮小(最大 5 倍)';
+
+  @override
+  String get composeMfmPropScaleX => '横の倍率(例: 0.5)';
+
+  @override
+  String get composeMfmPropScaleY => '縦の倍率(例: 1.5)';
+
+  @override
+  String get composeMfmFnBorder => '枠線';
+
+  @override
+  String get composeMfmPropBorderStyle => '線の種類(solid / dashed / dotted など)';
+
+  @override
+  String get composeMfmPropBorderWidth => '太さ(px、既定 1)';
+
+  @override
+  String get composeMfmPropBorderColor => '16進(既定はアクセント色)';
+
+  @override
+  String get composeMfmPropBorderRadius => '角の丸み(px)';
+
+  @override
+  String get composeMfmPropBorderNoclip => 'はみ出しを切らない';
+
+  @override
+  String get composeMfmFnRuby => 'ルビ(「本文 読み」の形で書く)';
+
+  @override
+  String get composeMfmSampleRuby => '漢字 かんじ';
+
+  @override
+  String get composeMfmFnUnixtime => 'UNIX 時刻(秒)を日時で表示';
+
+  @override
+  String get composeMfmFnSparkle => 'きらきら';
+
+  @override
+  String get composeMfmPropDelay => '開始を遅らせる(例: 0.5s)';
+
+  @override
+  String get composeMfmSearchButton => '検索';
+
+  @override
   String get composeMfmMarkdownBoldName => '太字';
 
   @override

@@ -13,15 +13,33 @@ Widget wrap(Widget child) => MaterialApp(
 
 void main() {
   group('RasqTransformSpan rendering', () {
-    testWidgets('x2 scales the child text style', (tester) async {
+    testWidgets('x2 scales the child text style inline (Misskey: plain span, nested x2 half effective)', (tester) async {
       await tester.pumpWidget(wrap(const RasqRichText([
         RasqTextSpan('通常'),
-        RasqTransformSpan('x2', children: [RasqTextSpan('大きい')]),
+        RasqTransformSpan('x2', children: [
+          RasqTextSpan('大きい'),
+          RasqTransformSpan('x2', children: [RasqTextSpan('入れ子')]),
+        ]),
       ], style: TextStyle(fontSize: 15))));
-      expect(find.text('大きい'), findsOneWidget);
-      final inner = tester.widget<RasqRichText>(find.byType(RasqRichText).last);
+      final sizes = <String, double?>{};
+      tester.widget<RichText>(find.byType(RichText).first).text.visitChildren((s) {
+        if (s is TextSpan && s.text != null) sizes[s.text!] = s.style?.fontSize;
+        return true;
+      });
+      expect(sizes, {'通常': 15, '大きい': 30, '入れ子': 45});
       expect(RasqMfmTransform.childStyle('x2', const {}, const TextStyle(fontSize: 15)).fontSize, 30);
-      expect(inner.style!.fontSize, 30);
+    });
+
+    testWidgets('box fns are inline-blocks with their own transform (nested transforms compose)', (tester) async {
+      await tester.pumpWidget(wrap(const RasqRichText([
+        RasqTransformSpan('position', args: {'y': '-1'}, children: [
+          RasqTransformSpan('rotate', args: {'deg': '90'}, children: [RasqTextSpan('箱')]),
+        ]),
+      ], style: TextStyle(fontSize: 20))));
+      final transforms = tester.widgetList<Transform>(find.descendant(of: find.byType(RasqMfmTransform), matching: find.byType(Transform))).toList();
+      expect(transforms, hasLength(2));
+      expect(transforms.first.transform.storage[13], -20, reason: 'position.y=-1 = -1em');
+      expect(transforms.last.transform.storage[1], closeTo(1, 1e-9), reason: 'rotate 90°');
     });
 
     testWidgets('unknown fn renders children unchanged', (tester) async {
@@ -38,7 +56,8 @@ void main() {
       ])));
       await tester.pumpAndSettle(); // no live tickers → settles
       expect(find.text('回る'), findsOneWidget);
-      expect(find.text('虹'), findsOneWidget);
+      // rainbow の静止は Misskey と同じく文字にグラデーション(絵文字はそのまま)= 2 枚重ね。
+      expect(find.text('虹'), findsWidgets);
     });
 
     test('speedOf / color parsing', () {
