@@ -10,6 +10,8 @@ class RasqCollapsibleTabScaffold extends StatelessWidget {
     required this.tabViews,
     this.controller,
     this.pinnedTabsBackground,
+    this.nestedScrollKey,
+    this.tabViewPhysics,
   }) : assert(tabViews.length > 0);
 
   /// The collapsible top tile (e.g. UserTileLarge).
@@ -21,10 +23,18 @@ class RasqCollapsibleTabScaffold extends StatelessWidget {
   final TabController? controller;
   final Color? pinnedTabsBackground;
 
+  /// 中の [NestedScrollView] のキー (D-514)。`GlobalKey<NestedScrollViewState>` を渡すと、タブの一覧の位置
+  /// (`innerController`)を外から見て、いちばん上へ送れる。
+  final Key? nestedScrollKey;
+
+  /// タブの中身の横のスワイプ (D-514)。`NeverScrollableScrollPhysics` で、指をチャートに置いている間などに止める。
+  final ScrollPhysics? tabViewPhysics;
+
   @override
   Widget build(BuildContext context) {
     final bg = pinnedTabsBackground ?? Theme.of(context).colorScheme.surface;
     Widget body(TabController ctrl) => NestedScrollView(
+          key: nestedScrollKey,
           headerSliverBuilder: (context, innerBoxIsScrolled) => [
             SliverOverlapAbsorber(
               handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
@@ -35,7 +45,7 @@ class RasqCollapsibleTabScaffold extends StatelessWidget {
               delegate: _PinnedTabsDelegate(tabs, bg),
             ),
           ],
-          body: TabBarView(controller: ctrl, children: tabViews),
+          body: TabBarView(controller: ctrl, physics: tabViewPhysics, children: tabViews),
         );
     if (controller != null) return body(controller!);
     return DefaultTabController(length: tabViews.length, child: Builder(builder: (context) => body(DefaultTabController.of(context))));

@@ -14324,6 +14324,80 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String userPageViewTitle(String tab) {
+    return '$tabの表示';
+  }
+
+  @override
+  String get userPageViewClose => '閉じる';
+
+  @override
+  String userPageViewSearchHint(String tab) {
+    return 'この人の$tabから探す';
+  }
+
+  @override
+  String get userPageViewSortLabel => '並べ替え';
+
+  @override
+  String get userPageViewSortNewest => '新しい順';
+
+  @override
+  String get userPageViewSortOldest => '古い順';
+
+  @override
+  String get userPageViewSortReactions => 'リアクション数';
+
+  @override
+  String get userPageViewSortTendency => '傾向に合う順';
+
+  @override
+  String get userPageViewShowLabel => '表示';
+
+  @override
+  String get userPageViewShowPinned => 'ピン留め';
+
+  @override
+  String get userPageViewShowRenotes => 'リノート';
+
+  @override
+  String get userPageViewShowQuotes => '引用ノート';
+
+  @override
+  String get userPageViewShowDigest => 'ダイジェスト';
+
+  @override
+  String get userPageViewDirectivityTitle => '指向性';
+
+  @override
+  String get userPageViewDirectivityNoGenres => '好きなジャンルを決めると効きます';
+
+  @override
+  String get userPageViewStimulusTitle => '刺激性';
+
+  @override
+  String get userPageViewStimulusCaption => '中心に寄せた感情の強い投稿を隠します';
+
+  @override
+  String get userPageViewReset => 'リセット';
+
+  @override
+  String userPageViewCount(int shown, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total 件中 $shown 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get userPageViewEmptyTitle => '条件に合う投稿はありません';
+
+  @override
+  String get userPageViewEmptyHint => 'タブをもう一度押して、表示の設定を変えるかリセットしてください';
+
+  @override
   String get vcSectionInvited => '招待';
 
   @override

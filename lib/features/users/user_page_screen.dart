@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,8 @@ import 'package:go_router/go_router.dart';
 import '../../app/navigation.dart';
 import '../../app/router.dart';
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
+import '../settings/settings_dsl.dart' show settingsAreaProvider;
 import '../../shell/headers.dart';
 import '../../text/inline_spans.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -22,11 +25,14 @@ import '../servers/server_info_tile.dart';
 import '../profile/rasq_links_on_sns_profile.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../trend/tendency_profile.dart';
 import 'user_list.dart';
 import 'user_providers.dart';
+import 'user_tab_view.dart';
 import '../ads/timeline_ads.dart';
 
-/// ユーザーページ(通常 / 自分 / 制限 / ノーヒット). タブ: ノート / 引用 / メディア / クリップ.
+/// ユーザーページ(通常 / 自分 / 制限 / ノーヒット). タブ: ノート / 返信 / 引用 / メディア / クリップ.
+/// 選んでいるタブをもう一度押すと、いちばん上へ / 並べ替え・絞り込みのパネル (D-514、[showUserTabViewPanel])。
 class UserPageScreen extends ConsumerStatefulWidget {
   const UserPageScreen({super.key, required this.userId, this.initial, this.account});
   final String userId;
@@ -46,6 +52,61 @@ class UserPageScreen extends ConsumerStatefulWidget {
 
 class _UserPageScreenState extends ConsumerState<UserPageScreen> {
   bool _showRestricted = false;
+
+  /// 投稿のタブ(並び = タブの順。クリップ/Play はこの後ろ)。
+  static const _postTabs = [UserPostsFilter.posts, UserPostsFilter.replies, UserPostsFilter.quotes, UserPostsFilter.media];
+
+  /// タブの一覧の位置(選んでいるタブをもう一度押したとき、いちばん上か、D-514)。
+  final _nested = GlobalKey<NestedScrollViewState>();
+
+  /// 並べ替え・絞り込みのパネルの指向性 / 刺激性の欄に指が触れている (D-514)。その間はタブの横のスワイプと戻るジェスチャーを止める。
+  final _chartHeld = ValueNotifier(false);
+
+  /// タブごとの検索の語 (D-514)。保存しない(このページを開いている間だけ)。
+  final _queries = {for (final f in _postTabs) f: ValueNotifier('')};
+
+  @override
+  void dispose() {
+    _chartHeld.dispose();
+    for (final q in _queries.values) {
+      q.dispose();
+    }
+    super.dispose();
+  }
+
+  /// 選んでいるタブをもう一度押した (D-514)。一覧が下へ進んでいれば、まずいちばん上へ(下のナビの D-505 と同じ「押し直すと上へ」)。
+  /// いちばん上なら、そのタブにつながった並べ替え・絞り込みのパネルを開く(開いていれば閉じる)。ヘッダーが出ていれば先に畳む。
+  Future<void> _onSelectedTabTap(int i, Rect anchor, UserProfile p, String label) async {
+    if (i >= _postTabs.length) return;
+    final inner = _nested.currentState?.innerController;
+    if (inner != null && inner.hasClients && inner.positions.any((x) => x.pixels > 0.5)) {
+      await inner.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
+      return;
+    }
+    // ヘッダーが出ていれば畳んで、タブを上に留めてから開く(パネルの入る高さを取る)。タブの矩形はその分だけ上へ。
+    final outer = _nested.currentState?.outerController;
+    if (outer != null && outer.hasClients) {
+      final rest = outer.position.maxScrollExtent - outer.position.pixels;
+      if (rest > 0.5) {
+        await outer.animateTo(outer.position.maxScrollExtent, duration: const Duration(milliseconds: 200), curve: Curves.easeOutCubic);
+        if (!mounted) return;
+        anchor = anchor.shift(Offset(0, -rest));
+      }
+    }
+    final f = _postTabs[i];
+    if (!mounted) return;
+    await showUserTabViewPanel(
+      context,
+      ref,
+      anchor: anchor,
+      tab: f,
+      tabLabel: label,
+      query: _queries[f]!,
+      chartHeld: _chartHeld,
+      postsKey: (id: p.summary.id, filter: f, account: widget.accountKey),
+      hasPinned: f == UserPostsFilter.posts && p.pinnedPosts.isNotEmpty,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,8 +137,23 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
           final restricted = (p.isSuspended || st.blocked || st.blockedBy) && !_showRestricted;
           // 返信TL / 引用TL (D-069): 返信と引用はそれぞれのタブに振り分ける
           // (ノートには両方とも流さない。純リノートはノートに残る)。
-          final tabs = [const RasqTabItem('ノート'), const RasqTabItem('返信'), const RasqTabItem('引用'), const RasqTabItem('メディア'), const RasqTabItem('クリップ/Play')];
-          return RasqCollapsibleTabScaffold(
+          final labels = ['ノート', '返信', '引用', 'メディア', 'クリップ/Play'];
+          final views = ref.watch(settingsAreaProvider(userPageTabsKvArea)).value ?? const <String, Object?>{};
+          // 選んでいるタブの ∨ = 並べ替え・絞り込み (D-514)。クリップ/Play には無い。変えているタブは名前の右肩に点。
+          return ListenableBuilder(
+            listenable: Listenable.merge([_chartHeld, ..._queries.values]),
+            builder: (context, _) {
+              final tabs = [
+                for (final (i, f) in _postTabs.indexed) RasqTabItem(labels[i], dot: !restricted && (!UserTabView.fromJson(views[f.name]).isDefault || _queries[f]!.value.trim().isNotEmpty)),
+                RasqTabItem(labels[4], chevron: false),
+              ];
+              final held = _chartHeld.value;
+              return PopScope(
+                // 指をチャートに置いている間は、端からの戻るジェスチャーで閉じない (D-514)。
+                canPop: !held,
+                child: RasqCollapsibleTabScaffold(
+            nestedScrollKey: _nested,
+            tabViewPhysics: held ? const NeverScrollableScrollPhysics() : null,
             header: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               RasqUserTileLarge(
                 profile: p,
@@ -101,16 +177,19 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
               // この人の RASQ アカウントと、ほかにつないでいるアカウント (D-312)。制限中 / 凍結中は出さない。
               if (!restricted && !p.isSuspended) RasqLinksOnSnsProfile(profile: p),
             ]),
-            tabs: RasqTabs(items: tabs),
+            tabs: RasqTabs(items: tabs, onSelectedTabTap: restricted ? null : (i, anchor) => _onSelectedTabTap(i, anchor, p, labels[i])),
             tabViews: restricted
                 ? [for (final _ in tabs) const RasqEmptyView(title: '制限されたユーザーです', hint: '「表示」を押すと内容を表示します')]
                 : [
-                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.posts, pinned: p.pinnedPosts),
-                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.replies),
-                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.quotes),
-                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.media),
+                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.posts, pinned: p.pinnedPosts, query: _queries[UserPostsFilter.posts]!),
+                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.replies, query: _queries[UserPostsFilter.replies]!),
+                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.quotes, query: _queries[UserPostsFilter.quotes]!),
+                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.media, query: _queries[UserPostsFilter.media]!),
                     _UserClips(userId: p.summary.id),
                   ],
+                ),
+              );
+            },
           );
         },
       ),
@@ -157,11 +236,14 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
 }
 
 class _UserPosts extends ConsumerWidget {
-  const _UserPosts({required this.userId, required this.filter, this.pinned = const [], this.account});
+  const _UserPosts({required this.userId, required this.filter, required this.query, this.pinned = const [], this.account});
   final String userId;
   final UserPostsFilter filter;
   final List<Post> pinned;
   final String? account;
+
+  /// このタブの検索の語 (D-514)。
+  final ValueListenable<String> query;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final page = ref.watch(userPostsProvider((id: userId, filter: filter, account: account)));
@@ -171,14 +253,22 @@ class _UserPosts extends ConsumerWidget {
     final actions = ref.watch(sessionForAccountProvider(account))?.actions ?? const <ActionDescriptor>[];
     final notifier = ref.read(timelineProvider(TimelineKind.home).notifier);
     final scheme = Theme.of(context).colorScheme;
+    final view = watchUserTabView(ref, filter);
+    // 指向性 / 傾向に合う順は、トレンドの設定の好きなジャンル / 例を使う(使うときだけ読む)。
+    final base = view.limitsDirection || view.limitsStimulus || view.sort == UserTabSort.tendency ? ref.watch(tendencyProfileProvider).value : null;
     return page.when(
       loading: () => const RasqLoading(),
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userPostsProvider((id: userId, filter: filter, account: account))), retryLabel: '再読み込み'),
-      data: (p) {
-        final items = [...pinned, ...p.items.where((x) => !pinned.any((pin) => pin.id == x.id))];
-        if (items.isEmpty) return const RasqEmptyView(title: '投稿はありません');
+      data: (p) => ValueListenableBuilder<String>(valueListenable: query, builder: (context, q, _) {
+        // 並べ替え・絞り込み (D-514): ピン留めは絞るだけで上に(並べ替えない)、残りに並べ替えも掛ける。
+        final rest = p.items.where((x) => !pinned.any((pin) => pin.id == x.id)).toList();
+        if (pinned.isEmpty && rest.isEmpty) return const RasqEmptyView(title: '投稿はありません');
+        final shownPinned = view.pinned ? applyUserTabView(pinned, view, query: q, base: base, sorted: false) : const <Post>[];
+        final items = [...shownPinned, ...applyUserTabView(rest, view, query: q, base: base)];
+        if (items.isEmpty) return RasqEmptyView(key: const ValueKey('user.tabView.empty'), title: context.l10n.userPageViewEmptyTitle, hint: context.l10n.userPageViewEmptyHint);
+        final pinnedCount = shownPinned.length;
         // 投稿の間の広告 (D-438)。ピン留めの間には置かない。
-        final ads = {for (final g in timelineAdGaps(ref, items)) if (g > pinned.length) g};
+        final ads = {for (final g in timelineAdGaps(ref, items)) if (g > pinnedCount) g};
         final adOrdinal = {for (final (n, g) in (ads.toList()..sort()).indexed) g: n};
         return ListView.separated(
           padding: const EdgeInsets.only(bottom: 80),
@@ -186,15 +276,19 @@ class _UserPosts extends ConsumerWidget {
           separatorBuilder: (_, _) => const Divider(),
           itemBuilder: (_, i) {
             final post = items[i];
-            final isPinned = i < pinned.length;
+            final isPinned = i < pinnedCount;
             return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (ads.contains(i)) ...[TimelineAdSlot(key: ValueKey('user.ad.$i'), ordinal: adOrdinal[i]!), const Divider()],
               if (isPinned) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page + RasqSizes.avatarLg + RasqSpacing.md, 6, 0, 0), child: Row(children: [Icon(Icons.push_pin, size: 14, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text('ピン留め', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))])),
-              PostRow(post: post, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(post, a, args: args), onTap: () => context.pushPost(post)),
+              // ダイジェスト (D-514) = 小表示(D-156 のインラインフレーム)。
+              if (view.digest)
+                Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs), child: InlinePostFrame(key: ValueKey('user.digest.${post.id}'), post: post, onTap: () => context.pushPost(post)))
+              else
+                PostRow(post: post, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(post, a, args: args), onTap: () => context.pushPost(post)),
             ]);
           },
         );
-      },
+      }),
     );
   }
 }

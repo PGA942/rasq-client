@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/colors.dart';
@@ -11,7 +12,7 @@ import '../tokens/typography.dart';
 /// その軸の値が変わる(触った点から中心までの距離 = 値)。標準 widget では
 /// 組めないので CustomPaint(D-153)。
 class RasqRadarChart extends StatefulWidget {
-  const RasqRadarChart({super.key, required this.axes, required this.values, this.labels = const {}, this.onChanged, this.size = 240, this.rings = 4, this.color});
+  const RasqRadarChart({super.key, required this.axes, required this.values, this.labels = const {}, this.onChanged, this.size = 240, this.rings = 4, this.color, this.claimDrag = false});
 
   /// 軸の並び(時計回り、先頭が真上)。
   final List<String> axes;
@@ -25,6 +26,10 @@ class RasqRadarChart extends StatefulWidget {
   final double size;
   final int rings;
   final Color? color;
+
+  /// 触れたらすぐドラッグを取る (D-514)。スクロールする FOW の中に置くと、縦に動かした指を FOW のスクロールが取り、
+  /// 軸を動かせなかった。true なら指を置いた時点でこのチャートのドラッグに決める(タップも置いた点で値が決まる)。
+  final bool claimDrag;
 
   @override
   State<RasqRadarChart> createState() => _RasqRadarChartState();
@@ -64,28 +69,56 @@ class _RasqRadarChartState extends State<RasqRadarChart> {
       height: widget.size,
       child: LayoutBuilder(builder: (context, c) {
         final size = Size(c.maxWidth, c.maxHeight);
+        final paint = CustomPaint(
+          painter: _RadarPainter(
+            axes: widget.axes,
+            values: widget.values,
+            labels: widget.labels,
+            rings: widget.rings,
+            color: color,
+            lineColor: scheme.onSurface,
+            gridColor: scheme.outlineVariant,
+            textStyle: RasqTypography.caption.copyWith(color: scheme.onSurface),
+            radius: _radius(c),
+          ),
+        );
+        if (widget.claimDrag) {
+          return RawGestureDetector(
+            behavior: HitTestBehavior.opaque,
+            gestures: {
+              _EagerPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<_EagerPanGestureRecognizer>(
+                () => _EagerPanGestureRecognizer(debugOwner: this),
+                (r) => r
+                  ..onStart = ((d) => _handle(d.localPosition, size))
+                  ..onUpdate = ((d) => _handle(d.localPosition, size, lockAxis: true))
+                  ..onEnd = ((_) => _dragging = null)
+                  ..onCancel = (() => _dragging = null),
+              ),
+            },
+            child: paint,
+          );
+        }
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: (d) => _handle(d.localPosition, size),
           onPanStart: (d) => _handle(d.localPosition, size),
           onPanUpdate: (d) => _handle(d.localPosition, size, lockAxis: true),
           onPanEnd: (_) => _dragging = null,
-          child: CustomPaint(
-            painter: _RadarPainter(
-              axes: widget.axes,
-              values: widget.values,
-              labels: widget.labels,
-              rings: widget.rings,
-              color: color,
-              lineColor: scheme.onSurface,
-              gridColor: scheme.outlineVariant,
-              textStyle: RasqTypography.caption.copyWith(color: scheme.onSurface),
-              radius: _radius(c),
-            ),
-          ),
+          child: paint,
         );
       }),
     );
+  }
+}
+
+/// 指を置いた時点で勝つドラッグ([RasqRadarChart.claimDrag])。スクロール / 横のスワイプとの取り合いに負けない。
+class _EagerPanGestureRecognizer extends PanGestureRecognizer {
+  _EagerPanGestureRecognizer({super.debugOwner});
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    super.addAllowedPointer(event);
+    resolve(GestureDisposition.accepted);
   }
 }
 
