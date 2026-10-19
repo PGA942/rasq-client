@@ -77,6 +77,8 @@ Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0, MediaIt
           return Builder(
             builder: (ctx) => AccountSelectPill(
               key: postShareAccountKey,
+              // 狭いカラム(最小 280px、D-320)に開いても見出しの行(左の余白 + ✕)からはみ出さない幅まで (D-481)。
+              maxWidth: 220,
               account: s.account,
               displayName: s.displayName,
               avatarUrl: s.avatarUrl,
