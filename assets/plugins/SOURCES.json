@@ -10,9 +10,9 @@
     },
     "bluesky_wasm.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
-      "commit": "e947964405fab26acc97f1cccb0b6fdabe46701c",
+      "commit": "3060558f841bc4d2d1048f37354948d2fea75fb2",
       "version": "0.1.0",
-      "sha256": "9f44fe7658439df93cc60544590553e94f831bb4dc237b6b35e5da511030bd02"
+      "sha256": "8ecd1861545db548a21b108754966291515ba0568d27d08504a4bd9057f153c7"
     },
     "composer_media_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/composer-media-plugin.git",
