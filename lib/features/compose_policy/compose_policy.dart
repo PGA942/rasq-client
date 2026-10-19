@@ -14,22 +14,23 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import '../../l10n/l10n.dart';
 import 'compose_signals.dart';
 
 /// 応答の形の名前。
 const composePolicySchema = 'rasq.compose-policy/1';
 
-/// 種類の名前(Central の `types` が無いときの表示。Central S-102 の TYPES と同じ)。
-const composeTypeLabels = <String, String>{
-  'sexual': '性的な表現',
-  'violence': '暴力・脅し',
-  'self-harm': '自傷・自殺',
-  'harassment': '暴言・嫌がらせ',
-  'personal-info': '個人情報(電話番号・メールアドレス・住所など)',
-  'link': '外部へのリンク',
-  'media': '画像・動画',
-  'stimulus': '強い言葉',
-  'topic': '決められた話題',
+/// 種類の名前(Central の `types` が無いときの表示。Central S-102 の TYPES と同じ。いまの表示の言語)。
+Map<String, String> get composeTypeLabels => <String, String>{
+  'sexual': appL10n.composePolicyTypeSexual,
+  'violence': appL10n.composePolicyTypeViolence,
+  'self-harm': appL10n.composePolicyTypeSelfHarm,
+  'harassment': appL10n.composePolicyTypeHarassment,
+  'personal-info': appL10n.composePolicyTypePersonalInfo,
+  'link': appL10n.composePolicyTypeLink,
+  'media': appL10n.composePolicyTypeMedia,
+  'stimulus': appL10n.composePolicyTypeStimulus,
+  'topic': appL10n.composePolicyTypeTopic,
 };
 
 /// 見守り / 制限。
@@ -196,10 +197,11 @@ class ComposeTrip {
 
   /// 利用者に出す文(種類の名前だけ。点数や語の一覧は出さない)。
   String get message {
-    final who = mode == composeModeChildSafe ? '保護者の設定' : 'アカウントの制限';
-    if (unmeasured && type == 'media') return '$whoにより、画像・動画は送れません(この端末では添付の確認ができません)。添付を外してください';
-    if (unmeasured) return '$whoにより、いまは送れません(この端末では「$label」の確認ができません)';
-    return blocks ? '$whoにより、「$label」に当たる内容は送れません。書き換えてください' : '「$label」に当たるかもしれません($who)。このまま送りますか?';
+    final l = appL10n;
+    final who = mode == composeModeChildSafe ? l.composePolicyWhoGuardian : l.composePolicyWhoSanction;
+    if (unmeasured && type == 'media') return l.composePolicyBlockedMediaUnmeasured(who);
+    if (unmeasured) return l.composePolicyBlockedUnmeasured(who, label);
+    return blocks ? l.composePolicyBlocked(who, label) : l.composePolicyWarn(label, who);
   }
 }
 

@@ -29,6 +29,7 @@ import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
 import '../nodeprog/tl_components.dart';
 import '../settings/settings_dsl.dart';
+import '../../l10n/l10n.dart';
 import 'composer_learning.dart';
 import 'compose_providers.dart';
 export 'compose_providers.dart' show ComposerInitialFile;
@@ -145,18 +146,18 @@ class ComposerHeaderControls extends ConsumerWidget {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Builder(builder: (ctx) {
           final (icon, label) = switch (opts.visibility) {
-            'home' => (Icons.home_outlined, 'ホーム'),
-            'followers' => (Icons.lock_outline, 'フォロワー'),
-            _ => (Icons.public, 'パブリック'),
+            'home' => (Icons.home_outlined, context.l10n.composeVisibilityHome),
+            'followers' => (Icons.lock_outline, context.l10n.composeVisibilityFollowers),
+            _ => (Icons.public, context.l10n.composeVisibilityPublic),
           };
           return RasqActionButton.icon(
             icon: icon,
-            tooltip: '公開範囲: $label',
+            tooltip: context.l10n.composeVisibilityTooltip(label),
             onTap: () async {
-              final picked = await manager.showDropdown<String>(id: 'composer.visibility', ownerId: composerFowId, anchor: _anchorOf(ctx), dense: true, items: const [
-                RasqDropdownItem('パブリック', 'public'),
-                RasqDropdownItem('ホーム', 'home'),
-                RasqDropdownItem('フォロワー', 'followers'),
+              final picked = await manager.showDropdown<String>(id: 'composer.visibility', ownerId: composerFowId, anchor: _anchorOf(ctx), dense: true, items: [
+                RasqDropdownItem(context.l10n.composeVisibilityPublic, 'public'),
+                RasqDropdownItem(context.l10n.composeVisibilityHome, 'home'),
+                RasqDropdownItem(context.l10n.composeVisibilityFollowers, 'followers'),
               ]);
               if (picked != null) store.setVisibility(picked);
             },
@@ -166,7 +167,7 @@ class ComposerHeaderControls extends ConsumerWidget {
         icon: Icons.rocket_launch_outlined,
         doneIcon: Icons.public_off,
         done: opts.localOnly,
-        tooltip: opts.localOnly ? '連合なし(このサーバーのみ)' : '連合あり(タップで連合なしに)',
+        tooltip: opts.localOnly ? context.l10n.composeLocalOnlyOnTooltip : context.l10n.composeLocalOnlyOffTooltip,
         onTap: () => store.setLocalOnly(!opts.localOnly),
       ),
       Builder(builder: (ctx) {
@@ -174,7 +175,7 @@ class ComposerHeaderControls extends ConsumerWidget {
           icon: Icons.add_reaction_outlined,
           doneIcon: Icons.add_reaction,
           done: opts.reactionAcceptance != null,
-          tooltip: 'リアクションの受け入れ: ${reactionAcceptanceLabels[opts.reactionAcceptance]}',
+          tooltip: context.l10n.composeReactionAcceptanceTooltip('${reactionAcceptanceLabels[opts.reactionAcceptance]}'),
           onTap: () async {
             final picked = await manager.showDropdown<(String?,)>(id: 'composer.reaction', ownerId: composerFowId, anchor: _anchorOf(ctx), dense: true, items: [
               for (final e in reactionAcceptanceLabels.entries) RasqDropdownItem(e.value, (e.key,)),
@@ -323,7 +324,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               icon: icon,
               doneIcon: icon,
               done: on,
-              tooltip: '${a.decl.label}(${on ? 'オン' : 'オフ'}・長押しで設定)',
+              tooltip: context.l10n.composeTextPluginTooltip(a.decl.label, on ? context.l10n.composeOn : context.l10n.composeOff),
               onTap: () => setState(() {
                 _textPluginOn[a.id] = !on;
                 if (!on) _scheduleTextPlugins();
@@ -358,15 +359,15 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         builder: (context, set) => Column(mainAxisSize: MainAxisSize.min, children: [
           RasqSwitchListTile(
             key: const ValueKey('composer.textPlugin.panel.here'),
-            title: 'このコンポーザーでオン',
-            subtitle: '本文の変化をこのプラグインに渡します',
+            title: context.l10n.composeTextPluginHereTitle,
+            subtitle: context.l10n.composeTextPluginHereSubtitle,
             value: here,
             onChanged: (v) => set(() => here = v),
           ),
           RasqSwitchListTile(
             key: const ValueKey('composer.textPlugin.panel.auto'),
-            title: '次からも自動でオン',
-            subtitle: reset || override == null ? 'プラグインの既定(${a.declaredAuto ? 'オン' : 'オフ'})' : '設定で上書き中(既定は ${a.declaredAuto ? 'オン' : 'オフ'})',
+            title: context.l10n.composeTextPluginAutoTitle,
+            subtitle: reset || override == null ? context.l10n.composeTextPluginAutoDefault(a.declaredAuto ? context.l10n.composeOn : context.l10n.composeOff) : context.l10n.composeTextPluginAutoOverridden(a.declaredAuto ? context.l10n.composeOn : context.l10n.composeOff),
             value: auto,
             onChanged: (v) => set(() {
               auto = v;
@@ -381,10 +382,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   reset = true;
                   auto = a.declaredAuto;
                 }),
-                child: const Text('プラグインの既定に戻す'),
+                child: Text(context.l10n.composeTextPluginResetDefault),
               ),
             ),
-          RasqCaption('${a.plugin.manifest.name} · テキスト加工', padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs)),
+          RasqCaption(context.l10n.composeTextPluginCaption(a.plugin.manifest.name), padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs)),
         ]),
       ),
     );
@@ -438,9 +439,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   /// ヘッダー中央のタイトル (D-052: 「投稿/返信」)。
   String get _headerTitle => switch (widget.target) {
-        ComposeNormal() => '投稿',
-        ComposeReply() => '返信',
-        ComposeQuote() => '引用',
+        ComposeNormal() => context.l10n.composeHeaderPost,
+        ComposeReply() => context.l10n.composeHeaderReply,
+        ComposeQuote() => context.l10n.composeHeaderQuote,
         ComposeDm() => '→ ${widget.target.title}',
       };
 
@@ -684,17 +685,17 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final editing = _draftId != null;
     final pick = await manager.showChoiceAlert<_CloseChoice>(
       id: 'composer.close',
-      title: editing ? '下書きを上書きしますか' : '下書きに保存しますか',
-      message: editing ? '開いている下書きを今の内容で上書きして閉じます。' : '今の内容を下書きに残して閉じます。',
+      title: editing ? context.l10n.composeCloseOverwriteTitle : context.l10n.composeCloseSaveTitle,
+      message: editing ? context.l10n.composeCloseOverwriteMessage : context.l10n.composeCloseSaveMessage,
       choices: [
         if (editing) ...[
-          const RasqAlertChoice('上書き', _CloseChoice.overwrite, primary: true, key: ValueKey('composer.close.overwrite')),
-          const RasqAlertChoice('新規保存', _CloseChoice.saveNew, key: ValueKey('composer.close.saveNew')),
+          RasqAlertChoice(context.l10n.composeCloseOverwrite, _CloseChoice.overwrite, primary: true, key: const ValueKey('composer.close.overwrite')),
+          RasqAlertChoice(context.l10n.composeCloseSaveNew, _CloseChoice.saveNew, key: const ValueKey('composer.close.saveNew')),
         ] else
-          const RasqAlertChoice('保存', _CloseChoice.overwrite, primary: true, key: ValueKey('composer.close.save')),
-        const RasqAlertChoice('変更を破棄', _CloseChoice.discard, destructive: true, key: ValueKey('composer.close.discard')),
+          RasqAlertChoice(context.l10n.composeCloseSave, _CloseChoice.overwrite, primary: true, key: const ValueKey('composer.close.save')),
+        RasqAlertChoice(context.l10n.composeCloseDiscard, _CloseChoice.discard, destructive: true, key: const ValueKey('composer.close.discard')),
       ],
-      cancelText: 'キャンセル',
+      cancelText: context.l10n.composeCancel,
     );
     if (!mounted || pick == null) return;
     switch (pick) {
@@ -892,8 +893,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       return {
         for (final n in graph.nodes)
           if (n.type == 'composer.target' || n.type == 'composer.fallback')
-            if ((n.inputs.where((i) => i.label == 'アカウント').firstOrNull?.value ?? '').trim().isNotEmpty)
-              n.inputs.where((i) => i.label == 'アカウント').firstOrNull!.value!.trim(),
+            if ((n.inputs.where((i) => i.label == 'アカウント').firstOrNull?.value ?? '').trim().isNotEmpty) // l10n-ignore
+              n.inputs.where((i) => i.label == 'アカウント').firstOrNull!.value!.trim(), // l10n-ignore
       };
     } catch (_) {
       return const {};
@@ -1007,7 +1008,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     if (!mounted) return;
     final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
     AccountSession? find(String label) =>
-        label.isEmpty || label == '現在のアカウント' ? null : sessions.where((s) => '${s.account}' == label || s.account.key == label).firstOrNull;
+        label.isEmpty || label == '現在のアカウント' ? null : sessions.where((s) => '${s.account}' == label || s.account.key == label).firstOrNull; // l10n-ignore
     // 投稿アカウントの自動選択 (D-131: その他の設定 → 投稿コンポーザー)。
     // オフでも一致マーク/並び替えは出す(自動で顔は切り替えない)。
     final autoAccount = (ref.read(settingsAreaProvider('composer.prefs')).value ?? const {})['autoAccount'] != false;
@@ -1100,12 +1101,12 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   key: const ValueKey('composer.rasqRow.multi'),
                   padding: const EdgeInsets.only(right: 4),
                   child: switch (_multiSel['${rasq.account}'] ?? _selNone) {
-                    _selNormal => Text('通常投稿', style: RasqTypography.caption.copyWith(color: tokens.link)),
-                    _selLinked => Text('ノード連動', style: RasqTypography.caption.copyWith(color: tokens.link)),
+                    _selNormal => Text(context.l10n.composeMultiNormal, style: RasqTypography.caption.copyWith(color: tokens.link)),
+                    _selLinked => Text(context.l10n.composeMultiLinked, style: RasqTypography.caption.copyWith(color: tokens.link)),
                     _ => Icon(Icons.radio_button_unchecked, size: 16, color: scheme.onSurfaceVariant.withValues(alpha: 0.4)),
                   },
                 ),
-              if (_rasqTarget) Padding(padding: const EdgeInsets.only(right: 4), child: Text('RASQ に投稿', style: RasqTypography.caption.copyWith(color: tokens.link))),
+              if (_rasqTarget) Padding(padding: const EdgeInsets.only(right: 4), child: Text(context.l10n.composeRasqTarget, style: RasqTypography.caption.copyWith(color: tokens.link))),
               if (_rasqTarget) Icon(Icons.check, size: 16, color: tokens.link),
               const Icon(Icons.keyboard_arrow_up, size: 20),
             ]),
@@ -1148,17 +1149,17 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   if (_targetRank(s) < _matchedTargets.length)
                     Padding(
                       padding: const EdgeInsets.only(right: 4),
-                      child: Tooltip(message: 'ポスト先ノードの条件に一致', child: Icon(Icons.auto_awesome, size: 14, color: scheme.onSurfaceVariant)),
+                      child: Tooltip(message: context.l10n.composeTargetMatchedTooltip, child: Icon(Icons.auto_awesome, size: 14, color: scheme.onSurfaceVariant)),
                     ),
                   if (_multiSelect) ...[
                     switch (_multiSel['${s.account}'] ?? _selNone) {
                       _selNormal => Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text('通常投稿', style: RasqTypography.caption.copyWith(color: tokens.link)),
+                          Text(context.l10n.composeMultiNormal, style: RasqTypography.caption.copyWith(color: tokens.link)),
                           const SizedBox(width: 4),
                           Icon(Icons.check_circle_outline, size: 16, color: tokens.link),
                         ]),
                       _selLinked => Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text('ノード連動', style: RasqTypography.caption.copyWith(color: tokens.link)),
+                          Text(context.l10n.composeMultiLinked, style: RasqTypography.caption.copyWith(color: tokens.link)),
                           const SizedBox(width: 4),
                           Icon(Icons.alt_route, size: 16, color: tokens.link),
                         ]),
@@ -1178,7 +1179,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               child: Row(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.settings, size: 16, color: tokens.link),
                 const SizedBox(width: 6),
-                Text('投稿先のカスタマイズ', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+                Text(context.l10n.composeTargetCustomize, style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
               ]),
             ),
           ),
@@ -1200,7 +1201,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 child: Row(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
                   Icon(_multiSelect ? Icons.checklist_rtl : Icons.checklist, size: 16, color: tokens.link),
                   const SizedBox(width: 6),
-                  Text(_multiSelect ? '複数選択を解除' : '複数選択モード', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+                  Text(_multiSelect ? context.l10n.composeMultiSelectOff : context.l10n.composeMultiSelectOn, style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
                 ]),
               ),
             ),
@@ -1254,19 +1255,19 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final checked = {for (final e in targets) e.$1.account.key: true};
     final ok = await manager.showBottomSheet<bool>(
       id: 'composer.linked.confirm',
-      title: '連動投稿の確認',
+      title: appL10n.composeLinkedConfirmTitle,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) {
         return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           for (final e in targets)
             RasqSwitchListTile(
               title: '${e.$1.account}',
-              subtitle: e.$2 == null ? '同内容で連動投稿' : '代わりのフォーマットで連動投稿',
+              subtitle: e.$2 == null ? ctx.l10n.composeLinkedConfirmSame : ctx.l10n.composeLinkedConfirmAlt,
               value: checked[e.$1.account.key] ?? true,
               onChanged: (v) => setLocal(() => checked[e.$1.account.key] = v),
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
-            child: FilledButton(onPressed: () => manager.close('composer.linked.confirm', result: true), child: const Text('この内容で投稿する')),
+            child: FilledButton(onPressed: () => manager.close('composer.linked.confirm', result: true), child: Text(ctx.l10n.composeLinkedConfirmPost)),
           ),
         ]);
       }),
@@ -1298,7 +1299,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       // フォールバック経由 (D-126) は代替フォーマットを適用。
       switch (fb?['format']) {
         case 'cw':
-          cw ??= (fb!['cw']?.isNotEmpty ?? false) ? fb['cw'] : '別フォーマット';
+          cw ??= (fb!['cw']?.isNotEmpty ?? false) ? fb['cw'] : '別フォーマット'; // l10n-ignore
         case 'followers':
           visibility = 'followers';
         case 'localOnly':
@@ -1315,8 +1316,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       if (s.pluginId == rasqLinkPluginId) {
         try {
           final api = ref.read(rasqAccountPageApiProvider);
-          if (api == null) throw StateError('RASQ のサーバーが設定されていません');
-          if (text.length > rasqPostMaxChars || _files.length > rasqPostMaxImages || (base.poll?.choices.length ?? 0) > rasqPostMaxPollChoices) throw StateError('RASQ の上限を超えています');
+          if (api == null) throw StateError(appL10n.composeRasqNoServer);
+          if (text.length > rasqPostMaxChars || _files.length > rasqPostMaxImages || (base.poll?.choices.length ?? 0) > rasqPostMaxPollChoices) throw StateError(appL10n.composeRasqOverLimit);
           await api.createPost(
             text,
             images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: f.sensitive)],
@@ -1379,7 +1380,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   bool get _isDm => widget.target is ComposeDm;
 
-  static const _rasqTextOnlyTip = 'RASQ の返信は文字だけです';
+  String get _rasqTextOnlyTip => context.l10n.composeRasqTextOnlyTip;
   int get _max => _rasqTarget ? (_rasqReply ? rasqReplyMaxChars : rasqPostMaxChars) : (_session?.maxPostLength ?? 500);
 
   // ── @ 補完 (D-285) ──
@@ -1528,16 +1529,16 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       setState(() {});
     } catch (e) {
       if (camera) return _pick();
-      setState(() => _error = '画像を選択できませんでした: $e');
+      setState(() => _error = appL10n.composePickImageFailed('$e'));
     }
   }
 
   /// 動画 (D-174 → D-250): ライブラリから動画 1 本、またはファイルから動画 / **音声** 1 本。
   /// 音声はそのまま添付になる(加工を開くと Visualizer の動画へ変換される)。
   Future<void> _pickVideo(Rect anchor) async {
-    final from = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'composer.video.source', ownerId: _ownerId, anchor: anchor, dense: true, items: const [
-      RasqDropdownItem('ライブラリの動画', 'library'),
-      RasqDropdownItem('ファイルから(動画 / 音声)', 'file'),
+    final from = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'composer.video.source', ownerId: _ownerId, anchor: anchor, dense: true, items: [
+      RasqDropdownItem(context.l10n.composePickVideoLibrary, 'library'),
+      RasqDropdownItem(context.l10n.composePickVideoFile, 'file'),
     ]);
     if (from == null || !mounted) return;
     try {
@@ -1546,13 +1547,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       final name = f.name.isEmpty ? 'video.mp4' : f.name;
       final mime = mediaMimeFor(name, reported: f.mimeType);
       if (mime == null) {
-        setState(() => _error = '動画 / 音声のファイルではありません: $name');
+        setState(() => _error = appL10n.composePickNotMedia(name));
         return;
       }
       _files.add(_Attachment(bytes: await f.readAsBytes(), name: name, mimeType: mime));
       setState(() {});
     } catch (e) {
-      setState(() => _error = '動画 / 音声を選択できませんでした: $e');
+      setState(() => _error = appL10n.composePickMediaFailed('$e'));
     }
   }
 
@@ -1573,14 +1574,14 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Future<void> _sendRasq() async {
     final api = ref.read(rasqAccountPageApiProvider);
     final me = ref.read(orgateAccountProvider).value;
-    if (api == null || me == null) return setState(() => _error = 'RASQ アカウントにログインしていません');
-    if (_files.any((f) => f.bytes.length > rasqPostMaxMediaBytes)) return setState(() => _error = 'RASQ への投稿では、動画 / 音声は 1 つ ${rasqPostMaxMediaBytes ~/ (1024 * 1024)} MB までです');
-    if (_rasqTextOnlyReply && (_files.isNotEmpty || _poll != null)) return setState(() => _error = 'RASQ の返信は、文字だけです(添付 / 投票は付けられません)');
-    if (_rasqReply && _text.text.trim().length > rasqReplyMaxChars) return setState(() => _error = 'RASQ の返信は $rasqReplyMaxChars 文字までです');
-    if (_files.length > rasqPostMaxImages) return setState(() => _error = 'RASQ への投稿は、添付 $rasqPostMaxImages つまでです');
-    if (_text.text.trim().length > rasqPostMaxChars) return setState(() => _error = 'RASQ への投稿は $rasqPostMaxChars 文字までです');
+    if (api == null || me == null) return setState(() => _error = appL10n.composeRasqNotLoggedIn);
+    if (_files.any((f) => f.bytes.length > rasqPostMaxMediaBytes)) return setState(() => _error = appL10n.composeRasqMediaTooLarge(rasqPostMaxMediaBytes ~/ (1024 * 1024)));
+    if (_rasqTextOnlyReply && (_files.isNotEmpty || _poll != null)) return setState(() => _error = appL10n.composeRasqReplyTextOnly);
+    if (_rasqReply && _text.text.trim().length > rasqReplyMaxChars) return setState(() => _error = appL10n.composeRasqReplyMaxChars(rasqReplyMaxChars));
+    if (_files.length > rasqPostMaxImages) return setState(() => _error = appL10n.composeRasqMaxImages(rasqPostMaxImages));
+    if (_text.text.trim().length > rasqPostMaxChars) return setState(() => _error = appL10n.composeRasqMaxChars(rasqPostMaxChars));
     final poll = _poll;
-    if (poll != null && poll.texts.length > rasqPostMaxPollChoices) return setState(() => _error = 'RASQ への投稿は、投票の選択肢 $rasqPostMaxPollChoices 個までです');
+    if (poll != null && poll.texts.length > rasqPostMaxPollChoices) return setState(() => _error = appL10n.composeRasqMaxPollChoices(rasqPostMaxPollChoices));
     final sanctions = ref.read(rasqSanctionsProvider).value ?? RasqSanctions.none;
     final blocked = sanctions.blockedMessage('post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
     if (blocked != null) return setState(() => _error = blocked);
@@ -1592,7 +1593,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     setState(() {
       _busy = true;
       _error = null;
-      _progress = '送信中…';
+      _progress = appL10n.composeSending;
     });
     try {
       // 返信 (D-292): 公開範囲 / リアクションの受け入れは送らない(Swing のスレッドへの返信は Central が `swing` にする)。
@@ -1618,7 +1619,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       await childComposeSent(ref);
       if (_draftId != null) _drafts.clear(_draftId!);
       _skipDraftOnDispose = true;
-      ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(const SnackBar(content: Text('RASQ に投稿しました')));
+      ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(appL10n.composeRasqPosted)));
       if (widget.resident) {
         if (mounted) {
           _skipDraftOnDispose = false;
@@ -1636,7 +1637,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         widget.onClose?.call();
       }
     } on OrgateException catch (e) {
-      if (mounted) setState(() => _error = e.code.code == '409' && _rasqReply ? 'RASQ の返信は 100 件までです。古い返信を消してください' : e.code.code == '409' ? 'RASQ への投稿は 3 件までです。古い投稿を消してください' : 'RASQ に投稿できませんでした: ${e.message}');
+      if (mounted) setState(() => _error = e.code.code == '409' && _rasqReply ? appL10n.composeRasqReplyQuota : e.code.code == '409' ? appL10n.composeRasqPostQuota : appL10n.composeRasqPostFailed(e.message));
     } finally {
       if (mounted) {
         setState(() {
@@ -1709,7 +1710,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     const id = 'composer.policy.warn';
     final ok = await manager.showBottomSheet<bool>(
       id: id,
-      title: '送る前の確認',
+      title: appL10n.composePolicyConfirmTitle,
       builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         for (final w in warns)
           Padding(
@@ -1718,11 +1719,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
           ),
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: FilledButton(key: const ValueKey('composer.policy.send'), onPressed: () => manager.close(id, result: true), child: const Text('このまま送る')),
+          child: FilledButton(key: const ValueKey('composer.policy.send'), onPressed: () => manager.close(id, result: true), child: Text(ctx.l10n.composePolicyConfirmSend)),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
-          child: TextButton(key: const ValueKey('composer.policy.edit'), onPressed: () => manager.close(id, result: false), child: const Text('書き直す')),
+          child: TextButton(key: const ValueKey('composer.policy.edit'), onPressed: () => manager.close(id, result: false), child: Text(ctx.l10n.composePolicyConfirmEdit)),
         ),
       ]),
     );
@@ -1776,18 +1777,18 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       if (sanctions.moderated) {
         for (var left = sanctions.reviewDelaySeconds; left > 0; left--) {
           if (!mounted) return;
-          setState(() => _progress = '検閲による遅延: あと $left 秒');
+          setState(() => _progress = appL10n.composeModerationDelay(left));
           await Future<void>.delayed(const Duration(seconds: 1));
         }
       }
       final ids = <String>[];
       for (var i = 0; i < _files.length; i++) {
         final f = _files[i];
-        setState(() => _progress = 'アップロード中 ${i + 1}/${_files.length}');
+        setState(() => _progress = appL10n.composeUploading(i + 1, _files.length));
         f.uploaded ??= await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: f.sensitive);
         ids.add(f.uploaded!.id);
       }
-      setState(() => _progress = '送信中…');
+      setState(() => _progress = appL10n.composeSending);
       // 投稿オプション (D-045: FOW ヘッダーの公開設定/連合/リアクション受け入れ)。
       final opts = ref.read(composeOptionsProvider);
       final replyTo = _replyTo;
@@ -1807,7 +1808,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       var localOnly = !_isDm && ((parent?.localOnly ?? false) || (!direct && opts.localOnly));
       switch (fb?['format']) {
         case 'cw':
-          cw ??= (fb!['cw']?.isNotEmpty ?? false) ? fb['cw'] : '別フォーマット';
+          cw ??= (fb!['cw']?.isNotEmpty ?? false) ? fb['cw'] : '別フォーマット'; // l10n-ignore
         case 'followers':
           if (!_isDm && !direct) visibility = 'followers';
         case 'localOnly':
@@ -1854,7 +1855,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       _multiSel.clear();
       if (linkErrors.isNotEmpty && mounted) {
         // 本体は投稿済み — 閉じずに連動側の失敗だけ知らせる。
-        setState(() => _error = '連動投稿に失敗しました: ${linkErrors.join(' / ')}(本体は投稿済みです)');
+        setState(() => _error = appL10n.composeLinkedFailed(linkErrors.join(' / ')));
         return;
       }
       widget.onSent(post);
@@ -1865,7 +1866,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     } on SnsApiException catch (e) {
       setState(() => _error = '${e.code.display}${e.code.message == null ? '' : '\n${e.code.message}'}');
     } catch (e) {
-      setState(() => _error = '送信に失敗しました: $e');
+      setState(() => _error = appL10n.composeSendFailed('$e'));
     } finally {
       if (mounted) {
         setState(() {
@@ -1918,7 +1919,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                               key: const ValueKey('composer.cancel'),
                               onPressed: _busy ? null : _handleClose,
                               style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerLeft),
-                              child: Text('キャンセル', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+                              child: Text(context.l10n.composeCancel, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
                             ),
                           ),
                         ),
@@ -1930,12 +1931,12 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                             child: TextButton(
                               onPressed: _busy ? null : _openDrafts,
                               style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerRight),
-                              child: Text('下書き', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+                              child: Text(context.l10n.composeDraftsButton, style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
                             ),
                           ),
                         ),
                       ])),
-                      if (_directReply) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('ダイレクト投稿への返信(相手にだけ届きます)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+                      if (_directReply) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text(context.l10n.composeDirectReplyNote, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
                       if (_replyTo != null || _quoteOf != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: widget.targetPreview ?? _TargetPreview(post: (_replyTo ?? _quoteOf)!, emojis: emojis)),
                     ]),
             ),
@@ -1954,7 +1955,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 displayName: _rasqTarget ? ref.watch(rasqAccountProvider).displayName : me.displayName,
                 avatarUrl: _rasqTarget ? ref.watch(rasqAccountProvider).avatarUrl : me.avatarUrl,
                 open: _targetsOpen,
-                tooltip: _isDm ? '' : '投稿先を選ぶ',
+                tooltip: _isDm ? '' : context.l10n.composeChooseTargetTooltip,
                 onTap: _isDm ? null : () => setState(() => _targetsOpen = !_targetsOpen),
               ),
             ),
@@ -1966,8 +1967,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     Row(children: [
                       Icon(Icons.visibility_outlined, size: 18, color: scheme.onSurfaceVariant),
                       const SizedBox(width: 6),
-                      Expanded(child: TextField(controller: _cw, decoration: const InputDecoration(hintText: '注釈..', isDense: true), style: RasqTypography.bodySmall)),
-                      RasqIconButton(icon: Icons.cancel, size: 20, tooltip: '注釈を外す', onPressed: () => setState(() => _cwOn = false)),
+                      Expanded(child: TextField(controller: _cw, decoration: InputDecoration(hintText: context.l10n.composeCwHint, isDense: true), style: RasqTypography.bodySmall)),
+                      RasqIconButton(icon: Icons.cancel, size: 20, tooltip: context.l10n.composeCwRemoveTooltip, onPressed: () => setState(() => _cwOn = false)),
                     ]),
                   TextField(
                     key: const ValueKey('composer.input'),
@@ -1980,7 +1981,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     maxLines: 10,
                     // 文字サイズは絵文字ピッカー(検索欄 = bodySmall)に合わせる (D-053)。
                     style: RasqTypography.bodySmall,
-                    decoration: InputDecoration(hintText: _isDm ? 'メッセージを入力..' : 'いいことがありますように！', border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none),
+                    decoration: InputDecoration(hintText: _isDm ? context.l10n.composeDmHint : context.l10n.composeTextHint, border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none),
                     onChanged: (_) {
                       _scheduleMentionSearch(); // @ 補完 (D-285)
                       _scheduleTagSearch(); // # 補完 (D-475)
@@ -2040,7 +2041,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
             ActionChip(
               key: ValueKey('composer.hashtag.${t.tag}'),
               avatar: Icon(Icons.tag, size: 16, color: scheme.primary),
-              label: Text(t.usersCount == null ? t.tag : '${t.tag}  ${t.usersCount}人', style: RasqTypography.caption),
+              label: Text(t.usersCount == null ? t.tag : context.l10n.composeHashtagUsers(t.tag, t.usersCount!), style: RasqTypography.caption),
               onPressed: () => _applyHashtag(t.tag),
             ),
         ]),
@@ -2056,17 +2057,17 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               scrollDirection: Axis.horizontal,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 // RASQ の返信は文字だけ (D-292)。Swing のスレッドへの返信は付けられる (D-421)。付けられないときは押せない理由を出す。
-                RasqActionButton.icon(key: const ValueKey('composer.tool.camera'), icon: Icons.photo_camera_outlined, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : 'カメラ', onTap: _busy || _rasqTextOnlyReply ? null : () => _pick(camera: true)),
-                RasqActionButton.icon(key: const ValueKey('composer.tool.image'), icon: Icons.image_outlined, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : '画像', onTap: _busy || _rasqTextOnlyReply || _files.length >= _maxFiles ? null : () => _pick()),
-                Builder(builder: (ctx) => RasqActionButton.icon(key: const ValueKey('composer.tool.video'), icon: Icons.videocam_outlined, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : '動画 / 音声', onTap: _busy || _rasqTextOnlyReply || _files.length >= _maxFiles ? null : () {
+                RasqActionButton.icon(key: const ValueKey('composer.tool.camera'), icon: Icons.photo_camera_outlined, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : context.l10n.composeToolCamera, onTap: _busy || _rasqTextOnlyReply ? null : () => _pick(camera: true)),
+                RasqActionButton.icon(key: const ValueKey('composer.tool.image'), icon: Icons.image_outlined, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : context.l10n.composeToolImage, onTap: _busy || _rasqTextOnlyReply || _files.length >= _maxFiles ? null : () => _pick()),
+                Builder(builder: (ctx) => RasqActionButton.icon(key: const ValueKey('composer.tool.video'), icon: Icons.videocam_outlined, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : context.l10n.composeToolVideo, onTap: _busy || _rasqTextOnlyReply || _files.length >= _maxFiles ? null : () {
                   final box = ctx.findRenderObject() as RenderBox;
                   _pickVideo(box.localToGlobal(Offset.zero) & box.size);
                 })),
-                RasqActionButton.icon(key: const ValueKey('composer.tool.cw'), icon: Icons.visibility_outlined, doneIcon: Icons.visibility, done: _cwOn, tooltip: '隠す(注釈)', onTap: () => setState(() => _cwOn = !_cwOn)),
-                if (!_isDm) RasqActionButton.icon(key: const ValueKey('composer.tool.poll'), icon: Icons.poll_outlined, doneIcon: Icons.poll, done: _poll != null, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : '投票', onTap: _rasqTextOnlyReply && _poll == null ? null : () => setState(() => _poll = _poll == null ? PollDraft() : null)),
+                RasqActionButton.icon(key: const ValueKey('composer.tool.cw'), icon: Icons.visibility_outlined, doneIcon: Icons.visibility, done: _cwOn, tooltip: context.l10n.composeToolCw, onTap: () => setState(() => _cwOn = !_cwOn)),
+                if (!_isDm) RasqActionButton.icon(key: const ValueKey('composer.tool.poll'), icon: Icons.poll_outlined, doneIcon: Icons.poll, done: _poll != null, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : context.l10n.composeToolPoll, onTap: _rasqTextOnlyReply && _poll == null ? null : () => setState(() => _poll = _poll == null ? PollDraft() : null)),
                 RasqActionButton.icon(
                   icon: Icons.emoji_emotions_outlined,
-                  tooltip: '絵文字',
+                  tooltip: context.l10n.composeToolEmoji,
                   // 絵文字は、**投稿するアカウント**のサーバーのもの (D-278。切り替えに追従する)。
                   onTap: () => openEmojiPicker(ref, ownerId: _ownerId, column: _column, predictionContext: _text.text, accountKey: _effectivePostAs?.account.key, onPick: (e) {
                     _insert(e);
@@ -2106,7 +2107,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
             key: const ValueKey('composer.send'),
             onPressed: _canSend ? _send : null,
             style: FilledButton.styleFrom(minimumSize: const Size(0, 34), padding: const EdgeInsets.symmetric(horizontal: 16)),
-            child: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(switch (target) { ComposeReply() => '返信', ComposeDm() => '送信', _ => '送信' }),
+            child: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(switch (target) { ComposeReply() => context.l10n.composeSendReply, ComposeDm() => context.l10n.composeSend, _ => context.l10n.composeSend }),
           ),
         ]),
       )),
@@ -2171,14 +2172,14 @@ class _AttachmentTile extends StatelessWidget {
                 )
               : Image.memory(a.bytes, width: 88, height: 88, fit: BoxFit.cover, gaplessPlayback: true),
         ),
-        Positioned(right: 0, top: 0, child: RasqIconButton(icon: Icons.cancel, size: 18, color: Colors.white, onPressed: onRemove, tooltip: '削除')),
-        if (onEdit != null) Positioned(right: 0, bottom: 0, child: RasqIconButton(icon: Icons.auto_fix_high, size: 18, color: Colors.white, onPressed: onEdit, tooltip: '加工')),
+        Positioned(right: 0, top: 0, child: RasqIconButton(icon: Icons.cancel, size: 18, color: Colors.white, onPressed: onRemove, tooltip: context.l10n.composeAttachmentRemove)),
+        if (onEdit != null) Positioned(right: 0, bottom: 0, child: RasqIconButton(icon: Icons.auto_fix_high, size: 18, color: Colors.white, onPressed: onEdit, tooltip: context.l10n.composeAttachmentEdit)),
         Positioned(
           left: 0,
           bottom: 0,
           child: IconButton(
             onPressed: onToggleSensitive,
-            tooltip: a.sensitive ? 'センシティブ解除' : 'センシティブにする',
+            tooltip: a.sensitive ? context.l10n.composeAttachmentUnsensitive : context.l10n.composeAttachmentSensitive,
             icon: Icon(a.sensitive ? Icons.visibility_off : Icons.visibility_outlined, size: 18, color: Colors.white),
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
@@ -2205,7 +2206,7 @@ enum _CloseChoice { overwrite, saveNew, discard }
 /// - `#` の前は、行頭 / 空白 / 日本語の文字 / 記号。英数字・`&`・`/` の直後は拾わない(`C#`、`&#123;`、URL の `#frag`)。
 (int, String)? hashtagQueryAt(String text, int caret) {
   if (caret < 0 || caret > text.length) return null;
-  final m = RegExp(r'(?:^|[^A-Za-z0-9_&/#])#([^\s#@、。,.!?！？「」()（）]*)$').firstMatch(text.substring(0, caret));
+  final m = RegExp(r'(?:^|[^A-Za-z0-9_&/#])#([^\s#@、。,.!?！？「」()（）]*)$').firstMatch(text.substring(0, caret)); // l10n-ignore
   if (m == null) return null;
   return (caret - m.group(1)!.length - 1, m.group(1)!);
 }

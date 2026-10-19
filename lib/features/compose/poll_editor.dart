@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../../l10n/l10n.dart';
+
 /// 投票フォーム (ワイヤーフレーム): 回答1 / 回答2 / ＋その他 / ∧時間指定 / 複数回答 / 日 時間 分 秒.
 class PollDraft {
   PollDraft() : choices = [TextEditingController(), TextEditingController()];
@@ -44,16 +46,16 @@ class _PollEditorState extends State<PollEditor> {
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Row(children: [
-              if (i == 0) RasqIconButton(icon: Icons.cancel, size: 20, onPressed: widget.onRemove, tooltip: '投票を削除') else const SizedBox(width: RasqSizes.minTap),
+              if (i == 0) RasqIconButton(icon: Icons.cancel, size: 20, onPressed: widget.onRemove, tooltip: context.l10n.composePollRemoveTooltip) else const SizedBox(width: RasqSizes.minTap),
               Expanded(
                 child: TextField(
                   controller: d.choices[i],
-                  decoration: InputDecoration(hintText: '回答${i + 1}', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+                  decoration: InputDecoration(hintText: context.l10n.composePollChoiceHint(i + 1), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
                   onChanged: (_) => setState(() {}),
                 ),
               ),
               if (d.choices.length > 2)
-                RasqIconButton(icon: Icons.close, size: 18, tooltip: '削除', onPressed: () => setState(() => d.choices.removeAt(i).dispose()))
+                RasqIconButton(icon: Icons.close, size: 18, tooltip: context.l10n.composePollChoiceDeleteTooltip, onPressed: () => setState(() => d.choices.removeAt(i).dispose()))
               else
                 const SizedBox(width: RasqSizes.minTap),
             ]),
@@ -64,7 +66,7 @@ class _PollEditorState extends State<PollEditor> {
             child: OutlinedButton.icon(
               onPressed: d.choices.length >= widget.maxChoices ? null : () => setState(() => d.choices.add(TextEditingController())),
               icon: const Icon(Icons.add),
-              label: const Text('その他'),
+              label: Text(context.l10n.composePollAddChoice),
               style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), alignment: Alignment.centerLeft),
             ),
           ),
@@ -74,18 +76,18 @@ class _PollEditorState extends State<PollEditor> {
         Row(children: [
           InkWell(
             onTap: () => setState(() => d.timed = !d.timed),
-            child: Row(children: [Icon(d.timed ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 18), const Text('時間指定', style: RasqTypography.bodySmall)]),
+            child: Row(children: [Icon(d.timed ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 18), Text(context.l10n.composePollTimed, style: RasqTypography.bodySmall)]),
           ),
           const Spacer(),
           Switch(value: d.multiple, onChanged: (v) => setState(() => d.multiple = v)),
-          const Text('複数回答', style: RasqTypography.bodySmall),
+          Text(context.l10n.composePollMultiple, style: RasqTypography.bodySmall),
         ]),
         if (d.timed)
           Row(children: [
-            _num('日', d.days, (v) => d.days = v),
-            _num('時間', d.hours, (v) => d.hours = v),
-            _num('分', d.minutes, (v) => d.minutes = v),
-            _num('秒', d.seconds, (v) => d.seconds = v),
+            _num(context.l10n.composePollUnitDays, d.days, (v) => d.days = v),
+            _num(context.l10n.composePollUnitHours, d.hours, (v) => d.hours = v),
+            _num(context.l10n.composePollUnitMinutes, d.minutes, (v) => d.minutes = v),
+            _num(context.l10n.composePollUnitSeconds, d.seconds, (v) => d.seconds = v),
           ]),
       ]),
     );

@@ -9,6 +9,8 @@ import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../../l10n/l10n.dart';
+
 /// 投稿タイルの動画化 (D-260): 「ノート画像の追加」で選んだ投稿が**動く / 鳴る**なら、静止画ではなく動画(mp4)にできる。
 ///
 /// | 種類 | 中身 | 作り方 |
@@ -55,17 +57,17 @@ PostMotion postMotionOf(Post p) {
 }
 
 String postMotionLabel(PostMotion m) => switch (m) {
-      PostMotion.video => '動画にする(付いている動画を、タイルの中で再生。音つき)',
-      PostMotion.audio => '動画にする(タイルの静止画 + 付いている音声)',
-      PostMotion.animated => '動画にする(動いている様子を $postAnimatedFps コマ/秒で ${postAnimatedDuration.inSeconds} 秒)',
+      PostMotion.video => appL10n.composeMediaMotionVideoLabel,
+      PostMotion.audio => appL10n.composeMediaMotionAudioLabel,
+      PostMotion.animated => appL10n.composeMediaMotionAnimatedLabel(postAnimatedFps, postAnimatedDuration.inSeconds),
       PostMotion.none => '',
     };
 
 /// 加工画面の「動画に変換しますか?」に添える説明。
 String postMotionNote(PostMotion m) => switch (m) {
-      PostMotion.video => 'この投稿には動画が付いています。',
-      PostMotion.audio => 'この投稿には音声が付いています。',
-      PostMotion.animated => 'この投稿には動く絵(GIF / 動く MFM)があります。',
+      PostMotion.video => appL10n.composeMediaMotionVideoNote,
+      PostMotion.audio => appL10n.composeMediaMotionAudioNote,
+      PostMotion.animated => appL10n.composeMediaMotionAnimatedNote,
       PostMotion.none => '',
     };
 
@@ -163,7 +165,7 @@ Future<File> buildPostVideo({required Post post, required PostMotion motion, req
   final out = '${workDir.path}/rasq_post_$id.mp4';
   try {
     final box = boundaryKey.currentContext?.findRenderObject();
-    if (box is! RenderBox) throw StateError('投稿が画面に出ていません');
+    if (box is! RenderBox) throw StateError(appL10n.composeMediaPostNotOnScreen);
     final canvas = evenPixelSize(box.size, pixelRatio);
     final editor = pve.ProVideoEditor.instance;
 
@@ -176,7 +178,7 @@ Future<File> buildPostVideo({required Post post, required PostMotion motion, req
       for (var i = 0; i < count; i++) {
         if (cancelled?.call() ?? false) throw StateError('cancelled');
         final f = await _capturePng(boundaryKey, pixelRatio, File('${dir.path}/f_${i.toString().padLeft(4, '0')}.png'));
-        if (f == null) throw StateError('投稿が画面に出ていません');
+        if (f == null) throw StateError(appL10n.composeMediaPostNotOnScreen);
         frames.add(pve.StopMotionFrame(image: pve.EditorLayerImage.file(f), duration: each));
         onProgress?.call(0.7 * (i + 1) / count);
         final wait = each * (i + 1) - clock.elapsed;
@@ -191,17 +193,17 @@ Future<File> buildPostVideo({required Post post, required PostMotion motion, req
     final item = motion == PostMotion.video ? post.media.firstWhere((m) => m.type == MediaType.video) : post.media.firstWhere(isAudioMedia);
     final rect = motion == PostMotion.video ? mediaRectInTile(boundaryKey, pixelRatio) : null;
     final still = await _capturePng(boundaryKey, pixelRatio, File('${dir.path}/tile.png'));
-    if (still == null) throw StateError('投稿が画面に出ていません');
+    if (still == null) throw StateError(appL10n.composeMediaPostNotOnScreen);
     onProgress?.call(0.1);
     final named = (item.fileName ?? item.url.path).split('.').last.toLowerCase();
-    var source = await _stage('元のファイルを取得できませんでした', () => _download(item.url, File('${dir.path}/source.bin')));
+    var source = await _stage(appL10n.composeMediaSourceFetchFailed, () => _download(item.url, File('${dir.path}/source.bin')));
     // 拡張子は中身から決める(無ければ名前、それも無ければ mp4 / m4a)。
     final head = await source.openRead(0, 16).fold<List<int>>([], (a, c) => a..addAll(c));
     final ext = mediaContainerExt(head) ?? (RegExp(r'^[a-z0-9]{1,5}$').hasMatch(named) ? named : (motion == PostMotion.video ? 'mp4' : 'm4a'));
-    if ((Platform.isMacOS || Platform.isIOS) && _appleUnreadable.contains(ext)) throw StateError('この端末は $ext 形式を読めません(静止画なら貼れます)');
+    if ((Platform.isMacOS || Platform.isIOS) && _appleUnreadable.contains(ext)) throw StateError(appL10n.composeMediaFormatUnreadable(ext));
     source = await source.rename('${dir.path}/source.$ext');
     onProgress?.call(0.35);
-    final length = _cap((await _stage('元のファイル(.$ext、${await source.length()} バイト)を開けませんでした', () => editor.getMetadata(pve.EditorVideo.file(source.path)))).duration);
+    final length = _cap((await _stage(appL10n.composeMediaSourceOpenFailed(ext, await source.length()), () => editor.getMetadata(pve.EditorVideo.file(source.path)))).duration);
     final base = '${dir.path}/base.mp4';
     await editor.renderStopMotionToFile(base, pve.StopMotionRenderData(id: 'rasq-post-base-$id', frames: [pve.StopMotionFrame(image: pve.EditorLayerImage.file(still), duration: length)], frameRate: 10, resolution: canvas, fit: pve.StopMotionFit.stretch, outputFormat: pve.VideoOutputFormat.mp4));
     onProgress?.call(0.6);

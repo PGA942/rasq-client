@@ -94,6 +94,1506 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('ja')];
 
+  /// コンポーザーの題(新しい投稿)
+  ///
+  /// In ja, this message translates to:
+  /// **'ノートの作成'**
+  String get composeTargetNormalTitle;
+
+  /// コンポーザーの題(返信)
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get composeTargetReplyTitle;
+
+  /// コンポーザーの題(引用)
+  ///
+  /// In ja, this message translates to:
+  /// **'引用'**
+  String get composeTargetQuoteTitle;
+
+  /// 絵文字ピッカーの題(既定)
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字'**
+  String get composeEmojiPickerTitle;
+
+  /// No description provided for @composeEmojiPickerClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get composeEmojiPickerClose;
+
+  /// No description provided for @composePollRemoveTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'投票を削除'**
+  String get composePollRemoveTooltip;
+
+  /// 投票の選択肢の入力欄のヒント。index は 1 から
+  ///
+  /// In ja, this message translates to:
+  /// **'回答{index}'**
+  String composePollChoiceHint(int index);
+
+  /// 投票の選択肢を消すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get composePollChoiceDeleteTooltip;
+
+  /// 投票の選択肢を足すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get composePollAddChoice;
+
+  /// 投票の締め切りを決める欄の開閉
+  ///
+  /// In ja, this message translates to:
+  /// **'時間指定'**
+  String get composePollTimed;
+
+  /// No description provided for @composePollMultiple.
+  ///
+  /// In ja, this message translates to:
+  /// **'複数回答'**
+  String get composePollMultiple;
+
+  /// 投票の期間の単位
+  ///
+  /// In ja, this message translates to:
+  /// **'日'**
+  String get composePollUnitDays;
+
+  /// 投票の期間の単位
+  ///
+  /// In ja, this message translates to:
+  /// **'時間'**
+  String get composePollUnitHours;
+
+  /// 投票の期間の単位
+  ///
+  /// In ja, this message translates to:
+  /// **'分'**
+  String get composePollUnitMinutes;
+
+  /// 投票の期間の単位
+  ///
+  /// In ja, this message translates to:
+  /// **'秒'**
+  String get composePollUnitSeconds;
+
+  /// 下書きの一覧(FOW)の題
+  ///
+  /// In ja, this message translates to:
+  /// **'下書き'**
+  String get composeDraftsTitle;
+
+  /// No description provided for @composeDraftsCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get composeDraftsCancel;
+
+  /// 選んだ下書きを消すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get composeDraftsDelete;
+
+  /// No description provided for @composeDraftsSaveAndClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'今の内容を保存して閉じる'**
+  String get composeDraftsSaveAndClose;
+
+  /// No description provided for @composeDraftsOverwriteAndClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'今の内容を上書き保存して閉じる'**
+  String get composeDraftsOverwriteAndClose;
+
+  /// No description provided for @composeDraftsSaveNewAndClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'今の内容を新しい下書きにして閉じる'**
+  String get composeDraftsSaveNewAndClose;
+
+  /// No description provided for @composeDraftsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'下書きはありません'**
+  String get composeDraftsEmpty;
+
+  /// 下書きの行の注記: 添付の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{添付 {count}}}'**
+  String composeDraftsAttachmentCount(int count);
+
+  /// 下書きの行の注記: いまコンポーザーで開いている
+  ///
+  /// In ja, this message translates to:
+  /// **'開いている'**
+  String get composeDraftsOpenNow;
+
+  /// No description provided for @composeDraftsSelectOff.
+  ///
+  /// In ja, this message translates to:
+  /// **'選択解除'**
+  String get composeDraftsSelectOff;
+
+  /// No description provided for @composeDraftsSelect.
+  ///
+  /// In ja, this message translates to:
+  /// **'選択'**
+  String get composeDraftsSelect;
+
+  /// 選んだ下書きの数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 件}}'**
+  String composeDraftsSelectedCount(int count);
+
+  /// 本文の無い下書きの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{(添付 {count} 件)}}'**
+  String composeDraftTitleAttachments(int count);
+
+  /// 本文も添付も無い下書きの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'(本文なし)'**
+  String get composeDraftTitleEmpty;
+
+  /// 下書きの対象の種類
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get composeDraftTargetReply;
+
+  /// 下書きの対象の種類
+  ///
+  /// In ja, this message translates to:
+  /// **'引用'**
+  String get composeDraftTargetQuote;
+
+  /// 下書きの対象の種類
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get composeDraftTargetPost;
+
+  /// リアクションの受け入れ(Misskey)
+  ///
+  /// In ja, this message translates to:
+  /// **'全て'**
+  String get composeReactionAcceptanceAll;
+
+  /// リアクションの受け入れ(Misskey)
+  ///
+  /// In ja, this message translates to:
+  /// **'いいねのみ'**
+  String get composeReactionAcceptanceLikeOnly;
+
+  /// リアクションの受け入れ(Misskey)
+  ///
+  /// In ja, this message translates to:
+  /// **'外部からはいいね'**
+  String get composeReactionAcceptanceLikeOnlyForRemote;
+
+  /// リアクションの受け入れ(Misskey)
+  ///
+  /// In ja, this message translates to:
+  /// **'非センシティブのみ'**
+  String get composeReactionAcceptanceNonSensitiveOnly;
+
+  /// リアクションの受け入れ(Misskey)
+  ///
+  /// In ja, this message translates to:
+  /// **'非センシティブ&外部からはいいねのみ'**
+  String get composeReactionAcceptanceNonSensitiveOnlyForLocalLikeOnlyForRemote;
+
+  /// No description provided for @composeEmojiResizeHandleSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'サイズ変更ハンドル'**
+  String get composeEmojiResizeHandleSemantics;
+
+  /// 絵文字ピッカーの節: 最近使った絵文字
+  ///
+  /// In ja, this message translates to:
+  /// **'履歴'**
+  String get composeEmojiSectionHistory;
+
+  /// 絵文字ピッカーの節: 予測した絵文字
+  ///
+  /// In ja, this message translates to:
+  /// **'予測'**
+  String get composeEmojiSectionPrediction;
+
+  /// No description provided for @composeEmojiBundleEditTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'バンドル編集'**
+  String get composeEmojiBundleEditTitle;
+
+  /// No description provided for @composeEmojiBundleEditMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'バンドルの編集は準備中です。'**
+  String get composeEmojiBundleEditMessage;
+
+  /// 絵文字ピッカーの節: Unicode の絵文字
+  ///
+  /// In ja, this message translates to:
+  /// **'デフォルト'**
+  String get composeEmojiSectionDefault;
+
+  /// No description provided for @composeEmojiCustomEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'独自の絵文字はありません'**
+  String get composeEmojiCustomEmpty;
+
+  /// 絵文字ピッカーの節: サーバーの独自の絵文字
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバー'**
+  String get composeEmojiSectionServer;
+
+  /// ジャンルの無い独自の絵文字のまとまり
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get composeEmojiGenreOther;
+
+  /// 絵文字のジャンル / ステッカーのパックの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'・{name}'**
+  String composeEmojiGroupHeading(String name);
+
+  /// No description provided for @composeEmojiSearchHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索'**
+  String get composeEmojiSearchHint;
+
+  /// No description provided for @composeEmojiStickersEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'使えるアセットパックがありません(ストアからインストールできます)'**
+  String get composeEmojiStickersEmpty;
+
+  /// No description provided for @composeEmojiSectionSearchResults.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索結果'**
+  String get composeEmojiSectionSearchResults;
+
+  /// No description provided for @composeEmojiSearchNoHit.
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりません'**
+  String get composeEmojiSearchNoHit;
+
+  /// 絵文字の意味検索の索引づくりの進み
+  ///
+  /// In ja, this message translates to:
+  /// **'意味検索を準備中 {done} / {total}'**
+  String composeEmojiIndexProgress(int done, int total);
+
+  /// 投稿の公開範囲
+  ///
+  /// In ja, this message translates to:
+  /// **'ホーム'**
+  String get composeVisibilityHome;
+
+  /// 投稿の公開範囲
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワー'**
+  String get composeVisibilityFollowers;
+
+  /// 投稿の公開範囲
+  ///
+  /// In ja, this message translates to:
+  /// **'パブリック'**
+  String get composeVisibilityPublic;
+
+  /// No description provided for @composeVisibilityTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開範囲: {label}'**
+  String composeVisibilityTooltip(String label);
+
+  /// No description provided for @composeLocalOnlyOnTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'連合なし(このサーバーのみ)'**
+  String get composeLocalOnlyOnTooltip;
+
+  /// No description provided for @composeLocalOnlyOffTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'連合あり(タップで連合なしに)'**
+  String get composeLocalOnlyOffTooltip;
+
+  /// No description provided for @composeReactionAcceptanceTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションの受け入れ: {label}'**
+  String composeReactionAcceptanceTooltip(String label);
+
+  /// No description provided for @composeOn.
+  ///
+  /// In ja, this message translates to:
+  /// **'オン'**
+  String get composeOn;
+
+  /// No description provided for @composeOff.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフ'**
+  String get composeOff;
+
+  /// テキスト加工プラグインのボタン。state は「オン」/「オフ」
+  ///
+  /// In ja, this message translates to:
+  /// **'{label}({state}・長押しで設定)'**
+  String composeTextPluginTooltip(String label, String state);
+
+  /// No description provided for @composeTextPluginHereTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'このコンポーザーでオン'**
+  String get composeTextPluginHereTitle;
+
+  /// No description provided for @composeTextPluginHereSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'本文の変化をこのプラグインに渡します'**
+  String get composeTextPluginHereSubtitle;
+
+  /// No description provided for @composeTextPluginAutoTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'次からも自動でオン'**
+  String get composeTextPluginAutoTitle;
+
+  /// state は「オン」/「オフ」
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの既定({state})'**
+  String composeTextPluginAutoDefault(String state);
+
+  /// state は「オン」/「オフ」
+  ///
+  /// In ja, this message translates to:
+  /// **'設定で上書き中(既定は {state})'**
+  String composeTextPluginAutoOverridden(String state);
+
+  /// No description provided for @composeTextPluginResetDefault.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの既定に戻す'**
+  String get composeTextPluginResetDefault;
+
+  /// name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} · テキスト加工'**
+  String composeTextPluginCaption(String name);
+
+  /// コンポーザーのヘッダーの題
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get composeHeaderPost;
+
+  /// コンポーザーのヘッダーの題
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get composeHeaderReply;
+
+  /// コンポーザーのヘッダーの題
+  ///
+  /// In ja, this message translates to:
+  /// **'引用'**
+  String get composeHeaderQuote;
+
+  /// No description provided for @composeCloseOverwriteTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'下書きを上書きしますか'**
+  String get composeCloseOverwriteTitle;
+
+  /// No description provided for @composeCloseSaveTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'下書きに保存しますか'**
+  String get composeCloseSaveTitle;
+
+  /// No description provided for @composeCloseOverwriteMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'開いている下書きを今の内容で上書きして閉じます。'**
+  String get composeCloseOverwriteMessage;
+
+  /// No description provided for @composeCloseSaveMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'今の内容を下書きに残して閉じます。'**
+  String get composeCloseSaveMessage;
+
+  /// No description provided for @composeCloseOverwrite.
+  ///
+  /// In ja, this message translates to:
+  /// **'上書き'**
+  String get composeCloseOverwrite;
+
+  /// No description provided for @composeCloseSaveNew.
+  ///
+  /// In ja, this message translates to:
+  /// **'新規保存'**
+  String get composeCloseSaveNew;
+
+  /// No description provided for @composeCloseSave.
+  ///
+  /// In ja, this message translates to:
+  /// **'保存'**
+  String get composeCloseSave;
+
+  /// No description provided for @composeCloseDiscard.
+  ///
+  /// In ja, this message translates to:
+  /// **'変更を破棄'**
+  String get composeCloseDiscard;
+
+  /// No description provided for @composeCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get composeCancel;
+
+  /// 複数選択モード: 同じ内容で投稿するアカウントの印
+  ///
+  /// In ja, this message translates to:
+  /// **'通常投稿'**
+  String get composeMultiNormal;
+
+  /// 複数選択モード: ポスト先グラフを通して投稿するアカウントの印
+  ///
+  /// In ja, this message translates to:
+  /// **'ノード連動'**
+  String get composeMultiLinked;
+
+  /// No description provided for @composeRasqTarget.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ に投稿'**
+  String get composeRasqTarget;
+
+  /// No description provided for @composeTargetMatchedTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'ポスト先ノードの条件に一致'**
+  String get composeTargetMatchedTooltip;
+
+  /// No description provided for @composeTargetCustomize.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿先のカスタマイズ'**
+  String get composeTargetCustomize;
+
+  /// No description provided for @composeMultiSelectOff.
+  ///
+  /// In ja, this message translates to:
+  /// **'複数選択を解除'**
+  String get composeMultiSelectOff;
+
+  /// No description provided for @composeMultiSelectOn.
+  ///
+  /// In ja, this message translates to:
+  /// **'複数選択モード'**
+  String get composeMultiSelectOn;
+
+  /// No description provided for @composeLinkedConfirmTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'連動投稿の確認'**
+  String get composeLinkedConfirmTitle;
+
+  /// No description provided for @composeLinkedConfirmSame.
+  ///
+  /// In ja, this message translates to:
+  /// **'同内容で連動投稿'**
+  String get composeLinkedConfirmSame;
+
+  /// No description provided for @composeLinkedConfirmAlt.
+  ///
+  /// In ja, this message translates to:
+  /// **'代わりのフォーマットで連動投稿'**
+  String get composeLinkedConfirmAlt;
+
+  /// No description provided for @composeLinkedConfirmPost.
+  ///
+  /// In ja, this message translates to:
+  /// **'この内容で投稿する'**
+  String get composeLinkedConfirmPost;
+
+  /// No description provided for @composeRasqNoServer.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のサーバーが設定されていません'**
+  String get composeRasqNoServer;
+
+  /// No description provided for @composeRasqOverLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の上限を超えています'**
+  String get composeRasqOverLimit;
+
+  /// RASQ の返信で添付のボタンを押せないときのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の返信は文字だけです'**
+  String get composeRasqTextOnlyTip;
+
+  /// No description provided for @composePickImageFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を選択できませんでした: {error}'**
+  String composePickImageFailed(String error);
+
+  /// No description provided for @composePickVideoLibrary.
+  ///
+  /// In ja, this message translates to:
+  /// **'ライブラリの動画'**
+  String get composePickVideoLibrary;
+
+  /// No description provided for @composePickVideoFile.
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルから(動画 / 音声)'**
+  String get composePickVideoFile;
+
+  /// No description provided for @composePickNotMedia.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画 / 音声のファイルではありません: {name}'**
+  String composePickNotMedia(String name);
+
+  /// No description provided for @composePickMediaFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画 / 音声を選択できませんでした: {error}'**
+  String composePickMediaFailed(String error);
+
+  /// No description provided for @composeRasqNotLoggedIn.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインしていません'**
+  String get composeRasqNotLoggedIn;
+
+  /// No description provided for @composeRasqMediaTooLarge.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ への投稿では、動画 / 音声は 1 つ {mb} MB までです'**
+  String composeRasqMediaTooLarge(int mb);
+
+  /// No description provided for @composeRasqReplyTextOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の返信は、文字だけです(添付 / 投票は付けられません)'**
+  String get composeRasqReplyTextOnly;
+
+  /// No description provided for @composeRasqReplyMaxChars.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{RASQ の返信は {count} 文字までです}}'**
+  String composeRasqReplyMaxChars(int count);
+
+  /// No description provided for @composeRasqMaxImages.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{RASQ への投稿は、添付 {count} つまでです}}'**
+  String composeRasqMaxImages(int count);
+
+  /// No description provided for @composeRasqMaxChars.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{RASQ への投稿は {count} 文字までです}}'**
+  String composeRasqMaxChars(int count);
+
+  /// No description provided for @composeRasqMaxPollChoices.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{RASQ への投稿は、投票の選択肢 {count} 個までです}}'**
+  String composeRasqMaxPollChoices(int count);
+
+  /// No description provided for @composeRasqPosted.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ に投稿しました'**
+  String get composeRasqPosted;
+
+  /// No description provided for @composeRasqReplyQuota.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の返信は 100 件までです。古い返信を消してください'**
+  String get composeRasqReplyQuota;
+
+  /// No description provided for @composeRasqPostQuota.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ への投稿は 3 件までです。古い投稿を消してください'**
+  String get composeRasqPostQuota;
+
+  /// No description provided for @composeRasqPostFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ に投稿できませんでした: {error}'**
+  String composeRasqPostFailed(String error);
+
+  /// No description provided for @composePolicyConfirmTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'送る前の確認'**
+  String get composePolicyConfirmTitle;
+
+  /// No description provided for @composePolicyConfirmSend.
+  ///
+  /// In ja, this message translates to:
+  /// **'このまま送る'**
+  String get composePolicyConfirmSend;
+
+  /// No description provided for @composePolicyConfirmEdit.
+  ///
+  /// In ja, this message translates to:
+  /// **'書き直す'**
+  String get composePolicyConfirmEdit;
+
+  /// No description provided for @composeSending.
+  ///
+  /// In ja, this message translates to:
+  /// **'送信中…'**
+  String get composeSending;
+
+  /// No description provided for @composeModerationDelay.
+  ///
+  /// In ja, this message translates to:
+  /// **'{seconds, plural, other{検閲による遅延: あと {seconds} 秒}}'**
+  String composeModerationDelay(int seconds);
+
+  /// No description provided for @composeUploading.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップロード中 {index}/{total}'**
+  String composeUploading(int index, int total);
+
+  /// errors は失敗したアカウントの理由(「 / 」区切り)
+  ///
+  /// In ja, this message translates to:
+  /// **'連動投稿に失敗しました: {errors}(本体は投稿済みです)'**
+  String composeLinkedFailed(String errors);
+
+  /// No description provided for @composeSendFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'送信に失敗しました: {error}'**
+  String composeSendFailed(String error);
+
+  /// コンポーザーのヘッダーの、下書きの一覧を開くボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'下書き'**
+  String get composeDraftsButton;
+
+  /// No description provided for @composeDirectReplyNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダイレクト投稿への返信(相手にだけ届きます)'**
+  String get composeDirectReplyNote;
+
+  /// No description provided for @composeChooseTargetTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿先を選ぶ'**
+  String get composeChooseTargetTooltip;
+
+  /// No description provided for @composeCwHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'注釈..'**
+  String get composeCwHint;
+
+  /// No description provided for @composeCwRemoveTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'注釈を外す'**
+  String get composeCwRemoveTooltip;
+
+  /// No description provided for @composeDmHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'メッセージを入力..'**
+  String get composeDmHint;
+
+  /// コンポーザーの本文の欄のヒント
+  ///
+  /// In ja, this message translates to:
+  /// **'いいことがありますように！'**
+  String get composeTextHint;
+
+  /// ハッシュタグの候補。tag はタグ、count は使っている人の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{tag}  {count}人}}'**
+  String composeHashtagUsers(String tag, int count);
+
+  /// No description provided for @composeToolCamera.
+  ///
+  /// In ja, this message translates to:
+  /// **'カメラ'**
+  String get composeToolCamera;
+
+  /// No description provided for @composeToolImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像'**
+  String get composeToolImage;
+
+  /// No description provided for @composeToolVideo.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画 / 音声'**
+  String get composeToolVideo;
+
+  /// No description provided for @composeToolCw.
+  ///
+  /// In ja, this message translates to:
+  /// **'隠す(注釈)'**
+  String get composeToolCw;
+
+  /// No description provided for @composeToolPoll.
+  ///
+  /// In ja, this message translates to:
+  /// **'投票'**
+  String get composeToolPoll;
+
+  /// No description provided for @composeToolEmoji.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字'**
+  String get composeToolEmoji;
+
+  /// 送信ボタン(返信のとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get composeSendReply;
+
+  /// 送信ボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'送信'**
+  String get composeSend;
+
+  /// 添付を外すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get composeAttachmentRemove;
+
+  /// 添付を加工するボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'加工'**
+  String get composeAttachmentEdit;
+
+  /// No description provided for @composeAttachmentUnsensitive.
+  ///
+  /// In ja, this message translates to:
+  /// **'センシティブ解除'**
+  String get composeAttachmentUnsensitive;
+
+  /// No description provided for @composeAttachmentSensitive.
+  ///
+  /// In ja, this message translates to:
+  /// **'センシティブにする'**
+  String get composeAttachmentSensitive;
+
+  /// ファイル選択ダイアログの種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'動画 / 音声'**
+  String get composeMediaPickTypeLabel;
+
+  /// 投稿の画像の加工: 動画にするスイッチ(動画の付いた投稿)
+  ///
+  /// In ja, this message translates to:
+  /// **'動画にする(付いている動画を、タイルの中で再生。音つき)'**
+  String get composeMediaMotionVideoLabel;
+
+  /// 投稿の画像の加工: 動画にするスイッチ(音声の付いた投稿)
+  ///
+  /// In ja, this message translates to:
+  /// **'動画にする(タイルの静止画 + 付いている音声)'**
+  String get composeMediaMotionAudioLabel;
+
+  /// 投稿の画像の加工: 動画にするスイッチ(GIF / 動く MFM の投稿)
+  ///
+  /// In ja, this message translates to:
+  /// **'動画にする(動いている様子を {fps} コマ/秒で {seconds} 秒)'**
+  String composeMediaMotionAnimatedLabel(int fps, int seconds);
+
+  /// 「動画に変換しますか?」に添える説明
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿には動画が付いています。'**
+  String get composeMediaMotionVideoNote;
+
+  /// 「動画に変換しますか?」に添える説明
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿には音声が付いています。'**
+  String get composeMediaMotionAudioNote;
+
+  /// 「動画に変換しますか?」に添える説明
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿には動く絵(GIF / 動く MFM)があります。'**
+  String get composeMediaMotionAnimatedNote;
+
+  /// 投稿を動画にするときのエラー
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿が画面に出ていません'**
+  String get composeMediaPostNotOnScreen;
+
+  /// 投稿を動画にするときのエラー(後ろに「: 詳しい理由」が付く)
+  ///
+  /// In ja, this message translates to:
+  /// **'元のファイルを取得できませんでした'**
+  String get composeMediaSourceFetchFailed;
+
+  /// ext はファイルの拡張子(webm など)
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末は {ext} 形式を読めません(静止画なら貼れます)'**
+  String composeMediaFormatUnreadable(String ext);
+
+  /// 投稿を動画にするときのエラー(後ろに「: 詳しい理由」が付く)
+  ///
+  /// In ja, this message translates to:
+  /// **'元のファイル(.{ext}、{bytes} バイト)を開けませんでした'**
+  String composeMediaSourceOpenFailed(String ext, int bytes);
+
+  /// ノート画像の追加: タブ
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の投稿'**
+  String get composeMediaTabMine;
+
+  /// ノート画像の追加: タブ(リアクションした投稿)
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション'**
+  String get composeMediaTabReacted;
+
+  /// ノート画像の追加: タブ
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマーク'**
+  String get composeMediaTabFavorites;
+
+  /// ノート画像の追加: タブ
+  ///
+  /// In ja, this message translates to:
+  /// **'最近の検索'**
+  String get composeMediaTabSearches;
+
+  /// 貼る投稿の見た目: スレッド展開時の本文
+  ///
+  /// In ja, this message translates to:
+  /// **'スレッド'**
+  String get composeMediaStyleThread;
+
+  /// 貼る投稿の見た目: 一番小さい表示
+  ///
+  /// In ja, this message translates to:
+  /// **'インライン'**
+  String get composeMediaStyleInline;
+
+  /// 投稿を画像にして貼る FOW の題
+  ///
+  /// In ja, this message translates to:
+  /// **'ノート画像の追加'**
+  String get composeMediaPostImageTitle;
+
+  /// No description provided for @composeMediaCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get composeMediaCancel;
+
+  /// No description provided for @composeMediaConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get composeMediaConfirm;
+
+  /// No description provided for @composeMediaNoAccount.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントがありません'**
+  String get composeMediaNoAccount;
+
+  /// No description provided for @composeMediaSearchUnsupported.
+  ///
+  /// In ja, this message translates to:
+  /// **'この SNS では投稿の検索が使えません'**
+  String get composeMediaSearchUnsupported;
+
+  /// No description provided for @composeMediaTabUnsupported.
+  ///
+  /// In ja, this message translates to:
+  /// **'この SNS では「{tab}」が使えません'**
+  String composeMediaTabUnsupported(String tab);
+
+  /// No description provided for @composeMediaFetchFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'取得できませんでした: {error}'**
+  String composeMediaFetchFailed(String error);
+
+  /// No description provided for @composeMediaCaptureRetry.
+  ///
+  /// In ja, this message translates to:
+  /// **'選んだ投稿が画面に出ている状態で、もう一度「決定」を押してください'**
+  String get composeMediaCaptureRetry;
+
+  /// No description provided for @composeMediaVideoFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画にできませんでした: {error}'**
+  String composeMediaVideoFailed(String error);
+
+  /// No description provided for @composeMediaFilterHistoryHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索の履歴を絞り込む'**
+  String get composeMediaFilterHistoryHint;
+
+  /// No description provided for @composeMediaFilterListHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'一覧を絞り込む'**
+  String get composeMediaFilterListHint;
+
+  /// No description provided for @composeMediaFilterFromHistoryTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近の検索から入れる'**
+  String get composeMediaFilterFromHistoryTooltip;
+
+  /// 貼る投稿の見た目の選択の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'見た目'**
+  String get composeMediaStyleHeading;
+
+  /// No description provided for @composeMediaSearchResultsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{query}」の検索結果'**
+  String composeMediaSearchResultsTitle(String query);
+
+  /// No description provided for @composeMediaSearchBack.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近の検索に戻る'**
+  String get composeMediaSearchBack;
+
+  /// No description provided for @composeMediaExcludedNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{公開範囲を限った投稿 {count} 件は出していません。}}'**
+  String composeMediaExcludedNote(int count);
+
+  /// 動画にするスイッチの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'オフ = その瞬間の静止画'**
+  String get composeMediaAsVideoOffNote;
+
+  /// No description provided for @composeMediaExporting.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画にしています…'**
+  String get composeMediaExporting;
+
+  /// No description provided for @composeMediaHistoryEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近の検索はありません(検索ホームで検索すると、ここに並びます)'**
+  String get composeMediaHistoryEmpty;
+
+  /// No description provided for @composeMediaHistoryNoMatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'当てはまる検索はありません'**
+  String get composeMediaHistoryNoMatch;
+
+  /// No description provided for @composeMediaPostsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿はありません'**
+  String get composeMediaPostsEmpty;
+
+  /// No description provided for @composeMediaPostsNoMatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'当てはまる投稿はありません(「もっと読む」で続きも探せます)'**
+  String get composeMediaPostsNoMatch;
+
+  /// No description provided for @composeMediaLoadMore.
+  ///
+  /// In ja, this message translates to:
+  /// **'もっと読む'**
+  String get composeMediaLoadMore;
+
+  /// MFM の関数 x2 の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'2倍に拡大'**
+  String get composeMfmFnX2;
+
+  /// MFM の関数 x3 の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'3倍に拡大'**
+  String get composeMfmFnX3;
+
+  /// MFM の関数 x4 の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'4倍に拡大'**
+  String get composeMfmFnX4;
+
+  /// MFM の関数 small の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'小さく表示'**
+  String get composeMfmFnSmall;
+
+  /// MFM の関数 center の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'中央寄せ'**
+  String get composeMfmFnCenter;
+
+  /// MFM の関数 blur の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'ぼかし(ホバー/タップで解除)'**
+  String get composeMfmFnBlur;
+
+  /// MFM の関数 rotate の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'回転'**
+  String get composeMfmFnRotate;
+
+  /// MFM の関数 rotate のプロパティー deg の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'角度(既定 90)'**
+  String get composeMfmPropRotateDeg;
+
+  /// MFM の関数 flip の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'反転'**
+  String get composeMfmFnFlip;
+
+  /// MFM の関数 flip のプロパティー h の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'左右'**
+  String get composeMfmPropFlipH;
+
+  /// MFM の関数 flip のプロパティー v の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'上下'**
+  String get composeMfmPropFlipV;
+
+  /// MFM の関数 fg の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'文字色'**
+  String get composeMfmFnFg;
+
+  /// MFM の関数 fg のプロパティー color の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'16進(例: ff0000)'**
+  String get composeMfmPropFgColor;
+
+  /// MFM の関数 bg の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'背景色'**
+  String get composeMfmFnBg;
+
+  /// MFM の関数 bg のプロパティー color の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'16進(例: ffff00)'**
+  String get composeMfmPropBgColor;
+
+  /// MFM の関数 shake の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'振動'**
+  String get composeMfmFnShake;
+
+  /// MFM の関数 shake のプロパティー speed の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'例: 0.5s'**
+  String get composeMfmPropShakeSpeed;
+
+  /// MFM の関数 spin の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'回転アニメ'**
+  String get composeMfmFnSpin;
+
+  /// MFM の関数 spin のプロパティー speed の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'例: 1.5s'**
+  String get composeMfmPropSpinSpeed;
+
+  /// MFM の関数 spin のプロパティー left の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'逆回転'**
+  String get composeMfmPropSpinLeft;
+
+  /// MFM の関数 spin のプロパティー alternate の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'往復'**
+  String get composeMfmPropSpinAlternate;
+
+  /// MFM の関数 spin のプロパティー x の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'横軸'**
+  String get composeMfmPropSpinX;
+
+  /// MFM の関数 spin のプロパティー y の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'縦軸'**
+  String get composeMfmPropSpinY;
+
+  /// MFM の関数 jump の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'ジャンプ'**
+  String get composeMfmFnJump;
+
+  /// MFM の関数 jump のプロパティー speed の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'例: 0.75s'**
+  String get composeMfmPropJumpSpeed;
+
+  /// MFM の関数 bounce の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'バウンド'**
+  String get composeMfmFnBounce;
+
+  /// MFM の関数 bounce のプロパティー speed の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'例: 0.75s'**
+  String get composeMfmPropBounceSpeed;
+
+  /// MFM の関数 rainbow の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'虹色'**
+  String get composeMfmFnRainbow;
+
+  /// MFM の関数 rainbow のプロパティー speed の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'例: 1s'**
+  String get composeMfmPropRainbowSpeed;
+
+  /// MFM の関数 twitch の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'ぴくぴく'**
+  String get composeMfmFnTwitch;
+
+  /// MFM の関数 twitch のプロパティー speed の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'例: 0.5s'**
+  String get composeMfmPropTwitchSpeed;
+
+  /// MFM の関数 jelly の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'ぷるぷる'**
+  String get composeMfmFnJelly;
+
+  /// MFM の関数 jelly のプロパティー speed の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'例: 1s'**
+  String get composeMfmPropJellySpeed;
+
+  /// MFM の関数 tada の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'じゃーん'**
+  String get composeMfmFnTada;
+
+  /// MFM の関数 tada のプロパティー speed の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'例: 1s'**
+  String get composeMfmPropTadaSpeed;
+
+  /// MFM の関数 plain の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'装飾を無効化'**
+  String get composeMfmFnPlain;
+
+  /// Markdown のスニペットの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'太字'**
+  String get composeMfmMarkdownBoldName;
+
+  /// Markdown のスニペットの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'**強調** で表示'**
+  String get composeMfmMarkdownBoldDescription;
+
+  /// Markdown のスニペットの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'斜体'**
+  String get composeMfmMarkdownItalicName;
+
+  /// Markdown のスニペットの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'*斜体* で表示'**
+  String get composeMfmMarkdownItalicDescription;
+
+  /// Markdown のスニペットの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'取り消し線'**
+  String get composeMfmMarkdownStrikeName;
+
+  /// Markdown のスニペットの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'~~取り消し~~ で表示'**
+  String get composeMfmMarkdownStrikeDescription;
+
+  /// Markdown のスニペットの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'インラインコード'**
+  String get composeMfmMarkdownInlineCodeName;
+
+  /// Markdown のスニペットの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'`コード` で表示'**
+  String get composeMfmMarkdownInlineCodeDescription;
+
+  /// Markdown のスニペットの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'コードブロック'**
+  String get composeMfmMarkdownCodeBlockName;
+
+  /// Markdown のスニペットの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'複数行のコードを枠で表示'**
+  String get composeMfmMarkdownCodeBlockDescription;
+
+  /// Markdown のスニペットの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'見出し'**
+  String get composeMfmMarkdownHeadingName;
+
+  /// Markdown のスニペットの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'行頭に # を付ける'**
+  String get composeMfmMarkdownHeadingDescription;
+
+  /// Markdown のスニペットの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'リンク'**
+  String get composeMfmMarkdownLinkName;
+
+  /// Markdown のスニペットの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'[表示名](URL) の形'**
+  String get composeMfmMarkdownLinkDescription;
+
+  /// No description provided for @composeMfmClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get composeMfmClose;
+
+  /// MFM のプレビューに入れる見本の文
+  ///
+  /// In ja, this message translates to:
+  /// **'サンプル'**
+  String get composeMfmSample;
+
+  /// MFM のプレビューに入れる見本の文。emoji はサーバーの絵文字(:name:)
+  ///
+  /// In ja, this message translates to:
+  /// **'サンプル {emoji}'**
+  String composeMfmSampleWithEmoji(String emoji);
+
+  /// No description provided for @composeMfmBackTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'一覧へ戻る'**
+  String get composeMfmBackTooltip;
+
+  /// MFM / Markdown をコンポーザーに入れるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get composeMfmApply;
+
+  /// No description provided for @composeMfmNoProps.
+  ///
+  /// In ja, this message translates to:
+  /// **'この関数にプロパティーはありません。'**
+  String get composeMfmNoProps;
+
+  /// 送る前の判定の種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'性的な表現'**
+  String get composePolicyTypeSexual;
+
+  /// 送る前の判定の種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'暴力・脅し'**
+  String get composePolicyTypeViolence;
+
+  /// 送る前の判定の種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'自傷・自殺'**
+  String get composePolicyTypeSelfHarm;
+
+  /// 送る前の判定の種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'暴言・嫌がらせ'**
+  String get composePolicyTypeHarassment;
+
+  /// 送る前の判定の種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'個人情報(電話番号・メールアドレス・住所など)'**
+  String get composePolicyTypePersonalInfo;
+
+  /// 送る前の判定の種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'外部へのリンク'**
+  String get composePolicyTypeLink;
+
+  /// 送る前の判定の種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'画像・動画'**
+  String get composePolicyTypeMedia;
+
+  /// 送る前の判定の種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'強い言葉'**
+  String get composePolicyTypeStimulus;
+
+  /// 送る前の判定の種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'決められた話題'**
+  String get composePolicyTypeTopic;
+
+  /// 送れない理由の主語(見守り)
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の設定'**
+  String get composePolicyWhoGuardian;
+
+  /// 送れない理由の主語(アカウントの処置)
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントの制限'**
+  String get composePolicyWhoSanction;
+
+  /// who は「保護者の設定」/「アカウントの制限」
+  ///
+  /// In ja, this message translates to:
+  /// **'{who}により、画像・動画は送れません(この端末では添付の確認ができません)。添付を外してください'**
+  String composePolicyBlockedMediaUnmeasured(String who);
+
+  /// who は「保護者の設定」/「アカウントの制限」、label は種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{who}により、いまは送れません(この端末では「{label}」の確認ができません)'**
+  String composePolicyBlockedUnmeasured(String who, String label);
+
+  /// who は「保護者の設定」/「アカウントの制限」、label は種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{who}により、「{label}」に当たる内容は送れません。書き換えてください'**
+  String composePolicyBlocked(String who, String label);
+
+  /// who は「保護者の設定」/「アカウントの制限」、label は種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{label}」に当たるかもしれません({who})。このまま送りますか?'**
+  String composePolicyWarn(String label, String who);
+
   /// この言語の、その言語での名前(設定の「言語」の一覧に出す)。訳すときは、その言語での自分の名前にする(English / 한국어 など)。
   ///
   /// In ja, this message translates to:

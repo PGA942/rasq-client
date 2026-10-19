@@ -10,6 +10,886 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get composeTargetNormalTitle => 'ノートの作成';
+
+  @override
+  String get composeTargetReplyTitle => '返信';
+
+  @override
+  String get composeTargetQuoteTitle => '引用';
+
+  @override
+  String get composeEmojiPickerTitle => '絵文字';
+
+  @override
+  String get composeEmojiPickerClose => '閉じる';
+
+  @override
+  String get composePollRemoveTooltip => '投票を削除';
+
+  @override
+  String composePollChoiceHint(int index) {
+    return '回答$index';
+  }
+
+  @override
+  String get composePollChoiceDeleteTooltip => '削除';
+
+  @override
+  String get composePollAddChoice => 'その他';
+
+  @override
+  String get composePollTimed => '時間指定';
+
+  @override
+  String get composePollMultiple => '複数回答';
+
+  @override
+  String get composePollUnitDays => '日';
+
+  @override
+  String get composePollUnitHours => '時間';
+
+  @override
+  String get composePollUnitMinutes => '分';
+
+  @override
+  String get composePollUnitSeconds => '秒';
+
+  @override
+  String get composeDraftsTitle => '下書き';
+
+  @override
+  String get composeDraftsCancel => 'キャンセル';
+
+  @override
+  String get composeDraftsDelete => '削除';
+
+  @override
+  String get composeDraftsSaveAndClose => '今の内容を保存して閉じる';
+
+  @override
+  String get composeDraftsOverwriteAndClose => '今の内容を上書き保存して閉じる';
+
+  @override
+  String get composeDraftsSaveNewAndClose => '今の内容を新しい下書きにして閉じる';
+
+  @override
+  String get composeDraftsEmpty => '下書きはありません';
+
+  @override
+  String composeDraftsAttachmentCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '添付 $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get composeDraftsOpenNow => '開いている';
+
+  @override
+  String get composeDraftsSelectOff => '選択解除';
+
+  @override
+  String get composeDraftsSelect => '選択';
+
+  @override
+  String composeDraftsSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String composeDraftTitleAttachments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '(添付 $count 件)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get composeDraftTitleEmpty => '(本文なし)';
+
+  @override
+  String get composeDraftTargetReply => '返信';
+
+  @override
+  String get composeDraftTargetQuote => '引用';
+
+  @override
+  String get composeDraftTargetPost => '投稿';
+
+  @override
+  String get composeReactionAcceptanceAll => '全て';
+
+  @override
+  String get composeReactionAcceptanceLikeOnly => 'いいねのみ';
+
+  @override
+  String get composeReactionAcceptanceLikeOnlyForRemote => '外部からはいいね';
+
+  @override
+  String get composeReactionAcceptanceNonSensitiveOnly => '非センシティブのみ';
+
+  @override
+  String
+  get composeReactionAcceptanceNonSensitiveOnlyForLocalLikeOnlyForRemote =>
+      '非センシティブ&外部からはいいねのみ';
+
+  @override
+  String get composeEmojiResizeHandleSemantics => 'サイズ変更ハンドル';
+
+  @override
+  String get composeEmojiSectionHistory => '履歴';
+
+  @override
+  String get composeEmojiSectionPrediction => '予測';
+
+  @override
+  String get composeEmojiBundleEditTitle => 'バンドル編集';
+
+  @override
+  String get composeEmojiBundleEditMessage => 'バンドルの編集は準備中です。';
+
+  @override
+  String get composeEmojiSectionDefault => 'デフォルト';
+
+  @override
+  String get composeEmojiCustomEmpty => '独自の絵文字はありません';
+
+  @override
+  String get composeEmojiSectionServer => 'サーバー';
+
+  @override
+  String get composeEmojiGenreOther => 'その他';
+
+  @override
+  String composeEmojiGroupHeading(String name) {
+    return '・$name';
+  }
+
+  @override
+  String get composeEmojiSearchHint => '検索';
+
+  @override
+  String get composeEmojiStickersEmpty => '使えるアセットパックがありません(ストアからインストールできます)';
+
+  @override
+  String get composeEmojiSectionSearchResults => '検索結果';
+
+  @override
+  String get composeEmojiSearchNoHit => '見つかりません';
+
+  @override
+  String composeEmojiIndexProgress(int done, int total) {
+    return '意味検索を準備中 $done / $total';
+  }
+
+  @override
+  String get composeVisibilityHome => 'ホーム';
+
+  @override
+  String get composeVisibilityFollowers => 'フォロワー';
+
+  @override
+  String get composeVisibilityPublic => 'パブリック';
+
+  @override
+  String composeVisibilityTooltip(String label) {
+    return '公開範囲: $label';
+  }
+
+  @override
+  String get composeLocalOnlyOnTooltip => '連合なし(このサーバーのみ)';
+
+  @override
+  String get composeLocalOnlyOffTooltip => '連合あり(タップで連合なしに)';
+
+  @override
+  String composeReactionAcceptanceTooltip(String label) {
+    return 'リアクションの受け入れ: $label';
+  }
+
+  @override
+  String get composeOn => 'オン';
+
+  @override
+  String get composeOff => 'オフ';
+
+  @override
+  String composeTextPluginTooltip(String label, String state) {
+    return '$label($state・長押しで設定)';
+  }
+
+  @override
+  String get composeTextPluginHereTitle => 'このコンポーザーでオン';
+
+  @override
+  String get composeTextPluginHereSubtitle => '本文の変化をこのプラグインに渡します';
+
+  @override
+  String get composeTextPluginAutoTitle => '次からも自動でオン';
+
+  @override
+  String composeTextPluginAutoDefault(String state) {
+    return 'プラグインの既定($state)';
+  }
+
+  @override
+  String composeTextPluginAutoOverridden(String state) {
+    return '設定で上書き中(既定は $state)';
+  }
+
+  @override
+  String get composeTextPluginResetDefault => 'プラグインの既定に戻す';
+
+  @override
+  String composeTextPluginCaption(String name) {
+    return '$name · テキスト加工';
+  }
+
+  @override
+  String get composeHeaderPost => '投稿';
+
+  @override
+  String get composeHeaderReply => '返信';
+
+  @override
+  String get composeHeaderQuote => '引用';
+
+  @override
+  String get composeCloseOverwriteTitle => '下書きを上書きしますか';
+
+  @override
+  String get composeCloseSaveTitle => '下書きに保存しますか';
+
+  @override
+  String get composeCloseOverwriteMessage => '開いている下書きを今の内容で上書きして閉じます。';
+
+  @override
+  String get composeCloseSaveMessage => '今の内容を下書きに残して閉じます。';
+
+  @override
+  String get composeCloseOverwrite => '上書き';
+
+  @override
+  String get composeCloseSaveNew => '新規保存';
+
+  @override
+  String get composeCloseSave => '保存';
+
+  @override
+  String get composeCloseDiscard => '変更を破棄';
+
+  @override
+  String get composeCancel => 'キャンセル';
+
+  @override
+  String get composeMultiNormal => '通常投稿';
+
+  @override
+  String get composeMultiLinked => 'ノード連動';
+
+  @override
+  String get composeRasqTarget => 'RASQ に投稿';
+
+  @override
+  String get composeTargetMatchedTooltip => 'ポスト先ノードの条件に一致';
+
+  @override
+  String get composeTargetCustomize => '投稿先のカスタマイズ';
+
+  @override
+  String get composeMultiSelectOff => '複数選択を解除';
+
+  @override
+  String get composeMultiSelectOn => '複数選択モード';
+
+  @override
+  String get composeLinkedConfirmTitle => '連動投稿の確認';
+
+  @override
+  String get composeLinkedConfirmSame => '同内容で連動投稿';
+
+  @override
+  String get composeLinkedConfirmAlt => '代わりのフォーマットで連動投稿';
+
+  @override
+  String get composeLinkedConfirmPost => 'この内容で投稿する';
+
+  @override
+  String get composeRasqNoServer => 'RASQ のサーバーが設定されていません';
+
+  @override
+  String get composeRasqOverLimit => 'RASQ の上限を超えています';
+
+  @override
+  String get composeRasqTextOnlyTip => 'RASQ の返信は文字だけです';
+
+  @override
+  String composePickImageFailed(String error) {
+    return '画像を選択できませんでした: $error';
+  }
+
+  @override
+  String get composePickVideoLibrary => 'ライブラリの動画';
+
+  @override
+  String get composePickVideoFile => 'ファイルから(動画 / 音声)';
+
+  @override
+  String composePickNotMedia(String name) {
+    return '動画 / 音声のファイルではありません: $name';
+  }
+
+  @override
+  String composePickMediaFailed(String error) {
+    return '動画 / 音声を選択できませんでした: $error';
+  }
+
+  @override
+  String get composeRasqNotLoggedIn => 'RASQ アカウントにログインしていません';
+
+  @override
+  String composeRasqMediaTooLarge(int mb) {
+    return 'RASQ への投稿では、動画 / 音声は 1 つ $mb MB までです';
+  }
+
+  @override
+  String get composeRasqReplyTextOnly => 'RASQ の返信は、文字だけです(添付 / 投票は付けられません)';
+
+  @override
+  String composeRasqReplyMaxChars(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'RASQ の返信は $count 文字までです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String composeRasqMaxImages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'RASQ への投稿は、添付 $count つまでです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String composeRasqMaxChars(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'RASQ への投稿は $count 文字までです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String composeRasqMaxPollChoices(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'RASQ への投稿は、投票の選択肢 $count 個までです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get composeRasqPosted => 'RASQ に投稿しました';
+
+  @override
+  String get composeRasqReplyQuota => 'RASQ の返信は 100 件までです。古い返信を消してください';
+
+  @override
+  String get composeRasqPostQuota => 'RASQ への投稿は 3 件までです。古い投稿を消してください';
+
+  @override
+  String composeRasqPostFailed(String error) {
+    return 'RASQ に投稿できませんでした: $error';
+  }
+
+  @override
+  String get composePolicyConfirmTitle => '送る前の確認';
+
+  @override
+  String get composePolicyConfirmSend => 'このまま送る';
+
+  @override
+  String get composePolicyConfirmEdit => '書き直す';
+
+  @override
+  String get composeSending => '送信中…';
+
+  @override
+  String composeModerationDelay(int seconds) {
+    String _temp0 = intl.Intl.pluralLogic(
+      seconds,
+      locale: localeName,
+      other: '検閲による遅延: あと $seconds 秒',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String composeUploading(int index, int total) {
+    return 'アップロード中 $index/$total';
+  }
+
+  @override
+  String composeLinkedFailed(String errors) {
+    return '連動投稿に失敗しました: $errors(本体は投稿済みです)';
+  }
+
+  @override
+  String composeSendFailed(String error) {
+    return '送信に失敗しました: $error';
+  }
+
+  @override
+  String get composeDraftsButton => '下書き';
+
+  @override
+  String get composeDirectReplyNote => 'ダイレクト投稿への返信(相手にだけ届きます)';
+
+  @override
+  String get composeChooseTargetTooltip => '投稿先を選ぶ';
+
+  @override
+  String get composeCwHint => '注釈..';
+
+  @override
+  String get composeCwRemoveTooltip => '注釈を外す';
+
+  @override
+  String get composeDmHint => 'メッセージを入力..';
+
+  @override
+  String get composeTextHint => 'いいことがありますように！';
+
+  @override
+  String composeHashtagUsers(String tag, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$tag  $count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get composeToolCamera => 'カメラ';
+
+  @override
+  String get composeToolImage => '画像';
+
+  @override
+  String get composeToolVideo => '動画 / 音声';
+
+  @override
+  String get composeToolCw => '隠す(注釈)';
+
+  @override
+  String get composeToolPoll => '投票';
+
+  @override
+  String get composeToolEmoji => '絵文字';
+
+  @override
+  String get composeSendReply => '返信';
+
+  @override
+  String get composeSend => '送信';
+
+  @override
+  String get composeAttachmentRemove => '削除';
+
+  @override
+  String get composeAttachmentEdit => '加工';
+
+  @override
+  String get composeAttachmentUnsensitive => 'センシティブ解除';
+
+  @override
+  String get composeAttachmentSensitive => 'センシティブにする';
+
+  @override
+  String get composeMediaPickTypeLabel => '動画 / 音声';
+
+  @override
+  String get composeMediaMotionVideoLabel => '動画にする(付いている動画を、タイルの中で再生。音つき)';
+
+  @override
+  String get composeMediaMotionAudioLabel => '動画にする(タイルの静止画 + 付いている音声)';
+
+  @override
+  String composeMediaMotionAnimatedLabel(int fps, int seconds) {
+    return '動画にする(動いている様子を $fps コマ/秒で $seconds 秒)';
+  }
+
+  @override
+  String get composeMediaMotionVideoNote => 'この投稿には動画が付いています。';
+
+  @override
+  String get composeMediaMotionAudioNote => 'この投稿には音声が付いています。';
+
+  @override
+  String get composeMediaMotionAnimatedNote => 'この投稿には動く絵(GIF / 動く MFM)があります。';
+
+  @override
+  String get composeMediaPostNotOnScreen => '投稿が画面に出ていません';
+
+  @override
+  String get composeMediaSourceFetchFailed => '元のファイルを取得できませんでした';
+
+  @override
+  String composeMediaFormatUnreadable(String ext) {
+    return 'この端末は $ext 形式を読めません(静止画なら貼れます)';
+  }
+
+  @override
+  String composeMediaSourceOpenFailed(String ext, int bytes) {
+    return '元のファイル(.$ext、$bytes バイト)を開けませんでした';
+  }
+
+  @override
+  String get composeMediaTabMine => '自分の投稿';
+
+  @override
+  String get composeMediaTabReacted => 'リアクション';
+
+  @override
+  String get composeMediaTabFavorites => 'ブックマーク';
+
+  @override
+  String get composeMediaTabSearches => '最近の検索';
+
+  @override
+  String get composeMediaStyleThread => 'スレッド';
+
+  @override
+  String get composeMediaStyleInline => 'インライン';
+
+  @override
+  String get composeMediaPostImageTitle => 'ノート画像の追加';
+
+  @override
+  String get composeMediaCancel => 'キャンセル';
+
+  @override
+  String get composeMediaConfirm => '決定';
+
+  @override
+  String get composeMediaNoAccount => 'アカウントがありません';
+
+  @override
+  String get composeMediaSearchUnsupported => 'この SNS では投稿の検索が使えません';
+
+  @override
+  String composeMediaTabUnsupported(String tab) {
+    return 'この SNS では「$tab」が使えません';
+  }
+
+  @override
+  String composeMediaFetchFailed(String error) {
+    return '取得できませんでした: $error';
+  }
+
+  @override
+  String get composeMediaCaptureRetry => '選んだ投稿が画面に出ている状態で、もう一度「決定」を押してください';
+
+  @override
+  String composeMediaVideoFailed(String error) {
+    return '動画にできませんでした: $error';
+  }
+
+  @override
+  String get composeMediaFilterHistoryHint => '検索の履歴を絞り込む';
+
+  @override
+  String get composeMediaFilterListHint => '一覧を絞り込む';
+
+  @override
+  String get composeMediaFilterFromHistoryTooltip => '最近の検索から入れる';
+
+  @override
+  String get composeMediaStyleHeading => '見た目';
+
+  @override
+  String composeMediaSearchResultsTitle(String query) {
+    return '「$query」の検索結果';
+  }
+
+  @override
+  String get composeMediaSearchBack => '最近の検索に戻る';
+
+  @override
+  String composeMediaExcludedNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '公開範囲を限った投稿 $count 件は出していません。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get composeMediaAsVideoOffNote => 'オフ = その瞬間の静止画';
+
+  @override
+  String get composeMediaExporting => '動画にしています…';
+
+  @override
+  String get composeMediaHistoryEmpty => '最近の検索はありません(検索ホームで検索すると、ここに並びます)';
+
+  @override
+  String get composeMediaHistoryNoMatch => '当てはまる検索はありません';
+
+  @override
+  String get composeMediaPostsEmpty => '投稿はありません';
+
+  @override
+  String get composeMediaPostsNoMatch => '当てはまる投稿はありません(「もっと読む」で続きも探せます)';
+
+  @override
+  String get composeMediaLoadMore => 'もっと読む';
+
+  @override
+  String get composeMfmFnX2 => '2倍に拡大';
+
+  @override
+  String get composeMfmFnX3 => '3倍に拡大';
+
+  @override
+  String get composeMfmFnX4 => '4倍に拡大';
+
+  @override
+  String get composeMfmFnSmall => '小さく表示';
+
+  @override
+  String get composeMfmFnCenter => '中央寄せ';
+
+  @override
+  String get composeMfmFnBlur => 'ぼかし(ホバー/タップで解除)';
+
+  @override
+  String get composeMfmFnRotate => '回転';
+
+  @override
+  String get composeMfmPropRotateDeg => '角度(既定 90)';
+
+  @override
+  String get composeMfmFnFlip => '反転';
+
+  @override
+  String get composeMfmPropFlipH => '左右';
+
+  @override
+  String get composeMfmPropFlipV => '上下';
+
+  @override
+  String get composeMfmFnFg => '文字色';
+
+  @override
+  String get composeMfmPropFgColor => '16進(例: ff0000)';
+
+  @override
+  String get composeMfmFnBg => '背景色';
+
+  @override
+  String get composeMfmPropBgColor => '16進(例: ffff00)';
+
+  @override
+  String get composeMfmFnShake => '振動';
+
+  @override
+  String get composeMfmPropShakeSpeed => '例: 0.5s';
+
+  @override
+  String get composeMfmFnSpin => '回転アニメ';
+
+  @override
+  String get composeMfmPropSpinSpeed => '例: 1.5s';
+
+  @override
+  String get composeMfmPropSpinLeft => '逆回転';
+
+  @override
+  String get composeMfmPropSpinAlternate => '往復';
+
+  @override
+  String get composeMfmPropSpinX => '横軸';
+
+  @override
+  String get composeMfmPropSpinY => '縦軸';
+
+  @override
+  String get composeMfmFnJump => 'ジャンプ';
+
+  @override
+  String get composeMfmPropJumpSpeed => '例: 0.75s';
+
+  @override
+  String get composeMfmFnBounce => 'バウンド';
+
+  @override
+  String get composeMfmPropBounceSpeed => '例: 0.75s';
+
+  @override
+  String get composeMfmFnRainbow => '虹色';
+
+  @override
+  String get composeMfmPropRainbowSpeed => '例: 1s';
+
+  @override
+  String get composeMfmFnTwitch => 'ぴくぴく';
+
+  @override
+  String get composeMfmPropTwitchSpeed => '例: 0.5s';
+
+  @override
+  String get composeMfmFnJelly => 'ぷるぷる';
+
+  @override
+  String get composeMfmPropJellySpeed => '例: 1s';
+
+  @override
+  String get composeMfmFnTada => 'じゃーん';
+
+  @override
+  String get composeMfmPropTadaSpeed => '例: 1s';
+
+  @override
+  String get composeMfmFnPlain => '装飾を無効化';
+
+  @override
+  String get composeMfmMarkdownBoldName => '太字';
+
+  @override
+  String get composeMfmMarkdownBoldDescription => '**強調** で表示';
+
+  @override
+  String get composeMfmMarkdownItalicName => '斜体';
+
+  @override
+  String get composeMfmMarkdownItalicDescription => '*斜体* で表示';
+
+  @override
+  String get composeMfmMarkdownStrikeName => '取り消し線';
+
+  @override
+  String get composeMfmMarkdownStrikeDescription => '~~取り消し~~ で表示';
+
+  @override
+  String get composeMfmMarkdownInlineCodeName => 'インラインコード';
+
+  @override
+  String get composeMfmMarkdownInlineCodeDescription => '`コード` で表示';
+
+  @override
+  String get composeMfmMarkdownCodeBlockName => 'コードブロック';
+
+  @override
+  String get composeMfmMarkdownCodeBlockDescription => '複数行のコードを枠で表示';
+
+  @override
+  String get composeMfmMarkdownHeadingName => '見出し';
+
+  @override
+  String get composeMfmMarkdownHeadingDescription => '行頭に # を付ける';
+
+  @override
+  String get composeMfmMarkdownLinkName => 'リンク';
+
+  @override
+  String get composeMfmMarkdownLinkDescription => '[表示名](URL) の形';
+
+  @override
+  String get composeMfmClose => '閉じる';
+
+  @override
+  String get composeMfmSample => 'サンプル';
+
+  @override
+  String composeMfmSampleWithEmoji(String emoji) {
+    return 'サンプル $emoji';
+  }
+
+  @override
+  String get composeMfmBackTooltip => '一覧へ戻る';
+
+  @override
+  String get composeMfmApply => '決定';
+
+  @override
+  String get composeMfmNoProps => 'この関数にプロパティーはありません。';
+
+  @override
+  String get composePolicyTypeSexual => '性的な表現';
+
+  @override
+  String get composePolicyTypeViolence => '暴力・脅し';
+
+  @override
+  String get composePolicyTypeSelfHarm => '自傷・自殺';
+
+  @override
+  String get composePolicyTypeHarassment => '暴言・嫌がらせ';
+
+  @override
+  String get composePolicyTypePersonalInfo => '個人情報(電話番号・メールアドレス・住所など)';
+
+  @override
+  String get composePolicyTypeLink => '外部へのリンク';
+
+  @override
+  String get composePolicyTypeMedia => '画像・動画';
+
+  @override
+  String get composePolicyTypeStimulus => '強い言葉';
+
+  @override
+  String get composePolicyTypeTopic => '決められた話題';
+
+  @override
+  String get composePolicyWhoGuardian => '保護者の設定';
+
+  @override
+  String get composePolicyWhoSanction => 'アカウントの制限';
+
+  @override
+  String composePolicyBlockedMediaUnmeasured(String who) {
+    return '$whoにより、画像・動画は送れません(この端末では添付の確認ができません)。添付を外してください';
+  }
+
+  @override
+  String composePolicyBlockedUnmeasured(String who, String label) {
+    return '$whoにより、いまは送れません(この端末では「$label」の確認ができません)';
+  }
+
+  @override
+  String composePolicyBlocked(String who, String label) {
+    return '$whoにより、「$label」に当たる内容は送れません。書き換えてください';
+  }
+
+  @override
+  String composePolicyWarn(String label, String who) {
+    return '「$label」に当たるかもしれません($who)。このまま送りますか?';
+  }
+
+  @override
   String get languageSelfName => '日本語';
 
   @override

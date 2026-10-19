@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import 'compose_providers.dart';
 
 /// 下書き FOW (D-176): コンポーザーの「下書き」から。複数の下書きを一覧し、選んで開く / 消す。
@@ -38,8 +39,8 @@ Future<DraftsResult?> showDraftsFow(WidgetRef ref, {required String? currentDraf
   final store = ref.read(composeDraftsProvider.notifier);
   final spec = FowSpec(
     type: FowPanelType.widget,
-    title: '下書き',
-    cancelText: 'キャンセル',
+    title: appL10n.composeDraftsTitle,
+    cancelText: appL10n.composeDraftsCancel,
     initialHeightFactor: 0.6,
     minHeightFactor: 0.3,
     maxHeightFactor: 0.92,
@@ -62,7 +63,7 @@ Future<DraftsResult?> showDraftsFow(WidgetRef ref, {required String? currentDraf
                     selected.value = const {};
                     selectMode.value = false;
                   },
-            child: Text('削除', style: TextStyle(color: sel.isEmpty ? scheme.onSurfaceVariant.withValues(alpha: 0.5) : scheme.error)),
+            child: Text(context.l10n.composeDraftsDelete, style: TextStyle(color: sel.isEmpty ? scheme.onSurfaceVariant.withValues(alpha: 0.5) : scheme.error)),
           );
         },
       ),
@@ -105,21 +106,21 @@ class _DraftsBody extends ConsumerWidget {
             child: ListView(padding: EdgeInsets.zero, children: [
               if (!select && hasContent) ...[
                 if (currentDraftId == null)
-                  RasqListTile(key: const ValueKey('drafts.save'), leading: Icon(Icons.save_outlined, size: 20, color: tokens.link), title: '今の内容を保存して閉じる', titleColor: tokens.link, onTap: () => onSave(false))
+                  RasqListTile(key: const ValueKey('drafts.save'), leading: Icon(Icons.save_outlined, size: 20, color: tokens.link), title: context.l10n.composeDraftsSaveAndClose, titleColor: tokens.link, onTap: () => onSave(false))
                 else ...[
-                  RasqListTile(key: const ValueKey('drafts.save'), leading: Icon(Icons.save_outlined, size: 20, color: tokens.link), title: '今の内容を上書き保存して閉じる', titleColor: tokens.link, onTap: () => onSave(false)),
-                  RasqListTile(key: const ValueKey('drafts.saveNew'), leading: Icon(Icons.note_add_outlined, size: 20, color: tokens.link), title: '今の内容を新しい下書きにして閉じる', titleColor: tokens.link, onTap: () => onSave(true)),
+                  RasqListTile(key: const ValueKey('drafts.save'), leading: Icon(Icons.save_outlined, size: 20, color: tokens.link), title: context.l10n.composeDraftsOverwriteAndClose, titleColor: tokens.link, onTap: () => onSave(false)),
+                  RasqListTile(key: const ValueKey('drafts.saveNew'), leading: Icon(Icons.note_add_outlined, size: 20, color: tokens.link), title: context.l10n.composeDraftsSaveNewAndClose, titleColor: tokens.link, onTap: () => onSave(true)),
                 ],
               ],
               if (drafts.isEmpty)
-                Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('下書きはありません', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)))
+                Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(context.l10n.composeDraftsEmpty, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)))
               else
                 for (final d in drafts)
                   RasqListTile(
                     key: ValueKey('drafts.item.${d.id}'),
                     leading: select ? Icon(sel.contains(d.id) ? Icons.check_box : Icons.check_box_outline_blank, size: 22, color: sel.contains(d.id) ? RasqColors.accent : scheme.onSurfaceVariant) : null,
                     title: d.title,
-                    subtitle: [d.targetLabel, if (d.createdAt != null) _fmt(d.createdAt!), if (d.files.isNotEmpty) '添付 ${d.files.length}', if (d.id == currentDraftId) '開いている'].join(' · '),
+                    subtitle: [d.targetLabel, if (d.createdAt != null) _fmt(d.createdAt!), if (d.files.isNotEmpty) context.l10n.composeDraftsAttachmentCount(d.files.length), if (d.id == currentDraftId) context.l10n.composeDraftsOpenNow].join(' · '),
                     chevron: !select,
                     onTap: () {
                       if (select) {
@@ -144,10 +145,10 @@ class _DraftsBody extends ConsumerWidget {
                         selectMode.value = !select;
                       },
                 icon: Icon(select ? Icons.close : Icons.checklist, size: 18),
-                label: Text(select ? '選択解除' : '選択'),
+                label: Text(select ? context.l10n.composeDraftsSelectOff : context.l10n.composeDraftsSelect),
               ),
               const Spacer(),
-              if (select) Text('${sel.length} 件', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              if (select) Text(context.l10n.composeDraftsSelectedCount(sel.length), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ]),
           ),
         ]),
