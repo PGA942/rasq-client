@@ -20,6 +20,9 @@ import 'overlay_manager.dart';
 ///   ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 /// ```
 ///
+/// - D-477 (2026-10-19): パネルの辺をボタンの丸の端まで寄せ([kTetherPanelInset])、首は丸の真横より**パネルと反対の側**
+///   ([kTetherNeckAngle])で丸を離れ、横に長い裾([kTetherNeckFlare])でパネルの辺へなだらかに着く。画面の端で上辺に裾の
+///   場所が無いときは、首を横の辺へ流す。
 /// - 形は [TetherOutline](純粋な幾何。テストもここ)、置き方と描画は [TetheredPanel]。オーバーレイに出すのは
 ///   [TetheredPanelPresets.showTetheredPanel]。
 /// - 座標はオーバーレイ(画面全体)の座標 = グローバル座標(ドロップダウンの anchor と同じ前提)。
@@ -36,6 +39,19 @@ enum TetherSide {
   above,
 }
 
+/// 形の調整値の既定 (D-477: 2026-10-19 のユーザーの指摘)。ここを変えれば形をすぐ詰められる。
+///
+/// 首がボタンの丸を離れる角度(度)。真横から**パネルと反対の側**へ測る(下に開くときは真横より上)。
+/// 大きいほど首が丸の高いところから始まり、丸の横を包まずに裾が広がる。
+const double kTetherNeckAngle = 20;
+
+/// 首の裾の横の長さ(px)。首が丸を離れる点から、パネルの辺に着く点まで。長いほど肩がなだらか。
+const double kTetherNeckFlare = 44;
+
+/// パネルの外形の辺を、ボタンの丸(アイコンの範囲)の端からどれだけ内側(ボタンの中心の側)へ寄せるか(px)。
+/// 0 = 外形の辺がボタンの丸の端に接する。正にするとボタンがパネルのふちに重なる(ふちは [TetheredPanel.outlineOffset])。
+const double kTetherPanelInset = 3;
+
 /// 外形の幾何。[rect] = 外形(輪郭の線)の矩形、[button] = 元のボタンの中心、[buttonRadius] = 元のボタンの半径。
 @immutable
 class TetherOutline {
@@ -46,6 +62,8 @@ class TetherOutline {
     required this.side,
     this.clearance = 3,
     this.cornerRadius = 18,
+    this.neckAngle = kTetherNeckAngle,
+    this.neckFlare = kTetherNeckFlare,
   });
 
   final Rect rect;
@@ -57,11 +75,17 @@ class TetherOutline {
   final double clearance;
   final double cornerRadius;
 
+  /// [kTetherNeckAngle](度)。
+  final double neckAngle;
+
+  /// [kTetherNeckFlare](px)。
+  final double neckFlare;
+
   /// 首の丸(ボタン + すき間)の半径。
   double get headRadius => buttonRadius + clearance;
 
-  /// 首が丸に付く角度(下に開くとき、真横から 30° 下)。ここで接線が丸と揃うので、つなぎ目に角が出ない。
-  static const _join = 30 * math.pi / 180;
+  /// 角を詰めるときの最小の丸み(これより詰まるなら首を横の辺へ流す)。
+  static const _minCorner = 6.0;
 
   /// 輪郭(閉じたパス)。下に開くときの形を作り、上に開くときは上下を裏返す。
   Path path() {
@@ -70,44 +94,65 @@ class TetherOutline {
     return flipped.transform((Matrix4.identity()..scaleByDouble(1.0, -1.0, 1.0, 1.0)).storage);
   }
 
+  /// 首の右半分(丸を離れる点 → パネルの辺)。左半分は左右を裏返して同じ計算をする([edge] = その側の横の辺の x)。
+  /// 返すのは 3 次ベジェの 4 点と、その側の角の丸み(0 = 首を横の辺へ流した)。
+  ({Offset p0, Offset p1, Offset p2, Offset p3, double corner}) _half(Offset c, double top, double edge, double maxDrop) {
+    final a = headRadius;
+    final th = neckAngle * math.pi / 180;
+    final cosT = math.cos(th), sinT = math.sin(th);
+    // 丸を離れる点(右上。y は下向き)と、そこでの進む向き(時計回りの接線 = 右下)。
+    final p0 = Offset(c.dx + a * cosT, c.dy - a * sinT);
+    final dir = Offset(sinT, cosT);
+    final rise = math.max(0.0, top - p0.dy);
+    final room = edge - p0.dx; // 丸を離れる点から横の辺まで。
+    final flare = room - neckFlare >= _minCorner ? neckFlare : room - _minCorner;
+    if (flare >= neckFlare * 0.5) {
+      // ふつう: 首は上辺に水平に着く。角に近ければ角の丸みを詰める。
+      final corner = math.min(cornerRadius, room - flare);
+      final p3 = Offset(p0.dx + flare, top);
+      return (p0: p0, p1: p0 + dir * (rise * 0.6), p2: Offset(p3.dx - flare * 0.55, top), p3: p3, corner: corner);
+    }
+    // 画面の端のボタン: 上辺に着く場所が無いので、首を横の辺へ流す(縦の接線で横の辺に着く)。
+    // 横の辺に着く深さは、足りなかった裾の長さのぶん(上辺の代わりに横の辺で裾を伸ばす)。
+    final drop = math.min(maxDrop, math.min(neckFlare * 0.6, math.max(16.0, neckFlare - math.max(0.0, room)) * 0.8));
+    final p3 = Offset(edge, top + drop);
+    final reach = math.max(8.0, (p3 - p0).distance);
+    return (p0: p0, p1: p0 + dir * (reach * 0.4), p2: Offset(edge, p3.dy - reach * 0.5), p3: p3, corner: 0);
+  }
+
   /// 首が上辺にある形。
   Path _topNeck(Rect r, Offset c) {
-    final a = headRadius;
     final top = r.top;
-    final cosJ = math.cos(_join), sinJ = math.sin(_join);
-    // 丸に付く点(左は 150°、右は 30°。y は下向き)。
-    final pl = Offset(c.dx - a * cosJ, c.dy + a * sinJ);
-    final pr = Offset(c.dx + a * cosJ, c.dy + a * sinJ);
-    // 首の高さ(上辺から付く点まで)と、上辺で首が始まる広がり。
-    final rise = math.max(0.0, top - pl.dy);
-    final spread = rise + 6;
-    var x0 = pl.dx - spread;
-    var x1 = pr.dx + spread;
-    // 角に近いときは、その側の角の丸みを詰める(はみ出すなら首を角から始める)。
-    var rl = cornerRadius, rr = cornerRadius;
-    if (x0 < r.left + rl) {
-      x0 = math.max(x0, r.left);
-      rl = math.max(0.0, x0 - r.left);
-    }
-    if (x1 > r.right - rr) {
-      x1 = math.min(x1, r.right);
-      rr = math.max(0.0, r.right - x1);
-    }
     final rb = math.min(cornerRadius, r.height / 2);
-    // 制御点: 上辺側は水平の接線、丸側は丸の接線(進む向き = 左は左上、右は左下)。
-    final t = rise * 0.5;
-    // 首の始まりが丸の付く点より外にあるとき(画面の端のボタン)は、上辺側の接線を持たせない(折り返しにしない)。
-    final h = math.max(0.0, pl.dx - x0) * 0.55;
-    final h1 = math.max(0.0, x1 - pr.dx) * 0.55;
-    final p = Path()..moveTo(r.left, top + rl);
-    if (rl > 0) p.arcToPoint(Offset(r.left + rl, top), radius: Radius.circular(rl));
+    final maxDrop = math.max(0.0, r.height - rb - 1);
+    final rh = _half(c, top, r.right, maxDrop);
+    // 左半分: x を c.dx で裏返して右半分と同じ計算をし、戻す(向きも逆になる)。
+    Offset m(Offset p) => Offset(2 * c.dx - p.dx, p.dy);
+    final lh = _half(c, top, 2 * c.dx - r.left, maxDrop);
+    final rl = lh.corner, rr = rh.corner;
+    final a = headRadius;
+    final th = neckAngle * math.pi / 180;
+    final p = Path()..moveTo(r.left, r.bottom - rb);
+    // 左の辺 → 左上の角 → 上辺 → 首(左)。角が 0 なら首を横の辺から始める。
+    if (rl > 0) {
+      p
+        ..lineTo(r.left, top + rl)
+        ..arcToPoint(Offset(r.left + rl, top), radius: Radius.circular(rl))
+        ..lineTo(m(lh.p3).dx, top);
+    } else {
+      p.lineTo(m(lh.p3).dx, m(lh.p3).dy);
+    }
+    final l2 = m(lh.p2), l1 = m(lh.p1), l0 = m(lh.p0);
     p
-      ..lineTo(x0, top)
-      ..cubicTo(x0 + h, top, pl.dx + sinJ * t, pl.dy + cosJ * t, pl.dx, pl.dy)
-      ..arcTo(Rect.fromCircle(center: c, radius: a), math.pi - _join, math.pi + 2 * _join, false)
-      ..cubicTo(pr.dx - sinJ * t, pr.dy + cosJ * t, x1 - h1, top, x1, top)
-      ..lineTo(r.right - rr, top);
-    if (rr > 0) p.arcToPoint(Offset(r.right, top + rr), radius: Radius.circular(rr));
+      ..cubicTo(l2.dx, l2.dy, l1.dx, l1.dy, l0.dx, l0.dy)
+      // 丸の上側を時計回りに(左の離れる点 → 右の離れる点)。
+      ..arcTo(Rect.fromCircle(center: c, radius: a), math.pi + th, math.pi - 2 * th, false)
+      ..cubicTo(rh.p1.dx, rh.p1.dy, rh.p2.dx, rh.p2.dy, rh.p3.dx, rh.p3.dy);
+    if (rr > 0) {
+      p
+        ..lineTo(r.right - rr, top)
+        ..arcToPoint(Offset(r.right, top + rr), radius: Radius.circular(rr));
+    }
     p
       ..lineTo(r.right, r.bottom - rb)
       ..arcToPoint(Offset(r.right - rb, r.bottom), radius: Radius.circular(rb))
@@ -119,19 +164,28 @@ class TetherOutline {
 
   @override
   bool operator ==(Object other) =>
-      other is TetherOutline && other.rect == rect && other.button == button && other.buttonRadius == buttonRadius && other.side == side && other.clearance == clearance && other.cornerRadius == cornerRadius;
+      other is TetherOutline &&
+      other.rect == rect &&
+      other.button == button &&
+      other.buttonRadius == buttonRadius &&
+      other.side == side &&
+      other.clearance == clearance &&
+      other.cornerRadius == cornerRadius &&
+      other.neckAngle == neckAngle &&
+      other.neckFlare == neckFlare;
 
   @override
-  int get hashCode => Object.hash(rect, button, buttonRadius, side, clearance, cornerRadius);
+  int get hashCode => Object.hash(rect, button, buttonRadius, side, clearance, cornerRadius, neckAngle, neckFlare);
 }
 
 /// [TetheredPanel] の置き場所を決める(純粋な計算。テストもここ)。
-/// [area] = 置いてよい範囲(画面からキーボード / ノッチ / 余白を除いたもの)。[panelHeight] は中身 + 外形のぶん。
+/// [area] = 置いてよい範囲(画面からキーボード / ノッチ / 余白を除いたもの)。
+/// [reach] = ボタンの中心からパネルの外形の辺まで(= ボタンの半径 − [kTetherPanelInset])。
 @visibleForTesting
-({TetherSide side, double left, double maxHeight}) tetherPlacement({required Rect anchor, required Rect area, required double width, required double neckGap, required double headRadius, required TetherSide preferred, double minHeight = 200}) {
+({TetherSide side, double left, double maxHeight}) tetherPlacement({required Rect anchor, required Rect area, required double width, required double reach, required TetherSide preferred, double minHeight = 200}) {
   final c = anchor.center;
-  final spaceBelow = area.bottom - (c.dy + headRadius + neckGap);
-  final spaceAbove = (c.dy - headRadius - neckGap) - area.top;
+  final spaceBelow = area.bottom - (c.dy + reach);
+  final spaceAbove = (c.dy - reach) - area.top;
   final pref = preferred == TetherSide.below ? spaceBelow : spaceAbove;
   final other = preferred == TetherSide.below ? spaceAbove : spaceBelow;
   final side = pref >= minHeight || pref >= other ? preferred : (preferred == TetherSide.below ? TetherSide.above : TetherSide.below);
@@ -152,7 +206,9 @@ class TetheredPanel extends StatelessWidget {
     this.preferredSide = TetherSide.below,
     this.outlineOffset = 6,
     this.clearance = 3,
-    this.neckGap = 10,
+    this.panelInset = kTetherPanelInset,
+    this.neckAngle = kTetherNeckAngle,
+    this.neckFlare = kTetherNeckFlare,
     this.strokeWidth = 1.5,
     this.margin = 8,
     this.progress = 1,
@@ -173,8 +229,14 @@ class TetheredPanel extends StatelessWidget {
   /// 首がボタンを包むすき間(px。スケッチの「3px」)。
   final double clearance;
 
-  /// ボタンの丸の下端からパネルの外形までの首の長さ。
-  final double neckGap;
+  /// [kTetherPanelInset]。外形の辺はボタンの丸の端からこれだけ内側(D-477。以前は丸 + すき間の外に 10px の首)。
+  final double panelInset;
+
+  /// [kTetherNeckAngle](度)。
+  final double neckAngle;
+
+  /// [kTetherNeckFlare](px)。
+  final double neckFlare;
   final double strokeWidth;
   final double margin;
 
@@ -194,7 +256,9 @@ class TetheredPanel extends StatelessWidget {
         preferred: preferredSide,
         offset: outlineOffset,
         clearance: clearance,
-        neckGap: neckGap,
+        panelInset: panelInset,
+        neckAngle: neckAngle,
+        neckFlare: neckFlare,
         insets: EdgeInsets.fromLTRB(mq.padding.left + margin, mq.padding.top + margin, mq.padding.right + margin, math.max(mq.padding.bottom, mq.viewInsets.bottom) + margin),
       ),
       children: [
@@ -240,30 +304,32 @@ class _TetherHolder {
 }
 
 class _TetherDelegate extends MultiChildLayoutDelegate {
-  _TetherDelegate({required this.holder, required this.anchor, required this.width, required this.preferred, required this.offset, required this.clearance, required this.neckGap, required this.insets});
+  _TetherDelegate({required this.holder, required this.anchor, required this.width, required this.preferred, required this.offset, required this.clearance, required this.panelInset, required this.neckAngle, required this.neckFlare, required this.insets});
   final _TetherHolder holder;
   final Rect anchor;
   final double width;
   final TetherSide preferred;
   final double offset;
   final double clearance;
-  final double neckGap;
+  final double panelInset;
+  final double neckAngle;
+  final double neckFlare;
   final EdgeInsets insets;
 
   @override
   void performLayout(Size size) {
     final buttonRadius = math.min(anchor.width, anchor.height) / 2;
-    final headRadius = buttonRadius + clearance;
+    final reach = buttonRadius - panelInset;
     final area = insets.deflateRect(Offset.zero & size);
-    final place = tetherPlacement(anchor: anchor, area: area, width: width, neckGap: neckGap, headRadius: headRadius, preferred: preferred);
+    final place = tetherPlacement(anchor: anchor, area: area, width: width, reach: reach, preferred: preferred);
     final w = math.min(width, area.width);
     final panel = layoutChild(_TetherSlot.panel, BoxConstraints(minWidth: w - 2 * offset, maxWidth: w - 2 * offset, maxHeight: math.max(0.0, place.maxHeight - 2 * offset)));
     final h = panel.height + 2 * offset;
     final c = anchor.center;
-    final top = place.side == TetherSide.below ? c.dy + headRadius + neckGap : c.dy - headRadius - neckGap - h;
+    final top = place.side == TetherSide.below ? c.dy + reach : c.dy - reach - h;
     final rect = Rect.fromLTWH(place.left, top, w, h);
     positionChild(_TetherSlot.panel, rect.topLeft + Offset(offset, offset));
-    holder.outline = TetherOutline(rect: rect, button: c, buttonRadius: buttonRadius, side: place.side, clearance: clearance);
+    holder.outline = TetherOutline(rect: rect, button: c, buttonRadius: buttonRadius, side: place.side, clearance: clearance, neckAngle: neckAngle, neckFlare: neckFlare);
     layoutChild(_TetherSlot.paint, BoxConstraints.tight(size));
     positionChild(_TetherSlot.paint, Offset.zero);
     layoutChild(_TetherSlot.head, BoxConstraints.tight(Size.square(buttonRadius * 2)));
@@ -272,7 +338,10 @@ class _TetherDelegate extends MultiChildLayoutDelegate {
 
   @override
   bool shouldRelayout(_TetherDelegate old) =>
-      old.anchor != anchor || old.width != width || old.preferred != preferred || old.offset != offset || old.clearance != clearance || old.neckGap != neckGap || old.insets != insets || old.holder != holder;
+      old.anchor != anchor || old.width != width || old.preferred != preferred || old.offset != offset || old.clearance != clearance ||
+      old.panelInset != panelInset ||
+      old.neckAngle != neckAngle ||
+      old.neckFlare != neckFlare || old.insets != insets || old.holder != holder;
 }
 
 class _TetherPainter extends CustomPainter {

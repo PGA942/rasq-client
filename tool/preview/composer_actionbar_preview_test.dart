@@ -1,4 +1,4 @@
-// 描画確認ハーネス (D-474 / D-475): コンポーザーのアクションバーのテキスト加工プラグインのボタン・ボタンにつながったパネル・# の補完を PNG に。
+// 描画確認ハーネス (D-474 / D-475 / D-477): コンポーザーのアクションバーのテキスト加工プラグインのボタン・ボタンにつながったパネル・# の補完を PNG に。
 //   RASQ_PREVIEW_FONT=/path/to/NotoSansJP.ttf flutter test tool/preview/composer_actionbar_preview_test.dart --update-goldens
 import 'dart:convert';
 import 'dart:io';
@@ -117,4 +117,32 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('tethered_panel_shapes.png'));
   });
+
+  // 1 つずつ大きめに(首の形を詰めるとき用。D-477)。
+  for (final (name, anchor, side, icon) in [
+    ('below', const Rect.fromLTWH(158, 30, 44, 44), TetherSide.below, Icons.tag),
+    ('edge', const Rect.fromLTWH(312, 30, 44, 44), TetherSide.below, Icons.photo_camera_outlined),
+    ('above', const Rect.fromLTWH(30, 186, 44, 44), TetherSide.above, Icons.emoji_emotions_outlined),
+  ]) {
+    testWidgets('つながったパネル単体(拡大): $name', (tester) async {
+      tester.view.physicalSize = const Size(1080, 720);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xFF3D7BFF)),
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: TetheredPanel(
+            anchor: anchor,
+            preferredSide: side,
+            width: 300,
+            anchorChild: Icon(icon, size: 20),
+            child: const SizedBox(height: 120, child: Center(child: Text('中身'))),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('tethered_panel_$name.png'));
+    });
+  }
 }
