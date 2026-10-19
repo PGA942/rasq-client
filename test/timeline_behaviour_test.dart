@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/backend/learning_api.dart';
 import 'package:rasq_client/features/home/home_header.dart' show homeHeaderArea;
+import 'package:rasq_client/features/learning/contribution.dart';
 import 'package:rasq_client/features/home/new_posts_pill.dart';
 import 'package:rasq_client/features/home/timeline_providers.dart';
 import 'package:rasq_client/features/nodeprog/node_tabs.dart' show nodeprogAreaFor;
@@ -316,4 +318,78 @@ void main() {
       expect(shown('自分の投稿 G'), findsOneWidget);
     });
   });
+  group('D-508 見えていない TL は読まない', () {
+    int fetches() => plugin.opened.fold(0, (n, s) => n + s.timelineFetches);
+    int userFetches() => plugin.opened.fold(0, (n, s) => n + s.userPostsFetches);
+    Future<void> openTab(WidgetTester tester, String label) async {
+      await tester.tap(find.text(label).first);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('隠れたタブの TL は、読み直しを頼まれても取りに行かず、開いたときに 1 回だけ取る', (tester) async {
+      final c = await pump(tester);
+      await openTab(tester, 'フォロー中');
+      await openTab(tester, 'おすすめ');
+      final before = fetches();
+      // RAi の関数 / リストの変更などが「フォロー中」の読み直しを頼む(隠れている)。
+      for (var i = 0; i < 3; i++) {
+        c.invalidate(timelineProvider(TimelineKind.home));
+        await tester.pumpAndSettle();
+      }
+      debugPrint('D-508 hidden TL fetches after 3 invalidations: ${fetches() - before}');
+      expect(fetches() - before, 0, reason: '隠れている間は取りに行かない');
+      await openTab(tester, 'フォロー中');
+      expect(fetches() - before, 1, reason: '開いたときに 1 回');
+      // 見えている TL は今までどおりすぐ読み直す。
+      c.invalidate(timelineProvider(TimelineKind.home));
+      await tester.pumpAndSettle();
+      expect(fetches() - before, 2);
+    });
+
+    testWidgets('しばらく隠れていた TL は、開いたときに新しい投稿を上に足す', (tester) async {
+      TimelineNotifier.staleAfter = Duration.zero;
+      addTearDown(() => TimelineNotifier.staleAfter = const Duration(minutes: 2));
+      await pump(tester);
+      await openTab(tester, 'フォロー中');
+      await openTab(tester, 'おすすめ');
+      for (final s in plugin.opened) {
+        s.prepend(post(-1, author: 'x'));
+      }
+      final before = fetches();
+      await openTab(tester, 'フォロー中');
+      expect(fetches() - before, 1);
+      expect(find.byKey(const ValueKey('tl.newPosts.pill')), findsOneWidget, reason: '上に足した(D-506 の札)');
+    });
+
+    testWidgets('学習への貢献が入っていても、関連 TL を開いていなければ会話を組まない(ゲストの投稿を取りに行かない)', (tester) async {
+      ContributionController.debounce = const Duration(days: 1);
+      final c = await pump(tester, extra: [learningProvider.overrideWith(_GrantedLearning.new)]);
+      await c.read(learningProvider.future);
+      await tester.pumpAndSettle();
+      expect(c.read(contributionProvider).active, isTrue);
+      // リノートで運ばれてきた、フォローしていない人(関連 TL のゲスト D-046)の投稿が届き続ける。
+      for (var i = 0; i < 3; i++) {
+        for (final s in plugin.opened) {
+          s.prepend(Post(
+              id: 'rn$i',
+              account: acc,
+              author: UserSummary(id: 'guest$i', account: acc, displayName: 'ゲスト$i'),
+              repostedBy: UserSummary(id: 'u1', account: acc, displayName: '人u1'),
+              createdAt: DateTime(2026, 10, 20, 12, 1 + i),
+              body: 'リノート $i'));
+        }
+        await c.read(timelineProvider(TimelineKind.home).notifier).prependNewer();
+        await tester.pumpAndSettle();
+      }
+      debugPrint('D-508 guest userPosts fetches while 関連 is hidden: ${userFetches()}');
+      expect(userFetches(), 0, reason: '関連 TL が見えていない');
+      await openTab(tester, '関連');
+      expect(userFetches(), greaterThan(0), reason: '開けば組む');
+    });
+  });
+}
+
+class _GrantedLearning extends LearningNotifier {
+  @override
+  Future<LearningStatus?> build() async => const LearningStatus(open: true, granted: true, eligible: true, scope: 'extended');
 }

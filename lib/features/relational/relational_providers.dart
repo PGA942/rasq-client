@@ -345,6 +345,26 @@ final relationalNodePostsProvider = FutureProvider<List<Post>?>((ref) async {
   }
 });
 
+/// いま組んである会話イベント (D-508)。関連 TL(など、[conversationEventsProvider] を見ている画面)が組んだものを写す。
+/// 学習への貢献 (D-367) はこちらを見る: 見ても会話を組ませない(前は貢献が [conversationEventsProvider] をずっと見ていて、
+/// 関連 TL を開いていなくても、フォロー中の TL が更新されるたびにゲストの投稿を取りに行き、会話を組み直していた)。
+class LatestConversationEvents extends Notifier<List<ConversationEvent>> {
+  LatestConversationEvents([this._initial = const []]);
+  final List<ConversationEvent> _initial;
+
+  @override
+  List<ConversationEvent> build() => _initial;
+
+  void set(List<ConversationEvent> events) => state = events;
+}
+
+final latestConversationEventsProvider = NotifierProvider<LatestConversationEvents, List<ConversationEvent>>(LatestConversationEvents.new);
+
+/// [events] を [latestConversationEventsProvider] へ(provider の中から状態を変えないよう、次のマイクロタスクで)。
+void _publishEvents(Ref ref, List<ConversationEvent> events) => scheduleMicrotask(() {
+      if (ref.mounted) ref.read(latestConversationEventsProvider.notifier).set(events);
+    });
+
 final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>((ref) {
   final settings = ref.watch(relationalSettingsProvider);
   final lookbackMinutes = ref.watch(relationalLookbackProvider);
@@ -357,7 +377,10 @@ final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>
 
   // wasm エンジンの結果があればそれを使う (M5f / D-084 特別枠)。
   final wasmEvents = ref.watch(wasmConversationEventsProvider).value;
-  if (wasmEvents != null) return AsyncData(wasmEvents);
+  if (wasmEvents != null) {
+    _publishEvents(ref, wasmEvents);
+    return AsyncData(wasmEvents);
+  }
 
   return home.whenData((h) {
     // 前段絞り込み (D-102) > バンドル供給 (D-086) > 現在分、の順で使う。
@@ -373,6 +396,7 @@ final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>
         if (ref.mounted) ref.read(relationalCloudProvider.notifier).offer(borderline);
       });
     }
+    _publishEvents(ref, events);
     return events;
   });
 });

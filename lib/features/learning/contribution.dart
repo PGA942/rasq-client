@@ -423,10 +423,11 @@ class ContributionController extends Notifier<ContributionState> {
     final rai = extended && settings['rai'] != false;
     final preload = extended && settings['preload'] != false;
     if (active && relational) {
-      ref.listen(conversationEventsProvider, (_, next) => _offerEvents(next.value ?? const []));
+      // 関連 TL が組んだ会話だけを見る (D-508): 見ても会話を組ませない(関連 TL を開いていないときに、裏で組み直さない)。
+      ref.listen(latestConversationEventsProvider, (_, next) => _offerEvents(next));
       // いまある束も(build の中では state を触れないので、次のマイクロタスクで)。
       scheduleMicrotask(() {
-        if (ref.mounted) _offerEvents(ref.read(conversationEventsProvider).value ?? const []);
+        if (ref.mounted) _offerEvents(ref.read(latestConversationEventsProvider));
       });
       if (preload) _warmUp();
     }

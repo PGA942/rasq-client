@@ -126,7 +126,7 @@ void main() {
     final container = ProviderContainer(overrides: [
       centralClientProvider.overrideWithValue(OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: client, tokenProvider: () => 't')),
       learningProvider.overrideWith(() => _FixedLearning(() => granted)),
-      conversationEventsProvider.overrideWithValue(AsyncData([e])),
+      latestConversationEventsProvider.overrideWith(() => LatestConversationEvents([e])),
       raiLlmProvider.overrideWithValue(llm),
     ]);
     addTearDown(container.dispose);
@@ -218,7 +218,7 @@ void main() {
       final container = ProviderContainer(overrides: [
         centralClientProvider.overrideWithValue(OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: client, tokenProvider: () => 't')),
         learningProvider.overrideWith(() => _FixedLearning(() => true, scope: 'own')),
-        conversationEventsProvider.overrideWithValue(AsyncData([e])),
+        latestConversationEventsProvider.overrideWith(() => LatestConversationEvents([e])),
         raiLlmProvider.overrideWithValue(FakeRaiLlm(phase: RaiLlmPhase.ready)),
       ]);
       addTearDown(container.dispose);

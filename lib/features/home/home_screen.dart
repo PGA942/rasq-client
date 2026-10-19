@@ -317,6 +317,9 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
   /// このタブがいま見えているか(隠れたタブ = [VisibleTabPage] が TickerMode を切る)。
   bool _visible = true;
 
+  /// 前に組み立てたときの TL (D-506 の見比べ)。
+  TimelineState? _lastTl;
+
   /// 読み直しを済ませた自分の投稿 (D-507、[OwnPost.seq])。
   late int _ownSeq;
 
@@ -388,9 +391,21 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    _visible = TickerMode.valuesOf(context).enabled;
+    final visible = TickerMode.valuesOf(context).enabled;
+    // 隠れていたタブが見えた (D-508): しばらく取っていなければ上に足す(隠れている間は読み直さない)。
+    if (visible && !_visible) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(timelineProvider(widget.kind).notifier).refreshIfStale();
+      });
+    }
+    _visible = visible;
     final state = ref.watch(timelineProvider(widget.kind));
-    ref.listen(timelineProvider(widget.kind), (prev, next) => _onTimeline(prev?.value, next.value));
+    // 更新を見比べる (D-506)。ref.listen だと隠れている間も監視が止まらない(D-508: 止まるのは watch だけ)ので、組み立てのたびに前と比べる。
+    final tlNow = state.value;
+    if (!identical(tlNow, _lastTl)) {
+      _onTimeline(_lastTl, tlNow);
+      _lastTl = tlNow;
+    }
     // しまったヘッダーには D-449 の新着を浮かべるので、「新しい投稿」は出さない。
     final pillShown = _pill.showing && !ref.watch(homeHeaderCollapsedProvider) && ref.watch(timelineNewPostsPillProvider);
     // 自分が投稿した (D-507): 見えていれば読み直す。隠れている間は見ない(Riverpod の監視も止まる)ので、次に見えたときに読み直す。
