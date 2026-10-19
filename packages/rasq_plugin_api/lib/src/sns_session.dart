@@ -104,6 +104,11 @@ abstract class SnsSession {
   Future<Page<Post>> searchPosts(String query, {String? cursor, int limit = 20});
   Future<Page<UserSummary>> searchUsers(String query, {String? cursor, int limit = 20});
 
+  /// ハッシュタグの候補 (D-475: コンポーザーの `#` の補完。`@` の補完の [searchUsers] と同じ口)。
+  /// [query] は打っている途中のタグ(`#` 無し)、戻りのタグにも `#` は付けない。
+  /// 境界は `sns.search {kind: hashtags}`。非対応 SNS は [UnsupportedError](ホストは候補を出さないだけ)。
+  Future<List<TrendTag>> searchHashtags(String query, {int limit = 10});
+
   /// Resolves custom emoji shortcode → image URL (MFM / Mastodon custom emoji).
   Future<Uri?> emojiUrl(String shortcode);
 
@@ -267,6 +272,8 @@ abstract class SnsSessionBase implements SnsSession {
   Future<Page<Post>> searchPosts(String query, {String? cursor, int limit = 20}) => _unsupported('searchPosts');
   @override
   Future<Page<UserSummary>> searchUsers(String query, {String? cursor, int limit = 20}) => _unsupported('searchUsers');
+  @override
+  Future<List<TrendTag>> searchHashtags(String query, {int limit = 10}) => _unsupported('searchHashtags');
   @override
   Future<Uri?> emojiUrl(String shortcode) async => null;
   @override

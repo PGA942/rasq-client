@@ -13,3 +13,4 @@ export 'src/overlay_manager.dart';
 export 'src/overlay_host.dart';
 export 'src/overlay_scope.dart';
 export 'src/presets.dart';
+export 'src/tethered_panel.dart';

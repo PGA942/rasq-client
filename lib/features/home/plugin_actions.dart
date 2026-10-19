@@ -234,7 +234,7 @@ SlotActionDecl viewerToggleDecl(SlotManifest m) {
   );
 }
 
-// ── コンポーザー本文の ON / OFF チップ (契約 v0.14 §2.3、D-305) ──────────
+// ── コンポーザー本文の ON / OFF ボタン (契約 v0.14 §2.3、D-305 → D-474: アクションバーの行) ──────────
 
 /// `composer.text` のプラグインごとの ON / OFF。ActionKey は `slot:<pluginId>:composer.text`(宣言の `id` に依らない)。
 /// 見た目は `actions` の `slot: "composer.text"` の項目(label / icon)、無ければプラグイン名 + 既定のアイコン。

@@ -20,7 +20,7 @@ import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
-import 'package:rasq_design/rasq_design.dart' show RasqMediaPolicy, RasqPolicyNetworkImage;
+import 'package:rasq_design/rasq_design.dart' show RasqActionButton, RasqMediaPolicy, RasqPolicyNetworkImage;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -173,7 +173,7 @@ void main() {
     expect(rt.calls.where((x) => x.$1 == 'astell.event' && x.$2['type'] == 'closed'), isNotEmpty);
   });
 
-  testWidgets('コンポーザー (§2.2/§2.3): 添付の「プラグインで加工」→ media.edit → composer.media.replace、本文の # → text.changed(trigger)→ composer.text.replace、ON / OFF チップ (v0.14)', (tester) async {
+  testWidgets('コンポーザー (§2.2/§2.3): 添付の「プラグインで加工」→ media.edit → composer.media.replace、本文の # → text.changed(trigger)→ composer.text.replace、ON / OFF ボタン (v0.14 → D-474)', (tester) async {
     late FakeSlotRuntime media;
     late FakeSlotRuntime text;
     fakes['media'] = () => media = FakeSlotRuntime(
@@ -211,12 +211,12 @@ void main() {
     // コンポーザーを開く(ホーム右下の +)。
     await openHomeComposer(tester);
     await tester.pumpAndSettle();
-    // 入力欄の上の ON / OFF チップ: 宣言が無い t.text は名前 + 既定 ON、t.off は宣言の label で OFF。
+    // アクションバーの ON / OFF ボタン (D-474): 宣言が無い t.text は名前 + 既定 ON、t.off は宣言の label / icon で OFF。
     final textChip = find.byKey(const ValueKey('composer.textPlugin.t.text'));
     final offChip = find.byKey(const ValueKey('composer.textPlugin.t.off'));
-    expect(tester.widget<FilterChip>(textChip).selected, isTrue);
-    expect(tester.widget<FilterChip>(offChip).selected, isFalse);
-    expect(find.text('校正'), findsOneWidget);
+    expect(tester.widget<RasqActionButton>(textChip).done, isTrue);
+    expect(tester.widget<RasqActionButton>(offChip).done, isFalse);
+    expect(tester.widget<RasqActionButton>(offChip).tooltip, startsWith('校正'));
     final field = find.byType(TextField).first;
     await tester.enterText(field, 'こんにちは #uch');
     await tester.pump(const Duration(milliseconds: 300));
@@ -226,8 +226,13 @@ void main() {
     expect(changed.$2['text'], 'こんにちは #uch');
     expect(tester.widget<TextField>(field).controller!.text, 'こんにちは #打上会 ');
     expect(off.calls.where((x) => x.$1 == 'text.changed'), isEmpty);
-    // チップで t.text を OFF、t.off を ON(このコンポーザー限り。保存しない)→ 送る相手が入れ替わる。
+    // ボタンで t.text を OFF、t.off を ON(このコンポーザー限り。保存しない)→ 送る相手が入れ替わる。
+    // ボタンの行は横にスクロールする(幅の狭い端末では絵文字から先は送って見る)。
+    await tester.ensureVisible(textChip);
+    await tester.pumpAndSettle();
     await tester.tap(textChip);
+    await tester.ensureVisible(offChip);
+    await tester.pumpAndSettle();
     await tester.tap(offChip);
     await tester.pumpAndSettle();
     text.calls.clear();
@@ -237,7 +242,7 @@ void main() {
     expect(text.calls.where((x) => x.$1 == 'text.changed'), isEmpty);
     expect(off.calls.where((x) => x.$1 == 'text.changed').last.$2['text'], 'こんにちは #打上会 あ');
     expect(c.read(actionButtonPrefsProvider).autoOverride(pluginActionId('t.off', SlotIds.composerText)), isNull); // 設定には書かれない
-    // switch オフ(端末全体): チップが消え、送る相手からも外れる。
+    // switch オフ(端末全体): ボタンが消え、送る相手からも外れる。
     await setActionSwitch(c.read(settingsAreaProvider(actionButtonPrefsArea).notifier), c.read(actionButtonPrefsProvider), pluginActionId('t.off', SlotIds.composerText), false);
     await tester.pumpAndSettle();
     expect(offChip, findsNothing);
@@ -252,6 +257,90 @@ void main() {
     // 遅延返答(§2.2 の UI を出す形): composer.media.replace のホスト関数で差し替わる。
     media.hostFn('composer.media.replace', {'token': media.calls.single.$2['token'], 'bytesB64': base64Encode([7]), 'mimeType': 'image/jpeg'});
     expect(replaced, [Uint8List.fromList([7]), 'image/jpeg', null]);
+  });
+
+  testWidgets('D-474: テキスト加工プラグインのボタンはアクションバーの行(絵文字 / 投票と同じ)、長押しでボタンにつながったパネル', (tester) async {
+    fakes['text'] = () => FakeSlotRuntime(manifest: manifest('t.text', ['composer.text']), handler: (self, fn, args) => fn == 'text.changed' ? {} : null);
+    final c = await pump(tester);
+    await register(c, 'text');
+    await openHomeComposer(tester);
+    await tester.pumpAndSettle();
+    final button = find.byKey(const ValueKey('composer.textPlugin.t.text'));
+    // 置き場所: カメラ / 画像 / 投票 / 絵文字と同じ横スクロールの行(入力欄の上のチップ行は無くなった)。
+    final row = find.ancestor(of: find.byKey(const ValueKey('composer.tool.poll')), matching: find.byType(SingleChildScrollView)).first;
+    expect(find.descendant(of: row, matching: button), findsOneWidget);
+    expect(find.byType(FilterChip), findsNothing);
+    expect(tester.getTopLeft(button).dx, greaterThan(tester.getTopLeft(find.byTooltip('絵文字')).dx)); // 絵文字の隣
+    expect(tester.getTopLeft(button).dy, greaterThan(tester.getBottomLeft(find.byKey(const ValueKey('composer.input'))).dy));
+    // 押すとこのコンポーザーでの ON / OFF(行は横にスクロールする。絵文字の隣)。
+    expect(tester.widget<RasqActionButton>(button).done, isTrue);
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(tester.widget<RasqActionButton>(button).done, isFalse);
+    // 長押し: ボタンにつながったパネル。首はボタンを包む(パネルはバーの上に開く)。
+    await tester.longPress(button);
+    await tester.pumpAndSettle();
+    final panel = find.byKey(const ValueKey('composer.textPlugin.panel.panel'));
+    expect(panel, findsOneWidget);
+    final buttonRect = tester.getRect(button);
+    expect(tester.getRect(find.byKey(const ValueKey('composer.textPlugin.panel.ok'))).bottom, lessThan(buttonRect.top));
+    // キャンセルは何も変えない。
+    await tester.tap(find.byKey(const ValueKey('composer.textPlugin.panel.here')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('composer.textPlugin.panel.cancel')));
+    await tester.pumpAndSettle();
+    expect(panel, findsNothing);
+    expect(tester.widget<RasqActionButton>(button).done, isFalse);
+    // OK: このコンポーザーでオン + 次からは自動でオフ(temp の上書き)。
+    await tester.longPress(button);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('composer.textPlugin.panel.here')));
+    await tester.tap(find.byKey(const ValueKey('composer.textPlugin.panel.auto')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('composer.textPlugin.panel.ok')));
+    await tester.pumpAndSettle();
+    expect(panel, findsNothing);
+    expect(tester.widget<RasqActionButton>(button).done, isTrue);
+    expect(c.read(actionButtonPrefsProvider).autoOverride(pluginActionId('t.text', SlotIds.composerText)), isFalse);
+  });
+
+  testWidgets('D-475: # を打つと、@ の補完と同じ帯に SNS プラグインのハッシュタグの候補が出て、押すとその場のタグに置き換わる', (tester) async {
+    await pump(tester, posts: [post('p1', '今日は #打ち上げ と #打上会'), post('p2', '#rocket の写真')]);
+    await openHomeComposer(tester);
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('composer.input'));
+    await tester.enterText(field, '花火 #打');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('composer.hashtags')), findsOneWidget);
+    expect(find.byKey(const ValueKey('composer.hashtag.打ち上げ')), findsOneWidget);
+    expect(find.byKey(const ValueKey('composer.hashtag.打上会')), findsOneWidget);
+    expect(find.byKey(const ValueKey('composer.hashtag.rocket')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('composer.hashtag.打上会')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(field).controller!.text, '花火 #打上会 ');
+    expect(find.byKey(const ValueKey('composer.hashtags')), findsNothing);
+    // タグを打ち終えたあと / # の無い語では出ない。
+    await tester.enterText(field, '花火 #打上会 です');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('composer.hashtags')), findsNothing);
+  });
+
+  testWidgets('D-475: ハッシュタグの検索を持たない SNS(非対応 / 失敗)では、候補を出さないだけ', (tester) async {
+    await pump(tester, posts: [post('p1', '#打ち上げ')]);
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    (c.read(currentSnsSessionProvider)! as FakeSnsSession).hashtagsUnsupported = true;
+    await openHomeComposer(tester);
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('composer.input'));
+    await tester.enterText(field, '#打');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('composer.hashtags')), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('投稿加工 (§2.5) とトレンド (§2.7)', (tester) async {
