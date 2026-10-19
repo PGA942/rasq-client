@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../l10n/l10n.dart';
 import 'astell_media.dart';
 
 /// 通話に入れる人数(自分を含む)。音声だけのメッシュは人数の 2 乗で接続が増えるので、ここで止める。
@@ -140,7 +141,7 @@ class AstellCallMesh {
         await run();
       } catch (e, st) {
         debugPrint('astell call: $e\n$st');
-        onError?.call('通話の接続に失敗しました: ${AstellMediaException.from(e).message}');
+        onError?.call(appL10n.vcCallConnectFailed(AstellMediaException.from(e).message));
       }
     });
     _queue = next;

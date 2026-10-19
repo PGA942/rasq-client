@@ -5,6 +5,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import 'astell_bookmarks.dart';
@@ -24,27 +25,30 @@ Future<void> shareAstellRoom(BuildContext context, WidgetRef ref, AstellRoom roo
 
 Future<void> copyAstellRoomLink(BuildContext context, WidgetRef ref, AstellRoom room) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
+  final l = context.l10n;
   await Clipboard.setData(ClipboardData(text: astellRoomLink(room)));
-  messenger?.showSnackBar(const SnackBar(content: Text('リンクをコピーしました')));
+  messenger?.showSnackBar(SnackBar(content: Text(l.vcLinkCopied)));
 }
 
 /// ブックマークの切替 + スナックバー。タイルは切替で消えることがある(ブックマーク
 /// 画面の帯)ので、メッセンジャーは先に取っておく。
 Future<void> bookmarkAstellRoom(BuildContext context, WidgetRef ref, AstellRoom room) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
+  final l = context.l10n;
   final saved = await toggleAstellBookmark(ref, room);
-  messenger?.showSnackBar(SnackBar(content: Text(saved ? 'ブックマークに保存しました' : 'ブックマークから削除しました')));
+  messenger?.showSnackBar(SnackBar(content: Text(saved ? l.vcBookmarkSaved : l.vcBookmarkRemoved)));
 }
 
 /// 開始通知の切替 + スナックバー。
 Future<void> remindAstellRoom(BuildContext context, WidgetRef ref, AstellRoom room) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
+  final l = context.l10n;
   final res = await toggleAstellReminder(ref, room);
   final msg = switch (res) {
-    AstellReminderResult.registered => '${formatAstellSchedule(room.scheduledAt!)} に通知します',
-    AstellReminderResult.removed => '通知を解除しました',
-    AstellReminderResult.unavailable => 'この端末では通知を登録できませんでした',
-    AstellReminderResult.notScheduled => '開催予定のないルームです',
+    AstellReminderResult.registered => l.vcRemindRegistered(formatAstellSchedule(room.scheduledAt!)),
+    AstellReminderResult.removed => l.vcRemindRemoved,
+    AstellReminderResult.unavailable => l.vcRemindUnavailable,
+    AstellReminderResult.notScheduled => l.vcRemindNotScheduled,
   };
   messenger?.showSnackBar(SnackBar(content: Text(msg)));
 }
@@ -67,17 +71,18 @@ Future<void> showAstellTileMenu(BuildContext context, WidgetRef ref, AstellRoom 
   final reminded = ref.read(astellRemindedProvider(room.id));
   final mine = room.ownerId == ref.read(astellMyAccountIdProvider);
   final joined = ref.read(astellSessionProvider)?.room.id == room.id;
+  final l = context.l10n;
   final pick = await manager.showDropdown<String>(id: 'astell.tile.more', anchor: anchor, dense: true, items: [
-    const RasqDropdownItem('投稿で共有', 'share'),
-    const RasqDropdownItem('リンクをコピー', 'copy'),
-    RasqDropdownItem(bookmarked ? 'ブックマークから削除' : 'ブックマークに保存', 'bookmark'),
-    if (!mine && room.isScheduled) RasqDropdownItem(reminded ? '開始通知を解除' : '開始を通知', 'remind'),
-    if (mine && room.isScheduled && !joined) const RasqDropdownItem('今すぐ開催する', 'start'),
-    if (mine) RasqDropdownItem(joined ? 'ルームへ戻る' : '参加する', 'open'),
-    if (mine) const RasqDropdownItem('終了する', 'close', destructive: true),
-    if (!mine) RasqDropdownItem(following ? 'ホストのフォローを解除' : 'ホストをフォロー', 'follow'),
-    if (!mine) const RasqDropdownItem('ミュート', 'mute'),
-    if (!mine) const RasqDropdownItem('報告', 'report', destructive: true),
+    RasqDropdownItem(l.vcMenuShareAsPost, 'share'),
+    RasqDropdownItem(l.vcMenuCopyLink, 'copy'),
+    RasqDropdownItem(bookmarked ? l.vcBookmarkRemove : l.vcBookmarkSave, 'bookmark'),
+    if (!mine && room.isScheduled) RasqDropdownItem(reminded ? l.vcRemindCancel : l.vcRemindSet, 'remind'),
+    if (mine && room.isScheduled && !joined) RasqDropdownItem(l.vcMenuStartNow, 'start'),
+    if (mine) RasqDropdownItem(joined ? l.vcMenuBackToRoom : l.vcMenuJoin, 'open'),
+    if (mine) RasqDropdownItem(l.vcMenuClose, 'close', destructive: true),
+    if (!mine) RasqDropdownItem(following ? l.vcMenuUnfollowHost : l.vcMenuFollowHost, 'follow'),
+    if (!mine) RasqDropdownItem(l.vcMenuMute, 'mute'),
+    if (!mine) RasqDropdownItem(l.vcMenuReport, 'report', destructive: true),
   ]);
   if (pick == null || !context.mounted) return;
   switch (pick) {
@@ -100,11 +105,11 @@ Future<void> showAstellTileMenu(BuildContext context, WidgetRef ref, AstellRoom 
       await closeAstellRoom(context, ref, room);
     case 'follow':
       await ref.read(astellSessionProvider.notifier).follow(room.ownerId, !following);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(following ? '${room.ownerDisplayName} のフォローを解除しました' : '${room.ownerDisplayName} をフォローしました')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(following ? l.vcUnfollowed(room.ownerDisplayName) : l.vcFollowed(room.ownerDisplayName))));
     case 'report':
-      await showAstellReportSheet(context, ref, targetAccountId: room.ownerId, roomId: room.id, what: 'ルーム「${room.title}」');
+      await showAstellReportSheet(context, ref, targetAccountId: room.ownerId, roomId: room.id, what: l.vcReportWhatRoom(room.title));
     default:
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('「${room.title}」の操作($pick)は M5 後段で入ります')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.vcMenuNotYet(room.title, pick))));
   }
 }
 
@@ -112,13 +117,14 @@ Future<void> showAstellTileMenu(BuildContext context, WidgetRef ref, AstellRoom 
 Future<void> closeAstellRoom(BuildContext context, WidgetRef ref, AstellRoom room) async {
   final manager = ref.read(overlayManagerProvider);
   final messenger = ScaffoldMessenger.maybeOf(context);
+  final l = context.l10n;
   final ok = await manager.showBottomSheet<bool>(
     id: 'astell.tile.close',
-    title: 'ルームを終了',
-    confirmText: '終了する',
+    title: l.vcCloseRoomTitle,
+    confirmText: l.vcMenuClose,
     builder: (ctx) => Padding(
       padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.page),
-      child: Text(room.isScheduled ? '「${room.title}」の予約を取り消します。ブックマークや開始通知を登録した人には届きません。' : '「${room.title}」を終了します。参加中のメンバーは退出になります。', style: RasqTypography.body),
+      child: Text(room.isScheduled ? l.vcCloseScheduledBody(room.title) : l.vcCloseRoomBody(room.title), style: RasqTypography.body),
     ),
   );
   if (ok != true) return;
@@ -127,9 +133,9 @@ Future<void> closeAstellRoom(BuildContext context, WidgetRef ref, AstellRoom roo
     await ref.read(astellClientProvider).closeRoom(room.id);
     ref.invalidate(astellHomeProvider);
     ref.invalidate(astellRoomProvider(room.id));
-    messenger?.showSnackBar(SnackBar(content: Text(room.isScheduled ? '「${room.title}」の予約を取り消しました' : '「${room.title}」を終了しました')));
+    messenger?.showSnackBar(SnackBar(content: Text(room.isScheduled ? l.vcClosedScheduled(room.title) : l.vcClosedRoom(room.title))));
   } catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text('終了できませんでした: $e')));
+    messenger?.showSnackBar(SnackBar(content: Text(l.vcCloseFailed('$e'))));
   }
 }
 
@@ -144,7 +150,7 @@ class AstellRoomTile extends ConsumerWidget {
     final joined = ref.watch(astellSessionProvider.select((s) => s?.room.id == room.id));
     return AstellTile(
       room: room,
-      openLabel: joined ? '戻る' : '見てみる',
+      openLabel: joined ? context.l10n.vcTileBack : context.l10n.vcTileOpen,
       onOpen: () => openAstellRoomTile(context, ref, room),
       onMore: (rect) => showAstellTileMenu(context, ref, room, rect),
       bookmarked: ref.watch(astellBookmarkedProvider(room.id)),

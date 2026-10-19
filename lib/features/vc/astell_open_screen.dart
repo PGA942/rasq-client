@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import 'astell_actions.dart';
 import 'astell_links.dart';
@@ -36,7 +37,7 @@ class _AstellOpenScreenState extends ConsumerState<AstellOpenScreen> {
     try {
       final room = await ref.read(astellRoomProvider(widget.roomRef).future);
       if (!mounted) return;
-      if (room == null) return setState(() => _error = 'このルームは見つかりません(終了したか、リンクが違うかもしれません)');
+      if (room == null) return setState(() => _error = context.l10n.vcOpenNotFound);
       setState(() => _room = room);
       await _open();
     } catch (e) {
@@ -57,19 +58,19 @@ class _AstellOpenScreenState extends ConsumerState<AstellOpenScreen> {
       body: _error != null
           ? RasqEmptyView(
               key: const ValueKey('astell.open.error'),
-              title: 'ルームを開けませんでした',
+              title: context.l10n.vcOpenFailed,
               hint: _error,
-              action: TextButton(onPressed: () => context.go(Routes.vc), child: const Text('ASTell のホームへ')),
+              action: TextButton(onPressed: () => context.go(Routes.vc), child: Text(context.l10n.vcOpenGoHome)),
             )
           : room == null
               ? const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5)))
               : RasqEmptyView(
                   key: const ValueKey('astell.open.room'),
                   title: room.title,
-                  hint: 'ホスト: ${room.ownerDisplayName}(@${room.ownerHandle})',
+                  hint: context.l10n.vcOpenHost(room.ownerDisplayName, room.ownerHandle),
                   action: Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
-                    FilledButton(key: const ValueKey('astell.open.again'), onPressed: _open, child: const Text('ルームを開く')),
-                    TextButton(onPressed: () => context.go(Routes.vc), child: const Text('ASTell のホームへ')),
+                    FilledButton(key: const ValueKey('astell.open.again'), onPressed: _open, child: Text(context.l10n.vcOpenRoom)),
+                    TextButton(onPressed: () => context.go(Routes.vc), child: Text(context.l10n.vcOpenGoHome)),
                   ]),
                 ),
     );

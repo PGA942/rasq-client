@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../l10n/l10n.dart';
+
 import 'astell_web_audio.dart' show astellBrowserSecureContext;
 
 /// AsTell の通話の音声 (D-317) の境界。
@@ -123,10 +125,10 @@ class AstellMediaException implements Exception {
 
   /// 画面に出す 1 行。
   String get message => switch (issue) {
-        AstellMediaIssue.insecureContext => 'Web 版の通話は https で開いたときだけ使えます',
-        AstellMediaIssue.permissionDenied => 'マイク(カメラ)の許可がありません。端末の設定で許可してください',
-        AstellMediaIssue.noDevice => 'マイク(カメラ)が見つかりません',
-        AstellMediaIssue.unsupported => 'この端末では使えません${detail == null ? '' : '($detail)'}',
+        AstellMediaIssue.insecureContext => appL10n.vcMediaInsecureContext,
+        AstellMediaIssue.permissionDenied => appL10n.vcMediaPermissionDenied,
+        AstellMediaIssue.noDevice => appL10n.vcMediaNoDevice,
+        AstellMediaIssue.unsupported => detail == null ? appL10n.vcMediaUnsupported : appL10n.vcMediaUnsupportedDetail(detail!),
       };
 
   @override
@@ -345,15 +347,15 @@ class AstellLinkDiagnostics {
 
   /// 表示とログの行。
   List<String> lines() {
-    String tally(Map<String, int> m) => m.isEmpty ? 'なし' : [for (final e in m.entries) '${e.key}×${e.value}'].join(' ');
+    String tally(Map<String, int> m) => m.isEmpty ? 'なし' : [for (final e in m.entries) '${e.key}×${e.value}'].join(' '); // l10n-ignore: 開発者向けの接続の様子(ログと同じ行)
     String num(int? v) => v == null ? '-' : '$v';
     final s = stats;
     return [
-      '接続 ${connectionState ?? '-'} / ICE ${iceConnectionState ?? '-'}(収集 ${iceGatheringState ?? '-'})/ SDP ${signalingState ?? '-'}',
-      '候補: 自分 ${tally(localCandidates)} / 相手 ${tally(remoteCandidates)}',
-      '選ばれた組: ${s.pairState ?? 'なし'}${s.localCandidate != null || s.remoteCandidate != null ? '(自分 ${s.localCandidate ?? '?'} ⇄ 相手 ${s.remoteCandidate ?? '?'})' : ''}',
-      '音声: 送 ${num(s.bytesSent)} B / 受 ${num(s.bytesReceived)} B(${num(s.packetsReceived)} パケット、欠 ${num(s.packetsLost)})/ 声の大きさ ${s.audioLevel?.toStringAsFixed(3) ?? '-'}',
-      '相手の声: ${remoteAudio ? '受けた' : 'まだ'}${playout != null ? ' / <audio> $playout' : ''} / マイク: ${micAttached ? '差し込み済み' : 'まだ'}',
+      '接続 ${connectionState ?? '-'} / ICE ${iceConnectionState ?? '-'}(収集 ${iceGatheringState ?? '-'})/ SDP ${signalingState ?? '-'}', // l10n-ignore: 開発者向けの接続の様子(ログと同じ行)
+      '候補: 自分 ${tally(localCandidates)} / 相手 ${tally(remoteCandidates)}', // l10n-ignore: 開発者向けの接続の様子(ログと同じ行)
+      '選ばれた組: ${s.pairState ?? 'なし'}${s.localCandidate != null || s.remoteCandidate != null ? '(自分 ${s.localCandidate ?? '?'} ⇄ 相手 ${s.remoteCandidate ?? '?'})' : ''}', // l10n-ignore: 開発者向けの接続の様子(ログと同じ行)
+      '音声: 送 ${num(s.bytesSent)} B / 受 ${num(s.bytesReceived)} B(${num(s.packetsReceived)} パケット、欠 ${num(s.packetsLost)})/ 声の大きさ ${s.audioLevel?.toStringAsFixed(3) ?? '-'}', // l10n-ignore: 開発者向けの接続の様子(ログと同じ行)
+      '相手の声: ${remoteAudio ? '受けた' : 'まだ'}${playout != null ? ' / <audio> $playout' : ''} / マイク: ${micAttached ? '差し込み済み' : 'まだ'}', // l10n-ignore: 開発者向けの接続の様子(ログと同じ行)
     ];
   }
 }

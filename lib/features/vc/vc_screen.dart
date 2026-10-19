@@ -7,6 +7,7 @@ import '../home/create_fow.dart' show RadialCreateFab;
 import '../../shell/rasq_terms_gate.dart';
 import '../settings/settings_dsl.dart';
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/rasq_shell.dart';
 import 'astell_actions.dart';
 import 'astell_fows.dart';
@@ -34,7 +35,10 @@ class VcScreen extends ConsumerStatefulWidget {
 }
 
 /// 検索の節(チップ)。
-const astellSearchSections = {'swing': 'Swing', 'invited': '招待', 'recommended': 'おすすめ', 'upcoming': '近日開催', 'trending': 'トレンド', 'following': 'フォロー中'};
+Map<String, String> get astellSearchSections => astellSearchSectionsOf(appL10n);
+
+/// [astellSearchSections] を [l] の言語で。
+Map<String, String> astellSearchSectionsOf(AppLocalizations l) => {'swing': 'Swing', 'invited': l.vcSectionInvited, 'recommended': l.vcSectionRecommended, 'upcoming': l.vcSectionUpcoming, 'trending': l.vcSectionTrending, 'following': l.vcSectionFollowing};
 
 /// ホームに載っているルームから探す (D-385)。[sections] を渡すとその節だけ。同じルームは 1 つに。語が無ければ節のルームを全部。
 List<AstellRoom> searchAstellRooms(AstellHome h, String query, {Set<String> sections = const {}}) {
@@ -102,7 +106,7 @@ class _VcScreenState extends ConsumerState<VcScreen> {
     void open(AstellRoom room) => openAstellPreviewFow(context, ref, room);
 
     Widget section(String title, List<AstellRoom> rooms, {String? emptyHint, VoidCallback? onSettings}) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          RasqSectionHeader(title: title, topMargin: 0, trailing: onSettings == null ? null : RasqIconButton(icon: Icons.settings, size: 20, onPressed: onSettings, tooltip: '$titleの設定')),
+          RasqSectionHeader(title: title, topMargin: 0, trailing: onSettings == null ? null : RasqIconButton(icon: Icons.settings, size: 20, onPressed: onSettings, tooltip: context.l10n.vcSectionSettingsTooltip(title))),
           // ブックマーク/開始通知/見てみる(戻る)を配線したタイル (D-160)。
           AstellTileStrip(rooms: rooms, tileBuilder: (r) => AstellRoomTile(room: r), emptyHint: emptyHint),
         ]);
@@ -126,7 +130,7 @@ class _VcScreenState extends ConsumerState<VcScreen> {
                   expanded: _toggled || _focus.hasFocus || _sections.isNotEmpty || _terms.isNotEmpty,
                   controller: _query,
                   focusNode: _focus,
-                  hintText: _terms.isEmpty ? 'ASTell / Swing を検索' : 'さらに絞る',
+                  hintText: _terms.isEmpty ? context.l10n.vcSearchHint : context.l10n.vcSearchRefineHint,
                   onSubmitted: _stack,
                   onDropdownTap: () => setState(() => _toggled = !_toggled),
                   onReset: _sections.isEmpty && _terms.isEmpty
@@ -137,13 +141,13 @@ class _VcScreenState extends ConsumerState<VcScreen> {
                           }),
                   // 重ねた語(押すと外す)。
                   filterChips: [
-                    for (final t in _terms) RasqFilterChipItem(label: '「$t」 ×', selected: true, onTap: () => setState(() => _terms.remove(t))),
+                    for (final t in _terms) RasqFilterChipItem(label: context.l10n.vcSearchTermChip(t), selected: true, onTap: () => setState(() => _terms.remove(t))),
                   ],
                   genreChips: [
-                    for (final MapEntry(key: id, value: label) in astellSearchSections.entries)
+                    for (final MapEntry(key: id, value: label) in astellSearchSectionsOf(context.l10n).entries)
                       RasqFilterChipItem(label: label, selected: _sections.contains(id), onTap: () => setState(() => _sections.contains(id) ? _sections.remove(id) : _sections.add(id))),
                   ],
-                  barTrailing: _query.text.isEmpty ? null : RasqIconButton(key: const ValueKey('astell.search.clear'), icon: Icons.close, size: 18, tooltip: '消す', onPressed: _query.clear),
+                  barTrailing: _query.text.isEmpty ? null : RasqIconButton(key: const ValueKey('astell.search.clear'), icon: Icons.close, size: 18, tooltip: context.l10n.vcSearchClear, onPressed: _query.clear),
                 ),
               ),
             ]),
@@ -152,7 +156,7 @@ class _VcScreenState extends ConsumerState<VcScreen> {
         ]),
       ),
       // ＋ (D-381): Swing / AsTell / RASQ に投稿(設定で出すものを選べる)。
-      floatingActionButton: const RadialCreateFab(scope: 'astell', heroTag: 'astell.create', tooltip: 'VC を作成'),
+      floatingActionButton: RadialCreateFab(scope: 'astell', heroTag: 'astell.create', tooltip: context.l10n.vcCreateTooltip),
     );
   }
 
@@ -161,7 +165,7 @@ class _VcScreenState extends ConsumerState<VcScreen> {
     if (_searching) return _results(home.value ?? const AstellHome());
     return home.when(
         loading: () => const RasqLoading(),
-        error: (e, _) => RasqEmptyView(title: 'VC を取得できませんでした', hint: '$e'),
+        error: (e, _) => RasqEmptyView(title: context.l10n.vcHomeLoadError, hint: '$e'),
         data: (h) => RefreshIndicator(
           onRefresh: () => ref.refresh(astellHomeProvider.future),
           child: ListView(key: const ValueKey('astell.home.list'), children: [
@@ -170,36 +174,36 @@ class _VcScreenState extends ConsumerState<VcScreen> {
             // 参加中のルームがあれば先頭に戻り口(FOW を閉じても接続は続く)。
             if (session != null)
               RasqListTile(
-                title: '参加中: ${session.room.title}',
-                subtitle: session.connected ? '${session.peers.length}人 ・ タップで開く' : (session.error ?? '接続しています…'),
+                title: context.l10n.vcJoinedRoom(session.room.title),
+                subtitle: session.connected ? context.l10n.vcJoinedPeers(session.peers.length) : (session.error ?? context.l10n.vcConnecting),
                 leading: const Icon(Icons.headset_mic_outlined, color: RasqColors.accent),
                 onTap: () => openAstellRoomFow(context, ref),
               ),
             // 招待 (D-150): 招待されているルームを行で(辞退できる)。
             if (h.invited.isNotEmpty) ...[
-              const RasqSectionHeader(title: '招待', topMargin: 0),
+              RasqSectionHeader(title: context.l10n.vcSectionInvited, topMargin: 0),
               for (final r in h.invited)
                 RasqListTile(
                   title: r.title,
-                  subtitle: '${r.ownerDisplayName} から招待 ・ タップで見る',
+                  subtitle: context.l10n.vcInvitedBy(r.ownerDisplayName),
                   leading: RasqAvatar(imageUrl: r.ownerAvatarUrl, size: RasqSizes.avatarMd, fallbackLabel: r.ownerDisplayName),
                   trailing: TextButton(
                     onPressed: () async {
                       await ref.read(astellClientProvider).declineInvite(r.id);
                       ref.invalidate(astellHomeProvider);
                     },
-                    child: const Text('辞退'),
+                    child: Text(context.l10n.vcInviteDecline),
                   ),
                   chevron: false,
                   onTap: () => open(r),
                 ),
             ],
-            if (settingValue(ref, 'astell.trend', 'showRecommended', true) != false) section('おすすめ', h.recommended, emptyHint: 'おすすめの VC はまだありません'),
+            if (settingValue(ref, 'astell.trend', 'showRecommended', true) != false) section(context.l10n.vcSectionRecommended, h.recommended, emptyHint: context.l10n.vcRecommendedEmpty),
             // 近日開催 (D-159): 開催予約中のルーム(予約時刻の近い順)。
-            if (h.upcoming.isNotEmpty) section('近日開催', h.upcoming),
+            if (h.upcoming.isNotEmpty) section(context.l10n.vcSectionUpcoming, h.upcoming),
             // 欄の歯車 (D-238): AsTell の設定ページへ。
-            if (settingValue(ref, 'astell.trend', 'showTrending', true) != false) section('トレンド', h.trending, emptyHint: 'トレンドの VC はまだありません', onSettings: () => context.push('/settings/dsl/astell.trend')),
-            section('フォロー中', h.following, emptyHint: 'フォロー中のユーザーの VC はありません', onSettings: () => context.push('/settings/dsl/astell.tiles')),
+            if (settingValue(ref, 'astell.trend', 'showTrending', true) != false) section(context.l10n.vcSectionTrending, h.trending, emptyHint: context.l10n.vcTrendingEmpty, onSettings: () => context.push('/settings/dsl/astell.trend')),
+            section(context.l10n.vcSectionFollowing, h.following, emptyHint: context.l10n.vcFollowingEmpty, onSettings: () => context.push('/settings/dsl/astell.tiles')),
             const SizedBox(height: 80),
           ]),
         ),
@@ -213,7 +217,7 @@ class _VcScreenState extends ConsumerState<VcScreen> {
     final wantRooms = _sections.isEmpty || roomSections.isNotEmpty;
     final swings = !wantSwing ? const <SwingAuthorEntry>[] : searchSwingAuthors(ref.watch(swingFeedProvider).value ?? const [], q);
     final rooms = !wantRooms ? const <AstellRoom>[] : searchAstellRooms(h, q, sections: roomSections);
-    if (rooms.isEmpty && swings.isEmpty) return RasqEmptyView(title: '見つかりませんでした', hint: q.isEmpty ? 'この節にはありません' : '「$q」に当たる ASTell / Swing はありません');
+    if (rooms.isEmpty && swings.isEmpty) return RasqEmptyView(title: context.l10n.vcSearchNoResults, hint: q.isEmpty ? context.l10n.vcSearchNoResultsInSection : context.l10n.vcSearchNoResultsFor(q));
     return ListView(key: const ValueKey('astell.search.results'), children: [
       if (swings.isNotEmpty) ...[
         RasqSectionHeader(title: 'Swing(${swings.length})', topMargin: 0),

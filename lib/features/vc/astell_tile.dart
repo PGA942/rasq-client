@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../../l10n/l10n.dart';
+
 import 'astell_models.dart';
 
 /// VC タイル (D-139、ワイヤーフレーム p.3 グローバル VC ホーム)。
@@ -9,13 +11,13 @@ import 'astell_models.dart';
 /// (または「デスクリプションが提供されていません。」)/ ジャンル(青字の行)/
 /// LIVE ならバッジ + サムネイル / 「見てみる」。
 class AstellTile extends StatelessWidget {
-  const AstellTile({super.key, required this.room, this.onOpen, this.onMore, this.openLabel = '見てみる', this.bookmarked = false, this.onBookmark, this.reminded = false, this.onRemind});
+  const AstellTile({super.key, required this.room, this.onOpen, this.onMore, this.openLabel, this.bookmarked = false, this.onBookmark, this.reminded = false, this.onRemind});
   final AstellRoom room;
   final VoidCallback? onOpen;
   final ValueChanged<Rect>? onMore;
 
-  /// 下のボタンの文言 (D-160): 参加中のルームなら「戻る」。
-  final String openLabel;
+  /// 下のボタンの文言 (D-160): 参加中のルームなら「戻る」。null なら「見てみる」。
+  final String? openLabel;
 
   /// ブックマーク (D-160)。[onBookmark] が null なら出さない。
   final bool bookmarked;
@@ -32,7 +34,7 @@ class AstellTile extends StatelessWidget {
     // 高さの決まらない所(縦のリストに直など)に置かれても壊れないように (D-376): 中は Expanded で詰めるので、既定の高さを与える。
     return LayoutBuilder(builder: (context, c) {
       final wide = !c.hasBoundedWidth || c.maxWidth >= roomyWidth;
-      return c.hasBoundedHeight ? _tile(scheme, tokens, wide) : SizedBox(height: defaultHeight, child: _tile(scheme, tokens, wide));
+      return c.hasBoundedHeight ? _tile(context, scheme, tokens, wide) : SizedBox(height: defaultHeight, child: _tile(context, scheme, tokens, wide));
     });
   }
 
@@ -48,7 +50,7 @@ class AstellTile extends StatelessWidget {
   /// アイコン(バンドル)の大きさ (D-386: 30 → 36、2 割大きく)。
   static const bundleSize = 36.0;
 
-  Widget _tile(ColorScheme scheme, RasqTokens tokens, bool wide) {
+  Widget _tile(BuildContext context, ColorScheme scheme, RasqTokens tokens, bool wide) {
     final onBookmark = wide ? this.onBookmark : null;
     final faces = wide || room.bundleFaces.length <= 2 ? room.bundleFaces : room.bundleFaces.take(2).toList();
     return Container(
@@ -90,15 +92,15 @@ class AstellTile extends StatelessWidget {
               right: -10,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (onBookmark != null)
-                  RasqIconButton(key: const ValueKey('astell.tile.bookmark'), icon: bookmarked ? Icons.bookmark : Icons.bookmark_border, size: 16, color: bookmarked ? RasqColors.accent : null, tooltip: bookmarked ? 'ブックマークから削除' : 'ブックマークに保存', onPressed: onBookmark),
+                  RasqIconButton(key: const ValueKey('astell.tile.bookmark'), icon: bookmarked ? Icons.bookmark : Icons.bookmark_border, size: 16, color: bookmarked ? RasqColors.accent : null, tooltip: bookmarked ? context.l10n.vcBookmarkRemove : context.l10n.vcBookmarkSave, onPressed: onBookmark),
                 if (onRemind != null)
-                  RasqIconButton(key: const ValueKey('astell.tile.remind'), icon: reminded ? Icons.notifications_active : Icons.notifications_none, size: 16, color: reminded ? RasqColors.accent : null, tooltip: reminded ? '開始通知を解除' : '開始を通知', onPressed: onRemind),
+                  RasqIconButton(key: const ValueKey('astell.tile.remind'), icon: reminded ? Icons.notifications_active : Icons.notifications_none, size: 16, color: reminded ? RasqColors.accent : null, tooltip: reminded ? context.l10n.vcRemindCancel : context.l10n.vcRemindSet, onPressed: onRemind),
                 if (onMore != null)
                   Builder(
                     builder: (ctx) => RasqIconButton(
                       icon: Icons.more_horiz,
                       size: 16,
-                      tooltip: 'メニュー',
+                      tooltip: context.l10n.vcMenuTooltip,
                       onPressed: () {
                         final box = ctx.findRenderObject() as RenderBox;
                         onMore!(box.localToGlobal(Offset.zero) & box.size);
@@ -126,12 +128,12 @@ class AstellTile extends StatelessWidget {
                       child: Row(children: [
                         Icon(Icons.schedule, size: 12, color: tokens.link),
                         const SizedBox(width: 2),
-                        Expanded(child: Text('開催予定 ${_schedule(room.scheduledAt!)}', style: RasqTypography.caption.copyWith(color: tokens.link, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        Expanded(child: Text(context.l10n.vcScheduledAt(_schedule(room.scheduledAt!)), style: RasqTypography.caption.copyWith(color: tokens.link, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
                       ]),
                     ),
                   Expanded(
                     child: Text(
-                      room.showSummary ? room.summaryText : 'ざっくり要約は非公開です。',
+                      room.showSummary ? room.summaryText : context.l10n.vcSummaryPrivate,
                       style: RasqTypography.caption.copyWith(height: 1.4, color: room.description.isEmpty || !room.showSummary ? scheme.onSurfaceVariant : scheme.onSurface),
                       textAlign: room.description.isEmpty ? TextAlign.center : TextAlign.start,
                       overflow: TextOverflow.fade,
@@ -141,7 +143,7 @@ class AstellTile extends StatelessWidget {
                 ]),
         ),
         const SizedBox(height: RasqSpacing.xs),
-        RasqGradientButton(label: openLabel, onPressed: onOpen, height: 36),
+        RasqGradientButton(label: openLabel ?? context.l10n.vcTileOpen, onPressed: onOpen, height: 36),
       ]),
     );
   }
@@ -210,7 +212,7 @@ class _AstellTileStripState extends State<AstellTileStrip> {
     if (widget.rooms.isEmpty) {
       return SizedBox(
         height: 72,
-        child: Center(child: Text(widget.emptyHint ?? 'VC はまだありません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+        child: Center(child: Text(widget.emptyHint ?? context.l10n.vcTileStripEmpty, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
       );
     }
     return SizedBox(

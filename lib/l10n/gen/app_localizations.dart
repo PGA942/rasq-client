@@ -10737,6 +10737,2146 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'アセットパック'**
   String get storePkgKindAssets;
+
+  /// VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)
+  ///
+  /// In ja, this message translates to:
+  /// **'招待'**
+  String get vcSectionInvited;
+
+  /// VC ホームの節の見出し / 検索の節のチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'おすすめ'**
+  String get vcSectionRecommended;
+
+  /// VC ホームの節の見出し / 検索の節のチップ(開催予約中のルーム)
+  ///
+  /// In ja, this message translates to:
+  /// **'近日開催'**
+  String get vcSectionUpcoming;
+
+  /// VC ホームの節の見出し / 検索の節のチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド'**
+  String get vcSectionTrending;
+
+  /// VC ホームの節の見出し / 検索の節のチップ(フォロー中のユーザーのルーム)
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get vcSectionFollowing;
+
+  /// 節の見出しの歯車のツールチップ。title は節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'{title}の設定'**
+  String vcSectionSettingsTooltip(String title);
+
+  /// VC ホームの検索欄のヒント
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell / Swing を検索'**
+  String get vcSearchHint;
+
+  /// 語を重ねたあとの検索欄のヒント
+  ///
+  /// In ja, this message translates to:
+  /// **'さらに絞る'**
+  String get vcSearchRefineHint;
+
+  /// 重ねた検索語のチップ(押すと外す)。term は語
+  ///
+  /// In ja, this message translates to:
+  /// **'「{term}」 ×'**
+  String vcSearchTermChip(String term);
+
+  /// 検索欄の入力を消すボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'消す'**
+  String get vcSearchClear;
+
+  /// VC ホームの + ボタンのツールチップ / 作成 FOW の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'VC を作成'**
+  String get vcCreateTooltip;
+
+  /// VC ホームを読めなかったときの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'VC を取得できませんでした'**
+  String get vcHomeLoadError;
+
+  /// 参加中のルームへの戻り口の行。title はルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'参加中: {title}'**
+  String vcJoinedRoom(String title);
+
+  /// 参加中のルームの行の補足。count は参加人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}人 ・ タップで開く}}'**
+  String vcJoinedPeers(int count);
+
+  /// ルームに接続中の表示
+  ///
+  /// In ja, this message translates to:
+  /// **'接続しています…'**
+  String get vcConnecting;
+
+  /// 招待されたルームの行の補足。name はホストの表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} から招待 ・ タップで見る'**
+  String vcInvitedBy(String name);
+
+  /// 招待を辞退するボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'辞退'**
+  String get vcInviteDecline;
+
+  /// おすすめの節が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'おすすめの VC はまだありません'**
+  String get vcRecommendedEmpty;
+
+  /// トレンドの節が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの VC はまだありません'**
+  String get vcTrendingEmpty;
+
+  /// フォロー中の節が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中のユーザーの VC はありません'**
+  String get vcFollowingEmpty;
+
+  /// 検索の結果が無いときの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりませんでした'**
+  String get vcSearchNoResults;
+
+  /// 節だけで絞って結果が無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'この節にはありません'**
+  String get vcSearchNoResultsInSection;
+
+  /// 検索の結果が無いとき。query は検索語
+  ///
+  /// In ja, this message translates to:
+  /// **'「{query}」に当たる ASTell / Swing はありません'**
+  String vcSearchNoResultsFor(String query);
+
+  /// VC タイルの下のボタン(ルームのプレビューを開く)
+  ///
+  /// In ja, this message translates to:
+  /// **'見てみる'**
+  String get vcTileOpen;
+
+  /// ルームのブックマークを外す(ツールチップ / メニュー)
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークから削除'**
+  String get vcBookmarkRemove;
+
+  /// ルームをブックマークする(ツールチップ / メニュー)
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークに保存'**
+  String get vcBookmarkSave;
+
+  /// 開催予約のルームの開始通知を外す(ツールチップ / メニュー)
+  ///
+  /// In ja, this message translates to:
+  /// **'開始通知を解除'**
+  String get vcRemindCancel;
+
+  /// 開催予約のルームの開始を通知する(ツールチップ / メニュー)
+  ///
+  /// In ja, this message translates to:
+  /// **'開始を通知'**
+  String get vcRemindSet;
+
+  /// … ボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'メニュー'**
+  String get vcMenuTooltip;
+
+  /// 開催予約の時刻。when は「9/6 20:00」の形の日時
+  ///
+  /// In ja, this message translates to:
+  /// **'開催予定 {when}'**
+  String vcScheduledAt(String when);
+
+  /// ざっくり要約を公開していないルームのタイル
+  ///
+  /// In ja, this message translates to:
+  /// **'ざっくり要約は非公開です。'**
+  String get vcSummaryPrivate;
+
+  /// タイルの並びが空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'VC はまだありません'**
+  String get vcTileStripEmpty;
+
+  /// ルームのリンクをコピーしたときのスナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピーしました'**
+  String get vcLinkCopied;
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークに保存しました'**
+  String get vcBookmarkSaved;
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークから削除しました'**
+  String get vcBookmarkRemoved;
+
+  /// 開始通知を登録したときのスナックバー。when は開催予定の日時(formatAstellSchedule)
+  ///
+  /// In ja, this message translates to:
+  /// **'{when} に通知します'**
+  String vcRemindRegistered(String when);
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'通知を解除しました'**
+  String get vcRemindRemoved;
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では通知を登録できませんでした'**
+  String get vcRemindUnavailable;
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'開催予定のないルームです'**
+  String get vcRemindNotScheduled;
+
+  /// タイルの … メニュー
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿で共有'**
+  String get vcMenuShareAsPost;
+
+  /// タイルの … メニュー / 共有の操作
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピー'**
+  String get vcMenuCopyLink;
+
+  /// タイルの … メニュー(自分の開催予約のルーム)
+  ///
+  /// In ja, this message translates to:
+  /// **'今すぐ開催する'**
+  String get vcMenuStartNow;
+
+  /// タイルの … メニュー(参加中の自分のルーム)
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームへ戻る'**
+  String get vcMenuBackToRoom;
+
+  /// タイルの … メニュー(自分のルーム)
+  ///
+  /// In ja, this message translates to:
+  /// **'参加する'**
+  String get vcMenuJoin;
+
+  /// タイルの … メニュー / ルームを終了する確認シートのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'終了する'**
+  String get vcMenuClose;
+
+  /// タイルの … メニュー
+  ///
+  /// In ja, this message translates to:
+  /// **'ホストのフォローを解除'**
+  String get vcMenuUnfollowHost;
+
+  /// タイルの … メニュー
+  ///
+  /// In ja, this message translates to:
+  /// **'ホストをフォロー'**
+  String get vcMenuFollowHost;
+
+  /// タイルの … メニュー
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュート'**
+  String get vcMenuMute;
+
+  /// タイルの … メニュー / 共有の操作
+  ///
+  /// In ja, this message translates to:
+  /// **'報告'**
+  String get vcMenuReport;
+
+  /// スナックバー。name はホストの表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} のフォローを解除しました'**
+  String vcUnfollowed(String name);
+
+  /// スナックバー。name はホストの表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} をフォローしました'**
+  String vcFollowed(String name);
+
+  /// 通報シートの対象の名前(「〜を通報します」に入る)。title はルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ルーム「{title}」'**
+  String vcReportWhatRoom(String title);
+
+  /// まだ無い操作を選んだとき。title はルームの名前、action は操作の id
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」の操作({action})は M5 後段で入ります'**
+  String vcMenuNotYet(String title, String action);
+
+  /// ルームを終了する確認シートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームを終了'**
+  String get vcCloseRoomTitle;
+
+  /// 開催予約を取り消す確認の本文。title はルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」の予約を取り消します。ブックマークや開始通知を登録した人には届きません。'**
+  String vcCloseScheduledBody(String title);
+
+  /// ルームを終了する確認の本文。title はルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」を終了します。参加中のメンバーは退出になります。'**
+  String vcCloseRoomBody(String title);
+
+  /// スナックバー。title はルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」の予約を取り消しました'**
+  String vcClosedScheduled(String title);
+
+  /// スナックバー。title はルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」を終了しました'**
+  String vcClosedRoom(String title);
+
+  /// スナックバー。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'終了できませんでした: {error}'**
+  String vcCloseFailed(String error);
+
+  /// VC タイルの下のボタン(参加中のルームへ戻る)
+  ///
+  /// In ja, this message translates to:
+  /// **'戻る'**
+  String get vcTileBack;
+
+  /// 開始通知(端末の通知)の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークしたVCが始まります！'**
+  String get vcReminderNotificationTitle;
+
+  /// 開始通知(端末の通知)の本文。host はホストの表示名、title はルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{host} の「{title}」'**
+  String vcReminderNotificationBody(String host, String title);
+
+  /// ルームを投稿で共有するときの本文の頭。title はルームの名前、when は開催予定の日時
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」を {when} に開催します'**
+  String vcShareTextScheduled(String title, String when);
+
+  /// ルームを投稿で共有するときの本文の頭。title はルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」を開催中です'**
+  String vcShareTextOpen(String title);
+
+  /// 共有メディアの全画面表示の下段のボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面表示プラグイン(準備中)'**
+  String get vcViewerPluginsTooltip;
+
+  /// 共有メディアの全画面表示の下段。name は共有した人の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} が共有'**
+  String vcViewerSharedBy(String name);
+
+  /// 共有メディアの全画面表示の保存ボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'保存'**
+  String get vcViewerSave;
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'保存は準備中です'**
+  String get vcViewerSaveNotYet;
+
+  /// 共有メディアの全画面表示の共有ボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'共有'**
+  String get vcViewerShare;
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'共有は準備中です'**
+  String get vcViewerShareNotYet;
+
+  /// ルームの下段のボタンの名前(並びの編集画面に出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'スピーカー'**
+  String get vcBarSpeaker;
+
+  /// ルームの下段のボタンの名前(並びの編集画面に出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'マイク'**
+  String get vcBarMic;
+
+  /// ルームの下段のボタンの名前(並びの編集画面に出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'画面共有'**
+  String get vcBarScreen;
+
+  /// ルームの下段のボタンの名前(並びの編集画面に出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面(共有枠に画面があるとき)'**
+  String get vcBarFullscreen;
+
+  /// ルームの下段のボタンの名前(並びの編集画面に出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'字幕(文字起こし)'**
+  String get vcBarCaptions;
+
+  /// 通話(WebRTC)の接続の失敗。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'通話の接続に失敗しました: {error}'**
+  String vcCallConnectFailed(String error);
+
+  /// リンクから開いたルームが無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームは見つかりません(終了したか、リンクが違うかもしれません)'**
+  String get vcOpenNotFound;
+
+  /// リンクから開いたルームを開けなかったときの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームを開けませんでした'**
+  String get vcOpenFailed;
+
+  /// リンクから開いた画面のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell のホームへ'**
+  String get vcOpenGoHome;
+
+  /// リンクから開いたルームのホスト。name は表示名、handle はハンドル
+  ///
+  /// In ja, this message translates to:
+  /// **'ホスト: {name}(@{handle})'**
+  String vcOpenHost(String name, String handle);
+
+  /// リンクから開いた画面のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームを開く'**
+  String get vcOpenRoom;
+
+  /// 投稿を ASTell に本文ごと共有できない理由
+  ///
+  /// In ja, this message translates to:
+  /// **'ダイレクトの投稿は ASTell に共有できません'**
+  String get vcShareBlockDirect;
+
+  /// 投稿を ASTell に本文ごと共有できない理由
+  ///
+  /// In ja, this message translates to:
+  /// **'ローカル限定の投稿は ASTell に共有できません'**
+  String get vcShareBlockLocalOnly;
+
+  /// 投稿を ASTell に本文ごと共有できない理由
+  ///
+  /// In ja, this message translates to:
+  /// **'公開範囲が分からない投稿は ASTell に共有できません'**
+  String get vcShareBlockUnknownVisibility;
+
+  /// 投稿を ASTell に本文ごと共有できない理由
+  ///
+  /// In ja, this message translates to:
+  /// **'公開範囲が限定された投稿は ASTell に共有できません'**
+  String get vcShareBlockLimited;
+
+  /// ルームの共有欄の見出し(共有が無いとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'共有'**
+  String get vcShares;
+
+  /// ルームの共有欄の見出し。count は共有の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{共有 ({count})}}'**
+  String vcSharesCount(int count);
+
+  /// 共有欄の「>」のツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'すべての共有を見る'**
+  String get vcSharesShowAll;
+
+  /// 共有欄が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'チャットで 📌 したものがここに並びます。'**
+  String get vcSharesEmpty;
+
+  /// 共有カードの … のツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'共有の操作'**
+  String get vcShareActions;
+
+  /// ピン留めした文字起こしのカードの出どころ
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ ・ 文字起こし'**
+  String get vcShareTranscriptSource;
+
+  /// 共有 / 文字起こしのピン留めを外す(ツールチップ / メニュー)
+  ///
+  /// In ja, this message translates to:
+  /// **'ピン留めを外す'**
+  String get vcUnpin;
+
+  /// 自分の表示名の代わり
+  ///
+  /// In ja, this message translates to:
+  /// **'あなた'**
+  String get vcYou;
+
+  /// ルームの要約が空のとき(タイル / プレビュー)
+  ///
+  /// In ja, this message translates to:
+  /// **'説明はありません。'**
+  String get vcNoDescription;
+
+  /// 通報の理由
+  ///
+  /// In ja, this message translates to:
+  /// **'スパム'**
+  String get vcReportReasonSpam;
+
+  /// 通報の理由
+  ///
+  /// In ja, this message translates to:
+  /// **'嫌がらせ・暴言'**
+  String get vcReportReasonHarassment;
+
+  /// 通報の理由
+  ///
+  /// In ja, this message translates to:
+  /// **'違法・危険な内容'**
+  String get vcReportReasonIllegal;
+
+  /// 通報の理由
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get vcReportReasonOther;
+
+  /// ルームに参加できる人(参加ポリシー)
+  ///
+  /// In ja, this message translates to:
+  /// **'誰でも'**
+  String get vcJoinPolicyAnyone;
+
+  /// 参加ポリシーの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'公開ルームは誰でも参加できます'**
+  String get vcJoinPolicyAnyoneHint;
+
+  /// ルームに参加できる人(参加ポリシー)
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワーだけ'**
+  String get vcJoinPolicyFollowers;
+
+  /// 参加ポリシーの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'あなた(ホスト)を RASQ アカウントでフォローしている人'**
+  String get vcJoinPolicyFollowersHint;
+
+  /// ルームに参加できる人(参加ポリシー)
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中の人だけ'**
+  String get vcJoinPolicyFollowing;
+
+  /// 参加ポリシーの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'あなたがフォローしている人'**
+  String get vcJoinPolicyFollowingHint;
+
+  /// ルームに参加できる人(参加ポリシー)
+  ///
+  /// In ja, this message translates to:
+  /// **'相互フォローだけ'**
+  String get vcJoinPolicyMutual;
+
+  /// 参加ポリシーの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'お互いにフォローしている人'**
+  String get vcJoinPolicyMutualHint;
+
+  /// 共有(チャットへの投稿)できる人
+  ///
+  /// In ja, this message translates to:
+  /// **'全員'**
+  String get vcSharePolicyEveryone;
+
+  /// 共有(チャットへの投稿)できる人
+  ///
+  /// In ja, this message translates to:
+  /// **'モデレーターだけ'**
+  String get vcSharePolicyModerators;
+
+  /// CW 付きの投稿の共有の見出し(本文は出さない)。warning は CW の文
+  ///
+  /// In ja, this message translates to:
+  /// **'⚠ {warning}(閲覧注意)'**
+  String vcShareContentWarning(String warning);
+
+  /// プラグインの共有の見出し。name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を使いたい'**
+  String vcSharePluginWant(String name);
+
+  /// 共有の種別
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get vcKindPost;
+
+  /// 共有の種別
+  ///
+  /// In ja, this message translates to:
+  /// **'メディア'**
+  String get vcKindMedia;
+
+  /// 共有の種別
+  ///
+  /// In ja, this message translates to:
+  /// **'動画'**
+  String get vcKindVideo;
+
+  /// 共有の種別
+  ///
+  /// In ja, this message translates to:
+  /// **'リンク'**
+  String get vcKindLink;
+
+  /// 共有の種別
+  ///
+  /// In ja, this message translates to:
+  /// **'テキスト'**
+  String get vcKindText;
+
+  /// 共有の種別
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン'**
+  String get vcKindPlugin;
+
+  /// 通話のマイクを使えない理由
+  ///
+  /// In ja, this message translates to:
+  /// **'Web 版の通話は https で開いたときだけ使えます'**
+  String get vcMediaInsecureContext;
+
+  /// 通話のマイクを使えない理由
+  ///
+  /// In ja, this message translates to:
+  /// **'マイク(カメラ)の許可がありません。端末の設定で許可してください'**
+  String get vcMediaPermissionDenied;
+
+  /// 通話のマイクを使えない理由
+  ///
+  /// In ja, this message translates to:
+  /// **'マイク(カメラ)が見つかりません'**
+  String get vcMediaNoDevice;
+
+  /// 通話のマイクを使えない理由
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では使えません'**
+  String get vcMediaUnsupported;
+
+  /// 通話のマイクを使えない理由。detail は端末の例外の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では使えません({detail})'**
+  String vcMediaUnsupportedDetail(String detail);
+
+  /// 退出したあとにマイクを開こうとしたときの失敗
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じた通話のマイクは開けません'**
+  String get vcMediaMicClosed;
+
+  /// 配信を上げようとしたが配信サーバー(LiveKit)に繋がっていないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'配信サーバーに繋がっていません'**
+  String get vcStreamNotConnected;
+
+  /// 配信 / 画面共有の映像を上げられなかったとき
+  ///
+  /// In ja, this message translates to:
+  /// **'映像を配信サーバーに上げられませんでした'**
+  String get vcStreamPublishFailed;
+
+  /// Android の画面共有中の前面サービスの通知の本文
+  ///
+  /// In ja, this message translates to:
+  /// **'画面を共有しています'**
+  String get vcScreenSharingNotification;
+
+  /// デスクトップの画面 / ウィンドウを選ぶダイアログの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'共有する画面を選ぶ'**
+  String get vcScreenPickTitle;
+
+  /// 画面を選ぶダイアログのタブ
+  ///
+  /// In ja, this message translates to:
+  /// **'画面全体'**
+  String get vcScreenPickScreen;
+
+  /// 画面を選ぶダイアログのタブ
+  ///
+  /// In ja, this message translates to:
+  /// **'ウィンドウ'**
+  String get vcScreenPickWindow;
+
+  /// 画面を選ぶダイアログのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'やめる'**
+  String get vcScreenPickCancel;
+
+  /// 画面を選ぶダイアログのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'共有する'**
+  String get vcScreenPickShare;
+
+  /// Web: ブラウザが声の自動再生を止めているときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'音が止まっています。画面をタップすると鳴ります'**
+  String get vcNoticeAudioBlocked;
+
+  /// 満員で通話に入れなかったときの案内。cap は通話に入れる人数
+  ///
+  /// In ja, this message translates to:
+  /// **'通話は満員です({cap} 人まで)。配信があれば、配信で聞けます'**
+  String vcNoticeCallFull(int cap);
+
+  /// 開催予約の開始待ちの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'開催までお待ちください。保留音を鳴らしています'**
+  String get vcNoticeHoldWaiting;
+
+  /// 開催予約のルームが始まったときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'開催が始まりました'**
+  String get vcNoticeStarted;
+
+  /// しばらく誰も話さないときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'静かなので保留音を鳴らしています'**
+  String get vcNoticeHoldIdle;
+
+  /// 共有欄に自動で出すメディアの種類
+  ///
+  /// In ja, this message translates to:
+  /// **'画像'**
+  String get vcShareClassImage;
+
+  /// 共有欄に自動で出すメディアの種類 / ファイルを共有するボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイル'**
+  String get vcShareClassFile;
+
+  /// 共有欄に自動で出すメディアの種類 / 文字起こしのカード
+  ///
+  /// In ja, this message translates to:
+  /// **'文字起こし'**
+  String get vcShareClassTranscript;
+
+  /// 共有欄の表示の選択肢
+  ///
+  /// In ja, this message translates to:
+  /// **'カード(横スライド)'**
+  String get vcShareStyleCards;
+
+  /// 共有欄の表示の選択肢
+  ///
+  /// In ja, this message translates to:
+  /// **'一覧(レガシー)'**
+  String get vcShareStyleList;
+
+  /// 同意待ちのアカウントがルームに入れなかったとき
+  ///
+  /// In ja, this message translates to:
+  /// **'利用規約への同意が必要です(ASTell のいちばん上の案内から同意できます)'**
+  String get vcTermsRequired;
+
+  /// ルームが閉じられたときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'運営によりルームが閉鎖されました'**
+  String get vcClosedByModeration;
+
+  /// ルームが閉じられたときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'ホストがルームを終了しました'**
+  String get vcClosedByHost;
+
+  /// ルームから追い出されたときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームから BAN されました'**
+  String get vcKickedBanned;
+
+  /// ルームから追い出されたときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントの処置により退出させられました'**
+  String get vcKickedSanctioned;
+
+  /// ルームから追い出されたときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'モデレーターにルームから退出させられました'**
+  String get vcKickedByModerator;
+
+  /// アカウントの処置で共有が保留されたとき。seconds は秒数(不明なら ?)
+  ///
+  /// In ja, this message translates to:
+  /// **'検閲中: {seconds} 秒後に判定して配信されます(アカウントの処置)'**
+  String vcShareHeld(String seconds);
+
+  /// 共有が却下されたとき。source は判定の出どころ(review など)
+  ///
+  /// In ja, this message translates to:
+  /// **'検閲で却下されました({source})。この発言は配信されていません'**
+  String vcShareRejected(String source);
+
+  /// ルームに入らずに配信へ繋ごうとしたときの失敗
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームに入っていません'**
+  String get vcNotInRoom;
+
+  /// 配信 / 画面共有の映像を受けられないときの案内。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'映像を受けられません: {error}'**
+  String vcStreamReceiveFailed(String error);
+
+  /// 配信を始められないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'画面共有中は配信を始められません(共有をやめてから)'**
+  String get vcStreamBlockedByScreenShare;
+
+  /// 配信を始められないとき。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'配信を始められません: {error}'**
+  String vcStreamStartFailed(String error);
+
+  /// 配信を止めたあとルームの印を消せなかったとき。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'配信の印を消せませんでした: {error}'**
+  String vcStreamClearFailed(String error);
+
+  /// 画面共有を始められないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'配信中は画面共有を始められません(配信を止めてから)'**
+  String get vcScreenShareBlockedByStream;
+
+  /// 画面共有を始められないとき。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'画面共有を始められません: {error}'**
+  String vcScreenShareStartFailed(String error);
+
+  /// 配信の失敗(サーバーが 501)
+  ///
+  /// In ja, this message translates to:
+  /// **'配信はまだ使えません(配信サーバーが未設定)'**
+  String get vcStreamUnavailable;
+
+  /// 配信の失敗(サーバーが 403)。message はサーバーの文
+  ///
+  /// In ja, this message translates to:
+  /// **'許可されていません({message})'**
+  String vcStreamForbidden(String message);
+
+  /// 読み上げを使えないとき(モック)
+  ///
+  /// In ja, this message translates to:
+  /// **'読み上げバックエンドが未設定です(CENTRAL_TTS_URL)'**
+  String get vcTtsNotConfigured;
+
+  /// ログインせずにルームへ繋ごうとしたとき
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインしてください'**
+  String get vcLoginRequired;
+
+  /// 作成画面の招待のチップのツールチップ。name は表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の招待をやめる'**
+  String vcCreateUninvite(String name);
+
+  /// 作成画面の招待のチップのツールチップ。name は表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を招待'**
+  String vcCreateInvite(String name);
+
+  /// 作成 FOW の閉じるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get vcCreateCancel;
+
+  /// 作成 FOW の共有のアイコンのツールチップ(オン)
+  ///
+  /// In ja, this message translates to:
+  /// **'作成後に投稿で共有する(オン)'**
+  String get vcCreateShareAfterOn;
+
+  /// 作成 FOW の共有のアイコンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'作成後に投稿で共有する'**
+  String get vcCreateShareAfter;
+
+  /// スナックバー。title はルームの名前、when は開催予定の日時
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」を {when} に予約しました'**
+  String vcCreateScheduled(String title, String when);
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'開催予定は今より後にしてください'**
+  String get vcCreateScheduleInPast;
+
+  /// スナックバー。max はジャンルの上限
+  ///
+  /// In ja, this message translates to:
+  /// **'{max, plural, other{ジャンルは {max} 個までです}}'**
+  String vcCreateGenresMax(int max);
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'タイトルを入力してください'**
+  String get vcCreateTitleRequired;
+
+  /// スナックバー。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'招待を送れませんでした: {error}'**
+  String vcCreateInviteFailed(String error);
+
+  /// スナックバー。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'作成できませんでした: {error}'**
+  String vcCreateFailed(String error);
+
+  /// 作成画面の招待の「+」/ そのシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'検索して追加'**
+  String get vcCreateSearchAdd;
+
+  /// 招待するアカウントを探す入力欄のヒント
+  ///
+  /// In ja, this message translates to:
+  /// **'@handle(RASQ アカウント)'**
+  String get vcCreateHandleHint;
+
+  /// 招待するアカウントが見つからないとき。handle は入力した値
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりませんでした: {handle}'**
+  String vcCreateHandleNotFound(String handle);
+
+  /// 招待するアカウントを探すシートのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'招待に追加'**
+  String get vcCreateAddInvitee;
+
+  /// 作成画面のタイトルの入力欄のヒント
+  ///
+  /// In ja, this message translates to:
+  /// **'タイトル'**
+  String get vcCreateTitleHint;
+
+  /// 作成画面の節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワーを招待'**
+  String get vcCreateInviteFollowers;
+
+  /// 作成画面の節の見出し。count は招待する人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{フォロワーを招待({count})}}'**
+  String vcCreateInviteFollowersCount(int count);
+
+  /// 作成画面のスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'参加時にウェルカムメッセージを表示する'**
+  String get vcCreateWelcomeToggle;
+
+  /// 作成画面の入力欄のヒント
+  ///
+  /// In ja, this message translates to:
+  /// **'ウェルカムメッセージを設定..'**
+  String get vcCreateWelcomeHint;
+
+  /// 作成画面の節の見出し。max はジャンルの上限
+  ///
+  /// In ja, this message translates to:
+  /// **'{max, plural, other{ジャンルを選定(最大 {max})}}'**
+  String vcCreateGenresLabel(int max);
+
+  /// 作成画面の入力欄のヒント
+  ///
+  /// In ja, this message translates to:
+  /// **'ジャンルを入力'**
+  String get vcCreateGenreHint;
+
+  /// 作成画面のボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'ジャンルを追加'**
+  String get vcCreateGenreAdd;
+
+  /// 作成画面のスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'開催を予約する'**
+  String get vcCreateSchedule;
+
+  /// 開催予約の注記
+  ///
+  /// In ja, this message translates to:
+  /// **'予約中は、あなたが入るまで他の人は入れません。'**
+  String get vcCreateScheduleCaption;
+
+  /// 開催予約の注記(開発者モードの詳しい説明)
+  ///
+  /// In ja, this message translates to:
+  /// **'予約中はあなた(とモデレーター)が入るまで他の人は参加できません。近日開催の節と共有リンクから開始通知を登録できます。'**
+  String get vcCreateScheduleCaptionDetail;
+
+  /// 作成画面の入力欄のヒント
+  ///
+  /// In ja, this message translates to:
+  /// **'ざっくり要約(任意。空なら自動で作ります)'**
+  String get vcCreateSummaryHint;
+
+  /// 作成画面のマイクのボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'マイク(作成後に切替)'**
+  String get vcCreateMicAfterCreate;
+
+  /// 作成画面のボタン(開催予約)
+  ///
+  /// In ja, this message translates to:
+  /// **'予約'**
+  String get vcCreateScheduleButton;
+
+  /// 作成画面のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'作成'**
+  String get vcCreateButton;
+
+  /// ホストの行のピル(ホストがルームにいる)
+  ///
+  /// In ja, this message translates to:
+  /// **'参加中'**
+  String get vcRoomHostPresent;
+
+  /// ホストの行のピル(開催予約中)
+  ///
+  /// In ja, this message translates to:
+  /// **'開催前'**
+  String get vcRoomHostBeforeStart;
+
+  /// ホストの行のピル(ホストがいない)
+  ///
+  /// In ja, this message translates to:
+  /// **'不在'**
+  String get vcRoomHostAbsent;
+
+  /// 参加メンバーの顔ぶれが取れていないときの人数。count は人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 人が参加しています}}'**
+  String vcRoomMembersCount(int count);
+
+  /// 参加メンバーがホストだけのとき
+  ///
+  /// In ja, this message translates to:
+  /// **'ホストのほかには、まだ誰もいません'**
+  String get vcRoomMembersHostOnly;
+
+  /// 参加メンバーがいないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ誰もいません'**
+  String get vcRoomMembersNone;
+
+  /// 参加メンバー行の 3 人より後の人数。count は人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{他{count}人}}'**
+  String vcRoomMembersRest(int count);
+
+  /// 画面共有の枠のツールチップ(表示中)
+  ///
+  /// In ja, this message translates to:
+  /// **'共有枠に表示中'**
+  String get vcRoomScreenShown;
+
+  /// 画面共有の枠のツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'画面共有を表示'**
+  String get vcRoomScreenShow;
+
+  /// まだ無い機能を押したとき。what は機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{what} は準備中です'**
+  String vcRoomNotYet(String what);
+
+  /// 参加前 / 作成前の歯車のシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell の設定(この端末)'**
+  String get vcRoomDeviceSettingsTitle;
+
+  /// 設定の行
+  ///
+  /// In ja, this message translates to:
+  /// **'下段のボタンの並びを編集'**
+  String get vcRoomEditBar;
+
+  /// 設定の行の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'並べ替え / 表示 / 非表示 / プラグインのボタンを追加'**
+  String get vcRoomEditBarSubtitle;
+
+  /// 設定の節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'チャットの内容を自動で共有欄に出す(ピン留めしなくても)'**
+  String get vcRoomAutoShareLabel;
+
+  /// 設定の節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'共有欄の表示'**
+  String get vcRoomShareStyleLabel;
+
+  /// 設定の節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'自動再生'**
+  String get vcRoomAutoPlayLabel;
+
+  /// 設定のスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'画面共有が始まったら共有枠に出す'**
+  String get vcRoomAutoPlayScreen;
+
+  /// 設定の節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'保留音'**
+  String get vcRoomHoldMusicLabel;
+
+  /// 設定のスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'保留音を鳴らす(この端末)'**
+  String get vcRoomHoldMusicDevice;
+
+  /// 参加前の設定のシートの注記
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。'**
+  String get vcRoomDeviceSettingsCaption;
+
+  /// 参加前の設定のシートの注記(開発者モードの詳しい説明)
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームごとの設定(参加できる人・読み上げなど)は、参加してからルームの歯車で変えられます(オーナー)。'**
+  String get vcRoomDeviceSettingsCaptionDetail;
+
+  /// FOW / シートを閉じるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get vcRoomClose;
+
+  /// 共有ボタン(ツールチップ / ボタン / 見出し)
+  ///
+  /// In ja, this message translates to:
+  /// **'共有'**
+  String get vcRoomShare;
+
+  /// プレビュー / ルームの節の見出し、メンバーの役割
+  ///
+  /// In ja, this message translates to:
+  /// **'ホスト'**
+  String get vcRoomHost;
+
+  /// プレビュー / ルームの節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'参加メンバー'**
+  String get vcRoomMembers;
+
+  /// 新規入室が止められたルームの注記
+  ///
+  /// In ja, this message translates to:
+  /// **'運営により新しい入室が止められています。'**
+  String get vcRoomLocked;
+
+  /// 新規入室が止められたルームの注記(開発者モードの詳しい説明)
+  ///
+  /// In ja, this message translates to:
+  /// **'運営により新規入室が停止されています(D-151)。'**
+  String get vcRoomLockedDetail;
+
+  /// 開始通知を登録済みのときの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'開始を通知します'**
+  String get vcRoomRemindOn;
+
+  /// 開催予約中のルームの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'ホストが始めるまで参加できません'**
+  String get vcRoomWaitForHost;
+
+  /// 開始通知を外すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'通知を解除'**
+  String get vcRoomRemindOff;
+
+  /// プレビューの節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ざっくり要約'**
+  String get vcRoomSummary;
+
+  /// ざっくり要約を公開していないルームのプレビュー
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームはざっくり要約を公開していません。'**
+  String get vcRoomSummaryPrivate;
+
+  /// プレビューのウェルカムメッセージ。message はホストが書いた文
+  ///
+  /// In ja, this message translates to:
+  /// **'ようこそ: {message}'**
+  String vcRoomWelcome(String message);
+
+  /// プレビューのマイクのボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'マイク(参加後に切替)'**
+  String get vcRoomMicAfterJoin;
+
+  /// 字幕のボタンのツールチップ / 作成画面のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'字幕'**
+  String get vcRoomCaptions;
+
+  /// プレビューの参加ボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'参加'**
+  String get vcRoomJoin;
+
+  /// 歯車のボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'設定'**
+  String get vcRoomSettings;
+
+  /// ルームのタブ
+  ///
+  /// In ja, this message translates to:
+  /// **'ホーム'**
+  String get vcRoomTabHome;
+
+  /// ルームのタブ
+  ///
+  /// In ja, this message translates to:
+  /// **'チャット'**
+  String get vcRoomTabChat;
+
+  /// ルームのタブ
+  ///
+  /// In ja, this message translates to:
+  /// **'目次'**
+  String get vcRoomTabToc;
+
+  /// ルームのタブ
+  ///
+  /// In ja, this message translates to:
+  /// **'ルーム'**
+  String get vcRoomTabRoom;
+
+  /// ルームから退出したあとの表示
+  ///
+  /// In ja, this message translates to:
+  /// **'退出しました'**
+  String get vcRoomLeft;
+
+  /// ルームから退出するボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'退出'**
+  String get vcRoomLeave;
+
+  /// 自分が配信中の帯 / 配信の設定
+  ///
+  /// In ja, this message translates to:
+  /// **'画面を配信しています'**
+  String get vcRoomStreamingScreen;
+
+  /// 自分が配信中の帯 / 配信の設定
+  ///
+  /// In ja, this message translates to:
+  /// **'カメラで配信しています'**
+  String get vcRoomStreamingCamera;
+
+  /// 画面共有中の帯のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'共有をやめる'**
+  String get vcRoomStopSharing;
+
+  /// 配信中の帯のボタン / 配信の設定
+  ///
+  /// In ja, this message translates to:
+  /// **'配信を止める'**
+  String get vcRoomStopStream;
+
+  /// 下段のボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'スピーカーミュート解除'**
+  String get vcRoomSpeakerUnmute;
+
+  /// 下段のボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'スピーカーミュート'**
+  String get vcRoomSpeakerMute;
+
+  /// 下段のマイクのボタンのツールチップ(強制ミュート中)
+  ///
+  /// In ja, this message translates to:
+  /// **'モデレーターにミュートされています'**
+  String get vcRoomMutedByModerator;
+
+  /// 下段のマイクのボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'マイクを準備中(押すとやめる)'**
+  String get vcRoomMicOpening;
+
+  /// 下段のマイクのボタンのツールチップ(押すとオフ)
+  ///
+  /// In ja, this message translates to:
+  /// **'マイクオフ'**
+  String get vcRoomMicOff;
+
+  /// 下段のマイクのボタンのツールチップ(押すとオン)
+  ///
+  /// In ja, this message translates to:
+  /// **'マイクオン'**
+  String get vcRoomMicOn;
+
+  /// 下段の画面共有のボタンのツールチップ(押すとやめる)
+  ///
+  /// In ja, this message translates to:
+  /// **'画面共有オフ'**
+  String get vcRoomScreenShareOff;
+
+  /// 全画面のボタン / メニュー
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面'**
+  String get vcRoomFullscreen;
+
+  /// 下段の字幕のボタンのツールチップ(押すとオフ)/ 字幕が切れているときの表示
+  ///
+  /// In ja, this message translates to:
+  /// **'字幕オフ'**
+  String get vcRoomCaptionsOff;
+
+  /// 下段の字幕のボタンのツールチップ(押すとオン)
+  ///
+  /// In ja, this message translates to:
+  /// **'字幕オン'**
+  String get vcRoomCaptionsOn;
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'公開範囲が限定された投稿なので、リンクとして共有します'**
+  String get vcRoomShareAsLinkLimited;
+
+  /// スナックバー。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿を取れなかったのでリンクとして共有します: {error}'**
+  String vcRoomShareAsLinkFailed(String error);
+
+  /// スナックバー。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルを選択できませんでした: {error}'**
+  String vcRoomPickFileFailed(String error);
+
+  /// ホストの配信(画面共有と並べる種別の名前)
+  ///
+  /// In ja, this message translates to:
+  /// **'配信'**
+  String get vcRoomStream;
+
+  /// 配信のカードの見出し。kind は「画面共有」か「配信」、title は配信の題(無ければホストの表示名)
+  ///
+  /// In ja, this message translates to:
+  /// **'{kind}: {title}'**
+  String vcRoomLiveCardTitle(String kind, String title);
+
+  /// 参加者の画面共有の見出し。name は表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の画面'**
+  String vcRoomPeerScreen(String name);
+
+  /// 参加者の画面共有の見出し。name は表示名、title は画面の題
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の画面 — {title}'**
+  String vcRoomPeerScreenTitled(String name, String title);
+
+  /// すべての共有のシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'すべての共有'**
+  String get vcRoomAllShares;
+
+  /// ルームの歯車のシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'VC の設定'**
+  String get vcRoomSettingsTitle;
+
+  /// ルームの設定の節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'モデレーション(オーナー)'**
+  String get vcRoomModerationLabel;
+
+  /// ルームの設定の節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'参加できる人'**
+  String get vcRoomJoinPolicyLabel;
+
+  /// ルームの設定の節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'共有(チャットへの投稿)できる人'**
+  String get vcRoomSharePolicyLabel;
+
+  /// ルームの設定の節の見出し。count はモデレーターの数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{モデレーター({count})— メンバーの「…」から追加}}'**
+  String vcRoomModeratorsLabel(int count);
+
+  /// モデレーターを外す(ツールチップ / メニュー)
+  ///
+  /// In ja, this message translates to:
+  /// **'モデレーターを外す'**
+  String get vcRoomRemoveModerator;
+
+  /// ルームの設定の節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'発信傾向'**
+  String get vcRoomTendencyLabel;
+
+  /// ルームの設定のスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'荒らしの入室を断る(試験中)'**
+  String get vcRoomTendencyFilter;
+
+  /// 発信傾向の注記
+  ///
+  /// In ja, this message translates to:
+  /// **'オンにすると、敵対的と判定された人は入れません。判定はまだ仮のものです。'**
+  String get vcRoomTendencyCaption;
+
+  /// 発信傾向の注記(開発者モードの詳しい説明)
+  ///
+  /// In ja, this message translates to:
+  /// **'本命は rasq-judge の GoEmotion(発信の感情傾向)で、学習が要るので今はサーバーのダミー判定(表示名に hostile / 荒らし を含む人だけ敵対的)。オンにすると敵対的と判定された人は入室できません。メンバー行の「…」から判定結果を見られます。'**
+  String get vcRoomTendencyCaptionDetail;
+
+  /// ルームの設定の節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'配信(ホスト)'**
+  String get vcRoomHostStreamLabel;
+
+  /// ルームの設定の行
+  ///
+  /// In ja, this message translates to:
+  /// **'カメラで配信する'**
+  String get vcRoomStreamCamera;
+
+  /// ルームの設定の行
+  ///
+  /// In ja, this message translates to:
+  /// **'画面を配信する'**
+  String get vcRoomStreamScreen;
+
+  /// 画面の配信の補足(iOS)
+  ///
+  /// In ja, this message translates to:
+  /// **'iPhone / iPad はこのアプリの画面だけ(ほかのアプリは映りません)'**
+  String get vcRoomStreamScreenIos;
+
+  /// 配信の注記
+  ///
+  /// In ja, this message translates to:
+  /// **'映像と声を配信します。通話に入りきらない人も配信で聞けます。'**
+  String get vcRoomHostStreamCaption;
+
+  /// 配信の注記(開発者モードの詳しい説明)。cap は通話に入れる人数
+  ///
+  /// In ja, this message translates to:
+  /// **'映像とマイクを配信サーバー(LiveKit)に上げます。参加者は通話の声のまま映像を見られ、通話に入りきらない人({cap} 人目より後)は配信であなたの声を聞きます。'**
+  String vcRoomHostStreamCaptionDetail(int cap);
+
+  /// ルームの設定のスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームで保留音を許す(オーナー)'**
+  String get vcRoomHoldMusicRoom;
+
+  /// 保留音の注記
+  ///
+  /// In ja, this message translates to:
+  /// **'開始を待つ間や、しばらく誰も話さないときに鳴ります。'**
+  String get vcRoomHoldMusicCaption;
+
+  /// 保留音の注記(開発者モードの詳しい説明)。minutes は分
+  ///
+  /// In ja, this message translates to:
+  /// **'開催予約の開始を待っている間と、全員がマイクを下ろして(画面共有 / 配信も無く)チャットが {minutes} 分以上流れていない間に鳴ります。誰かが話し始めるか、チャットが流れると止まります。'**
+  String vcRoomHoldMusicCaptionDetail(int minutes);
+
+  /// ルームの設定の節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'読み上げ'**
+  String get vcRoomTts;
+
+  /// ルームの設定の節の見出し(読み上げを使えないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'読み上げ(使えません)'**
+  String get vcRoomTtsUnavailable;
+
+  /// ルームの設定の節の見出し(開発者モード)。model は音声合成のモデル名
+  ///
+  /// In ja, this message translates to:
+  /// **'読み上げ({model}、プリセット音声)'**
+  String vcRoomTtsDetail(String model);
+
+  /// ルームの設定の節の見出し(開発者モード、使えないとき)。model は音声合成のモデル名
+  ///
+  /// In ja, this message translates to:
+  /// **'読み上げ({model}、プリセット音声) — サーバー未設定'**
+  String vcRoomTtsDetailUnavailable(String model);
+
+  /// 読み上げの声の選択肢
+  ///
+  /// In ja, this message translates to:
+  /// **'読み上げなし'**
+  String get vcRoomTtsNone;
+
+  /// 読み上げの注記(オーナー)
+  ///
+  /// In ja, this message translates to:
+  /// **'読み上げの声はサーバーで作ります(アプリでの再生は準備中)。'**
+  String get vcRoomTtsCaptionOwner;
+
+  /// 読み上げの注記(参加者)
+  ///
+  /// In ja, this message translates to:
+  /// **'読み上げ音声はホストが選びます。'**
+  String get vcRoomTtsCaptionGuest;
+
+  /// 読み上げの注記(開発者モードの詳しい説明)
+  ///
+  /// In ja, this message translates to:
+  /// **'チャットと共有の読み上げは Central 側で合成します(端末での再生は今後の対応)。'**
+  String get vcRoomTtsCaptionOwnerDetail;
+
+  /// ルームの設定の節の見出し(開発者モード)
+  ///
+  /// In ja, this message translates to:
+  /// **'接続の状態(開発者向け)'**
+  String get vcRoomDiagnosticsLabel;
+
+  /// ルームの設定の行(開発者モード)
+  ///
+  /// In ja, this message translates to:
+  /// **'通話 / 配信の接続を見る'**
+  String get vcRoomDiagnosticsOpen;
+
+  /// ルームの設定の行の補足(開発者モード)
+  ///
+  /// In ja, this message translates to:
+  /// **'ICE の状態・候補・送受信の量・受けているトラック'**
+  String get vcRoomDiagnosticsOpenSubtitle;
+
+  /// 接続の状態のシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'接続の状態'**
+  String get vcRoomDiagnosticsTitle;
+
+  /// ホストの配信の全画面の見出し。name はホストの表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の配信'**
+  String vcRoomHostStreamTitle(String name);
+
+  /// まだ無い機能の名前(「〜 は準備中です」に入る)
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿の表示(対応 SNS プラグインが未導入)'**
+  String get vcRoomPostViewNotYet;
+
+  /// 共有の操作のメニュー
+  ///
+  /// In ja, this message translates to:
+  /// **'開く'**
+  String get vcRoomOpen;
+
+  /// 共有の操作のメニュー
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get vcRoomDelete;
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'コピーしました'**
+  String get vcRoomCopied;
+
+  /// 通報シートの対象の名前。headline は共有の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'共有「{headline}」'**
+  String vcRoomReportWhatShare(String headline);
+
+  /// 参加者の … メニュー(画面共有を共有枠に出す)
+  ///
+  /// In ja, this message translates to:
+  /// **'共有枠に表示'**
+  String get vcRoomPinToFrame;
+
+  /// 参加者 / チャットの … メニュー
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー解除'**
+  String get vcRoomUnfollow;
+
+  /// 参加者 / チャットの … メニュー
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー'**
+  String get vcRoomFollow;
+
+  /// 参加者 / チャットの … メニュー、メンバー行のツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュート解除'**
+  String get vcRoomUnmute;
+
+  /// 参加者 / チャットの … メニュー(モデレーター)
+  ///
+  /// In ja, this message translates to:
+  /// **'全員向けミュートを解除'**
+  String get vcRoomModUnmute;
+
+  /// 参加者 / チャットの … メニュー(モデレーター)
+  ///
+  /// In ja, this message translates to:
+  /// **'全員向けにミュート'**
+  String get vcRoomModMute;
+
+  /// 参加者 / チャットの … メニュー(モデレーター)
+  ///
+  /// In ja, this message translates to:
+  /// **'キック'**
+  String get vcRoomKick;
+
+  /// 参加者の … メニュー(オーナー)
+  ///
+  /// In ja, this message translates to:
+  /// **'モデレーターにする'**
+  String get vcRoomMakeModerator;
+
+  /// 参加者の … メニュー(モデレーター)
+  ///
+  /// In ja, this message translates to:
+  /// **'発信傾向を見る(試験中)'**
+  String get vcRoomShowTendency;
+
+  /// 参加者 / チャットの … メニュー
+  ///
+  /// In ja, this message translates to:
+  /// **'ブロック解除'**
+  String get vcRoomUnblock;
+
+  /// 参加者 / チャットの … メニュー
+  ///
+  /// In ja, this message translates to:
+  /// **'ブロック'**
+  String get vcRoomBlock;
+
+  /// 参加者 / チャットの … メニュー、通報シートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'通報'**
+  String get vcRoomReport;
+
+  /// スナックバー。name は表示名、source は判定の出どころ、summary はラベルと割合の並び
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の発信傾向({source}): {summary}'**
+  String vcRoomTendencyResult(String name, String source, String summary);
+
+  /// スナックバー(敵対的と判定)。name は表示名、source は判定の出どころ、summary はラベルと割合の並び
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の発信傾向({source}): {summary} — 敵対的'**
+  String vcRoomTendencyResultHostile(
+    String name,
+    String source,
+    String summary,
+  );
+
+  /// スナックバー。name は表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} のブロックを解除しました'**
+  String vcRoomUnblocked(String name);
+
+  /// スナックバー。name は表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} をブロックしました(発言を隠し、あなたのルームには入れません)'**
+  String vcRoomBlocked(String name);
+
+  /// 操作の失敗のスナックバー。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'できませんでした: {error}'**
+  String vcRoomActionFailed(String error);
+
+  /// チャットの … メニュー / ピンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'共有欄にピン留め'**
+  String get vcRoomPinToShares;
+
+  /// 通報シートの対象の名前。name は発言者の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の発言'**
+  String vcRoomReportWhatChat(String name);
+
+  /// ルームのホームのスイッチ / 作成画面のスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'プレビューにざっくり要約を表示する'**
+  String get vcRoomShowSummary;
+
+  /// ルームのホームのスイッチ / 作成画面のスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'ジャンルを自動選択する'**
+  String get vcRoomAutoGenre;
+
+  /// ルームのホームの節の見出し(オーナー)
+  ///
+  /// In ja, this message translates to:
+  /// **'自動選択されたジャンルを編集'**
+  String get vcRoomEditAutoGenres;
+
+  /// ルームのホームの節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ジャンル'**
+  String get vcRoomGenres;
+
+  /// チャットのタブが空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'話した内容の文字起こしと、チャット・共有がここに並びます。'**
+  String get vcRoomChatEmpty;
+
+  /// チャットのタブの注記。count は隠した数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{ブロック中のユーザーの発言 {count} 件を隠しています}}'**
+  String vcRoomChatHiddenBlocked(int count);
+
+  /// 下書きが空のときの表示
+  ///
+  /// In ja, this message translates to:
+  /// **'入力中…'**
+  String get vcRoomTyping;
+
+  /// 自分の下書きの印
+  ///
+  /// In ja, this message translates to:
+  /// **'下書き'**
+  String get vcRoomDraft;
+
+  /// ほかの人の下書きの印
+  ///
+  /// In ja, this message translates to:
+  /// **'入力中'**
+  String get vcRoomTypingLabel;
+
+  /// チャット行の … のツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'チャットの操作'**
+  String get vcRoomChatActions;
+
+  /// 目次の最初の行。title はルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'開始: {title}'**
+  String vcRoomTocStart(String title);
+
+  /// 目次の共有の行。name は表示名、kind は共有の種別の id、headline は共有の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} が {kind} を共有: {headline}'**
+  String vcRoomTocShared(String name, String kind, String headline);
+
+  /// 目次のタブの注記
+  ///
+  /// In ja, this message translates to:
+  /// **'共有と文字起こしの区切りです。'**
+  String get vcRoomTocCaption;
+
+  /// ルームのタブの節の見出し。count は人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{参加メンバー({count})}}'**
+  String vcRoomMembersWithCount(int count);
+
+  /// メンバーの役割のピル
+  ///
+  /// In ja, this message translates to:
+  /// **'モデレーター'**
+  String get vcRoomModerator;
+
+  /// ルームのタブの節の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムプラグイン'**
+  String get vcRoomCustomPlugins;
+
+  /// スナックバー。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'設定を更新できませんでした: {error}'**
+  String vcRoomUpdateFailed(String error);
+
+  /// 下段の共有のボタン(ファイルを選んで共有)
+  ///
+  /// In ja, this message translates to:
+  /// **'共有する'**
+  String get vcRoomShareAction;
+
+  /// 下段の送信のボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'送信完了する'**
+  String get vcRoomSendDone;
+
+  /// stick の画面のツールチップ。name は表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の画面(タップで全画面)'**
+  String vcRoomPeerScreenTap(String name);
+
+  /// 共有枠が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'ピン留めした共有がここに出ます'**
+  String get vcRoomPinnedSharesEmpty;
+
+  /// 縮めたルームの最後の共有の行。headline は共有の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'共有: {headline}'**
+  String vcRoomCompactShare(String headline);
+
+  /// 縮めたルームの字幕の行
+  ///
+  /// In ja, this message translates to:
+  /// **'文字起こしはまだありません'**
+  String get vcRoomNoTranscripts;
+
+  /// 縮めたルームの字幕の行
+  ///
+  /// In ja, this message translates to:
+  /// **'文字起こしは無効(要約非公開)'**
+  String get vcRoomTranscriptsDisabled;
+
+  /// 共有欄の開け閉めのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'共有を畳む'**
+  String get vcRoomSharesCollapse;
+
+  /// 共有欄の開け閉めのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'共有をすべて表示'**
+  String get vcRoomSharesExpand;
+
+  /// 共有の一覧の行の補足(ピン留め)。name は共有した人の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} が共有 ・ 📌'**
+  String vcRoomSharedByPinned(String name);
+
+  /// 共有の一覧の行の補足(自動表示)。name は共有した人の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} が共有 ・ 自動表示'**
+  String vcRoomSharedByAuto(String name);
+
+  /// 文字起こしの一覧の行の補足(ピン留め)。name は話した人、time は時刻(HH:mm)
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} ・ {time} ・ 📌'**
+  String vcRoomTranscriptMetaPinned(String name, String time);
+
+  /// 文字起こしの一覧の行の補足(自動表示)。name は話した人、time は時刻(HH:mm)
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} ・ {time} ・ 自動表示'**
+  String vcRoomTranscriptMetaAuto(String name, String time);
+
+  /// 共有枠のピル
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュート中'**
+  String get vcRoomMuted;
+
+  /// 共有枠の … のツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'共有枠の操作'**
+  String get vcRoomScreenFrameActions;
+
+  /// メンバー行の自分の名前。name は表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}(あなた)'**
+  String vcRoomMemberSelf(String name);
+
+  /// メンバー行のピル(モデレーターにミュートされた)
+  ///
+  /// In ja, this message translates to:
+  /// **'強制ミュート'**
+  String get vcRoomForceMuted;
+
+  /// メンバー行の … のツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'メンバーの操作'**
+  String get vcRoomMemberActions;
+
+  /// 接続の状態のシートの注記(開発者向け)
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザ / Xcode のログにも「astell call:」「astell stream:」で出ます。'**
+  String get vcRoomDiagnosticsLogHint;
+
+  /// 接続の状態のシートのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'コピー'**
+  String get vcRoomCopy;
+
+  /// ルームの設定の節の見出し。count は BAN の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{BAN({count})— メンバー行の「…」から}}'**
+  String vcRoomBansLabel(int count);
+
+  /// BAN 一覧の読み込みの失敗。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'BAN 一覧を読めませんでした: {error}'**
+  String vcRoomBansLoadFailed(String error);
+
+  /// BAN の行のボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'BAN を解除'**
+  String get vcRoomUnban;
+
+  /// 通報シートの本文。what は対象の名前(表示名 / ルーム「…」/ 共有「…」など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{what} を通報します。RASQ の審査で確認します。'**
+  String vcRoomReportBody(String what);
+
+  /// 通報シートの入力欄のヒント
+  ///
+  /// In ja, this message translates to:
+  /// **'補足(任意)'**
+  String get vcRoomReportNoteHint;
+
+  /// スナックバー。error は失敗の内容
+  ///
+  /// In ja, this message translates to:
+  /// **'通報できませんでした: {error}'**
+  String vcRoomReportFailed(String error);
+
+  /// 通報シートのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'通報する'**
+  String get vcRoomReportSubmit;
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'通報しました。審査で確認します'**
+  String get vcRoomReported;
+
+  /// 配信の帯の見出し。name はホストの表示名、kind は「画面共有」か「配信」
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} が{kind}中'**
+  String vcRoomLiveBy(String name, String kind);
 }
 
 class _AppLocalizationsDelegate

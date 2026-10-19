@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/redact.dart';
+import '../../l10n/l10n.dart';
 import '../child_safe/child_gate.dart';
 import '../child_safe/child_safe_policy.dart';
 import '../settings/settings_dsl.dart';
@@ -49,15 +50,15 @@ final astellStreamerFactoryProvider = Provider<AstellStreamer Function()>((ref) 
 final astellLevelIntervalProvider = Provider<Duration?>((ref) => astellLevelInterval);
 
 /// Web: ブラウザが声の自動再生を止めているときの案内 (D-323)。次にページを触ると鳴らし直す。
-const astellAudioBlockedNotice = '音が止まっています。画面をタップすると鳴ります';
+String get astellAudioBlockedNotice => appL10n.vcNoticeAudioBlocked;
 
 /// 満員で通話に入れなかったときの案内 (D-317)。
-const astellCallFullNotice = '通話は満員です($astellMeshCap 人まで)。配信があれば、配信で聞けます';
+String get astellCallFullNotice => appL10n.vcNoticeCallFull(astellMeshCap);
 
 /// 保留音 (D-327) の案内: 開催予約の開始待ち / 全員が静か。開始 (D-331) はチャイムと一緒に。
-const astellHoldWaitingNotice = '開催までお待ちください。保留音を鳴らしています';
-const astellStartedNotice = '開催が始まりました';
-const astellHoldIdleNotice = '静かなので保留音を鳴らしています';
+String get astellHoldWaitingNotice => appL10n.vcNoticeHoldWaiting;
+String get astellStartedNotice => appL10n.vcNoticeStarted;
+String get astellHoldIdleNotice => appL10n.vcNoticeHoldIdle;
 
 /// これだけチャット(共有 / 文字起こし)が流れず、全員がマイクを下ろしていれば「静か」(D-327)。
 const astellHoldIdleAfter = Duration(minutes: 1);
@@ -101,15 +102,15 @@ final astellMediaPickerProvider = Provider<Future<XFile?> Function()>((ref) => (
 /// 共有欄の自動表示設定 (D-146): チャットに流れたものをメディアタイプごとに
 /// 自動で「共有」欄へ出すか。KV `astell.v1` の `auto.<class>`。既定は画像・動画のみ。
 const astellSettingsArea = 'astell';
-const astellShareClasses = <({String id, String label})>[
-  (id: 'image', label: '画像'),
-  (id: 'video', label: '動画'),
-  (id: 'file', label: 'ファイル'),
-  (id: 'link', label: 'リンク'),
-  (id: 'post', label: '投稿'),
-  (id: 'text', label: 'テキスト'),
-  (id: 'transcript', label: '文字起こし'),
-];
+List<({String id, String label})> get astellShareClasses => <({String id, String label})>[
+      (id: 'image', label: appL10n.vcShareClassImage),
+      (id: 'video', label: appL10n.vcKindVideo),
+      (id: 'file', label: appL10n.vcShareClassFile),
+      (id: 'link', label: appL10n.vcKindLink),
+      (id: 'post', label: appL10n.vcKindPost),
+      (id: 'text', label: appL10n.vcKindText),
+      (id: 'transcript', label: appL10n.vcShareClassTranscript),
+    ];
 const _astellAutoDefaults = {'image': true, 'video': true};
 
 final astellAutoShareProvider = Provider<Map<String, bool>>((ref) {
@@ -119,11 +120,13 @@ final astellAutoShareProvider = Provider<Map<String, bool>>((ref) {
 
 /// 共有欄の表示 (D-333): カード型横スライド(既定)か、レガシー(共有枠 + 縦の一覧、D-146)。KV `shares.style`。
 enum AstellShareStyle {
-  cards('カード(横スライド)'),
-  list('一覧(レガシー)');
+  cards,
+  list;
 
-  const AstellShareStyle(this.label);
-  final String label;
+  String get label => switch (this) {
+        cards => appL10n.vcShareStyleCards,
+        list => appL10n.vcShareStyleList,
+      };
 }
 
 final astellShareStyleProvider = Provider<AstellShareStyle>((ref) {
@@ -386,7 +389,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
     } catch (e) {
       // 同意待ちのアカウントはサーバーが入室を断る (D-371 / S-053)。WS の失敗には理由が載らないので、ここで言い換える。
       if (ref.read(orgateAccountProvider).value?.termsAccepted == false) {
-        _fail('利用規約への同意が必要です(ASTell のいちばん上の案内から同意できます)');
+        _fail(appL10n.vcTermsRequired);
         return;
       }
       // REC-03: 接続エラーは接続先の URL(`?token=`)を含むので、そのまま出さない。
@@ -487,7 +490,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
         _syncWatching();
         _syncHoldMusic(); // 開催が始まった / 保留音の可否が変わった (D-327)
       case 'closed':
-        state = s.copyWith(connected: false, streamConnected: false, clearStreaming: true, screenShareOn: false, error: m['reason'] == 'moderation' ? '運営によりルームが閉鎖されました' : 'ホストがルームを終了しました');
+        state = s.copyWith(connected: false, streamConnected: false, clearStreaming: true, screenShareOn: false, error: m['reason'] == 'moderation' ? appL10n.vcClosedByModeration : appL10n.vcClosedByHost);
         unawaited(_stopMedia());
         _syncSpeaking(); // 通話と配信を閉じたので、話している印も消す
       case 'kicked':
@@ -498,18 +501,18 @@ class AstellSession extends Notifier<AstellSessionState?> {
           clearStreaming: true,
           screenShareOn: false,
           error: switch (m['reason']) {
-            'banned' => 'このルームから BAN されました',
-            'sanctioned' => 'アカウントの処置により退出させられました',
-            _ => 'モデレーターにルームから退出させられました',
+            'banned' => appL10n.vcKickedBanned,
+            'sanctioned' => appL10n.vcKickedSanctioned,
+            _ => appL10n.vcKickedByModerator,
           },
         );
         unawaited(_teardown());
         _syncSpeaking();
       // アカウント処置(中レベル、D-151): 共有は保留 → 判定 → 配信 or 却下。
       case 'held':
-        state = s.copyWith(notice: '検閲中: ${m['delaySeconds'] ?? '?'} 秒後に判定して配信されます(アカウントの処置)', clearError: true);
+        state = s.copyWith(notice: appL10n.vcShareHeld('${m['delaySeconds'] ?? '?'}'), clearError: true);
       case 'rejected':
-        state = s.copyWith(error: '検閲で却下されました(${m['source'] ?? 'review'})。この発言は配信されていません', clearNotice: true);
+        state = s.copyWith(error: appL10n.vcShareRejected('${m['source'] ?? 'review'}'), clearNotice: true);
       case 'share':
         final x = m['share'];
         if (x is Map) {
@@ -589,7 +592,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
       'type': 'state',
       'state': {
         'micOn': s.micOn,
-        'screenShare': s.screenShareOn ? const AstellScreenShare(title: '自分の画面').toJson() : null,
+        'screenShare': s.screenShareOn ? const AstellScreenShare(title: '自分の画面').toJson() : null, // l10n-ignore: サーバーへ送る値(ほかの人の画面に出る題)
       },
     });
   }
@@ -909,16 +912,16 @@ class AstellSession extends Notifier<AstellSessionState?> {
   /// 「繋がったのに聞こえない / 映らない」を、ICE の状態・候補・送受信のバイト数・受けたトラックで切り分ける。
   Future<List<String>> diagnostics() async {
     final s = state;
-    if (s == null) return const ['ルームに入っていません'];
+    if (s == null) return const ['ルームに入っていません']; // l10n-ignore: 開発者向けの接続の様子(コピーしてログと突き合わせる)
     String short(String? id) => id == null ? '-' : (id.length > 8 ? id.substring(0, 8) : id);
     final media = _media;
     final mesh = _mesh;
     final blocked = media?.micBlocked;
     final lines = <String>[
-      '自分: peer ${short(s.myPeerId)} / ${kIsWeb ? 'Web' : defaultTargetPlatform.name}${kIsWeb ? (astellInsecureWebContext() ? '(安全でない場所 — マイク不可)' : '(https)') : ''}',
-      'マイク: ${s.micOn ? '立てている' : '下ろしている'} / ${media == null || !media.available ? '通話なし' : (media.micOpen ? '開いた' : 'まだ開いていない')}${blocked != null ? ' / ${AstellMediaException(blocked).message}' : ''}',
-      if (astellAudioAwaitingGesture.value) '声: ブラウザが自動再生を止めている(画面を触ると鳴らし直す)',
-      '通話: ${mesh == null ? 'なし' : (mesh.full ? '満員で入っていない' : '接続 ${mesh.peerIds.length} 本')} / ICE サーバー: ${mesh?.iceServerUrls?.join(', ') ?? '-'}',
+      '自分: peer ${short(s.myPeerId)} / ${kIsWeb ? 'Web' : defaultTargetPlatform.name}${kIsWeb ? (astellInsecureWebContext() ? '(安全でない場所 — マイク不可)' : '(https)') : ''}', // l10n-ignore: 開発者向けの接続の様子(コピーしてログと突き合わせる)
+      'マイク: ${s.micOn ? '立てている' : '下ろしている'} / ${media == null || !media.available ? '通話なし' : (media.micOpen ? '開いた' : 'まだ開いていない')}${blocked != null ? ' / ${AstellMediaException(blocked).message}' : ''}', // l10n-ignore: 開発者向けの接続の様子(コピーしてログと突き合わせる)
+      if (astellAudioAwaitingGesture.value) '声: ブラウザが自動再生を止めている(画面を触ると鳴らし直す)', // l10n-ignore: 開発者向けの接続の様子(コピーしてログと突き合わせる)
+      '通話: ${mesh == null ? 'なし' : (mesh.full ? '満員で入っていない' : '接続 ${mesh.peerIds.length} 本')} / ICE サーバー: ${mesh?.iceServerUrls?.join(', ') ?? '-'}', // l10n-ignore: 開発者向けの接続の様子(コピーしてログと突き合わせる)
     ];
     if (mesh != null) {
       for (final d in await mesh.diagnostics()) {
@@ -929,7 +932,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
       }
     }
     final st = _streamer;
-    lines.addAll(st == null ? const ['配信: 繋いでいない'] : st.diagnostics().lines());
+    lines.addAll(st == null ? const ['配信: 繋いでいない'] : st.diagnostics().lines()); // l10n-ignore: 開発者向けの接続の様子(コピーしてログと突き合わせる)
     return lines;
   }
 
@@ -938,7 +941,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
   /// LiveKit に繋ぐ(繋いでいればそのまま。上げるのに見るだけのトークンなら取り直す)。
   Future<AstellStreamer> _ensureStream({required bool publish}) async {
     final s = state;
-    if (s == null) throw StateError('ルームに入っていません');
+    if (s == null) throw StateError(appL10n.vcNotInRoom);
     final have = _streamer;
     if (have != null && have.connected && (!publish || have.canPublish)) return have;
     final token = await ref.read(astellClientProvider).streamToken(s.room.id, publish: publish);
@@ -959,7 +962,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
       _streamBusy = true;
       unawaited(_ensureStream(publish: false).then((_) {}, onError: (Object e) {
         _streamGaveUp = true;
-        if (state != null) state = state!.copyWith(notice: '映像を受けられません: ${astellStreamErrorText(e)}');
+        if (state != null) state = state!.copyWith(notice: appL10n.vcStreamReceiveFailed(astellStreamErrorText(e)));
       }).whenComplete(() => _streamBusy = false));
     } else if (!want && st != null && st.connected && st.publishing == null) {
       unawaited(st.disconnect());
@@ -971,7 +974,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
   Future<void> startHostStream(String kind, {String? screenSourceId}) async {
     final s = state;
     if (s == null || !s.isOwner || s.streaming != null) {
-      if (s != null && s.screenShareOn) state = s.copyWith(error: '画面共有中は配信を始められません(共有をやめてから)');
+      if (s != null && s.screenShareOn) state = s.copyWith(error: appL10n.vcStreamBlockedByScreenShare);
       return;
     }
     try {
@@ -984,7 +987,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
       _syncHoldMusic();
     } catch (e) {
       await _streamer?.unpublish();
-      if (state != null) state = state!.copyWith(error: '配信を始められません: ${astellStreamErrorText(e)}');
+      if (state != null) state = state!.copyWith(error: appL10n.vcStreamStartFailed(astellStreamErrorText(e)));
     }
   }
 
@@ -999,7 +1002,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
       final room = await ref.read(astellClientProvider).updateRoom(s.room.id, {'hostStream': null});
       if (state != null) state = state!.copyWith(room: room);
     } catch (e) {
-      if (state != null) state = state!.copyWith(error: '配信の印を消せませんでした: $e');
+      if (state != null) state = state!.copyWith(error: appL10n.vcStreamClearFailed('$e'));
     }
     _syncWatching();
   }
@@ -1111,14 +1114,14 @@ class AstellSession extends Notifier<AstellSessionState?> {
       return;
     }
     if (s.streaming != null) {
-      state = s.copyWith(error: '配信中は画面共有を始められません(配信を止めてから)');
+      state = s.copyWith(error: appL10n.vcScreenShareBlockedByStream);
       return;
     }
     try {
       final st = await _ensureStream(publish: true);
       await st.publish('screen', mic: s.micOn && !s.forceMuted, screenSourceId: screenSourceId);
     } catch (e) {
-      if (state != null) state = state!.copyWith(error: '画面共有を始められません: ${astellStreamErrorText(e)}');
+      if (state != null) state = state!.copyWith(error: appL10n.vcScreenShareStartFailed(astellStreamErrorText(e)));
       return;
     }
     if (state == null) return;
@@ -1196,8 +1199,8 @@ String astellStreamErrorText(Object e) {
   if (e is AstellMediaException) return e.message;
   if (e is OrgateException) {
     return switch (e.code.code) {
-      '501' => '配信はまだ使えません(配信サーバーが未設定)',
-      '403' => '許可されていません(${e.message})',
+      '501' => appL10n.vcStreamUnavailable,
+      '403' => appL10n.vcStreamForbidden(e.message),
       _ => e.message,
     };
   }
