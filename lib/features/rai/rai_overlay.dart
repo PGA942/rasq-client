@@ -22,6 +22,7 @@ import 'rai_motion.dart';
 import 'rai_space.dart';
 import 'rai_providers.dart';
 import 'rai_widgets.dart';
+import '../../l10n/l10n.dart';
 
 /// RAi のオーバーレイ (D-179): `rai` 層(常に最前面、バリア無し)にバーとマスコットを置く。
 /// 画面を移っても残る(「入力欄のみ残したまま起動直前まで見ていたページへ移動」)。
@@ -38,7 +39,7 @@ void showRai(WidgetRef ref, {RaiMode? mode, bool asking = false}) {
     id: raiBarOverlayId,
     layer: OverlayLayer.rai,
     alignment: Alignment.bottomCenter,
-    semanticsLabel: 'RAi バー',
+    semanticsLabel: appL10n.raiBarSemantics,
     builder: (_, _) => const _RaiBarHost(),
   ));
   manager.show(RasqOverlayEntry(
@@ -166,10 +167,10 @@ class _RaiBarHostState extends ConsumerState<_RaiBarHost> {
         historyMaxHeight: screen.height * 0.45,
         llmNote: switch (llm.phase) {
           RaiLlmPhase.ready || RaiLlmPhase.generating => null,
-          RaiLlmPhase.loading => '読み込み中',
+          RaiLlmPhase.loading => context.l10n.raiModelsPhaseLoading,
           RaiLlmPhase.downloading => '${llm.progress ?? 0}%',
-          RaiLlmPhase.notInstalled => '未DL',
-          RaiLlmPhase.unavailable => '使えません',
+          RaiLlmPhase.notInstalled => context.l10n.raiModelsNoteNotInstalled,
+          RaiLlmPhase.unavailable => context.l10n.raiModelsPhaseUnavailable,
         },
       ),
       ]),

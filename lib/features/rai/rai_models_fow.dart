@@ -9,6 +9,7 @@ import 'rai_layout.dart';
 import '../settings/settings_dsl.dart';
 import 'rai_llm.dart';
 import 'rai_widgets.dart' show raiBarContext;
+import '../../l10n/l10n.dart';
 
 /// LLM モデルの FOW (D-183): タイルに ローカル / クラウド、集計された完遂率(35B 未満だけ集計、
 /// 未集計は「-%」)、端末 RAM から見た動作可否のインジケーター、状態と操作(ダウンロード / 使う /
@@ -29,7 +30,7 @@ Future<void> showRaiModelsFow(WidgetRef ref, BuildContext context, {int? column}
   await manager.showFow<void>(
     id: raiModelsFowId,
     // 幅は入力ウィジェットに揃える (D-185)。
-    spec: FowSpec(title: 'モデル', cancelText: '閉じる', initialHeightFactor: 0.7, maxHeightFactor: 0.92, columnIndex: column ?? 0, maxWidth: raiPanelWidth(context))
+    spec: FowSpec(title: appL10n.raiModelsTitle, cancelText: appL10n.raiModelsClose, initialHeightFactor: 0.7, maxHeightFactor: 0.92, columnIndex: column ?? 0, maxWidth: raiPanelWidth(context))
       ..anchor = anchor
       ..anchorBelow = raiAnchorBelow(anchor),
     builder: (_, _) => const RaiModelsBody(),
@@ -53,25 +54,25 @@ class RaiModelsBody extends ConsumerWidget {
       }
     }
 
-    final ramText = ram?.totalMb == null ? 'RAM: 不明' : 'RAM: ${(ram!.totalMb! / 1024).toStringAsFixed(1)} GB${ram.availableMb == null ? '' : '(空き ${(ram.availableMb! / 1024).toStringAsFixed(1)} GB)'}';
+    final ramText = ram?.totalMb == null ? context.l10n.raiModelsRamUnknown : 'RAM: ${(ram!.totalMb! / 1024).toStringAsFixed(1)} GB${ram.availableMb == null ? '' : context.l10n.raiModelsRamFree((ram.availableMb! / 1024).toStringAsFixed(1))}';
     return ListView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xl), children: [
-      RasqCaption('${llm.spec.codename} = この端末で動くモデル。$ramText', detail: '${llm.spec.codename} = 端末内で動くモデル(${llm.spec.label})。$ramText', padding: EdgeInsets.zero),
-      const RasqSectionHeader(title: 'ローカル', topMargin: RasqSpacing.sm),
+      RasqCaption(context.l10n.raiModelsCaption(llm.spec.codename, ramText), detail: context.l10n.raiModelsCaptionDetail(llm.spec.codename, llm.spec.label, ramText), padding: EdgeInsets.zero),
+      RasqSectionHeader(title: context.l10n.raiModelsSectionLocal, topMargin: RasqSpacing.sm),
       // 選択中を先頭に(操作ボタンがすぐ見える)。
       for (final m in [...raiModelSpecs.where((m) => m.id == llm.spec.id), ...raiModelSpecs.where((m) => m.id != llm.spec.id)]) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
-      const RasqSectionHeader(title: 'RAi の検索と投稿の埋め込み', topMargin: RasqSpacing.md),
+      RasqSectionHeader(title: context.l10n.raiModelsSectionEmbedding, topMargin: RasqSpacing.md),
       _EmbeddingTile(ram: ram),
       // 投稿の画像 (D-390): 文の塔と同じ空間。関連 TL / TL のアルゴリズムで、画像も本文と一緒に比べる。
-      _EmbeddingTile(ram: ram, model: postVisionModelProvider, status: postVisionStatusProvider, tag: 'postVision', readyNote: '関連 TL と TL のアルゴリズムで、投稿の画像も比べます', idleNote: '関連 TL と TL のアルゴリズムで、投稿の本文に加えて画像も比べられるようになります(文のモデルも入れてください)'),
+      _EmbeddingTile(ram: ram, model: postVisionModelProvider, status: postVisionStatusProvider, tag: 'postVision', readyNote: context.l10n.raiModelsPostVisionReady, idleNote: context.l10n.raiModelsPostVisionIdle),
       // 絵文字の画像検索 (D-293): 文と絵を同じ空間で比べるので、SigLIP2 の 2 つが揃って初めて効く。
-      if (ref.watch(emojiVisionModelProvider) is! UnavailableRaiEmbeddingModel) const RasqSectionHeader(title: '絵文字の画像検索(2 つとも要ります)', topMargin: RasqSpacing.md),
-      _EmbeddingTile(ram: ram, model: emojiTextModelProvider, status: emojiTextStatusProvider, tag: 'emojiText', readyNote: '打った文で、絵文字の絵を探せます', idleNote: '絵文字の絵を、意味で探せるようになります(画像側も入れてください)'),
-      _EmbeddingTile(ram: ram, model: emojiVisionModelProvider, status: emojiVisionStatusProvider, tag: 'emojiVision', readyNote: '絵文字の絵を、裏で少しずつ読み込みます(サーバーごとに 1 回)', idleNote: '名前が意味を持たない絵文字も、絵の中身で探せるようになります'),
-      const RasqSectionHeader(title: 'クラウド(端末で答えられないとき)', topMargin: RasqSpacing.md),
+      if (ref.watch(emojiVisionModelProvider) is! UnavailableRaiEmbeddingModel) RasqSectionHeader(title: context.l10n.raiModelsSectionEmoji, topMargin: RasqSpacing.md),
+      _EmbeddingTile(ram: ram, model: emojiTextModelProvider, status: emojiTextStatusProvider, tag: 'emojiText', readyNote: context.l10n.raiModelsEmojiTextReady, idleNote: context.l10n.raiModelsEmojiTextIdle),
+      _EmbeddingTile(ram: ram, model: emojiVisionModelProvider, status: emojiVisionStatusProvider, tag: 'emojiVision', readyNote: context.l10n.raiModelsEmojiVisionReady, idleNote: context.l10n.raiModelsEmojiVisionIdle),
+      RasqSectionHeader(title: context.l10n.raiModelsSectionCloud, topMargin: RasqSpacing.md),
       const _ServerTile(),
       for (final m in raiCloudModelSpecs) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
       const SizedBox(height: RasqSpacing.sm),
-      const RasqCaption('完遂率 = 案内や返答が最後までうまくいった割合です。', detail: '完遂率 = 操作の案内 / 返答が最後まで成立した割合の集計(35B 未満のモデルだけ集計、デモでは「-%」)。', padding: EdgeInsets.zero),
+      RasqCaption(context.l10n.raiModelsCompletionCaption, detail: context.l10n.raiModelsCompletionCaptionDetail, padding: EdgeInsets.zero),
     ]);
   }
 
@@ -81,18 +82,18 @@ class RaiModelsBody extends ConsumerWidget {
     final mine = selected ? st : null;
     final verdict = m.cloud ? RaiRamVerdict.ok : raiMemoryVerdict(modelMb: m.sizeMb, totalRamMb: ram?.totalMb);
     final verdictColor = switch (verdict) { RaiRamVerdict.ok => RasqColors.inVc, RaiRamVerdict.tight => RasqColors.warning, RaiRamVerdict.no => RasqColors.danger, RaiRamVerdict.unknown => scheme.onSurfaceVariant };
-    final rate = m.params >= 35 ? '集計外' : (m.completionRate == null ? '-%' : '${(m.completionRate! * 100).round()}%');
+    final rate = m.params >= 35 ? context.l10n.raiModelsRateExcluded : (m.completionRate == null ? '-%' : '${(m.completionRate! * 100).round()}%');
     final phase = m.cloud
-        ? '未接続'
+        ? context.l10n.raiModelsNotConnected
         : mine == null
             ? ''
             : switch (mine.phase) {
-                RaiLlmPhase.notInstalled => '未ダウンロード',
-                RaiLlmPhase.downloading => 'ダウンロード中 ${mine.progress ?? 0}%',
-                RaiLlmPhase.ready => '準備完了',
-                RaiLlmPhase.loading => mine.message ?? '読み込み中',
-                RaiLlmPhase.generating => '生成中',
-                RaiLlmPhase.unavailable => '使えません',
+                RaiLlmPhase.notInstalled => context.l10n.raiModelsPhaseNotInstalled,
+                RaiLlmPhase.downloading => context.l10n.raiModelsPhaseDownloading(mine.progress ?? 0),
+                RaiLlmPhase.ready => context.l10n.raiModelsPhaseReady,
+                RaiLlmPhase.loading => mine.message ?? context.l10n.raiModelsPhaseLoading,
+                RaiLlmPhase.generating => context.l10n.raiModelsPhaseGenerating,
+                RaiLlmPhase.unavailable => context.l10n.raiModelsPhaseUnavailable,
               };
     return Container(
       key: ValueKey('rai.model.tile.${m.id}'),
@@ -105,24 +106,24 @@ class RaiModelsBody extends ConsumerWidget {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          RasqPill(label: m.cloud ? 'クラウド' : 'ローカル', color: m.cloud ? scheme.surfaceContainerHighest : RasqColors.link, textColor: m.cloud ? scheme.onSurface : Colors.white),
+          RasqPill(label: m.cloud ? context.l10n.raiModelsPillCloud : context.l10n.raiModelsPillLocal, color: m.cloud ? scheme.surfaceContainerHighest : RasqColors.link, textColor: m.cloud ? scheme.onSurface : Colors.white),
           const SizedBox(width: RasqSpacing.sm),
           Expanded(child: Text(m.codename, key: ValueKey('rai.model.name.${m.id}'), style: RasqTypography.listTile, overflow: TextOverflow.ellipsis)),
           if (selected) const Icon(Icons.check_circle, size: 18, color: RasqColors.link),
         ]),
         const SizedBox(height: RasqSpacing.xs),
-        Text(m.cloud ? '${m.label} · ${m.params.toStringAsFixed(0)}B · クラウド' : '${m.label} · ${m.engine.label} · ${m.fileName} · ${m.sizeMb} MB', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
+        Text(m.cloud ? context.l10n.raiModelsCloudLine(m.label, m.params.toStringAsFixed(0)) : '${m.label} · ${m.engine.label} · ${m.fileName} · ${m.sizeMb} MB', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
         const SizedBox(height: RasqSpacing.xs),
         Row(children: [
           // 完遂率。
           Icon(Icons.task_alt, size: 14, color: scheme.onSurfaceVariant),
           const SizedBox(width: 3),
-          Text('完遂率 $rate', style: RasqTypography.caption),
+          Text(context.l10n.raiModelsCompletionRate(rate), style: RasqTypography.caption),
           const SizedBox(width: RasqSpacing.md),
           // メモリの判定インジケーター。
           Container(width: 10, height: 10, decoration: BoxDecoration(color: verdictColor, shape: BoxShape.circle)),
           const SizedBox(width: 4),
-          Text(m.cloud ? 'メモリ: 端末不要' : 'メモリ: ${verdict.label}', key: ValueKey('rai.model.ram.${m.id}'), style: RasqTypography.caption),
+          Text(m.cloud ? context.l10n.raiModelsMemoryNotNeeded : context.l10n.raiModelsMemory(verdict.label), key: ValueKey('rai.model.ram.${m.id}'), style: RasqTypography.caption),
           const Spacer(),
           if (phase.isNotEmpty) Text(phase, key: ValueKey('rai.model.phase.${m.id}'), style: RasqTypography.caption.copyWith(color: m.cloud ? RasqColors.danger : scheme.onSurfaceVariant)),
         ]),
@@ -133,21 +134,21 @@ class RaiModelsBody extends ConsumerWidget {
             padding: const EdgeInsets.only(top: RasqSpacing.sm),
             child: Wrap(spacing: RasqSpacing.sm, runSpacing: RasqSpacing.xs, children: [
               if (!selected)
-                OutlinedButton(key: ValueKey('rai.model.use.${m.id}'), onPressed: st.phase == RaiLlmPhase.downloading ? null : () => guard(() => llm.select(m)), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: const Text('使う')),
+                OutlinedButton(key: ValueKey('rai.model.use.${m.id}'), onPressed: st.phase == RaiLlmPhase.downloading ? null : () => guard(() => llm.select(m)), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: Text(context.l10n.raiModelsUse)),
               if (selected && (mine!.phase == RaiLlmPhase.notInstalled || mine.phase == RaiLlmPhase.unavailable))
                 // 同梱 (D-216) なら「展開」、無ければ HF から「ダウンロード」。
-                FilledButton.icon(key: const ValueKey('rai.model.download'), onPressed: verdict == RaiRamVerdict.no ? null : () => guard(llm.install), icon: Icon(mine.bundled ? Icons.unarchive_outlined : Icons.download, size: 16), label: Text(mine.bundled ? '展開(同梱)' : 'ダウンロード'), style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
+                FilledButton.icon(key: const ValueKey('rai.model.download'), onPressed: verdict == RaiRamVerdict.no ? null : () => guard(llm.install), icon: Icon(mine.bundled ? Icons.unarchive_outlined : Icons.download, size: 16), label: Text(mine.bundled ? context.l10n.raiModelsExtract : context.l10n.raiModelsDownload), style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
               if (selected && (mine!.ready || mine.phase == RaiLlmPhase.loading))
-                OutlinedButton.icon(key: const ValueKey('rai.model.release'), onPressed: () => guard(llm.release), icon: const Icon(Icons.memory, size: 16), label: const Text('メモリを解放'), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
+                OutlinedButton.icon(key: const ValueKey('rai.model.release'), onPressed: () => guard(llm.release), icon: const Icon(Icons.memory, size: 16), label: Text(context.l10n.raiModelsRelease), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
               if (selected && mine!.ready)
                 OutlinedButton.icon(
                   key: const ValueKey('rai.model.delete'),
                   onPressed: () async {
-                    final ok = await manager.showAlert(id: 'rai.model.delete', title: 'モデルを削除しますか', message: '${m.fileName} を端末から消します。', confirmText: '削除', cancelText: 'キャンセル', destructive: true, ownerId: raiModelsFowId);
+                    final ok = await manager.showAlert(id: 'rai.model.delete', title: context.l10n.raiModelsDeleteTitle, message: context.l10n.raiModelsDeleteMessage(m.fileName), confirmText: context.l10n.raiModelsDelete, cancelText: context.l10n.raiModelsCancel, destructive: true, ownerId: raiModelsFowId);
                     if (ok) await guard(llm.uninstall);
                   },
                   icon: const Icon(Icons.delete_outline, size: 16),
-                  label: const Text('削除'),
+                  label: Text(context.l10n.raiModelsDelete),
                   style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)),
                 ),
             ]),
@@ -193,15 +194,15 @@ class _EmbeddingTile extends ConsumerWidget {
       decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(RasqSizes.radiusMd), border: Border.all(color: st.ready ? RasqColors.link : scheme.outlineVariant, width: st.ready ? 2 : 1)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          RasqPill(label: 'ローカル', color: RasqColors.link, textColor: Colors.white),
+          RasqPill(label: context.l10n.raiModelsPillLocal, color: RasqColors.link, textColor: Colors.white),
           const SizedBox(width: RasqSpacing.sm),
-          Expanded(child: Text(spec.label, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(spec.displayLabel, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
         ]),
         const SizedBox(height: RasqSpacing.xs),
-        Text('onnxruntime · ${spec.fileName} · 約 ${spec.sizeMb} MB · ${spec.dims} 次元', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
+        Text(context.l10n.raiModelsEmbeddingLine(spec.fileName, spec.sizeMb, spec.dims), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
         const SizedBox(height: RasqSpacing.xs),
         Row(children: [
-          Text('メモリ: ${verdict.label}', style: RasqTypography.caption),
+          Text(context.l10n.raiModelsMemory(verdict.label), style: RasqTypography.caption),
           const SizedBox(width: RasqSpacing.md),
           Text(st.label, key: ValueKey('rai.$tag.phase'), style: RasqTypography.caption.copyWith(color: st.phase == RaiEmbeddingPhase.error ? RasqColors.danger : scheme.onSurfaceVariant)),
         ]),
@@ -210,13 +211,13 @@ class _EmbeddingTile extends ConsumerWidget {
         if (readyNote != null)
           Text(st.ready ? readyNote! : (idleNote ?? ''), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
         else
-          Text(st.ready ? rasqDetail(context, '意味の近さで探します', '検索: ${spec.label}(意味で引く)') : rasqDetail(context, 'いまは語の一致で探します。ダウンロードすると言い換えにも強くなります', '検索: n-gram 代替(語の一致で引く。ダウンロードすると言い換えにも強くなる)'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text(st.ready ? rasqDetail(context, context.l10n.raiModelsSearchSemantic, context.l10n.raiModelsSearchSemanticDetail(spec.displayLabel)) : rasqDetail(context, context.l10n.raiModelsSearchNgram, context.l10n.raiModelsSearchNgramDetail), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: RasqSpacing.sm),
         Wrap(spacing: RasqSpacing.sm, runSpacing: RasqSpacing.xs, children: [
           if (st.phase == RaiEmbeddingPhase.notInstalled || st.phase == RaiEmbeddingPhase.error)
-            FilledButton.icon(key: ValueKey('rai.$tag.download'), onPressed: verdict == RaiRamVerdict.no ? null : () => guard(model.install), icon: const Icon(Icons.download, size: 16), label: const Text('ダウンロード'), style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
+            FilledButton.icon(key: ValueKey('rai.$tag.download'), onPressed: verdict == RaiRamVerdict.no ? null : () => guard(model.install), icon: const Icon(Icons.download, size: 16), label: Text(context.l10n.raiModelsDownload), style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
           if (st.ready || st.phase == RaiEmbeddingPhase.loading)
-            OutlinedButton.icon(key: ValueKey('rai.$tag.delete'), onPressed: () => guard(model.uninstall), icon: const Icon(Icons.delete_outline, size: 16), label: const Text('削除'), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
+            OutlinedButton.icon(key: ValueKey('rai.$tag.delete'), onPressed: () => guard(model.uninstall), icon: const Icon(Icons.delete_outline, size: 16), label: Text(context.l10n.raiModelsDelete), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
         ]),
       ]),
     );
@@ -261,15 +262,15 @@ class _ServerTileState extends ConsumerState<_ServerTile> {
       decoration: BoxDecoration(color: scheme.surfaceContainerHighest.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(child: Text('ローカル推論サーバー', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600))),
-          RasqPill(label: configured ? '接続先あり' : '未設定', color: configured ? RasqColors.link : scheme.surfaceContainerHighest, textColor: configured ? Colors.white : scheme.onSurface),
+          Expanded(child: Text(context.l10n.raiModelsServerTitle, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600))),
+          RasqPill(label: configured ? context.l10n.raiModelsServerConfigured : context.l10n.raiModelsServerNotConfigured, color: configured ? RasqColors.link : scheme.surfaceContainerHighest, textColor: configured ? Colors.white : scheme.onSurface),
         ]),
         const SizedBox(height: RasqSpacing.xs),
-        const RasqCaption('端末のモデルが答えられないとき、ここに聞きます。', detail: 'OpenAI 互換のチャット API(llama-server / vLLM など)。端末内モデルが失敗 / 無応答のとき、質問と近かったリファレンスを添えて渡します。', padding: EdgeInsets.zero),
+        RasqCaption(context.l10n.raiModelsServerCaption, detail: context.l10n.raiModelsServerCaptionDetail, padding: EdgeInsets.zero),
         const SizedBox(height: RasqSpacing.sm),
         RasqInput(key: const ValueKey('rai.server.url'), controller: _url, hintText: 'http://127.0.0.1:8000/v1', onChanged: (s) => setState(() => store.set('serverUrl', s.trim()))),
         const SizedBox(height: RasqSpacing.xs),
-        RasqInput(key: const ValueKey('rai.server.model'), controller: _model, hintText: 'モデル名(省略可)', onChanged: (s) => store.set('serverModel', s.trim())),
+        RasqInput(key: const ValueKey('rai.server.model'), controller: _model, hintText: context.l10n.raiModelsServerModelHint, onChanged: (s) => store.set('serverModel', s.trim())),
       ]),
     );
   }

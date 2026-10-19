@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import 'rai_functions.dart';
 import 'rai_reference.dart';
+import '../../l10n/l10n.dart';
 
 /// 関数優先の自動化 (D-229): 「スキップ」→ 承認 → 手順を **UI を押さずに関数で** 進める。
 ///
@@ -39,53 +40,53 @@ class RaiAutoBinding {
       ];
 }
 
-const raiDestinationLabel = '取り込み先';
-const raiDestinationHome = 'ホームのタイムライン';
-const raiDestinationTendency = 'トレンドの指向性';
-const raiDestinationBoth = '両方';
+const raiDestinationLabel = '取り込み先'; // l10n-ignore
+const raiDestinationHome = 'ホームのタイムライン'; // l10n-ignore
+const raiDestinationTendency = 'トレンドの指向性'; // l10n-ignore
+const raiDestinationBoth = '両方'; // l10n-ignore
 const raiDestinations = [raiDestinationHome, raiDestinationTendency, raiDestinationBoth];
 
 /// 関数リファレンスの id → 呼べる関数 (D-229)。
 const raiAutoBindings = <String, RaiAutoBinding>{
   // 保存済み一覧は「見る」だけ(候補にはしない: 後の検索の語を上書きしないように)。
   'feeds.open': RaiAutoBinding(call: 'feeds.list', fetch: true),
-  'feeds.search': RaiAutoBinding(call: 'feeds.list', args: {'keyword': r'$フィード'}, fetch: true, produces: 'フィード'),
-  'feeds.save': RaiAutoBinding(call: 'feed.save', args: {'feed': r'$フィード'}),
-  'timeline.addFeed': RaiAutoBinding(call: 'timeline.addFeed', args: {'feed': r'$フィード'}, destination: true),
-  'timeline.importFeed': RaiAutoBinding(call: 'timeline.addFeed', args: {'feed': r'$フィード'}, destination: true),
+  'feeds.search': RaiAutoBinding(call: 'feeds.list', args: {'keyword': r'$フィード'}, fetch: true, produces: 'フィード'), // l10n-ignore
+  'feeds.save': RaiAutoBinding(call: 'feed.save', args: {'feed': r'$フィード'}), // l10n-ignore
+  'timeline.addFeed': RaiAutoBinding(call: 'timeline.addFeed', args: {'feed': r'$フィード'}, destination: true), // l10n-ignore
+  'timeline.importFeed': RaiAutoBinding(call: 'timeline.addFeed', args: {'feed': r'$フィード'}, destination: true), // l10n-ignore
   // RASQ リスト (D-348): 探す → 取り込む(ホームの TL だけ。指向性には入れない)。
-  'rasqLists.search': RaiAutoBinding(call: 'rasqLists.search', args: {'keyword': r'$RASQ リスト'}, fetch: true, produces: 'RASQ リスト'),
-  'timeline.addRasqList': RaiAutoBinding(call: 'timeline.addRasqList', args: {'list': r'$RASQ リスト'}),
-  'timeline.importRasqList': RaiAutoBinding(call: 'timeline.addRasqList', args: {'list': r'$RASQ リスト'}),
-  'timeline.excludeWord': RaiAutoBinding(call: 'timeline.excludeWord', args: {'word': r'$ワード'}),
-  'timeline.queryFilter': RaiAutoBinding(call: 'timeline.filterWord', args: {'word': r'$ワード', 'mode': 'include'}),
-  'trend.seed': RaiAutoBinding(call: 'tendency.seed', args: {'source': r'$フィード'}),
+  'rasqLists.search': RaiAutoBinding(call: 'rasqLists.search', args: {'keyword': r'$RASQ リスト'}, fetch: true, produces: 'RASQ リスト'), // l10n-ignore
+  'timeline.addRasqList': RaiAutoBinding(call: 'timeline.addRasqList', args: {'list': r'$RASQ リスト'}), // l10n-ignore
+  'timeline.importRasqList': RaiAutoBinding(call: 'timeline.addRasqList', args: {'list': r'$RASQ リスト'}), // l10n-ignore
+  'timeline.excludeWord': RaiAutoBinding(call: 'timeline.excludeWord', args: {'word': r'$ワード'}), // l10n-ignore
+  'timeline.queryFilter': RaiAutoBinding(call: 'timeline.filterWord', args: {'word': r'$ワード', 'mode': 'include'}), // l10n-ignore
+  'trend.seed': RaiAutoBinding(call: 'tendency.seed', args: {'source': r'$フィード'}), // l10n-ignore
   // コンポーザーを開く手順は post.create(本文つきで開く)に畳む。送信はしない(オートフィルだけ、D-225)。
-  'post.create': RaiAutoBinding(call: 'post.compose', args: {'text': r'$本文'}),
+  'post.create': RaiAutoBinding(call: 'post.compose', args: {'text': r'$本文'}), // l10n-ignore
 };
 
 /// 「任せる」系の文言 (D-229): あれば選択肢を聞かずに候補の先頭で進める。
-final _entrustedRe = RegExp(r'任せ|おまかせ|お任せ|自動で|勝手に|よしなに|よろしく|進めて');
+final _entrustedRe = RegExp(r'任せ|おまかせ|お任せ|自動で|勝手に|よしなに|よろしく|進めて'); // l10n-ignore
 bool raiEntrusted(String question) => _entrustedRe.hasMatch(question);
 
 /// 質問文から入力を抜く (D-229): 「…」 / 『…』 / "…" の引用、ラベルごとの言い回し。見つからなければ null。
 String? raiExtractInput(String label, String question) {
   final q = question.trim();
-  final quoted = [for (final m in RegExp(r'[「『"“]([^」』"”]{1,40})[」』"”]').allMatches(q)) m.group(1)!.trim()];
+  final quoted = [for (final m in RegExp(r'[「『"“]([^」』"”]{1,40})[」』"”]').allMatches(q)) m.group(1)!.trim()]; // l10n-ignore
   switch (label) {
-    case 'フィード':
-      final m = RegExp(r'([\p{L}\p{N}ー・]{1,20}?)(?:の|について|という|に関する|系)?(?:カスタム)?フィード', unicode: true).firstMatch(q);
-      if (m != null && m.group(1)!.isNotEmpty && !RegExp(r'^(カスタム|保存|した|この|その|人気|の)$').hasMatch(m.group(1)!)) return m.group(1);
+    case 'フィード': // l10n-ignore
+      final m = RegExp(r'([\p{L}\p{N}ー・]{1,20}?)(?:の|について|という|に関する|系)?(?:カスタム)?フィード', unicode: true).firstMatch(q); // l10n-ignore
+      if (m != null && m.group(1)!.isNotEmpty && !RegExp(r'^(カスタム|保存|した|この|その|人気|の)$').hasMatch(m.group(1)!)) return m.group(1); // l10n-ignore
       return quoted.firstOrNull;
-    case 'ワード':
-      final m = RegExp(r'([\p{L}\p{N}ー・]{1,20})(?:を|は|の)(?:除外|ミュート|消|落と|見たくない|隠|ブロック)', unicode: true).firstMatch(q);
+    case 'ワード': // l10n-ignore
+      final m = RegExp(r'([\p{L}\p{N}ー・]{1,20})(?:を|は|の)(?:除外|ミュート|消|落と|見たくない|隠|ブロック)', unicode: true).firstMatch(q); // l10n-ignore
       return quoted.firstOrNull ?? m?.group(1);
-    case '本文':
-      final m = RegExp(r'[「『"“]([^」』"”]{1,300})[」』"”]\s*(?:と|って)?\s*(?:投稿|書|送)').firstMatch(q);
+    case '本文': // l10n-ignore
+      final m = RegExp(r'[「『"“]([^」』"”]{1,300})[」』"”]\s*(?:と|って)?\s*(?:投稿|書|送)').firstMatch(q); // l10n-ignore
       return m?.group(1)?.trim() ?? quoted.firstOrNull;
     case raiDestinationLabel:
-      final tendency = RegExp(r'指向性|刺激性|トレンド').hasMatch(q);
-      final home = RegExp(r'タイムライン|TL|ホーム').hasMatch(q);
+      final tendency = RegExp(r'指向性|刺激性|トレンド').hasMatch(q); // l10n-ignore
+      final home = RegExp(r'タイムライン|TL|ホーム').hasMatch(q); // l10n-ignore
       if (tendency && home) return raiDestinationBoth;
       if (tendency) return raiDestinationTendency;
       if (home) return raiDestinationHome;
@@ -168,11 +169,11 @@ class RaiAutoPlan {
       if (s.bound) {
         out.add(s);
       } else if (s.index < last) {
-        out.add(s.with_(status: RaiAutoStatus.skipped, detail: '関数で代替'));
+        out.add(s.with_(status: RaiAutoStatus.skipped, detail: appL10n.raiAutoDetailReplaced));
       } else if (steps[s.index].hasTarget || steps[s.index].inputs.isNotEmpty) {
-        out.add(s.with_(status: RaiAutoStatus.guide, detail: last < 0 ? '関数の対応が無い' : '押す部品は案内で'));
+        out.add(s.with_(status: RaiAutoStatus.guide, detail: last < 0 ? appL10n.raiAutoDetailNoFunction : appL10n.raiAutoDetailGuideParts));
       } else {
-        out.add(s.with_(status: RaiAutoStatus.skipped, detail: '説明だけ'));
+        out.add(s.with_(status: RaiAutoStatus.skipped, detail: appL10n.raiAutoDetailExplanationOnly));
       }
     }
     return RaiAutoPlan(opId: op.id, title: op.index, steps: out, question: question);
@@ -182,14 +183,14 @@ class RaiAutoPlan {
   String describe() {
     final b = StringBuffer();
     if (!hasBound) {
-      b.write('「$title」は関数で代わりにできる手順が無いので、案内(指差し)で進めます。');
+      b.write(appL10n.raiAutoDescribeNoBound(title));
       return b.toString();
     }
-    b.write('「$title」は案内を出さずに私が関数でやります:');
+    b.write(appL10n.raiAutoDescribeHead(title));
     for (final s in steps) {
       final mark = switch (s.status) {
         RaiAutoStatus.skipped => '(${s.detail})',
-        RaiAutoStatus.guide => '(ここからは案内: ${s.detail})',
+        RaiAutoStatus.guide => appL10n.raiAutoDescribeGuideMark(s.detail),
         _ => s.binding == null ? '' : ' → ${s.binding!.call}',
       };
       b.write('\n${s.index + 1}. ${s.text}$mark');
@@ -198,10 +199,10 @@ class RaiAutoPlan {
     if (need.isNotEmpty) {
       final found = [for (final l in need) if (raiExtractInput(l, question) != null) '$l=${raiExtractInput(l, question)}'];
       final ask = [for (final l in need) if (raiExtractInput(l, question) == null) l];
-      if (found.isNotEmpty) b.write('\n質問から: ${found.join('、')}');
-      if (ask.isNotEmpty) b.write(entrusted ? '\n${ask.join('、')} は候補の先頭で進めます(任されているので)' : '\n${ask.join('、')} は実行の途中で選んでもらいます');
+      if (found.isNotEmpty) b.write('\n${appL10n.raiAutoDescribeFromQuestion(found.join(appL10n.raiListSeparator))}');
+      if (ask.isNotEmpty) b.write('\n${entrusted ? appL10n.raiAutoDescribeEntrusted(ask.join(appL10n.raiListSeparator)) : appL10n.raiAutoDescribeAskLater(ask.join(appL10n.raiListSeparator))}');
     }
-    b.write('\nよければ「実行する」を押してください。');
+    b.write('\n${appL10n.raiAutoDescribeConfirm}');
     return b.toString();
   }
 }

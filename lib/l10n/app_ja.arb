@@ -3142,6 +3142,1569 @@
   "@onboardingTourRaiBubble": {
     "description": "RAi のページの絵の吹き出し(利用者の質問の例)"
   },
+  "raiModeInstruction": "インストラクション",
+  "@raiModeInstruction": {
+    "description": "RAi のモード: 操作を教える(RAi がボタンまで移動して指差す)"
+  },
+  "raiModeAssistant": "アシスタント",
+  "@raiModeAssistant": {
+    "description": "RAi のモード: 端末内モデルで答える"
+  },
+  "raiGuideDefaultTitle": "案内",
+  "@raiGuideDefaultTitle": {
+    "description": "一時停止した案内に操作の名前が無いときの題"
+  },
+  "raiHeldDeclined": "実行しませんでした({calls})",
+  "@raiHeldDeclined": {
+    "description": "保留した関数の「やめる」。calls は「 / 」区切りの関数の呼び出し",
+    "placeholders": {
+      "calls": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoDeclined": "わかりました。「{title}」は案内で進めるときに「この手順で案内」を押してください",
+  "@raiAutoDeclined": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoProgress": "自動で進めています({step} / {total}): {text}",
+  "@raiAutoProgress": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoAskingDetail": "{label} を選ぶ",
+  "@raiAutoAskingDetail": {
+    "description": "工程の手順の注記(入力の選択待ち)。先頭が label、空白で区切る(答えを受けるときに先頭の語をラベルとして読む)",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoAskDestination": "「{title}」の取り込み先はどれにしますか？",
+  "@raiAutoAskDestination": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoAskWhich": "{label} はどれにしますか？",
+  "@raiAutoAskWhich": {
+    "description": "label は入力の名前(フィード / RASQ リスト / ワードなど)",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoAskHint": "候補から選ぶか、ほかの語を入れてください",
+  "raiAutoNotFoundDetail": "{label} が見つからない",
+  "@raiAutoNotFoundDetail": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoNotFoundAsk": "{label} が見つかりません。別の {label} で探しますか？",
+  "@raiAutoNotFoundAsk": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoAskWhichCount": "{count, plural, other{{label} はどれにしますか？({count} 件)}}",
+  "@raiAutoAskWhichCount": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiAutoCancelled": "「{title}」の自動化をやめました",
+  "@raiAutoCancelled": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoFailedAt": "「{title}」の {step} 手順目で止まりました: {detail}",
+  "@raiAutoFailedAt": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "step": {
+        "type": "int"
+      },
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoPartlyDone": "{done, plural, other{{done} 手順を関数で進めました。{step} 手順目「{text}」からは押す部品があるので案内します}}",
+  "@raiAutoPartlyDone": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "step": {
+        "type": "int"
+      },
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoDone": "「{title}」を関数で進めました",
+  "@raiAutoDone": {
+    "description": "このあとに「:」と結果の行が続くことがある",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "raiInstructionUnknown": "まだ覚えていない操作です。「投稿」「ログイン」「共有」などで聞いてみてください。",
+  "raiAskChoice": "どれのことですか？ 上の選択肢から選んでください",
+  "raiNoReply": "返事がありませんでした",
+  "raiFailureDevice": "端末内モデル: {message}",
+  "@raiFailureDevice": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFailureFallUp": "フォールアップ: {message}",
+  "@raiFailureFallUp": {
+    "description": "フォールアップ = 端末内モデルが答えられないときのサーバーの推論",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "raiProposalReady": "案内「{title}」を用意しました(下のタイルから始められます)",
+  "@raiProposalReady": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "raiProposalReadyStopAt": "案内「{title}」を {step} 手順目まで進める用意をしました(下のタイルから)",
+  "@raiProposalReadyStopAt": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "step": {
+        "type": "int"
+      }
+    }
+  },
+  "raiHeldNote": "(取得した情報をもとにした操作は、確かめてから実行します: {calls})",
+  "@raiHeldNote": {
+    "placeholders": {
+      "calls": {
+        "type": "String"
+      }
+    }
+  },
+  "raiNoReplyParen": "(返事がありませんでした)",
+  "raiRestartInjecting": "取得した情報({keys})を注入してモデルを再始動します",
+  "@raiRestartInjecting": {
+    "placeholders": {
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoDetailReplaced": "関数で代替",
+  "@raiAutoDetailReplaced": {
+    "description": "工程の手順の注記: 後ろの関数で済むので畳んだ手順"
+  },
+  "raiAutoDetailNoFunction": "関数の対応が無い",
+  "raiAutoDetailGuideParts": "押す部品は案内で",
+  "raiAutoDetailExplanationOnly": "説明だけ",
+  "raiAutoDescribeNoBound": "「{title}」は関数で代わりにできる手順が無いので、案内(指差し)で進めます。",
+  "@raiAutoDescribeNoBound": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoDescribeHead": "「{title}」は案内を出さずに私が関数でやります:",
+  "@raiAutoDescribeHead": {
+    "description": "承認タイルの説明の 1 行目。このあとに手順が 1 行ずつ続く",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoDescribeGuideMark": "(ここからは案内: {detail})",
+  "@raiAutoDescribeGuideMark": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "raiListSeparator": "、",
+  "@raiListSeparator": {
+    "description": "語を並べるときの区切り"
+  },
+  "raiAutoDescribeFromQuestion": "質問から: {inputs}",
+  "@raiAutoDescribeFromQuestion": {
+    "description": "inputs は「ラベル=値」の並び",
+    "placeholders": {
+      "inputs": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoDescribeEntrusted": "{labels} は候補の先頭で進めます(任されているので)",
+  "@raiAutoDescribeEntrusted": {
+    "placeholders": {
+      "labels": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoDescribeAskLater": "{labels} は実行の途中で選んでもらいます",
+  "@raiAutoDescribeAskLater": {
+    "placeholders": {
+      "labels": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAutoDescribeConfirm": "よければ「実行する」を押してください。",
+  "raiProposalHead": "{count, plural, other{「{title}」なら、この順で進めます({count} 手順)}}",
+  "@raiProposalHead": {
+    "description": "アシスタントの提案の 1 行目。このあとに手順が 1 行ずつ続く",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiProposalFunction": "〔{function}〕",
+  "@raiProposalFunction": {
+    "description": "手順の行の末尾の関数 id",
+    "placeholders": {
+      "function": {
+        "type": "String"
+      }
+    }
+  },
+  "raiProposalInputs": " 入力: {inputs}",
+  "@raiProposalInputs": {
+    "description": "先頭の空白も文言のうち",
+    "placeholders": {
+      "inputs": {
+        "type": "String"
+      }
+    }
+  },
+  "raiProposalPresets": " 固定: {presets}",
+  "@raiProposalPresets": {
+    "description": "先頭の空白も文言のうち。presets は「名前=値」の空白区切り",
+    "placeholders": {
+      "presets": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModeSemantics": "RAi モード",
+  "@raiModeSemantics": {
+    "description": "モードの切り替えの読み上げの名前"
+  },
+  "raiAskButton": "質問する",
+  "raiInputHint": "困ったとき、お手伝いします！",
+  "@raiInputHint": {
+    "description": "RAi の入力欄のヒント"
+  },
+  "raiInputPredicted": "{prediction}(スペースで入力)",
+  "@raiInputPredicted": {
+    "description": "空の入力欄に薄く出す予測。prediction は予測した質問",
+    "placeholders": {
+      "prediction": {
+        "type": "String"
+      }
+    }
+  },
+  "raiCollapse": "畳む",
+  "raiExpand": "広げる",
+  "raiAskMore": "さらに尋ねる",
+  "raiHistoryClose": "履歴を閉じる",
+  "raiHistory": "発言の履歴",
+  "raiClose": "RAi を閉じる",
+  "raiNext": "次へ",
+  "raiDone": "了解(閉じる)",
+  "raiSpeechClose": "閉じる",
+  "raiHistoryEmpty": "まだ発言はありません",
+  "raiCopy": "コピー",
+  "raiCopied": "コピーしました",
+  "raiChatSuspended": "案内を一時停止中({step} / {total} 手順目)。戻ると続きます。",
+  "@raiChatSuspended": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "raiChatResume": "続きへ",
+  "raiChatHeadline": "マクロとか、お任せください！",
+  "raiChatIntro": "操作を聞くと、RAi がボタンを指差して教えます。",
+  "raiChatIntroDetail": "インストラクション: 操作を聞くと RAi がボタンまで移動して指差します。\nアシスタント: 端末内モデルで答えます。モデルはバーのチップから選べます(マクロは第二期)。",
+  "@raiChatIntroDetail": {
+    "description": "開発者モードの詳しい説明"
+  },
+  "raiChatRecent": "最近の質問",
+  "raiChatRejectCandidates": "これじゃない(候補を外して答え直す)",
+  "raiChatProposalTitle": "{steps, plural, other{{title} · {steps} 手順}}",
+  "@raiChatProposalTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "steps": {
+        "type": "int"
+      }
+    }
+  },
+  "raiChatSkip": "スキップ",
+  "raiChatGuide": "この手順で案内",
+  "raiChatGuideTitle": "案内「{title}」",
+  "@raiChatGuideTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "raiChatTrace": "工程",
+  "raiChatShowGraph": "グラフビューで表示",
+  "raiChatApproveHeld": "この操作を実行しますか？(取得した情報から出た操作です)",
+  "raiChatApprove": "RAi に任せますか？",
+  "raiChatDecline": "やめる",
+  "raiChatRun": "実行する",
+  "raiHomeSidebarSemantics": "RAi サイドバー",
+  "raiHomeClose": "閉じる",
+  "raiHomeNewConversation": "新しい会話",
+  "raiHomeHistory": "会話の履歴",
+  "raiHomeCurrentConversation": "{count, plural, other{いまの会話 · {count} 件}}",
+  "@raiHomeCurrentConversation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiHomeConversationSubtitle": "{count, plural, other{{when} · {count} 件}}",
+  "@raiHomeConversationSubtitle": {
+    "description": "when は会話を始めた日時(M/d HH:mm)",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiHomeDelete": "削除",
+  "raiHomeHistoryEmpty": "まだありません。質問すると、ここに会話が残ります。",
+  "raiHomeOther": "その他",
+  "raiAchievementsTitle": "アチーブメント",
+  "raiAchievementsProgress": "{unlocked} / {total} 達成",
+  "@raiAchievementsProgress": {
+    "placeholders": {
+      "unlocked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "raiHomeMacro": "マクロ",
+  "raiHomeMacroSoon": "準備中",
+  "raiBarSemantics": "RAi バー",
+  "raiAskCancel": "やめる",
+  "raiAskInputHint": "{label}を入れる",
+  "@raiAskInputHint": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAskInputOtherHint": "ほかの{label}を入れる",
+  "@raiAskInputOtherHint": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "raiAskDone": "決定",
+  "raiAchievementsStats": "インストラクション {instructions} 回 · アシスタント {assistant} 回(アプリの話 {app} 回)· 完走 {completed} 回 · 聞き直し {repeated} 回",
+  "@raiAchievementsStats": {
+    "placeholders": {
+      "instructions": {
+        "type": "int"
+      },
+      "assistant": {
+        "type": "int"
+      },
+      "app": {
+        "type": "int"
+      },
+      "completed": {
+        "type": "int"
+      },
+      "repeated": {
+        "type": "int"
+      }
+    }
+  },
+  "raiAchievementAsk1Title": "はじめての質問",
+  "raiAchievementAsk1Description": "インストラクションを 1 回聞いた",
+  "raiAchievementAsk10Title": "聞き上手",
+  "raiAchievementAsk10Description": "インストラクションを 10 回聞いた",
+  "raiAchievementAsk50Title": "RAi の常連",
+  "raiAchievementAsk50Description": "インストラクションを 50 回聞いた",
+  "raiAchievementApp5Title": "アプリ通",
+  "raiAchievementApp5Description": "アシスタントとアプリについて 5 回話した",
+  "raiAchievementChat20Title": "おしゃべり",
+  "raiAchievementChat20Description": "アシスタントに 20 回話しかけた",
+  "raiAchievementDone1Title": "一発で完走",
+  "raiAchievementDone1Description": "案内を最後の手順まで進めた",
+  "raiAchievementDone10Title": "完走マスター",
+  "raiAchievementDone10Description": "案内を 10 回最後まで進めた",
+  "raiAchievementAgain3Title": "復習中",
+  "raiAchievementAgain3Description": "同じ操作を 3 回聞き直した",
+  "raiAchievementAuto1Title": "おまかせ",
+  "raiAchievementAuto1Description": "「スキップ」で RAi に任せた",
+  "raiTracePortPrev": "前",
+  "@raiTracePortPrev": {
+    "description": "工程グラフのノードの入力の名前"
+  },
+  "raiTracePortState": "状態",
+  "raiTracePortFunction": "関数",
+  "raiTracePortResult": "結果",
+  "raiTracePortNext": "次",
+  "raiTraceStatusDone": "関数で済",
+  "raiTraceStatusSkipped": "畳んだ",
+  "raiTraceStatusGuide": "案内へ",
+  "raiTraceStatusFailed": "失敗",
+  "raiTraceStatusAsking": "選択待ち",
+  "raiTraceStatusRunning": "実行中",
+  "raiTraceStatusPending": "未実行",
+  "raiTraceCaption": "{count, plural, other{工程 {count} 手順}}",
+  "@raiTraceCaption": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiFunctionsSettingMissing": "「{area}」に「{key}」という設定はありません(ある: {keys})",
+  "@raiFunctionsSettingMissing": {
+    "description": "RAi の関数 settings.get / set の結果(ユーザーにも注記で見える)。keys は「, 」区切りのある設定のキー",
+    "placeholders": {
+      "area": {
+        "type": "String"
+      },
+      "key": {
+        "type": "String"
+      },
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsSettingNotWritable": "「{key}」は画面から書ける設定ではありません",
+  "@raiFunctionsSettingNotWritable": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsSettingNeedsPassword": "「{key}」はパスワードが要るので RAi からは書きません",
+  "@raiFunctionsSettingNeedsPassword": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsSettingLocked": "「{key}」は操作禁止タグが付いているので RAi からは書きません",
+  "@raiFunctionsSettingLocked": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsFoldEmpty": "{head}: 該当なし",
+  "@raiFunctionsFoldEmpty": {
+    "description": "関数の取得結果の一覧が空のとき。head は一覧の見出し",
+    "placeholders": {
+      "head": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsFoldHead": "{total, plural, other{{head} {total} 件中 {shown} 件:}}",
+  "@raiFunctionsFoldHead": {
+    "description": "関数の取得結果の一覧の見出し(このあとに 1 行ずつ続く)。total = 全件、shown = 載せた件数",
+    "placeholders": {
+      "head": {
+        "type": "String"
+      },
+      "total": {
+        "type": "int"
+      },
+      "shown": {
+        "type": "int"
+      }
+    }
+  },
+  "raiFunctionsUnsupported": "この SNS では使えません({name})",
+  "@raiFunctionsUnsupported": {
+    "description": "name は関数の名前(posts.fetch など)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotAutomatable": "{name} は自動化不可です(送信はユーザーが押します)。代わりに {alt}: {result}",
+  "@raiFunctionsNotAutomatable": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "alt": {
+        "type": "String"
+      },
+      "result": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsUnknown": "知らない関数です: {name}",
+  "@raiFunctionsUnknown": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsFailed": "{name} に失敗: {error}",
+  "@raiFunctionsFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotLoggedInSns": "SNS にログインしていません",
+  "raiFunctionsLineReactions": "{count, plural, other{(反応 {count})}}",
+  "@raiFunctionsLineReactions": {
+    "description": "投稿 1 行の末尾に付ける反応の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiFunctionsPostsNone": "該当する投稿はありませんでした",
+  "raiFunctionsPostsHead": "{count, plural, other{投稿 {count} 件({total} 件中):}}",
+  "@raiFunctionsPostsHead": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "raiFunctionsReferenceOperation": "操作「{title}」({id}): {steps}",
+  "@raiFunctionsReferenceOperation": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      },
+      "steps": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsReferenceFunction": "関数 {id}: {does}",
+  "@raiFunctionsReferenceFunction": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "does": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsReferenceParams": " 引数: {params}",
+  "@raiFunctionsReferenceParams": {
+    "description": "先頭の空白も文言のうち",
+    "placeholders": {
+      "params": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsReferenceParamInput": "入力",
+  "raiFunctionsReferenceParamFixed": "固定={value}",
+  "@raiFunctionsReferenceParamFixed": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsReferenceMissing": "リファレンスに {id} はありません",
+  "@raiFunctionsReferenceMissing": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsActionMissing": "アクション {id} はありません",
+  "@raiFunctionsActionMissing": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsActionNotAllowed": "「{label}」は自動化が許可されていません(RAi からは実行しません)。代わりに案内(この手順で案内)で進めるか、ユーザーが押してください",
+  "@raiFunctionsActionNotAllowed": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsActionDone": "{label} を実行しました({state})",
+  "@raiFunctionsActionDone": {
+    "description": "state は「済」か「未」",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsActionDoneYes": "済",
+  "raiFunctionsActionDoneNo": "未",
+  "raiFunctionsAstellNoRooms": "ASTell のルームはありません",
+  "raiFunctionsAstellRooms": "ASTell のルーム: {rooms}",
+  "@raiFunctionsAstellRooms": {
+    "placeholders": {
+      "rooms": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsAstellNoTitle": "題名がありません",
+  "raiFunctionsAstellCreated": "ASTell「{title}」を作りました [{id}]",
+  "@raiFunctionsAstellCreated": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotifReaction": "{who} がリアクション{reaction}",
+  "@raiFunctionsNotifReaction": {
+    "description": "reaction は「(絵文字)」か空",
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "reaction": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotifRepost": "{who} がリノート",
+  "@raiFunctionsNotifRepost": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotifQuote": "{who} が引用",
+  "@raiFunctionsNotifQuote": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotifReply": "{who} が返信",
+  "@raiFunctionsNotifReply": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotifMention": "{who} がメンション",
+  "@raiFunctionsNotifMention": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotifFollow": "{who} がフォロー",
+  "@raiFunctionsNotifFollow": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotifFollowRequest": "{who} がフォロー申請",
+  "@raiFunctionsNotifFollowRequest": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotifFollowAccepted": "{who} がフォロー承認",
+  "@raiFunctionsNotifFollowAccepted": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotifListAdded": "{who} がリストに追加",
+  "@raiFunctionsNotifListAdded": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotifPollEnded": "アンケート終了",
+  "raiFunctionsNotifTimer": "タイマー通知",
+  "raiFunctionsNotifVc": "ASTell 通知",
+  "raiFunctionsNotifSystem": "システム通知",
+  "raiFunctionsNotifOther": "その他の通知",
+  "raiFunctionsUnreadMark": "(未読)",
+  "raiFunctionsMissingPostId": "投稿 id (id=) がありません",
+  "raiFunctionsMissingPostArg": "投稿 id (post=) がありません",
+  "raiFunctionsThreadReply": "返信: {line}",
+  "@raiFunctionsThreadReply": {
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsHeadThread": "スレッド",
+  "raiFunctionsHeadReactions": "反応",
+  "raiFunctionsHeadReposters": "リノートした人",
+  "raiFunctionsHeadQuotes": "引用",
+  "raiFunctionsHeadFavorites": "お気に入り",
+  "raiFunctionsHeadReacted": "リアクション済み",
+  "raiFunctionsMe": "自分: {user} プラグイン={plugin}",
+  "@raiFunctionsMe": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      },
+      "plugin": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsUserIdOrHandle": "id= か handle= を指定してください",
+  "raiFunctionsNotFound": "見つかりませんでした",
+  "raiFunctionsUserCounts": " フォロワー{followers} フォロー{following}",
+  "@raiFunctionsUserCounts": {
+    "description": "先頭の空白も文言のうち。数が分からなければ ?",
+    "placeholders": {
+      "followers": {
+        "type": "String"
+      },
+      "following": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsMissingUser": "user id (user=) がありません",
+  "raiFunctionsHeadUserPosts": "投稿({filter})",
+  "@raiFunctionsHeadUserPosts": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsMissingKeyword": "keyword がありません",
+  "raiFunctionsHeadUserSearch": "ユーザー検索「{keyword}」",
+  "@raiFunctionsHeadUserSearch": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsHeadFollowing": "フォロー中",
+  "raiFunctionsHeadFollowers": "フォロワー",
+  "raiFunctionsRelFollowing": "フォロー中",
+  "raiFunctionsRelFollowedBy": "フォローされています",
+  "raiFunctionsRelRequested": "申請中",
+  "raiFunctionsRelMuted": "ミュート中",
+  "raiFunctionsRelBlocked": "ブロック中",
+  "raiFunctionsRelBlockedBy": "ブロックされています",
+  "raiFunctionsRelNone": "なし",
+  "raiFunctionsRelation": "関係: {flags}",
+  "@raiFunctionsRelation": {
+    "placeholders": {
+      "flags": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsRequestLine": "{user} [申請 {id}]",
+  "@raiFunctionsRequestLine": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsHeadModeration": "モデレーション({kind})",
+  "@raiFunctionsHeadModeration": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsHeadNotifications": "{unread, plural, other{通知(未読 {unread} 件)}}",
+  "@raiFunctionsHeadNotifications": {
+    "placeholders": {
+      "unread": {
+        "type": "int"
+      }
+    }
+  },
+  "raiFunctionsNotificationsRead": "通知を既読にしました",
+  "raiFunctionsTrendLine": "{count, plural, other{{tag}({count} 人)}}",
+  "@raiFunctionsTrendLine": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiFunctionsHeadTrends": "トレンド",
+  "raiFunctionsListLine": "{count, plural, other{{name} [{id}]({count} 人)}}",
+  "@raiFunctionsListLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiFunctionsHeadLists": "リスト",
+  "raiFunctionsMissingList": "list id (list=) がありません",
+  "raiFunctionsHeadListMembers": "リストのメンバー",
+  "raiFunctionsClipCount": "{count, plural, other{({count} 件)}}",
+  "@raiFunctionsClipCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiFunctionsHeadClips": "クリップ",
+  "raiFunctionsMissingClip": "clip id (clip=) がありません",
+  "raiFunctionsHeadClipNotes": "クリップの中身",
+  "raiFunctionsHeadFeeds": "フィード",
+  "raiFunctionsDmUnread": "(未読 {count})",
+  "@raiFunctionsDmUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiFunctionsHeadEmoji": "絵文字「{keyword}」",
+  "@raiFunctionsHeadEmoji": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsUnfollowed": "フォローを外しました",
+  "raiFunctionsFollowRequested": "フォロー申請しました",
+  "raiFunctionsFollowed": "フォローしました",
+  "raiFunctionsListUserArgs": "list= と user= を指定してください",
+  "raiFunctionsListAdded": "リストに追加しました",
+  "raiFunctionsListRemoved": "リストから外しました",
+  "raiFunctionsMissingName": "名前 (name=) がありません",
+  "raiFunctionsListCreated": "リスト「{name}」を作りました [{id}]",
+  "@raiFunctionsListCreated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsClipPostArgs": "clip= と post= を指定してください",
+  "raiFunctionsClipAdded": "クリップに追加しました",
+  "raiFunctionsClipRemoved": "クリップから外しました",
+  "raiFunctionsClipCreated": "クリップ「{name}」を作りました [{id}]",
+  "@raiFunctionsClipCreated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsAreaKeyArgs": "area= と key= を指定してください",
+  "raiFunctionsSettingsPageMissing": "設定ページ「{area}」はありません",
+  "@raiFunctionsSettingsPageMissing": {
+    "placeholders": {
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsAreaKeyValueArgs": "area= と key= と value= を指定してください",
+  "raiFunctionsSettingBadValue": "「{key}」に「{value}」は入れられません(今の値: {current})",
+  "@raiFunctionsSettingBadValue": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsSettingSet": "{area}.{key} を {value} にしました",
+  "@raiFunctionsSettingSet": {
+    "placeholders": {
+      "area": {
+        "type": "String"
+      },
+      "key": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsMissingText": "本文(text=)がありません",
+  "raiFunctionsMissingRoom": "ルーム id (room=) がありません",
+  "raiFunctionsDmRoomMissing": "DM ルーム {id} はありません",
+  "@raiFunctionsDmRoomMissing": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsComposeFilled": "{target}の下書きをコンポーザーに入れました(送信はしていません)",
+  "@raiFunctionsComposeFilled": {
+    "description": "target はコンポーザーの題(返信 / 引用など)",
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsFeedNotFound": "フィード「{feed}」が見つかりません",
+  "@raiFunctionsFeedNotFound": {
+    "placeholders": {
+      "feed": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsFeedSaved": "{count, plural, other{「{name}」を保存しました(保存済み {count} 件)}}",
+  "@raiFunctionsFeedSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiFunctionsFeedUnsaved": "{count, plural, other{「{name}」を保存から外しました(保存済み {count} 件)}}",
+  "@raiFunctionsFeedUnsaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "raiFunctionsNoBluesky": "Bluesky のアカウントがありません(カスタムフィードは Bluesky のみ)",
+  "raiFunctionsFeedAlreadyHome": "「{name}」はもうホームのタイムラインに入っています",
+  "@raiFunctionsFeedAlreadyHome": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsFeedAddedHome": "「{name}」({account})をホームのタイムラインに取り込みました",
+  "@raiFunctionsFeedAddedHome": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotLoggedInRasq": "RASQ アカウントにログインしていません",
+  "raiFunctionsRasqListMine": "自分",
+  "raiFunctionsRasqListUnfetchable": "取り込めない",
+  "raiFunctionsRasqListFollowing": "フォロー中",
+  "raiFunctionsRasqListLine": "{count, plural, other{{name}({count}人・{state})}}",
+  "@raiFunctionsRasqListLine": {
+    "description": "このあとに「 — 説明」と「 [id]」が続く",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsHeadRasqLists": "RASQ リスト",
+  "raiFunctionsMissingListArg": "リスト(list=)がありません",
+  "raiFunctionsRasqListNotFound": "RASQ リスト「{query}」が見つかりません",
+  "@raiFunctionsRasqListNotFound": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsMissingWord": "ワード(word=)がありません",
+  "raiFunctionsNotLoggedIn": "ログインしていません",
+  "raiFunctionsWordExcludeAlready": "「{word}」の除外はもう入っています",
+  "@raiFunctionsWordExcludeAlready": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsWordIncludeAlready": "「{word}」の絞り込みはもう入っています",
+  "@raiFunctionsWordIncludeAlready": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsWordExcluded": "「{word}」を含む投稿を {scope} のタイムラインから除外するようにしました",
+  "@raiFunctionsWordExcluded": {
+    "description": "scope は home / social / local / global",
+    "placeholders": {
+      "word": {
+        "type": "String"
+      },
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsWordIncluded": "「{word}」を含む投稿だけを {scope} のタイムラインに通すようにしました",
+  "@raiFunctionsWordIncluded": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      },
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsFeedKindLabel": "フィード",
+  "raiFunctionsHeadFeedTimeline": "フィード TL",
+  "raiFunctionsPageList": "リスト {name} [{id}]",
+  "@raiFunctionsPageList": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsPageFeed": "フィード {name} [{uri}]",
+  "@raiFunctionsPageFeed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "uri": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsHeadListsPage": "リストページ",
+  "raiFunctionsHeadNotificationsPage": "通知",
+  "raiFunctionsHeadHomeTimeline": "ホーム TL",
+  "raiFunctionsMissingSource": "取り込み元(source=)がありません",
+  "raiFunctionsSeedNoPosts": "「{label}」に投稿が無いので特徴語を取れません",
+  "@raiFunctionsSeedNoPosts": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsSeedNoWords": "「{label}」から特徴語を取れませんでした",
+  "@raiFunctionsSeedNoWords": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsSeedWordSeparator": "、",
+  "raiFunctionsSeedAdded": "「{label}」の特徴語({words})をトレンドの指向性(好きなジャンル)に足しました",
+  "@raiFunctionsSeedAdded": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "words": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsMissingQuery": "検索語(q=)がありません",
+  "raiFunctionsHeadWeb": "web「{query}」",
+  "@raiFunctionsHeadWeb": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "raiFunctionsNotAutomatableMark": "(自動化不可)",
+  "raiFunctionsHeadActions": "アクション",
+  "raiModelsTitle": "モデル",
+  "@raiModelsTitle": {
+    "description": "RAi のモデルを選ぶ FOW の題"
+  },
+  "raiModelsClose": "閉じる",
+  "raiModelsRamUnknown": "RAM: 不明",
+  "raiModelsRamFree": "(空き {gb} GB)",
+  "@raiModelsRamFree": {
+    "description": "gb は小数 1 桁の空きメモリ",
+    "placeholders": {
+      "gb": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsCaption": "{codename} = この端末で動くモデル。{ram}",
+  "@raiModelsCaption": {
+    "description": "ram は「RAM: 8.0 GB(空き …)」の文",
+    "placeholders": {
+      "codename": {
+        "type": "String"
+      },
+      "ram": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsCaptionDetail": "{codename} = 端末内で動くモデル({label})。{ram}",
+  "@raiModelsCaptionDetail": {
+    "description": "開発者モードの詳しい説明",
+    "placeholders": {
+      "codename": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      },
+      "ram": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsSectionLocal": "ローカル",
+  "raiModelsSectionEmbedding": "RAi の検索と投稿の埋め込み",
+  "raiModelsPostVisionReady": "関連 TL と TL のアルゴリズムで、投稿の画像も比べます",
+  "raiModelsPostVisionIdle": "関連 TL と TL のアルゴリズムで、投稿の本文に加えて画像も比べられるようになります(文のモデルも入れてください)",
+  "raiModelsSectionEmoji": "絵文字の画像検索(2 つとも要ります)",
+  "raiModelsEmojiTextReady": "打った文で、絵文字の絵を探せます",
+  "raiModelsEmojiTextIdle": "絵文字の絵を、意味で探せるようになります(画像側も入れてください)",
+  "raiModelsEmojiVisionReady": "絵文字の絵を、裏で少しずつ読み込みます(サーバーごとに 1 回)",
+  "raiModelsEmojiVisionIdle": "名前が意味を持たない絵文字も、絵の中身で探せるようになります",
+  "raiModelsSectionCloud": "クラウド(端末で答えられないとき)",
+  "raiModelsCompletionCaption": "完遂率 = 案内や返答が最後までうまくいった割合です。",
+  "raiModelsCompletionCaptionDetail": "完遂率 = 操作の案内 / 返答が最後まで成立した割合の集計(35B 未満のモデルだけ集計、デモでは「-%」)。",
+  "@raiModelsCompletionCaptionDetail": {
+    "description": "開発者モードの詳しい説明"
+  },
+  "raiModelsRateExcluded": "集計外",
+  "raiModelsNotConnected": "未接続",
+  "raiModelsPhaseNotInstalled": "未ダウンロード",
+  "raiModelsPhaseDownloading": "ダウンロード中 {percent}%",
+  "@raiModelsPhaseDownloading": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "raiModelsPhaseReady": "準備完了",
+  "raiModelsPhaseLoading": "読み込み中",
+  "raiModelsPhaseGenerating": "生成中",
+  "raiModelsPhaseUnavailable": "使えません",
+  "raiModelsPillCloud": "クラウド",
+  "raiModelsPillLocal": "ローカル",
+  "raiModelsCloudLine": "{label} · {params}B · クラウド",
+  "@raiModelsCloudLine": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "params": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsCompletionRate": "完遂率 {rate}",
+  "@raiModelsCompletionRate": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsMemoryNotNeeded": "メモリ: 端末不要",
+  "raiModelsMemory": "メモリ: {verdict}",
+  "@raiModelsMemory": {
+    "placeholders": {
+      "verdict": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsUse": "使う",
+  "raiModelsExtract": "展開(同梱)",
+  "raiModelsDownload": "ダウンロード",
+  "raiModelsRelease": "メモリを解放",
+  "raiModelsDeleteTitle": "モデルを削除しますか",
+  "raiModelsDeleteMessage": "{file} を端末から消します。",
+  "@raiModelsDeleteMessage": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsDelete": "削除",
+  "raiModelsCancel": "キャンセル",
+  "raiModelsEmbeddingLine": "onnxruntime · {file} · 約 {size} MB · {dims} 次元",
+  "@raiModelsEmbeddingLine": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      },
+      "size": {
+        "type": "int"
+      },
+      "dims": {
+        "type": "int"
+      }
+    }
+  },
+  "raiModelsSearchSemantic": "意味の近さで探します",
+  "raiModelsSearchSemanticDetail": "検索: {label}(意味で引く)",
+  "@raiModelsSearchSemanticDetail": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsSearchNgram": "いまは語の一致で探します。ダウンロードすると言い換えにも強くなります",
+  "raiModelsSearchNgramDetail": "検索: n-gram 代替(語の一致で引く。ダウンロードすると言い換えにも強くなる)",
+  "raiModelsServerTitle": "ローカル推論サーバー",
+  "raiModelsServerConfigured": "接続先あり",
+  "raiModelsServerNotConfigured": "未設定",
+  "raiModelsServerCaption": "端末のモデルが答えられないとき、ここに聞きます。",
+  "raiModelsServerCaptionDetail": "OpenAI 互換のチャット API(llama-server / vLLM など)。端末内モデルが失敗 / 無応答のとき、質問と近かったリファレンスを添えて渡します。",
+  "@raiModelsServerCaptionDetail": {
+    "description": "開発者モードの詳しい説明"
+  },
+  "raiModelsServerModelHint": "モデル名(省略可)",
+  "raiModelsRamOk": "動作可",
+  "@raiModelsRamOk": {
+    "description": "モデルの大きさと端末のメモリの見立て"
+  },
+  "raiModelsRamTight": "ぎりぎり",
+  "raiModelsRamNo": "メモリ不足",
+  "raiModelsRamUnknownVerdict": "不明",
+  "raiModelsFallUpNotConnected": "フォールアップ先(サーバー側)が未接続です",
+  "raiModelsServerHttpError": "推論サーバー HTTP {status}",
+  "@raiModelsServerHttpError": {
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "raiModelsServerNoReply": "推論サーバーから返事がありませんでした",
+  "raiModelsServerUnreachable": "推論サーバーに届きません: {error}",
+  "@raiModelsServerUnreachable": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsLlmUnavailableHere": "この環境では端末内モデルを使えません",
+  "raiModelsLlamaFetching": "llama.cpp のランタイム({tag})を取得中",
+  "@raiModelsLlamaFetching": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsLlamaMissingIos": "llama.cpp が組み込まれていません(Runner に llama.xcframework を追加)",
+  "raiModelsLlamaMissing": "llama.cpp のライブラリがありません",
+  "raiModelsLlamaFetchFailed": "llama.cpp のランタイムを取得できません(HTTP {status})",
+  "@raiModelsLlamaFetchFailed": {
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "raiModelsStateCheckFailed": "モデルの状態を確認できません: {error}",
+  "@raiModelsStateCheckFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsExtracting": "同梱モデルを展開中",
+  "raiModelsExtractTooLarge": "この端末では同梱モデルを展開できません(ダウンロードしてください)",
+  "raiModelsExtractFailed": "展開に失敗しました: {error}",
+  "@raiModelsExtractFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsDownloadFailed": "ダウンロードに失敗しました: {error}",
+  "@raiModelsDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsNotDownloaded": "端末内モデル({codename})がまだダウンロードされていません",
+  "@raiModelsNotDownloaded": {
+    "placeholders": {
+      "codename": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsDeviceUnavailable": "端末内モデルを使えません",
+  "raiModelsFileMissing": "モデルファイルがありません: {path}",
+  "@raiModelsFileMissing": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsTimeoutFirstToken": "端末内モデルが 30 秒返事をしませんでした",
+  "raiModelsTimeoutOverall": "端末内モデルの返事が長すぎるので打ち切りました",
+  "raiModelsOnlyThinking": "端末内モデルから返事がありませんでした(思考だけで終わった可能性)",
+  "raiModelsGenerateFailed": "生成に失敗しました: {error}",
+  "@raiModelsGenerateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsHintSystemPolicy": "「system policy」= サンドボックス / ライブラリ検証で拒否。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください",
+  "@raiModelsHintSystemPolicy": {
+    "description": "macOS で llama.cpp を読めないときに添える案内(前に改行が入る)"
+  },
+  "raiModelsHintGatekeeper": "Gatekeeper に止められた場合: 「システム設定 > プライバシーとセキュリティ」で許可するか、Application Support/llama_cpp の dylib に xattr -dr com.apple.quarantine を実行してください",
+  "@raiModelsHintGatekeeper": {
+    "description": "macOS で llama.cpp を読めないときに添える案内(前に改行が入る)"
+  },
+  "raiModelsLoadFailedLlama": "モデルを読み込めません(llama.cpp): {error}",
+  "@raiModelsLoadFailedLlama": {
+    "description": "error のあとに案内が続くことがある",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsLoadFailed": "モデルを読み込めません: {error}",
+  "@raiModelsLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsEmbeddingRasqText": "RASQ MiniLM(文)",
+  "@raiModelsEmbeddingRasqText": {
+    "description": "埋め込みモデルの名前"
+  },
+  "raiModelsEmbeddingMiniLmL12": "MiniLM-L12 多言語(paraphrase, int8)",
+  "raiModelsEmbeddingRasqVision": "RASQ MobileNet(投稿の画像)",
+  "raiModelsEmbeddingSiglipText": "SigLIP2 base(テキスト塔・int8)",
+  "raiModelsEmbeddingSiglipVision": "SigLIP2 base(画像側・int8)",
+  "raiModelsEmbeddingFailed": "失敗: {message}",
+  "@raiModelsEmbeddingFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsEmbeddingUnavailableHere": "この環境では端末内の埋め込みモデルを使えません",
+  "raiModelsCentralNotConfigured": "RASQ サーバーの接続先が未設定です",
+  "raiModelsLoadFailedOnnx": "モデルを読み込めません(onnxruntime): {error}",
+  "@raiModelsLoadFailedOnnx": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsWebDisabled": "web 検索はまだ使えません",
+  "raiModelsWebNoKey": "Brave Search の鍵が設定されていません",
+  "raiModelsWebAnswerTitle": "web の答え",
+  "@raiModelsWebAnswerTitle": {
+    "description": "web 検索の答えを 1 件の結果として出すときの題"
+  },
+  "raiModelsWebFailed": "検索に失敗: {error}",
+  "@raiModelsWebFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "raiModelsNoteNotInstalled": "未DL",
+  "@raiModelsNoteNotInstalled": {
+    "description": "RAi バーのモデルのチップの横の短い状態(未ダウンロード)"
+  },
   "settingsActionBarTitle": "プラグインボタン",
   "settingsActionBarBackTooltip": "戻る",
   "settingsActionBarBundleManual": "手動配置(バーの (+) から足すまで出ない)",

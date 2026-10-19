@@ -346,7 +346,7 @@ void main() {
 
     test('実行できる関数はどれもまとまりを持つ / functions.jsonl の全行が既知のまとまり', () {
       final src = File('lib/features/rai/rai_functions.dart').readAsStringSync();
-      final body = src.substring(src.indexOf('Future<RaiFunctionResult> run(RaiFunctionCall c)'), src.indexOf("return RaiFunctionResult(name: c.name, text: '知らない関数です"));
+      final body = src.substring(src.indexOf('Future<RaiFunctionResult> run(RaiFunctionCall c)'), src.indexOf('return RaiFunctionResult(name: c.name, text: appL10n.raiFunctionsUnknown('));
       final cases = [for (final m in RegExp(r"case '([\w.]+)':").allMatches(body)) m.group(1)!];
       expect(cases.length, greaterThan(40));
       for (final fn in [...cases, ...raiNonAutomatable.keys]) {

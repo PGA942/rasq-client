@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'rai_reference.dart';
+import '../../l10n/l10n.dart';
 
 /// リファレンス検索の埋め込みモデル (D-190): SigLIP2 のテキスト塔(int8 ONNX、283 MB)を端末に
 /// ダウンロードして onnxruntime で回す。トークナイザー(4 MB)はアプリに同梱。
@@ -47,7 +48,18 @@ class RaiEmbeddingSpec {
   final String id;
   final RaiEmbeddingKind kind;
   final int maxLen;
+  /// 名前の既定(日本語)。画面には [displayLabel](表示の言語)を出す。
   final String label;
+
+  /// 画面に出す名前(表示の言語)。知らない id は [label]。
+  String get displayLabel => switch (id) {
+        'rasq-minilm-text-int8' => appL10n.raiModelsEmbeddingRasqText,
+        'minilm-l12-multilingual-int8' => appL10n.raiModelsEmbeddingMiniLmL12,
+        'rasq-mobilenet-vision-int8' => appL10n.raiModelsEmbeddingRasqVision,
+        'siglip2-base-text-int8' => appL10n.raiModelsEmbeddingSiglipText,
+        'siglip2-base-vision-int8' => appL10n.raiModelsEmbeddingSiglipVision,
+        _ => label,
+      };
   final String fileName;
   final String url;
   final int sizeMb;
@@ -62,7 +74,7 @@ class RaiEmbeddingSpec {
 /// 投稿の画像の塔([postVisionEmbeddingSpec])と同じ空間なので、投稿の本文と画像を比べられる。RASQ Central が配る。
 const raiEmbeddingSpec = RaiEmbeddingSpec(
   id: 'rasq-minilm-text-int8',
-  label: 'RASQ MiniLM(文)',
+  label: 'RASQ MiniLM(文)', // l10n-ignore
   fileName: 'text_tower_uint8.onnx',
   url: '',
   centralPath: 'minilm-mobilenet/onnx/text_tower_uint8.onnx',
@@ -76,7 +88,7 @@ const raiEmbeddingSpec = RaiEmbeddingSpec(
 /// 以前の既定 (D-193): paraphrase-multilingual-MiniLM-L12-v2(多言語の文埋め込み、int8 118 MB)。差し替え用に残す。
 const raiMiniLmL12EmbeddingSpec = RaiEmbeddingSpec(
   id: 'minilm-l12-multilingual-int8',
-  label: 'MiniLM-L12 多言語(paraphrase, int8)',
+  label: 'MiniLM-L12 多言語(paraphrase, int8)', // l10n-ignore
   fileName: 'model_quantized.onnx',
   url: 'https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/onnx/model_quantized.onnx',
   sizeMb: 118,
@@ -90,7 +102,7 @@ const raiMiniLmL12EmbeddingSpec = RaiEmbeddingSpec(
 /// 関連 TL / TL のアルゴリズム(似ている投稿)で、投稿の画像も本文と一緒に比べる。RASQ Central が配る。
 const postVisionEmbeddingSpec = RaiEmbeddingSpec(
   id: 'rasq-mobilenet-vision-int8',
-  label: 'RASQ MobileNet(投稿の画像)',
+  label: 'RASQ MobileNet(投稿の画像)', // l10n-ignore
   fileName: 'image_tower_uint8.onnx',
   url: '',
   centralPath: 'minilm-mobilenet/onnx/image_tower_uint8.onnx',
@@ -104,7 +116,7 @@ const postVisionEmbeddingSpec = RaiEmbeddingSpec(
 /// SigLIP2 テキスト塔 (D-190)。計測では言い換えに弱かったので既定から外した(差し替え可)。
 const raiSiglip2EmbeddingSpec = RaiEmbeddingSpec(
   id: 'siglip2-base-text-int8',
-  label: 'SigLIP2 base(テキスト塔・int8)',
+  label: 'SigLIP2 base(テキスト塔・int8)', // l10n-ignore
   fileName: 'text_model_int8.onnx',
   url: 'https://huggingface.co/onnx-community/siglip2-base-patch16-224-ONNX/resolve/main/onnx/text_model_int8.onnx',
   sizeMb: 283,
@@ -126,11 +138,11 @@ class RaiEmbeddingStatus {
   static const initial = RaiEmbeddingStatus(RaiEmbeddingPhase.notInstalled);
 
   String get label => switch (phase) {
-        RaiEmbeddingPhase.notInstalled => '未ダウンロード',
-        RaiEmbeddingPhase.downloading => 'ダウンロード中 ${progress ?? 0}%',
-        RaiEmbeddingPhase.ready => '準備完了',
-        RaiEmbeddingPhase.loading => '読み込み中',
-        RaiEmbeddingPhase.error => '失敗: ${message ?? ''}',
+        RaiEmbeddingPhase.notInstalled => appL10n.raiModelsPhaseNotInstalled,
+        RaiEmbeddingPhase.downloading => appL10n.raiModelsPhaseDownloading(progress ?? 0),
+        RaiEmbeddingPhase.ready => appL10n.raiModelsPhaseReady,
+        RaiEmbeddingPhase.loading => appL10n.raiModelsPhaseLoading,
+        RaiEmbeddingPhase.error => appL10n.raiModelsEmbeddingFailed(message ?? ''),
       };
 }
 
@@ -161,7 +173,7 @@ class UnavailableRaiEmbeddingModel implements RaiEmbeddingModel {
   @override
   Future<void> refresh() async {}
   @override
-  Future<void> install({String? hfToken}) async => throw const RaiEmbeddingException('この環境では端末内の埋め込みモデルを使えません');
+  Future<void> install({String? hfToken}) async => throw RaiEmbeddingException(appL10n.raiModelsEmbeddingUnavailableHere);
   @override
   Future<void> uninstall() async {}
   @override
@@ -180,7 +192,7 @@ class RaiEmbeddingException implements Exception {
 /// SigLIP2 の画像側 (D-293)。int8。絵文字の絵を、SigLIP2 のテキスト側と同じ空間に埋め込む。
 const emojiVisionEmbeddingSpec = RaiEmbeddingSpec(
   id: 'siglip2-base-vision-int8',
-  label: 'SigLIP2 base(画像側・int8)',
+  label: 'SigLIP2 base(画像側・int8)', // l10n-ignore
   fileName: 'vision_model_int8.onnx',
   url: 'https://huggingface.co/onnx-community/siglip2-base-patch16-224-ONNX/resolve/main/onnx/vision_model_int8.onnx',
   sizeMb: 95,

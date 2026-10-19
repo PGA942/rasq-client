@@ -14,6 +14,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'rai_bundled.dart';
 import 'rai_llm.dart';
+import '../../l10n/l10n.dart';
 
 /// 端末の RAM(device_info_plus)。iOS / Android は MB、macOS は bytes で返るので MB に揃える。
 Future<({int? totalMb, int? availableMb})> deviceRamReader() async {
@@ -141,7 +142,7 @@ class DeviceRaiLlm implements RaiLlm {
       final dir = Directory('${(await _dir('llama_cpp')).path}/$llamaCppReleaseTag');
       final lib = File('${dir.path}/libllama.dylib');
       if (!await lib.exists()) {
-        _set(RaiLlmStatus(RaiLlmPhase.loading, message: 'llama.cpp のランタイム($llamaCppReleaseTag)を取得中', modelId: _spec.id));
+        _set(RaiLlmStatus(RaiLlmPhase.loading, message: appL10n.raiModelsLlamaFetching(llamaCppReleaseTag), modelId: _spec.id));
         await _downloadLlamaRuntime(dir);
       }
       // Gatekeeper (D-184): 取得した dylib には隔離属性が付き「開いていません」で弾かれるので、
@@ -162,7 +163,7 @@ class DeviceRaiLlm implements RaiLlm {
       DynamicLibrary.process().lookup<NativeFunction<Void Function()>>('llama_backend_init');
       return null;
     } catch (_) {
-      throw RaiLlmException(Platform.isIOS ? 'llama.cpp が組み込まれていません(Runner に llama.xcframework を追加)' : 'llama.cpp のライブラリがありません');
+      throw RaiLlmException(Platform.isIOS ? appL10n.raiModelsLlamaMissingIos : appL10n.raiModelsLlamaMissing);
     }
   }
 
@@ -203,7 +204,7 @@ class DeviceRaiLlm implements RaiLlm {
   Future<void> _downloadLlamaRuntime(Directory dir) async {
     final url = 'https://github.com/ggml-org/llama.cpp/releases/download/$llamaCppReleaseTag/llama-$llamaCppReleaseTag-bin-macos-arm64.tar.gz';
     final res = await http.get(Uri.parse(url)).timeout(const Duration(minutes: 3));
-    if (res.statusCode != 200) throw RaiLlmException('llama.cpp のランタイムを取得できません(HTTP ${res.statusCode})');
+    if (res.statusCode != 200) throw RaiLlmException(appL10n.raiModelsLlamaFetchFailed(res.statusCode));
     final archive = TarDecoder().decodeBytes(GZipDecoder().decodeBytes(res.bodyBytes));
     await dir.create(recursive: true);
     final links = <String, String>{};
@@ -244,7 +245,7 @@ class DeviceRaiLlm implements RaiLlm {
       _set(RaiLlmStatus(installed ? RaiLlmPhase.ready : RaiLlmPhase.notInstalled, modelId: _spec.id, bundled: !installed && await _isBundled()));
     } catch (e) {
       debugPrint('rai llm refresh: $e');
-      _set(RaiLlmStatus(RaiLlmPhase.unavailable, message: 'モデルの状態を確認できません: $e', modelId: _spec.id));
+      _set(RaiLlmStatus(RaiLlmPhase.unavailable, message: appL10n.raiModelsStateCheckFailed('$e'), modelId: _spec.id));
     }
   }
 
@@ -283,7 +284,7 @@ class DeviceRaiLlm implements RaiLlm {
     final f = await _ggufFile();
     final asset = raiBundledAsset(_spec);
     try {
-      _set(RaiLlmStatus(RaiLlmPhase.downloading, progress: 0, message: '同梱モデルを展開中', modelId: _spec.id, bundled: true));
+      _set(RaiLlmStatus(RaiLlmPhase.downloading, progress: 0, message: appL10n.raiModelsExtracting, modelId: _spec.id, bundled: true));
       final dir = flutterAssetsDirOf(Platform.resolvedExecutable);
       final src = dir == null ? null : File('$dir/$asset');
       if (src != null && await src.exists()) {
@@ -292,11 +293,11 @@ class DeviceRaiLlm implements RaiLlm {
           final pct = (done * 100 ~/ (total == 0 ? 1 : total)).clamp(0, 99);
           if (pct != lastPct) {
             lastPct = pct;
-            _set(RaiLlmStatus(RaiLlmPhase.downloading, progress: pct, message: '同梱モデルを展開中', modelId: _spec.id, bundled: true));
+            _set(RaiLlmStatus(RaiLlmPhase.downloading, progress: pct, message: appL10n.raiModelsExtracting, modelId: _spec.id, bundled: true));
           }
         });
       } else {
-        if (_spec.sizeMb > 1200) throw const RaiLlmException('この端末では同梱モデルを展開できません(ダウンロードしてください)');
+        if (_spec.sizeMb > 1200) throw RaiLlmException(appL10n.raiModelsExtractTooLarge);
         final bytes = await rootBundle.load(asset);
         final out = gzip.decode(bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
         final tmp = File('${f.path}.part');
@@ -305,8 +306,8 @@ class DeviceRaiLlm implements RaiLlm {
       }
       _set(RaiLlmStatus(RaiLlmPhase.ready, modelId: _spec.id));
     } catch (e) {
-      _set(RaiLlmStatus(RaiLlmPhase.notInstalled, message: '展開に失敗しました: $e', modelId: _spec.id, bundled: true));
-      throw RaiLlmException('展開に失敗しました: $e');
+      _set(RaiLlmStatus(RaiLlmPhase.notInstalled, message: appL10n.raiModelsExtractFailed('$e'), modelId: _spec.id, bundled: true));
+      throw RaiLlmException(appL10n.raiModelsExtractFailed('$e'));
     }
   }
 
@@ -320,8 +321,8 @@ class DeviceRaiLlm implements RaiLlm {
           .install();
       _set(RaiLlmStatus(RaiLlmPhase.ready, modelId: _spec.id));
     } catch (e) {
-      _set(RaiLlmStatus(RaiLlmPhase.notInstalled, message: 'ダウンロードに失敗しました: $e', modelId: _spec.id));
-      throw RaiLlmException('ダウンロードに失敗しました: $e');
+      _set(RaiLlmStatus(RaiLlmPhase.notInstalled, message: appL10n.raiModelsDownloadFailed('$e'), modelId: _spec.id));
+      throw RaiLlmException(appL10n.raiModelsDownloadFailed('$e'));
     }
   }
 
@@ -363,8 +364,8 @@ class DeviceRaiLlm implements RaiLlm {
       try {
         if (await tmp.exists()) await tmp.delete();
       } catch (_) {}
-      _set(RaiLlmStatus(RaiLlmPhase.notInstalled, message: 'ダウンロードに失敗しました: $e', modelId: _spec.id));
-      throw RaiLlmException('ダウンロードに失敗しました: $e');
+      _set(RaiLlmStatus(RaiLlmPhase.notInstalled, message: appL10n.raiModelsDownloadFailed('$e'), modelId: _spec.id));
+      throw RaiLlmException(appL10n.raiModelsDownloadFailed('$e'));
     } finally {
       _download = null;
       client.close();
@@ -436,7 +437,7 @@ class DeviceRaiLlm implements RaiLlm {
   @override
   Stream<String> chat(String prompt, {String? system, int? maxTokens}) {
     if (!_current.ready && _current.phase != RaiLlmPhase.loading) {
-      return Stream.error(RaiLlmException(_current.phase == RaiLlmPhase.notInstalled ? '端末内モデル(${_spec.codename})がまだダウンロードされていません' : (_current.message ?? '端末内モデルを使えません')));
+      return Stream.error(RaiLlmException(_current.phase == RaiLlmPhase.notInstalled ? appL10n.raiModelsNotDownloaded(_spec.codename) : (_current.message ?? appL10n.raiModelsDeviceUnavailable)));
     }
     return _spec.engine == RaiEngine.gguf ? _ggufChat(prompt, system, maxTokens: maxTokens) : _lrChat(prompt, system);
   }
@@ -481,7 +482,7 @@ class DeviceRaiLlm implements RaiLlm {
     () async {
       try {
         final f = await _ggufFile();
-        if (!await f.exists()) throw RaiLlmException('モデルファイルがありません: ${f.path}');
+        if (!await f.exists()) throw RaiLlmException(appL10n.raiModelsFileMissing(f.path));
         final engine = await _llamaLoad(f.path);
         _set(RaiLlmStatus(RaiLlmPhase.generating, modelId: _spec.id));
         // ChatML(Agents-A1 / Qwen 系)。system + user を渡し、assistant を開けておく。
@@ -499,8 +500,8 @@ class DeviceRaiLlm implements RaiLlm {
           await out.close();
           await cleanup();
         }
-        firstToken = Timer(const Duration(seconds: 30), () => abort('端末内モデルが 30 秒返事をしませんでした'));
-        overall = Timer(const Duration(seconds: 150), () => abort('端末内モデルの返事が長すぎるので打ち切りました'));
+        firstToken = Timer(const Duration(seconds: 30), () => abort(appL10n.raiModelsTimeoutFirstToken));
+        overall = Timer(const Duration(seconds: 150), () => abort(appL10n.raiModelsTimeoutOverall));
         final sess = await engine.createSession();
         session = sess;
         events = sess
@@ -524,7 +525,7 @@ class DeviceRaiLlm implements RaiLlm {
               case lc.DoneEvent():
                 firstToken?.cancel();
                 overall?.cancel();
-                if (visibleChars == 0) out.addError(const RaiLlmException('端末内モデルから返事がありませんでした(思考だけで終わった可能性)'));
+                if (visibleChars == 0) out.addError(RaiLlmException(appL10n.raiModelsOnlyThinking));
                 out.close();
               case lc.ShiftEvent():
                 break;
@@ -532,7 +533,7 @@ class DeviceRaiLlm implements RaiLlm {
           },
           onError: (Object e) {
             if (out.isClosed) return;
-            out.addError(RaiLlmException('生成に失敗しました: $e'));
+            out.addError(RaiLlmException(appL10n.raiModelsGenerateFailed('$e')));
             out.close();
           },
           onDone: () {
@@ -543,11 +544,11 @@ class DeviceRaiLlm implements RaiLlm {
         if (!out.isClosed) {
           final msg = '$e';
           final hint = msg.contains('disallowed by system policy')
-              ? '\n「system policy」= サンドボックス / ライブラリ検証で拒否。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください'
+              ? '\n${appL10n.raiModelsHintSystemPolicy}'
               : msg.contains('dlopen') || msg.contains('Failed to load dynamic library') || msg.contains('failed to open')
-                  ? '\nGatekeeper に止められた場合: 「システム設定 > プライバシーとセキュリティ」で許可するか、Application Support/llama_cpp の dylib に xattr -dr com.apple.quarantine を実行してください'
+                  ? '\n${appL10n.raiModelsHintGatekeeper}'
                   : '';
-          out.addError(e is RaiLlmException ? e : RaiLlmException('モデルを読み込めません(llama.cpp): $msg$hint'));
+          out.addError(e is RaiLlmException ? e : RaiLlmException('${appL10n.raiModelsLoadFailedLlama(msg)}$hint'));
           await out.close();
         }
       }
@@ -574,8 +575,8 @@ class DeviceRaiLlm implements RaiLlm {
     try {
       model = await _lrLoad();
     } catch (e) {
-      _set(RaiLlmStatus(RaiLlmPhase.unavailable, message: 'モデルを読み込めません: $e', modelId: _spec.id));
-      throw RaiLlmException('モデルを読み込めません: $e');
+      _set(RaiLlmStatus(RaiLlmPhase.unavailable, message: appL10n.raiModelsLoadFailed('$e'), modelId: _spec.id));
+      throw RaiLlmException(appL10n.raiModelsLoadFailed('$e'));
     }
     _set(RaiLlmStatus(RaiLlmPhase.generating, modelId: _spec.id));
     try {
@@ -585,7 +586,7 @@ class DeviceRaiLlm implements RaiLlm {
         if (r is TextResponse) yield r.token;
       }
     } catch (e) {
-      throw RaiLlmException('生成に失敗しました: $e');
+      throw RaiLlmException(appL10n.raiModelsGenerateFailed('$e'));
     } finally {
       _set(RaiLlmStatus(RaiLlmPhase.ready, modelId: _spec.id));
     }

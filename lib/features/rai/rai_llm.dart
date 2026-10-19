@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../settings/settings_dsl.dart';
+import '../../l10n/l10n.dart';
 
 /// 端末内 LLM(ワイヤーフレームの「Agents-A1-4B」)の配線 (D-181)。
 ///
@@ -118,7 +119,7 @@ enum RaiRamVerdict {
   no,
   unknown;
 
-  String get label => switch (this) { RaiRamVerdict.ok => '動作可', RaiRamVerdict.tight => 'ぎりぎり', RaiRamVerdict.no => 'メモリ不足', RaiRamVerdict.unknown => '不明' };
+  String get label => switch (this) { RaiRamVerdict.ok => appL10n.raiModelsRamOk, RaiRamVerdict.tight => appL10n.raiModelsRamTight, RaiRamVerdict.no => appL10n.raiModelsRamNo, RaiRamVerdict.unknown => appL10n.raiModelsRamUnknownVerdict };
 }
 
 RaiRamVerdict raiMemoryVerdict({required int modelMb, required int? totalRamMb}) {
@@ -212,12 +213,12 @@ class RaiFallUp {
   /// 送るメッセージ(system にリファレンスを添える)。
   List<Map<String, String>> messages(String prompt, {String? system, List<String> context = const []}) => [
         if ((system ?? '').isNotEmpty || context.isNotEmpty)
-          {'role': 'system', 'content': [if ((system ?? '').isNotEmpty) system!, if (context.isNotEmpty) '参考(操作リファレンス、近い順):', ...context].join('\n')},
+          {'role': 'system', 'content': [if ((system ?? '').isNotEmpty) system!, if (context.isNotEmpty) '参考(操作リファレンス、近い順):', ...context].join('\n')}, // l10n-ignore
         {'role': 'user', 'content': prompt},
       ];
 
   Future<String> chat(String prompt, {String? system, List<String> context = const []}) async {
-    if (!configured) throw const RaiLlmException('フォールアップ先(サーバー側)が未接続です');
+    if (!configured) throw RaiLlmException(appL10n.raiModelsFallUpNotConnected);
     final c = client ?? http.Client();
     try {
       final res = await c
@@ -234,17 +235,17 @@ class RaiFallUp {
             }),
           )
           .timeout(const Duration(seconds: 90));
-      if (res.statusCode != 200) throw RaiLlmException('推論サーバー HTTP ${res.statusCode}');
+      if (res.statusCode != 200) throw RaiLlmException(appL10n.raiModelsServerHttpError(res.statusCode));
       final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map;
       final choices = j['choices'] as List? ?? const [];
       final content = choices.isEmpty ? null : ((choices.first as Map)['message'] as Map?)?['content'];
       final text = '${content ?? ''}'.replaceAll(RegExp(r'<think>[\s\S]*?</think>'), '').trim();
-      if (text.isEmpty) throw const RaiLlmException('推論サーバーから返事がありませんでした');
+      if (text.isEmpty) throw RaiLlmException(appL10n.raiModelsServerNoReply);
       return text;
     } on RaiLlmException {
       rethrow;
     } catch (e) {
-      throw RaiLlmException('推論サーバーに届きません: $e');
+      throw RaiLlmException(appL10n.raiModelsServerUnreachable('$e'));
     } finally {
       if (client == null) c.close();
     }
@@ -272,7 +273,7 @@ final raiLlmStatusProvider = StreamProvider<RaiLlmStatus>((ref) async* {
 
 /// 端末内 LLM が無い環境(テスト / 未配線)の骨格。
 class UnavailableRaiLlm implements RaiLlm {
-  UnavailableRaiLlm({this.reason = 'この環境では端末内モデルを使えません'});
+  UnavailableRaiLlm({String? reason}) : reason = reason ?? appL10n.raiModelsLlmUnavailableHere;
   final String reason;
   final _ctrl = StreamController<RaiLlmStatus>.broadcast();
   RaiModelSpec _spec = raiModelSpecs.first;

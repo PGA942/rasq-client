@@ -4940,6 +4940,2202 @@ abstract class AppLocalizations {
   /// **'TL にリストを足したい'**
   String get onboardingTourRaiBubble;
 
+  /// RAi のモード: 操作を教える(RAi がボタンまで移動して指差す)
+  ///
+  /// In ja, this message translates to:
+  /// **'インストラクション'**
+  String get raiModeInstruction;
+
+  /// RAi のモード: 端末内モデルで答える
+  ///
+  /// In ja, this message translates to:
+  /// **'アシスタント'**
+  String get raiModeAssistant;
+
+  /// 一時停止した案内に操作の名前が無いときの題
+  ///
+  /// In ja, this message translates to:
+  /// **'案内'**
+  String get raiGuideDefaultTitle;
+
+  /// 保留した関数の「やめる」。calls は「 / 」区切りの関数の呼び出し
+  ///
+  /// In ja, this message translates to:
+  /// **'実行しませんでした({calls})'**
+  String raiHeldDeclined(String calls);
+
+  /// No description provided for @raiAutoDeclined.
+  ///
+  /// In ja, this message translates to:
+  /// **'わかりました。「{title}」は案内で進めるときに「この手順で案内」を押してください'**
+  String raiAutoDeclined(String title);
+
+  /// No description provided for @raiAutoProgress.
+  ///
+  /// In ja, this message translates to:
+  /// **'自動で進めています({step} / {total}): {text}'**
+  String raiAutoProgress(int step, int total, String text);
+
+  /// 工程の手順の注記(入力の選択待ち)。先頭が label、空白で区切る(答えを受けるときに先頭の語をラベルとして読む)
+  ///
+  /// In ja, this message translates to:
+  /// **'{label} を選ぶ'**
+  String raiAutoAskingDetail(String label);
+
+  /// No description provided for @raiAutoAskDestination.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」の取り込み先はどれにしますか？'**
+  String raiAutoAskDestination(String title);
+
+  /// label は入力の名前(フィード / RASQ リスト / ワードなど)
+  ///
+  /// In ja, this message translates to:
+  /// **'{label} はどれにしますか？'**
+  String raiAutoAskWhich(String label);
+
+  /// No description provided for @raiAutoAskHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'候補から選ぶか、ほかの語を入れてください'**
+  String get raiAutoAskHint;
+
+  /// No description provided for @raiAutoNotFoundDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'{label} が見つからない'**
+  String raiAutoNotFoundDetail(String label);
+
+  /// No description provided for @raiAutoNotFoundAsk.
+  ///
+  /// In ja, this message translates to:
+  /// **'{label} が見つかりません。別の {label} で探しますか？'**
+  String raiAutoNotFoundAsk(String label);
+
+  /// No description provided for @raiAutoAskWhichCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{label} はどれにしますか？({count} 件)}}'**
+  String raiAutoAskWhichCount(String label, int count);
+
+  /// No description provided for @raiAutoCancelled.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」の自動化をやめました'**
+  String raiAutoCancelled(String title);
+
+  /// No description provided for @raiAutoFailedAt.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」の {step} 手順目で止まりました: {detail}'**
+  String raiAutoFailedAt(String title, int step, String detail);
+
+  /// No description provided for @raiAutoPartlyDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'{done, plural, other{{done} 手順を関数で進めました。{step} 手順目「{text}」からは押す部品があるので案内します}}'**
+  String raiAutoPartlyDone(int done, int step, String text);
+
+  /// このあとに「:」と結果の行が続くことがある
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」を関数で進めました'**
+  String raiAutoDone(String title);
+
+  /// No description provided for @raiInstructionUnknown.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ覚えていない操作です。「投稿」「ログイン」「共有」などで聞いてみてください。'**
+  String get raiInstructionUnknown;
+
+  /// No description provided for @raiAskChoice.
+  ///
+  /// In ja, this message translates to:
+  /// **'どれのことですか？ 上の選択肢から選んでください'**
+  String get raiAskChoice;
+
+  /// No description provided for @raiNoReply.
+  ///
+  /// In ja, this message translates to:
+  /// **'返事がありませんでした'**
+  String get raiNoReply;
+
+  /// No description provided for @raiFailureDevice.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末内モデル: {message}'**
+  String raiFailureDevice(String message);
+
+  /// フォールアップ = 端末内モデルが答えられないときのサーバーの推論
+  ///
+  /// In ja, this message translates to:
+  /// **'フォールアップ: {message}'**
+  String raiFailureFallUp(String message);
+
+  /// No description provided for @raiProposalReady.
+  ///
+  /// In ja, this message translates to:
+  /// **'案内「{title}」を用意しました(下のタイルから始められます)'**
+  String raiProposalReady(String title);
+
+  /// No description provided for @raiProposalReadyStopAt.
+  ///
+  /// In ja, this message translates to:
+  /// **'案内「{title}」を {step} 手順目まで進める用意をしました(下のタイルから)'**
+  String raiProposalReadyStopAt(String title, int step);
+
+  /// No description provided for @raiHeldNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'(取得した情報をもとにした操作は、確かめてから実行します: {calls})'**
+  String raiHeldNote(String calls);
+
+  /// No description provided for @raiNoReplyParen.
+  ///
+  /// In ja, this message translates to:
+  /// **'(返事がありませんでした)'**
+  String get raiNoReplyParen;
+
+  /// No description provided for @raiRestartInjecting.
+  ///
+  /// In ja, this message translates to:
+  /// **'取得した情報({keys})を注入してモデルを再始動します'**
+  String raiRestartInjecting(String keys);
+
+  /// 工程の手順の注記: 後ろの関数で済むので畳んだ手順
+  ///
+  /// In ja, this message translates to:
+  /// **'関数で代替'**
+  String get raiAutoDetailReplaced;
+
+  /// No description provided for @raiAutoDetailNoFunction.
+  ///
+  /// In ja, this message translates to:
+  /// **'関数の対応が無い'**
+  String get raiAutoDetailNoFunction;
+
+  /// No description provided for @raiAutoDetailGuideParts.
+  ///
+  /// In ja, this message translates to:
+  /// **'押す部品は案内で'**
+  String get raiAutoDetailGuideParts;
+
+  /// No description provided for @raiAutoDetailExplanationOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'説明だけ'**
+  String get raiAutoDetailExplanationOnly;
+
+  /// No description provided for @raiAutoDescribeNoBound.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」は関数で代わりにできる手順が無いので、案内(指差し)で進めます。'**
+  String raiAutoDescribeNoBound(String title);
+
+  /// 承認タイルの説明の 1 行目。このあとに手順が 1 行ずつ続く
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」は案内を出さずに私が関数でやります:'**
+  String raiAutoDescribeHead(String title);
+
+  /// No description provided for @raiAutoDescribeGuideMark.
+  ///
+  /// In ja, this message translates to:
+  /// **'(ここからは案内: {detail})'**
+  String raiAutoDescribeGuideMark(String detail);
+
+  /// 語を並べるときの区切り
+  ///
+  /// In ja, this message translates to:
+  /// **'、'**
+  String get raiListSeparator;
+
+  /// inputs は「ラベル=値」の並び
+  ///
+  /// In ja, this message translates to:
+  /// **'質問から: {inputs}'**
+  String raiAutoDescribeFromQuestion(String inputs);
+
+  /// No description provided for @raiAutoDescribeEntrusted.
+  ///
+  /// In ja, this message translates to:
+  /// **'{labels} は候補の先頭で進めます(任されているので)'**
+  String raiAutoDescribeEntrusted(String labels);
+
+  /// No description provided for @raiAutoDescribeAskLater.
+  ///
+  /// In ja, this message translates to:
+  /// **'{labels} は実行の途中で選んでもらいます'**
+  String raiAutoDescribeAskLater(String labels);
+
+  /// No description provided for @raiAutoDescribeConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'よければ「実行する」を押してください。'**
+  String get raiAutoDescribeConfirm;
+
+  /// アシスタントの提案の 1 行目。このあとに手順が 1 行ずつ続く
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{「{title}」なら、この順で進めます({count} 手順)}}'**
+  String raiProposalHead(String title, int count);
+
+  /// 手順の行の末尾の関数 id
+  ///
+  /// In ja, this message translates to:
+  /// **'〔{function}〕'**
+  String raiProposalFunction(String function);
+
+  /// 先頭の空白も文言のうち
+  ///
+  /// In ja, this message translates to:
+  /// **' 入力: {inputs}'**
+  String raiProposalInputs(String inputs);
+
+  /// 先頭の空白も文言のうち。presets は「名前=値」の空白区切り
+  ///
+  /// In ja, this message translates to:
+  /// **' 固定: {presets}'**
+  String raiProposalPresets(String presets);
+
+  /// モードの切り替えの読み上げの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi モード'**
+  String get raiModeSemantics;
+
+  /// No description provided for @raiAskButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'質問する'**
+  String get raiAskButton;
+
+  /// RAi の入力欄のヒント
+  ///
+  /// In ja, this message translates to:
+  /// **'困ったとき、お手伝いします！'**
+  String get raiInputHint;
+
+  /// 空の入力欄に薄く出す予測。prediction は予測した質問
+  ///
+  /// In ja, this message translates to:
+  /// **'{prediction}(スペースで入力)'**
+  String raiInputPredicted(String prediction);
+
+  /// No description provided for @raiCollapse.
+  ///
+  /// In ja, this message translates to:
+  /// **'畳む'**
+  String get raiCollapse;
+
+  /// No description provided for @raiExpand.
+  ///
+  /// In ja, this message translates to:
+  /// **'広げる'**
+  String get raiExpand;
+
+  /// No description provided for @raiAskMore.
+  ///
+  /// In ja, this message translates to:
+  /// **'さらに尋ねる'**
+  String get raiAskMore;
+
+  /// No description provided for @raiHistoryClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'履歴を閉じる'**
+  String get raiHistoryClose;
+
+  /// No description provided for @raiHistory.
+  ///
+  /// In ja, this message translates to:
+  /// **'発言の履歴'**
+  String get raiHistory;
+
+  /// No description provided for @raiClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi を閉じる'**
+  String get raiClose;
+
+  /// No description provided for @raiNext.
+  ///
+  /// In ja, this message translates to:
+  /// **'次へ'**
+  String get raiNext;
+
+  /// No description provided for @raiDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'了解(閉じる)'**
+  String get raiDone;
+
+  /// No description provided for @raiSpeechClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get raiSpeechClose;
+
+  /// No description provided for @raiHistoryEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ発言はありません'**
+  String get raiHistoryEmpty;
+
+  /// No description provided for @raiCopy.
+  ///
+  /// In ja, this message translates to:
+  /// **'コピー'**
+  String get raiCopy;
+
+  /// No description provided for @raiCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'コピーしました'**
+  String get raiCopied;
+
+  /// No description provided for @raiChatSuspended.
+  ///
+  /// In ja, this message translates to:
+  /// **'案内を一時停止中({step} / {total} 手順目)。戻ると続きます。'**
+  String raiChatSuspended(int step, int total);
+
+  /// No description provided for @raiChatResume.
+  ///
+  /// In ja, this message translates to:
+  /// **'続きへ'**
+  String get raiChatResume;
+
+  /// No description provided for @raiChatHeadline.
+  ///
+  /// In ja, this message translates to:
+  /// **'マクロとか、お任せください！'**
+  String get raiChatHeadline;
+
+  /// No description provided for @raiChatIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'操作を聞くと、RAi がボタンを指差して教えます。'**
+  String get raiChatIntro;
+
+  /// 開発者モードの詳しい説明
+  ///
+  /// In ja, this message translates to:
+  /// **'インストラクション: 操作を聞くと RAi がボタンまで移動して指差します。\nアシスタント: 端末内モデルで答えます。モデルはバーのチップから選べます(マクロは第二期)。'**
+  String get raiChatIntroDetail;
+
+  /// No description provided for @raiChatRecent.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近の質問'**
+  String get raiChatRecent;
+
+  /// No description provided for @raiChatRejectCandidates.
+  ///
+  /// In ja, this message translates to:
+  /// **'これじゃない(候補を外して答え直す)'**
+  String get raiChatRejectCandidates;
+
+  /// No description provided for @raiChatProposalTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'{steps, plural, other{{title} · {steps} 手順}}'**
+  String raiChatProposalTitle(String title, int steps);
+
+  /// No description provided for @raiChatSkip.
+  ///
+  /// In ja, this message translates to:
+  /// **'スキップ'**
+  String get raiChatSkip;
+
+  /// No description provided for @raiChatGuide.
+  ///
+  /// In ja, this message translates to:
+  /// **'この手順で案内'**
+  String get raiChatGuide;
+
+  /// No description provided for @raiChatGuideTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'案内「{title}」'**
+  String raiChatGuideTitle(String title);
+
+  /// No description provided for @raiChatTrace.
+  ///
+  /// In ja, this message translates to:
+  /// **'工程'**
+  String get raiChatTrace;
+
+  /// No description provided for @raiChatShowGraph.
+  ///
+  /// In ja, this message translates to:
+  /// **'グラフビューで表示'**
+  String get raiChatShowGraph;
+
+  /// No description provided for @raiChatApproveHeld.
+  ///
+  /// In ja, this message translates to:
+  /// **'この操作を実行しますか？(取得した情報から出た操作です)'**
+  String get raiChatApproveHeld;
+
+  /// No description provided for @raiChatApprove.
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi に任せますか？'**
+  String get raiChatApprove;
+
+  /// No description provided for @raiChatDecline.
+  ///
+  /// In ja, this message translates to:
+  /// **'やめる'**
+  String get raiChatDecline;
+
+  /// No description provided for @raiChatRun.
+  ///
+  /// In ja, this message translates to:
+  /// **'実行する'**
+  String get raiChatRun;
+
+  /// No description provided for @raiHomeSidebarSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi サイドバー'**
+  String get raiHomeSidebarSemantics;
+
+  /// No description provided for @raiHomeClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get raiHomeClose;
+
+  /// No description provided for @raiHomeNewConversation.
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい会話'**
+  String get raiHomeNewConversation;
+
+  /// No description provided for @raiHomeHistory.
+  ///
+  /// In ja, this message translates to:
+  /// **'会話の履歴'**
+  String get raiHomeHistory;
+
+  /// No description provided for @raiHomeCurrentConversation.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{いまの会話 · {count} 件}}'**
+  String raiHomeCurrentConversation(int count);
+
+  /// when は会話を始めた日時(M/d HH:mm)
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{when} · {count} 件}}'**
+  String raiHomeConversationSubtitle(String when, int count);
+
+  /// No description provided for @raiHomeDelete.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get raiHomeDelete;
+
+  /// No description provided for @raiHomeHistoryEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだありません。質問すると、ここに会話が残ります。'**
+  String get raiHomeHistoryEmpty;
+
+  /// No description provided for @raiHomeOther.
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get raiHomeOther;
+
+  /// No description provided for @raiAchievementsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アチーブメント'**
+  String get raiAchievementsTitle;
+
+  /// No description provided for @raiAchievementsProgress.
+  ///
+  /// In ja, this message translates to:
+  /// **'{unlocked} / {total} 達成'**
+  String raiAchievementsProgress(int unlocked, int total);
+
+  /// No description provided for @raiHomeMacro.
+  ///
+  /// In ja, this message translates to:
+  /// **'マクロ'**
+  String get raiHomeMacro;
+
+  /// No description provided for @raiHomeMacroSoon.
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中'**
+  String get raiHomeMacroSoon;
+
+  /// No description provided for @raiBarSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi バー'**
+  String get raiBarSemantics;
+
+  /// No description provided for @raiAskCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'やめる'**
+  String get raiAskCancel;
+
+  /// No description provided for @raiAskInputHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'{label}を入れる'**
+  String raiAskInputHint(String label);
+
+  /// No description provided for @raiAskInputOtherHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかの{label}を入れる'**
+  String raiAskInputOtherHint(String label);
+
+  /// No description provided for @raiAskDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get raiAskDone;
+
+  /// No description provided for @raiAchievementsStats.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストラクション {instructions} 回 · アシスタント {assistant} 回(アプリの話 {app} 回)· 完走 {completed} 回 · 聞き直し {repeated} 回'**
+  String raiAchievementsStats(
+    int instructions,
+    int assistant,
+    int app,
+    int completed,
+    int repeated,
+  );
+
+  /// No description provided for @raiAchievementAsk1Title.
+  ///
+  /// In ja, this message translates to:
+  /// **'はじめての質問'**
+  String get raiAchievementAsk1Title;
+
+  /// No description provided for @raiAchievementAsk1Description.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストラクションを 1 回聞いた'**
+  String get raiAchievementAsk1Description;
+
+  /// No description provided for @raiAchievementAsk10Title.
+  ///
+  /// In ja, this message translates to:
+  /// **'聞き上手'**
+  String get raiAchievementAsk10Title;
+
+  /// No description provided for @raiAchievementAsk10Description.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストラクションを 10 回聞いた'**
+  String get raiAchievementAsk10Description;
+
+  /// No description provided for @raiAchievementAsk50Title.
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi の常連'**
+  String get raiAchievementAsk50Title;
+
+  /// No description provided for @raiAchievementAsk50Description.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストラクションを 50 回聞いた'**
+  String get raiAchievementAsk50Description;
+
+  /// No description provided for @raiAchievementApp5Title.
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリ通'**
+  String get raiAchievementApp5Title;
+
+  /// No description provided for @raiAchievementApp5Description.
+  ///
+  /// In ja, this message translates to:
+  /// **'アシスタントとアプリについて 5 回話した'**
+  String get raiAchievementApp5Description;
+
+  /// No description provided for @raiAchievementChat20Title.
+  ///
+  /// In ja, this message translates to:
+  /// **'おしゃべり'**
+  String get raiAchievementChat20Title;
+
+  /// No description provided for @raiAchievementChat20Description.
+  ///
+  /// In ja, this message translates to:
+  /// **'アシスタントに 20 回話しかけた'**
+  String get raiAchievementChat20Description;
+
+  /// No description provided for @raiAchievementDone1Title.
+  ///
+  /// In ja, this message translates to:
+  /// **'一発で完走'**
+  String get raiAchievementDone1Title;
+
+  /// No description provided for @raiAchievementDone1Description.
+  ///
+  /// In ja, this message translates to:
+  /// **'案内を最後の手順まで進めた'**
+  String get raiAchievementDone1Description;
+
+  /// No description provided for @raiAchievementDone10Title.
+  ///
+  /// In ja, this message translates to:
+  /// **'完走マスター'**
+  String get raiAchievementDone10Title;
+
+  /// No description provided for @raiAchievementDone10Description.
+  ///
+  /// In ja, this message translates to:
+  /// **'案内を 10 回最後まで進めた'**
+  String get raiAchievementDone10Description;
+
+  /// No description provided for @raiAchievementAgain3Title.
+  ///
+  /// In ja, this message translates to:
+  /// **'復習中'**
+  String get raiAchievementAgain3Title;
+
+  /// No description provided for @raiAchievementAgain3Description.
+  ///
+  /// In ja, this message translates to:
+  /// **'同じ操作を 3 回聞き直した'**
+  String get raiAchievementAgain3Description;
+
+  /// No description provided for @raiAchievementAuto1Title.
+  ///
+  /// In ja, this message translates to:
+  /// **'おまかせ'**
+  String get raiAchievementAuto1Title;
+
+  /// No description provided for @raiAchievementAuto1Description.
+  ///
+  /// In ja, this message translates to:
+  /// **'「スキップ」で RAi に任せた'**
+  String get raiAchievementAuto1Description;
+
+  /// 工程グラフのノードの入力の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'前'**
+  String get raiTracePortPrev;
+
+  /// No description provided for @raiTracePortState.
+  ///
+  /// In ja, this message translates to:
+  /// **'状態'**
+  String get raiTracePortState;
+
+  /// No description provided for @raiTracePortFunction.
+  ///
+  /// In ja, this message translates to:
+  /// **'関数'**
+  String get raiTracePortFunction;
+
+  /// No description provided for @raiTracePortResult.
+  ///
+  /// In ja, this message translates to:
+  /// **'結果'**
+  String get raiTracePortResult;
+
+  /// No description provided for @raiTracePortNext.
+  ///
+  /// In ja, this message translates to:
+  /// **'次'**
+  String get raiTracePortNext;
+
+  /// No description provided for @raiTraceStatusDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'関数で済'**
+  String get raiTraceStatusDone;
+
+  /// No description provided for @raiTraceStatusSkipped.
+  ///
+  /// In ja, this message translates to:
+  /// **'畳んだ'**
+  String get raiTraceStatusSkipped;
+
+  /// No description provided for @raiTraceStatusGuide.
+  ///
+  /// In ja, this message translates to:
+  /// **'案内へ'**
+  String get raiTraceStatusGuide;
+
+  /// No description provided for @raiTraceStatusFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'失敗'**
+  String get raiTraceStatusFailed;
+
+  /// No description provided for @raiTraceStatusAsking.
+  ///
+  /// In ja, this message translates to:
+  /// **'選択待ち'**
+  String get raiTraceStatusAsking;
+
+  /// No description provided for @raiTraceStatusRunning.
+  ///
+  /// In ja, this message translates to:
+  /// **'実行中'**
+  String get raiTraceStatusRunning;
+
+  /// No description provided for @raiTraceStatusPending.
+  ///
+  /// In ja, this message translates to:
+  /// **'未実行'**
+  String get raiTraceStatusPending;
+
+  /// No description provided for @raiTraceCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{工程 {count} 手順}}'**
+  String raiTraceCaption(int count);
+
+  /// RAi の関数 settings.get / set の結果(ユーザーにも注記で見える)。keys は「, 」区切りのある設定のキー
+  ///
+  /// In ja, this message translates to:
+  /// **'「{area}」に「{key}」という設定はありません(ある: {keys})'**
+  String raiFunctionsSettingMissing(String area, String key, String keys);
+
+  /// No description provided for @raiFunctionsSettingNotWritable.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{key}」は画面から書ける設定ではありません'**
+  String raiFunctionsSettingNotWritable(String key);
+
+  /// No description provided for @raiFunctionsSettingNeedsPassword.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{key}」はパスワードが要るので RAi からは書きません'**
+  String raiFunctionsSettingNeedsPassword(String key);
+
+  /// No description provided for @raiFunctionsSettingLocked.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{key}」は操作禁止タグが付いているので RAi からは書きません'**
+  String raiFunctionsSettingLocked(String key);
+
+  /// 関数の取得結果の一覧が空のとき。head は一覧の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'{head}: 該当なし'**
+  String raiFunctionsFoldEmpty(String head);
+
+  /// 関数の取得結果の一覧の見出し(このあとに 1 行ずつ続く)。total = 全件、shown = 載せた件数
+  ///
+  /// In ja, this message translates to:
+  /// **'{total, plural, other{{head} {total} 件中 {shown} 件:}}'**
+  String raiFunctionsFoldHead(String head, int total, int shown);
+
+  /// name は関数の名前(posts.fetch など)
+  ///
+  /// In ja, this message translates to:
+  /// **'この SNS では使えません({name})'**
+  String raiFunctionsUnsupported(String name);
+
+  /// No description provided for @raiFunctionsNotAutomatable.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} は自動化不可です(送信はユーザーが押します)。代わりに {alt}: {result}'**
+  String raiFunctionsNotAutomatable(String name, String alt, String result);
+
+  /// No description provided for @raiFunctionsUnknown.
+  ///
+  /// In ja, this message translates to:
+  /// **'知らない関数です: {name}'**
+  String raiFunctionsUnknown(String name);
+
+  /// No description provided for @raiFunctionsFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} に失敗: {error}'**
+  String raiFunctionsFailed(String name, String error);
+
+  /// No description provided for @raiFunctionsNotLoggedInSns.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS にログインしていません'**
+  String get raiFunctionsNotLoggedInSns;
+
+  /// 投稿 1 行の末尾に付ける反応の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{(反応 {count})}}'**
+  String raiFunctionsLineReactions(int count);
+
+  /// No description provided for @raiFunctionsPostsNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'該当する投稿はありませんでした'**
+  String get raiFunctionsPostsNone;
+
+  /// No description provided for @raiFunctionsPostsHead.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{投稿 {count} 件({total} 件中):}}'**
+  String raiFunctionsPostsHead(int count, int total);
+
+  /// No description provided for @raiFunctionsReferenceOperation.
+  ///
+  /// In ja, this message translates to:
+  /// **'操作「{title}」({id}): {steps}'**
+  String raiFunctionsReferenceOperation(String title, String id, String steps);
+
+  /// No description provided for @raiFunctionsReferenceFunction.
+  ///
+  /// In ja, this message translates to:
+  /// **'関数 {id}: {does}'**
+  String raiFunctionsReferenceFunction(String id, String does);
+
+  /// 先頭の空白も文言のうち
+  ///
+  /// In ja, this message translates to:
+  /// **' 引数: {params}'**
+  String raiFunctionsReferenceParams(String params);
+
+  /// No description provided for @raiFunctionsReferenceParamInput.
+  ///
+  /// In ja, this message translates to:
+  /// **'入力'**
+  String get raiFunctionsReferenceParamInput;
+
+  /// No description provided for @raiFunctionsReferenceParamFixed.
+  ///
+  /// In ja, this message translates to:
+  /// **'固定={value}'**
+  String raiFunctionsReferenceParamFixed(String value);
+
+  /// No description provided for @raiFunctionsReferenceMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'リファレンスに {id} はありません'**
+  String raiFunctionsReferenceMissing(String id);
+
+  /// No description provided for @raiFunctionsActionMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクション {id} はありません'**
+  String raiFunctionsActionMissing(String id);
+
+  /// No description provided for @raiFunctionsActionNotAllowed.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{label}」は自動化が許可されていません(RAi からは実行しません)。代わりに案内(この手順で案内)で進めるか、ユーザーが押してください'**
+  String raiFunctionsActionNotAllowed(String label);
+
+  /// state は「済」か「未」
+  ///
+  /// In ja, this message translates to:
+  /// **'{label} を実行しました({state})'**
+  String raiFunctionsActionDone(String label, String state);
+
+  /// No description provided for @raiFunctionsActionDoneYes.
+  ///
+  /// In ja, this message translates to:
+  /// **'済'**
+  String get raiFunctionsActionDoneYes;
+
+  /// No description provided for @raiFunctionsActionDoneNo.
+  ///
+  /// In ja, this message translates to:
+  /// **'未'**
+  String get raiFunctionsActionDoneNo;
+
+  /// No description provided for @raiFunctionsAstellNoRooms.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell のルームはありません'**
+  String get raiFunctionsAstellNoRooms;
+
+  /// No description provided for @raiFunctionsAstellRooms.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell のルーム: {rooms}'**
+  String raiFunctionsAstellRooms(String rooms);
+
+  /// No description provided for @raiFunctionsAstellNoTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'題名がありません'**
+  String get raiFunctionsAstellNoTitle;
+
+  /// No description provided for @raiFunctionsAstellCreated.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell「{title}」を作りました [{id}]'**
+  String raiFunctionsAstellCreated(String title, String id);
+
+  /// reaction は「(絵文字)」か空
+  ///
+  /// In ja, this message translates to:
+  /// **'{who} がリアクション{reaction}'**
+  String raiFunctionsNotifReaction(String who, String reaction);
+
+  /// No description provided for @raiFunctionsNotifRepost.
+  ///
+  /// In ja, this message translates to:
+  /// **'{who} がリノート'**
+  String raiFunctionsNotifRepost(String who);
+
+  /// No description provided for @raiFunctionsNotifQuote.
+  ///
+  /// In ja, this message translates to:
+  /// **'{who} が引用'**
+  String raiFunctionsNotifQuote(String who);
+
+  /// No description provided for @raiFunctionsNotifReply.
+  ///
+  /// In ja, this message translates to:
+  /// **'{who} が返信'**
+  String raiFunctionsNotifReply(String who);
+
+  /// No description provided for @raiFunctionsNotifMention.
+  ///
+  /// In ja, this message translates to:
+  /// **'{who} がメンション'**
+  String raiFunctionsNotifMention(String who);
+
+  /// No description provided for @raiFunctionsNotifFollow.
+  ///
+  /// In ja, this message translates to:
+  /// **'{who} がフォロー'**
+  String raiFunctionsNotifFollow(String who);
+
+  /// No description provided for @raiFunctionsNotifFollowRequest.
+  ///
+  /// In ja, this message translates to:
+  /// **'{who} がフォロー申請'**
+  String raiFunctionsNotifFollowRequest(String who);
+
+  /// No description provided for @raiFunctionsNotifFollowAccepted.
+  ///
+  /// In ja, this message translates to:
+  /// **'{who} がフォロー承認'**
+  String raiFunctionsNotifFollowAccepted(String who);
+
+  /// No description provided for @raiFunctionsNotifListAdded.
+  ///
+  /// In ja, this message translates to:
+  /// **'{who} がリストに追加'**
+  String raiFunctionsNotifListAdded(String who);
+
+  /// No description provided for @raiFunctionsNotifPollEnded.
+  ///
+  /// In ja, this message translates to:
+  /// **'アンケート終了'**
+  String get raiFunctionsNotifPollEnded;
+
+  /// No description provided for @raiFunctionsNotifTimer.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイマー通知'**
+  String get raiFunctionsNotifTimer;
+
+  /// No description provided for @raiFunctionsNotifVc.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell 通知'**
+  String get raiFunctionsNotifVc;
+
+  /// No description provided for @raiFunctionsNotifSystem.
+  ///
+  /// In ja, this message translates to:
+  /// **'システム通知'**
+  String get raiFunctionsNotifSystem;
+
+  /// No description provided for @raiFunctionsNotifOther.
+  ///
+  /// In ja, this message translates to:
+  /// **'その他の通知'**
+  String get raiFunctionsNotifOther;
+
+  /// No description provided for @raiFunctionsUnreadMark.
+  ///
+  /// In ja, this message translates to:
+  /// **'(未読)'**
+  String get raiFunctionsUnreadMark;
+
+  /// No description provided for @raiFunctionsMissingPostId.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿 id (id=) がありません'**
+  String get raiFunctionsMissingPostId;
+
+  /// No description provided for @raiFunctionsMissingPostArg.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿 id (post=) がありません'**
+  String get raiFunctionsMissingPostArg;
+
+  /// No description provided for @raiFunctionsThreadReply.
+  ///
+  /// In ja, this message translates to:
+  /// **'返信: {line}'**
+  String raiFunctionsThreadReply(String line);
+
+  /// No description provided for @raiFunctionsHeadThread.
+  ///
+  /// In ja, this message translates to:
+  /// **'スレッド'**
+  String get raiFunctionsHeadThread;
+
+  /// No description provided for @raiFunctionsHeadReactions.
+  ///
+  /// In ja, this message translates to:
+  /// **'反応'**
+  String get raiFunctionsHeadReactions;
+
+  /// No description provided for @raiFunctionsHeadReposters.
+  ///
+  /// In ja, this message translates to:
+  /// **'リノートした人'**
+  String get raiFunctionsHeadReposters;
+
+  /// No description provided for @raiFunctionsHeadQuotes.
+  ///
+  /// In ja, this message translates to:
+  /// **'引用'**
+  String get raiFunctionsHeadQuotes;
+
+  /// No description provided for @raiFunctionsHeadFavorites.
+  ///
+  /// In ja, this message translates to:
+  /// **'お気に入り'**
+  String get raiFunctionsHeadFavorites;
+
+  /// No description provided for @raiFunctionsHeadReacted.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション済み'**
+  String get raiFunctionsHeadReacted;
+
+  /// No description provided for @raiFunctionsMe.
+  ///
+  /// In ja, this message translates to:
+  /// **'自分: {user} プラグイン={plugin}'**
+  String raiFunctionsMe(String user, String plugin);
+
+  /// No description provided for @raiFunctionsUserIdOrHandle.
+  ///
+  /// In ja, this message translates to:
+  /// **'id= か handle= を指定してください'**
+  String get raiFunctionsUserIdOrHandle;
+
+  /// No description provided for @raiFunctionsNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりませんでした'**
+  String get raiFunctionsNotFound;
+
+  /// 先頭の空白も文言のうち。数が分からなければ ?
+  ///
+  /// In ja, this message translates to:
+  /// **' フォロワー{followers} フォロー{following}'**
+  String raiFunctionsUserCounts(String followers, String following);
+
+  /// No description provided for @raiFunctionsMissingUser.
+  ///
+  /// In ja, this message translates to:
+  /// **'user id (user=) がありません'**
+  String get raiFunctionsMissingUser;
+
+  /// No description provided for @raiFunctionsHeadUserPosts.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿({filter})'**
+  String raiFunctionsHeadUserPosts(String filter);
+
+  /// No description provided for @raiFunctionsMissingKeyword.
+  ///
+  /// In ja, this message translates to:
+  /// **'keyword がありません'**
+  String get raiFunctionsMissingKeyword;
+
+  /// No description provided for @raiFunctionsHeadUserSearch.
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザー検索「{keyword}」'**
+  String raiFunctionsHeadUserSearch(String keyword);
+
+  /// No description provided for @raiFunctionsHeadFollowing.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get raiFunctionsHeadFollowing;
+
+  /// No description provided for @raiFunctionsHeadFollowers.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワー'**
+  String get raiFunctionsHeadFollowers;
+
+  /// No description provided for @raiFunctionsRelFollowing.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get raiFunctionsRelFollowing;
+
+  /// No description provided for @raiFunctionsRelFollowedBy.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォローされています'**
+  String get raiFunctionsRelFollowedBy;
+
+  /// No description provided for @raiFunctionsRelRequested.
+  ///
+  /// In ja, this message translates to:
+  /// **'申請中'**
+  String get raiFunctionsRelRequested;
+
+  /// No description provided for @raiFunctionsRelMuted.
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュート中'**
+  String get raiFunctionsRelMuted;
+
+  /// No description provided for @raiFunctionsRelBlocked.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブロック中'**
+  String get raiFunctionsRelBlocked;
+
+  /// No description provided for @raiFunctionsRelBlockedBy.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブロックされています'**
+  String get raiFunctionsRelBlockedBy;
+
+  /// No description provided for @raiFunctionsRelNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'なし'**
+  String get raiFunctionsRelNone;
+
+  /// No description provided for @raiFunctionsRelation.
+  ///
+  /// In ja, this message translates to:
+  /// **'関係: {flags}'**
+  String raiFunctionsRelation(String flags);
+
+  /// No description provided for @raiFunctionsRequestLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'{user} [申請 {id}]'**
+  String raiFunctionsRequestLine(String user, String id);
+
+  /// No description provided for @raiFunctionsHeadModeration.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデレーション({kind})'**
+  String raiFunctionsHeadModeration(String kind);
+
+  /// No description provided for @raiFunctionsHeadNotifications.
+  ///
+  /// In ja, this message translates to:
+  /// **'{unread, plural, other{通知(未読 {unread} 件)}}'**
+  String raiFunctionsHeadNotifications(int unread);
+
+  /// No description provided for @raiFunctionsNotificationsRead.
+  ///
+  /// In ja, this message translates to:
+  /// **'通知を既読にしました'**
+  String get raiFunctionsNotificationsRead;
+
+  /// No description provided for @raiFunctionsTrendLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{tag}({count} 人)}}'**
+  String raiFunctionsTrendLine(String tag, int count);
+
+  /// No description provided for @raiFunctionsHeadTrends.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド'**
+  String get raiFunctionsHeadTrends;
+
+  /// No description provided for @raiFunctionsListLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{name} [{id}]({count} 人)}}'**
+  String raiFunctionsListLine(String name, String id, int count);
+
+  /// No description provided for @raiFunctionsHeadLists.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get raiFunctionsHeadLists;
+
+  /// No description provided for @raiFunctionsMissingList.
+  ///
+  /// In ja, this message translates to:
+  /// **'list id (list=) がありません'**
+  String get raiFunctionsMissingList;
+
+  /// No description provided for @raiFunctionsHeadListMembers.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストのメンバー'**
+  String get raiFunctionsHeadListMembers;
+
+  /// No description provided for @raiFunctionsClipCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{({count} 件)}}'**
+  String raiFunctionsClipCount(int count);
+
+  /// No description provided for @raiFunctionsHeadClips.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ'**
+  String get raiFunctionsHeadClips;
+
+  /// No description provided for @raiFunctionsMissingClip.
+  ///
+  /// In ja, this message translates to:
+  /// **'clip id (clip=) がありません'**
+  String get raiFunctionsMissingClip;
+
+  /// No description provided for @raiFunctionsHeadClipNotes.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップの中身'**
+  String get raiFunctionsHeadClipNotes;
+
+  /// No description provided for @raiFunctionsHeadFeeds.
+  ///
+  /// In ja, this message translates to:
+  /// **'フィード'**
+  String get raiFunctionsHeadFeeds;
+
+  /// No description provided for @raiFunctionsDmUnread.
+  ///
+  /// In ja, this message translates to:
+  /// **'(未読 {count})'**
+  String raiFunctionsDmUnread(int count);
+
+  /// No description provided for @raiFunctionsHeadEmoji.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字「{keyword}」'**
+  String raiFunctionsHeadEmoji(String keyword);
+
+  /// No description provided for @raiFunctionsUnfollowed.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォローを外しました'**
+  String get raiFunctionsUnfollowed;
+
+  /// No description provided for @raiFunctionsFollowRequested.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー申請しました'**
+  String get raiFunctionsFollowRequested;
+
+  /// No description provided for @raiFunctionsFollowed.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォローしました'**
+  String get raiFunctionsFollowed;
+
+  /// No description provided for @raiFunctionsListUserArgs.
+  ///
+  /// In ja, this message translates to:
+  /// **'list= と user= を指定してください'**
+  String get raiFunctionsListUserArgs;
+
+  /// No description provided for @raiFunctionsListAdded.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストに追加しました'**
+  String get raiFunctionsListAdded;
+
+  /// No description provided for @raiFunctionsListRemoved.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストから外しました'**
+  String get raiFunctionsListRemoved;
+
+  /// No description provided for @raiFunctionsMissingName.
+  ///
+  /// In ja, this message translates to:
+  /// **'名前 (name=) がありません'**
+  String get raiFunctionsMissingName;
+
+  /// No description provided for @raiFunctionsListCreated.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト「{name}」を作りました [{id}]'**
+  String raiFunctionsListCreated(String name, String id);
+
+  /// No description provided for @raiFunctionsClipPostArgs.
+  ///
+  /// In ja, this message translates to:
+  /// **'clip= と post= を指定してください'**
+  String get raiFunctionsClipPostArgs;
+
+  /// No description provided for @raiFunctionsClipAdded.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップに追加しました'**
+  String get raiFunctionsClipAdded;
+
+  /// No description provided for @raiFunctionsClipRemoved.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップから外しました'**
+  String get raiFunctionsClipRemoved;
+
+  /// No description provided for @raiFunctionsClipCreated.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ「{name}」を作りました [{id}]'**
+  String raiFunctionsClipCreated(String name, String id);
+
+  /// No description provided for @raiFunctionsAreaKeyArgs.
+  ///
+  /// In ja, this message translates to:
+  /// **'area= と key= を指定してください'**
+  String get raiFunctionsAreaKeyArgs;
+
+  /// No description provided for @raiFunctionsSettingsPageMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'設定ページ「{area}」はありません'**
+  String raiFunctionsSettingsPageMissing(String area);
+
+  /// No description provided for @raiFunctionsAreaKeyValueArgs.
+  ///
+  /// In ja, this message translates to:
+  /// **'area= と key= と value= を指定してください'**
+  String get raiFunctionsAreaKeyValueArgs;
+
+  /// No description provided for @raiFunctionsSettingBadValue.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{key}」に「{value}」は入れられません(今の値: {current})'**
+  String raiFunctionsSettingBadValue(String key, String value, String current);
+
+  /// No description provided for @raiFunctionsSettingSet.
+  ///
+  /// In ja, this message translates to:
+  /// **'{area}.{key} を {value} にしました'**
+  String raiFunctionsSettingSet(String area, String key, String value);
+
+  /// No description provided for @raiFunctionsMissingText.
+  ///
+  /// In ja, this message translates to:
+  /// **'本文(text=)がありません'**
+  String get raiFunctionsMissingText;
+
+  /// No description provided for @raiFunctionsMissingRoom.
+  ///
+  /// In ja, this message translates to:
+  /// **'ルーム id (room=) がありません'**
+  String get raiFunctionsMissingRoom;
+
+  /// No description provided for @raiFunctionsDmRoomMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'DM ルーム {id} はありません'**
+  String raiFunctionsDmRoomMissing(String id);
+
+  /// target はコンポーザーの題(返信 / 引用など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{target}の下書きをコンポーザーに入れました(送信はしていません)'**
+  String raiFunctionsComposeFilled(String target);
+
+  /// No description provided for @raiFunctionsFeedNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'フィード「{feed}」が見つかりません'**
+  String raiFunctionsFeedNotFound(String feed);
+
+  /// No description provided for @raiFunctionsFeedSaved.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{「{name}」を保存しました(保存済み {count} 件)}}'**
+  String raiFunctionsFeedSaved(String name, int count);
+
+  /// No description provided for @raiFunctionsFeedUnsaved.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{「{name}」を保存から外しました(保存済み {count} 件)}}'**
+  String raiFunctionsFeedUnsaved(String name, int count);
+
+  /// No description provided for @raiFunctionsNoBluesky.
+  ///
+  /// In ja, this message translates to:
+  /// **'Bluesky のアカウントがありません(カスタムフィードは Bluesky のみ)'**
+  String get raiFunctionsNoBluesky;
+
+  /// No description provided for @raiFunctionsFeedAlreadyHome.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」はもうホームのタイムラインに入っています'**
+  String raiFunctionsFeedAlreadyHome(String name);
+
+  /// No description provided for @raiFunctionsFeedAddedHome.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」({account})をホームのタイムラインに取り込みました'**
+  String raiFunctionsFeedAddedHome(String name, String account);
+
+  /// No description provided for @raiFunctionsNotLoggedInRasq.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインしていません'**
+  String get raiFunctionsNotLoggedInRasq;
+
+  /// No description provided for @raiFunctionsRasqListMine.
+  ///
+  /// In ja, this message translates to:
+  /// **'自分'**
+  String get raiFunctionsRasqListMine;
+
+  /// No description provided for @raiFunctionsRasqListUnfetchable.
+  ///
+  /// In ja, this message translates to:
+  /// **'取り込めない'**
+  String get raiFunctionsRasqListUnfetchable;
+
+  /// No description provided for @raiFunctionsRasqListFollowing.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get raiFunctionsRasqListFollowing;
+
+  /// このあとに「 — 説明」と「 [id]」が続く
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{name}({count}人・{state})}}'**
+  String raiFunctionsRasqListLine(String name, int count, String state);
+
+  /// No description provided for @raiFunctionsHeadRasqLists.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト'**
+  String get raiFunctionsHeadRasqLists;
+
+  /// No description provided for @raiFunctionsMissingListArg.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト(list=)がありません'**
+  String get raiFunctionsMissingListArg;
+
+  /// No description provided for @raiFunctionsRasqListNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト「{query}」が見つかりません'**
+  String raiFunctionsRasqListNotFound(String query);
+
+  /// No description provided for @raiFunctionsMissingWord.
+  ///
+  /// In ja, this message translates to:
+  /// **'ワード(word=)がありません'**
+  String get raiFunctionsMissingWord;
+
+  /// No description provided for @raiFunctionsNotLoggedIn.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインしていません'**
+  String get raiFunctionsNotLoggedIn;
+
+  /// No description provided for @raiFunctionsWordExcludeAlready.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{word}」の除外はもう入っています'**
+  String raiFunctionsWordExcludeAlready(String word);
+
+  /// No description provided for @raiFunctionsWordIncludeAlready.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{word}」の絞り込みはもう入っています'**
+  String raiFunctionsWordIncludeAlready(String word);
+
+  /// scope は home / social / local / global
+  ///
+  /// In ja, this message translates to:
+  /// **'「{word}」を含む投稿を {scope} のタイムラインから除外するようにしました'**
+  String raiFunctionsWordExcluded(String word, String scope);
+
+  /// No description provided for @raiFunctionsWordIncluded.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{word}」を含む投稿だけを {scope} のタイムラインに通すようにしました'**
+  String raiFunctionsWordIncluded(String word, String scope);
+
+  /// No description provided for @raiFunctionsFeedKindLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'フィード'**
+  String get raiFunctionsFeedKindLabel;
+
+  /// No description provided for @raiFunctionsHeadFeedTimeline.
+  ///
+  /// In ja, this message translates to:
+  /// **'フィード TL'**
+  String get raiFunctionsHeadFeedTimeline;
+
+  /// No description provided for @raiFunctionsPageList.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト {name} [{id}]'**
+  String raiFunctionsPageList(String name, String id);
+
+  /// No description provided for @raiFunctionsPageFeed.
+  ///
+  /// In ja, this message translates to:
+  /// **'フィード {name} [{uri}]'**
+  String raiFunctionsPageFeed(String name, String uri);
+
+  /// No description provided for @raiFunctionsHeadListsPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストページ'**
+  String get raiFunctionsHeadListsPage;
+
+  /// No description provided for @raiFunctionsHeadNotificationsPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'通知'**
+  String get raiFunctionsHeadNotificationsPage;
+
+  /// No description provided for @raiFunctionsHeadHomeTimeline.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホーム TL'**
+  String get raiFunctionsHeadHomeTimeline;
+
+  /// No description provided for @raiFunctionsMissingSource.
+  ///
+  /// In ja, this message translates to:
+  /// **'取り込み元(source=)がありません'**
+  String get raiFunctionsMissingSource;
+
+  /// No description provided for @raiFunctionsSeedNoPosts.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{label}」に投稿が無いので特徴語を取れません'**
+  String raiFunctionsSeedNoPosts(String label);
+
+  /// No description provided for @raiFunctionsSeedNoWords.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{label}」から特徴語を取れませんでした'**
+  String raiFunctionsSeedNoWords(String label);
+
+  /// No description provided for @raiFunctionsSeedWordSeparator.
+  ///
+  /// In ja, this message translates to:
+  /// **'、'**
+  String get raiFunctionsSeedWordSeparator;
+
+  /// No description provided for @raiFunctionsSeedAdded.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{label}」の特徴語({words})をトレンドの指向性(好きなジャンル)に足しました'**
+  String raiFunctionsSeedAdded(String label, String words);
+
+  /// No description provided for @raiFunctionsMissingQuery.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索語(q=)がありません'**
+  String get raiFunctionsMissingQuery;
+
+  /// No description provided for @raiFunctionsHeadWeb.
+  ///
+  /// In ja, this message translates to:
+  /// **'web「{query}」'**
+  String raiFunctionsHeadWeb(String query);
+
+  /// No description provided for @raiFunctionsNotAutomatableMark.
+  ///
+  /// In ja, this message translates to:
+  /// **'(自動化不可)'**
+  String get raiFunctionsNotAutomatableMark;
+
+  /// No description provided for @raiFunctionsHeadActions.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクション'**
+  String get raiFunctionsHeadActions;
+
+  /// RAi のモデルを選ぶ FOW の題
+  ///
+  /// In ja, this message translates to:
+  /// **'モデル'**
+  String get raiModelsTitle;
+
+  /// No description provided for @raiModelsClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get raiModelsClose;
+
+  /// No description provided for @raiModelsRamUnknown.
+  ///
+  /// In ja, this message translates to:
+  /// **'RAM: 不明'**
+  String get raiModelsRamUnknown;
+
+  /// gb は小数 1 桁の空きメモリ
+  ///
+  /// In ja, this message translates to:
+  /// **'(空き {gb} GB)'**
+  String raiModelsRamFree(String gb);
+
+  /// ram は「RAM: 8.0 GB(空き …)」の文
+  ///
+  /// In ja, this message translates to:
+  /// **'{codename} = この端末で動くモデル。{ram}'**
+  String raiModelsCaption(String codename, String ram);
+
+  /// 開発者モードの詳しい説明
+  ///
+  /// In ja, this message translates to:
+  /// **'{codename} = 端末内で動くモデル({label})。{ram}'**
+  String raiModelsCaptionDetail(String codename, String label, String ram);
+
+  /// No description provided for @raiModelsSectionLocal.
+  ///
+  /// In ja, this message translates to:
+  /// **'ローカル'**
+  String get raiModelsSectionLocal;
+
+  /// No description provided for @raiModelsSectionEmbedding.
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi の検索と投稿の埋め込み'**
+  String get raiModelsSectionEmbedding;
+
+  /// No description provided for @raiModelsPostVisionReady.
+  ///
+  /// In ja, this message translates to:
+  /// **'関連 TL と TL のアルゴリズムで、投稿の画像も比べます'**
+  String get raiModelsPostVisionReady;
+
+  /// No description provided for @raiModelsPostVisionIdle.
+  ///
+  /// In ja, this message translates to:
+  /// **'関連 TL と TL のアルゴリズムで、投稿の本文に加えて画像も比べられるようになります(文のモデルも入れてください)'**
+  String get raiModelsPostVisionIdle;
+
+  /// No description provided for @raiModelsSectionEmoji.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字の画像検索(2 つとも要ります)'**
+  String get raiModelsSectionEmoji;
+
+  /// No description provided for @raiModelsEmojiTextReady.
+  ///
+  /// In ja, this message translates to:
+  /// **'打った文で、絵文字の絵を探せます'**
+  String get raiModelsEmojiTextReady;
+
+  /// No description provided for @raiModelsEmojiTextIdle.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字の絵を、意味で探せるようになります(画像側も入れてください)'**
+  String get raiModelsEmojiTextIdle;
+
+  /// No description provided for @raiModelsEmojiVisionReady.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字の絵を、裏で少しずつ読み込みます(サーバーごとに 1 回)'**
+  String get raiModelsEmojiVisionReady;
+
+  /// No description provided for @raiModelsEmojiVisionIdle.
+  ///
+  /// In ja, this message translates to:
+  /// **'名前が意味を持たない絵文字も、絵の中身で探せるようになります'**
+  String get raiModelsEmojiVisionIdle;
+
+  /// No description provided for @raiModelsSectionCloud.
+  ///
+  /// In ja, this message translates to:
+  /// **'クラウド(端末で答えられないとき)'**
+  String get raiModelsSectionCloud;
+
+  /// No description provided for @raiModelsCompletionCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'完遂率 = 案内や返答が最後までうまくいった割合です。'**
+  String get raiModelsCompletionCaption;
+
+  /// 開発者モードの詳しい説明
+  ///
+  /// In ja, this message translates to:
+  /// **'完遂率 = 操作の案内 / 返答が最後まで成立した割合の集計(35B 未満のモデルだけ集計、デモでは「-%」)。'**
+  String get raiModelsCompletionCaptionDetail;
+
+  /// No description provided for @raiModelsRateExcluded.
+  ///
+  /// In ja, this message translates to:
+  /// **'集計外'**
+  String get raiModelsRateExcluded;
+
+  /// No description provided for @raiModelsNotConnected.
+  ///
+  /// In ja, this message translates to:
+  /// **'未接続'**
+  String get raiModelsNotConnected;
+
+  /// No description provided for @raiModelsPhaseNotInstalled.
+  ///
+  /// In ja, this message translates to:
+  /// **'未ダウンロード'**
+  String get raiModelsPhaseNotInstalled;
+
+  /// No description provided for @raiModelsPhaseDownloading.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロード中 {percent}%'**
+  String raiModelsPhaseDownloading(int percent);
+
+  /// No description provided for @raiModelsPhaseReady.
+  ///
+  /// In ja, this message translates to:
+  /// **'準備完了'**
+  String get raiModelsPhaseReady;
+
+  /// No description provided for @raiModelsPhaseLoading.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込み中'**
+  String get raiModelsPhaseLoading;
+
+  /// No description provided for @raiModelsPhaseGenerating.
+  ///
+  /// In ja, this message translates to:
+  /// **'生成中'**
+  String get raiModelsPhaseGenerating;
+
+  /// No description provided for @raiModelsPhaseUnavailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'使えません'**
+  String get raiModelsPhaseUnavailable;
+
+  /// No description provided for @raiModelsPillCloud.
+  ///
+  /// In ja, this message translates to:
+  /// **'クラウド'**
+  String get raiModelsPillCloud;
+
+  /// No description provided for @raiModelsPillLocal.
+  ///
+  /// In ja, this message translates to:
+  /// **'ローカル'**
+  String get raiModelsPillLocal;
+
+  /// No description provided for @raiModelsCloudLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'{label} · {params}B · クラウド'**
+  String raiModelsCloudLine(String label, String params);
+
+  /// No description provided for @raiModelsCompletionRate.
+  ///
+  /// In ja, this message translates to:
+  /// **'完遂率 {rate}'**
+  String raiModelsCompletionRate(String rate);
+
+  /// No description provided for @raiModelsMemoryNotNeeded.
+  ///
+  /// In ja, this message translates to:
+  /// **'メモリ: 端末不要'**
+  String get raiModelsMemoryNotNeeded;
+
+  /// No description provided for @raiModelsMemory.
+  ///
+  /// In ja, this message translates to:
+  /// **'メモリ: {verdict}'**
+  String raiModelsMemory(String verdict);
+
+  /// No description provided for @raiModelsUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'使う'**
+  String get raiModelsUse;
+
+  /// No description provided for @raiModelsExtract.
+  ///
+  /// In ja, this message translates to:
+  /// **'展開(同梱)'**
+  String get raiModelsExtract;
+
+  /// No description provided for @raiModelsDownload.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロード'**
+  String get raiModelsDownload;
+
+  /// No description provided for @raiModelsRelease.
+  ///
+  /// In ja, this message translates to:
+  /// **'メモリを解放'**
+  String get raiModelsRelease;
+
+  /// No description provided for @raiModelsDeleteTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルを削除しますか'**
+  String get raiModelsDeleteTitle;
+
+  /// No description provided for @raiModelsDeleteMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'{file} を端末から消します。'**
+  String raiModelsDeleteMessage(String file);
+
+  /// No description provided for @raiModelsDelete.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get raiModelsDelete;
+
+  /// No description provided for @raiModelsCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get raiModelsCancel;
+
+  /// No description provided for @raiModelsEmbeddingLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'onnxruntime · {file} · 約 {size} MB · {dims} 次元'**
+  String raiModelsEmbeddingLine(String file, int size, int dims);
+
+  /// No description provided for @raiModelsSearchSemantic.
+  ///
+  /// In ja, this message translates to:
+  /// **'意味の近さで探します'**
+  String get raiModelsSearchSemantic;
+
+  /// No description provided for @raiModelsSearchSemanticDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索: {label}(意味で引く)'**
+  String raiModelsSearchSemanticDetail(String label);
+
+  /// No description provided for @raiModelsSearchNgram.
+  ///
+  /// In ja, this message translates to:
+  /// **'いまは語の一致で探します。ダウンロードすると言い換えにも強くなります'**
+  String get raiModelsSearchNgram;
+
+  /// No description provided for @raiModelsSearchNgramDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索: n-gram 代替(語の一致で引く。ダウンロードすると言い換えにも強くなる)'**
+  String get raiModelsSearchNgramDetail;
+
+  /// No description provided for @raiModelsServerTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ローカル推論サーバー'**
+  String get raiModelsServerTitle;
+
+  /// No description provided for @raiModelsServerConfigured.
+  ///
+  /// In ja, this message translates to:
+  /// **'接続先あり'**
+  String get raiModelsServerConfigured;
+
+  /// No description provided for @raiModelsServerNotConfigured.
+  ///
+  /// In ja, this message translates to:
+  /// **'未設定'**
+  String get raiModelsServerNotConfigured;
+
+  /// No description provided for @raiModelsServerCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末のモデルが答えられないとき、ここに聞きます。'**
+  String get raiModelsServerCaption;
+
+  /// 開発者モードの詳しい説明
+  ///
+  /// In ja, this message translates to:
+  /// **'OpenAI 互換のチャット API(llama-server / vLLM など)。端末内モデルが失敗 / 無応答のとき、質問と近かったリファレンスを添えて渡します。'**
+  String get raiModelsServerCaptionDetail;
+
+  /// No description provided for @raiModelsServerModelHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデル名(省略可)'**
+  String get raiModelsServerModelHint;
+
+  /// モデルの大きさと端末のメモリの見立て
+  ///
+  /// In ja, this message translates to:
+  /// **'動作可'**
+  String get raiModelsRamOk;
+
+  /// No description provided for @raiModelsRamTight.
+  ///
+  /// In ja, this message translates to:
+  /// **'ぎりぎり'**
+  String get raiModelsRamTight;
+
+  /// No description provided for @raiModelsRamNo.
+  ///
+  /// In ja, this message translates to:
+  /// **'メモリ不足'**
+  String get raiModelsRamNo;
+
+  /// No description provided for @raiModelsRamUnknownVerdict.
+  ///
+  /// In ja, this message translates to:
+  /// **'不明'**
+  String get raiModelsRamUnknownVerdict;
+
+  /// No description provided for @raiModelsFallUpNotConnected.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォールアップ先(サーバー側)が未接続です'**
+  String get raiModelsFallUpNotConnected;
+
+  /// No description provided for @raiModelsServerHttpError.
+  ///
+  /// In ja, this message translates to:
+  /// **'推論サーバー HTTP {status}'**
+  String raiModelsServerHttpError(int status);
+
+  /// No description provided for @raiModelsServerNoReply.
+  ///
+  /// In ja, this message translates to:
+  /// **'推論サーバーから返事がありませんでした'**
+  String get raiModelsServerNoReply;
+
+  /// No description provided for @raiModelsServerUnreachable.
+  ///
+  /// In ja, this message translates to:
+  /// **'推論サーバーに届きません: {error}'**
+  String raiModelsServerUnreachable(String error);
+
+  /// No description provided for @raiModelsLlmUnavailableHere.
+  ///
+  /// In ja, this message translates to:
+  /// **'この環境では端末内モデルを使えません'**
+  String get raiModelsLlmUnavailableHere;
+
+  /// No description provided for @raiModelsLlamaFetching.
+  ///
+  /// In ja, this message translates to:
+  /// **'llama.cpp のランタイム({tag})を取得中'**
+  String raiModelsLlamaFetching(String tag);
+
+  /// No description provided for @raiModelsLlamaMissingIos.
+  ///
+  /// In ja, this message translates to:
+  /// **'llama.cpp が組み込まれていません(Runner に llama.xcframework を追加)'**
+  String get raiModelsLlamaMissingIos;
+
+  /// No description provided for @raiModelsLlamaMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'llama.cpp のライブラリがありません'**
+  String get raiModelsLlamaMissing;
+
+  /// No description provided for @raiModelsLlamaFetchFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'llama.cpp のランタイムを取得できません(HTTP {status})'**
+  String raiModelsLlamaFetchFailed(int status);
+
+  /// No description provided for @raiModelsStateCheckFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルの状態を確認できません: {error}'**
+  String raiModelsStateCheckFailed(String error);
+
+  /// No description provided for @raiModelsExtracting.
+  ///
+  /// In ja, this message translates to:
+  /// **'同梱モデルを展開中'**
+  String get raiModelsExtracting;
+
+  /// No description provided for @raiModelsExtractTooLarge.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では同梱モデルを展開できません(ダウンロードしてください)'**
+  String get raiModelsExtractTooLarge;
+
+  /// No description provided for @raiModelsExtractFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'展開に失敗しました: {error}'**
+  String raiModelsExtractFailed(String error);
+
+  /// No description provided for @raiModelsDownloadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロードに失敗しました: {error}'**
+  String raiModelsDownloadFailed(String error);
+
+  /// No description provided for @raiModelsNotDownloaded.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末内モデル({codename})がまだダウンロードされていません'**
+  String raiModelsNotDownloaded(String codename);
+
+  /// No description provided for @raiModelsDeviceUnavailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末内モデルを使えません'**
+  String get raiModelsDeviceUnavailable;
+
+  /// No description provided for @raiModelsFileMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルファイルがありません: {path}'**
+  String raiModelsFileMissing(String path);
+
+  /// No description provided for @raiModelsTimeoutFirstToken.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末内モデルが 30 秒返事をしませんでした'**
+  String get raiModelsTimeoutFirstToken;
+
+  /// No description provided for @raiModelsTimeoutOverall.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末内モデルの返事が長すぎるので打ち切りました'**
+  String get raiModelsTimeoutOverall;
+
+  /// No description provided for @raiModelsOnlyThinking.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末内モデルから返事がありませんでした(思考だけで終わった可能性)'**
+  String get raiModelsOnlyThinking;
+
+  /// No description provided for @raiModelsGenerateFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'生成に失敗しました: {error}'**
+  String raiModelsGenerateFailed(String error);
+
+  /// macOS で llama.cpp を読めないときに添える案内(前に改行が入る)
+  ///
+  /// In ja, this message translates to:
+  /// **'「system policy」= サンドボックス / ライブラリ検証で拒否。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください'**
+  String get raiModelsHintSystemPolicy;
+
+  /// macOS で llama.cpp を読めないときに添える案内(前に改行が入る)
+  ///
+  /// In ja, this message translates to:
+  /// **'Gatekeeper に止められた場合: 「システム設定 > プライバシーとセキュリティ」で許可するか、Application Support/llama_cpp の dylib に xattr -dr com.apple.quarantine を実行してください'**
+  String get raiModelsHintGatekeeper;
+
+  /// error のあとに案内が続くことがある
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルを読み込めません(llama.cpp): {error}'**
+  String raiModelsLoadFailedLlama(String error);
+
+  /// No description provided for @raiModelsLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルを読み込めません: {error}'**
+  String raiModelsLoadFailed(String error);
+
+  /// 埋め込みモデルの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ MiniLM(文)'**
+  String get raiModelsEmbeddingRasqText;
+
+  /// No description provided for @raiModelsEmbeddingMiniLmL12.
+  ///
+  /// In ja, this message translates to:
+  /// **'MiniLM-L12 多言語(paraphrase, int8)'**
+  String get raiModelsEmbeddingMiniLmL12;
+
+  /// No description provided for @raiModelsEmbeddingRasqVision.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ MobileNet(投稿の画像)'**
+  String get raiModelsEmbeddingRasqVision;
+
+  /// No description provided for @raiModelsEmbeddingSiglipText.
+  ///
+  /// In ja, this message translates to:
+  /// **'SigLIP2 base(テキスト塔・int8)'**
+  String get raiModelsEmbeddingSiglipText;
+
+  /// No description provided for @raiModelsEmbeddingSiglipVision.
+  ///
+  /// In ja, this message translates to:
+  /// **'SigLIP2 base(画像側・int8)'**
+  String get raiModelsEmbeddingSiglipVision;
+
+  /// No description provided for @raiModelsEmbeddingFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'失敗: {message}'**
+  String raiModelsEmbeddingFailed(String message);
+
+  /// No description provided for @raiModelsEmbeddingUnavailableHere.
+  ///
+  /// In ja, this message translates to:
+  /// **'この環境では端末内の埋め込みモデルを使えません'**
+  String get raiModelsEmbeddingUnavailableHere;
+
+  /// No description provided for @raiModelsCentralNotConfigured.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ サーバーの接続先が未設定です'**
+  String get raiModelsCentralNotConfigured;
+
+  /// No description provided for @raiModelsLoadFailedOnnx.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルを読み込めません(onnxruntime): {error}'**
+  String raiModelsLoadFailedOnnx(String error);
+
+  /// No description provided for @raiModelsWebDisabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'web 検索はまだ使えません'**
+  String get raiModelsWebDisabled;
+
+  /// No description provided for @raiModelsWebNoKey.
+  ///
+  /// In ja, this message translates to:
+  /// **'Brave Search の鍵が設定されていません'**
+  String get raiModelsWebNoKey;
+
+  /// web 検索の答えを 1 件の結果として出すときの題
+  ///
+  /// In ja, this message translates to:
+  /// **'web の答え'**
+  String get raiModelsWebAnswerTitle;
+
+  /// No description provided for @raiModelsWebFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索に失敗: {error}'**
+  String raiModelsWebFailed(String error);
+
+  /// RAi バーのモデルのチップの横の短い状態(未ダウンロード)
+  ///
+  /// In ja, this message translates to:
+  /// **'未DL'**
+  String get raiModelsNoteNotInstalled;
+
   /// No description provided for @settingsActionBarTitle.
   ///
   /// In ja, this message translates to:
