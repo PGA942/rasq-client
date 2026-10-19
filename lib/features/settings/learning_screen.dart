@@ -15,6 +15,7 @@ import '../../backend/rasq_account.dart';
 import '../../backend/rasq_consent.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_account_fow.dart';
+import '../../l10n/l10n.dart';
 import '../learning/contribution.dart';
 import '../learning/relational_cloud.dart';
 import '../rai/rai_llm.dart';
@@ -56,7 +57,7 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
       final m = await body();
       if (mounted) setState(() => _message = m);
     } on OrgateException catch (e) {
-      if (mounted) setState(() => _message = 'できませんでした — $e');
+      if (mounted) setState(() => _message = context.l10n.settingsLearningError('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -68,49 +69,48 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
     final agreed = ValueNotifier(false);
     final ok = await manager.showBottomSheet<bool>(
       id: 'learning.grant',
-      title: 'アルゴリズムとコミュニティへの貢献',
-      confirmText: '同意して参加する',
+      title: context.l10n.settingsLearningTitle,
+      confirmText: context.l10n.settingsLearningGrantConfirmButton,
       confirmEnabled: agreed,
       builder: (ctx) {
         final scheme = Theme.of(ctx).colorScheme;
+        final l = ctx.l10n;
         Widget point(String t) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('・$t', style: RasqTypography.bodySmall));
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.lg),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // 本人の範囲 (D-370、規約案 02 第 10 項): 自分が書いた公開投稿と、その投稿どうしの関連だけ。
-            point('任意です。断っても、やめても、RASQ の機能や有料機能はそのまま使えます'),
-            point('対象は、あなたが自分で書いた公開の投稿と、その投稿どうしが同じ会話かどうかだけです'),
-            point('ほかの人の投稿、DM、限定公開の投稿、ASTell の会話、RAi の質問と答えは送りません'),
-            point('持ち主の確認が済んだ SNS アカウントの投稿だけを受け付けます'),
-            point('リレーショナルタイムラインの会話のまとめ方の改善に使います'),
-            point('やめたときは、送ったデータをすぐに消します'),
+            point(l.settingsLearningGrantPointOptional),
+            point(l.settingsLearningGrantPointScope),
+            point(l.settingsLearningGrantPointExcluded),
+            point(l.settingsLearningGrantPointVerifiedOnly),
+            point(l.settingsLearningGrantPointPurpose),
+            point(l.settingsLearningGrantPointDeletion),
             if (s.extended)
-              const RasqNotice.warning(
-                key: ValueKey('learning.extendedNotice'),
-                margin: EdgeInsets.only(bottom: RasqSpacing.sm),
-                text: '検証用の設定です。ほかの人の投稿の判定や RAi のやりとりも送ります。',
-                detail: 'CENTRAL_LEARNING_SCOPE=extended(S-049 / S-050)。正式な環境では使わない。',
+              RasqNotice.warning(
+                key: const ValueKey('learning.extendedNotice'),
+                margin: const EdgeInsets.only(bottom: RasqSpacing.sm),
+                text: l.settingsLearningGrantExtendedNotice,
+                detail: l.settingsLearningGrantExtendedNoticeDetail,
               ),
             RasqCaption(
               '',
               devOnly: true,
               padding: EdgeInsets.zero,
-              detail: 'D-370 / S-051。関連 TL の会話イベントから自分の投稿(公開と分かるもの。Bluesky はすべて公開)だけを '
-                  'POST /me/learning/contributions へ(v2、self = 自分の SNS アカウント)。Central は持ち主の確認(sns_links.verified_at)と、'
-                  '全投稿が a=-1・vis=public かを確かめる。受け取るたびに年齢と保護者の同意も確かめ直す。本文の @メンションと URL は伏せる。',
+              detail: l.settingsLearningGrantScopeDetail,
             ),
-            TextButton(onPressed: () => ref.read(routerProvider).push('/settings/dsl/about.learning'), child: const Text('説明の全文を読む')),
+            TextButton(onPressed: () => ref.read(routerProvider).push('/settings/dsl/about.learning'), child: Text(l.settingsLearningGrantReadFullButton)),
             ValueListenableBuilder<bool>(
               valueListenable: agreed,
               builder: (_, v, _) => RasqListTile(
                 key: const ValueKey('learning.agree'),
-                title: '説明を読み、データの提供に同意します',
+                title: l.settingsLearningGrantAgreeCheckbox,
                 chevron: false,
                 onTap: () => agreed.value = !v,
                 trailing: Checkbox(value: v, onChanged: (x) => agreed.value = x ?? false),
               ),
             ),
-            Text('文書の版: $rasqLearningVersion', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(l.settingsLearningDocumentVersion(rasqLearningVersion), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ]),
         );
       },
@@ -120,6 +120,7 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
 
   /// 年齢の申告(登録の FOW より前に作ったアカウント向け)。
   Future<void> _declareAge() async {
+    final l = context.l10n;
     final manager = ref.read(overlayManagerProvider);
     final age = ValueNotifier<RasqAgeBand?>(null);
     final guardian = ValueNotifier(false);
@@ -129,8 +130,8 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
     guardian.addListener(sync);
     final ok = await manager.showBottomSheet<bool>(
       id: 'learning.age',
-      title: '年齢の申告',
-      confirmText: '申告する',
+      title: l.settingsLearningAgeTitle,
+      confirmText: l.settingsLearningAgeConfirmButton,
       confirmEnabled: ready,
       builder: (ctx) => ListenableBuilder(
         listenable: Listenable.merge([age, guardian]),
@@ -140,7 +141,7 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
           if (age.value?.needsGuardian ?? false)
             RasqListTile(
               key: const ValueKey('learning.guardian'),
-              title: '保護者の同意を得ています',
+              title: ctx.l10n.settingsLearningGuardianConsent,
               chevron: false,
               onTap: () => guardian.value = !guardian.value,
               trailing: Checkbox(value: guardian.value, onChanged: (x) => guardian.value = x ?? false),
@@ -155,37 +156,38 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
       await api.put('age', version: rasqTermsVersion, granted: true, detail: age.value!.wire);
       if (age.value!.needsGuardian) await api.put('guardian', version: rasqTermsVersion, granted: true);
       ref.invalidate(learningProvider);
-      return '年齢を申告しました';
+      return l.settingsLearningAgeDeclared;
     });
   }
 
   Future<void> _withdrawByCode() async {
+    final l = context.l10n;
     final manager = ref.read(overlayManagerProvider);
     final input = TextEditingController();
     final ok = await manager.showBottomSheet<bool>(
       id: 'learning.code',
-      title: '撤回用のコードで撤回',
-      confirmText: '撤回する',
+      title: l.settingsLearningCodeSheetTitle,
+      confirmText: l.settingsLearningCodeConfirmButton,
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(RasqSpacing.page),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('同意したときに発行されたコードを入れます。提供した RASQ アカウントに入れなくなった場合でも撤回できます。', style: RasqTypography.bodySmall),
+          Text(ctx.l10n.settingsLearningCodeSheetBody, style: RasqTypography.bodySmall),
           const SizedBox(height: RasqSpacing.sm),
-          RasqInput(key: const ValueKey('learning.code.input'), controller: input, hintText: '撤回用のコード'),
+          RasqInput(key: const ValueKey('learning.code.input'), controller: input, hintText: ctx.l10n.settingsLearningCodeHint),
         ]),
       ),
     );
     if (ok != true || input.text.trim().isEmpty) return;
     await _run(() async {
       await ref.read(learningProvider.notifier).withdrawByCode(input.text);
-      return 'やめました。送ったデータは消します';
+      return l.settingsLearningWithdrawnByCode;
     });
   }
 
   String _reasonText(String? r) => switch (r) {
-        'age-required' => '年齢の申告が必要です',
-        'under-16' => '16 歳以上から参加できます',
-        'guardian-required' => '16〜17 歳の人は、保護者の同意が必要です',
+        'age-required' => context.l10n.settingsLearningReasonAgeRequired,
+        'under-16' => context.l10n.settingsLearningReasonUnder16,
+        'guardian-required' => context.l10n.settingsLearningReasonGuardianRequired,
         _ => '',
       };
 
@@ -198,35 +200,35 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
     final state = ref.watch(learningProvider);
     final notifier = ref.read(learningProvider.notifier);
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
+    final l = context.l10n;
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'アルゴリズムとコミュニティへの貢献'),
+      appBar: RasqPageHeader(title: l.settingsLearningTitle),
       body: ListView(children: [
-        const RasqNotice(
-          text: 'あなたが書いた公開の投稿を送って、会話のまとめ方の改善に協力できます。任意で、いつでもやめられます。',
-          detail: 'D-243 / D-363 / D-370。同意は Central の account_consents(kind = learning)に記録。既定の範囲(own)では、関連 TL の会話の中の自分の公開投稿だけを '
-              'POST /me/learning/contributions へ送る。正式な環境では受付を閉じる(CENTRAL_LEARNING_OPEN=false)。',
+        RasqNotice(
+          text: l.settingsLearningIntroNotice,
+          detail: l.settingsLearningIntroNoticeDetail,
         ),
-        RasqListTile(title: '説明を読む', subtitle: '送るもの、使いみち、保存する期間', onTap: () => context.push('/settings/dsl/about.learning')),
-        const RasqSectionHeader(title: '状態'),
+        RasqListTile(title: l.settingsLearningReadAboutTitle, subtitle: l.settingsLearningReadAboutSubtitle, onTap: () => context.push('/settings/dsl/about.learning')),
+        RasqSectionHeader(title: l.settingsLearningStatusSection),
         if (!configured)
-          RasqListTile(title: 'RASQ サーバーの接続先が未設定です', subtitle: '接続先を入れると確認できます', onTap: () => context.push('/settings/server'))
+          RasqListTile(title: l.settingsLearningServerNotConfiguredTitle, subtitle: l.settingsLearningServerNotConfiguredSubtitle, onTap: () => context.push('/settings/server'))
         else if (noAccount)
-          RasqListTile(key: const ValueKey('learning.needAccount'), title: 'RASQ アカウントが未作成です', subtitle: 'データの提供は RASQ アカウントごとに記録します', onTap: () => openRasqAccountFow(ref))
+          RasqListTile(key: const ValueKey('learning.needAccount'), title: l.settingsLearningNoAccountTitle, subtitle: l.settingsLearningNoAccountSubtitle, onTap: () => openRasqAccountFow(ref))
         else
           state.when(
             loading: () => const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: RasqLoading()),
-            error: (e, _) => Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('取得できませんでした: $e', style: RasqTypography.bodySmall.copyWith(color: RasqColors.danger))),
+            error: (e, _) => Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(l.settingsLearningLoadError('$e'), style: RasqTypography.bodySmall.copyWith(color: RasqColors.danger))),
             data: (s) {
               if (s == null) return const SizedBox.shrink();
               return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                RasqValueListTile(key: const ValueKey('learning.status'), title: '貢献', value: s.granted ? '参加中' : '参加していません'),
-                if (s.granted && s.since != null) RasqValueListTile(title: '同意した日', value: RasqTimestamp.format(s.since!)),
-                RasqValueListTile(title: '受付', value: s.open ? '受付中' : 'まだ始まっていません'),
-                RasqValueListTile(title: '年齢の申告', value: s.ageBand == null ? '未申告' : RasqAgeBand.values.firstWhere((a) => a.wire == s.ageBand, orElse: () => RasqAgeBand.adult).label),
-                RasqValueListTile(title: '送ったデータ', value: '会話 ${s.contributions['relational'] ?? 0} 件 ・ RAi ${s.contributions['rai'] ?? 0} 件'),
-                if ((s.contributions['examples'] ?? 0) > 0) RasqValueListTile(key: const ValueKey('learning.examples'), title: 'クラウドの判定の例', value: '${s.contributions['examples']} 件(怪しいけど違う ${s.contributions['hardNegative'] ?? 0} 件)'),
-                if (RasqDeveloperMode.of(context)) RasqValueListTile(title: '投稿 / ラベル', value: '${s.posts} / ${s.labels}'),
-                RasqValueListTile(title: 'このデータを使ったモデル', value: s.models.isEmpty ? 'なし' : s.models.join('、')),
+                RasqValueListTile(key: const ValueKey('learning.status'), title: l.settingsLearningStatusTitle, value: s.granted ? l.settingsLearningStatusJoined : l.settingsLearningStatusNotJoined),
+                if (s.granted && s.since != null) RasqValueListTile(title: l.settingsLearningSinceTitle, value: RasqTimestamp.format(s.since!)),
+                RasqValueListTile(title: l.settingsLearningOpenTitle, value: s.open ? l.settingsLearningOpenYes : l.settingsLearningOpenNo),
+                RasqValueListTile(title: l.settingsLearningAgeTitle, value: s.ageBand == null ? l.settingsLearningAgeUndeclared : RasqAgeBand.values.firstWhere((a) => a.wire == s.ageBand, orElse: () => RasqAgeBand.adult).label),
+                RasqValueListTile(title: l.settingsLearningSentTitle, value: l.settingsLearningSentValue(s.contributions['relational'] ?? 0, s.contributions['rai'] ?? 0)),
+                if ((s.contributions['examples'] ?? 0) > 0) RasqValueListTile(key: const ValueKey('learning.examples'), title: l.settingsLearningExamplesTitle, value: l.settingsLearningExamplesValue(s.contributions['examples'] ?? 0, s.contributions['hardNegative'] ?? 0)),
+                if (RasqDeveloperMode.of(context)) RasqValueListTile(title: l.settingsLearningPostsLabelsTitle, value: '${s.posts} / ${s.labels}'),
+                RasqValueListTile(title: l.settingsLearningModelsTitle, value: s.models.isEmpty ? l.settingsLearningModelsNone : s.models.join(l.settingsLearningModelsSeparator)),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
                   child: s.granted
@@ -237,26 +239,26 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
                               : () async {
                                   final ok = await ref.read(overlayManagerProvider).showAlert(
                                         id: 'learning.withdraw',
-                                        title: '貢献をやめる',
-                                        message: 'データを送るのをすぐに止め、送ったデータも消します。',
-                                        confirmText: 'やめる',
-                                        cancelText: 'キャンセル',
+                                        title: l.settingsLearningWithdrawTitle,
+                                        message: l.settingsLearningWithdrawMessage,
+                                        confirmText: l.settingsLearningWithdrawConfirm,
+                                        cancelText: l.settingsLearningCancel,
                                         destructive: true,
                                       );
                                   if (!ok) return;
                                   await _run(() async {
                                     await notifier.withdraw();
                                     if (mounted) setState(() => _code = null);
-                                    return '撤回しました';
+                                    return l.settingsLearningWithdrawn;
                                   });
                                 },
-                          child: const Text('貢献をやめる'),
+                          child: Text(l.settingsLearningWithdrawTitle),
                         )
                       : !s.eligible
                           ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                               Text(_reasonText(s.reason), key: const ValueKey('learning.reason'), style: RasqTypography.bodySmall),
                               if (s.reason != 'under-16')
-                                OutlinedButton(key: const ValueKey('learning.declareAge'), onPressed: _busy ? null : _declareAge, child: const Text('年齢を申告する')),
+                                OutlinedButton(key: const ValueKey('learning.declareAge'), onPressed: _busy ? null : _declareAge, child: Text(l.settingsLearningDeclareAgeButton)),
                             ])
                           : FilledButton(
                               key: const ValueKey('learning.grant'),
@@ -267,37 +269,36 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
                                       await _run(() async {
                                         final code = await notifier.grant();
                                         if (mounted) setState(() => _code = code);
-                                        return '参加しました。下のコードを控えておくと、ログインできなくなってもやめられます';
+                                        return l.settingsLearningGranted;
                                       });
                                     },
-                              child: Text(s.open ? '内容を確認して参加する' : '受付はまだ始まっていません'),
+                              child: Text(s.open ? l.settingsLearningGrantButton : l.settingsLearningGrantClosedButton),
                             ),
                 ),
                 if (_message != null) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text(_message!, key: const ValueKey('learning.message'), style: RasqTypography.bodySmall)),
                 if (s.granted) const _ContributionKinds(),
                 if (s.granted && _code != null) ...[
-                  const RasqSectionHeader(title: '撤回用のコード'),
+                  RasqSectionHeader(title: l.settingsLearningCodeSection),
                   RasqListTile(
                     key: const ValueKey('learning.code'),
                     title: _code!,
-                    subtitle: 'タップでコピー。ログインできなくなっても、このコードでやめられます',
+                    subtitle: l.settingsLearningCodeSubtitle,
                     chevron: false,
                     onTap: () {
                       unawaited(Clipboard.setData(ClipboardData(text: _code!)));
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('撤回用のコードをコピーしました')));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.settingsLearningCodeCopied)));
                     },
                   ),
                 ] else if (s.granted && s.hasWithdrawCode)
-                  Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text('撤回用のコードは、同意した端末に控えてあります。', style: caption)),
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text(l.settingsLearningCodeStoredOnGrantDevice, style: caption)),
               ]);
             },
           ),
-        const RasqSectionHeader(title: 'そのほか'),
-        RasqListTile(key: const ValueKey('learning.byCode'), title: '撤回用のコードでやめる', subtitle: 'ログインできなくなったとき', onTap: configured ? _withdrawByCode : null),
+        RasqSectionHeader(title: l.settingsLearningOtherSection),
+        RasqListTile(key: const ValueKey('learning.byCode'), title: l.settingsLearningByCodeTitle, subtitle: l.settingsLearningByCodeSubtitle, onTap: configured ? _withdrawByCode : null),
         RasqCaption(
-          'アカウントを削除したときも、送ったデータは消えます。ほかの人が参加しているかは、だれにも調べられません。',
-          detail: 'RASQ アカウントを削除したときも、提供の停止と提供済みデータの削除が同時に始まります(learning_contributions は accounts の削除で消える)。'
-              'ほかの人がデータを提供しているかどうかは、だれにも調べられません(GET /me/learning は自分の状態だけ)。',
+          l.settingsLearningDeletionCaption,
+          detail: l.settingsLearningDeletionCaptionDetail,
           padding: const EdgeInsets.all(RasqSpacing.page),
         ),
         if (RasqDeveloperMode.of(context)) const _ContributionDebug(),
@@ -314,48 +315,46 @@ class _ContributionKinds extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = ref.watch(contributionProvider);
     final store = ref.read(settingsAreaProvider(contributionArea).notifier);
+    final l = context.l10n;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const RasqSectionHeader(title: '送るもの'),
+      RasqSectionHeader(title: l.settingsLearningKindsSection),
       RasqSwitchListTile(
         key: const ValueKey('learning.kind.relational'),
-        title: '自分の公開投稿',
-        subtitle: c.extended ? 'タイムラインでまとまった会話' : 'タイムラインで会話にまとまった、あなたの公開の投稿',
-        detail: c.extended
-            ? '会話イベント(束)の公開の投稿。書き手ごとに学習してよいかを判定し、許可の書き手と自分の投稿だけを送る。本文の @メンションと URL は伏せる。'
-            : 'D-370。会話イベントの中の自分の投稿(公開と分かるもの)と、その投稿どうしが同じ会話であること(関連のラベル)。ほかの人の投稿は数(参加者・投稿数)だけ。',
+        title: l.settingsLearningKindRelationalTitle,
+        subtitle: c.extended ? l.settingsLearningKindRelationalSubtitleExtended : l.settingsLearningKindRelationalSubtitle,
+        detail: c.extended ? l.settingsLearningKindRelationalDetailExtended : l.settingsLearningKindRelationalDetail,
         value: c.relational,
         onChanged: (v) => store.set('relational', v),
       ),
       if (c.unverified > 0)
         RasqNotice(
           key: const ValueKey('learning.unverified'),
-          text: '持ち主の確認が済んでいない SNS アカウントの投稿は受け付けられませんでした。プロフィールの編集から確認できます。',
-          action: TextButton(onPressed: () => context.push('/settings/rasq-profile'), child: const Text('確認する')),
+          text: l.settingsLearningUnverifiedNotice,
+          action: TextButton(onPressed: () => context.push('/settings/rasq-profile'), child: Text(l.settingsLearningUnverifiedButton)),
         ),
       // 検証用の範囲 (extended、S-049 / S-050) だけの項目。
       if (c.extended) ...[
         RasqSwitchListTile(
           key: const ValueKey('learning.kind.cloudRelational'),
-          title: 'クラウドでまとめる',
-          subtitle: '迷う会話のまとまりを、クラウドの RAi が判断します',
-          detail: 'D-367 / S-050。端末のエンジンがしきい値の近くで決めた結び付き(投稿 → 会話)を POST /me/relational/judge に送り、クラウドの LLM の判定で組み直す。'
-              '書き手が許可済みの組だけ。判定の例(怪しいけど違う = hard_negative、分けたけど同じ = hard_positive)は学習用に残り、やめると消える。',
+          title: l.settingsLearningKindCloudTitle,
+          subtitle: l.settingsLearningKindCloudSubtitle,
+          detail: l.settingsLearningKindCloudDetail,
           value: ref.watch(settingsAreaProvider(contributionArea)).value?['cloudRelational'] != false,
           onChanged: (v) => store.set('cloudRelational', v),
         ),
         RasqSwitchListTile(
           key: const ValueKey('learning.kind.rai'),
           title: 'RAi',
-          subtitle: 'RAi への質問と答え',
-          detail: '質問(@メンションと URL は伏せる)、答え、モード、使った関数の名前、モデルの id。ほかの人の投稿は含めない。',
+          subtitle: l.settingsLearningKindRaiSubtitle,
+          detail: l.settingsLearningKindRaiDetail,
           value: c.rai,
           onChanged: (v) => store.set('rai', v),
         ),
         RasqSwitchListTile(
           key: const ValueKey('learning.preload'),
-          title: '端末のモデルを先に読み込む',
-          subtitle: '判定の下見を早くします(ダウンロード済みのときだけ)',
-          detail: 'RAi の端末内モデル(既定 Qwen3.5 2B)を起動の少しあとに読み込み、書き手の下見に使う。未ダウンロードならダウンロードはしない(規則だけで下見)。',
+          title: l.settingsLearningPreloadTitle,
+          subtitle: l.settingsLearningPreloadSubtitle,
+          detail: l.settingsLearningPreloadDetail,
           value: c.preload,
           onChanged: (v) => store.set('preload', v),
         ),
@@ -374,31 +373,34 @@ class _ContributionDebug extends ConsumerWidget {
     final llm = ref.watch(raiLlmStatusProvider).value ?? ref.read(raiLlmProvider).current;
     final caption = RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
     final verdicts = c.verdicts.entries.toList();
+    final l = context.l10n;
     return Column(key: const ValueKey('learning.debug'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const RasqSectionHeader(title: '開発者向けの詳細'),
-      RasqValueListTile(title: '集めているか', value: c.active ? 'はい' : 'いいえ(同意・受付・見守りを確認)'),
-      RasqValueListTile(key: const ValueKey('learning.debug.scope'), title: '受け付ける範囲', value: c.extended ? 'extended(検証用)' : 'own(自分の公開投稿だけ)'),
-      RasqValueListTile(title: '送信待ち', value: '会話 ${c.pendingRelational} ・ RAi ${c.pendingRai}'),
-      RasqValueListTile(title: 'この起動で送った', value: '会話 ${c.sentRelational} ・ RAi ${c.sentRai} ・ 見送り ${c.skipped}'),
+      RasqSectionHeader(title: l.settingsLearningDebugSection),
+      RasqValueListTile(title: l.settingsLearningDebugActiveTitle, value: c.active ? l.settingsLearningDebugActiveYes : l.settingsLearningDebugActiveNo),
+      RasqValueListTile(key: const ValueKey('learning.debug.scope'), title: l.settingsLearningDebugScopeTitle, value: c.extended ? l.settingsLearningDebugScopeExtended : l.settingsLearningDebugScopeOwn),
+      RasqValueListTile(title: l.settingsLearningDebugPendingTitle, value: l.settingsLearningDebugPendingValue('${c.pendingRelational}', '${c.pendingRai}')),
+      RasqValueListTile(title: l.settingsLearningDebugSentTitle, value: l.settingsLearningDebugSentValue('${c.sentRelational}', '${c.sentRai}', '${c.skipped}')),
       Builder(builder: (_) {
         final cloud = ref.watch(relationalCloudProvider);
         return RasqValueListTile(
           key: const ValueKey('learning.debug.cloud'),
-          title: 'クラウドでまとめる',
-          value: cloud.active ? '判定 ${cloud.decisions.length}(怪しいけど違う ${cloud.hardNegative} ・ 分けたけど同じ ${cloud.hardPositive} ・ 一致 ${cloud.agree})・ 待ち ${cloud.pending} ・ 見送り ${cloud.skipped}' : 'オフ',
+          title: l.settingsLearningKindCloudTitle,
+          value: cloud.active
+              ? l.settingsLearningDebugCloudValue('${cloud.decisions.length}', '${cloud.hardNegative}', '${cloud.hardPositive}', '${cloud.agree}', '${cloud.pending}', '${cloud.skipped}')
+              : l.settingsLearningDebugCloudOff,
         );
       }),
-      RasqValueListTile(title: '端末のモデル', value: '${ref.read(raiLlmProvider).spec.codename} ・ ${llm.phase.name}'),
+      RasqValueListTile(title: l.settingsLearningDebugModelTitle, value: '${ref.read(raiLlmProvider).spec.codename} ・ ${llm.phase.name}'),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
         child: OutlinedButton(
           key: const ValueKey('learning.flush'),
           onPressed: c.busy || !c.active ? null : () => ref.read(contributionProvider.notifier).flush(),
-          child: Text(c.busy ? '送信中…' : '今すぐ送る'),
+          child: Text(c.busy ? l.settingsLearningDebugFlushing : l.settingsLearningDebugFlushButton),
         ),
       ),
       if (verdicts.isNotEmpty) ...[
-        const RasqSectionHeader(title: '書き手の判定'),
+        RasqSectionHeader(title: l.settingsLearningDebugVerdictsSection),
         for (final e in verdicts.take(30))
           RasqListTile(
             title: e.key.replaceAll('|', ' / '),
@@ -407,7 +409,7 @@ class _ContributionDebug extends ConsumerWidget {
           ),
       ],
       if (c.log.isNotEmpty) ...[
-        const RasqSectionHeader(title: '記録'),
+        RasqSectionHeader(title: l.settingsLearningDebugLogSection),
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page),
           child: Text(c.log.join('\n'), key: const ValueKey('learning.log'), style: caption),

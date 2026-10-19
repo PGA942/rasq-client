@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/test_endpoints.dart';
 import '../../backend/rasq_account.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_account_fow.dart';
 import 'settings_dsl.dart';
@@ -48,12 +49,13 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
 
   /// 入力を正して保存する (D-239)。解釈できない入力は保存せず、理由を出す。戻り値 = 保存できたか。
   Future<bool> _save({bool quiet = false}) async {
+    final l = context.l10n;
     final central = _central.text.trim();
     final edge = _url.text.trim();
     final centralUri = central.isEmpty ? null : normalizeServerUrl(central);
     final edgeUri = edge.isEmpty ? null : normalizeServerUrl(edge);
     if ((central.isNotEmpty && centralUri == null) || (edge.isNotEmpty && edgeUri == null)) {
-      setState(() => _probe = '接続先を解釈できません。「http://192.168.3.14:8080」や「https://central.example」の形で入れてください。');
+      setState(() => _probe = l.settingsBackendErrorUnparseable);
       return false;
     }
     setState(() => _busy = true);
@@ -65,7 +67,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
     // 接続先が変わったので、アカウントとストアを取り直す。
     ref.invalidate(orgateAccountProvider);
     ref.invalidate(storeKeyProbeProvider);
-    if (mounted) setState(() { _busy = false; if (!quiet) _probe = '保存しました'; });
+    if (mounted) setState(() { _busy = false; if (!quiet) _probe = l.settingsBackendSaved; });
     return true;
   }
 
@@ -73,11 +75,12 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
   /// 「接続先が設定されていません」になった)。D-405: Central に加えて ORGATE も確かめる(前は Central だけを見ていて、
   /// ORGATE の接続先を間違えても「接続 OK」になり、逆に ORGATE の URL を Central の欄に入れると訳の分からない 404 だった)。
   Future<void> _test() async {
+    final l = context.l10n;
     if (!await _save(quiet: true)) return;
     setState(() { _busy = true; _probe = null; });
     final client = ref.read(centralClientProvider);
     if (client == null) {
-      setState(() { _busy = false; _probe = '接続先を入力してください(例: http://192.168.3.14:8080)'; });
+      setState(() { _busy = false; _probe = l.settingsBackendErrorEnterUrl; });
       return;
     }
     final lines = [await _probeCentral(client), await _probeOrgate()];
@@ -87,37 +90,39 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
   /// Central: 接続の成否は公開の口 `/store-key` だけで決める。`/me` は RASQ アカウントが要るので、未作成の
   /// 端末では 401 になる — それは「接続できない」ではない (D-240)。
   Future<String> _probeCentral(OrgateClient client) async {
+    final l = context.l10n;
     final centralUrl = ref.read(centralBaseUrlProvider);
     final Map<String, Object?> key;
     try {
       key = await client.getJson('/store-key');
     } on OrgateException catch (e) {
       // ストアの口が無い = Central ではないサーバー(ORGATE の URL を Central の欄に入れた / Central の欄が空で ORGATE を流用した)。
-      final hint = e.code.code == '404' ? '\nCentral の欄に、ORGATE ではなく RASQ Central の接続先を入れてください' : '';
-      return '接続できませんでした($centralUrl)— $e$hint';
+      final hint = e.code.code == '404' ? '\n${l.settingsBackendCentralNotCentralHint}' : '';
+      return l.settingsBackendCentralConnectFailed('$centralUrl', '$e', hint);
     }
-    final ok = '接続 OK — 署名鍵 ${key['algorithm']} ${_head(key['publicKey'] as String? ?? '')}…';
+    final ok = l.settingsBackendCentralOk('${key['algorithm']}', _head(key['publicKey'] as String? ?? ''));
     String accountLine;
     try {
       final me = await client.getJson('/me');
-      accountLine = 'RASQ アカウント: @${me['handle']} (${me['displayName']})';
+      accountLine = l.settingsBackendAccountLine('${me['handle']}', '${me['displayName']}');
     } on OrgateException catch (e) {
-      accountLine = e.code.code == '401' ? 'RASQ アカウント: 未作成(下の「RASQ アカウントを開く」から作成できます)' : 'RASQ アカウントを取得できませんでした — $e';
+      accountLine = e.code.code == '401' ? l.settingsBackendAccountNotCreatedLine : l.settingsBackendAccountLoadFailedLine('$e');
     }
     return '$ok\n$accountLine';
   }
 
   /// ORGATE: アクセストークンの公開鍵の口 `/auth/keys`(認証なし、Central もここから鍵を読む)。
   Future<String> _probeOrgate() async {
+    final l = context.l10n;
     final orgate = ref.read(orgateClientProvider);
-    if (orgate == null) return 'ORGATE: 未設定(RASQ アカウントにログインできません)';
+    if (orgate == null) return l.settingsBackendOrgateNotConfiguredLine;
     final base = ref.read(orgateBaseUrlProvider);
     try {
       final keys = await orgate.getJson('/auth/keys');
       final n = keys['keys'] is List ? (keys['keys'] as List).length : 0;
-      return n > 0 ? 'ORGATE: 接続 OK — トークンの公開鍵 $n 個' : 'ORGATE: 応答にトークンの公開鍵がありません($base)';
+      return n > 0 ? l.settingsBackendOrgateOk(n) : l.settingsBackendOrgateNoKeys('$base');
     } on OrgateException catch (e) {
-      return 'ORGATE に接続できませんでした($base)— $e';
+      return l.settingsBackendOrgateConnectFailed('$base', '$e');
     }
   }
 
@@ -137,31 +142,29 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
     final central = ref.watch(centralBaseUrlProvider);
     final account = ref.watch(orgateAccountProvider);
     final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    final l = context.l10n;
 
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'RASQ サーバー'),
+      appBar: RasqPageHeader(title: l.settingsBackendTitle),
       body: ListView(padding: const EdgeInsets.all(RasqSpacing.page), children: [
-        const RasqCaption(
-          'RASQ アカウントやストアのサーバーの接続先です。SNS の投稿やタイムラインは、ここを通りません。',
-          detail: 'RASQ Central は公開・共有のもの(プロフィール・ストア・ASTell・投稿・リストなど)のサーバー、'
-              'ORGATE は本人だけの情報(ログイン・パスワード・メールアドレス)と Mastodon などのログイン(OAuth ブローカー)の'
-              'サーバーです。RASQ アカウントへのログインは ORGATE で行い、そのトークンを Central にも使います。'
-              'SNS の投稿やタイムラインはどちらも通らず、プラグインが各インスタンスへ直接接続します。',
+        RasqCaption(
+          l.settingsBackendCaption,
+          detail: l.settingsBackendCaptionDetail,
           padding: EdgeInsets.zero,
         ),
         const SizedBox(height: RasqSpacing.md),
-        Text('RASQ Central の接続先(空なら ORGATE を流用)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        Text(l.settingsBackendCentralLabel, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: 4),
         RasqInput(key: const ValueKey('backend.central'), controller: _central, hintText: 'https://central.rasq.example', keyboardType: TextInputType.url),
         const SizedBox(height: RasqSpacing.sm),
-        Text('ORGATE(ログイン・本人だけの情報)の接続先', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        Text(l.settingsBackendOrgateLabel, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: 4),
         RasqInput(key: const ValueKey('backend.edge'), controller: _url, hintText: 'https://orgate.example', keyboardType: TextInputType.url),
         const SizedBox(height: RasqSpacing.sm),
         Row(children: [
-          Expanded(child: FilledButton(key: const ValueKey('backend.save'), onPressed: _busy ? null : () => _save(), child: const Text('保存'))),
+          Expanded(child: FilledButton(key: const ValueKey('backend.save'), onPressed: _busy ? null : () => _save(), child: Text(l.settingsBackendSaveButton))),
           const SizedBox(width: RasqSpacing.sm),
-          Expanded(child: OutlinedButton(key: const ValueKey('backend.test'), onPressed: _busy ? null : _test, child: const Text('接続テスト'))),
+          Expanded(child: OutlinedButton(key: const ValueKey('backend.test'), onPressed: _busy ? null : _test, child: Text(l.settingsBackendTestButton))),
         ]),
         if (_probe != null) ...[
           const SizedBox(height: RasqSpacing.sm),
@@ -170,22 +173,22 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
         const SizedBox(height: RasqSpacing.sm),
         Text(
           [
-            central == null ? rasqDetail(context, 'Central: 未接続(RASQ アカウントは作れません)', 'Central: 未接続 — プラグインストアは同梱のものだけ、RASQ アカウントは作成できません(この端末のみ)。') : 'Central: $central',
-            base == null ? 'ORGATE: 未接続(RASQ アカウントにログインできません)' : 'ORGATE: $base',
+            central == null ? rasqDetail(context, l.settingsBackendCentralDisconnected, l.settingsBackendCentralDisconnectedDetail) : 'Central: $central',
+            base == null ? l.settingsBackendOrgateDisconnected : 'ORGATE: $base',
           ].join('\n'),
           style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
         ),
         // テスト用の接続先 (D-360): プレビュー録画用のダミー環境(rasq-preview-assets の dummy/run_all.sh)。開発者モードのときだけ (D-393)。
         if (RasqDeveloperMode.of(context) || area?[TestEndpoints.keyEnabled] == true) ...[
-        const RasqSectionHeader(title: 'テスト用の接続先'),
+        RasqSectionHeader(title: l.settingsBackendTestEndpointsSection),
         Builder(builder: (context) {
           final on = area?[TestEndpoints.keyEnabled] == true;
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             RasqSwitchListTile(
               key: const ValueKey('backend.testEndpoints'),
-              title: 'ダミーの SNS とデモの Central / ORGATE を使う',
-              subtitle: 'プレビューの録画用',
-              detail: 'プレビュー録画用。Misskey / Mastodon / Bluesky の ${TestEndpoints.misskeyHost} / ${TestEndpoints.mastodonHost} / ${TestEndpoints.blueskyHost} をこのアドレスのダミーへ向け、Central(:${TestEndpoints.centralPort})と ORGATE(:${TestEndpoints.orgatePort})も切り替えます',
+              title: l.settingsBackendTestEndpointsTitle,
+              subtitle: l.settingsBackendTestEndpointsSubtitle,
+              detail: l.settingsBackendTestEndpointsDetail(TestEndpoints.misskeyHost, TestEndpoints.mastodonHost, TestEndpoints.blueskyHost, '${TestEndpoints.centralPort}', '${TestEndpoints.orgatePort}'),
               value: on,
               onChanged: _busy
                   ? null
@@ -196,7 +199,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
                     },
             ),
             const SizedBox(height: 4),
-            Text('ダミー環境のアドレス(同じ機械なら 127.0.0.1、ほかの機械なら その IP)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(l.settingsBackendTestAddressLabel, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 4),
             RasqInput(
               key: const ValueKey('backend.testAddress'),
@@ -209,43 +212,41 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
             ),
             const SizedBox(height: 4),
             RasqCaption(
-              'SNS のログイン画面で、サーバーに上のホスト名を入れてください。',
-              detail: 'SNS は各ログイン画面でサーバーに上のホスト名を入れます(許可ページは自動で通ります。Bluesky の ID / パスワードは何でも可)。'
-                  'RASQ アカウントはアカウントのログインから。切り替えたら、すでにログインしている SNS は次の読み込みから新しい接続先になります。',
+              l.settingsBackendTestCaption,
+              detail: l.settingsBackendTestCaptionDetail,
               padding: EdgeInsets.zero,
             ),
           ]);
         }),
         ],
-        const RasqSectionHeader(title: 'RASQ アカウント'),
+        RasqSectionHeader(title: l.settingsBackendAccountSection),
         account.when(
           loading: () => const RasqLoading(),
-          error: (e, _) => Text('アカウントを取得できませんでした: $e', style: RasqTypography.bodySmall.copyWith(color: RasqTokens.of(context).danger)),
+          error: (e, _) => Text(l.settingsBackendAccountLoadError('$e'), style: RasqTypography.bodySmall.copyWith(color: RasqTokens.of(context).danger)),
           data: (a) => a == null
               ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(central == null ? '接続先が設定されていません。' : 'RASQ アカウントは未作成です。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+                  Text(central == null ? l.settingsBackendNoServer : l.settingsBackendAccountNotCreated, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
                   if (central != null)
-                    TextButton(key: const ValueKey('backend.account'), onPressed: () => openRasqAccountFow(ref), child: const Text('RASQ アカウントを開く')),
+                    TextButton(key: const ValueKey('backend.account'), onPressed: () => openRasqAccountFow(ref), child: Text(l.settingsBackendOpenAccountButton)),
                 ])
               : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('@${a.handle}', style: RasqTypography.title),
                   Text(a.displayName, style: RasqTypography.bodySmall),
                   const SizedBox(height: 2),
-                  Text('この端末でだけ有効なアカウントです。ハンドルと表示名はプロフィール編集から変更できます。',
+                  Text(l.settingsBackendAccountDeviceOnly,
                       style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 ]),
         ),
-        const RasqSectionHeader(title: 'アカウントバンドル'),
-        const RasqCaption(
+        RasqSectionHeader(title: l.settingsBackendBundleSection),
+        RasqCaption(
           // 規約案 02 第 4 項 (D-372): 鍵(アクセストークン)が端末の外へ出る経路を正しく。
-          'まとめるときに送るのは、SNS アカウントの一覧だけです。ログインの鍵は、端末間の共有・Web 版・アカウントページへの投稿の表示を選んだときだけ送ります。',
-          detail: '束ねるときにサーバーへ送るのは、SNS の種類・サーバー・アカウント・表示名だけ。アクセストークンは、端末間の共有(E2E、サーバーは読めない)、'
-              'Web 版の保管庫(サーバーの鍵で暗号化、サーバーは復号できる)、アカウントページへの投稿の表示(同上)を選んだときだけ送る(プライバシーポリシー第 4 項)。',
+          l.settingsBackendBundleCaption,
+          detail: l.settingsBackendBundleCaptionDetail,
           padding: EdgeInsets.zero,
         ),
         const SizedBox(height: 4),
         if (sessions.isEmpty)
-          Text('ログイン中のアカウントはありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
+          Text(l.settingsBackendNoSessions, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
         else
           for (final s in sessions) Text('・${s.account}', style: RasqTypography.bodySmall),
       ]),

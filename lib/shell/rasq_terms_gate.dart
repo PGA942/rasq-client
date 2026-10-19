@@ -9,6 +9,7 @@ import '../backend/orgate_client.dart';
 import '../backend/rasq_account.dart';
 import '../backend/rasq_consent.dart';
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
+import '../l10n/l10n.dart';
 
 /// 同意待ちの RASQ アカウント (D-371 / Central S-053、規約案 06 CONS-02)。
 ///
@@ -37,28 +38,28 @@ Future<bool> showRasqTermsSheet(WidgetRef ref) async {
   }
   final ok = await manager.showBottomSheet<bool>(
     id: 'rasq.terms',
-    title: '利用規約への同意',
-    confirmText: '同意する',
+    title: appL10n.shellTermsSheetTitle,
+    confirmText: appL10n.shellTermsAgreeButton,
     confirmEnabled: ready,
     builder: (ctx) => ListenableBuilder(
       listenable: Listenable.merge([age, guardian, agreed]),
       builder: (_, _) => SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: RasqSpacing.lg),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const RasqNotice(
-            text: 'RASQ アカウントを使い続けるには、いまの利用規約とプライバシーポリシーへの同意が必要です。同意するまで、ASTell・購入・データの預け入れは使えません。',
-            detail: 'D-371 / S-053。サーバーの CENTRAL_TERMS_VERSION / CENTRAL_PRIVACY_VERSION と同じ版の承諾がそろうまで「同意待ち」。PUT /me/consents/{terms,privacy,age,guardian}。',
+          RasqNotice(
+            text: ctx.l10n.shellTermsNotice,
+            detail: ctx.l10n.shellTermsNoticeDetail('{terms,privacy,age,guardian}'),
           ),
-          RasqListTile(key: const ValueKey('terms.read.terms'), title: '利用規約を読む', onTap: () => ref.read(routerProvider).push('/settings/dsl/about.terms')),
-          RasqListTile(key: const ValueKey('terms.read.privacy'), title: 'プライバシーポリシーを読む', onTap: () => ref.read(routerProvider).push('/settings/dsl/about.privacy')),
+          RasqListTile(key: const ValueKey('terms.read.terms'), title: ctx.l10n.shellTermsReadTermsButton, onTap: () => ref.read(routerProvider).push('/settings/dsl/about.terms')),
+          RasqListTile(key: const ValueKey('terms.read.privacy'), title: ctx.l10n.shellTermsReadPrivacyButton, onTap: () => ref.read(routerProvider).push('/settings/dsl/about.privacy')),
           if (needAge) ...[
-            const RasqSectionHeader(title: '年齢'),
+            RasqSectionHeader(title: ctx.l10n.shellTermsAgeHeader),
             for (final a in RasqAgeBand.values)
               RasqRadioListTile<RasqAgeBand>(key: ValueKey('terms.age.${a.wire}'), title: a.label, value: a, groupValue: age.value, onChanged: (v) => age.value = v),
             if (age.value?.needsGuardian ?? false)
               RasqListTile(
                 key: const ValueKey('terms.guardian'),
-                title: '保護者の同意を得ています',
+                title: ctx.l10n.shellTermsGuardianConsentCheck,
                 chevron: false,
                 onTap: () => guardian.value = !guardian.value,
                 trailing: Checkbox(value: guardian.value, onChanged: (x) => guardian.value = x ?? false),
@@ -66,12 +67,12 @@ Future<bool> showRasqTermsSheet(WidgetRef ref) async {
           ],
           RasqListTile(
             key: const ValueKey('terms.agree'),
-            title: '利用規約とプライバシーポリシーを読み、同意します',
+            title: ctx.l10n.shellTermsAgreeCheck,
             chevron: false,
             onTap: () => agreed.value = !agreed.value,
             trailing: Checkbox(value: agreed.value, onChanged: (x) => agreed.value = x ?? false),
           ),
-          RasqCaption('版: 利用規約 $rasqTermsVersion ・ プライバシーポリシー $rasqPrivacyVersion'),
+          RasqCaption(ctx.l10n.shellTermsVersionCaption(rasqTermsVersion, rasqPrivacyVersion)),
         ]),
       ),
     ),
@@ -81,11 +82,11 @@ Future<bool> showRasqTermsSheet(WidgetRef ref) async {
   try {
     await RasqConsentApi(client).acceptCurrent(age: needAge ? age.value : null);
     await ref.read(orgateAccountProvider.notifier).refresh();
-    messenger?.showSnackBar(const SnackBar(content: Text('利用規約に同意しました')));
+    messenger?.showSnackBar(SnackBar(content: Text(appL10n.shellTermsAcceptedSnack)));
     return true;
   } on OrgateException catch (e) {
     final outdated = isTermsVersionError(e);
-    messenger?.showSnackBar(SnackBar(content: Text(outdated ? '利用規約が新しくなっています。アプリを更新してから同意してください' : '同意を記録できませんでした: $e')));
+    messenger?.showSnackBar(SnackBar(content: Text(outdated ? appL10n.shellTermsOutdatedError : appL10n.shellTermsRecordFailedError('$e'))));
     return false;
   }
 }
@@ -101,8 +102,8 @@ class RasqTermsBanner extends ConsumerWidget {
     return RasqNotice.warning(
       key: const ValueKey('terms.banner'),
       margin: margin,
-      text: '利用規約への同意が必要です。同意するまで ASTell・購入などは使えません。',
-      action: TextButton(key: const ValueKey('terms.banner.open'), onPressed: () => showRasqTermsSheet(ref), child: const Text('確認する')),
+      text: context.l10n.shellTermsBannerText,
+      action: TextButton(key: const ValueKey('terms.banner.open'), onPressed: () => showRasqTermsSheet(ref), child: Text(context.l10n.shellTermsBannerOpenButton)),
     );
   }
 }

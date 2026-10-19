@@ -14,6 +14,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
+import '../../l10n/ui_locale.dart' show uiLocaleTagProvider;
+import '../../l10n/l10n.dart';
 
 /// 設定第二階層の DSL 描画 (D-031 / D-044)。
 ///
@@ -50,7 +52,7 @@ class SettingsPageSpec {
     }
     return SettingsPageSpec(
       area: json['area'] as String,
-      title: json['title'] as String? ?? '設定',
+      title: json['title'] as String? ?? appL10n.settingsHomeGenericTitle,
       source: json['source'] as String? ?? 'local',
       defaults: (json['defaults'] as Map?)?.cast<String, Object?>() ?? const {},
       root: RrlNode.fromJson((json['root'] as Map).cast<String, Object?>()),
@@ -61,6 +63,8 @@ class SettingsPageSpec {
 /// SNS プラグイン [pluginId] が提供する設定ページ(短 area → spec)(D-044 / D-482)。壊れたページは読み飛ばす
 /// (V12: 縮退)。wasm のプラグインは `sns.settingsPages` で返すので非同期([SnsPlugin.loadSettingsPages])。
 final snsPluginSettingsPagesProvider = FutureProvider.family<Map<String, SettingsPageSpec>, String>((ref, pluginId) async {
+  // ページの文言はプラグインが表示の言語(`args.locale`)で選ぶ。言語が変われば読み直す (D-484 / 契約 v0.24)。
+  ref.watch(uiLocaleTagProvider);
   final plugin = ref.watch(pluginRegistryProvider).plugin(pluginId);
   final out = <String, SettingsPageSpec>{};
   for (final raw in await plugin?.loadSettingsPages() ?? const <String>[]) {
@@ -94,7 +98,7 @@ class MissingSnsSettingsPage implements Exception {
   const MissingSnsSettingsPage(this.area);
   final String area;
   @override
-  String toString() => 'SNS プラグインが設定ページ "$area" を提供していません';
+  String toString() => appL10n.settingsHomeMissingSnsPage(area);
 }
 
 /// 設定の行 [route] が SNS プラグインの設定ページ(`/settings/dsl/sns.<短area>`)なら、その短 area。
@@ -274,21 +278,22 @@ class SettingsDslScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l10n;
     final spec = ref.watch(settingsPageSpecProvider(area));
     return spec.when(
-      loading: () => Scaffold(appBar: const RasqPageHeader(title: '設定'), body: const RasqLoading()),
+      loading: () => Scaffold(appBar: RasqPageHeader(title: l.settingsHomeGenericTitle), body: const RasqLoading()),
       error: (e, _) => Scaffold(
-        appBar: const RasqPageHeader(title: '設定'),
+        appBar: RasqPageHeader(title: l.settingsHomeGenericTitle),
         body: e is MissingSnsSettingsPage
-            ? RasqEmptyView(title: 'このページはありません', hint: rasqDetail(context, 'このアカウントの SNS には、この設定がありません。', '$e(D-482)'))
-            : RasqEmptyView(title: '設定ページを読み込めません', hint: '$e'),
+            ? RasqEmptyView(title: l.settingsHomePageMissing, hint: rasqDetail(context, l.settingsHomePageMissingHint, '$e(D-482)'))
+            : RasqEmptyView(title: l.settingsHomePageLoadError, hint: '$e'),
       ),
       data: (s) {
         if (!s.isRemote) return _page(context, ref, s, ref.watch(settingsAreaProvider(area)).value ?? const {});
         final remote = ref.watch(remoteSettingsProvider(s.area));
         return remote.when(
           loading: () => Scaffold(appBar: RasqPageHeader(title: s.title), body: const RasqLoading()),
-          error: (e, _) => Scaffold(appBar: RasqPageHeader(title: s.title), body: RasqEmptyView(title: 'サーバーから設定を取得できません', hint: '$e')),
+          error: (e, _) => Scaffold(appBar: RasqPageHeader(title: s.title), body: RasqEmptyView(title: l.settingsHomeRemoteLoadError, hint: '$e')),
           data: (values) => _page(context, ref, s, values),
         );
       },
@@ -318,8 +323,8 @@ class SettingsDslScreen extends ConsumerWidget {
               // 権限不足 (D-045): スコープの増加は既存トークンに反映されない
               // ため、再ログインの誘導を添える。
               final permission = '$e'.contains('PERMISSION_DENIED') || '$e'.contains('403');
-              final hint = permission ? '\n\nアプリの権限が不足しています。一度ログアウトして再ログインすると、新しい権限が付与されます。' : '';
-              ref.read(overlayManagerProvider).showAlert(id: 'settings.remote.error', title: '保存できませんでした', message: '$e$hint', confirmText: 'OK');
+              final hint = permission ? appL10n.settingsHomeRemotePermissionHint : '';
+              ref.read(overlayManagerProvider).showAlert(id: 'settings.remote.error', title: appL10n.settingsHomeSaveFailed, message: '$e$hint', confirmText: appL10n.settingsHomeOk);
             });
           case 'settings.set':
             ref.read(settingsAreaProvider(area).notifier).set(key, value);
@@ -346,9 +351,9 @@ class SettingsDslScreen extends ConsumerWidget {
         // (RASQ アカウント行なし)。選んだアカウントのセッションに読み書き。
         if (area.startsWith('sns.')) _accountTile(context, ref),
         if (childLocked)
-          const RasqNotice(
-            key: ValueKey('childSafe.safetyReadOnly'),
-            text: '見守り中のため、ここは変えられません(閲覧注意のメディアは必ず隠します)。',
+          RasqNotice(
+            key: const ValueKey('childSafe.safetyReadOnly'),
+            text: context.l10n.settingsHomeChildLocked,
           ),
         IgnorePointer(ignoring: childLocked, child: RrlRenderer(node: s.root, host: host)),
       ]),
@@ -367,7 +372,7 @@ class SettingsDslScreen extends ConsumerWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.md, 6, RasqSpacing.md, 0),
-          child: Text('設定するアカウント', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text(context.l10n.settingsHomeTargetAccount, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ),
         for (final s in sessions)
           InkWell(

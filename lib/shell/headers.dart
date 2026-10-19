@@ -6,6 +6,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../app/providers.dart';
+import '../l10n/l10n.dart';
 import 'third_column.dart';
 
 /// ヘッダー4種 (原典: UI_Elements「ヘッダー（4種）」). All expose the same
@@ -28,7 +29,7 @@ Widget _leadingAvatar(BuildContext context, UserSummary me, VoidCallback? onTap)
 
 /// ホームヘッダー: avatar (opens sidebar) + VC widget + trailing chevron.
 class RasqHomeHeader extends StatelessWidget implements PreferredSizeWidget {
-  const RasqHomeHeader({super.key, required this.me, this.onAvatarTap, this.vcWidget, this.onTrailingTap, this.trailingIcon = Icons.keyboard_arrow_down, this.trailingTooltip = 'タイムライン切り替え', this.trailingKey});
+  const RasqHomeHeader({super.key, required this.me, this.onAvatarTap, this.vcWidget, this.onTrailingTap, this.trailingIcon = Icons.keyboard_arrow_down, this.trailingTooltip, this.trailingKey});
 
   final UserSummary me;
   final VoidCallback? onAvatarTap;
@@ -37,7 +38,7 @@ class RasqHomeHeader extends StatelessWidget implements PreferredSizeWidget {
   final Widget? vcWidget;
   final VoidCallback? onTrailingTap;
   final IconData trailingIcon;
-  final String trailingTooltip;
+  final String? trailingTooltip;
   final Key? trailingKey;
 
   @override
@@ -48,7 +49,7 @@ class RasqHomeHeader extends StatelessWidget implements PreferredSizeWidget {
         leading: _leadingAvatar(context, me, onAvatarTap),
         middle: vcWidget ?? const SizedBox.shrink(),
         middleAlignment: Alignment.centerLeft,
-        trailing: RasqIconButton(key: trailingKey, icon: trailingIcon, onPressed: onTrailingTap, tooltip: trailingTooltip),
+        trailing: RasqIconButton(key: trailingKey, icon: trailingIcon, onPressed: onTrailingTap, tooltip: trailingTooltip ?? context.l10n.shellHeaderTimelineSwitchTooltip),
       );
 }
 
@@ -76,7 +77,7 @@ class RasqFloatingHomeHeader extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
           child: Row(children: [
             if (!RasqRailScope.of(context)) ...[
-              float(Tooltip(message: 'ヘッダーを戻す', child: RasqHeaderAvatarButton(key: const ValueKey('home.header.expand'), me: me, onTap: onExpand, semanticsLabel: 'ヘッダーを戻す'))),
+              float(Tooltip(message: context.l10n.shellHeaderExpandTooltip, child: RasqHeaderAvatarButton(key: const ValueKey('home.header.expand'), me: me, onTap: onExpand, semanticsLabel: context.l10n.shellHeaderExpandTooltip))),
               const SizedBox(width: RasqSpacing.sm),
             ],
             Expanded(child: Align(alignment: Alignment.centerLeft, child: arrivals ?? const SizedBox.shrink())),
@@ -106,17 +107,17 @@ class RasqNotificationHeader extends StatelessWidget implements PreferredSizeWid
   Widget build(BuildContext context) => _HeaderBar(
         leading: _leadingAvatar(context, me, onAvatarTap),
         middle: title == null ? const SizedBox.shrink() : Text(title!, style: RasqTypography.title),
-        trailing: trailing ?? RasqIconButton(icon: Icons.keyboard_arrow_up, onPressed: onTrailingTap, tooltip: '先頭へ'),
+        trailing: trailing ?? RasqIconButton(icon: Icons.keyboard_arrow_up, onPressed: onTrailingTap, tooltip: context.l10n.shellHeaderScrollToTopTooltip),
       );
 }
 
 /// 検索ヘッダー: search bar is the main actor. Shared by 検索 and DM tabs.
 class RasqSearchHeader extends StatelessWidget implements PreferredSizeWidget {
-  const RasqSearchHeader({super.key, required this.me, this.onAvatarTap, this.hintText = '検索', this.controller, this.onSubmitted, this.onDropdownTap, this.onSearchTap, this.readOnly = false, this.trailing, this.focusNode});
+  const RasqSearchHeader({super.key, required this.me, this.onAvatarTap, this.hintText, this.controller, this.onSubmitted, this.onDropdownTap, this.onSearchTap, this.readOnly = false, this.trailing, this.focusNode});
 
   final UserSummary me;
   final VoidCallback? onAvatarTap;
-  final String hintText;
+  final String? hintText;
   final TextEditingController? controller;
   final ValueChanged<String>? onSubmitted;
   final VoidCallback? onDropdownTap;
@@ -131,7 +132,7 @@ class RasqSearchHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) => _HeaderBar(
         leading: _leadingAvatar(context, me, onAvatarTap),
-        middle: RasqSearchBar(controller: controller, focusNode: focusNode, hintText: hintText, onSubmitted: onSubmitted, onDropdownTap: onDropdownTap, onTap: onSearchTap, readOnly: readOnly),
+        middle: RasqSearchBar(controller: controller, focusNode: focusNode, hintText: hintText ?? context.l10n.shellHeaderSearchHint, onSubmitted: onSubmitted, onDropdownTap: onDropdownTap, onTap: onSearchTap, readOnly: readOnly),
         middlePadding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
         trailing: trailing ?? const SizedBox(width: RasqSpacing.sm),
       );
@@ -174,7 +175,7 @@ class RasqPageHeader extends StatelessWidget implements PreferredSizeWidget {
         Builder(builder: (ctx) {
           return RasqActionButton.icon(
             icon: Icons.arrow_back_ios_new,
-            tooltip: '戻る',
+            tooltip: context.l10n.shellHeaderBackTooltip,
             onTap: onBack ??
                 () {
                   if (inPane) return paneBackTo(ctx, paneEntry, target: paneEntry.previous);
@@ -193,7 +194,7 @@ class RasqPageHeader extends StatelessWidget implements PreferredSizeWidget {
                     final manager = ProviderScope.containerOf(ctx, listen: false).read(overlayManagerProvider);
                     final picked = await manager.showDropdown<(ThirdColumnEntry?,)>(id: 'thirdColumn.back', anchor: anchor, dense: true, items: [
                       for (final p in paneBackChain(paneEntry)) RasqDropdownItem(p.title, (p,)),
-                      const RasqDropdownItem('閉じる', (null,)),
+                      RasqDropdownItem(ctx.l10n.shellHeaderCloseButton, (null,)),
                     ]);
                     if (picked != null && ctx.mounted) paneBackTo(ctx, paneEntry, target: picked.$1);
                   },
@@ -205,7 +206,7 @@ class RasqPageHeader extends StatelessWidget implements PreferredSizeWidget {
       middle: Text(title, style: RasqTypography.title, overflow: TextOverflow.ellipsis),
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         ...actions,
-        if (showMore) RasqIconButton(icon: Icons.more_horiz, onPressed: onMore, tooltip: 'メニュー'),
+        if (showMore) RasqIconButton(icon: Icons.more_horiz, onPressed: onMore, tooltip: context.l10n.shellHeaderMenuTooltip),
       ]),
     );
     if (bottom == null) return bar;
@@ -215,15 +216,15 @@ class RasqPageHeader extends StatelessWidget implements PreferredSizeWidget {
 
 /// ヘッダーの左のアカウントのアイコン(押すとサイドバー)。幅の広い画面ではナビゲーションのレールの下端にも (D-429)。
 class RasqHeaderAvatarButton extends StatelessWidget {
-  const RasqHeaderAvatarButton({super.key, required this.me, this.onTap, this.semanticsLabel = 'サイドバーを開く'});
+  const RasqHeaderAvatarButton({super.key, required this.me, this.onTap, this.semanticsLabel});
   final UserSummary me;
   final VoidCallback? onTap;
-  final String semanticsLabel;
+  final String? semanticsLabel;
 
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: semanticsLabel,
+        label: semanticsLabel ?? context.l10n.shellHeaderOpenSidebarSemantics,
         child: InkResponse(
           onTap: onTap,
           radius: 24,

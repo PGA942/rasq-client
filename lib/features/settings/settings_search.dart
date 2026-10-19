@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/router.dart' show Routes;
 import '../rai/rai_reference.dart' show keywordScore;
 import 'settings_sections.dart';
+import '../../l10n/l10n.dart';
+import '../../l10n/ui_locale.dart' show uiLocaleProvider;
 
 /// 設定の検索 (D-385)。「全ての設定」の検索欄から、設定の行と、設定ページ(DSL)の中の項目を探す。
 ///
@@ -61,10 +63,12 @@ List<String> settingsPageLabels(Object? node) {
 }
 
 /// 索引を組む。[loadPage] = 設定ページの JSON を読む(テストで差し替える。読めなければ null)。
-Future<List<SettingsSearchEntry>> buildSettingsSearchIndex(Future<String?> Function(String area) loadPage) async {
+/// [l10n] = 名前の言語(省略するといまの表示の言語)。
+Future<List<SettingsSearchEntry>> buildSettingsSearchIndex(Future<String?> Function(String area) loadPage, {AppLocalizations? l10n}) async {
+  final l = l10n ?? appL10n;
   final out = <SettingsSearchEntry>[];
   final pages = <String, Future<String?>>{};
-  for (final MapEntry(key: id, value: section) in settingsSections.entries) {
+  for (final MapEntry(key: id, value: section) in settingsSectionsOf(l).entries) {
     out.add(SettingsSearchEntry(title: section.title, sectionId: id));
     for (final r in section.rows) {
       out.add(SettingsSearchEntry(title: r.title, sectionId: id, path: [section.title], row: r, keys: [?r.subtitle, ?r.detail]));
@@ -87,35 +91,38 @@ Future<List<SettingsSearchEntry>> buildSettingsSearchIndex(Future<String?> Funct
     }
   }
   // 「全ての設定」の下の段(節に入っていないもの)。
-  out.addAll(const [
+  List<String> words(String s) => [for (final w in s.split(',')) if (w.trim().isNotEmpty) w.trim()];
+  out.addAll([
     SettingsSearchEntry(
-      title: '投稿コンポーザー',
+      title: l.settingsHomeComposer,
       sectionId: 'other',
-      path: ['その他の設定'],
-      row: SettingsRow('投稿コンポーザー', route: '/settings/composer'),
-      keys: ['投稿の画面', '下書き'],
+      path: [l.settingsHomeOtherHeader],
+      row: SettingsRow(l.settingsHomeComposer, route: '/settings/composer'),
+      keys: words(l.settingsHomeComposerKeywords),
     ),
     SettingsSearchEntry(
-      title: 'フォントやカラースキーム',
+      title: l.settingsSectionsAppearanceThemeTitle,
       sectionId: 'appearance',
-      path: ['アプリの外観'],
-      row: SettingsRow('フォントやカラースキーム', route: Routes.settingsTheme),
-      keys: ['着せ替え', 'テーマ', 'ダークモード', 'ライト', '色', 'フォント'],
+      path: [l.settingsSectionsAppearanceTitle],
+      row: SettingsRow(l.settingsSectionsAppearanceThemeTitle, route: Routes.settingsTheme),
+      keys: words(l.settingsHomeThemeKeywords),
     ),
   ]);
   return out;
 }
 
-final settingsSearchIndexProvider = FutureProvider<List<SettingsSearchEntry>>(
-  (ref) => buildSettingsSearchIndex((area) async {
+final settingsSearchIndexProvider = FutureProvider<List<SettingsSearchEntry>>((ref) {
+  // 表示の言語が変わったら組み直す (D-484)。
+  final l = appL10nFor(ref.watch(uiLocaleProvider));
+  return buildSettingsSearchIndex(l10n: l, (area) async {
     try {
       // loadString は 50KB を超えると別の isolate で解く。長い文書ページも同じ道で読む(settings_dsl の loadSettingsPageJson と同じ)。
       return utf8.decode((await rootBundle.load('assets/settings/$area.rrl.json')).buffer.asUint8List());
     } catch (_) {
       return null;
     }
-  }),
-);
+  });
+});
 
 /// 当たったものを良い順に。[sections] を渡すとその節だけ。同じページへ行く同じ名前は 1 つに。
 List<SettingsSearchHit> searchSettings(List<SettingsSearchEntry> index, String query, {Set<String> sections = const {}, int limit = 30, double threshold = 0.55}) {

@@ -9,6 +9,7 @@ import 'package:rasq_design/rasq_design.dart';
 import '../../backend/notify_api.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_account_fow.dart';
 
@@ -34,9 +35,9 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
       final m = await body();
       if (mounted) setState(() => _message = m);
     } on OrgateException catch (e) {
-      if (mounted) setState(() => _message = 'できませんでした — $e');
+      if (mounted) setState(() => _message = context.l10n.settingsNotifyTokenError('$e'));
     } catch (e) {
-      if (mounted) setState(() => _message = 'できませんでした — $e');
+      if (mounted) setState(() => _message = context.l10n.settingsNotifyTokenError('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -49,29 +50,29 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
     final noAccount = account.hasValue && account.value == null;
     final state = ref.watch(notifyStoreProvider);
     final store = ref.read(notifyStoreProvider.notifier);
+    final l = context.l10n;
     return Scaffold(
-      appBar: const RasqPageHeader(title: '通知専用のアクセストークン'),
+      appBar: RasqPageHeader(title: l.settingsNotifyTokenTitle),
       body: ListView(children: [
-        const RasqCaption(
-          '通知を受け取るためだけの鍵です。投稿やアカウントの操作はできません。',
-          detail: '通知トークンは、RASQ サーバーからの通知を受け取るためだけのトークンです(読めるのは自分宛ての通知の受信箱だけ。投稿やアカウントの操作はできません)。'
-              'マクロ / ASTell 用の配下トークンもここから発行します。',
-          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
+        RasqCaption(
+          l.settingsNotifyTokenCaption,
+          detail: l.settingsNotifyTokenCaptionDetail,
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
         ),
-        const RasqSectionHeader(title: '状態'),
-        RasqValueListTile(title: 'プッシュ配信', value: rasqDetail(context, '準備中', 'ダミー(APNs / FCM は未接続)')),
+        RasqSectionHeader(title: l.settingsNotifyTokenStatusSection),
+        RasqValueListTile(title: l.settingsNotifyTokenPushTitle, value: rasqDetail(context, l.settingsNotifyTokenPushPending, l.settingsNotifyTokenPushPendingDetail)),
         if (!configured)
-          RasqListTile(title: 'RASQ サーバーの接続先が未設定です', subtitle: '接続先を入れると発行できます', onTap: () => context.push('/settings/server'))
+          RasqListTile(title: l.settingsNotifyTokenServerNotConfiguredTitle, subtitle: l.settingsNotifyTokenServerNotConfiguredSubtitle, onTap: () => context.push('/settings/server'))
         else if (noAccount)
           // RASQ アカウントが無いと発行は 401 になる — 先に案内する (D-240)。
-          RasqListTile(key: const ValueKey('notify.needAccount'), title: 'RASQ アカウントが未作成です', subtitle: '作成すると通知トークンを発行できます', onTap: () => openRasqAccountFow(ref))
+          RasqListTile(key: const ValueKey('notify.needAccount'), title: l.settingsNotifyTokenNoAccountTitle, subtitle: l.settingsNotifyTokenNoAccountSubtitle, onTap: () => openRasqAccountFow(ref))
         else
           state.when(
             loading: () => const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: RasqLoading()),
-            error: (e, _) => Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('取得できませんでした: $e', style: RasqTypography.bodySmall.copyWith(color: RasqColors.danger))),
+            error: (e, _) => Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(l.settingsNotifyTokenLoadError('$e'), style: RasqTypography.bodySmall.copyWith(color: RasqColors.danger))),
             data: (s) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              RasqValueListTile(key: const ValueKey('notify.status'), title: 'この端末のトークン', value: s.hasLocalToken ? '有効' : '未発行'),
-              RasqValueListTile(title: 'プッシュ登録している端末', value: '${s.devices.length} 台'),
+              RasqValueListTile(key: const ValueKey('notify.status'), title: l.settingsNotifyTokenLocalTokenTitle, value: s.hasLocalToken ? l.settingsNotifyTokenLocalTokenActive : l.settingsNotifyTokenLocalTokenNone),
+              RasqValueListTile(title: l.settingsNotifyTokenDevicesTitle, value: l.settingsNotifyTokenDevicesValue(s.devices.length)),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
                 child: s.hasLocalToken
@@ -83,9 +84,9 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
                                 ? null
                                 : () => _run(() async {
                                       final item = await store.sendTestAndRead();
-                                      return item == null ? 'テスト通知を積みましたが、受信箱で見つかりませんでした' : '受信箱で確認できました: 「${item.title}」(${item.status}、端末 ${item.devices} 台)';
+                                      return item == null ? l.settingsNotifyTokenTestNotFound : l.settingsNotifyTokenTestFound(item.title, item.status, item.devices);
                                     }),
-                            child: const Text('テスト通知を送る'),
+                            child: Text(l.settingsNotifyTokenTestButton),
                           ),
                         ),
                         const SizedBox(width: RasqSpacing.sm),
@@ -97,9 +98,9 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
                                 : () => _run(() async {
                                       await store.unregisterThisDevice();
                                       await store.revoke(s.localTokenId!);
-                                      return 'この端末のトークンを失効しました';
+                                      return l.settingsNotifyTokenLocalRevoked;
                                     }),
-                            child: const Text('失効する'),
+                            child: Text(l.settingsNotifyTokenRevokeButton),
                           ),
                         ),
                       ])
@@ -109,18 +110,18 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
                             ? null
                             : () => _run(() async {
                                   await store.enable(label: notifyPlatform());
-                                  return '発行して、この端末をプッシュ登録しました';
+                                  return l.settingsNotifyTokenEnabled;
                                 }),
-                        child: const Text('通知トークンを発行してこの端末を登録'),
+                        child: Text(l.settingsNotifyTokenEnableButton),
                       ),
               ),
               if (_message != null) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text(_message!, key: const ValueKey('notify.message'), style: RasqTypography.bodySmall)),
-              if (s.tokens.isNotEmpty) const RasqSectionHeader(title: '発行済みのトークン'),
+              if (s.tokens.isNotEmpty) RasqSectionHeader(title: l.settingsNotifyTokenTokensSection),
               for (final t in s.tokens)
                 RasqListTile(
                   key: ValueKey('notify.token.${t.id}'),
-                  title: '${t.isRoot ? '通知トークン' : '配下トークン'}${t.label == null ? '' : '(${t.label})'}${t.id == s.localTokenId ? ' ・ この端末' : ''}',
-                  subtitle: '${t.scopes.join(' / ')} ・ 発行 ${RasqTimestamp.format(t.createdAt)}${t.lastUsedAt == null ? ' ・ 未使用' : ' ・ 最終使用 ${RasqTimestamp.format(t.lastUsedAt!)}'}',
+                  title: '${t.isRoot ? l.settingsNotifyTokenKindRoot : l.settingsNotifyTokenKindChild}${t.label == null ? '' : l.settingsNotifyTokenLabelSuffix(t.label!)}${t.id == s.localTokenId ? ' ・ ${l.settingsNotifyTokenThisDevice}' : ''}',
+                  subtitle: '${t.scopes.join(' / ')} ・ ${l.settingsNotifyTokenIssuedAt(RasqTimestamp.format(t.createdAt))}${t.lastUsedAt == null ? ' ・ ${l.settingsNotifyTokenUnused}' : ' ・ ${l.settingsNotifyTokenLastUsedAt(RasqTimestamp.format(t.lastUsedAt!))}'}',
                   chevron: false,
                   trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                     if (t.isRoot)
@@ -128,33 +129,33 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
                         key: ValueKey('notify.child.${t.id}'),
                         icon: Icons.call_split,
                         size: 20,
-                        tooltip: '配下トークンを発行(マクロ / ASTell 共用)',
+                        tooltip: l.settingsNotifyTokenIssueChildTooltip,
                         onPressed: _busy
                             ? null
                             : () => _run(() async {
                                   final raw = await store.issueChild(t.id, scopes: const ['macro', 'astell'], label: 'macro / astell');
                                   unawaited(Clipboard.setData(ClipboardData(text: raw))); // 待たない(クリップボードの無い環境で止まらないように)
-                                  return '配下トークンを発行してクリップボードにコピーしました(生の値が見られるのは今だけです)';
+                                  return l.settingsNotifyTokenChildIssued;
                                 }),
                       ),
                     RasqIconButton(
                       key: ValueKey('notify.revoke.${t.id}'),
                       icon: Icons.delete_outline,
                       size: 20,
-                      tooltip: '失効する',
+                      tooltip: l.settingsNotifyTokenRevokeButton,
                       onPressed: _busy ? null : () => _run(() async {
                             await store.revoke(t.id);
-                            return '失効しました';
+                            return l.settingsNotifyTokenRevoked;
                           }),
                     ),
                   ]),
                 ),
             ]),
           ),
-        const RasqCaption(
-          '鍵はこの端末の中に安全に保存します。',
-          detail: '生のトークンは発行時にだけ受け取り、端末内の安全な領域に保存します。サーバーに残るのはハッシュだけです。親のトークンを失効すると配下のトークンも失効します。',
-          padding: EdgeInsets.all(RasqSpacing.page),
+        RasqCaption(
+          l.settingsNotifyTokenStorageCaption,
+          detail: l.settingsNotifyTokenStorageCaptionDetail,
+          padding: const EdgeInsets.all(RasqSpacing.page),
         ),
       ]),
     );

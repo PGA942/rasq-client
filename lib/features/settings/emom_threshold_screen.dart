@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../trend/trend_restrictions.dart';
 import 'settings_dsl.dart';
@@ -50,27 +51,28 @@ class _EmomThresholdScreenState extends ConsumerState<EmomThresholdScreen> {
     await _syncNow();
   }
 
-  static String _band(int v) => v < 30
-      ? '控えめ — 運営が制限したトレンドを早めに隠します'
+  static String _band(AppLocalizations l, int v) => v < 30
+      ? l.settingsEmomBandLow
       : v < 70
-          ? 'ふつう'
-          : '広め — 運営が強く制限したトレンドだけを隠します';
+          ? l.settingsEmomBandMiddle
+          : l.settingsEmomBandHigh;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l = context.l10n;
     final values = ref.watch(settingsAreaProvider(emomArea)).value ?? const <String, Object?>{};
     final threshold = emomThresholdOf(values);
     final disclose = values['disclose'] == true;
     final shown = (_dragging ?? threshold.toDouble()).round();
     final sent = values['sent'];
     final status = switch (_sync) {
-      _ when _busy => '送っています…',
-      EmomSyncResult.noAccount when disclose => 'RASQ アカウントでログインすると公開できます(この端末では使えます)',
-      EmomSyncResult.failed => '送れませんでした。次に開いたとき(またはトレンドを読み直したとき)送り直します',
-      _ when disclose && sent == threshold => '公開しています(値 $threshold)',
-      _ when disclose => 'まだ届いていません',
-      _ => '公開していません',
+      _ when _busy => l.settingsEmomStatusSending,
+      EmomSyncResult.noAccount when disclose => l.settingsEmomStatusNoAccount,
+      EmomSyncResult.failed => l.settingsEmomStatusFailed,
+      _ when disclose && sent == threshold => l.settingsEmomStatusDisclosed('$threshold'),
+      _ when disclose => l.settingsEmomStatusPending,
+      _ => l.settingsEmomStatusNotDisclosed,
     };
     Widget text(String t, {Key? key}) => Padding(
           key: key,
@@ -78,14 +80,13 @@ class _EmomThresholdScreenState extends ConsumerState<EmomThresholdScreen> {
           child: Text(t, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
         );
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'EmoM の閾値'),
+      appBar: RasqPageHeader(title: l.settingsEmomTitle),
       body: ListView(children: [
-        text('EmoM は、投稿やトレンドの気持ちの強さ・刺激の強さを見積もる RASQ のモデルです(準備中)。'
-            'いまはこの閾値を、RASQ の運営が通報を確かめてトレンドを制限するときの目安にだけ使います。'),
+        text(l.settingsEmomIntro),
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
           child: Row(children: [
-            Text('閾値', style: RasqTypography.title.copyWith(fontSize: 16)),
+            Text(l.settingsEmomThresholdLabel, style: RasqTypography.title.copyWith(fontSize: 16)),
             const Spacer(),
             Text('$shown', key: const ValueKey('emom.value'), style: RasqTypography.title.copyWith(fontSize: 20)),
             Text(' / $emomThresholdMax', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
@@ -107,28 +108,24 @@ class _EmomThresholdScreenState extends ConsumerState<EmomThresholdScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: Row(children: [
-            Text('低い(隠れやすい)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(l.settingsEmomScaleLow, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             const Spacer(),
-            Text('高い(隠れにくい)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(l.settingsEmomScaleHigh, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ]),
         ),
-        text(_band(shown), key: const ValueKey('emom.band')),
-        text('閾値が高いほど、刺激の強い話題も受け入れる設定です。運営が制限したトレンドが隠れにくくなります。'
-            '低いほど、制限されたトレンドを早めに隠します。既定は $emomThresholdDefault です。'),
+        text(_band(l, shown), key: const ValueKey('emom.band')),
+        text(l.settingsEmomExplanation('$emomThresholdDefault')),
         const Divider(),
         RasqSwitchListTile(
           key: const ValueKey('emom.disclose'),
-          title: '閾値を公開する(制限の目安に使う)',
-          subtitle: '値だけを RASQ のサーバーに送ります。運営は、公開された値をまとめた分布(どの値の人が何人いるか)だけを使い、'
-              'あなたの値を個別に見ることはありません。オフにすると、送った値を消します。',
+          title: l.settingsEmomDiscloseTitle,
+          subtitle: l.settingsEmomDiscloseSubtitle,
           value: disclose,
           onChanged: (v) => _set('disclose', v),
         ),
         text(status, key: const ValueKey('emom.status')),
         const Divider(),
-        text('運営がトレンドを「N%」で制限すると、公開された閾値の低いほうから N% ほどの人に、そのトレンドが出なくなります。'
-            '公開していなくても、この端末の閾値で同じように判定します(閾値はこの端末に保存されます)。'
-            '「全員に非表示」にされたトレンドは、閾値に関係なく出ません。隠れたトレンドは、検索のトレンドの一覧に並ばなくなるだけです。'),
+        text(l.settingsEmomRestrictionExplanation),
       ]),
     );
   }

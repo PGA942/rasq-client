@@ -6,6 +6,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../app/providers.dart';
+import '../l10n/l10n.dart';
 
 /// **ヘッダーのアカウントのボタン** (D-415、D-411 の浮かべたタイルを置き換えた): 戻る `<` の右に置く丸いアイコン。どのアカウント
 /// (のセッション)でこの画面を読んでいるかをアイコンで出し、タップでその場に**アカウントの選択**を開く
@@ -54,10 +55,10 @@ class HeaderAccountButton extends ConsumerWidget {
     final avatarUrl = shown != null && me.account == shown ? me.avatarUrl : session?.avatarUrl;
     final name = shown != null && me.account == shown ? me.displayName : (session?.displayName ?? shown?.handle ?? '');
     return Tooltip(
-      message: shown == null ? 'アカウントを選ぶ' : '$shown で読んでいます',
+      message: shown == null ? context.l10n.shellAccountHeaderPickTooltip : context.l10n.shellAccountHeaderReadingAsTooltip('$shown'),
       child: Semantics(
         button: true,
-        label: 'アカウントを切り替える',
+        label: context.l10n.shellAccountHeaderSwitchSemantics,
         child: Builder(builder: (ctx) {
           return InkResponse(
             onTap: busy ? null : () => _pick(ctx, ref, shown),
@@ -69,7 +70,7 @@ class HeaderAccountButton extends ConsumerWidget {
                 child: Stack(alignment: Alignment.center, children: [
                   DecoratedBox(
                     decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: scheme.outlineVariant)),
-                    child: RasqAvatar(imageUrl: avatarUrl, size: size, fallbackLabel: name, semanticsLabel: 'アカウント'),
+                    child: RasqAvatar(imageUrl: avatarUrl, size: size, fallbackLabel: name, semanticsLabel: context.l10n.shellAccountHeaderAvatarSemantics),
                   ),
                   if (busy) SizedBox(width: size, height: size, child: CircularProgressIndicator(strokeWidth: 2, color: scheme.primary)),
                 ]),
@@ -93,7 +94,7 @@ class HeaderAccountButton extends ConsumerWidget {
       id: '$id.pick',
       layer: OverlayLayer.dropdown,
       anchor: anchor,
-      semanticsLabel: 'アカウントの選択',
+      semanticsLabel: ctx.l10n.shellAccountPickerSemantics,
       builder: (context, handle) => AccountPickerPanel(
         id: id,
         rasq: rasq,
@@ -161,7 +162,7 @@ class AccountPickerPanel extends StatelessWidget {
                     Text('@${rasq.account.handle}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
                   ]),
                 ),
-                RasqIconButton(key: ValueKey('$id.close'), icon: Icons.keyboard_arrow_up, size: 20, tooltip: '閉じる', onPressed: onClose),
+                RasqIconButton(key: ValueKey('$id.close'), icon: Icons.keyboard_arrow_up, size: 20, tooltip: context.l10n.shellAccountPickerCloseTooltip, onPressed: onClose),
               ]),
             ),
             for (final a in accounts)

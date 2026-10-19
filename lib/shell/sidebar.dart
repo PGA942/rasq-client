@@ -11,6 +11,7 @@ import '../app/router.dart';
 import '../backend/rasq_account.dart';
 import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
 import '../features/child_safe/child_safe_screens.dart' show ChildSafeBadge;
+import '../l10n/l10n.dart';
 import 'rasq_account_fow.dart';
 import 'rasq_terms_gate.dart';
 
@@ -39,7 +40,7 @@ class RasqSidebar extends ConsumerWidget {
         id: overlayId,
         layer: OverlayLayer.sidebar,
         alignment: Alignment.centerLeft,
-        semanticsLabel: 'サイドバー',
+        semanticsLabel: appL10n.shellSidebarSemantics,
         builder: (context, handle) => RasqSidebar(handle: handle),
       ));
 
@@ -85,7 +86,7 @@ class RasqSidebar extends ConsumerWidget {
                     child: Builder(builder: (context) {
                       final u = summaryOfRecord(ref, r, isCurrent: false);
                       return Tooltip(
-                        message: '${u.displayName} に切り替える',
+                        message: context.l10n.shellSidebarSwitchToAccountTooltip(u.displayName),
                         child: InkWell(
                           key: ValueKey('sidebar.otherAccount.${r.id}'),
                           customBorder: const CircleBorder(),
@@ -99,7 +100,7 @@ class RasqSidebar extends ConsumerWidget {
                 // ダウンは FOW 内の「SNS アカウントを追加」「アカウント設定」へ)。
                 RasqIconButton(
                   icon: Icons.more_horiz,
-                  tooltip: 'RASQ アカウント',
+                  tooltip: context.l10n.shellSidebarRasqAccountTooltip,
                   // サイドバーは閉じない (D-272 → D-274): FOW は、後ろを暗くしてサイドバーの上に被さって出る
                   // (1 カラム = 全幅 / 2 カラム = 左カラム、入りきらなければ 2 カラムにまたがる)。別の画面へ移るときは、サイドバーも閉じる。
                   onPressed: () => openRasqAccountFow(ref, onNavigate: handle.close, overSidebar: true),
@@ -139,7 +140,7 @@ class RasqSidebar extends ConsumerWidget {
                   ),
                   RasqIconButton(
                     icon: expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    tooltip: expanded ? 'アカウントリストを隠す' : 'アカウントリストを表示',
+                    tooltip: expanded ? context.l10n.shellSidebarHideAccountsTooltip : context.l10n.shellSidebarShowAccountsTooltip,
                     onPressed: () => ref.read(sidebarAccountsExpandedProvider.notifier).toggle(),
                   ),
                 ]),
@@ -159,19 +160,19 @@ class RasqSidebar extends ConsumerWidget {
                     child: TextButton.icon(
                       onPressed: () => go(Routes.settings),
                       icon: Icon(Icons.settings, size: 18, color: tokens.link),
-                      label: Text('アカウントの設定', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+                      label: Text(context.l10n.shellSidebarAccountSettingsButton, style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
                     ),
                   ),
                 ],
                 const Divider(),
-                RasqListTile(title: 'ブックマーク', leading: const Icon(Icons.bookmark_border), chevron: false, onTap: () => go(Routes.bookmarks)),
-                RasqListTile(title: 'リスト', leading: const Icon(Icons.list_alt_outlined), chevron: false, onTap: () => go(Routes.lists)),
+                RasqListTile(title: context.l10n.shellSidebarBookmarks, leading: const Icon(Icons.bookmark_border), chevron: false, onTap: () => go(Routes.bookmarks)),
+                RasqListTile(title: context.l10n.shellSidebarLists, leading: const Icon(Icons.list_alt_outlined), chevron: false, onTap: () => go(Routes.lists)),
                 // プラグインストア (M4 / D-120)。
-                RasqListTile(title: 'プラグイン', leading: const Icon(Icons.extension_outlined), chevron: false, onTap: () => go(Routes.store)),
+                RasqListTile(title: context.l10n.shellSidebarPlugins, leading: const Icon(Icons.extension_outlined), chevron: false, onTap: () => go(Routes.store)),
                 // カスタムプラグイン (D-357): インストール済みのページ型を開く / 招待コードで参加。
-                RasqListTile(key: const ValueKey('sidebar.custom'), title: 'カスタムプラグイン', leading: const Icon(Icons.dashboard_customize_outlined), chevron: false, onTap: () => go(Routes.customPlugins)),
-                RasqListTile(title: '全ての設定', leading: const Icon(Icons.settings_outlined), chevron: false, onTap: () => go(Routes.settings)),
-                RasqListTile(title: 'ヘルプ', leading: const Icon(Icons.help_outline), chevron: false, onTap: () {}),
+                RasqListTile(key: const ValueKey('sidebar.custom'), title: context.l10n.shellSidebarCustomPlugins, leading: const Icon(Icons.dashboard_customize_outlined), chevron: false, onTap: () => go(Routes.customPlugins)),
+                RasqListTile(title: context.l10n.shellSidebarAllSettings, leading: const Icon(Icons.settings_outlined), chevron: false, onTap: () => go(Routes.settings)),
+                RasqListTile(title: context.l10n.shellSidebarHelp, leading: const Icon(Icons.help_outline), chevron: false, onTap: () {}),
                 // RAi ホーム (D-179): サイドメニューの下部。
                 RasqListTile(key: const ValueKey('sidebar.rai'), title: 'RAi', leading: Container(
                   width: 28,
@@ -185,10 +186,10 @@ class RasqSidebar extends ConsumerWidget {
             ),
             // 開発者向けの画面は開発者モードのときだけ (D-362)。
             if (RasqDeveloperMode.of(context)) ...[
-              RasqListTile(title: 'コンポーネントカタログ (dev)', leading: const Icon(Icons.widgets_outlined), chevron: false, divider: false, onTap: () => go(Routes.catalog)),
-              RasqListTile(title: 'WASMプラグイン試験 (dev)', leading: const Icon(Icons.extension_outlined), chevron: false, divider: false, onTap: () => go(Routes.wasmDev)),
+              RasqListTile(title: context.l10n.shellSidebarDevCatalog, leading: const Icon(Icons.widgets_outlined), chevron: false, divider: false, onTap: () => go(Routes.catalog)),
+              RasqListTile(title: context.l10n.shellSidebarDevWasmPlugin, leading: const Icon(Icons.extension_outlined), chevron: false, divider: false, onTap: () => go(Routes.wasmDev)),
             ],
-            RasqListTile(title: 'Webコンソール', leading: const Icon(Icons.language), chevron: false, divider: false, onTap: () {}),
+            RasqListTile(title: context.l10n.shellSidebarWebConsole, leading: const Icon(Icons.language), chevron: false, divider: false, onTap: () {}),
           ]),
         ),
       ),
@@ -218,11 +219,11 @@ class RasqSidebar extends ConsumerWidget {
             return RasqIconButton(
               icon: Icons.more_horiz,
               size: 18,
-              tooltip: 'アカウントの操作',
+              tooltip: context.l10n.shellSidebarAccountActionsTooltip,
               onPressed: () async {
-                final pick = await manager.showDropdown<String>(id: 'sidebar.account.${s.account.key}', anchor: _rectOf(buttonContext), dense: true, items: const [
-                  RasqDropdownItem('このアカウントを表示', 'show'),
-                  RasqDropdownItem('ログアウト', 'logout', destructive: true),
+                final pick = await manager.showDropdown<String>(id: 'sidebar.account.${s.account.key}', anchor: _rectOf(buttonContext), dense: true, items: [
+                  RasqDropdownItem(context.l10n.shellSidebarShowAccountMenu, 'show'),
+                  RasqDropdownItem(context.l10n.shellSidebarLogoutMenu, 'logout', destructive: true),
                 ]);
                 if (pick == 'show') {
                   await ref.read(sessionsProvider.notifier).setCurrent(s.account);

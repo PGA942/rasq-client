@@ -13,6 +13,7 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_dsl.dart';
+import '../l10n/l10n.dart';
 import 'pane_swipe_back.dart';
 
 /// 第3カラム (M5b/D-056/D-057): タブレット幅(≥840dp)の右カラム。
@@ -193,7 +194,7 @@ bool replacePageInPane(
 }
 
 /// 第3カラムが空のときに出すもの (D-056 / D-397)。KV `thirdColumn.v1` の `empty`。
-const thirdColumnEmptyChoices = <(String, String)>[('search', '検索'), ('notifications', '通知'), ('none', '表示しない')];
+List<(String, String)> thirdColumnEmptyChoicesOf(AppLocalizations l) => [('search', l.shellColumnThirdEmptySearch), ('notifications', l.shellColumnThirdEmptyNotifications), ('none', l.shellColumnThirdEmptyNone)];
 
 /// 第3カラムの設定ボタン (D-397): 空のときに何を出すか(検索 / 通知 / 表示しない)を選ぶ。
 /// 検索なら検索欄の横、通知なら通知ヘッダーの右端(以前の押せない ↑ の場所)、表示しないなら右上に置く。
@@ -208,13 +209,13 @@ class ThirdColumnSettingsButton extends ConsumerWidget {
       key: const ValueKey('thirdColumn.settings'),
       icon: Icons.settings,
       size: size,
-      tooltip: '第3カラムの設定',
+      tooltip: context.l10n.shellColumnThirdSettingsTooltip,
       onPressed: () async {
         final box = context.findRenderObject() as RenderBox;
         final anchor = box.localToGlobal(Offset.zero) & box.size;
         final manager = ref.read(overlayManagerProvider);
         final picked = await manager.showDropdown<String>(id: 'thirdColumn.empty', anchor: anchor, dense: true, items: [
-          for (final (v, label) in thirdColumnEmptyChoices) RasqDropdownItem(label, v, checked: v == empty),
+          for (final (v, label) in thirdColumnEmptyChoicesOf(context.l10n)) RasqDropdownItem(label, v, checked: v == empty),
         ]);
         if (picked != null) await ref.read(settingsAreaProvider('thirdColumn').notifier).set('empty', picked);
       },
@@ -253,7 +254,7 @@ class ThirdColumnView extends ConsumerWidget {
             child: Row(children: [
               const SizedBox(width: RasqSpacing.md),
               Expanded(child: Text(entry.title, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
-              RasqIconButton(icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: () => ref.read(thirdColumnProvider.notifier).close()),
+              RasqIconButton(icon: Icons.close, size: 20, tooltip: context.l10n.shellColumnThirdCloseTooltip, onPressed: () => ref.read(thirdColumnProvider.notifier).close()),
               const SizedBox(width: 4),
             ]),
           ),
@@ -271,7 +272,7 @@ class ThirdColumnView extends ConsumerWidget {
             height: 40,
             child: Row(children: [
               const Spacer(),
-              RasqIconButton(key: const ValueKey('thirdColumn.blocked.close'), icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: () => ref.read(thirdColumnProvider.notifier).close()),
+              RasqIconButton(key: const ValueKey('thirdColumn.blocked.close'), icon: Icons.close, size: 20, tooltip: context.l10n.shellColumnThirdCloseTooltip, onPressed: () => ref.read(thirdColumnProvider.notifier).close()),
               const SizedBox(width: 4),
             ]),
           ),
@@ -301,7 +302,7 @@ class ThirdColumnView extends ConsumerWidget {
         key: ValueKey('thirdColumn.empty.$empty.$accountKey'),
         child: switch (empty) {
           _ when blocked != null => withCornerButton(ChildSafeBlockedView(message: blocked)),
-          'none' => withCornerButton(RasqEmptyView(title: '第3カラム', hint: rasqDetail(context, '開いている画面をここへ移動できます', 'FOW をここへ移動できます(M5c)'))),
+          'none' => withCornerButton(RasqEmptyView(title: context.l10n.shellColumnThirdEmptyTitle, hint: rasqDetail(context, context.l10n.shellColumnThirdEmptyHint, context.l10n.shellColumnThirdEmptyHintDetail))),
           'notifications' => const NotificationsScreen(headerTrailing: ThirdColumnSettingsButton(size: 20)),
           _ => const SearchScreen(inThirdColumn: true, showAccountIcon: false, searchTrailing: ThirdColumnSettingsButton()),
         },

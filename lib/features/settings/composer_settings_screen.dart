@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import 'settings_dsl.dart';
 
@@ -14,22 +15,23 @@ class ComposerSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final area = ref.watch(settingsAreaProvider('composer.prefs')).value ?? const <String, Object?>{};
     final autoAccount = area['autoAccount'] != false;
+    final l = context.l10n;
     return Scaffold(
-      appBar: const RasqPageHeader(title: '投稿コンポーザー'),
+      appBar: RasqPageHeader(title: l.settingsComposerTitle),
       body: ListView(children: [
         RasqSwitchListTile(
-          title: '投稿アカウントの自動選択',
-          subtitle: '下書きに合うアカウントへ、投稿先を自動で切り替えます',
-          detail: '下書きの内容がポスト先の絞り込みに合うアカウントへ、投稿先を自動で切り替えます(手動選択が常に優先)',
+          title: l.settingsComposerAutoAccountTitle,
+          subtitle: l.settingsComposerAutoAccountSubtitle,
+          detail: l.settingsComposerAutoAccountDetail,
           value: autoAccount,
           onChanged: (v) => ref.read(settingsAreaProvider('composer.prefs').notifier).set('autoAccount', v),
         ),
         // RASQ への連動投稿 (D-286)。
         RasqSwitchListTile(
           key: const ValueKey('composerPrefs.rasqLinked'),
-          title: 'RASQ アカウントへも連動投稿する',
-          subtitle: '複数のアカウントに投稿するとき、RASQ アカウントも選べます',
-          detail: '複数選択モードで、RASQ アカウントの行も選べるようになります(通常投稿 / ノード連動)。届け方と絞り込みは「投稿先のカスタマイズ」の RASQ のタブで決めます。RASQ の上限(1000 文字 / 添付 6 つ / 投票 6 個 / 投稿 3 件)を超える投稿は、RASQ へは送られません',
+          title: l.settingsComposerRasqLinkedTitle,
+          subtitle: l.settingsComposerRasqLinkedSubtitle,
+          detail: l.settingsComposerRasqLinkedDetail,
           value: area['rasqLinked'] == true,
           onChanged: (v) => ref.read(settingsAreaProvider('composer.prefs').notifier).set('rasqLinked', v),
         ),
