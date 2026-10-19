@@ -677,4 +677,25 @@ void main() {
     expect(find.byKey(const ValueKey('rai.input')), findsOneWidget);
   });
 
+  // D-480: RAi のウィジェット(バー / 会話だけの入力 / 発言)のふちは他の FOW と同じ細い線。
+  for (final theme in [RasqTheme.light(), RasqTheme.dark()]) {
+    testWidgets('RAi のふちは FOW と同じ細い線 (D-480, ${theme.brightness.name})', (tester) async {
+      final scheme = theme.colorScheme;
+      expect((raiBarShape(scheme) as RoundedRectangleBorder).side, fowRimSide(scheme));
+      await tester.pumpWidget(MaterialApp(
+        theme: theme,
+        home: Scaffold(
+          body: Column(children: [
+            RaiSpeech(key: const ValueKey('speech'), line: 'こんにちは', index: 0, count: 1, hasMore: false, streaming: false, onNext: () {}, onClose: () {}),
+            RaiPromptBar(key: const ValueKey('prompt'), controller: TextEditingController(), onSubmit: () {}, modelLabel: 'クラウド'),
+          ]),
+        ),
+      ));
+      for (final k in ['speech', 'prompt']) {
+        final m = tester.widget<Material>(find.descendant(of: find.byKey(ValueKey(k)), matching: find.byType(Material)).first);
+        expect((m.shape! as RoundedRectangleBorder).side, fowRimSide(scheme), reason: k);
+        expect(m.elevation, kFowElevation, reason: k);
+      }
+    });
+  }
 }

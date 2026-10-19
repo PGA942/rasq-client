@@ -166,7 +166,11 @@ bool paneBack(BuildContext context) {
 
 /// FOW を開くときの初期カラム (D-062): 第3カラムのページ内から開かれた
 /// FOW は第3カラム側にドックする。
-int fowColumnOf(BuildContext context) => PaneScope.maybeOf(context)?.entry != null ? 1 : 0;
+///
+/// 第3カラムが空のときの検索 / 通知(entry = null)の中から開いたものも第3カラム (D-481)。以前は entry の有無で見ていて、
+/// 検索 / 通知に並ぶ投稿のリノート / 引用 / リアクション / 共有などの FOW が第2カラムに出ていた。
+/// [takeoverColumnOf](カラムを置き換えて開く画面)と同じ判定。
+int fowColumnOf(BuildContext context) => PaneScope.maybeOf(context) != null ? 1 : 0;
 
 /// 第3カラム内での**置き換え**遷移 (D-061: replaceTrend 等)。現在の entry を
 /// 第2カラムへ移さず、previous を引き継いだまま差し替える。処理したら true。
