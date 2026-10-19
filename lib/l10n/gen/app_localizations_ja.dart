@@ -1916,6 +1916,484 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String customShareAddToRoom(String room) {
+    return '「$room」に追加';
+  }
+
+  @override
+  String customShareProposeToRoom(String room) {
+    return '「$room」で提案';
+  }
+
+  @override
+  String get customSharePlaceOnProfile => 'プロフィールに置く';
+
+  @override
+  String get customShareInviteBySwing => 'Swing で招待(みんなで使う)';
+
+  @override
+  String get customShareInstallToShare => 'インストールするとプロフィールや招待で共有できます';
+
+  @override
+  String customAddedToRoom(String name) {
+    return '「$name」をルームに追加しました';
+  }
+
+  @override
+  String customAddToRoomFailed(String error) {
+    return '追加できませんでした: $error';
+  }
+
+  @override
+  String customShareProposedToRoom(String name) {
+    return '「$name」をルームで提案しました';
+  }
+
+  @override
+  String get customSharePlacedOnProfile => 'プロフィールに置きました';
+
+  @override
+  String customPlaceFailed(String error) {
+    return '置けませんでした: $error';
+  }
+
+  @override
+  String customInvitedBySwingNotified(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人',
+    );
+    return 'Swing で招待しました(RASQ の通知 $_temp0)';
+  }
+
+  @override
+  String get customInvitedBySwing => 'Swing で招待しました';
+
+  @override
+  String get customInviteTitle => 'Swing で招待';
+
+  @override
+  String customInviteSendFailed(String error) {
+    return '送れませんでした: $error';
+  }
+
+  @override
+  String customInviteHeading(String title) {
+    return '「$title」に招待';
+  }
+
+  @override
+  String get customInviteIntroOwnPage => 'Swing で届けます。見た人は、あなたのページに一緒に入ります。';
+
+  @override
+  String get customInviteIntroCurrentPage =>
+      'Swing で届けます。見た人は、いま開いているページに一緒に入ります。';
+
+  @override
+  String get customInviteHelp =>
+      '届け先: 押す = Swing を届ける ・ 2 回続けて押す = RASQ の通知でも知らせる 🔔';
+
+  @override
+  String get customInviteFollowers => 'フォロワー';
+
+  @override
+  String get customInviteNoLists => 'RASQ リストを作ると、リストに入れた人も招待できます';
+
+  @override
+  String get customInviteTextHint => 'ひとこと(なくてもよい)';
+
+  @override
+  String get customInviteTtl => '消えるまで';
+
+  @override
+  String customInviteTtlHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours 時間',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get customInviteSendWithNotify => 'Swing で招待(通知も送る)';
+
+  @override
+  String get customInviteErrorVersionNotAvailable =>
+      'このプラグインは、つないでいる RASQ サーバーのストアで配られていません(審査を通った版がありません)。アプリに入っているサンプルのままでは、みんなで使えません';
+
+  @override
+  String get customInviteErrorNotShared => 'みんなで使うプラグインではありません';
+
+  @override
+  String get customInviteErrorSessionNotShareable =>
+      'このページのセッションは Swing では招待できません';
+
+  @override
+  String get customInviteErrorSwingLimit => '同時に出しておける Swing は 20 個までです';
+
+  @override
+  String customInviteTargetWithNotify(String label) {
+    return '$label(通知も送る)';
+  }
+
+  @override
+  String get customInviteTargetHint => '押すと選ぶ / 外す。2 回続けて押すと、通知も送る';
+
+  @override
+  String get customProfileLimit => 'ページに置けるのは 8 個までです';
+
+  @override
+  String get customProfileSideloadReplace => '上げ直す(新しい版)';
+
+  @override
+  String get customProfileSideloadRemove => 'ページから外す';
+
+  @override
+  String customProfileRemoveFailed(String error) {
+    return '外せませんでした: $error';
+  }
+
+  @override
+  String customLoadFailed(String error) {
+    return '読み込めませんでした: $error';
+  }
+
+  @override
+  String get customProfileEmptyMine =>
+      '「+ 追加」で Markdown のページや、カスタムプラグインを置けます。訪れた人がここから開けます。';
+
+  @override
+  String get customProfileEmpty => 'ページはまだありません。';
+
+  @override
+  String get customProfileSharedNotStarted => 'みんなで使う(まだ始まっていません)';
+
+  @override
+  String get customProfileShared => 'みんなで使う';
+
+  @override
+  String get customSolo => '1 人で使う';
+
+  @override
+  String customProfileHostPage(String title) {
+    return '$title のホスト用ページ';
+  }
+
+  @override
+  String get customProfileHostPageSubtitle => 'あなたにだけ出ます';
+
+  @override
+  String get customProfileMdPageWithDraft => 'ページ ・ 書きかけの下書きあり';
+
+  @override
+  String get customProfileMdPage => 'ページ';
+
+  @override
+  String get customProfileUntitled => '(無題)';
+
+  @override
+  String get customProfileDraft => '下書き(この端末だけ)';
+
+  @override
+  String customProfileSideloadSubtitle(String version) {
+    return '自作プラグイン ・ 制限モード ・ v$version';
+  }
+
+  @override
+  String get customMenu => 'メニュー';
+
+  @override
+  String get customProfileAdd => '追加';
+
+  @override
+  String get customProfileLoginToPlace => 'RASQ アカウントにログインすると置けます';
+
+  @override
+  String customProfileSideloadPlaced(String name) {
+    return '「$name」を置きました(訪れた人の端末では制限モードで動きます)';
+  }
+
+  @override
+  String get customProfileSideloadErrorNotProfilePage =>
+      'RASQ のページに置けるのは、プロフィールの面を持つ 1 人で使うページ型だけです';
+
+  @override
+  String get customProfileSideloadErrorLimit => '自作プラグインは 4 つまでです';
+
+  @override
+  String get customProfileSideloadErrorInvalidPackage =>
+      '配布物を読めませんでした(.rspkg / .rasqpkg)';
+
+  @override
+  String get customClose => '閉じる';
+
+  @override
+  String get customProfileAddTitle => 'ページを追加';
+
+  @override
+  String get customProfileAddMd => 'Markdown のページを書く';
+
+  @override
+  String get customProfileAddMdSubtitle =>
+      '下書きはこの端末に残し、「公開」で出します。MFM は HTML 風のタグで';
+
+  @override
+  String get customProfileAddSideload => '自作プラグインを置く(.rspkg / .rasqpkg)';
+
+  @override
+  String get customProfileAddSideloadSubtitle =>
+      '審査していないプラグイン。訪れた人の端末では制限モード(通信などなし)で動きます';
+
+  @override
+  String get customProfileAddStoreSection => 'ストアのカスタムプラグイン';
+
+  @override
+  String get customProfileAddStoreEmpty => 'ページに置けるカスタムプラグインを入れていません';
+
+  @override
+  String get customProfileAddStorePlaced => '置いています(押すと外す)';
+
+  @override
+  String get customProfileAddStoreTapToPlace => '押すと置く';
+
+  @override
+  String get customProfileAddStoreHasHostPage => 'ホスト用ページあり';
+
+  @override
+  String get customListSeparator => ' ・ ';
+
+  @override
+  String customProfileChangeFailed(String error) {
+    return '変えられませんでした: $error';
+  }
+
+  @override
+  String get customSearchStore => 'ストアで探す';
+
+  @override
+  String get customPluginsTitle => 'カスタムプラグイン';
+
+  @override
+  String get customPluginsJoinByCode => '招待コードで参加';
+
+  @override
+  String get customPluginsInviteCode => '招待コード';
+
+  @override
+  String get customPluginsJoin => '参加';
+
+  @override
+  String get customPluginsInstalled => 'インストール済み';
+
+  @override
+  String get customPluginsEmpty => 'まだありません。ストアの「カスタム」から探せます。';
+
+  @override
+  String get customPluginsShared => 'みんなで使える';
+
+  @override
+  String get customPluginsProfile => 'プロフィール';
+
+  @override
+  String get customPluginsSearchStore => 'ストアでカスタムプラグインを探す';
+
+  @override
+  String get customPluginsInviteNotFound =>
+      'この招待コードのセッションは見つかりません(閉じられたかもしれません)';
+
+  @override
+  String get customPluginsInviteTitle => '招待';
+
+  @override
+  String get customPluginsJoinFailed => '参加できませんでした';
+
+  @override
+  String get customPageLoadFailed => '読み込めませんでした';
+
+  @override
+  String customPageNotPagePlugin(String name) {
+    return '$name はページ型のプラグインではありません';
+  }
+
+  @override
+  String customPageSoloPlugin(String name) {
+    return '$name は 1 人で使うプラグインです(みんなでは使えません)';
+  }
+
+  @override
+  String customPageJoinFailed(String error) {
+    return 'セッションに入れませんでした: $error';
+  }
+
+  @override
+  String get customPageNoPage => 'プラグインがページを返しませんでした';
+
+  @override
+  String customPageWrongSession(String name) {
+    return '$name のセッションではありません';
+  }
+
+  @override
+  String customPageLeftWrongSession(String name) {
+    return '$name のセッションではないため抜けました';
+  }
+
+  @override
+  String customPageDisconnectedWithError(String error) {
+    return '接続が切れました: $error';
+  }
+
+  @override
+  String get customPageDisconnected => '接続が切れました';
+
+  @override
+  String get customPageError => 'エラー';
+
+  @override
+  String get customPageMenuInvite => '招待(Swing で送る)';
+
+  @override
+  String get customPageMenuCopyCode => '招待コードをコピー';
+
+  @override
+  String get customPageMenuCopyLink => '招待リンクをコピー';
+
+  @override
+  String customPageMenuParticipants(int count) {
+    return '参加者($count)';
+  }
+
+  @override
+  String get customPageMenuCloseSession => 'セッションを閉じる';
+
+  @override
+  String get customPageViewInStore => 'ストアで見る';
+
+  @override
+  String customPageCodeCopied(String code) {
+    return '招待コード $code をコピーしました';
+  }
+
+  @override
+  String get customPageLinkCopied => '招待リンクをコピーしました';
+
+  @override
+  String get customPageParticipants => '参加者';
+
+  @override
+  String get customPageCloseConfirmTitle => 'セッションを閉じますか?';
+
+  @override
+  String get customPageCloseConfirmMessage => '参加している全員のページで、共有の値が止まります。';
+
+  @override
+  String get customCancel => 'キャンセル';
+
+  @override
+  String customPageCloseFailed(String error) {
+    return '閉じられませんでした: $error';
+  }
+
+  @override
+  String get customPageClosedBanner => 'このセッションは閉じられました(共有の値はもう変わりません)';
+
+  @override
+  String get customPageConsentBody =>
+      'このページを開いている間だけ、インストールせずに動かします(閉じると消えます)。';
+
+  @override
+  String get customPageConsentPermissions => '使う権限';
+
+  @override
+  String get customPageConsentAccept => '使う';
+
+  @override
+  String get customPageConsentDecline => 'やめる';
+
+  @override
+  String get customPageNotInstalled => 'インストールされていません';
+
+  @override
+  String get customPageNotInstalledHint => 'ストアからインストールすると開けます';
+
+  @override
+  String get customPageOpenFailed => '開けませんでした';
+
+  @override
+  String get customClientHostOnly => 'ホストだけがデプロイできます';
+
+  @override
+  String get customClientSessionClosed => 'セッションが閉じています';
+
+  @override
+  String get customClientNoToken => 'RASQ アカウントのトークンがありません';
+
+  @override
+  String customAstellWaitingApproval(String name) {
+    return '「$name」はホストの承認を待っています';
+  }
+
+  @override
+  String customAstellApproveTitle(String name) {
+    return '「$name」をこのルームで使いますか?';
+  }
+
+  @override
+  String customAstellApproveMessage(String name) {
+    return '$name さんからの提案です。承認すると、参加している全員が開けるようになります(インストールしていない人は、開くときに一時的に読み込みます)。';
+  }
+
+  @override
+  String get customAstellApprove => '承認する';
+
+  @override
+  String customAstellProposed(String name) {
+    return '「$name」を提案しました(ホストが承認すると使えます)';
+  }
+
+  @override
+  String get customAstellEmptyHost =>
+      'このルームで動くプラグインはまだありません。下の「プラグインを追加」から足せます。';
+
+  @override
+  String get customAstellEmptyMember =>
+      'このルームで動くプラグインはまだありません。「プラグインを提案」でホストに頼めます。';
+
+  @override
+  String customAstellInUse(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人が使用中',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customAstellInUseAddedBy(int count, String handle) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人が使用中',
+    );
+    return '$_temp0 ・ @$handle が追加';
+  }
+
+  @override
+  String get customAstellOpen => '開く';
+
+  @override
+  String get customAstellRemove => 'ルームから外す';
+
+  @override
+  String get customAstellAdd => 'プラグインを追加';
+
+  @override
+  String get customAstellPropose => 'プラグインを提案';
+
+  @override
   String get languageSelfName => '日本語';
 
   @override

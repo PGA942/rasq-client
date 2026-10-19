@@ -6,6 +6,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/rasq_account.dart';
+import '../../l10n/l10n.dart';
 import '../plugins/slot_plugins.dart';
 import '../store/store_models.dart';
 import '../vc/astell_providers.dart';
@@ -25,12 +26,13 @@ Future<void> showCustomPluginShareMenu(BuildContext context, WidgetRef ref, Stor
   final handle = ref.read(orgateAccountProvider).value?.handle;
   // 入れていなければ宣言が分からない: ルームへの提案だけ(デプロイの可否は Central が確かめる)。
   final canRoom = room != null && (decl == null || decl.allows(PluginPageDecl.surfaceAstell));
+  final l = context.l10n;
   final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'store.custom.share', anchor: anchor, items: [
-    if (canRoom) RasqDropdownItem(room.isModerator ? '「${room.room.title}」に追加' : '「${room.room.title}」で提案', 'room'),
-    if (installed != null && handle != null && decl!.allows(PluginPageDecl.surfaceProfile)) const RasqDropdownItem('プロフィールに置く', 'profile'),
+    if (canRoom) RasqDropdownItem(room.isModerator ? l.customShareAddToRoom(room.room.title) : l.customShareProposeToRoom(room.room.title), 'room'),
+    if (installed != null && handle != null && decl!.allows(PluginPageDecl.surfaceProfile)) RasqDropdownItem(l.customSharePlaceOnProfile, 'profile'),
     // 招待 (D-424): Swing で送る(見た人は、この Swing のセッションに一緒に入る)。前は招待コードを作っていた。
-    if (installed != null && decl!.isShared) const RasqDropdownItem('Swing で招待(みんなで使う)', 'link'),
-    if (!canRoom && installed == null) const RasqDropdownItem('インストールするとプロフィールや招待で共有できます', '', enabled: false),
+    if (installed != null && decl!.isShared) RasqDropdownItem(l.customShareInviteBySwing, 'link'),
+    if (!canRoom && installed == null) RasqDropdownItem(l.customShareInstallToShare, '', enabled: false),
   ]);
   if (pick == null || pick.isEmpty || !context.mounted) return;
   final messenger = ScaffoldMessenger.maybeOf(context);
@@ -40,20 +42,20 @@ Future<void> showCustomPluginShareMenu(BuildContext context, WidgetRef ref, Stor
       final s = room!;
       if (s.isModerator) {
         final error = await deployToRoom(ref, roomId: s.room.id, pluginId: d.id, version: installed?.storeVersion);
-        toast(error == null ? '「${d.name}」をルームに追加しました' : '追加できませんでした: $error');
+        toast(error == null ? l.customAddedToRoom(d.name) : l.customAddToRoomFailed(error));
       } else {
         proposeToRoom(ref, CustomPluginProposal(pluginId: d.id, version: installed?.storeVersion, name: d.name, mode: decl?.mode ?? PluginPageDecl.shared, icon: decl?.icon));
-        toast('「${d.name}」をルームで提案しました');
+        toast(l.customShareProposedToRoom(d.name));
       }
     case 'profile':
       final error = await setProfilePlugin(ref, handle: handle!, plugin: installed!, placed: true);
-      toast(error == null ? 'プロフィールに置きました' : '置けませんでした: $error');
+      toast(error == null ? l.customSharePlacedOnProfile : l.customPlaceFailed(error));
     case 'link':
       final swing = await showCustomSwingInvite(ref, pluginId: d.id, title: decl?.title ?? d.name, version: installed!.storeVersion);
       final sid = swing?.plugin?.sessionId;
       if (swing == null || !context.mounted) return;
       final n = swing.notified ?? 0;
-      toast(n > 0 ? 'Swing で招待しました(RASQ の通知 $n 人)' : 'Swing で招待しました');
+      toast(n > 0 ? l.customInvitedBySwingNotified(n) : l.customInvitedBySwing);
       if (sid != null) context.push(Routes.customPage(d.id, CustomPageArgs(pluginId: d.id, version: swing.plugin?.version, sessionId: sid).query));
   }
 }

@@ -6,6 +6,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart' show overlayManagerProvider;
 import '../../backend/orgate_client.dart' show OrgateException;
 import '../../backend/rasq_collections_api.dart' show RasqCollection, RasqCollectionKind;
+import '../../l10n/l10n.dart';
 import '../collections/rasq_collections.dart' show myRasqCollectionsProvider;
 import '../swing/swing_client.dart';
 import '../swing/swing_composer.dart' show swingTtlChoices;
@@ -65,8 +66,8 @@ class SwingInviteSelection extends ChangeNotifier {
 Future<Swing?> showCustomSwingInvite(WidgetRef ref, {required String pluginId, required String title, String? version, String? sessionId, int column = 0}) {
   return ref.read(overlayManagerProvider).showFow<Swing>(
         id: customInviteFowId,
-        spec: FowSpec(type: FowPanelType.widget, title: 'Swing で招待', columnIndex: column, initialHeightFactor: 0.55, minHeightFactor: 0.3, maxHeightFactor: 0.9),
-        semanticsLabel: 'Swing で招待',
+        spec: FowSpec(type: FowPanelType.widget, title: appL10n.customInviteTitle, columnIndex: column, initialHeightFactor: 0.55, minHeightFactor: 0.3, maxHeightFactor: 0.9),
+        semanticsLabel: appL10n.customInviteTitle,
         builder: (ctx, handle) => CustomSwingInviteBody(
           pluginId: pluginId,
           title: title,
@@ -125,7 +126,7 @@ class _CustomSwingInviteBodyState extends ConsumerState<CustomSwingInviteBody> {
     } on OrgateException catch (e) {
       if (mounted) setState(() => _error = customInviteErrorText(e));
     } catch (e) {
-      if (mounted) setState(() => _error = '送れませんでした: $e');
+      if (mounted) setState(() => _error = context.l10n.customInviteSendFailed('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -134,25 +135,26 @@ class _CustomSwingInviteBodyState extends ConsumerState<CustomSwingInviteBody> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final lists = ref.watch(myRasqCollectionsProvider(RasqCollectionKind.list)).value ?? const <RasqCollection>[];
     return ListenableBuilder(
       listenable: _selection,
       builder: (context, _) => ListView(key: const ValueKey('custom.invite'), padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page), children: [
-        Text('「${widget.title}」に招待', style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700)),
+        Text(l10n.customInviteHeading(widget.title), style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 2),
         Text(
-          widget.sessionId == null ? 'Swing で届けます。見た人は、あなたのページに一緒に入ります。' : 'Swing で届けます。見た人は、いま開いているページに一緒に入ります。',
+          widget.sessionId == null ? l10n.customInviteIntroOwnPage : l10n.customInviteIntroCurrentPage,
           style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: RasqSpacing.sm),
-        Text('届け先: 押す = Swing を届ける ・ 2 回続けて押す = RASQ の通知でも知らせる 🔔',
+        Text(l10n.customInviteHelp,
             key: const ValueKey('custom.invite.help'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: RasqSpacing.xs),
         Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
           InviteTargetButton(
             key: const ValueKey('custom.invite.target.followers'),
             icon: Icons.people_outline,
-            label: 'フォロワー',
+            label: l10n.customInviteFollowers,
             mark: _selection.markOf(SwingInviteSelection.followersKey),
             onTap: _busy ? null : () => _selection.tap(SwingInviteSelection.followersKey),
             onDoubleTap: _busy ? null : () => _selection.doubleTap(SwingInviteSelection.followersKey),
@@ -167,19 +169,19 @@ class _CustomSwingInviteBodyState extends ConsumerState<CustomSwingInviteBody> {
               onDoubleTap: _busy ? null : () => _selection.doubleTap(SwingInviteSelection.listKey(l.id)),
             ),
         ]),
-        if (lists.isEmpty) const RasqCaption('RASQ リストを作ると、リストに入れた人も招待できます', padding: EdgeInsets.only(top: RasqSpacing.xs)),
+        if (lists.isEmpty) RasqCaption(l10n.customInviteNoLists, padding: EdgeInsets.only(top: RasqSpacing.xs)),
         const SizedBox(height: RasqSpacing.md),
         TextField(
           key: const ValueKey('custom.invite.text'),
           controller: _text,
           enabled: !_busy,
           maxLength: 200,
-          decoration: const InputDecoration(isDense: true, hintText: 'ひとこと(なくてもよい)'),
+          decoration: InputDecoration(isDense: true, hintText: l10n.customInviteTextHint),
         ),
         Wrap(spacing: RasqSpacing.xs, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          Text('消えるまで', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text(l10n.customInviteTtl, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           for (final h in swingTtlChoices)
-            ChoiceChip(key: ValueKey('custom.invite.ttl.$h'), label: Text('$h 時間'), selected: _ttl == h, onSelected: _busy ? null : (_) => setState(() => _ttl = h)),
+            ChoiceChip(key: ValueKey('custom.invite.ttl.$h'), label: Text(l10n.customInviteTtlHours(h)), selected: _ttl == h, onSelected: _busy ? null : (_) => setState(() => _ttl = h)),
         ]),
         if (_error != null)
           Padding(
@@ -191,7 +193,7 @@ class _CustomSwingInviteBodyState extends ConsumerState<CustomSwingInviteBody> {
           key: const ValueKey('custom.invite.send'),
           onPressed: _selection.isEmpty || _busy || ref.watch(swingApiProvider) == null ? null : _send,
           icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send),
-          label: Text(_selection.toNotify().isEmpty ? 'Swing で招待' : 'Swing で招待(通知も送る)'),
+          label: Text(_selection.toNotify().isEmpty ? l10n.customInviteTitle : l10n.customInviteSendWithNotify),
         ),
       ]),
     );
@@ -200,11 +202,11 @@ class _CustomSwingInviteBodyState extends ConsumerState<CustomSwingInviteBody> {
 
 /// 招待が送れなかったときの 1 行 (D-424)。
 String customInviteErrorText(OrgateException e) => switch (e.serverCode) {
-      SwingApi.versionNotAvailable => 'このプラグインは、つないでいる RASQ サーバーのストアで配られていません(審査を通った版がありません)。アプリに入っているサンプルのままでは、みんなで使えません',
-      'not_shared_page' => 'みんなで使うプラグインではありません',
-      'session_not_shareable' => 'このページのセッションは Swing では招待できません',
-      'swing_limit' => '同時に出しておける Swing は 20 個までです',
-      _ => '送れませんでした: ${e.message}',
+      SwingApi.versionNotAvailable => appL10n.customInviteErrorVersionNotAvailable,
+      'not_shared_page' => appL10n.customInviteErrorNotShared,
+      'session_not_shareable' => appL10n.customInviteErrorSessionNotShareable,
+      'swing_limit' => appL10n.customInviteErrorSwingLimit,
+      _ => appL10n.customInviteSendFailed(e.message),
     };
 
 /// 届け先のボタン (D-424): 押す = 選ぶ / 外す、ダブルタップ = 通知つき(🔔)/ 通知だけ外す。
@@ -219,14 +221,15 @@ class InviteTargetButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final on = mark != InviteMark.off;
     final bell = mark == InviteMark.notify;
     final fg = on ? scheme.onSecondaryContainer : scheme.onSurface;
     return Semantics(
       button: true,
       selected: on,
-      label: '$label${bell ? '(通知も送る)' : ''}',
-      hint: '押すと選ぶ / 外す。2 回続けて押すと、通知も送る',
+      label: bell ? l10n.customInviteTargetWithNotify(label) : label,
+      hint: l10n.customInviteTargetHint,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,

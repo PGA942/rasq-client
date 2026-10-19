@@ -3238,6 +3238,768 @@ abstract class AppLocalizations {
   /// **'「{label}」に当たるかもしれません({who})。このまま送りますか?'**
   String composePolicyWarn(String label, String who);
 
+  /// ストアのプラグインページの共有メニュー。room は参加中の AsTell のルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{room}」に追加'**
+  String customShareAddToRoom(String room);
+
+  /// No description provided for @customShareProposeToRoom.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{room}」で提案'**
+  String customShareProposeToRoom(String room);
+
+  /// No description provided for @customSharePlaceOnProfile.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィールに置く'**
+  String get customSharePlaceOnProfile;
+
+  /// No description provided for @customShareInviteBySwing.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で招待(みんなで使う)'**
+  String get customShareInviteBySwing;
+
+  /// No description provided for @customShareInstallToShare.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールするとプロフィールや招待で共有できます'**
+  String get customShareInstallToShare;
+
+  /// name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」をルームに追加しました'**
+  String customAddedToRoom(String name);
+
+  /// No description provided for @customAddToRoomFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加できませんでした: {error}'**
+  String customAddToRoomFailed(String error);
+
+  /// No description provided for @customShareProposedToRoom.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」をルームで提案しました'**
+  String customShareProposedToRoom(String name);
+
+  /// No description provided for @customSharePlacedOnProfile.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィールに置きました'**
+  String get customSharePlacedOnProfile;
+
+  /// No description provided for @customPlaceFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'置けませんでした: {error}'**
+  String customPlaceFailed(String error);
+
+  /// count は RASQ の通知でも知らせた人の数
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で招待しました(RASQ の通知 {count, plural, other{{count} 人}})'**
+  String customInvitedBySwingNotified(int count);
+
+  /// No description provided for @customInvitedBySwing.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で招待しました'**
+  String get customInvitedBySwing;
+
+  /// No description provided for @customInviteTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で招待'**
+  String get customInviteTitle;
+
+  /// No description provided for @customInviteSendFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'送れませんでした: {error}'**
+  String customInviteSendFailed(String error);
+
+  /// title はプラグインのページの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」に招待'**
+  String customInviteHeading(String title);
+
+  /// No description provided for @customInviteIntroOwnPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で届けます。見た人は、あなたのページに一緒に入ります。'**
+  String get customInviteIntroOwnPage;
+
+  /// No description provided for @customInviteIntroCurrentPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で届けます。見た人は、いま開いているページに一緒に入ります。'**
+  String get customInviteIntroCurrentPage;
+
+  /// No description provided for @customInviteHelp.
+  ///
+  /// In ja, this message translates to:
+  /// **'届け先: 押す = Swing を届ける ・ 2 回続けて押す = RASQ の通知でも知らせる 🔔'**
+  String get customInviteHelp;
+
+  /// No description provided for @customInviteFollowers.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワー'**
+  String get customInviteFollowers;
+
+  /// No description provided for @customInviteNoLists.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストを作ると、リストに入れた人も招待できます'**
+  String get customInviteNoLists;
+
+  /// No description provided for @customInviteTextHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ひとこと(なくてもよい)'**
+  String get customInviteTextHint;
+
+  /// No description provided for @customInviteTtl.
+  ///
+  /// In ja, this message translates to:
+  /// **'消えるまで'**
+  String get customInviteTtl;
+
+  /// No description provided for @customInviteTtlHours.
+  ///
+  /// In ja, this message translates to:
+  /// **'{hours, plural, other{{hours} 時間}}'**
+  String customInviteTtlHours(int hours);
+
+  /// No description provided for @customInviteSendWithNotify.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で招待(通知も送る)'**
+  String get customInviteSendWithNotify;
+
+  /// No description provided for @customInviteErrorVersionNotAvailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインは、つないでいる RASQ サーバーのストアで配られていません(審査を通った版がありません)。アプリに入っているサンプルのままでは、みんなで使えません'**
+  String get customInviteErrorVersionNotAvailable;
+
+  /// No description provided for @customInviteErrorNotShared.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなで使うプラグインではありません'**
+  String get customInviteErrorNotShared;
+
+  /// No description provided for @customInviteErrorSessionNotShareable.
+  ///
+  /// In ja, this message translates to:
+  /// **'このページのセッションは Swing では招待できません'**
+  String get customInviteErrorSessionNotShareable;
+
+  /// No description provided for @customInviteErrorSwingLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'同時に出しておける Swing は 20 個までです'**
+  String get customInviteErrorSwingLimit;
+
+  /// 届け先のボタンの読み上げ。label はフォロワー / リストの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{label}(通知も送る)'**
+  String customInviteTargetWithNotify(String label);
+
+  /// No description provided for @customInviteTargetHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'押すと選ぶ / 外す。2 回続けて押すと、通知も送る'**
+  String get customInviteTargetHint;
+
+  /// No description provided for @customProfileLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページに置けるのは 8 個までです'**
+  String get customProfileLimit;
+
+  /// No description provided for @customProfileSideloadReplace.
+  ///
+  /// In ja, this message translates to:
+  /// **'上げ直す(新しい版)'**
+  String get customProfileSideloadReplace;
+
+  /// No description provided for @customProfileSideloadRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページから外す'**
+  String get customProfileSideloadRemove;
+
+  /// No description provided for @customProfileRemoveFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'外せませんでした: {error}'**
+  String customProfileRemoveFailed(String error);
+
+  /// No description provided for @customLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした: {error}'**
+  String customLoadFailed(String error);
+
+  /// No description provided for @customProfileEmptyMine.
+  ///
+  /// In ja, this message translates to:
+  /// **'「+ 追加」で Markdown のページや、カスタムプラグインを置けます。訪れた人がここから開けます。'**
+  String get customProfileEmptyMine;
+
+  /// No description provided for @customProfileEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページはまだありません。'**
+  String get customProfileEmpty;
+
+  /// No description provided for @customProfileSharedNotStarted.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなで使う(まだ始まっていません)'**
+  String get customProfileSharedNotStarted;
+
+  /// No description provided for @customProfileShared.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなで使う'**
+  String get customProfileShared;
+
+  /// No description provided for @customSolo.
+  ///
+  /// In ja, this message translates to:
+  /// **'1 人で使う'**
+  String get customSolo;
+
+  /// title はプラグインのページの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{title} のホスト用ページ'**
+  String customProfileHostPage(String title);
+
+  /// No description provided for @customProfileHostPageSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'あなたにだけ出ます'**
+  String get customProfileHostPageSubtitle;
+
+  /// No description provided for @customProfileMdPageWithDraft.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページ ・ 書きかけの下書きあり'**
+  String get customProfileMdPageWithDraft;
+
+  /// No description provided for @customProfileMdPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページ'**
+  String get customProfileMdPage;
+
+  /// No description provided for @customProfileUntitled.
+  ///
+  /// In ja, this message translates to:
+  /// **'(無題)'**
+  String get customProfileUntitled;
+
+  /// No description provided for @customProfileDraft.
+  ///
+  /// In ja, this message translates to:
+  /// **'下書き(この端末だけ)'**
+  String get customProfileDraft;
+
+  /// No description provided for @customProfileSideloadSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'自作プラグイン ・ 制限モード ・ v{version}'**
+  String customProfileSideloadSubtitle(String version);
+
+  /// No description provided for @customMenu.
+  ///
+  /// In ja, this message translates to:
+  /// **'メニュー'**
+  String get customMenu;
+
+  /// No description provided for @customProfileAdd.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加'**
+  String get customProfileAdd;
+
+  /// No description provided for @customProfileLoginToPlace.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインすると置けます'**
+  String get customProfileLoginToPlace;
+
+  /// No description provided for @customProfileSideloadPlaced.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を置きました(訪れた人の端末では制限モードで動きます)'**
+  String customProfileSideloadPlaced(String name);
+
+  /// No description provided for @customProfileSideloadErrorNotProfilePage.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のページに置けるのは、プロフィールの面を持つ 1 人で使うページ型だけです'**
+  String get customProfileSideloadErrorNotProfilePage;
+
+  /// No description provided for @customProfileSideloadErrorLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'自作プラグインは 4 つまでです'**
+  String get customProfileSideloadErrorLimit;
+
+  /// No description provided for @customProfileSideloadErrorInvalidPackage.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物を読めませんでした(.rspkg / .rasqpkg)'**
+  String get customProfileSideloadErrorInvalidPackage;
+
+  /// No description provided for @customClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get customClose;
+
+  /// No description provided for @customProfileAddTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページを追加'**
+  String get customProfileAddTitle;
+
+  /// No description provided for @customProfileAddMd.
+  ///
+  /// In ja, this message translates to:
+  /// **'Markdown のページを書く'**
+  String get customProfileAddMd;
+
+  /// No description provided for @customProfileAddMdSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'下書きはこの端末に残し、「公開」で出します。MFM は HTML 風のタグで'**
+  String get customProfileAddMdSubtitle;
+
+  /// No description provided for @customProfileAddSideload.
+  ///
+  /// In ja, this message translates to:
+  /// **'自作プラグインを置く(.rspkg / .rasqpkg)'**
+  String get customProfileAddSideload;
+
+  /// No description provided for @customProfileAddSideloadSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'審査していないプラグイン。訪れた人の端末では制限モード(通信などなし)で動きます'**
+  String get customProfileAddSideloadSubtitle;
+
+  /// No description provided for @customProfileAddStoreSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアのカスタムプラグイン'**
+  String get customProfileAddStoreSection;
+
+  /// No description provided for @customProfileAddStoreEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページに置けるカスタムプラグインを入れていません'**
+  String get customProfileAddStoreEmpty;
+
+  /// No description provided for @customProfileAddStorePlaced.
+  ///
+  /// In ja, this message translates to:
+  /// **'置いています(押すと外す)'**
+  String get customProfileAddStorePlaced;
+
+  /// No description provided for @customProfileAddStoreTapToPlace.
+  ///
+  /// In ja, this message translates to:
+  /// **'押すと置く'**
+  String get customProfileAddStoreTapToPlace;
+
+  /// No description provided for @customProfileAddStoreHasHostPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホスト用ページあり'**
+  String get customProfileAddStoreHasHostPage;
+
+  /// 一覧の補足の項目をつなぐ区切り
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get customListSeparator;
+
+  /// No description provided for @customProfileChangeFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'変えられませんでした: {error}'**
+  String customProfileChangeFailed(String error);
+
+  /// No description provided for @customSearchStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアで探す'**
+  String get customSearchStore;
+
+  /// No description provided for @customPluginsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムプラグイン'**
+  String get customPluginsTitle;
+
+  /// No description provided for @customPluginsJoinByCode.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードで参加'**
+  String get customPluginsJoinByCode;
+
+  /// No description provided for @customPluginsInviteCode.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コード'**
+  String get customPluginsInviteCode;
+
+  /// No description provided for @customPluginsJoin.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加'**
+  String get customPluginsJoin;
+
+  /// No description provided for @customPluginsInstalled.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストール済み'**
+  String get customPluginsInstalled;
+
+  /// No description provided for @customPluginsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだありません。ストアの「カスタム」から探せます。'**
+  String get customPluginsEmpty;
+
+  /// No description provided for @customPluginsShared.
+  ///
+  /// In ja, this message translates to:
+  /// **'みんなで使える'**
+  String get customPluginsShared;
+
+  /// No description provided for @customPluginsProfile.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィール'**
+  String get customPluginsProfile;
+
+  /// No description provided for @customPluginsSearchStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアでカスタムプラグインを探す'**
+  String get customPluginsSearchStore;
+
+  /// No description provided for @customPluginsInviteNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'この招待コードのセッションは見つかりません(閉じられたかもしれません)'**
+  String get customPluginsInviteNotFound;
+
+  /// No description provided for @customPluginsInviteTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待'**
+  String get customPluginsInviteTitle;
+
+  /// No description provided for @customPluginsJoinFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加できませんでした'**
+  String get customPluginsJoinFailed;
+
+  /// No description provided for @customPageLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした'**
+  String get customPageLoadFailed;
+
+  /// name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} はページ型のプラグインではありません'**
+  String customPageNotPagePlugin(String name);
+
+  /// No description provided for @customPageSoloPlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} は 1 人で使うプラグインです(みんなでは使えません)'**
+  String customPageSoloPlugin(String name);
+
+  /// No description provided for @customPageJoinFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションに入れませんでした: {error}'**
+  String customPageJoinFailed(String error);
+
+  /// No description provided for @customPageNoPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインがページを返しませんでした'**
+  String get customPageNoPage;
+
+  /// No description provided for @customPageWrongSession.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} のセッションではありません'**
+  String customPageWrongSession(String name);
+
+  /// No description provided for @customPageLeftWrongSession.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} のセッションではないため抜けました'**
+  String customPageLeftWrongSession(String name);
+
+  /// No description provided for @customPageDisconnectedWithError.
+  ///
+  /// In ja, this message translates to:
+  /// **'接続が切れました: {error}'**
+  String customPageDisconnectedWithError(String error);
+
+  /// No description provided for @customPageDisconnected.
+  ///
+  /// In ja, this message translates to:
+  /// **'接続が切れました'**
+  String get customPageDisconnected;
+
+  /// サーバーが文を付けずに誤りを知らせたときの既定
+  ///
+  /// In ja, this message translates to:
+  /// **'エラー'**
+  String get customPageError;
+
+  /// No description provided for @customPageMenuInvite.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待(Swing で送る)'**
+  String get customPageMenuInvite;
+
+  /// No description provided for @customPageMenuCopyCode.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードをコピー'**
+  String get customPageMenuCopyCode;
+
+  /// No description provided for @customPageMenuCopyLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待リンクをコピー'**
+  String get customPageMenuCopyLink;
+
+  /// No description provided for @customPageMenuParticipants.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加者({count})'**
+  String customPageMenuParticipants(int count);
+
+  /// No description provided for @customPageMenuCloseSession.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションを閉じる'**
+  String get customPageMenuCloseSession;
+
+  /// No description provided for @customPageViewInStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアで見る'**
+  String get customPageViewInStore;
+
+  /// No description provided for @customPageCodeCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コード {code} をコピーしました'**
+  String customPageCodeCopied(String code);
+
+  /// No description provided for @customPageLinkCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待リンクをコピーしました'**
+  String get customPageLinkCopied;
+
+  /// No description provided for @customPageParticipants.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加者'**
+  String get customPageParticipants;
+
+  /// No description provided for @customPageCloseConfirmTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションを閉じますか?'**
+  String get customPageCloseConfirmTitle;
+
+  /// No description provided for @customPageCloseConfirmMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加している全員のページで、共有の値が止まります。'**
+  String get customPageCloseConfirmMessage;
+
+  /// No description provided for @customCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get customCancel;
+
+  /// No description provided for @customPageCloseFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じられませんでした: {error}'**
+  String customPageCloseFailed(String error);
+
+  /// No description provided for @customPageClosedBanner.
+  ///
+  /// In ja, this message translates to:
+  /// **'このセッションは閉じられました(共有の値はもう変わりません)'**
+  String get customPageClosedBanner;
+
+  /// No description provided for @customPageConsentBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'このページを開いている間だけ、インストールせずに動かします(閉じると消えます)。'**
+  String get customPageConsentBody;
+
+  /// No description provided for @customPageConsentPermissions.
+  ///
+  /// In ja, this message translates to:
+  /// **'使う権限'**
+  String get customPageConsentPermissions;
+
+  /// No description provided for @customPageConsentAccept.
+  ///
+  /// In ja, this message translates to:
+  /// **'使う'**
+  String get customPageConsentAccept;
+
+  /// No description provided for @customPageConsentDecline.
+  ///
+  /// In ja, this message translates to:
+  /// **'やめる'**
+  String get customPageConsentDecline;
+
+  /// No description provided for @customPageNotInstalled.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールされていません'**
+  String get customPageNotInstalled;
+
+  /// No description provided for @customPageNotInstalledHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアからインストールすると開けます'**
+  String get customPageNotInstalledHint;
+
+  /// No description provided for @customPageOpenFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'開けませんでした'**
+  String get customPageOpenFailed;
+
+  /// No description provided for @customClientHostOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホストだけがデプロイできます'**
+  String get customClientHostOnly;
+
+  /// No description provided for @customClientSessionClosed.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションが閉じています'**
+  String get customClientSessionClosed;
+
+  /// No description provided for @customClientNoToken.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントのトークンがありません'**
+  String get customClientNoToken;
+
+  /// No description provided for @customAstellWaitingApproval.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」はホストの承認を待っています'**
+  String customAstellWaitingApproval(String name);
+
+  /// No description provided for @customAstellApproveTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」をこのルームで使いますか?'**
+  String customAstellApproveTitle(String name);
+
+  /// name は提案した人の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} さんからの提案です。承認すると、参加している全員が開けるようになります(インストールしていない人は、開くときに一時的に読み込みます)。'**
+  String customAstellApproveMessage(String name);
+
+  /// No description provided for @customAstellApprove.
+  ///
+  /// In ja, this message translates to:
+  /// **'承認する'**
+  String get customAstellApprove;
+
+  /// No description provided for @customAstellProposed.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を提案しました(ホストが承認すると使えます)'**
+  String customAstellProposed(String name);
+
+  /// No description provided for @customAstellEmptyHost.
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームで動くプラグインはまだありません。下の「プラグインを追加」から足せます。'**
+  String get customAstellEmptyHost;
+
+  /// No description provided for @customAstellEmptyMember.
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームで動くプラグインはまだありません。「プラグインを提案」でホストに頼めます。'**
+  String get customAstellEmptyMember;
+
+  /// No description provided for @customAstellInUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 人が使用中}}'**
+  String customAstellInUse(int count);
+
+  /// handle はルームに追加した人のハンドル(@ なし)
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 人が使用中}} ・ @{handle} が追加'**
+  String customAstellInUseAddedBy(int count, String handle);
+
+  /// No description provided for @customAstellOpen.
+  ///
+  /// In ja, this message translates to:
+  /// **'開く'**
+  String get customAstellOpen;
+
+  /// No description provided for @customAstellRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームから外す'**
+  String get customAstellRemove;
+
+  /// No description provided for @customAstellAdd.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインを追加'**
+  String get customAstellAdd;
+
+  /// No description provided for @customAstellPropose.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインを提案'**
+  String get customAstellPropose;
+
   /// この言語の、その言語での名前(設定の「言語」の一覧に出す)。訳すときは、その言語での自分の名前にする(English / 한국어 など)。
   ///
   /// In ja, this message translates to:
