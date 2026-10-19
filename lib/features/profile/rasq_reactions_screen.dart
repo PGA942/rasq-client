@@ -10,6 +10,7 @@ import '../../backend/rasq_account_page_api.dart';
 import '../../shell/headers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/post_row.dart';
+import '../../l10n/l10n.dart';
 import 'rasq_post_tile.dart';
 
 /// RASQ の投稿の「リアクションを表示」(D-294 / S-030): SNS の同じページ (reactions_screen) と同じ作り。
@@ -33,6 +34,7 @@ class _RasqReactionsScreenState extends ConsumerState<RasqReactionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final thread = ref.watch(rasqThreadProvider(widget.postId));
     final rx = ref.watch(rasqPostReactionsProvider(widget.postId));
     final central = ref.watch(centralBaseUrlProvider);
@@ -41,8 +43,8 @@ class _RasqReactionsScreenState extends ConsumerState<RasqReactionsScreen> {
     final childBlocked = rasqPostDetailBlockReason(ref.watch(childGateProvider), post);
     if (childBlocked != null) {
       return Scaffold(
-        appBar: const RasqPageHeader(title: 'リアクション'),
-        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: 'この投稿は表示できません', hint: childBlocked == 'この投稿は表示できません' ? '見守りの設定は保護者が決めています' : childBlocked),
+        appBar: RasqPageHeader(title: l10n.profilePostReactionsTitle),
+        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: l10n.childSafePostHidden, hint: childBlocked == l10n.childSafePostHidden ? l10n.childSafeScreensBlockedHint : childBlocked),
       );
     }
     Widget tab(Widget Function(RasqPostReactions) of) => rx.when(
@@ -50,12 +52,12 @@ class _RasqReactionsScreenState extends ConsumerState<RasqReactionsScreen> {
           error: (e, _) => _RasqLoadError(error: e),
           data: of,
         );
-    const tabs = [RasqTabItem('返信'), RasqTabItem('リブロード'), RasqTabItem('キュー'), RasqTabItem('引用')];
+    final tabs = [RasqTabItem(l10n.profilePostReply), RasqTabItem(l10n.profilePostRebroad), RasqTabItem(l10n.profilePostQueue), RasqTabItem(l10n.profilePostQuote)];
     return DefaultTabController(
       length: tabs.length,
       initialIndex: 2,
       child: Scaffold(
-        appBar: const RasqPageHeader(title: 'リアクション'),
+        appBar: RasqPageHeader(title: l10n.profilePostReactionsTitle),
         body: Column(children: [
           if (post != null)
             Padding(
@@ -68,11 +70,11 @@ class _RasqReactionsScreenState extends ConsumerState<RasqReactionsScreen> {
               thread.when(
                 loading: () => const RasqLoading(),
                 error: (e, _) => _RasqLoadError(error: e),
-                data: (t) => RasqPostTileList(posts: t.replies, empty: '返信はありません', onChanged: _refresh),
+                data: (t) => RasqPostTileList(posts: t.replies, empty: l10n.profilePostNoReplies, onChanged: _refresh),
               ),
-              tab((r) => RasqActorList(actors: r.rebroads, empty: 'リブロードはありません')),
+              tab((r) => RasqActorList(actors: r.rebroads, empty: l10n.profilePostNoRebroads)),
               tab((r) => RasqQueueSections(groups: r.queues, open: _open, onToggle: (k) => setState(() => _open.contains(k) ? _open.remove(k) : _open.add(k)))),
-              tab((r) => RasqPostTileList(posts: r.quotes, empty: '引用はありません', onChanged: _refresh)),
+              tab((r) => RasqPostTileList(posts: r.quotes, empty: l10n.profilePostNoQuotes, onChanged: _refresh)),
             ]),
           ),
         ]),
@@ -89,7 +91,7 @@ class _RasqLoadError extends StatelessWidget {
     final e = error;
     return Padding(
       padding: const EdgeInsets.all(RasqSpacing.page),
-      child: Text(e is OrgateException && e.code.code == '404' ? 'この投稿は、もうありません' : '読み込めませんでした: ${e is OrgateException ? e.message : e}',
+      child: Text(e is OrgateException && e.code.code == '404' ? context.l10n.profilePostGone : context.l10n.profilePostLoadFailed('${e is OrgateException ? e.message : e}'),
           style: RasqTypography.bodySmall.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
     );
   }
@@ -165,7 +167,7 @@ class RasqQueueSections extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    if (groups.isEmpty) return const RasqEmptyView(title: 'キューはありません');
+    if (groups.isEmpty) return RasqEmptyView(title: context.l10n.profilePostNoQueues);
     return ListView(shrinkWrap: shrinkWrap, physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null, children: [
       for (final g in groups) ...[
         InkWell(
@@ -185,8 +187,8 @@ class RasqQueueSections extends StatelessWidget {
               const SizedBox(width: RasqSpacing.md),
               Text('${g.queue.count}', style: RasqTypography.title),
               const SizedBox(width: RasqSpacing.sm),
-              Expanded(child: Text(g.queue.like ? 'いいね' : g.queue.stickerId, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
-              if (g.queue.mine) const RasqPill(label: 'あなた'),
+              Expanded(child: Text(g.queue.like ? context.l10n.profilePostLike : g.queue.stickerId, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
+              if (g.queue.mine) RasqPill(label: context.l10n.profilePostYou),
               Icon(open.contains(RasqPostTileView.queueKey(g.queue.packId, g.queue.stickerId)) ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
             ]),
           ),

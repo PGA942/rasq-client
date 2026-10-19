@@ -4991,6 +4991,642 @@
   "@onboardingTourRaiBubble": {
     "description": "RAi のページの絵の吹き出し(利用者の質問の例)"
   },
+  "profileEditTitle": "プロフィールの更新",
+  "@profileEditTitle": {
+    "description": "プロフィールの編集画面(RASQ アカウント / SNS)の見出し"
+  },
+  "profileEditSave": "決定",
+  "@profileEditSave": {
+    "description": "プロフィールの編集画面の右上の保存のボタン"
+  },
+  "profileEditNotLoggedIn": "RASQ アカウントにログインしていません。",
+  "profileEditBannerRemove": "バナーを外す",
+  "profileEditBannerPick": "バナーを選ぶ",
+  "profileEditAvatarPick": "アイコンを選ぶ",
+  "profileEditAvatarRemove": "アイコンを外す",
+  "profileEditPickImage": "画像を選択",
+  "@profileEditPickImage": {
+    "description": "SNS のプロフィール編集: バナー / アイコンの画像を選ぶボタン"
+  },
+  "profileEditNameHint": "名前を入力..",
+  "profileEditBirthdayHint": "誕生日 (YYYY-MM-DD / MM-DD)",
+  "@profileEditBirthdayHint": {
+    "description": "RASQ アカウントの誕生日の入力欄のヒント(書式はサーバーが受けるもの)"
+  },
+  "profileEditBirthdayHintSns": "誕生日 (YYYY-MM-DD)",
+  "@profileEditBirthdayHintSns": {
+    "description": "SNS のプロフィール編集の誕生日の入力欄のヒント"
+  },
+  "profileEditHandleLabel": "ハンドル(@ なし、a-z 0-9 _、3〜32 文字)",
+  "profileEditBioLabel": "自己紹介",
+  "profileEditBioHint": "自己紹介(500 文字まで)",
+  "profileEditLocationLabel": "場所",
+  "profileEditLinksLabel": "リンク",
+  "profileEditLinkRemove": "削除",
+  "profileEditLinkCaptionHint": "キャプション",
+  "@profileEditLinkCaptionHint": {
+    "description": "リンクの見出し(表示する名前)の入力欄"
+  },
+  "profileEditLinkAdd": "追加",
+  "profileEditReload": "再読み込み",
+  "profileEditSnsTilesLabel": "アカウントページに出す SNS アカウント",
+  "profileEditSnsTilesCaption": "「自動」では、鍵アカウントなどは出しません。薄いタイルは、いま出ていないものです。",
+  "profileEditSnsTilesCaptionDetail": "「自動」は、鍵アカウントと、直近の投稿の公開範囲がフォロワーのみに寄っているアカウントを出しません。薄いタイルは、いまは出ていないものです。変更はすぐ反映されます。",
+  "profileEditSnsTileAuto": "自動({state})",
+  "@profileEditSnsTileAuto": {
+    "description": "SNS のタイルを出すかの 3 択の「自動」。state はいまの結果(表示 / 非表示)",
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditSnsTileShown": "表示",
+  "profileEditSnsTileHidden": "非表示",
+  "profileEditVerified": "持ち主を確認済み({method})",
+  "@profileEditVerified": {
+    "description": "method は確認の方法(サーバーが返す名前)",
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditVerify": "持ち主を確認",
+  "profileEditShowOnSnsLabel": "SNS のプロフィール",
+  "profileEditShowOnSnsTitle": "SNS のプロフィールにも、つないだアカウントを出す",
+  "profileEditShowOnSnsSubtitle": "RASQ で誰かがあなたの SNS のプロフィールを見たとき、つないだアカウントを出します。",
+  "profileEditShowOnSnsDetail": "アプリで誰かがあなたの SNS のプロフィールを見たとき、この RASQ アカウントと、アカウントページに出しているほかのアカウントを出します。自己紹介に書いてあるものは重ねて出しません。変更はすぐ反映されます。",
+  "profileEditKeybaseConnect": "Keybase をつなぐ",
+  "profileEditKeybaseConnectSubtitle": "Keybase で本人確認して、アカウントページに出します",
+  "profileEditKeybaseLinkedSubtitle": "確認済み。アカウントページに出ます",
+  "profileEditNotice": "プロフィールは、公開ページとストアのレビューに出ます。メールとパスワードは「セキュリティ」から。",
+  "profileEditNoticeDetail": "プロフィールは、RASQ の公開ページとストアのレビューに出ます。画像はサーバーで縮めて保存し直します(位置情報などは残りません)。メールアドレスとパスワードは「セキュリティ」から。",
+  "profileEditErrorHandleTaken": "そのハンドルは使われています",
+  "profileEditErrorHandle": "ハンドルは 3〜32 文字の a-z 0-9 _ にしてください",
+  "profileEditErrorBirthday": "誕生日は YYYY-MM-DD か MM-DD の形で入れてください",
+  "profileEditErrorLink": "リンクは、キャプション(40 文字まで)と http(s) の URL の組にしてください(8 組まで)",
+  "profileEditErrorImage": "その画像は使えません(PNG / JPEG / WebP / GIF、8 MiB まで)",
+  "profileEditErrorBio": "自己紹介は 500 文字までです",
+  "profileEditErrorLocation": "場所は 60 文字までです",
+  "profileEditErrorFailed": "更新に失敗しました: {message}",
+  "@profileEditErrorFailed": {
+    "description": "message はサーバー / SNS の誤りの文",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditSnsPostsWithdrawn": "預けた鍵と、取ってきた投稿を消しました",
+  "profileEditSnsPostsWithdrawFailed": "消せませんでした: {message}",
+  "@profileEditSnsPostsWithdrawFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditSnsPostsNoLogin": "この端末に、そのアカウントのログインがありません",
+  "profileEditSnsPostsNoDid": "このアカウントの DID が分かりません。ログインし直してください",
+  "profileEditSnsPostsBlueskyConsentTitle": "Bluesky の投稿をアカウントページに出します",
+  "profileEditSnsPostsBlueskyConsentMessage": "{account} の投稿を、RASQ のサーバーが Bluesky の公開の API から読み、**RASQ のアカウントページで誰でも見られる状態**にします。\n\n・Bluesky の投稿は、もともと誰でも読めます。返信とリポストは取り込みません。\n・**ログインの鍵(アプリパスワード / セッション)は預けません**。サーバーに渡すのは、このアカウントの DID とハンドルだけです。\n・使えるのは、持ち主の確認が済んだアカウントだけです(他人のアカウントの投稿を出せないように)。\n・このスイッチを切ると、取ってきた投稿は、すぐに消えます。",
+  "@profileEditSnsPostsBlueskyConsentMessage": {
+    "description": "Bluesky の投稿をアカウントページに出す前の確認(** は太字)。account はアカウントの表記",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditSnsPostsAgreeShow": "同意して出す",
+  "profileEditCancel": "やめる",
+  "profileEditSnsPostsTokenConsentTitle": "ログインの鍵を RASQ に預けます",
+  "profileEditSnsPostsTokenConsentMessage": "{account} の投稿をアカウントページに出すために、この SNS の**ログインの鍵(アクセストークン)を RASQ のサーバーに預けます**。\n\n・あなたの「公開」と「ホーム(未収載)」の投稿が、**RASQ のアカウントページで誰でも見られる状態**になります。「ホーム」はフォロワー限定ではありません。\n・フォロワー限定 / 指名・DM / ローカルのみ / 公開範囲が分からない投稿は、取り込みません。\n・鍵は、あなたの投稿を読むためだけに使います。投稿・フォローなどの操作や、ほかの目的には使いません。\n・鍵はサーバーの鍵で暗号化して保存します(RASQ のサーバーは復号できます)。アプリにも他の人にも返しません。\n・このスイッチを切ると、預けた鍵と取ってきた投稿は、すぐに消えます。\n\nこの鍵があれば、そのアカウントを操作できます。心配なときは、預けたあとでも SNS 側の設定からこの鍵(トークン)を無効にできます。",
+  "@profileEditSnsPostsTokenConsentMessage": {
+    "description": "SNS のアクセストークンを預ける前の確認(** は太字)。account はアカウントの表記",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditSnsPostsAgreeDeposit": "同意して預ける",
+  "profileEditSnsPostsFetched": "{count, plural, other{{count} 件の投稿を取ってきました}}",
+  "@profileEditSnsPostsFetched": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileEditSnsPostsFetchFailed": "預けましたが、投稿を取れませんでした({error})",
+  "@profileEditSnsPostsFetchFailed": {
+    "description": "error はサーバーの誤りの文",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditSnsPostsUnsupported": "このサーバーでは、まだ使えません",
+  "profileEditSnsPostsVerifyFirst": "先に、このアカウントの「持ち主の確認」を済ませてください",
+  "profileEditSnsPostsDepositFailed": "預けられませんでした: {message}",
+  "@profileEditSnsPostsDepositFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditSnsPostsSwitchTitle": "投稿もアカウントページに出す",
+  "profileEditSnsPostsFetchError": "取得に失敗しています: {error}",
+  "@profileEditSnsPostsFetchError": {
+    "description": "error はサーバーの誤りの文",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditSnsPostsCount": "{count, plural, other{{count} 件(公開 / ホームの投稿。30 分ごとに更新)}}",
+  "@profileEditSnsPostsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileEditSnsPostsBlueskySubtitle": "RASQ のサーバーが Bluesky の公開の投稿を読みます(鍵は預けません)",
+  "profileEditSnsPostsTokenSubtitle": "SNS のログインの鍵を RASQ に預けます(入れるときに確認が出ます)",
+  "profileEditSnsPostsCollectionsTitle": "この鍵を RASQ リストにも使う",
+  "profileEditSnsPostsCollectionsSubtitle": "開いた RASQ リストの取得と、見られるかの確認に使います",
+  "profileEditSnsPostsCollectionsDetail": "RASQ リスト・クリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせ、中の人の公開の投稿を取りに行く。投稿の表示のために預けた鍵とは別の目的なので、別に選ぶ(既定はオフ、選ぶ / やめるは同意の記録に残る)。",
+  "@profileEditSnsPostsCollectionsDetail": {
+    "description": "開発者モードの詳しい説明"
+  },
+  "profileEditSnsPostsCollectionsConsentTitle": "預けた鍵を RASQ リストにも使います",
+  "profileEditSnsPostsCollectionsConsentMessage": "投稿の表示のために預けた鍵を、別の目的にも使います。\n\n・RASQ リストやクリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせます(見られるかの確認)。\n・リストの人の公開 / ホームの投稿を、この鍵で取りに行きます。\n・投稿・フォローなどの操作には使いません。\n・このスイッチを切ると、すぐに使わなくなります。",
+  "profileEditSnsPostsCollectionsAgree": "同意して使う",
+  "profileEditSnsPostsCollectionsFailed": "変えられませんでした: {message}",
+  "@profileEditSnsPostsCollectionsFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "profileOwnershipWhereMisskey": "自己紹介か、プロフィールの「追加情報」のどれかに貼って、保存してください。",
+  "@profileOwnershipWhereMisskey": {
+    "description": "持ち主の確認の文を貼る場所(Misskey の呼び名)"
+  },
+  "profileOwnershipWhereMastodon": "自己紹介か、プロフィールの「補足情報」のどれかに貼って、保存してください。",
+  "@profileOwnershipWhereMastodon": {
+    "description": "持ち主の確認の文を貼る場所(Mastodon の呼び名)"
+  },
+  "profileOwnershipWhereBluesky": "自己紹介(プロフィールの説明)に貼って、保存してください。",
+  "profileOwnershipWhereFields": "自己紹介か、プロフィールの項目のどれかに貼って、保存してください。",
+  "profileOwnershipWhereBio": "自己紹介に貼って、保存してください。",
+  "profileOwnershipErrorNotLinked": "この SNS アカウントは、RASQ アカウントにつながっていません",
+  "profileOwnershipErrorUnsupported": "この SNS は、まだ持ち主の確認に対応していません",
+  "profileOwnershipErrorTooMany": "試す回数が多すぎます。しばらく待ってから、もう一度お試しください",
+  "profileOwnershipErrorNotStarted": "まだ確認の文を作っていないか、期限が切れています。「確認の文を作る」からやり直してください",
+  "profileOwnershipErrorCodeNotFound": "プロフィールに確認の文が見つかりませんでした。保存したか、公開のプロフィールに出ているかを確かめてください(反映まで少しかかることがあります)",
+  "profileOwnershipErrorProfileNotFound": "その SNS アカウントの公開のプロフィールが見つかりませんでした",
+  "profileOwnershipErrorReadFailed": "その SNS のプロフィールを読めませんでした。少し待ってから、もう一度お試しください",
+  "profileOwnershipErrorFailed": "確認できませんでした: {message}",
+  "@profileOwnershipErrorFailed": {
+    "description": "message はサーバーの誤りの文",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "profileOwnershipKeybaseErrorUsername": "Keybase のユーザー名(英小文字・数字・_、2〜16 文字)を入れてください",
+  "profileOwnershipKeybaseErrorSignature": "署名を読めませんでした。BEGIN KEYBASE SALTPACK SIGNED MESSAGE から END KEYBASE SALTPACK SIGNED MESSAGE. までを、そのまま貼ってください",
+  "@profileOwnershipKeybaseErrorSignature": {
+    "description": "BEGIN … / END … は Keybase の署名の区切りの行(訳さない)"
+  },
+  "profileOwnershipKeybaseErrorStatement": "署名した文が違います。上のコマンドを、そのまま使ってください",
+  "profileOwnershipKeybaseErrorKey": "その Keybase のユーザーの鍵で署名されていません",
+  "profileOwnershipKeybaseErrorNoUser": "その Keybase のユーザーは見つかりませんでした",
+  "profileOwnershipKeybaseErrorOtherAccount": "その Keybase は、別の RASQ アカウントにつながっています",
+  "profileOwnershipKeybaseErrorExpired": "文の期限が切れたか、まだ作っていません。「署名する文を作る」からやり直してください",
+  "profileOwnershipKeybaseErrorUnreachable": "Keybase に繋がりませんでした。少し待ってから、もう一度お試しください",
+  "profileOwnershipKeybaseErrorFailed": "確かめられませんでした: {message}",
+  "@profileOwnershipKeybaseErrorFailed": {
+    "description": "message はサーバーの誤りの文",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "profileOwnershipVerifyTitle": "持ち主を確認",
+  "profileOwnershipNotLinked": "この SNS アカウントは、RASQ アカウントにつながっていません。",
+  "profileOwnershipVerified": "確認済み({method})",
+  "@profileOwnershipVerified": {
+    "description": "method は確認の方法(サーバーが返す名前)",
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "profileOwnershipJustVerified": "確認できました。プロフィールに貼った文は、もう消してかまいません。",
+  "profileOwnershipVerifiedCaption": "アカウントページと SNS のプロフィールに、確認済みの印が付きます。",
+  "profileOwnershipVerifiedCaptionDetail": "アカウントページと、SNS のプロフィールに出る RASQ アカウントの欄に、確認済みの印が付きます。この SNS アカウントを外すまで続きます。",
+  "profileOwnershipUnsupportedKind": "この SNS は、まだ本人確認に対応していません(Misskey / Mastodon / Bluesky のみ)。",
+  "profileOwnershipIntro": "この SNS アカウントがあなたのものか確かめます。プロフィールに確認の文を一時的に貼ってください。",
+  "profileOwnershipIntroDetail": "この SNS アカウントが、あなたのものかを確かめます。確認の文をその SNS のプロフィールに一時的に貼ってもらい、RASQ がその公開のプロフィールを読んで確かめます。",
+  "profileOwnershipEffect": "確かめると、確認済みの印が付きます。",
+  "profileOwnershipEffectDetail": "確かめると、アカウントページと SNS のプロフィールの RASQ アカウントの欄に、確認済みの印が付きます。同じ SNS アカウントをほかの人がつないでいても、確認した人が優先されます。",
+  "profileOwnershipStart": "確認の文を作る",
+  "profileOwnershipStep1": "1. この文をコピーする",
+  "profileOwnershipCopied": "確認の文をコピーしました",
+  "profileOwnershipCopy": "コピー",
+  "profileOwnershipValidUntil": "{time} まで有効",
+  "@profileOwnershipValidUntil": {
+    "description": "time は期限の日時",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "profileOwnershipStep2": "2. その SNS のプロフィールに貼る",
+  "profileOwnershipNoRewrite": "RASQ からプロフィールを書き換えることはしません。その SNS で、ご自分で貼ってください。",
+  "profileOwnershipStep3": "3. 貼ったら「確認する」",
+  "profileOwnershipCheck": "確認する",
+  "profileOwnershipRestart": "文を作り直す",
+  "profileOwnershipKeybaseNoLinks": "Keybase の証明に、つないでいる SNS アカウントはありませんでした。",
+  "profileOwnershipKeybaseLinksVerified": "{count, plural, other{Keybase の証明で、つないでいる SNS アカウント {count} 件も確認済みになりました。}}",
+  "@profileOwnershipKeybaseLinksVerified": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileOwnershipKeybaseLinked": "@{username} をつなぎました。{links}",
+  "@profileOwnershipKeybaseLinked": {
+    "description": "username は Keybase のユーザー名、links は証明で確認済みになった SNS アカウントの文",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      },
+      "links": {
+        "type": "String"
+      }
+    }
+  },
+  "profileOwnershipKeybaseUnlinked": "Keybase を外しました。Keybase の証明で確認していた SNS アカウントは、未確認に戻ります。",
+  "profileOwnershipKeybaseVerifiedAt": "{time} に確認",
+  "@profileOwnershipKeybaseVerifiedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "profileOwnershipKeybaseCaption": "アカウントページに「Keybase: @{username}」が出ます。",
+  "@profileOwnershipKeybaseCaption": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "profileOwnershipKeybaseCaptionDetail": "アカウントページに「Keybase: @{username}」が出ます。Keybase で Mastodon などの証明を足したら、「証明を読み直す」で、つないでいる SNS アカウントも確認済みになります。",
+  "@profileOwnershipKeybaseCaptionDetail": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "profileOwnershipKeybaseRefresh": "証明を読み直す",
+  "profileOwnershipKeybaseUnlink": "Keybase を外す",
+  "profileOwnershipKeybaseIntro": "Keybase で署名して、この RASQ アカウントとつなぎます。つないだ Keybase は公開されます。",
+  "profileOwnershipKeybaseIntroDetail": "Keybase のアカウントで署名して、この RASQ アカウントとつなぎます。つないだ Keybase は、アカウントページに出ます(Keybase のプロフィールと同じく公開です)。",
+  "profileOwnershipKeybaseUsername": "Keybase のユーザー名",
+  "profileOwnershipKeybaseStart": "署名する文を作る",
+  "profileOwnershipKeybaseStep1": "1. Keybase が入っている端末で、このコマンドを実行する",
+  "profileOwnershipKeybaseCopied": "コマンドをコピーしました",
+  "profileOwnershipKeybaseStatement": "署名する文: {statement}",
+  "@profileOwnershipKeybaseStatement": {
+    "description": "statement はサーバーが作った署名する文(英語のまま)",
+    "placeholders": {
+      "statement": {
+        "type": "String"
+      }
+    }
+  },
+  "profileOwnershipKeybaseStep2": "2. 出てきた署名を、BEGIN から END … MESSAGE. まで貼る",
+  "profileOwnershipKeybaseVerify": "確かめる",
+  "profilePagePostLimit": "{limit, plural, other{投稿は {limit} 件までです。古い投稿を消してから投稿してください}}",
+  "@profilePagePostLimit": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePageEdit": "編集",
+  "profilePageCompose": "RASQ に投稿",
+  "profilePageNotFound": "@{handle} という RASQ アカウントはありません",
+  "@profilePageNotFound": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePageLoadFailed": "読み込めませんでした: {message}",
+  "@profilePageLoadFailed": {
+    "description": "message はサーバーの誤りの文",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePageLoadFailedShort": "読み込めませんでした。",
+  "profilePageTabPosts": "投稿",
+  "profilePageTabMedia": "メディア",
+  "profilePageTabPages": "ページ",
+  "profilePageTabLists": "リスト",
+  "profilePageTabClips": "クリップ",
+  "profilePageTabPlugins": "プラグイン",
+  "profilePageTabReviews": "レビュー",
+  "profilePageTileNoDestination": "このアカウントの行き先が分かりません",
+  "profilePageOpenFailed": "開けませんでした: {url}",
+  "@profilePageOpenFailed": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePageListsEmptyMine": "公開した RASQ リストがここに出ます(リストの画面から作れます)。",
+  "profilePageClipsEmptyMine": "公開した RASQ クリップがここに出ます(クリップのページの「公開する」)。",
+  "profilePageListsEmpty": "公開しているリストはありません。",
+  "profilePageClipsEmpty": "公開しているクリップはありません。",
+  "profilePageSince": "{date}から",
+  "@profilePageSince": {
+    "description": "アカウントを作った年月。date は年と月",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePagePinLimit": "{count, plural, other{固定できるのは {count} 件までです}}",
+  "@profilePagePinLimit": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePagePinFailed": "固定できませんでした: {message}",
+  "@profilePagePinFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePagePinned": "固定された投稿",
+  "profilePagePostsNote": "{limit, plural, other{RASQ の投稿は {limit} 件までです({used} / {limit})。SNS の投稿は、ログインの鍵を預けると一緒に出ます。}}",
+  "@profilePagePostsNote": {
+    "description": "used はいまの投稿の数、limit は上限",
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      },
+      "used": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePagePostsNoteDetail": "{limit, plural, other{RASQ アカウントとしての投稿は、いまは {limit} 件までです({used} / {limit})。SNS アカウントの投稿は、そのアカウントのアクセストークンを RASQ に預けると、ここに一緒に出ます。}}",
+  "@profilePagePostsNoteDetail": {
+    "description": "used はいまの投稿の数、limit は上限",
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      },
+      "used": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePageSnsHintTitle": "つないだ SNS アカウントの投稿は、まだここに出ていません。",
+  "profilePageSnsHint": "プロフィール編集で「投稿もアカウントページに出す」を入れると、ここに出ます。",
+  "profilePageSnsHintDetail": "プロフィール編集の「アカウントページに出す SNS アカウント」で、アカウントごとに「投稿もアカウントページに出す」を入れると(その SNS のアクセストークンを RASQ に預けます)、公開 / ホームの投稿がここに出ます。",
+  "profilePageSnsHintOpen": "SNS の投稿を出す設定へ",
+  "profilePageNoPostsYet": "投稿はまだありません。",
+  "profilePageNoMediaYet": "メディアはまだありません。",
+  "profilePageNoReviewsYet": "レビューはまだありません。",
+  "profilePageNoPluginsPublished": "公開したプラグインはありません。",
+  "profilePageImageUrlMissing": "画像の URL が返りませんでした",
+  "profilePageNotConnected": "RASQ のサーバーにつないでいません",
+  "profilePagePackageTypeLabel": "プラグイン(.rspkg / .rasqpkg)",
+  "@profilePagePackageTypeLabel": {
+    "description": "自作プラグインのファイルを選ぶ画面の種類の名前"
+  },
+  "profilePageImage": "画像",
+  "@profilePageImage": {
+    "description": "ページに貼る画像(ファイルを選ぶ画面の種類 / 道具の行のボタン / 貼った画像の代替の文の既定)"
+  },
+  "profilePageImageAlt": "(画像: {alt})",
+  "@profilePageImageAlt": {
+    "description": "読めなかった画像の代わりに出す文。alt は画像の代替の文",
+    "placeholders": {
+      "alt": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePageMdFallbackTitle": "ページ",
+  "profilePageMdLoadFailed": "ページを読めませんでした",
+  "profilePageMdToolBold": "太字",
+  "profilePageMdToolHeading": "見出し",
+  "profilePageMdToolBullet": "箇条書き",
+  "profilePageMdToolLink": "リンク",
+  "profilePageMdToolCenter": "中央",
+  "profilePageMdToolBig": "大きく",
+  "profilePageMdToolSmall": "小さく",
+  "profilePageMdToolSpin": "回転",
+  "profilePageMdToolJump": "跳ねる",
+  "profilePageMdToolColor": "色",
+  "profilePageMdToolRainbow": "虹",
+  "profilePageMdToolRuby": "ルビ",
+  "profilePageMdToolRubyReading": "よみ",
+  "@profilePageMdToolRubyReading": {
+    "description": "ルビの道具で差し込む読みの仮の文字(利用者が書き換える)"
+  },
+  "profilePageImageUploadFailed": "画像を上げられませんでした: {error}",
+  "@profilePageImageUploadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePageMdTitleRequired": "タイトルを入れてください",
+  "profilePageMdLoginToPublish": "RASQ アカウントにログインすると公開できます",
+  "profilePageMdPublished": "公開しました",
+  "profilePageMdPublishFailed": "公開できませんでした: {error}",
+  "@profilePageMdPublishFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePageMdDeleteTitle": "ページを削除",
+  "profilePageMdDeleteDraft": "下書きを削除します。",
+  "profilePageMdDeletePublished": "公開したページと下書きを削除します。元に戻せません。",
+  "profilePageDeleteConfirm": "削除する",
+  "profilePageCancel": "キャンセル",
+  "profilePageMdDeleteFailed": "削除できませんでした: {error}",
+  "@profilePageMdDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePageMdEditTitle": "ページを編集",
+  "profilePageMdDelete": "削除",
+  "profilePageMdWrite": "書く",
+  "profilePageMdPreview": "プレビュー",
+  "profilePageMdPublish": "公開",
+  "profilePageMdTitleHint": "タイトル",
+  "profilePageMdBodyHint": "Markdown で書きます。@メンション / #ハッシュタグ / :絵文字: / <center> などの MFM のタグも使えます",
+  "profilePageMdDraftCaption": "下書きはこの端末に残ります。「公開」で RASQ のページに出します",
+  "profilePageRasqAccount": "RASQ アカウント",
+  "@profilePageRasqAccount": {
+    "description": "SNS のプロフィールに出す、つないだ RASQ アカウントの欄の見出し"
+  },
+  "profilePageViewingVerified": "このアカウントの持ち主を確認済み({method})",
+  "@profilePageViewingVerified": {
+    "description": "method は確認の方法(サーバーが返す名前)",
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePageVerifiedSemantics": "持ち主を確認済み",
+  "profilePostLoginToUse": "RASQ アカウントにログインすると使えます",
+  "profilePostLoginToReply": "RASQ アカウントにログインすると返信できます",
+  "profilePostLoginToRebroad": "RASQ アカウントにログインするとリブロードできます",
+  "profilePostLoginToQueue": "RASQ アカウントにログインするとキューできます",
+  "profilePostErrorInstallPack": "このパックをストアからインストールすると、この絵でキューできます",
+  "profilePostErrorForbidden": "この投稿には操作できません",
+  "profilePostErrorRebroadLimit": "この投稿は、これ以上リブロードできません",
+  "profilePostErrorReplyLimit": "返信は 100 件までです。古い返信を消してください",
+  "profilePostErrorGone": "この投稿 / 絵は、もうありません",
+  "profilePostErrorFailed": "失敗しました: {message}",
+  "@profilePostErrorFailed": {
+    "description": "message はサーバーの誤りの文",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePostMenuReactions": "リアクションを表示",
+  "profilePostMenuCopyLink": "リンクをコピー",
+  "profilePostMenuOpenBrowser": "ブラウザで開く",
+  "profilePostMenuEditActions": "アクションバーを編集",
+  "profilePostMenuUnpin": "固定を外す",
+  "profilePostMenuPin": "固定する",
+  "profilePostMenuDelete": "削除",
+  "profilePostLinkCopied": "リンクをコピーしました",
+  "profilePostDeleteTitle": "投稿を削除",
+  "profilePostDeleteMessage": "この投稿と、付いている画像を削除します。元に戻せません。",
+  "profilePostDeleteConfirm": "削除する",
+  "profilePostCancel": "キャンセル",
+  "profilePostQuoteUnavailable": "引用元の投稿は見られません",
+  "profilePostReply": "返信",
+  "@profilePostReply": {
+    "description": "RASQ の投稿の返信(ボタン / 欄の名前)"
+  },
+  "profilePostRebroad": "リブロード",
+  "@profilePostRebroad": {
+    "description": "RASQ の再投稿(ReBroad)。SNS のリノート / リポストにあたる RASQ の呼び名"
+  },
+  "profilePostRebroadUndo": "リブロードを取り消す",
+  "profilePostQuote": "引用",
+  "profilePostQueue": "キュー",
+  "@profilePostQueue": {
+    "description": "RASQ の投稿へのリアクション(Queue)。アセットパックの絵で付ける"
+  },
+  "profilePostLike": "いいね",
+  "profilePostQuoteFollowersOnly": "フォロワー限定の投稿は引用できません",
+  "profilePostRebroadedBy": "{name} がリブロード",
+  "@profilePostRebroadedBy": {
+    "description": "投稿の上の帯。name はリブロードした人の表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePostReplyToDeleted": "削除された投稿への返信",
+  "profilePostShare": "共有",
+  "profilePostCwHide": "隠す",
+  "profilePostCwShow": "もっと見る",
+  "profilePostNoPacksTitle": "アセットパックがありません",
+  "profilePostNoPacksMessage": "キューは、ストアで入れたアセットパックの絵でするリアクションです。",
+  "profilePostNoPacksStore": "ストアで探す",
+  "profilePostClose": "閉じる",
+  "profilePostOverlayQueueTooltip": "{label}(長押しで絵を選ぶ)",
+  "@profilePostOverlayQueueTooltip": {
+    "description": "全画面の上のキューのボタンの説明。label はボタンの名前",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePostMenu": "メニュー",
+  "profilePostTitle": "投稿",
+  "profilePostGone": "この投稿は、もうありません",
+  "profilePostLoadFailed": "読み込めませんでした: {message}",
+  "@profilePostLoadFailed": {
+    "description": "message はサーバーの誤りの文",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePostParentDeleted": "元の投稿は削除されています。",
+  "profilePostRepliesCount": "{count, plural, other{返信 {count}}}",
+  "@profilePostRepliesCount": {
+    "description": "返信の欄の帯",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePostNoRepliesYet": "返信はまだありません。",
+  "profilePostNoReplies": "返信はありません",
+  "profilePostNoRebroads": "リブロードはありません",
+  "profilePostNoQuotes": "引用はありません",
+  "profilePostNoQueues": "キューはありません",
+  "profilePostReactionsTitle": "リアクション",
+  "profilePostYou": "あなた",
+  "@profilePostYou": {
+    "description": "キューの欄で、自分が付けた絵の印"
+  },
   "raiModeInstruction": "インストラクション",
   "@raiModeInstruction": {
     "description": "RAi のモード: 操作を教える(RAi がボタンまで移動して指差す)"

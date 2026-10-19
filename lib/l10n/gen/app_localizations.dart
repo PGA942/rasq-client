@@ -8078,6 +8078,1578 @@ abstract class AppLocalizations {
   /// **'TL にリストを足したい'**
   String get onboardingTourRaiBubble;
 
+  /// プロフィールの編集画面(RASQ アカウント / SNS)の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィールの更新'**
+  String get profileEditTitle;
+
+  /// プロフィールの編集画面の右上の保存のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get profileEditSave;
+
+  /// No description provided for @profileEditNotLoggedIn.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインしていません。'**
+  String get profileEditNotLoggedIn;
+
+  /// No description provided for @profileEditBannerRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'バナーを外す'**
+  String get profileEditBannerRemove;
+
+  /// No description provided for @profileEditBannerPick.
+  ///
+  /// In ja, this message translates to:
+  /// **'バナーを選ぶ'**
+  String get profileEditBannerPick;
+
+  /// No description provided for @profileEditAvatarPick.
+  ///
+  /// In ja, this message translates to:
+  /// **'アイコンを選ぶ'**
+  String get profileEditAvatarPick;
+
+  /// No description provided for @profileEditAvatarRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'アイコンを外す'**
+  String get profileEditAvatarRemove;
+
+  /// SNS のプロフィール編集: バナー / アイコンの画像を選ぶボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を選択'**
+  String get profileEditPickImage;
+
+  /// No description provided for @profileEditNameHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'名前を入力..'**
+  String get profileEditNameHint;
+
+  /// RASQ アカウントの誕生日の入力欄のヒント(書式はサーバーが受けるもの)
+  ///
+  /// In ja, this message translates to:
+  /// **'誕生日 (YYYY-MM-DD / MM-DD)'**
+  String get profileEditBirthdayHint;
+
+  /// SNS のプロフィール編集の誕生日の入力欄のヒント
+  ///
+  /// In ja, this message translates to:
+  /// **'誕生日 (YYYY-MM-DD)'**
+  String get profileEditBirthdayHintSns;
+
+  /// No description provided for @profileEditHandleLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'ハンドル(@ なし、a-z 0-9 _、3〜32 文字)'**
+  String get profileEditHandleLabel;
+
+  /// No description provided for @profileEditBioLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'自己紹介'**
+  String get profileEditBioLabel;
+
+  /// No description provided for @profileEditBioHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'自己紹介(500 文字まで)'**
+  String get profileEditBioHint;
+
+  /// No description provided for @profileEditLocationLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'場所'**
+  String get profileEditLocationLabel;
+
+  /// No description provided for @profileEditLinksLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンク'**
+  String get profileEditLinksLabel;
+
+  /// No description provided for @profileEditLinkRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get profileEditLinkRemove;
+
+  /// リンクの見出し(表示する名前)の入力欄
+  ///
+  /// In ja, this message translates to:
+  /// **'キャプション'**
+  String get profileEditLinkCaptionHint;
+
+  /// No description provided for @profileEditLinkAdd.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加'**
+  String get profileEditLinkAdd;
+
+  /// No description provided for @profileEditReload.
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get profileEditReload;
+
+  /// No description provided for @profileEditSnsTilesLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントページに出す SNS アカウント'**
+  String get profileEditSnsTilesLabel;
+
+  /// No description provided for @profileEditSnsTilesCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'「自動」では、鍵アカウントなどは出しません。薄いタイルは、いま出ていないものです。'**
+  String get profileEditSnsTilesCaption;
+
+  /// No description provided for @profileEditSnsTilesCaptionDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'「自動」は、鍵アカウントと、直近の投稿の公開範囲がフォロワーのみに寄っているアカウントを出しません。薄いタイルは、いまは出ていないものです。変更はすぐ反映されます。'**
+  String get profileEditSnsTilesCaptionDetail;
+
+  /// SNS のタイルを出すかの 3 択の「自動」。state はいまの結果(表示 / 非表示)
+  ///
+  /// In ja, this message translates to:
+  /// **'自動({state})'**
+  String profileEditSnsTileAuto(String state);
+
+  /// No description provided for @profileEditSnsTileShown.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示'**
+  String get profileEditSnsTileShown;
+
+  /// No description provided for @profileEditSnsTileHidden.
+  ///
+  /// In ja, this message translates to:
+  /// **'非表示'**
+  String get profileEditSnsTileHidden;
+
+  /// method は確認の方法(サーバーが返す名前)
+  ///
+  /// In ja, this message translates to:
+  /// **'持ち主を確認済み({method})'**
+  String profileEditVerified(String method);
+
+  /// No description provided for @profileEditVerify.
+  ///
+  /// In ja, this message translates to:
+  /// **'持ち主を確認'**
+  String get profileEditVerify;
+
+  /// No description provided for @profileEditShowOnSnsLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS のプロフィール'**
+  String get profileEditShowOnSnsLabel;
+
+  /// No description provided for @profileEditShowOnSnsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS のプロフィールにも、つないだアカウントを出す'**
+  String get profileEditShowOnSnsTitle;
+
+  /// No description provided for @profileEditShowOnSnsSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ で誰かがあなたの SNS のプロフィールを見たとき、つないだアカウントを出します。'**
+  String get profileEditShowOnSnsSubtitle;
+
+  /// No description provided for @profileEditShowOnSnsDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリで誰かがあなたの SNS のプロフィールを見たとき、この RASQ アカウントと、アカウントページに出しているほかのアカウントを出します。自己紹介に書いてあるものは重ねて出しません。変更はすぐ反映されます。'**
+  String get profileEditShowOnSnsDetail;
+
+  /// No description provided for @profileEditKeybaseConnect.
+  ///
+  /// In ja, this message translates to:
+  /// **'Keybase をつなぐ'**
+  String get profileEditKeybaseConnect;
+
+  /// No description provided for @profileEditKeybaseConnectSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Keybase で本人確認して、アカウントページに出します'**
+  String get profileEditKeybaseConnectSubtitle;
+
+  /// No description provided for @profileEditKeybaseLinkedSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'確認済み。アカウントページに出ます'**
+  String get profileEditKeybaseLinkedSubtitle;
+
+  /// No description provided for @profileEditNotice.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィールは、公開ページとストアのレビューに出ます。メールとパスワードは「セキュリティ」から。'**
+  String get profileEditNotice;
+
+  /// No description provided for @profileEditNoticeDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィールは、RASQ の公開ページとストアのレビューに出ます。画像はサーバーで縮めて保存し直します(位置情報などは残りません)。メールアドレスとパスワードは「セキュリティ」から。'**
+  String get profileEditNoticeDetail;
+
+  /// No description provided for @profileEditErrorHandleTaken.
+  ///
+  /// In ja, this message translates to:
+  /// **'そのハンドルは使われています'**
+  String get profileEditErrorHandleTaken;
+
+  /// No description provided for @profileEditErrorHandle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ハンドルは 3〜32 文字の a-z 0-9 _ にしてください'**
+  String get profileEditErrorHandle;
+
+  /// No description provided for @profileEditErrorBirthday.
+  ///
+  /// In ja, this message translates to:
+  /// **'誕生日は YYYY-MM-DD か MM-DD の形で入れてください'**
+  String get profileEditErrorBirthday;
+
+  /// No description provided for @profileEditErrorLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクは、キャプション(40 文字まで)と http(s) の URL の組にしてください(8 組まで)'**
+  String get profileEditErrorLink;
+
+  /// No description provided for @profileEditErrorImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'その画像は使えません(PNG / JPEG / WebP / GIF、8 MiB まで)'**
+  String get profileEditErrorImage;
+
+  /// No description provided for @profileEditErrorBio.
+  ///
+  /// In ja, this message translates to:
+  /// **'自己紹介は 500 文字までです'**
+  String get profileEditErrorBio;
+
+  /// No description provided for @profileEditErrorLocation.
+  ///
+  /// In ja, this message translates to:
+  /// **'場所は 60 文字までです'**
+  String get profileEditErrorLocation;
+
+  /// message はサーバー / SNS の誤りの文
+  ///
+  /// In ja, this message translates to:
+  /// **'更新に失敗しました: {message}'**
+  String profileEditErrorFailed(String message);
+
+  /// No description provided for @profileEditSnsPostsWithdrawn.
+  ///
+  /// In ja, this message translates to:
+  /// **'預けた鍵と、取ってきた投稿を消しました'**
+  String get profileEditSnsPostsWithdrawn;
+
+  /// No description provided for @profileEditSnsPostsWithdrawFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'消せませんでした: {message}'**
+  String profileEditSnsPostsWithdrawFailed(String message);
+
+  /// No description provided for @profileEditSnsPostsNoLogin.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末に、そのアカウントのログインがありません'**
+  String get profileEditSnsPostsNoLogin;
+
+  /// No description provided for @profileEditSnsPostsNoDid.
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントの DID が分かりません。ログインし直してください'**
+  String get profileEditSnsPostsNoDid;
+
+  /// No description provided for @profileEditSnsPostsBlueskyConsentTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Bluesky の投稿をアカウントページに出します'**
+  String get profileEditSnsPostsBlueskyConsentTitle;
+
+  /// Bluesky の投稿をアカウントページに出す前の確認(** は太字)。account はアカウントの表記
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} の投稿を、RASQ のサーバーが Bluesky の公開の API から読み、**RASQ のアカウントページで誰でも見られる状態**にします。\n\n・Bluesky の投稿は、もともと誰でも読めます。返信とリポストは取り込みません。\n・**ログインの鍵(アプリパスワード / セッション)は預けません**。サーバーに渡すのは、このアカウントの DID とハンドルだけです。\n・使えるのは、持ち主の確認が済んだアカウントだけです(他人のアカウントの投稿を出せないように)。\n・このスイッチを切ると、取ってきた投稿は、すぐに消えます。'**
+  String profileEditSnsPostsBlueskyConsentMessage(String account);
+
+  /// No description provided for @profileEditSnsPostsAgreeShow.
+  ///
+  /// In ja, this message translates to:
+  /// **'同意して出す'**
+  String get profileEditSnsPostsAgreeShow;
+
+  /// No description provided for @profileEditCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'やめる'**
+  String get profileEditCancel;
+
+  /// No description provided for @profileEditSnsPostsTokenConsentTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインの鍵を RASQ に預けます'**
+  String get profileEditSnsPostsTokenConsentTitle;
+
+  /// SNS のアクセストークンを預ける前の確認(** は太字)。account はアカウントの表記
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} の投稿をアカウントページに出すために、この SNS の**ログインの鍵(アクセストークン)を RASQ のサーバーに預けます**。\n\n・あなたの「公開」と「ホーム(未収載)」の投稿が、**RASQ のアカウントページで誰でも見られる状態**になります。「ホーム」はフォロワー限定ではありません。\n・フォロワー限定 / 指名・DM / ローカルのみ / 公開範囲が分からない投稿は、取り込みません。\n・鍵は、あなたの投稿を読むためだけに使います。投稿・フォローなどの操作や、ほかの目的には使いません。\n・鍵はサーバーの鍵で暗号化して保存します(RASQ のサーバーは復号できます)。アプリにも他の人にも返しません。\n・このスイッチを切ると、預けた鍵と取ってきた投稿は、すぐに消えます。\n\nこの鍵があれば、そのアカウントを操作できます。心配なときは、預けたあとでも SNS 側の設定からこの鍵(トークン)を無効にできます。'**
+  String profileEditSnsPostsTokenConsentMessage(String account);
+
+  /// No description provided for @profileEditSnsPostsAgreeDeposit.
+  ///
+  /// In ja, this message translates to:
+  /// **'同意して預ける'**
+  String get profileEditSnsPostsAgreeDeposit;
+
+  /// No description provided for @profileEditSnsPostsFetched.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 件の投稿を取ってきました}}'**
+  String profileEditSnsPostsFetched(int count);
+
+  /// error はサーバーの誤りの文
+  ///
+  /// In ja, this message translates to:
+  /// **'預けましたが、投稿を取れませんでした({error})'**
+  String profileEditSnsPostsFetchFailed(String error);
+
+  /// No description provided for @profileEditSnsPostsUnsupported.
+  ///
+  /// In ja, this message translates to:
+  /// **'このサーバーでは、まだ使えません'**
+  String get profileEditSnsPostsUnsupported;
+
+  /// No description provided for @profileEditSnsPostsVerifyFirst.
+  ///
+  /// In ja, this message translates to:
+  /// **'先に、このアカウントの「持ち主の確認」を済ませてください'**
+  String get profileEditSnsPostsVerifyFirst;
+
+  /// No description provided for @profileEditSnsPostsDepositFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'預けられませんでした: {message}'**
+  String profileEditSnsPostsDepositFailed(String message);
+
+  /// No description provided for @profileEditSnsPostsSwitchTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿もアカウントページに出す'**
+  String get profileEditSnsPostsSwitchTitle;
+
+  /// error はサーバーの誤りの文
+  ///
+  /// In ja, this message translates to:
+  /// **'取得に失敗しています: {error}'**
+  String profileEditSnsPostsFetchError(String error);
+
+  /// No description provided for @profileEditSnsPostsCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 件(公開 / ホームの投稿。30 分ごとに更新)}}'**
+  String profileEditSnsPostsCount(int count);
+
+  /// No description provided for @profileEditSnsPostsBlueskySubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のサーバーが Bluesky の公開の投稿を読みます(鍵は預けません)'**
+  String get profileEditSnsPostsBlueskySubtitle;
+
+  /// No description provided for @profileEditSnsPostsTokenSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS のログインの鍵を RASQ に預けます(入れるときに確認が出ます)'**
+  String get profileEditSnsPostsTokenSubtitle;
+
+  /// No description provided for @profileEditSnsPostsCollectionsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'この鍵を RASQ リストにも使う'**
+  String get profileEditSnsPostsCollectionsTitle;
+
+  /// No description provided for @profileEditSnsPostsCollectionsSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'開いた RASQ リストの取得と、見られるかの確認に使います'**
+  String get profileEditSnsPostsCollectionsSubtitle;
+
+  /// 開発者モードの詳しい説明
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト・クリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせ、中の人の公開の投稿を取りに行く。投稿の表示のために預けた鍵とは別の目的なので、別に選ぶ(既定はオフ、選ぶ / やめるは同意の記録に残る)。'**
+  String get profileEditSnsPostsCollectionsDetail;
+
+  /// No description provided for @profileEditSnsPostsCollectionsConsentTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'預けた鍵を RASQ リストにも使います'**
+  String get profileEditSnsPostsCollectionsConsentTitle;
+
+  /// No description provided for @profileEditSnsPostsCollectionsConsentMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿の表示のために預けた鍵を、別の目的にも使います。\n\n・RASQ リストやクリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせます(見られるかの確認)。\n・リストの人の公開 / ホームの投稿を、この鍵で取りに行きます。\n・投稿・フォローなどの操作には使いません。\n・このスイッチを切ると、すぐに使わなくなります。'**
+  String get profileEditSnsPostsCollectionsConsentMessage;
+
+  /// No description provided for @profileEditSnsPostsCollectionsAgree.
+  ///
+  /// In ja, this message translates to:
+  /// **'同意して使う'**
+  String get profileEditSnsPostsCollectionsAgree;
+
+  /// No description provided for @profileEditSnsPostsCollectionsFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'変えられませんでした: {message}'**
+  String profileEditSnsPostsCollectionsFailed(String message);
+
+  /// 持ち主の確認の文を貼る場所(Misskey の呼び名)
+  ///
+  /// In ja, this message translates to:
+  /// **'自己紹介か、プロフィールの「追加情報」のどれかに貼って、保存してください。'**
+  String get profileOwnershipWhereMisskey;
+
+  /// 持ち主の確認の文を貼る場所(Mastodon の呼び名)
+  ///
+  /// In ja, this message translates to:
+  /// **'自己紹介か、プロフィールの「補足情報」のどれかに貼って、保存してください。'**
+  String get profileOwnershipWhereMastodon;
+
+  /// No description provided for @profileOwnershipWhereBluesky.
+  ///
+  /// In ja, this message translates to:
+  /// **'自己紹介(プロフィールの説明)に貼って、保存してください。'**
+  String get profileOwnershipWhereBluesky;
+
+  /// No description provided for @profileOwnershipWhereFields.
+  ///
+  /// In ja, this message translates to:
+  /// **'自己紹介か、プロフィールの項目のどれかに貼って、保存してください。'**
+  String get profileOwnershipWhereFields;
+
+  /// No description provided for @profileOwnershipWhereBio.
+  ///
+  /// In ja, this message translates to:
+  /// **'自己紹介に貼って、保存してください。'**
+  String get profileOwnershipWhereBio;
+
+  /// No description provided for @profileOwnershipErrorNotLinked.
+  ///
+  /// In ja, this message translates to:
+  /// **'この SNS アカウントは、RASQ アカウントにつながっていません'**
+  String get profileOwnershipErrorNotLinked;
+
+  /// No description provided for @profileOwnershipErrorUnsupported.
+  ///
+  /// In ja, this message translates to:
+  /// **'この SNS は、まだ持ち主の確認に対応していません'**
+  String get profileOwnershipErrorUnsupported;
+
+  /// No description provided for @profileOwnershipErrorTooMany.
+  ///
+  /// In ja, this message translates to:
+  /// **'試す回数が多すぎます。しばらく待ってから、もう一度お試しください'**
+  String get profileOwnershipErrorTooMany;
+
+  /// No description provided for @profileOwnershipErrorNotStarted.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ確認の文を作っていないか、期限が切れています。「確認の文を作る」からやり直してください'**
+  String get profileOwnershipErrorNotStarted;
+
+  /// No description provided for @profileOwnershipErrorCodeNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィールに確認の文が見つかりませんでした。保存したか、公開のプロフィールに出ているかを確かめてください(反映まで少しかかることがあります)'**
+  String get profileOwnershipErrorCodeNotFound;
+
+  /// No description provided for @profileOwnershipErrorProfileNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'その SNS アカウントの公開のプロフィールが見つかりませんでした'**
+  String get profileOwnershipErrorProfileNotFound;
+
+  /// No description provided for @profileOwnershipErrorReadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'その SNS のプロフィールを読めませんでした。少し待ってから、もう一度お試しください'**
+  String get profileOwnershipErrorReadFailed;
+
+  /// message はサーバーの誤りの文
+  ///
+  /// In ja, this message translates to:
+  /// **'確認できませんでした: {message}'**
+  String profileOwnershipErrorFailed(String message);
+
+  /// No description provided for @profileOwnershipKeybaseErrorUsername.
+  ///
+  /// In ja, this message translates to:
+  /// **'Keybase のユーザー名(英小文字・数字・_、2〜16 文字)を入れてください'**
+  String get profileOwnershipKeybaseErrorUsername;
+
+  /// BEGIN … / END … は Keybase の署名の区切りの行(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'署名を読めませんでした。BEGIN KEYBASE SALTPACK SIGNED MESSAGE から END KEYBASE SALTPACK SIGNED MESSAGE. までを、そのまま貼ってください'**
+  String get profileOwnershipKeybaseErrorSignature;
+
+  /// No description provided for @profileOwnershipKeybaseErrorStatement.
+  ///
+  /// In ja, this message translates to:
+  /// **'署名した文が違います。上のコマンドを、そのまま使ってください'**
+  String get profileOwnershipKeybaseErrorStatement;
+
+  /// No description provided for @profileOwnershipKeybaseErrorKey.
+  ///
+  /// In ja, this message translates to:
+  /// **'その Keybase のユーザーの鍵で署名されていません'**
+  String get profileOwnershipKeybaseErrorKey;
+
+  /// No description provided for @profileOwnershipKeybaseErrorNoUser.
+  ///
+  /// In ja, this message translates to:
+  /// **'その Keybase のユーザーは見つかりませんでした'**
+  String get profileOwnershipKeybaseErrorNoUser;
+
+  /// No description provided for @profileOwnershipKeybaseErrorOtherAccount.
+  ///
+  /// In ja, this message translates to:
+  /// **'その Keybase は、別の RASQ アカウントにつながっています'**
+  String get profileOwnershipKeybaseErrorOtherAccount;
+
+  /// No description provided for @profileOwnershipKeybaseErrorExpired.
+  ///
+  /// In ja, this message translates to:
+  /// **'文の期限が切れたか、まだ作っていません。「署名する文を作る」からやり直してください'**
+  String get profileOwnershipKeybaseErrorExpired;
+
+  /// No description provided for @profileOwnershipKeybaseErrorUnreachable.
+  ///
+  /// In ja, this message translates to:
+  /// **'Keybase に繋がりませんでした。少し待ってから、もう一度お試しください'**
+  String get profileOwnershipKeybaseErrorUnreachable;
+
+  /// message はサーバーの誤りの文
+  ///
+  /// In ja, this message translates to:
+  /// **'確かめられませんでした: {message}'**
+  String profileOwnershipKeybaseErrorFailed(String message);
+
+  /// No description provided for @profileOwnershipVerifyTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'持ち主を確認'**
+  String get profileOwnershipVerifyTitle;
+
+  /// No description provided for @profileOwnershipNotLinked.
+  ///
+  /// In ja, this message translates to:
+  /// **'この SNS アカウントは、RASQ アカウントにつながっていません。'**
+  String get profileOwnershipNotLinked;
+
+  /// method は確認の方法(サーバーが返す名前)
+  ///
+  /// In ja, this message translates to:
+  /// **'確認済み({method})'**
+  String profileOwnershipVerified(String method);
+
+  /// No description provided for @profileOwnershipJustVerified.
+  ///
+  /// In ja, this message translates to:
+  /// **'確認できました。プロフィールに貼った文は、もう消してかまいません。'**
+  String get profileOwnershipJustVerified;
+
+  /// No description provided for @profileOwnershipVerifiedCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントページと SNS のプロフィールに、確認済みの印が付きます。'**
+  String get profileOwnershipVerifiedCaption;
+
+  /// No description provided for @profileOwnershipVerifiedCaptionDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントページと、SNS のプロフィールに出る RASQ アカウントの欄に、確認済みの印が付きます。この SNS アカウントを外すまで続きます。'**
+  String get profileOwnershipVerifiedCaptionDetail;
+
+  /// No description provided for @profileOwnershipUnsupportedKind.
+  ///
+  /// In ja, this message translates to:
+  /// **'この SNS は、まだ本人確認に対応していません(Misskey / Mastodon / Bluesky のみ)。'**
+  String get profileOwnershipUnsupportedKind;
+
+  /// No description provided for @profileOwnershipIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'この SNS アカウントがあなたのものか確かめます。プロフィールに確認の文を一時的に貼ってください。'**
+  String get profileOwnershipIntro;
+
+  /// No description provided for @profileOwnershipIntroDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'この SNS アカウントが、あなたのものかを確かめます。確認の文をその SNS のプロフィールに一時的に貼ってもらい、RASQ がその公開のプロフィールを読んで確かめます。'**
+  String get profileOwnershipIntroDetail;
+
+  /// No description provided for @profileOwnershipEffect.
+  ///
+  /// In ja, this message translates to:
+  /// **'確かめると、確認済みの印が付きます。'**
+  String get profileOwnershipEffect;
+
+  /// No description provided for @profileOwnershipEffectDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'確かめると、アカウントページと SNS のプロフィールの RASQ アカウントの欄に、確認済みの印が付きます。同じ SNS アカウントをほかの人がつないでいても、確認した人が優先されます。'**
+  String get profileOwnershipEffectDetail;
+
+  /// No description provided for @profileOwnershipStart.
+  ///
+  /// In ja, this message translates to:
+  /// **'確認の文を作る'**
+  String get profileOwnershipStart;
+
+  /// No description provided for @profileOwnershipStep1.
+  ///
+  /// In ja, this message translates to:
+  /// **'1. この文をコピーする'**
+  String get profileOwnershipStep1;
+
+  /// No description provided for @profileOwnershipCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'確認の文をコピーしました'**
+  String get profileOwnershipCopied;
+
+  /// No description provided for @profileOwnershipCopy.
+  ///
+  /// In ja, this message translates to:
+  /// **'コピー'**
+  String get profileOwnershipCopy;
+
+  /// time は期限の日時
+  ///
+  /// In ja, this message translates to:
+  /// **'{time} まで有効'**
+  String profileOwnershipValidUntil(String time);
+
+  /// No description provided for @profileOwnershipStep2.
+  ///
+  /// In ja, this message translates to:
+  /// **'2. その SNS のプロフィールに貼る'**
+  String get profileOwnershipStep2;
+
+  /// No description provided for @profileOwnershipNoRewrite.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ からプロフィールを書き換えることはしません。その SNS で、ご自分で貼ってください。'**
+  String get profileOwnershipNoRewrite;
+
+  /// No description provided for @profileOwnershipStep3.
+  ///
+  /// In ja, this message translates to:
+  /// **'3. 貼ったら「確認する」'**
+  String get profileOwnershipStep3;
+
+  /// No description provided for @profileOwnershipCheck.
+  ///
+  /// In ja, this message translates to:
+  /// **'確認する'**
+  String get profileOwnershipCheck;
+
+  /// No description provided for @profileOwnershipRestart.
+  ///
+  /// In ja, this message translates to:
+  /// **'文を作り直す'**
+  String get profileOwnershipRestart;
+
+  /// No description provided for @profileOwnershipKeybaseNoLinks.
+  ///
+  /// In ja, this message translates to:
+  /// **'Keybase の証明に、つないでいる SNS アカウントはありませんでした。'**
+  String get profileOwnershipKeybaseNoLinks;
+
+  /// No description provided for @profileOwnershipKeybaseLinksVerified.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{Keybase の証明で、つないでいる SNS アカウント {count} 件も確認済みになりました。}}'**
+  String profileOwnershipKeybaseLinksVerified(int count);
+
+  /// username は Keybase のユーザー名、links は証明で確認済みになった SNS アカウントの文
+  ///
+  /// In ja, this message translates to:
+  /// **'@{username} をつなぎました。{links}'**
+  String profileOwnershipKeybaseLinked(String username, String links);
+
+  /// No description provided for @profileOwnershipKeybaseUnlinked.
+  ///
+  /// In ja, this message translates to:
+  /// **'Keybase を外しました。Keybase の証明で確認していた SNS アカウントは、未確認に戻ります。'**
+  String get profileOwnershipKeybaseUnlinked;
+
+  /// No description provided for @profileOwnershipKeybaseVerifiedAt.
+  ///
+  /// In ja, this message translates to:
+  /// **'{time} に確認'**
+  String profileOwnershipKeybaseVerifiedAt(String time);
+
+  /// No description provided for @profileOwnershipKeybaseCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントページに「Keybase: @{username}」が出ます。'**
+  String profileOwnershipKeybaseCaption(String username);
+
+  /// No description provided for @profileOwnershipKeybaseCaptionDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントページに「Keybase: @{username}」が出ます。Keybase で Mastodon などの証明を足したら、「証明を読み直す」で、つないでいる SNS アカウントも確認済みになります。'**
+  String profileOwnershipKeybaseCaptionDetail(String username);
+
+  /// No description provided for @profileOwnershipKeybaseRefresh.
+  ///
+  /// In ja, this message translates to:
+  /// **'証明を読み直す'**
+  String get profileOwnershipKeybaseRefresh;
+
+  /// No description provided for @profileOwnershipKeybaseUnlink.
+  ///
+  /// In ja, this message translates to:
+  /// **'Keybase を外す'**
+  String get profileOwnershipKeybaseUnlink;
+
+  /// No description provided for @profileOwnershipKeybaseIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'Keybase で署名して、この RASQ アカウントとつなぎます。つないだ Keybase は公開されます。'**
+  String get profileOwnershipKeybaseIntro;
+
+  /// No description provided for @profileOwnershipKeybaseIntroDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'Keybase のアカウントで署名して、この RASQ アカウントとつなぎます。つないだ Keybase は、アカウントページに出ます(Keybase のプロフィールと同じく公開です)。'**
+  String get profileOwnershipKeybaseIntroDetail;
+
+  /// No description provided for @profileOwnershipKeybaseUsername.
+  ///
+  /// In ja, this message translates to:
+  /// **'Keybase のユーザー名'**
+  String get profileOwnershipKeybaseUsername;
+
+  /// No description provided for @profileOwnershipKeybaseStart.
+  ///
+  /// In ja, this message translates to:
+  /// **'署名する文を作る'**
+  String get profileOwnershipKeybaseStart;
+
+  /// No description provided for @profileOwnershipKeybaseStep1.
+  ///
+  /// In ja, this message translates to:
+  /// **'1. Keybase が入っている端末で、このコマンドを実行する'**
+  String get profileOwnershipKeybaseStep1;
+
+  /// No description provided for @profileOwnershipKeybaseCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'コマンドをコピーしました'**
+  String get profileOwnershipKeybaseCopied;
+
+  /// statement はサーバーが作った署名する文(英語のまま)
+  ///
+  /// In ja, this message translates to:
+  /// **'署名する文: {statement}'**
+  String profileOwnershipKeybaseStatement(String statement);
+
+  /// No description provided for @profileOwnershipKeybaseStep2.
+  ///
+  /// In ja, this message translates to:
+  /// **'2. 出てきた署名を、BEGIN から END … MESSAGE. まで貼る'**
+  String get profileOwnershipKeybaseStep2;
+
+  /// No description provided for @profileOwnershipKeybaseVerify.
+  ///
+  /// In ja, this message translates to:
+  /// **'確かめる'**
+  String get profileOwnershipKeybaseVerify;
+
+  /// No description provided for @profilePagePostLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'{limit, plural, other{投稿は {limit} 件までです。古い投稿を消してから投稿してください}}'**
+  String profilePagePostLimit(int limit);
+
+  /// No description provided for @profilePageEdit.
+  ///
+  /// In ja, this message translates to:
+  /// **'編集'**
+  String get profilePageEdit;
+
+  /// No description provided for @profilePageCompose.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ に投稿'**
+  String get profilePageCompose;
+
+  /// No description provided for @profilePageNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} という RASQ アカウントはありません'**
+  String profilePageNotFound(String handle);
+
+  /// message はサーバーの誤りの文
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした: {message}'**
+  String profilePageLoadFailed(String message);
+
+  /// No description provided for @profilePageLoadFailedShort.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした。'**
+  String get profilePageLoadFailedShort;
+
+  /// No description provided for @profilePageTabPosts.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get profilePageTabPosts;
+
+  /// No description provided for @profilePageTabMedia.
+  ///
+  /// In ja, this message translates to:
+  /// **'メディア'**
+  String get profilePageTabMedia;
+
+  /// No description provided for @profilePageTabPages.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページ'**
+  String get profilePageTabPages;
+
+  /// No description provided for @profilePageTabLists.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get profilePageTabLists;
+
+  /// No description provided for @profilePageTabClips.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ'**
+  String get profilePageTabClips;
+
+  /// No description provided for @profilePageTabPlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン'**
+  String get profilePageTabPlugins;
+
+  /// No description provided for @profilePageTabReviews.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビュー'**
+  String get profilePageTabReviews;
+
+  /// No description provided for @profilePageTileNoDestination.
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントの行き先が分かりません'**
+  String get profilePageTileNoDestination;
+
+  /// No description provided for @profilePageOpenFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'開けませんでした: {url}'**
+  String profilePageOpenFailed(String url);
+
+  /// No description provided for @profilePageListsEmptyMine.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開した RASQ リストがここに出ます(リストの画面から作れます)。'**
+  String get profilePageListsEmptyMine;
+
+  /// No description provided for @profilePageClipsEmptyMine.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開した RASQ クリップがここに出ます(クリップのページの「公開する」)。'**
+  String get profilePageClipsEmptyMine;
+
+  /// No description provided for @profilePageListsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開しているリストはありません。'**
+  String get profilePageListsEmpty;
+
+  /// No description provided for @profilePageClipsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開しているクリップはありません。'**
+  String get profilePageClipsEmpty;
+
+  /// アカウントを作った年月。date は年と月
+  ///
+  /// In ja, this message translates to:
+  /// **'{date}から'**
+  String profilePageSince(String date);
+
+  /// No description provided for @profilePagePinLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{固定できるのは {count} 件までです}}'**
+  String profilePagePinLimit(int count);
+
+  /// No description provided for @profilePagePinFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'固定できませんでした: {message}'**
+  String profilePagePinFailed(String message);
+
+  /// No description provided for @profilePagePinned.
+  ///
+  /// In ja, this message translates to:
+  /// **'固定された投稿'**
+  String get profilePagePinned;
+
+  /// used はいまの投稿の数、limit は上限
+  ///
+  /// In ja, this message translates to:
+  /// **'{limit, plural, other{RASQ の投稿は {limit} 件までです({used} / {limit})。SNS の投稿は、ログインの鍵を預けると一緒に出ます。}}'**
+  String profilePagePostsNote(int limit, int used);
+
+  /// used はいまの投稿の数、limit は上限
+  ///
+  /// In ja, this message translates to:
+  /// **'{limit, plural, other{RASQ アカウントとしての投稿は、いまは {limit} 件までです({used} / {limit})。SNS アカウントの投稿は、そのアカウントのアクセストークンを RASQ に預けると、ここに一緒に出ます。}}'**
+  String profilePagePostsNoteDetail(int limit, int used);
+
+  /// No description provided for @profilePageSnsHintTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'つないだ SNS アカウントの投稿は、まだここに出ていません。'**
+  String get profilePageSnsHintTitle;
+
+  /// No description provided for @profilePageSnsHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィール編集で「投稿もアカウントページに出す」を入れると、ここに出ます。'**
+  String get profilePageSnsHint;
+
+  /// No description provided for @profilePageSnsHintDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィール編集の「アカウントページに出す SNS アカウント」で、アカウントごとに「投稿もアカウントページに出す」を入れると(その SNS のアクセストークンを RASQ に預けます)、公開 / ホームの投稿がここに出ます。'**
+  String get profilePageSnsHintDetail;
+
+  /// No description provided for @profilePageSnsHintOpen.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS の投稿を出す設定へ'**
+  String get profilePageSnsHintOpen;
+
+  /// No description provided for @profilePageNoPostsYet.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿はまだありません。'**
+  String get profilePageNoPostsYet;
+
+  /// No description provided for @profilePageNoMediaYet.
+  ///
+  /// In ja, this message translates to:
+  /// **'メディアはまだありません。'**
+  String get profilePageNoMediaYet;
+
+  /// No description provided for @profilePageNoReviewsYet.
+  ///
+  /// In ja, this message translates to:
+  /// **'レビューはまだありません。'**
+  String get profilePageNoReviewsYet;
+
+  /// No description provided for @profilePageNoPluginsPublished.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開したプラグインはありません。'**
+  String get profilePageNoPluginsPublished;
+
+  /// No description provided for @profilePageImageUrlMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像の URL が返りませんでした'**
+  String get profilePageImageUrlMissing;
+
+  /// No description provided for @profilePageNotConnected.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のサーバーにつないでいません'**
+  String get profilePageNotConnected;
+
+  /// 自作プラグインのファイルを選ぶ画面の種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン(.rspkg / .rasqpkg)'**
+  String get profilePagePackageTypeLabel;
+
+  /// ページに貼る画像(ファイルを選ぶ画面の種類 / 道具の行のボタン / 貼った画像の代替の文の既定)
+  ///
+  /// In ja, this message translates to:
+  /// **'画像'**
+  String get profilePageImage;
+
+  /// 読めなかった画像の代わりに出す文。alt は画像の代替の文
+  ///
+  /// In ja, this message translates to:
+  /// **'(画像: {alt})'**
+  String profilePageImageAlt(String alt);
+
+  /// No description provided for @profilePageMdFallbackTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページ'**
+  String get profilePageMdFallbackTitle;
+
+  /// No description provided for @profilePageMdLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページを読めませんでした'**
+  String get profilePageMdLoadFailed;
+
+  /// No description provided for @profilePageMdToolBold.
+  ///
+  /// In ja, this message translates to:
+  /// **'太字'**
+  String get profilePageMdToolBold;
+
+  /// No description provided for @profilePageMdToolHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'見出し'**
+  String get profilePageMdToolHeading;
+
+  /// No description provided for @profilePageMdToolBullet.
+  ///
+  /// In ja, this message translates to:
+  /// **'箇条書き'**
+  String get profilePageMdToolBullet;
+
+  /// No description provided for @profilePageMdToolLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンク'**
+  String get profilePageMdToolLink;
+
+  /// No description provided for @profilePageMdToolCenter.
+  ///
+  /// In ja, this message translates to:
+  /// **'中央'**
+  String get profilePageMdToolCenter;
+
+  /// No description provided for @profilePageMdToolBig.
+  ///
+  /// In ja, this message translates to:
+  /// **'大きく'**
+  String get profilePageMdToolBig;
+
+  /// No description provided for @profilePageMdToolSmall.
+  ///
+  /// In ja, this message translates to:
+  /// **'小さく'**
+  String get profilePageMdToolSmall;
+
+  /// No description provided for @profilePageMdToolSpin.
+  ///
+  /// In ja, this message translates to:
+  /// **'回転'**
+  String get profilePageMdToolSpin;
+
+  /// No description provided for @profilePageMdToolJump.
+  ///
+  /// In ja, this message translates to:
+  /// **'跳ねる'**
+  String get profilePageMdToolJump;
+
+  /// No description provided for @profilePageMdToolColor.
+  ///
+  /// In ja, this message translates to:
+  /// **'色'**
+  String get profilePageMdToolColor;
+
+  /// No description provided for @profilePageMdToolRainbow.
+  ///
+  /// In ja, this message translates to:
+  /// **'虹'**
+  String get profilePageMdToolRainbow;
+
+  /// No description provided for @profilePageMdToolRuby.
+  ///
+  /// In ja, this message translates to:
+  /// **'ルビ'**
+  String get profilePageMdToolRuby;
+
+  /// ルビの道具で差し込む読みの仮の文字(利用者が書き換える)
+  ///
+  /// In ja, this message translates to:
+  /// **'よみ'**
+  String get profilePageMdToolRubyReading;
+
+  /// No description provided for @profilePageImageUploadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を上げられませんでした: {error}'**
+  String profilePageImageUploadFailed(String error);
+
+  /// No description provided for @profilePageMdTitleRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイトルを入れてください'**
+  String get profilePageMdTitleRequired;
+
+  /// No description provided for @profilePageMdLoginToPublish.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインすると公開できます'**
+  String get profilePageMdLoginToPublish;
+
+  /// No description provided for @profilePageMdPublished.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開しました'**
+  String get profilePageMdPublished;
+
+  /// No description provided for @profilePageMdPublishFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開できませんでした: {error}'**
+  String profilePageMdPublishFailed(String error);
+
+  /// No description provided for @profilePageMdDeleteTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページを削除'**
+  String get profilePageMdDeleteTitle;
+
+  /// No description provided for @profilePageMdDeleteDraft.
+  ///
+  /// In ja, this message translates to:
+  /// **'下書きを削除します。'**
+  String get profilePageMdDeleteDraft;
+
+  /// No description provided for @profilePageMdDeletePublished.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開したページと下書きを削除します。元に戻せません。'**
+  String get profilePageMdDeletePublished;
+
+  /// No description provided for @profilePageDeleteConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除する'**
+  String get profilePageDeleteConfirm;
+
+  /// No description provided for @profilePageCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get profilePageCancel;
+
+  /// No description provided for @profilePageMdDeleteFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除できませんでした: {error}'**
+  String profilePageMdDeleteFailed(String error);
+
+  /// No description provided for @profilePageMdEditTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページを編集'**
+  String get profilePageMdEditTitle;
+
+  /// No description provided for @profilePageMdDelete.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get profilePageMdDelete;
+
+  /// No description provided for @profilePageMdWrite.
+  ///
+  /// In ja, this message translates to:
+  /// **'書く'**
+  String get profilePageMdWrite;
+
+  /// No description provided for @profilePageMdPreview.
+  ///
+  /// In ja, this message translates to:
+  /// **'プレビュー'**
+  String get profilePageMdPreview;
+
+  /// No description provided for @profilePageMdPublish.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開'**
+  String get profilePageMdPublish;
+
+  /// No description provided for @profilePageMdTitleHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイトル'**
+  String get profilePageMdTitleHint;
+
+  /// No description provided for @profilePageMdBodyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'Markdown で書きます。@メンション / #ハッシュタグ / :絵文字: / <center> などの MFM のタグも使えます'**
+  String get profilePageMdBodyHint;
+
+  /// No description provided for @profilePageMdDraftCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'下書きはこの端末に残ります。「公開」で RASQ のページに出します'**
+  String get profilePageMdDraftCaption;
+
+  /// SNS のプロフィールに出す、つないだ RASQ アカウントの欄の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウント'**
+  String get profilePageRasqAccount;
+
+  /// method は確認の方法(サーバーが返す名前)
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントの持ち主を確認済み({method})'**
+  String profilePageViewingVerified(String method);
+
+  /// No description provided for @profilePageVerifiedSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'持ち主を確認済み'**
+  String get profilePageVerifiedSemantics;
+
+  /// No description provided for @profilePostLoginToUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインすると使えます'**
+  String get profilePostLoginToUse;
+
+  /// No description provided for @profilePostLoginToReply.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインすると返信できます'**
+  String get profilePostLoginToReply;
+
+  /// No description provided for @profilePostLoginToRebroad.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインするとリブロードできます'**
+  String get profilePostLoginToRebroad;
+
+  /// No description provided for @profilePostLoginToQueue.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインするとキューできます'**
+  String get profilePostLoginToQueue;
+
+  /// No description provided for @profilePostErrorInstallPack.
+  ///
+  /// In ja, this message translates to:
+  /// **'このパックをストアからインストールすると、この絵でキューできます'**
+  String get profilePostErrorInstallPack;
+
+  /// No description provided for @profilePostErrorForbidden.
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿には操作できません'**
+  String get profilePostErrorForbidden;
+
+  /// No description provided for @profilePostErrorRebroadLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿は、これ以上リブロードできません'**
+  String get profilePostErrorRebroadLimit;
+
+  /// No description provided for @profilePostErrorReplyLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'返信は 100 件までです。古い返信を消してください'**
+  String get profilePostErrorReplyLimit;
+
+  /// No description provided for @profilePostErrorGone.
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿 / 絵は、もうありません'**
+  String get profilePostErrorGone;
+
+  /// message はサーバーの誤りの文
+  ///
+  /// In ja, this message translates to:
+  /// **'失敗しました: {message}'**
+  String profilePostErrorFailed(String message);
+
+  /// No description provided for @profilePostMenuReactions.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションを表示'**
+  String get profilePostMenuReactions;
+
+  /// No description provided for @profilePostMenuCopyLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピー'**
+  String get profilePostMenuCopyLink;
+
+  /// No description provided for @profilePostMenuOpenBrowser.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザで開く'**
+  String get profilePostMenuOpenBrowser;
+
+  /// No description provided for @profilePostMenuEditActions.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションバーを編集'**
+  String get profilePostMenuEditActions;
+
+  /// No description provided for @profilePostMenuUnpin.
+  ///
+  /// In ja, this message translates to:
+  /// **'固定を外す'**
+  String get profilePostMenuUnpin;
+
+  /// No description provided for @profilePostMenuPin.
+  ///
+  /// In ja, this message translates to:
+  /// **'固定する'**
+  String get profilePostMenuPin;
+
+  /// No description provided for @profilePostMenuDelete.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get profilePostMenuDelete;
+
+  /// No description provided for @profilePostLinkCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピーしました'**
+  String get profilePostLinkCopied;
+
+  /// No description provided for @profilePostDeleteTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿を削除'**
+  String get profilePostDeleteTitle;
+
+  /// No description provided for @profilePostDeleteMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿と、付いている画像を削除します。元に戻せません。'**
+  String get profilePostDeleteMessage;
+
+  /// No description provided for @profilePostDeleteConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除する'**
+  String get profilePostDeleteConfirm;
+
+  /// No description provided for @profilePostCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get profilePostCancel;
+
+  /// No description provided for @profilePostQuoteUnavailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'引用元の投稿は見られません'**
+  String get profilePostQuoteUnavailable;
+
+  /// RASQ の投稿の返信(ボタン / 欄の名前)
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get profilePostReply;
+
+  /// RASQ の再投稿(ReBroad)。SNS のリノート / リポストにあたる RASQ の呼び名
+  ///
+  /// In ja, this message translates to:
+  /// **'リブロード'**
+  String get profilePostRebroad;
+
+  /// No description provided for @profilePostRebroadUndo.
+  ///
+  /// In ja, this message translates to:
+  /// **'リブロードを取り消す'**
+  String get profilePostRebroadUndo;
+
+  /// No description provided for @profilePostQuote.
+  ///
+  /// In ja, this message translates to:
+  /// **'引用'**
+  String get profilePostQuote;
+
+  /// RASQ の投稿へのリアクション(Queue)。アセットパックの絵で付ける
+  ///
+  /// In ja, this message translates to:
+  /// **'キュー'**
+  String get profilePostQueue;
+
+  /// No description provided for @profilePostLike.
+  ///
+  /// In ja, this message translates to:
+  /// **'いいね'**
+  String get profilePostLike;
+
+  /// No description provided for @profilePostQuoteFollowersOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワー限定の投稿は引用できません'**
+  String get profilePostQuoteFollowersOnly;
+
+  /// 投稿の上の帯。name はリブロードした人の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} がリブロード'**
+  String profilePostRebroadedBy(String name);
+
+  /// No description provided for @profilePostReplyToDeleted.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除された投稿への返信'**
+  String get profilePostReplyToDeleted;
+
+  /// No description provided for @profilePostShare.
+  ///
+  /// In ja, this message translates to:
+  /// **'共有'**
+  String get profilePostShare;
+
+  /// No description provided for @profilePostCwHide.
+  ///
+  /// In ja, this message translates to:
+  /// **'隠す'**
+  String get profilePostCwHide;
+
+  /// No description provided for @profilePostCwShow.
+  ///
+  /// In ja, this message translates to:
+  /// **'もっと見る'**
+  String get profilePostCwShow;
+
+  /// No description provided for @profilePostNoPacksTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アセットパックがありません'**
+  String get profilePostNoPacksTitle;
+
+  /// No description provided for @profilePostNoPacksMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'キューは、ストアで入れたアセットパックの絵でするリアクションです。'**
+  String get profilePostNoPacksMessage;
+
+  /// No description provided for @profilePostNoPacksStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアで探す'**
+  String get profilePostNoPacksStore;
+
+  /// No description provided for @profilePostClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get profilePostClose;
+
+  /// 全画面の上のキューのボタンの説明。label はボタンの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{label}(長押しで絵を選ぶ)'**
+  String profilePostOverlayQueueTooltip(String label);
+
+  /// No description provided for @profilePostMenu.
+  ///
+  /// In ja, this message translates to:
+  /// **'メニュー'**
+  String get profilePostMenu;
+
+  /// No description provided for @profilePostTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get profilePostTitle;
+
+  /// No description provided for @profilePostGone.
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿は、もうありません'**
+  String get profilePostGone;
+
+  /// message はサーバーの誤りの文
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした: {message}'**
+  String profilePostLoadFailed(String message);
+
+  /// No description provided for @profilePostParentDeleted.
+  ///
+  /// In ja, this message translates to:
+  /// **'元の投稿は削除されています。'**
+  String get profilePostParentDeleted;
+
+  /// 返信の欄の帯
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{返信 {count}}}'**
+  String profilePostRepliesCount(int count);
+
+  /// No description provided for @profilePostNoRepliesYet.
+  ///
+  /// In ja, this message translates to:
+  /// **'返信はまだありません。'**
+  String get profilePostNoRepliesYet;
+
+  /// No description provided for @profilePostNoReplies.
+  ///
+  /// In ja, this message translates to:
+  /// **'返信はありません'**
+  String get profilePostNoReplies;
+
+  /// No description provided for @profilePostNoRebroads.
+  ///
+  /// In ja, this message translates to:
+  /// **'リブロードはありません'**
+  String get profilePostNoRebroads;
+
+  /// No description provided for @profilePostNoQuotes.
+  ///
+  /// In ja, this message translates to:
+  /// **'引用はありません'**
+  String get profilePostNoQuotes;
+
+  /// No description provided for @profilePostNoQueues.
+  ///
+  /// In ja, this message translates to:
+  /// **'キューはありません'**
+  String get profilePostNoQueues;
+
+  /// No description provided for @profilePostReactionsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション'**
+  String get profilePostReactionsTitle;
+
+  /// キューの欄で、自分が付けた絵の印
+  ///
+  /// In ja, this message translates to:
+  /// **'あなた'**
+  String get profilePostYou;
+
   /// RAi のモード: 操作を教える(RAi がボタンまで移動して指差す)
   ///
   /// In ja, this message translates to:

@@ -12,6 +12,7 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../../backend/rasq_collections_api.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart' show fowColumnOf;
 import '../../session/session_providers.dart';
@@ -51,7 +52,7 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
 
   /// 「RASQ に投稿」= いつものコンポーザーを RASQ 指定で開く (D-275。SNS の投稿と同じ作り方: 注釈 / 公開範囲 / 投票 / 画像)。
   Future<void> _compose(RasqPostList posts) async {
-    if (posts.posts.where((p) => p.rebroadedBy == null).length >= posts.limit) return _toast('投稿は ${posts.limit} 件までです。古い投稿を消してから投稿してください');
+    if (posts.posts.where((p) => p.rebroadedBy == null).length >= posts.limit) return _toast(context.l10n.profilePagePostLimit(posts.limit));
     await showComposer(ref, const ComposeNormal(), rasqTarget: true, column: fowColumnOf(context));
     if (mounted) ref.invalidate(rasqAccountPageProvider(widget.handle));
   }
@@ -59,6 +60,7 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final page = ref.watch(rasqAccountPageProvider(widget.handle));
     final me = ref.watch(orgateAccountProvider).value;
     final isMine = me != null && me.handle.toLowerCase() == widget.handle.toLowerCase();
@@ -68,16 +70,16 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
         actions: [if (isMine) TextButton(key: const ValueKey('rasqPage.edit'), onPressed: () async {
           await context.push('${Routes.settings}/rasq-profile');
           ref.invalidate(rasqAccountPageProvider(widget.handle));
-        }, child: const Text('編集'))],
+        }, child: Text(l10n.profilePageEdit))],
       ),
       floatingActionButton: isMine && page.hasValue
-          ? FloatingActionButton.extended(key: const ValueKey('rasqPage.compose'), heroTag: 'fab.rasqPage', onPressed: () => _compose(page.value!.posts), icon: const Icon(Icons.edit_outlined), label: const Text('RASQ に投稿'))
+          ? FloatingActionButton.extended(key: const ValueKey('rasqPage.compose'), heroTag: 'fab.rasqPage', onPressed: () => _compose(page.value!.posts), icon: const Icon(Icons.edit_outlined), label: Text(l10n.profilePageCompose))
           : null,
       body: page.when(
         loading: () => const RasqLoading(),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(RasqSpacing.page),
-          child: Text(e is OrgateException && e.code.code == '404' ? '@${widget.handle} という RASQ アカウントはありません' : '読み込めませんでした: ${e is OrgateException ? e.message : e}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text(e is OrgateException && e.code.code == '404' ? l10n.profilePageNotFound(widget.handle) : l10n.profilePageLoadFailed('${e is OrgateException ? e.message : e}'), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
         ),
         data: (d) => DefaultTabController(
           length: 7,
@@ -87,7 +89,7 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _TabBarDelegate(
-                  TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: const [Tab(text: '投稿'), Tab(text: 'メディア'), Tab(text: 'ページ'), Tab(text: 'リスト'), Tab(text: 'クリップ'), Tab(text: 'プラグイン'), Tab(text: 'レビュー')]),
+                  TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [Tab(text: l10n.profilePageTabPosts), Tab(text: l10n.profilePageTabMedia), Tab(text: l10n.profilePageTabPages), Tab(text: l10n.profilePageTabLists), Tab(text: l10n.profilePageTabClips), Tab(text: l10n.profilePageTabPlugins), Tab(text: l10n.profilePageTabReviews)]),
                   scheme.surface,
                 ),
               ),
@@ -128,6 +130,7 @@ Future<void> openRasqSnsTile(BuildContext context, WidgetRef ref, RasqSnsTile t)
       ..showSnackBar(SnackBar(content: Text(m)));
   }
 
+  final l10n = context.l10n;
   final sessions = ref.read(sessionsProvider).value?.allSessions ?? const [];
   // Bluesky はサーバー(PDS)に関係なく、どの Bluesky のアカウントからでも引ける (D-423)。
   final mine = sessionServing(sessions, t.kind, t.instance, preferKey: t.key);
@@ -142,8 +145,8 @@ Future<void> openRasqSnsTile(BuildContext context, WidgetRef ref, RasqSnsTile t)
     }
   }
   final url = t.profileUrl;
-  if (url == null) return toast('このアカウントの行き先が分かりません');
-  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) toast('開けませんでした: $url');
+  if (url == null) return toast(l10n.profilePageTileNoDestination);
+  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) toast(l10n.profilePageOpenFailed('$url'));
 }
 
 /// 公開した RASQ リスト / RASQ クリップ (D-343/D-344、S-042)。タイルを縦に並べて、「見てみる」でそのページへ。
@@ -159,14 +162,14 @@ class _CollectionsTab extends ConsumerWidget {
     final isList = kind == RasqCollectionKind.list;
     return list.when(
       loading: () => const RasqLoading(),
-      error: (_, _) => _message(context, '読み込めませんでした。'),
+      error: (_, _) => _message(context, context.l10n.profilePageLoadFailedShort),
       data: (items) {
         if (items.isEmpty) {
           return _message(
             context,
             isMine
-                ? (isList ? '公開した RASQ リストがここに出ます(リストの画面から作れます)。' : '公開した RASQ クリップがここに出ます(クリップのページの「公開する」)。')
-                : (isList ? '公開しているリストはありません。' : '公開しているクリップはありません。'),
+                ? (isList ? context.l10n.profilePageListsEmptyMine : context.l10n.profilePageClipsEmptyMine)
+                : (isList ? context.l10n.profilePageListsEmpty : context.l10n.profilePageClipsEmpty),
           );
         }
         return ListView.separated(
@@ -233,7 +236,7 @@ class _Header extends StatelessWidget {
           Wrap(spacing: 14, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
             if (p.location.isNotEmpty) _Meta(Icons.place_outlined, p.location),
             if (p.birthday.isNotEmpty) _Meta(Icons.cake_outlined, p.birthday),
-            if (p.createdAt != null) _Meta(Icons.calendar_today_outlined, '${p.createdAt!.year}年${p.createdAt!.month}月から'),
+            if (p.createdAt != null) _Meta(Icons.calendar_today_outlined, context.l10n.profilePageSince(RasqDateFormat.yearMonth(p.createdAt!))),
             for (final l in p.links)
               InkWell(
                 onTap: () => launchUrl(l.url, mode: LaunchMode.externalApplication),
@@ -346,18 +349,19 @@ class _PostsTab extends ConsumerWidget {
   Future<void> _togglePin(BuildContext context, WidgetRef ref, RasqPin pin) async {
     final api = ref.read(rasqAccountPageApiProvider);
     if (api == null) return;
+    final l10n = context.l10n;
     final has = posts.pins.contains(pin);
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
     if (!has && posts.pins.length >= rasqMaxPins) {
-      messenger.showSnackBar(const SnackBar(content: Text('固定できるのは $rasqMaxPins 件までです')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.profilePagePinLimit(rasqMaxPins))));
       return;
     }
     try {
       await api.setPins(has ? [for (final p in posts.pins) if (p != pin) p] : [pin, ...posts.pins]);
       onChanged();
     } on OrgateException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('固定できませんでした: ${e.message}')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.profilePagePinFailed(e.message))));
     }
   }
 
@@ -365,6 +369,7 @@ class _PostsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
+    final l10n = context.l10n;
     final items = orderAccountPosts(posts);
     // 見ている人が、同じサーバーにアカウントを持っていれば、そのアカウントで SNS の投稿にリアクションなどができる (S-027)。
     final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
@@ -372,14 +377,14 @@ class _PostsTab extends ConsumerWidget {
     Widget pinnedMark(RasqPin pin) => Padding(
           key: ValueKey('rasqPage.pinned.${pin.source}.${pin.ref}'),
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 6, RasqSpacing.page, 0),
-          child: Row(children: [Icon(Icons.push_pin, size: 14, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text('固定された投稿', style: caption)]),
+          child: Row(children: [Icon(Icons.push_pin, size: 14, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text(l10n.profilePagePinned, style: caption)]),
         );
     Future<void> Function() toggle(RasqPin pin) => () => _togglePin(context, ref, pin);
     return ListView(padding: const EdgeInsets.only(bottom: 96), children: [
       if (isMine)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Text(rasqDetail(context, 'RASQ の投稿は ${posts.limit} 件までです(${posts.posts.where((p) => p.rebroadedBy == null).length} / ${posts.limit})。SNS の投稿は、ログインの鍵を預けると一緒に出ます。', 'RASQ アカウントとしての投稿は、いまは ${posts.limit} 件までです(${posts.posts.where((p) => p.rebroadedBy == null).length} / ${posts.limit})。SNS アカウントの投稿は、そのアカウントのアクセストークンを RASQ に預けると、ここに一緒に出ます。'), key: const ValueKey('rasqPage.posts.note'), style: caption),
+          child: Text(rasqDetail(context, l10n.profilePagePostsNote(posts.limit, posts.posts.where((p) => p.rebroadedBy == null).length), l10n.profilePagePostsNoteDetail(posts.limit, posts.posts.where((p) => p.rebroadedBy == null).length)), key: const ValueKey('rasqPage.posts.note'), style: caption),
         ),
       // 自分のページで、SNS アカウントはつないであるのに、その投稿が 1 件も出ていない (D-316): トークンを預けていない
       // (か、取れていない)。「投稿が出ない」と見えるので、預ける画面への入口を出す。ほかの人が見るときは出さない。
@@ -390,21 +395,21 @@ class _PostsTab extends ConsumerWidget {
           padding: const EdgeInsets.all(RasqSpacing.sm),
           decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(RasqSizes.radiusSm), border: Border.all(color: scheme.outlineVariant)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('つないだ SNS アカウントの投稿は、まだここに出ていません。', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+            Text(l10n.profilePageSnsHintTitle, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 2),
-            Text(rasqDetail(context, 'プロフィール編集で「投稿もアカウントページに出す」を入れると、ここに出ます。', 'プロフィール編集の「アカウントページに出す SNS アカウント」で、アカウントごとに「投稿もアカウントページに出す」を入れると(その SNS のアクセストークンを RASQ に預けます)、公開 / ホームの投稿がここに出ます。'), style: caption),
+            Text(rasqDetail(context, l10n.profilePageSnsHint, l10n.profilePageSnsHintDetail), style: caption),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 key: const ValueKey('rasqPage.posts.snsHint.open'),
                 onPressed: onOpenSnsPostsSettings,
                 icon: const Icon(Icons.tune, size: 16),
-                label: const Text('SNS の投稿を出す設定へ'),
+                label: Text(l10n.profilePageSnsHintOpen),
               ),
             ),
           ]),
         ),
-      if (items.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('投稿はまだありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
+      if (items.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(l10n.profilePageNoPostsYet, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
       for (final e in items)
         if (e.rasq != null) ...[
           if (e.pinned) pinnedMark((source: 'rasq', ref: e.rasq!.id)),
@@ -477,7 +482,7 @@ class _MediaTab extends ConsumerWidget {
         if (p.cw.isEmpty && p.rebroadedBy == null)
           for (var i = 0; i < p.images.length; i++) (post: p, index: i),
     ];
-    if (cells.isEmpty) return _message(context, 'メディアはまだありません。');
+    if (cells.isEmpty) return _message(context, context.l10n.profilePageNoMediaYet);
     return GridView.builder(
       padding: const EdgeInsets.all(RasqSpacing.sm),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 160, mainAxisSpacing: 4, crossAxisSpacing: 4),
@@ -531,7 +536,7 @@ class _PluginsTab extends StatelessWidget {
           onTap: () => context.push('/store/plugin/${Uri.encodeComponent(g.id)}'),
         );
     final items = reviews ? profile.reviewed : profile.published;
-    if (items.isEmpty) return _message(context, reviews ? 'レビューはまだありません。' : '公開したプラグインはありません。');
+    if (items.isEmpty) return _message(context, reviews ? context.l10n.profilePageNoReviewsYet : context.l10n.profilePageNoPluginsPublished);
     return ListView(padding: const EdgeInsets.only(bottom: 96), children: [
       for (final g in items) tile(g),
     ]);

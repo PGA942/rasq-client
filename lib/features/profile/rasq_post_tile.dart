@@ -15,6 +15,7 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../../app/navigation.dart';
+import '../../l10n/l10n.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../compose/emoji_panel.dart';
@@ -76,7 +77,8 @@ class RasqPostTileView extends ConsumerWidget {
   Future<void> _run(BuildContext context, WidgetRef ref, Future<void> Function(RasqAccountPageApi api) action) async {
     final api = ref.read(rasqAccountPageApiProvider);
     if (api == null) return;
-    if (ref.read(orgateAccountProvider).value == null) return _toast(context, 'RASQ アカウントにログインすると使えます');
+    final l10n = context.l10n;
+    if (ref.read(orgateAccountProvider).value == null) return _toast(context, l10n.profilePostLoginToUse);
     try {
       await action(api);
       // 自分のアカウントページも取り直す (D-277): スレッド画面からリブロード / 引用しても、投稿欄にすぐ出るように。
@@ -86,12 +88,12 @@ class RasqPostTileView extends ConsumerWidget {
     } on OrgateException catch (e) {
       if (!context.mounted) return;
       _toast(context, switch (e.code.code) {
-        '403' when e.message.contains('install') => 'このパックをストアからインストールすると、この絵でキューできます',
-        '403' => 'この投稿には操作できません',
-        '409' when e.message.contains('rebroad') => 'この投稿は、これ以上リブロードできません',
-        '409' => '返信は 100 件までです。古い返信を消してください',
-        '404' => 'この投稿 / 絵は、もうありません',
-        _ => '失敗しました: ${e.message}',
+        '403' when e.message.contains('install') => l10n.profilePostErrorInstallPack,
+        '403' => l10n.profilePostErrorForbidden,
+        '409' when e.message.contains('rebroad') => l10n.profilePostErrorRebroadLimit,
+        '409' => l10n.profilePostErrorReplyLimit,
+        '404' => l10n.profilePostErrorGone,
+        _ => l10n.profilePostErrorFailed(e.message),
       });
     }
   }
@@ -102,13 +104,14 @@ class RasqPostTileView extends ConsumerWidget {
   }
 
   Future<void> _more(BuildContext context, WidgetRef ref, Rect anchor, bool isMine) async {
+    final l10n = context.l10n;
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.more', anchor: anchor, dense: true, items: [
-      const RasqDropdownItem('リアクションを表示', 'reactions'),
-      const RasqDropdownItem('リンクをコピー', 'copy'),
-      const RasqDropdownItem('ブラウザで開く', 'open'),
-      const RasqDropdownItem('アクションバーを編集', 'editActions'),
-      if (onTogglePin != null) RasqDropdownItem(pinned ? '固定を外す' : '固定する', 'pin'),
-      if (isMine) const RasqDropdownItem('削除', 'delete', destructive: true),
+      RasqDropdownItem(l10n.profilePostMenuReactions, 'reactions'),
+      RasqDropdownItem(l10n.profilePostMenuCopyLink, 'copy'),
+      RasqDropdownItem(l10n.profilePostMenuOpenBrowser, 'open'),
+      RasqDropdownItem(l10n.profilePostMenuEditActions, 'editActions'),
+      if (onTogglePin != null) RasqDropdownItem(pinned ? l10n.profilePostMenuUnpin : l10n.profilePostMenuPin, 'pin'),
+      if (isMine) RasqDropdownItem(l10n.profilePostMenuDelete, 'delete', destructive: true),
     ]);
     if (!context.mounted || pick == null) return;
     final link = _permalink(ref);
@@ -118,7 +121,7 @@ class RasqPostTileView extends ConsumerWidget {
       case 'copy':
         if (link == null) return;
         await Clipboard.setData(ClipboardData(text: link.toString()));
-        if (context.mounted) _toast(context, 'リンクをコピーしました');
+        if (context.mounted) _toast(context, l10n.profilePostLinkCopied);
       case 'editActions':
         // RASQ アカウントのバー(全画面 = Swing / 投稿)を編集する (D-446)。
         await showActionBarEditSheet(ref, column: fowColumnOf(context), rasq: true);
@@ -128,7 +131,7 @@ class RasqPostTileView extends ConsumerWidget {
         await onTogglePin?.call();
       case 'delete':
         if (onDelete case final f?) return f();
-        final ok = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.delete', title: '投稿を削除', message: 'この投稿と、付いている画像を削除します。元に戻せません。', confirmText: '削除する', cancelText: 'キャンセル', destructive: true);
+        final ok = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.delete', title: l10n.profilePostDeleteTitle, message: l10n.profilePostDeleteMessage, confirmText: l10n.profilePostDeleteConfirm, cancelText: l10n.profilePostCancel, destructive: true);
         if (!ok || !context.mounted) return;
         await _run(context, ref, (api) => api.deletePost(post.id));
     }
@@ -136,7 +139,7 @@ class RasqPostTileView extends ConsumerWidget {
 
   /// 返信 (D-292): SNS の返信と同じコンポーザーで(投稿先は RASQ に固定。文字だけ、500 文字まで)。以前は、専用の簡易シートだった。
   Future<void> _reply(BuildContext context, WidgetRef ref) async {
-    if (ref.read(orgateAccountProvider).value == null) return _toast(context, 'RASQ アカウントにログインすると返信できます');
+    if (ref.read(orgateAccountProvider).value == null) return _toast(context, context.l10n.profilePostLoginToReply);
     if (onReply != null) return onReply!();
     final sent = await showComposer(ref, ComposeReply(post.toPost(central: ref.read(centralBaseUrlProvider))), column: fowColumnOf(context));
     if (sent != null) onChanged();
@@ -185,7 +188,7 @@ class RasqPostTileView extends ConsumerWidget {
         ),
       if (q != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: _quote(context, q))
       else if (post.isQuote)
-        Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text('引用元の投稿は見られません', key: ValueKey('rasqPost.${post.id}.quoteGone'), style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))),
+        Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text(context.l10n.profilePostQuoteUnavailable, key: ValueKey('rasqPost.${post.id}.quoteGone'), style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))),
     ]);
   }
 
@@ -198,17 +201,18 @@ class RasqPostTileView extends ConsumerWidget {
   /// リブロードのバンドル (D-276): ふつうのタイルでは「リブロード / 引用」(リブロードは何度でも)。
   /// 自分のリブロードとして出ているタイルでは「リブロードを取り消す / 引用」(その 1 回だけを取り消す)。
   Future<void> _rebroadBundle(BuildContext context, WidgetRef ref, Rect anchor, {required bool myRebroad}) async {
-    if (ref.read(orgateAccountProvider).value == null) return _toast(context, 'RASQ アカウントにログインするとリブロードできます');
+    final l10n = context.l10n;
+    if (ref.read(orgateAccountProvider).value == null) return _toast(context, l10n.profilePostLoginToRebroad);
     // SNS のリノートと同じく、ドロップダウンではなくバンドル FOW で出す (D-277)。
     final pick = await showBundleMenuFow<String>(
       ref.read(overlayManagerProvider),
       id: 'rasq.post.rebroad.${post.id}',
-      title: 'リブロード',
+      title: l10n.profilePostRebroad,
       anchor: anchor,
       column: fowColumnOf(context),
       items: [
-        if (myRebroad) const BundleMenuItem(value: 'undo', label: 'リブロードを取り消す', icon: Icons.repeat, destructive: true) else const BundleMenuItem(value: 'rebroad', label: 'リブロード', icon: Icons.repeat),
-        const BundleMenuItem(value: 'quote', label: '引用', icon: Icons.format_quote),
+        if (myRebroad) BundleMenuItem(value: 'undo', label: l10n.profilePostRebroadUndo, icon: Icons.repeat, destructive: true) else BundleMenuItem(value: 'rebroad', label: l10n.profilePostRebroad, icon: Icons.repeat),
+        BundleMenuItem(value: 'quote', label: l10n.profilePostQuote, icon: Icons.format_quote),
       ],
     );
     if (!context.mounted || pick == null) return;
@@ -219,7 +223,7 @@ class RasqPostTileView extends ConsumerWidget {
         final id = post.rebroadId;
         if (id != null) await _run(context, ref, (api) => api.deleteRebroad(id));
       case 'quote':
-        if (post.visibility == 'followers') return _toast(context, 'フォロワー限定の投稿は引用できません');
+        if (post.visibility == 'followers') return _toast(context, l10n.profilePostQuoteFollowersOnly);
         // SNS の引用と同じコンポーザーを、RASQ 指定で開く(送ると、呼び出し側が取り直す)。
         await showComposer(ref, ComposeQuote(post.toPost()), rasqTarget: true, column: fowColumnOf(context));
         onChanged();
@@ -289,6 +293,7 @@ class RasqPostTileView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = RasqTokens.of(context);
+    final l10n = context.l10n;
     final author = post.author;
     final me = ref.watch(orgateAccountProvider).value;
     final isMine = me != null && author != null && me.id == author.id;
@@ -338,12 +343,12 @@ class RasqPostTileView extends ConsumerWidget {
     }
 
     RasqActionBarItem item(ActionDescriptor a) => switch (a.id) {
-          rasqReplyActionId => RasqActionBarItem(id: 'reply', label: '返信', icon: Icons.chat_bubble_outline, count: post.replyCount, onAnchorTap: (r) => perform(a, r)),
+          rasqReplyActionId => RasqActionBarItem(id: 'reply', label: l10n.profilePostReply, icon: Icons.chat_bubble_outline, count: post.replyCount, onAnchorTap: (r) => perform(a, r)),
           // リブロード (D-276): SNS のリノートと同じバンドル(リブロード / 引用)。ふつうのタイルでは何度でもリブロードできる。
           // 自分のリブロードとして出ているタイルでは、済みの色になり、バンドルの 1 つ目が「リブロードを取り消す」になる。
           rasqRebroadActionId => RasqActionBarItem(
               id: 'rebroad',
-              label: myRebroad ? 'リブロードを取り消す' : 'リブロード',
+              label: myRebroad ? l10n.profilePostRebroadUndo : l10n.profilePostRebroad,
               icon: Icons.repeat,
               doneIcon: Icons.repeat, // 完了アイコンが無いと、部品が済みのボタンを無効にする
               done: myRebroad,
@@ -354,7 +359,7 @@ class RasqPostTileView extends ConsumerWidget {
           rasqQueueActionId => RasqActionBarItem(
               id: 'queue',
               // いいねのみ (S-023) の投稿は、ボタンも ❤ に。いいねの数はチップではなくボタンに出す (D-321: SNS の「いいねのみ」と同じ)。
-              label: post.likeOnly ? 'いいね' : 'キュー',
+              label: post.likeOnly ? l10n.profilePostLike : l10n.profilePostQueue,
               icon: post.likeOnly ? Icons.favorite_border : Icons.add_reaction_outlined,
               doneIcon: post.likeOnly ? Icons.favorite : Icons.add_reaction,
               done: mine != null,
@@ -377,7 +382,7 @@ class RasqPostTileView extends ConsumerWidget {
         createdAt: post.createdAt ?? DateTime.now(),
         // 帯: リブロード(RASQ の言い方で出す。部品の既定は「リノート」)> 返信の印。
         bannerIcon: post.rebroadedBy != null ? Icons.repeat : (post.isReply && !focused ? Icons.reply : null),
-        bannerText: post.rebroadedBy != null ? '${post.rebroadedBy!.label} がリブロード' : (post.isReply && !focused ? (post.replyTo == null ? '削除された投稿への返信' : '返信') : null),
+        bannerText: post.rebroadedBy != null ? l10n.profilePostRebroadedBy(post.rebroadedBy!.label) : (post.isReply && !focused ? (post.replyTo == null ? l10n.profilePostReplyToDeleted : l10n.profilePostReply) : null),
         onTap: onOpen,
         onAuthorTap: author == null ? null : () => context.pushRasqAccount(author.handle),
         // … = ほかの SNS の投稿と同じドロップダウン(削除はこの中)。
@@ -433,7 +438,7 @@ class RasqPostTileView extends ConsumerWidget {
               RasqActionButton.icon(
                 key: ValueKey('rasqPost.${post.id}.share'),
                 icon: Icons.ios_share,
-                tooltip: '共有',
+                tooltip: l10n.profilePostShare,
                 // SNS の投稿と同じ共有 FOW (D-279。リンク / 内容のコピー、引用、DM、共有プラグイン)。
                 onTap: () => showPostShareFow(ref, post.toPost(central: ref.read(centralBaseUrlProvider)), column: fowColumnOf(context)),
               ),
@@ -463,7 +468,7 @@ class _CwFoldState extends State<_CwFold> {
           key: const ValueKey('rasqPost.cw.toggle'),
           style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 28), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
           onPressed: () => setState(() => _open = !_open),
-          child: Text(_open ? '隠す' : 'もっと見る'),
+          child: Text(_open ? context.l10n.profilePostCwHide : context.l10n.profilePostCwShow),
         ),
         if (_open) widget.child,
       ]);
@@ -519,20 +524,21 @@ class _RasqBodyTextState extends State<_RasqBodyText> {
 /// [onRun] = API を呼んで結果を反映する(呼ぶ側の再読み込みつき)。
 Future<void> pickRasqQueue(BuildContext context, WidgetRef ref, RasqAccountPost post, {Rect? anchor, required Future<void> Function(Future<RasqAccountPost> Function(RasqAccountPageApi api)) onRun}) async {
   void toast(String m) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(m)));
-  if (ref.read(orgateAccountProvider).value == null) return toast('RASQ アカウントにログインするとキューできます');
+  final l10n = context.l10n;
+  if (ref.read(orgateAccountProvider).value == null) return toast(l10n.profilePostLoginToQueue);
   // いいねのみ (S-023): ピッカーは出さず、いいねを付ける。
   if (post.likeOnly) return onRun((api) => api.like(post.id));
   await ref.read(stickerPacksProvider.notifier).ready;
   if (!context.mounted) return;
   final packs = ref.read(stickerPacksProvider);
   if (packs.isEmpty) {
-    final go = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.noPacks', title: 'アセットパックがありません', message: 'キューは、ストアで入れたアセットパックの絵でするリアクションです。', confirmText: 'ストアで探す', cancelText: '閉じる');
+    final go = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.noPacks', title: l10n.profilePostNoPacksTitle, message: l10n.profilePostNoPacksMessage, confirmText: l10n.profilePostNoPacksStore, cancelText: l10n.profilePostClose);
     if (go && context.mounted) context.push(Routes.store);
     return;
   }
   await openEmojiPicker(
     ref,
-    title: 'キュー',
+    title: l10n.profilePostQueue,
     closeOnPick: true,
     anchor: anchor,
     predictionContext: post.body,
@@ -618,7 +624,7 @@ class RasqPostOverlayActions extends ConsumerWidget {
               key: ValueKey('overlay.action.${a.id}'),
               icon: icon,
               color: queue && mine != null ? RasqTokens.of(context).link : Colors.white,
-              tooltip: queue ? '${a.label}(長押しで絵を選ぶ)' : a.label,
+              tooltip: queue ? context.l10n.profilePostOverlayQueueTooltip(a.label) : a.label,
               onPressed: () => perform(a, anchorOf(bctx)),
             )),
           );
@@ -648,7 +654,7 @@ class RasqPostOverlayActions extends ConsumerWidget {
           key: const ValueKey('overlay.action.more'),
           icon: Icons.more_horiz,
           color: Colors.white,
-          tooltip: 'メニュー',
+          tooltip: context.l10n.profilePostMenu,
           onPressed: () => view._more(context, ref, anchorOf(bctx), isMine),
         )),
       ),

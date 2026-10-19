@@ -15,6 +15,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart' show orgateAccountProvider;
+import '../../l10n/l10n.dart';
 import '../../text/inline_spans.dart';
 import '../settings/settings_dsl.dart';
 
@@ -130,7 +131,7 @@ class RasqPagesApi {
       final u = Uri.parse(url);
       return u.hasScheme || base == null ? u : base!.resolveUri(u);
     }
-    throw StateError('画像の URL が返りませんでした');
+    throw StateError(appL10n.profilePageImageUrlMissing);
   }
 }
 
@@ -146,7 +147,7 @@ final rasqMdPagesProvider = FutureProvider.autoDispose.family<List<RasqMdPageInf
 
 final rasqMdPageProvider = FutureProvider.autoDispose.family<RasqMdPage, ({String handle, String id})>((ref, k) async {
   final api = ref.watch(rasqPagesApiProvider);
-  if (api == null) throw StateError('RASQ のサーバーにつないでいません');
+  if (api == null) throw StateError(appL10n.profilePageNotConnected);
   return api.mdPage(k.handle, k.id);
 });
 
@@ -157,13 +158,13 @@ final rasqSideloadPagesProvider = FutureProvider.autoDispose.family<List<RasqSid
 
 /// 自作プラグインの配布物を選ぶ(テストで差し替える)。
 final rasqPagePackagePickerProvider = Provider<Future<Uint8List?> Function()>((ref) => () async {
-      final f = await fs.openFile(acceptedTypeGroups: const [fs.XTypeGroup(label: 'プラグイン(.rspkg / .rasqpkg)', extensions: ['rspkg', 'rasqpkg'])]);
+      final f = await fs.openFile(acceptedTypeGroups: [fs.XTypeGroup(label: appL10n.profilePagePackageTypeLabel, extensions: const ['rspkg', 'rasqpkg'])]);
       return f == null ? null : await f.readAsBytes();
     });
 
 /// ページに貼る画像を選ぶ(テストで差し替える)。返り = (中身, MIME)。
 final rasqPageImagePickerProvider = Provider<Future<({Uint8List bytes, String contentType})?> Function()>((ref) => () async {
-      final f = await fs.openFile(acceptedTypeGroups: const [fs.XTypeGroup(label: '画像', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'])]);
+      final f = await fs.openFile(acceptedTypeGroups: [fs.XTypeGroup(label: appL10n.profilePageImage, extensions: const ['png', 'jpg', 'jpeg', 'webp', 'gif'])]);
       if (f == null) return null;
       final name = f.name.toLowerCase();
       final type = name.endsWith('.png') ? 'image/png' : name.endsWith('.webp') ? 'image/webp' : name.endsWith('.gif') ? 'image/gif' : 'image/jpeg';
@@ -341,7 +342,7 @@ class RasqMarkdownView extends ConsumerWidget {
               ),
             'img' => ClipRRect(
                 borderRadius: BorderRadius.circular(RasqSizes.radiusMd),
-                child: Image.network(b.extra!, semanticLabel: b.text, fit: BoxFit.contain, webHtmlElementStrategy: rasqWebImageStrategy, errorBuilder: (_, _, _) => Text('(画像: ${b.text})', style: RasqTypography.caption)),
+                child: Image.network(b.extra!, semanticLabel: b.text, fit: BoxFit.contain, webHtmlElementStrategy: rasqWebImageStrategy, errorBuilder: (_, _, _) => Text(context.l10n.profilePageImageAlt(b.text), style: RasqTypography.caption)),
               ),
             'li' => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 SizedBox(width: 24, child: Text(b.extra!, style: RasqTypography.body)),
@@ -366,22 +367,23 @@ class RasqMdPageScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final page = ref.watch(rasqMdPageProvider((handle: handle, id: id)));
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: Text(page.value?.title ?? 'ページ'),
+        title: Text(page.value?.title ?? l10n.profilePageMdFallbackTitle),
         actions: [
           if (isMine && page.value != null)
             RasqIconButton(
               key: const ValueKey('rasqPage.md.edit'),
               icon: Icons.edit_outlined,
-              tooltip: '編集',
+              tooltip: l10n.profilePageEdit,
               onPressed: () => context.push(Routes.rasqMdPageEdit(id), extra: page.value),
             ),
         ],
       ),
       body: page.when(
         loading: () => const RasqLoading(),
-        error: (e, _) => RasqEmptyView(title: 'ページを読めませんでした', hint: '$e'),
+        error: (e, _) => RasqEmptyView(title: l10n.profilePageMdLoadFailed, hint: '$e'),
         data: (p) => ListView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 96), children: [RasqMarkdownView(p.body, key: const ValueKey('rasqPage.md.view'))]),
       ),
     );
@@ -411,20 +413,21 @@ class _RasqMdPageEditorScreenState extends ConsumerState<RasqMdPageEditorScreen>
   bool _busy = false;
   Timer? _save;
 
-  static const _snippets = <(String, String, String)>[
-    ('太字', '**', '**'),
-    ('見出し', '## ', ''),
-    ('箇条書き', '- ', ''),
-    ('リンク', '[', '](https://)'),
-    ('中央', '<center>', '</center>'),
-    ('大きく', '<x2>', '</x2>'),
-    ('小さく', '<small>', '</small>'),
-    ('回転', '<spin speed="1.5s">', '</spin>'),
-    ('跳ねる', '<jump>', '</jump>'),
-    ('色', '<fg color="f00">', '</fg>'),
-    ('虹', '<rainbow>', '</rainbow>'),
-    ('ルビ', '<ruby>', '<rt>よみ</rt></ruby>'),
-  ];
+  /// 道具の行のボタン: (id(キー用)、名前、前に足す文、後ろに足す文)。
+  static List<(String, String, String, String)> _snippets(AppLocalizations l) => [
+        ('bold', l.profilePageMdToolBold, '**', '**'),
+        ('heading', l.profilePageMdToolHeading, '## ', ''),
+        ('bullet', l.profilePageMdToolBullet, '- ', ''),
+        ('link', l.profilePageMdToolLink, '[', '](https://)'),
+        ('center', l.profilePageMdToolCenter, '<center>', '</center>'),
+        ('big', l.profilePageMdToolBig, '<x2>', '</x2>'),
+        ('small', l.profilePageMdToolSmall, '<small>', '</small>'),
+        ('spin', l.profilePageMdToolSpin, '<spin speed="1.5s">', '</spin>'),
+        ('jump', l.profilePageMdToolJump, '<jump>', '</jump>'),
+        ('color', l.profilePageMdToolColor, '<fg color="f00">', '</fg>'),
+        ('rainbow', l.profilePageMdToolRainbow, '<rainbow>', '</rainbow>'),
+        ('ruby', l.profilePageMdToolRuby, '<ruby>', '<rt>${l.profilePageMdToolRubyReading}</rt></ruby>'),
+      ];
 
   @override
   void initState() {
@@ -461,12 +464,13 @@ class _RasqMdPageEditorScreenState extends ConsumerState<RasqMdPageEditorScreen>
     final picked = await ref.read(rasqPageImagePickerProvider)();
     if (picked == null || api == null || !mounted) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final l10n = context.l10n;
     setState(() => _busy = true);
     try {
       final url = await api.uploadImage(picked.bytes, picked.contentType);
-      _wrap('\n![画像]($url)\n', '');
+      _wrap('\n![${l10n.profilePageImage}]($url)\n', '');
     } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text('画像を上げられませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.profilePageImageUploadFailed('$e'))));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -476,12 +480,13 @@ class _RasqMdPageEditorScreenState extends ConsumerState<RasqMdPageEditorScreen>
     final api = ref.read(rasqPagesApiProvider);
     final title = _title.text.trim();
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final l10n = context.l10n;
     if (title.isEmpty) {
-      messenger?.showSnackBar(const SnackBar(content: Text('タイトルを入れてください')));
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.profilePageMdTitleRequired)));
       return;
     }
     if (api == null) {
-      messenger?.showSnackBar(const SnackBar(content: Text('RASQ アカウントにログインすると公開できます')));
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.profilePageMdLoginToPublish)));
       return;
     }
     setState(() => _busy = true);
@@ -492,22 +497,23 @@ class _RasqMdPageEditorScreenState extends ConsumerState<RasqMdPageEditorScreen>
       ref.invalidate(rasqMdPagesProvider);
       ref.invalidate(rasqMdPageProvider);
       scheduleRasqPageImageCleanup(ref);
-      messenger?.showSnackBar(const SnackBar(content: Text('公開しました')));
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.profilePageMdPublished)));
       if (mounted) Navigator.of(context).maybePop();
     } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text('公開できませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.profilePageMdPublishFailed('$e'))));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _delete() async {
+    final l10n = context.l10n;
     final ok = await ref.read(overlayManagerProvider).showAlert(
           id: 'rasqPage.md.delete',
-          title: 'ページを削除',
-          message: widget.published == null ? '下書きを削除します。' : '公開したページと下書きを削除します。元に戻せません。',
-          confirmText: '削除する',
-          cancelText: 'キャンセル',
+          title: l10n.profilePageMdDeleteTitle,
+          message: widget.published == null ? l10n.profilePageMdDeleteDraft : l10n.profilePageMdDeletePublished,
+          confirmText: l10n.profilePageDeleteConfirm,
+          cancelText: l10n.profilePageCancel,
           destructive: true,
         );
     if (!ok || !mounted) return;
@@ -520,21 +526,22 @@ class _RasqMdPageEditorScreenState extends ConsumerState<RasqMdPageEditorScreen>
       scheduleRasqPageImageCleanup(ref);
       if (mounted) Navigator.of(context).maybePop();
     } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text('削除できませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.profilePageMdDeleteFailed('$e'))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ページを編集'),
+        title: Text(l10n.profilePageMdEditTitle),
         actions: [
-          RasqIconButton(key: const ValueKey('rasqPage.md.delete'), icon: Icons.delete_outline, tooltip: '削除', onPressed: _busy ? null : _delete),
-          RasqIconButton(key: const ValueKey('rasqPage.md.preview'), icon: _preview ? Icons.edit_note : Icons.visibility_outlined, tooltip: _preview ? '書く' : 'プレビュー', onPressed: () => setState(() => _preview = !_preview)),
+          RasqIconButton(key: const ValueKey('rasqPage.md.delete'), icon: Icons.delete_outline, tooltip: l10n.profilePageMdDelete, onPressed: _busy ? null : _delete),
+          RasqIconButton(key: const ValueKey('rasqPage.md.preview'), icon: _preview ? Icons.edit_note : Icons.visibility_outlined, tooltip: _preview ? l10n.profilePageMdWrite : l10n.profilePageMdPreview, onPressed: () => setState(() => _preview = !_preview)),
           Padding(
             padding: const EdgeInsets.only(right: RasqSpacing.sm),
-            child: FilledButton(key: const ValueKey('rasqPage.md.publish'), onPressed: _busy ? null : _publish, child: const Text('公開')),
+            child: FilledButton(key: const ValueKey('rasqPage.md.publish'), onPressed: _busy ? null : _publish, child: Text(l10n.profilePageMdPublish)),
           ),
         ],
       ),
@@ -543,7 +550,7 @@ class _RasqMdPageEditorScreenState extends ConsumerState<RasqMdPageEditorScreen>
           if (_busy) const LinearProgressIndicator(),
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-            child: TextField(key: const ValueKey('rasqPage.md.title'), controller: _title, maxLength: rasqMdTitleMax, decoration: const InputDecoration(hintText: 'タイトル')),
+            child: TextField(key: const ValueKey('rasqPage.md.title'), controller: _title, maxLength: rasqMdTitleMax, decoration: InputDecoration(hintText: l10n.profilePageMdTitleHint)),
           ),
           if (_preview)
             Expanded(
@@ -555,11 +562,11 @@ class _RasqMdPageEditorScreenState extends ConsumerState<RasqMdPageEditorScreen>
             SizedBox(
               height: 44,
               child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), children: [
-                Padding(padding: const EdgeInsets.only(right: RasqSpacing.xs), child: ActionChip(key: const ValueKey('rasqPage.md.tool.image'), avatar: const Icon(Icons.image_outlined, size: 16), label: const Text('画像'), onPressed: _busy ? null : _insertImage)),
-                for (final (label, open, close) in _snippets)
+                Padding(padding: const EdgeInsets.only(right: RasqSpacing.xs), child: ActionChip(key: const ValueKey('rasqPage.md.tool.image'), avatar: const Icon(Icons.image_outlined, size: 16), label: Text(l10n.profilePageImage), onPressed: _busy ? null : _insertImage)),
+                for (final (id, label, open, close) in _snippets(l10n))
                   Padding(
                     padding: const EdgeInsets.only(right: RasqSpacing.xs),
-                    child: ActionChip(key: ValueKey('rasqPage.md.tool.$label'), label: Text(label), onPressed: () => _wrap(open, close)),
+                    child: ActionChip(key: ValueKey('rasqPage.md.tool.$id'), label: Text(label), onPressed: () => _wrap(open, close)),
                   ),
               ]),
             ),
@@ -573,11 +580,11 @@ class _RasqMdPageEditorScreenState extends ConsumerState<RasqMdPageEditorScreen>
                   maxLines: null,
                   expands: true,
                   textAlignVertical: TextAlignVertical.top,
-                  decoration: const InputDecoration(hintText: 'Markdown で書きます。@メンション / #ハッシュタグ / :絵文字: / <center> などの MFM のタグも使えます', border: InputBorder.none),
+                  decoration: InputDecoration(hintText: l10n.profilePageMdBodyHint, border: InputBorder.none),
                 ),
               ),
             ),
-            RasqCaption('下書きはこの端末に残ります。「公開」で RASQ のページに出します', padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm)),
+            RasqCaption(l10n.profilePageMdDraftCaption, padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm)),
           ],
         ]),
       ),

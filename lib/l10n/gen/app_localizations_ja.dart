@@ -4861,6 +4861,962 @@ class AppLocalizationsJa extends AppLocalizations {
   String get onboardingTourRaiBubble => 'TL にリストを足したい';
 
   @override
+  String get profileEditTitle => 'プロフィールの更新';
+
+  @override
+  String get profileEditSave => '決定';
+
+  @override
+  String get profileEditNotLoggedIn => 'RASQ アカウントにログインしていません。';
+
+  @override
+  String get profileEditBannerRemove => 'バナーを外す';
+
+  @override
+  String get profileEditBannerPick => 'バナーを選ぶ';
+
+  @override
+  String get profileEditAvatarPick => 'アイコンを選ぶ';
+
+  @override
+  String get profileEditAvatarRemove => 'アイコンを外す';
+
+  @override
+  String get profileEditPickImage => '画像を選択';
+
+  @override
+  String get profileEditNameHint => '名前を入力..';
+
+  @override
+  String get profileEditBirthdayHint => '誕生日 (YYYY-MM-DD / MM-DD)';
+
+  @override
+  String get profileEditBirthdayHintSns => '誕生日 (YYYY-MM-DD)';
+
+  @override
+  String get profileEditHandleLabel => 'ハンドル(@ なし、a-z 0-9 _、3〜32 文字)';
+
+  @override
+  String get profileEditBioLabel => '自己紹介';
+
+  @override
+  String get profileEditBioHint => '自己紹介(500 文字まで)';
+
+  @override
+  String get profileEditLocationLabel => '場所';
+
+  @override
+  String get profileEditLinksLabel => 'リンク';
+
+  @override
+  String get profileEditLinkRemove => '削除';
+
+  @override
+  String get profileEditLinkCaptionHint => 'キャプション';
+
+  @override
+  String get profileEditLinkAdd => '追加';
+
+  @override
+  String get profileEditReload => '再読み込み';
+
+  @override
+  String get profileEditSnsTilesLabel => 'アカウントページに出す SNS アカウント';
+
+  @override
+  String get profileEditSnsTilesCaption =>
+      '「自動」では、鍵アカウントなどは出しません。薄いタイルは、いま出ていないものです。';
+
+  @override
+  String get profileEditSnsTilesCaptionDetail =>
+      '「自動」は、鍵アカウントと、直近の投稿の公開範囲がフォロワーのみに寄っているアカウントを出しません。薄いタイルは、いまは出ていないものです。変更はすぐ反映されます。';
+
+  @override
+  String profileEditSnsTileAuto(String state) {
+    return '自動($state)';
+  }
+
+  @override
+  String get profileEditSnsTileShown => '表示';
+
+  @override
+  String get profileEditSnsTileHidden => '非表示';
+
+  @override
+  String profileEditVerified(String method) {
+    return '持ち主を確認済み($method)';
+  }
+
+  @override
+  String get profileEditVerify => '持ち主を確認';
+
+  @override
+  String get profileEditShowOnSnsLabel => 'SNS のプロフィール';
+
+  @override
+  String get profileEditShowOnSnsTitle => 'SNS のプロフィールにも、つないだアカウントを出す';
+
+  @override
+  String get profileEditShowOnSnsSubtitle =>
+      'RASQ で誰かがあなたの SNS のプロフィールを見たとき、つないだアカウントを出します。';
+
+  @override
+  String get profileEditShowOnSnsDetail =>
+      'アプリで誰かがあなたの SNS のプロフィールを見たとき、この RASQ アカウントと、アカウントページに出しているほかのアカウントを出します。自己紹介に書いてあるものは重ねて出しません。変更はすぐ反映されます。';
+
+  @override
+  String get profileEditKeybaseConnect => 'Keybase をつなぐ';
+
+  @override
+  String get profileEditKeybaseConnectSubtitle =>
+      'Keybase で本人確認して、アカウントページに出します';
+
+  @override
+  String get profileEditKeybaseLinkedSubtitle => '確認済み。アカウントページに出ます';
+
+  @override
+  String get profileEditNotice =>
+      'プロフィールは、公開ページとストアのレビューに出ます。メールとパスワードは「セキュリティ」から。';
+
+  @override
+  String get profileEditNoticeDetail =>
+      'プロフィールは、RASQ の公開ページとストアのレビューに出ます。画像はサーバーで縮めて保存し直します(位置情報などは残りません)。メールアドレスとパスワードは「セキュリティ」から。';
+
+  @override
+  String get profileEditErrorHandleTaken => 'そのハンドルは使われています';
+
+  @override
+  String get profileEditErrorHandle => 'ハンドルは 3〜32 文字の a-z 0-9 _ にしてください';
+
+  @override
+  String get profileEditErrorBirthday => '誕生日は YYYY-MM-DD か MM-DD の形で入れてください';
+
+  @override
+  String get profileEditErrorLink =>
+      'リンクは、キャプション(40 文字まで)と http(s) の URL の組にしてください(8 組まで)';
+
+  @override
+  String get profileEditErrorImage =>
+      'その画像は使えません(PNG / JPEG / WebP / GIF、8 MiB まで)';
+
+  @override
+  String get profileEditErrorBio => '自己紹介は 500 文字までです';
+
+  @override
+  String get profileEditErrorLocation => '場所は 60 文字までです';
+
+  @override
+  String profileEditErrorFailed(String message) {
+    return '更新に失敗しました: $message';
+  }
+
+  @override
+  String get profileEditSnsPostsWithdrawn => '預けた鍵と、取ってきた投稿を消しました';
+
+  @override
+  String profileEditSnsPostsWithdrawFailed(String message) {
+    return '消せませんでした: $message';
+  }
+
+  @override
+  String get profileEditSnsPostsNoLogin => 'この端末に、そのアカウントのログインがありません';
+
+  @override
+  String get profileEditSnsPostsNoDid => 'このアカウントの DID が分かりません。ログインし直してください';
+
+  @override
+  String get profileEditSnsPostsBlueskyConsentTitle =>
+      'Bluesky の投稿をアカウントページに出します';
+
+  @override
+  String profileEditSnsPostsBlueskyConsentMessage(String account) {
+    return '$account の投稿を、RASQ のサーバーが Bluesky の公開の API から読み、**RASQ のアカウントページで誰でも見られる状態**にします。\n\n・Bluesky の投稿は、もともと誰でも読めます。返信とリポストは取り込みません。\n・**ログインの鍵(アプリパスワード / セッション)は預けません**。サーバーに渡すのは、このアカウントの DID とハンドルだけです。\n・使えるのは、持ち主の確認が済んだアカウントだけです(他人のアカウントの投稿を出せないように)。\n・このスイッチを切ると、取ってきた投稿は、すぐに消えます。';
+  }
+
+  @override
+  String get profileEditSnsPostsAgreeShow => '同意して出す';
+
+  @override
+  String get profileEditCancel => 'やめる';
+
+  @override
+  String get profileEditSnsPostsTokenConsentTitle => 'ログインの鍵を RASQ に預けます';
+
+  @override
+  String profileEditSnsPostsTokenConsentMessage(String account) {
+    return '$account の投稿をアカウントページに出すために、この SNS の**ログインの鍵(アクセストークン)を RASQ のサーバーに預けます**。\n\n・あなたの「公開」と「ホーム(未収載)」の投稿が、**RASQ のアカウントページで誰でも見られる状態**になります。「ホーム」はフォロワー限定ではありません。\n・フォロワー限定 / 指名・DM / ローカルのみ / 公開範囲が分からない投稿は、取り込みません。\n・鍵は、あなたの投稿を読むためだけに使います。投稿・フォローなどの操作や、ほかの目的には使いません。\n・鍵はサーバーの鍵で暗号化して保存します(RASQ のサーバーは復号できます)。アプリにも他の人にも返しません。\n・このスイッチを切ると、預けた鍵と取ってきた投稿は、すぐに消えます。\n\nこの鍵があれば、そのアカウントを操作できます。心配なときは、預けたあとでも SNS 側の設定からこの鍵(トークン)を無効にできます。';
+  }
+
+  @override
+  String get profileEditSnsPostsAgreeDeposit => '同意して預ける';
+
+  @override
+  String profileEditSnsPostsFetched(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件の投稿を取ってきました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileEditSnsPostsFetchFailed(String error) {
+    return '預けましたが、投稿を取れませんでした($error)';
+  }
+
+  @override
+  String get profileEditSnsPostsUnsupported => 'このサーバーでは、まだ使えません';
+
+  @override
+  String get profileEditSnsPostsVerifyFirst => '先に、このアカウントの「持ち主の確認」を済ませてください';
+
+  @override
+  String profileEditSnsPostsDepositFailed(String message) {
+    return '預けられませんでした: $message';
+  }
+
+  @override
+  String get profileEditSnsPostsSwitchTitle => '投稿もアカウントページに出す';
+
+  @override
+  String profileEditSnsPostsFetchError(String error) {
+    return '取得に失敗しています: $error';
+  }
+
+  @override
+  String profileEditSnsPostsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件(公開 / ホームの投稿。30 分ごとに更新)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileEditSnsPostsBlueskySubtitle =>
+      'RASQ のサーバーが Bluesky の公開の投稿を読みます(鍵は預けません)';
+
+  @override
+  String get profileEditSnsPostsTokenSubtitle =>
+      'SNS のログインの鍵を RASQ に預けます(入れるときに確認が出ます)';
+
+  @override
+  String get profileEditSnsPostsCollectionsTitle => 'この鍵を RASQ リストにも使う';
+
+  @override
+  String get profileEditSnsPostsCollectionsSubtitle =>
+      '開いた RASQ リストの取得と、見られるかの確認に使います';
+
+  @override
+  String get profileEditSnsPostsCollectionsDetail =>
+      'RASQ リスト・クリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせ、中の人の公開の投稿を取りに行く。投稿の表示のために預けた鍵とは別の目的なので、別に選ぶ(既定はオフ、選ぶ / やめるは同意の記録に残る)。';
+
+  @override
+  String get profileEditSnsPostsCollectionsConsentTitle =>
+      '預けた鍵を RASQ リストにも使います';
+
+  @override
+  String get profileEditSnsPostsCollectionsConsentMessage =>
+      '投稿の表示のために預けた鍵を、別の目的にも使います。\n\n・RASQ リストやクリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせます(見られるかの確認)。\n・リストの人の公開 / ホームの投稿を、この鍵で取りに行きます。\n・投稿・フォローなどの操作には使いません。\n・このスイッチを切ると、すぐに使わなくなります。';
+
+  @override
+  String get profileEditSnsPostsCollectionsAgree => '同意して使う';
+
+  @override
+  String profileEditSnsPostsCollectionsFailed(String message) {
+    return '変えられませんでした: $message';
+  }
+
+  @override
+  String get profileOwnershipWhereMisskey =>
+      '自己紹介か、プロフィールの「追加情報」のどれかに貼って、保存してください。';
+
+  @override
+  String get profileOwnershipWhereMastodon =>
+      '自己紹介か、プロフィールの「補足情報」のどれかに貼って、保存してください。';
+
+  @override
+  String get profileOwnershipWhereBluesky => '自己紹介(プロフィールの説明)に貼って、保存してください。';
+
+  @override
+  String get profileOwnershipWhereFields => '自己紹介か、プロフィールの項目のどれかに貼って、保存してください。';
+
+  @override
+  String get profileOwnershipWhereBio => '自己紹介に貼って、保存してください。';
+
+  @override
+  String get profileOwnershipErrorNotLinked =>
+      'この SNS アカウントは、RASQ アカウントにつながっていません';
+
+  @override
+  String get profileOwnershipErrorUnsupported => 'この SNS は、まだ持ち主の確認に対応していません';
+
+  @override
+  String get profileOwnershipErrorTooMany => '試す回数が多すぎます。しばらく待ってから、もう一度お試しください';
+
+  @override
+  String get profileOwnershipErrorNotStarted =>
+      'まだ確認の文を作っていないか、期限が切れています。「確認の文を作る」からやり直してください';
+
+  @override
+  String get profileOwnershipErrorCodeNotFound =>
+      'プロフィールに確認の文が見つかりませんでした。保存したか、公開のプロフィールに出ているかを確かめてください(反映まで少しかかることがあります)';
+
+  @override
+  String get profileOwnershipErrorProfileNotFound =>
+      'その SNS アカウントの公開のプロフィールが見つかりませんでした';
+
+  @override
+  String get profileOwnershipErrorReadFailed =>
+      'その SNS のプロフィールを読めませんでした。少し待ってから、もう一度お試しください';
+
+  @override
+  String profileOwnershipErrorFailed(String message) {
+    return '確認できませんでした: $message';
+  }
+
+  @override
+  String get profileOwnershipKeybaseErrorUsername =>
+      'Keybase のユーザー名(英小文字・数字・_、2〜16 文字)を入れてください';
+
+  @override
+  String get profileOwnershipKeybaseErrorSignature =>
+      '署名を読めませんでした。BEGIN KEYBASE SALTPACK SIGNED MESSAGE から END KEYBASE SALTPACK SIGNED MESSAGE. までを、そのまま貼ってください';
+
+  @override
+  String get profileOwnershipKeybaseErrorStatement =>
+      '署名した文が違います。上のコマンドを、そのまま使ってください';
+
+  @override
+  String get profileOwnershipKeybaseErrorKey => 'その Keybase のユーザーの鍵で署名されていません';
+
+  @override
+  String get profileOwnershipKeybaseErrorNoUser =>
+      'その Keybase のユーザーは見つかりませんでした';
+
+  @override
+  String get profileOwnershipKeybaseErrorOtherAccount =>
+      'その Keybase は、別の RASQ アカウントにつながっています';
+
+  @override
+  String get profileOwnershipKeybaseErrorExpired =>
+      '文の期限が切れたか、まだ作っていません。「署名する文を作る」からやり直してください';
+
+  @override
+  String get profileOwnershipKeybaseErrorUnreachable =>
+      'Keybase に繋がりませんでした。少し待ってから、もう一度お試しください';
+
+  @override
+  String profileOwnershipKeybaseErrorFailed(String message) {
+    return '確かめられませんでした: $message';
+  }
+
+  @override
+  String get profileOwnershipVerifyTitle => '持ち主を確認';
+
+  @override
+  String get profileOwnershipNotLinked => 'この SNS アカウントは、RASQ アカウントにつながっていません。';
+
+  @override
+  String profileOwnershipVerified(String method) {
+    return '確認済み($method)';
+  }
+
+  @override
+  String get profileOwnershipJustVerified =>
+      '確認できました。プロフィールに貼った文は、もう消してかまいません。';
+
+  @override
+  String get profileOwnershipVerifiedCaption =>
+      'アカウントページと SNS のプロフィールに、確認済みの印が付きます。';
+
+  @override
+  String get profileOwnershipVerifiedCaptionDetail =>
+      'アカウントページと、SNS のプロフィールに出る RASQ アカウントの欄に、確認済みの印が付きます。この SNS アカウントを外すまで続きます。';
+
+  @override
+  String get profileOwnershipUnsupportedKind =>
+      'この SNS は、まだ本人確認に対応していません(Misskey / Mastodon / Bluesky のみ)。';
+
+  @override
+  String get profileOwnershipIntro =>
+      'この SNS アカウントがあなたのものか確かめます。プロフィールに確認の文を一時的に貼ってください。';
+
+  @override
+  String get profileOwnershipIntroDetail =>
+      'この SNS アカウントが、あなたのものかを確かめます。確認の文をその SNS のプロフィールに一時的に貼ってもらい、RASQ がその公開のプロフィールを読んで確かめます。';
+
+  @override
+  String get profileOwnershipEffect => '確かめると、確認済みの印が付きます。';
+
+  @override
+  String get profileOwnershipEffectDetail =>
+      '確かめると、アカウントページと SNS のプロフィールの RASQ アカウントの欄に、確認済みの印が付きます。同じ SNS アカウントをほかの人がつないでいても、確認した人が優先されます。';
+
+  @override
+  String get profileOwnershipStart => '確認の文を作る';
+
+  @override
+  String get profileOwnershipStep1 => '1. この文をコピーする';
+
+  @override
+  String get profileOwnershipCopied => '確認の文をコピーしました';
+
+  @override
+  String get profileOwnershipCopy => 'コピー';
+
+  @override
+  String profileOwnershipValidUntil(String time) {
+    return '$time まで有効';
+  }
+
+  @override
+  String get profileOwnershipStep2 => '2. その SNS のプロフィールに貼る';
+
+  @override
+  String get profileOwnershipNoRewrite =>
+      'RASQ からプロフィールを書き換えることはしません。その SNS で、ご自分で貼ってください。';
+
+  @override
+  String get profileOwnershipStep3 => '3. 貼ったら「確認する」';
+
+  @override
+  String get profileOwnershipCheck => '確認する';
+
+  @override
+  String get profileOwnershipRestart => '文を作り直す';
+
+  @override
+  String get profileOwnershipKeybaseNoLinks =>
+      'Keybase の証明に、つないでいる SNS アカウントはありませんでした。';
+
+  @override
+  String profileOwnershipKeybaseLinksVerified(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Keybase の証明で、つないでいる SNS アカウント $count 件も確認済みになりました。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileOwnershipKeybaseLinked(String username, String links) {
+    return '@$username をつなぎました。$links';
+  }
+
+  @override
+  String get profileOwnershipKeybaseUnlinked =>
+      'Keybase を外しました。Keybase の証明で確認していた SNS アカウントは、未確認に戻ります。';
+
+  @override
+  String profileOwnershipKeybaseVerifiedAt(String time) {
+    return '$time に確認';
+  }
+
+  @override
+  String profileOwnershipKeybaseCaption(String username) {
+    return 'アカウントページに「Keybase: @$username」が出ます。';
+  }
+
+  @override
+  String profileOwnershipKeybaseCaptionDetail(String username) {
+    return 'アカウントページに「Keybase: @$username」が出ます。Keybase で Mastodon などの証明を足したら、「証明を読み直す」で、つないでいる SNS アカウントも確認済みになります。';
+  }
+
+  @override
+  String get profileOwnershipKeybaseRefresh => '証明を読み直す';
+
+  @override
+  String get profileOwnershipKeybaseUnlink => 'Keybase を外す';
+
+  @override
+  String get profileOwnershipKeybaseIntro =>
+      'Keybase で署名して、この RASQ アカウントとつなぎます。つないだ Keybase は公開されます。';
+
+  @override
+  String get profileOwnershipKeybaseIntroDetail =>
+      'Keybase のアカウントで署名して、この RASQ アカウントとつなぎます。つないだ Keybase は、アカウントページに出ます(Keybase のプロフィールと同じく公開です)。';
+
+  @override
+  String get profileOwnershipKeybaseUsername => 'Keybase のユーザー名';
+
+  @override
+  String get profileOwnershipKeybaseStart => '署名する文を作る';
+
+  @override
+  String get profileOwnershipKeybaseStep1 => '1. Keybase が入っている端末で、このコマンドを実行する';
+
+  @override
+  String get profileOwnershipKeybaseCopied => 'コマンドをコピーしました';
+
+  @override
+  String profileOwnershipKeybaseStatement(String statement) {
+    return '署名する文: $statement';
+  }
+
+  @override
+  String get profileOwnershipKeybaseStep2 =>
+      '2. 出てきた署名を、BEGIN から END … MESSAGE. まで貼る';
+
+  @override
+  String get profileOwnershipKeybaseVerify => '確かめる';
+
+  @override
+  String profilePagePostLimit(int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other: '投稿は $limit 件までです。古い投稿を消してから投稿してください',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePageEdit => '編集';
+
+  @override
+  String get profilePageCompose => 'RASQ に投稿';
+
+  @override
+  String profilePageNotFound(String handle) {
+    return '@$handle という RASQ アカウントはありません';
+  }
+
+  @override
+  String profilePageLoadFailed(String message) {
+    return '読み込めませんでした: $message';
+  }
+
+  @override
+  String get profilePageLoadFailedShort => '読み込めませんでした。';
+
+  @override
+  String get profilePageTabPosts => '投稿';
+
+  @override
+  String get profilePageTabMedia => 'メディア';
+
+  @override
+  String get profilePageTabPages => 'ページ';
+
+  @override
+  String get profilePageTabLists => 'リスト';
+
+  @override
+  String get profilePageTabClips => 'クリップ';
+
+  @override
+  String get profilePageTabPlugins => 'プラグイン';
+
+  @override
+  String get profilePageTabReviews => 'レビュー';
+
+  @override
+  String get profilePageTileNoDestination => 'このアカウントの行き先が分かりません';
+
+  @override
+  String profilePageOpenFailed(String url) {
+    return '開けませんでした: $url';
+  }
+
+  @override
+  String get profilePageListsEmptyMine => '公開した RASQ リストがここに出ます(リストの画面から作れます)。';
+
+  @override
+  String get profilePageClipsEmptyMine =>
+      '公開した RASQ クリップがここに出ます(クリップのページの「公開する」)。';
+
+  @override
+  String get profilePageListsEmpty => '公開しているリストはありません。';
+
+  @override
+  String get profilePageClipsEmpty => '公開しているクリップはありません。';
+
+  @override
+  String profilePageSince(String date) {
+    return '$dateから';
+  }
+
+  @override
+  String profilePagePinLimit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '固定できるのは $count 件までです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profilePagePinFailed(String message) {
+    return '固定できませんでした: $message';
+  }
+
+  @override
+  String get profilePagePinned => '固定された投稿';
+
+  @override
+  String profilePagePostsNote(int limit, int used) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other:
+          'RASQ の投稿は $limit 件までです($used / $limit)。SNS の投稿は、ログインの鍵を預けると一緒に出ます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profilePagePostsNoteDetail(int limit, int used) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other:
+          'RASQ アカウントとしての投稿は、いまは $limit 件までです($used / $limit)。SNS アカウントの投稿は、そのアカウントのアクセストークンを RASQ に預けると、ここに一緒に出ます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePageSnsHintTitle => 'つないだ SNS アカウントの投稿は、まだここに出ていません。';
+
+  @override
+  String get profilePageSnsHint => 'プロフィール編集で「投稿もアカウントページに出す」を入れると、ここに出ます。';
+
+  @override
+  String get profilePageSnsHintDetail =>
+      'プロフィール編集の「アカウントページに出す SNS アカウント」で、アカウントごとに「投稿もアカウントページに出す」を入れると(その SNS のアクセストークンを RASQ に預けます)、公開 / ホームの投稿がここに出ます。';
+
+  @override
+  String get profilePageSnsHintOpen => 'SNS の投稿を出す設定へ';
+
+  @override
+  String get profilePageNoPostsYet => '投稿はまだありません。';
+
+  @override
+  String get profilePageNoMediaYet => 'メディアはまだありません。';
+
+  @override
+  String get profilePageNoReviewsYet => 'レビューはまだありません。';
+
+  @override
+  String get profilePageNoPluginsPublished => '公開したプラグインはありません。';
+
+  @override
+  String get profilePageImageUrlMissing => '画像の URL が返りませんでした';
+
+  @override
+  String get profilePageNotConnected => 'RASQ のサーバーにつないでいません';
+
+  @override
+  String get profilePagePackageTypeLabel => 'プラグイン(.rspkg / .rasqpkg)';
+
+  @override
+  String get profilePageImage => '画像';
+
+  @override
+  String profilePageImageAlt(String alt) {
+    return '(画像: $alt)';
+  }
+
+  @override
+  String get profilePageMdFallbackTitle => 'ページ';
+
+  @override
+  String get profilePageMdLoadFailed => 'ページを読めませんでした';
+
+  @override
+  String get profilePageMdToolBold => '太字';
+
+  @override
+  String get profilePageMdToolHeading => '見出し';
+
+  @override
+  String get profilePageMdToolBullet => '箇条書き';
+
+  @override
+  String get profilePageMdToolLink => 'リンク';
+
+  @override
+  String get profilePageMdToolCenter => '中央';
+
+  @override
+  String get profilePageMdToolBig => '大きく';
+
+  @override
+  String get profilePageMdToolSmall => '小さく';
+
+  @override
+  String get profilePageMdToolSpin => '回転';
+
+  @override
+  String get profilePageMdToolJump => '跳ねる';
+
+  @override
+  String get profilePageMdToolColor => '色';
+
+  @override
+  String get profilePageMdToolRainbow => '虹';
+
+  @override
+  String get profilePageMdToolRuby => 'ルビ';
+
+  @override
+  String get profilePageMdToolRubyReading => 'よみ';
+
+  @override
+  String profilePageImageUploadFailed(String error) {
+    return '画像を上げられませんでした: $error';
+  }
+
+  @override
+  String get profilePageMdTitleRequired => 'タイトルを入れてください';
+
+  @override
+  String get profilePageMdLoginToPublish => 'RASQ アカウントにログインすると公開できます';
+
+  @override
+  String get profilePageMdPublished => '公開しました';
+
+  @override
+  String profilePageMdPublishFailed(String error) {
+    return '公開できませんでした: $error';
+  }
+
+  @override
+  String get profilePageMdDeleteTitle => 'ページを削除';
+
+  @override
+  String get profilePageMdDeleteDraft => '下書きを削除します。';
+
+  @override
+  String get profilePageMdDeletePublished => '公開したページと下書きを削除します。元に戻せません。';
+
+  @override
+  String get profilePageDeleteConfirm => '削除する';
+
+  @override
+  String get profilePageCancel => 'キャンセル';
+
+  @override
+  String profilePageMdDeleteFailed(String error) {
+    return '削除できませんでした: $error';
+  }
+
+  @override
+  String get profilePageMdEditTitle => 'ページを編集';
+
+  @override
+  String get profilePageMdDelete => '削除';
+
+  @override
+  String get profilePageMdWrite => '書く';
+
+  @override
+  String get profilePageMdPreview => 'プレビュー';
+
+  @override
+  String get profilePageMdPublish => '公開';
+
+  @override
+  String get profilePageMdTitleHint => 'タイトル';
+
+  @override
+  String get profilePageMdBodyHint =>
+      'Markdown で書きます。@メンション / #ハッシュタグ / :絵文字: / <center> などの MFM のタグも使えます';
+
+  @override
+  String get profilePageMdDraftCaption => '下書きはこの端末に残ります。「公開」で RASQ のページに出します';
+
+  @override
+  String get profilePageRasqAccount => 'RASQ アカウント';
+
+  @override
+  String profilePageViewingVerified(String method) {
+    return 'このアカウントの持ち主を確認済み($method)';
+  }
+
+  @override
+  String get profilePageVerifiedSemantics => '持ち主を確認済み';
+
+  @override
+  String get profilePostLoginToUse => 'RASQ アカウントにログインすると使えます';
+
+  @override
+  String get profilePostLoginToReply => 'RASQ アカウントにログインすると返信できます';
+
+  @override
+  String get profilePostLoginToRebroad => 'RASQ アカウントにログインするとリブロードできます';
+
+  @override
+  String get profilePostLoginToQueue => 'RASQ アカウントにログインするとキューできます';
+
+  @override
+  String get profilePostErrorInstallPack => 'このパックをストアからインストールすると、この絵でキューできます';
+
+  @override
+  String get profilePostErrorForbidden => 'この投稿には操作できません';
+
+  @override
+  String get profilePostErrorRebroadLimit => 'この投稿は、これ以上リブロードできません';
+
+  @override
+  String get profilePostErrorReplyLimit => '返信は 100 件までです。古い返信を消してください';
+
+  @override
+  String get profilePostErrorGone => 'この投稿 / 絵は、もうありません';
+
+  @override
+  String profilePostErrorFailed(String message) {
+    return '失敗しました: $message';
+  }
+
+  @override
+  String get profilePostMenuReactions => 'リアクションを表示';
+
+  @override
+  String get profilePostMenuCopyLink => 'リンクをコピー';
+
+  @override
+  String get profilePostMenuOpenBrowser => 'ブラウザで開く';
+
+  @override
+  String get profilePostMenuEditActions => 'アクションバーを編集';
+
+  @override
+  String get profilePostMenuUnpin => '固定を外す';
+
+  @override
+  String get profilePostMenuPin => '固定する';
+
+  @override
+  String get profilePostMenuDelete => '削除';
+
+  @override
+  String get profilePostLinkCopied => 'リンクをコピーしました';
+
+  @override
+  String get profilePostDeleteTitle => '投稿を削除';
+
+  @override
+  String get profilePostDeleteMessage => 'この投稿と、付いている画像を削除します。元に戻せません。';
+
+  @override
+  String get profilePostDeleteConfirm => '削除する';
+
+  @override
+  String get profilePostCancel => 'キャンセル';
+
+  @override
+  String get profilePostQuoteUnavailable => '引用元の投稿は見られません';
+
+  @override
+  String get profilePostReply => '返信';
+
+  @override
+  String get profilePostRebroad => 'リブロード';
+
+  @override
+  String get profilePostRebroadUndo => 'リブロードを取り消す';
+
+  @override
+  String get profilePostQuote => '引用';
+
+  @override
+  String get profilePostQueue => 'キュー';
+
+  @override
+  String get profilePostLike => 'いいね';
+
+  @override
+  String get profilePostQuoteFollowersOnly => 'フォロワー限定の投稿は引用できません';
+
+  @override
+  String profilePostRebroadedBy(String name) {
+    return '$name がリブロード';
+  }
+
+  @override
+  String get profilePostReplyToDeleted => '削除された投稿への返信';
+
+  @override
+  String get profilePostShare => '共有';
+
+  @override
+  String get profilePostCwHide => '隠す';
+
+  @override
+  String get profilePostCwShow => 'もっと見る';
+
+  @override
+  String get profilePostNoPacksTitle => 'アセットパックがありません';
+
+  @override
+  String get profilePostNoPacksMessage => 'キューは、ストアで入れたアセットパックの絵でするリアクションです。';
+
+  @override
+  String get profilePostNoPacksStore => 'ストアで探す';
+
+  @override
+  String get profilePostClose => '閉じる';
+
+  @override
+  String profilePostOverlayQueueTooltip(String label) {
+    return '$label(長押しで絵を選ぶ)';
+  }
+
+  @override
+  String get profilePostMenu => 'メニュー';
+
+  @override
+  String get profilePostTitle => '投稿';
+
+  @override
+  String get profilePostGone => 'この投稿は、もうありません';
+
+  @override
+  String profilePostLoadFailed(String message) {
+    return '読み込めませんでした: $message';
+  }
+
+  @override
+  String get profilePostParentDeleted => '元の投稿は削除されています。';
+
+  @override
+  String profilePostRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '返信 $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePostNoRepliesYet => '返信はまだありません。';
+
+  @override
+  String get profilePostNoReplies => '返信はありません';
+
+  @override
+  String get profilePostNoRebroads => 'リブロードはありません';
+
+  @override
+  String get profilePostNoQuotes => '引用はありません';
+
+  @override
+  String get profilePostNoQueues => 'キューはありません';
+
+  @override
+  String get profilePostReactionsTitle => 'リアクション';
+
+  @override
+  String get profilePostYou => 'あなた';
+
+  @override
   String get raiModeInstruction => 'インストラクション';
 
   @override
