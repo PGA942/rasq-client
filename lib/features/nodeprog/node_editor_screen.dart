@@ -12,6 +12,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/rasq_collections_api.dart' show RasqCollection;
+import '../../l10n/l10n.dart';
 import '../../shell/app_overlay_root.dart';
 import '../../shell/headers.dart';
 import '../collections/rasq_list_picker.dart' show rasqListCandidatesProvider;
@@ -122,6 +123,7 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
   final acctOptions = accounts;
   final blueskyAccounts = [for (final s in sessions) if (s.account.kind == SnsKind.bluesky) '${s.account}'];
   final timelineIds = ref.watch(_nodeTimelineIdsProvider);
+  final l = appL10n;
   NodeCatalogEntry withOptions(NodeCatalogEntry e, String label, List<String> options) {
     if (options.isEmpty) return e;
     return NodeCatalogEntry(
@@ -144,7 +146,7 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
   }
 
   return [
-    for (final e in builtinNodeCatalog)
+    for (final e in builtinNodeCatalogOf(l))
       switch (e.type) {
         'tl.list' => withOptions(withOptions(e, 'リスト', listNames), 'アカウント', acctOptions),
         'tl.feed' => withOptions(e, 'アカウント', blueskyAccounts),
@@ -158,12 +160,12 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
     for (final c in customs)
       NodeCatalogEntry(
         type: 'plugin:${c.id}',
-        title: '${c.label}でソート',
+        title: l.nodeprogEditorPluginSortTitle(c.label),
         icon: Icons.extension_outlined,
-        genre: 'ソート/辞書',
-        author: 'TLプラグイン',
-        description: 'プラグインの並べ方で投稿を並べ替えます。',
-        detail: '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
+        genre: l.nodeprogCatalogGenreSortDictionary,
+        author: l.nodeprogEditorPluginSortAuthor,
+        description: l.nodeprogEditorPluginSortDescription,
+        detail: l.nodeprogEditorPluginSortDetail,
         inputs: [
           const NodePort(label: '投稿リスト', dataType: '投稿リスト'),
           // スロットの TL プラグイン (D-171): パラメーター(JSON)は「ノードを設定」FOW の RRL で編集。
@@ -249,12 +251,12 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     // 関数の中身の編集 (D-118): タイトルに関数名を出す。
     if (_scope.startsWith('fn:')) {
       final def = ref.read(customFunctionsProvider).where((d) => d.id == _scope).firstOrNull;
-      return '関数の中身${def == null ? '' : ' — ${def.name}'}';
+      return def == null ? context.l10n.nodeprogEditorTitleFunctionBody : context.l10n.nodeprogEditorTitleFunctionBodyNamed(def.name);
     }
     return switch (_scope) {
-      'composer' => '投稿先のカスタマイズ',
-      'trend' => 'トレンドをカスタマイズ',
-      _ => 'タイムラインをカスタマイズ',
+      'composer' => context.l10n.nodeprogEditorTitleComposer,
+      'trend' => context.l10n.nodeprogEditorTitleTrend,
+      _ => context.l10n.nodeprogEditorTitleTimeline,
     };
   }
 
@@ -377,17 +379,19 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   /// (スコープ, ラベル, ユーザー作成か)。基本タブ + ノードTLタブ。
   /// トレンドのエディタは ノート/フォロー中/ユーザー のタブ (D-107)。
   List<(String, String, bool)> _tabs() {
+    final l = context.l10n;
     if (_scope.startsWith('trend')) {
-      return const [('trend', 'ノート', false), ('trend.following', 'フォロー中', false), ('trend.users', 'ユーザー', false)];
+      return [('trend', l.nodeprogEditorTabTrendNotes, false), ('trend.following', l.nodeprogEditorTabFollowing, false), ('trend.users', l.nodeprogEditorTabTrendUsers, false)];
     }
     final nodeTabs = ref.watch(nodeTabsProvider);
+
     final tabs = <(String, String, bool)>[
-      ('tl.bundle', '総合', false),
-      ('tl.social', 'おすすめ', false),
-      ('tl.home', 'フォロー中', false),
-      ('tl.relational', '関連', false),
-      ('tl.local', 'ローカル', false),
-      ('tl.global', 'グローバル', false),
+      ('tl.bundle', l.nodeprogEditorTabBundle, false),
+      ('tl.social', l.nodeprogEditorTabSocial, false),
+      ('tl.home', l.nodeprogEditorTabFollowing, false),
+      ('tl.relational', l.nodeprogEditorTabRelational, false),
+      ('tl.local', l.nodeprogEditorTabLocal, false),
+      ('tl.global', l.nodeprogEditorTabGlobal, false),
       for (final t in nodeTabs) ('tl.${t.id}', t.label, true),
     ];
     if (_scope.startsWith('tl.') && !tabs.any((t) => t.$1 == _scope)) {
@@ -434,7 +438,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
               ]),
             ),
           ),
-          if (_scope.startsWith('tl.')) RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
+          if (_scope.startsWith('tl.')) RasqIconButton(icon: Icons.add, size: 20, tooltip: context.l10n.nodeprogEditorAddTabTooltip, onPressed: _addTab),
         ]),
       ),
     );
@@ -448,8 +452,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
         title: Text(title, style: RasqTypography.title),
         content: TextField(controller: controller, autofocus: true, style: RasqTypography.bodySmall, decoration: InputDecoration(hintText: hint, isDense: true)),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('キャンセル')),
-          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('決定')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(ctx.l10n.nodeprogEditorCancelButton)),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(ctx.l10n.nodeprogEditorConfirmButton)),
         ],
       ),
     );
@@ -457,7 +461,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   }
 
   Future<void> _addTab() async {
-    final name = await _promptText('新しいタブ', hint: 'タブ名');
+    final name = await _promptText(context.l10n.nodeprogEditorNewTabTitle, hint: context.l10n.nodeprogEditorTabNameHint);
     if (name == null || name.isEmpty || !mounted) return;
     final tab = NodeTab(id: 'node:${DateTime.now().millisecondsSinceEpoch}', label: name);
     await saveNodeTabs(ref, [...ref.read(nodeTabsProvider), tab]);
@@ -469,7 +473,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     final tabs = ref.read(nodeTabsProvider);
     final cur = tabs.where((t) => t.id == id).firstOrNull;
     if (cur == null) return;
-    final name = await _promptText('タブ名を変更', initial: cur.label);
+    final name = await _promptText(context.l10n.nodeprogEditorRenameTab, initial: cur.label);
     if (name == null || name.isEmpty || !mounted) return;
     await saveNodeTabs(ref, [for (final t in tabs) t.id == id ? NodeTab(id: id, label: name) : t]);
     setState(() {});
@@ -491,11 +495,12 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     final anchor = box.localToGlobal(Offset.zero) & box.size;
     final ownTab = _scope.startsWith('tl.node:') && ref.read(nodeTabsProvider).any((t) => 'tl.${t.id}' == _scope);
     final bundleTabs = ref.read(bundleNodeTabsVisibleProvider);
+    final l = context.l10n;
     final pick = await _manager.showDropdown<String>(id: 'nodeprog.more', anchor: anchor, dense: true, items: [
-      RasqDropdownItem('タブ名を変更', 'rename', enabled: ownTab),
-      RasqDropdownItem('タブを削除', 'deleteTab', enabled: ownTab, destructive: true),
-      const RasqDropdownItem('グラフをクリア', 'clear'),
-      RasqDropdownItem('バンドルでノードTLを集合表示', 'bundleTabs', checked: bundleTabs),
+      RasqDropdownItem(l.nodeprogEditorRenameTab, 'rename', enabled: ownTab),
+      RasqDropdownItem(l.nodeprogEditorDeleteTab, 'deleteTab', enabled: ownTab, destructive: true),
+      RasqDropdownItem(l.nodeprogEditorClearGraph, 'clear'),
+      RasqDropdownItem(l.nodeprogEditorBundleTabsToggle, 'bundleTabs', checked: bundleTabs),
     ]);
     if (!mounted) return;
     switch (pick) {
@@ -558,7 +563,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     manager
         .showFow<void>(
           id: nodePaletteFowId,
-          semanticsLabel: 'プラグインノードを検索',
+          semanticsLabel: context.l10n.nodeprogEditorPaletteSearchHint,
           spec: spec,
           builder: (ctx, handle) => _NodePalettePanel(spec: spec, scopeOf: () => _scope, onAdd: (e) => _addNode(e, _viewCenter()), onCreateFunction: () => _createFunction(_viewCenter())),
         )
@@ -669,7 +674,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     // 形式ゲート (D-092): ジャンル(色)不一致・形式指定の食い違いは接続不可。
     if (!portsCompatible(out, input)) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('接続できません: ${out.typeLabel} → ${input.typeLabel}(形式が合いません)'),
+        content: Text(context.l10n.nodeprogEditorConnectTypeMismatch(out.typeLabel, input.typeLabel)),
+
         duration: const Duration(seconds: 2),
       ));
       return;
@@ -745,8 +751,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
           title: Text(port.label, style: RasqTypography.title),
           content: TextField(controller: controller, autofocus: true, style: RasqTypography.bodySmall),
           actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('キャンセル')),
-            TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('決定')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(ctx.l10n.nodeprogEditorCancelButton)),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(ctx.l10n.nodeprogEditorConfirmButton)),
           ],
         ),
       );
@@ -795,34 +801,35 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
                 ),
             ]);
         final valid = name.text.trim().isNotEmpty && (kind == 'cond' ? tags.isNotEmpty : (ins.isNotEmpty || outs.isNotEmpty));
+        final l = ctx.l10n;
         return AlertDialog(
-          title: Text('カスタム関数を作成', style: RasqTypography.title),
+          title: Text(l.nodeprogEditorCreateFunction, style: RasqTypography.title),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              TextField(controller: name, autofocus: true, style: RasqTypography.bodySmall, decoration: const InputDecoration(hintText: '関数名', isDense: true), onChanged: (_) => setLocal(() {})),
+              TextField(controller: name, autofocus: true, style: RasqTypography.bodySmall, decoration: InputDecoration(hintText: l.nodeprogEditorFunctionNameHint, isDense: true), onChanged: (_) => setLocal(() {})),
               const SizedBox(height: RasqSpacing.sm),
-              Text('入力元', style: RasqTypography.caption),
+              Text(l.nodeprogEditorFunctionSourceLabel, style: RasqTypography.caption),
               Row(children: [
-                ChoiceChip(label: const Text('条件'), selected: kind == 'cond', visualDensity: VisualDensity.compact, onSelected: (_) => setLocal(() => kind = 'cond')),
+                ChoiceChip(label: Text(l.nodeprogEditorFunctionSourceCond), selected: kind == 'cond', visualDensity: VisualDensity.compact, onSelected: (_) => setLocal(() => kind = 'cond')),
                 const SizedBox(width: 6),
-                ChoiceChip(label: const Text('データ'), selected: kind == 'data', visualDensity: VisualDensity.compact, onSelected: (_) => setLocal(() => kind = 'data')),
+                ChoiceChip(label: Text(l.nodeprogEditorFunctionSourceData), selected: kind == 'data', visualDensity: VisualDensity.compact, onSelected: (_) => setLocal(() => kind = 'data')),
               ]),
               const SizedBox(height: RasqSpacing.sm),
               if (kind == 'cond') ...[
-                Text('条件タグ(複数選ぶと下側の分岐が増えます)', style: RasqTypography.caption),
+                Text(l.nodeprogEditorFunctionCondTagsLabel, style: RasqTypography.caption),
                 chips(condTagOptions, tags),
               ] else ...[
-                Text('入力(データ形式)', style: RasqTypography.caption),
+                Text(l.nodeprogEditorFunctionInputsLabel, style: RasqTypography.caption),
                 chips(dataTypes, ins),
                 const SizedBox(height: RasqSpacing.sm),
-                Text('出力(データ形式)', style: RasqTypography.caption),
+                Text(l.nodeprogEditorFunctionOutputsLabel, style: RasqTypography.caption),
                 chips(dataTypes, outs),
               ],
             ]),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('キャンセル')),
-            TextButton(onPressed: valid ? () => Navigator.of(ctx).pop(true) : null, child: const Text('作成')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(ctx.l10n.nodeprogEditorCancelButton)),
+            TextButton(onPressed: valid ? () => Navigator.of(ctx).pop(true) : null, child: Text(l.nodeprogEditorCreateButton)),
           ],
         );
       }),
@@ -847,22 +854,23 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   Future<void> _nodeMenu(GraphNode n, Offset globalPos) async {
     setState(() => _selected = n.id);
     final manager = ref.read(overlayManagerProvider);
+    final l = context.l10n;
     final pick = await manager.showDropdown<String>(
       id: 'nodeprog.node',
       anchor: globalPos & const Size(1, 1),
       dense: true,
       items: [
-        const RasqDropdownItem('ノード情報', 'info'),
+        RasqDropdownItem(l.nodeprogEditorMenuInfo, 'info'),
         // スロットの TL プラグイン (D-171): パラメーターを RRL で編集。
-        if (slotSortNodeOf(n.type) != null) const RasqDropdownItem('ノードを設定', 'params'),
+        if (slotSortNodeOf(n.type) != null) RasqDropdownItem(l.nodeprogEditorParamsTitle, 'params'),
         // 関数の中身の編集 (D-118): fn.input → … → fn.output のサブグラフへ。
-        if (n.type.startsWith('fn:')) const RasqDropdownItem('関数の中身を編集', 'fnbody'),
+        if (n.type.startsWith('fn:')) RasqDropdownItem(l.nodeprogEditorMenuEditFunctionBody, 'fnbody'),
         // ストア統合 (M4/D-120): プラグインノードは提供元のページへ、
         // それ以外はストアホームへ。
-        const RasqDropdownItem('プラグインストアに移動', 'store'),
-        const RasqDropdownItem('コピー', 'copy'),
-        RasqDropdownItem('ペースト', 'paste', enabled: _clipboard != null),
-        const RasqDropdownItem('削除', 'delete', destructive: true),
+        RasqDropdownItem(l.nodeprogEditorMenuStore, 'store'),
+        RasqDropdownItem(l.nodeprogEditorMenuCopy, 'copy'),
+        RasqDropdownItem(l.nodeprogEditorMenuPaste, 'paste', enabled: _clipboard != null),
+        RasqDropdownItem(l.nodeprogEditorMenuDelete, 'delete', destructive: true),
       ],
     );
     if (!mounted) return;
@@ -909,7 +917,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     manager
         .showFow<Map<String, Object?>>(
           id: nodeParamsFowId,
-          semanticsLabel: 'ノードを設定',
+          semanticsLabel: context.l10n.nodeprogEditorParamsTitle,
           spec: spec,
           builder: (ctx, handle) => PluginParamsPanel(
             nodeType: n.type,
@@ -1111,7 +1119,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
         leadingAvatar: _ownerSession == null ? null : ownerSummaryOf(_ownerSession!),
         actions: [
           Builder(builder: (ctx) {
-            return RasqIconButton(icon: Icons.more_horiz, tooltip: 'その他', onPressed: () => _moreMenu(ctx));
+            return RasqIconButton(icon: Icons.more_horiz, tooltip: ctx.l10n.nodeprogEditorMoreTooltip, onPressed: () => _moreMenu(ctx));
           }),
         ],
         bottom: _scope.startsWith('tl.') || _scope.startsWith('trend') ? _tabBar() : null,
@@ -1122,7 +1130,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
         // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
         heroTag: 'fab.nodeEditor',
         onPressed: _openPalette,
-        tooltip: 'ノードを検索',
+        tooltip: context.l10n.nodeprogEditorSearchNodesTooltip,
         shape: const CircleBorder(),
         child: const Icon(Icons.manage_search),
       ),
@@ -1223,7 +1231,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
                   ),
                 ),
                 if (_loaded && _graph.nodes.isEmpty)
-                  const Positioned.fill(child: IgnorePointer(child: RasqEmptyView(title: 'ノードがありません', hint: '下の検索から追加(タップで詳細、長押しでドラッグ)'))),
+                  Positioned.fill(child: IgnorePointer(child: RasqEmptyView(title: context.l10n.nodeprogEditorInlineEmpty, hint: context.l10n.nodeprogEditorEmptyHint))),
                 // ツールバー (D-235): 範囲選択 / 削除 / 整理整頓 / − / % / + / 全体。
                 // ツールバー (D-236): RAi の入力タイルと同じく掴んで動かせる(既定は右上)。
                 Positioned(
@@ -1251,6 +1259,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
 
   Widget _toolbar(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l = context.l10n;
     return Material(
       color: scheme.surface.withValues(alpha: 0.92),
       elevation: 2,
@@ -1258,17 +1267,17 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          RasqIconButton(key: const ValueKey('nodes.select'), icon: _selectMode ? Icons.highlight_alt : Icons.highlight_alt_outlined, size: 18, tooltip: _selectMode ? '範囲選択をやめる' : '範囲選択', color: _selectMode ? RasqColors.link : null, onPressed: () => setState(() => _selectMode = !_selectMode)),
-          RasqIconButton(key: const ValueKey('nodes.deleteSelected'), icon: Icons.delete_outline, size: 18, tooltip: '選んだノードを削除', onPressed: _selectedIds.isEmpty ? null : _removeSelected),
-          RasqIconButton(key: const ValueKey('nodes.tidy'), icon: Icons.auto_fix_high_outlined, size: 18, tooltip: '整理整頓', onPressed: _graph.nodes.isEmpty ? null : _tidy),
-          RasqIconButton(key: const ValueKey('nodes.zoomOut'), icon: Icons.remove, size: 18, tooltip: '縮小', onPressed: () => _zoomTo(_scale / 1.25)),
+          RasqIconButton(key: const ValueKey('nodes.select'), icon: _selectMode ? Icons.highlight_alt : Icons.highlight_alt_outlined, size: 18, tooltip: _selectMode ? l.nodeprogEditorToolbarSelectStop : l.nodeprogEditorToolbarSelect, color: _selectMode ? RasqColors.link : null, onPressed: () => setState(() => _selectMode = !_selectMode)),
+          RasqIconButton(key: const ValueKey('nodes.deleteSelected'), icon: Icons.delete_outline, size: 18, tooltip: l.nodeprogEditorToolbarDeleteSelected, onPressed: _selectedIds.isEmpty ? null : _removeSelected),
+          RasqIconButton(key: const ValueKey('nodes.tidy'), icon: Icons.auto_fix_high_outlined, size: 18, tooltip: l.nodeprogEditorToolbarTidy, onPressed: _graph.nodes.isEmpty ? null : _tidy),
+          RasqIconButton(key: const ValueKey('nodes.zoomOut'), icon: Icons.remove, size: 18, tooltip: l.nodeprogEditorToolbarZoomOut, onPressed: () => _zoomTo(_scale / 1.25)),
           InkWell(
             key: const ValueKey('nodes.zoomReset'),
             onTap: () => _zoomTo(1.0),
             child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: Text('${(_scale * 100).round()}%', style: RasqTypography.caption)),
           ),
-          RasqIconButton(key: const ValueKey('nodes.zoomIn'), icon: Icons.add, size: 18, tooltip: '拡大', onPressed: () => _zoomTo(_scale * 1.25)),
-          RasqIconButton(key: const ValueKey('nodes.fit'), icon: Icons.fit_screen_outlined, size: 18, tooltip: '全体表示', onPressed: _graph.nodes.isEmpty ? null : _fitAll),
+          RasqIconButton(key: const ValueKey('nodes.zoomIn'), icon: Icons.add, size: 18, tooltip: l.nodeprogEditorToolbarZoomIn, onPressed: () => _zoomTo(_scale * 1.25)),
+          RasqIconButton(key: const ValueKey('nodes.fit'), icon: Icons.fit_screen_outlined, size: 18, tooltip: l.nodeprogEditorToolbarFit, onPressed: _graph.nodes.isEmpty ? null : _fitAll),
         ]),
       ),
     );
@@ -1302,7 +1311,8 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
   final _barKey = GlobalKey();
   bool _toggled = false;
   bool _fitScheduled = false;
-  String _genre = 'すべて';
+  /// 選んだジャンル。空 = すべて。
+  String _genre = '';
 
   @override
   void initState() {
@@ -1360,7 +1370,8 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
     final manager = ref.read(overlayManagerProvider);
     final catalog = ref.watch(nodeCatalogProvider);
     final query = _search.text.trim();
-    final genres = ['すべて', ...{for (final e in catalog) e.genre}];
+    final l = context.l10n;
+    final genres = ['', ...{for (final e in catalog) e.genre}];
     // スコープ限定ノード: ポスト先はコンポーザー (D-106)、関数入出力は
     // 関数の中身の編集画面 (D-118) だけに出す。
     bool scopeAllows(NodeCatalogEntry e) {
@@ -1373,7 +1384,7 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
     final entries = [
       for (final e in catalog)
         if (scopeAllows(e))
-          if ((_genre == 'すべて' || e.genre == _genre) && (query.isEmpty || e.title.contains(query) || (e.description ?? '').contains(query) || (e.detail ?? '').contains(query))) e,
+          if ((_genre.isEmpty || e.genre == _genre) && (query.isEmpty || e.title.contains(query) || (e.description ?? '').contains(query) || (e.detail ?? '').contains(query))) e,
     ];
 
     _scheduleFit();
@@ -1390,44 +1401,44 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
               expanded: _toggled || _focus.hasFocus,
               controller: _search,
               focusNode: _focus,
-              hintText: 'プラグインノードを検索',
+              hintText: l.nodeprogEditorPaletteSearchHint,
               onDropdownTap: () => setState(() => _toggled = !_toggled),
               filterChips: [
                 RasqFilterChipItem(
-                  label: '並び替え: 関連順',
+                  label: l.nodeprogEditorPaletteSortChip,
                   dropdown: true,
                   onAnchorTap: (rect) => manager.showDropdown<String>(
                     id: 'nodeprog.sort',
                     ownerId: nodePaletteFowId,
                     anchor: rect,
                     dense: true,
-                    items: const [RasqDropdownItem('関連順', 'relevance', checked: true)],
+                    items: [RasqDropdownItem(l.nodeprogEditorPaletteSortRelevance, 'relevance', checked: true)],
                   ),
                 ),
                 RasqFilterChipItem(
-                  label: 'ジャンル: ${_genre == 'すべて' ? 'ソート/辞書' : _genre}',
+                  label: l.nodeprogEditorPaletteGenreChip(_genre.isEmpty ? l.nodeprogCatalogGenreSortDictionary : _genre),
                   dropdown: true,
-                  selected: _genre != 'すべて',
+                  selected: _genre.isNotEmpty,
                   onAnchorTap: (rect) async {
                     final pick = await manager.showDropdown<String>(
                       id: 'nodeprog.genre',
                       ownerId: nodePaletteFowId,
                       anchor: rect,
                       dense: true,
-                      items: [for (final g in genres) RasqDropdownItem(g, g, checked: g == _genre)],
+                      items: [for (final g in genres) RasqDropdownItem(g.isEmpty ? l.nodeprogEditorPaletteGenreAll : g, g, checked: g == _genre)],
                     );
                     if (pick != null) setState(() => _genre = pick);
                   },
                 ),
               ],
-              trailing: RasqIconButton(icon: Icons.settings_outlined, size: 18, tooltip: '検索設定(準備中)', onPressed: () {}),
+              trailing: RasqIconButton(icon: Icons.settings_outlined, size: 18, tooltip: l.nodeprogEditorPaletteSettingsTooltip, onPressed: () {}),
             ),
           ),
         ]),
     );
     // カスタム関数の作成タイル (D-119): 空白長押しだけだと見つけにくいので、
     // 検索(パレット)の「関数」ジャンル/すべての先頭にも作成導線を置く。
-    final showCreate = (_genre == 'すべて' || _genre == '関数') && (query.isEmpty || 'カスタム関数を作成'.contains(query));
+    final showCreate = (_genre.isEmpty || _genre == l.nodeprogCatalogGenreFunction) && (query.isEmpty || l.nodeprogEditorCreateFunction.contains(query));
 
     // 最小表示(折りたたみ)時はバーだけをクリップ描画 — 端数ではみ出さない。
     return LayoutBuilder(builder: (context, c) {
@@ -1438,7 +1449,7 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
         bar,
         Expanded(
           child: entries.isEmpty && !showCreate
-              ? const RasqEmptyView(title: 'ノードが見つかりません', hint: '検索ワードやジャンルを変えてみてください')
+              ? RasqEmptyView(title: l.nodeprogEditorPaletteEmptyTitle, hint: l.nodeprogEditorPaletteEmptyHint)
               : ListView.separated(
                   padding: const EdgeInsets.only(bottom: RasqSpacing.sm),
                   itemCount: entries.length + (showCreate ? 1 : 0),
@@ -1447,9 +1458,9 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
                     if (showCreate && i == 0) {
                       return RasqPluginTile(
                         icon: Icons.add_circle_outline,
-                        title: 'カスタム関数を作成',
-                        subtitle: '関数',
-                        description: '条件タグまたは入出力(データ形式)を選んで、自分の関数ノードを作ります。データ関数は中身をノードで組めます。',
+                        title: l.nodeprogEditorCreateFunction,
+                        subtitle: l.nodeprogCatalogGenreFunction,
+                        description: l.nodeprogEditorCreateFunctionDescription,
                         chevron: false,
                         onTap: widget.onCreateFunction,
                       );
@@ -1469,7 +1480,7 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
     final tile = RasqPluginTile(
       icon: e.icon,
       title: e.title,
-      subtitle: '${e.author ?? '組み込みノード'} · ${e.genre}',
+      subtitle: context.l10n.nodeprogEditorTileSubtitle(e.author ?? context.l10n.nodeprogEditorBuiltinAuthor, e.genre),
       description: nodeDescription(context, e),
       detail: e.ioSummary,
       detailColorDots: e.typeDots,
@@ -1508,7 +1519,7 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
               widget.onAdd(e);
             },
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('キャンバスに追加'),
+            label: Text(ctx.l10n.nodeprogEditorAddToCanvas),
           ),
         ),
         // カスタム関数 (D-118): 中身(サブグラフ)の編集へ。
@@ -1521,7 +1532,7 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
                 ref.read(routerProvider).push(Routes.nodes(e.type));
               },
               icon: const Icon(Icons.account_tree_outlined, size: 18),
-              label: const Text('中身を編集'),
+              label: Text(ctx.l10n.nodeprogEditorEditFunctionBody),
             ),
           ),
         // カスタム関数 (D-099) は定義ごと消せる(置き済みノードは残り、
@@ -1535,7 +1546,7 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
                 final defs = ref.read(customFunctionsProvider);
                 ref.read(settingsAreaProvider('nodeprog.functions').notifier).set('list', jsonEncode([for (final d in defs) if (d.id != e.type) d.toJson()]));
               },
-              child: Text('関数を削除', style: RasqTypography.bodySmall.copyWith(color: RasqTokens.of(context).danger)),
+              child: Text(ctx.l10n.nodeprogEditorDeleteFunction, style: RasqTypography.bodySmall.copyWith(color: RasqTokens.of(context).danger)),
             ),
           ),
       ]),
@@ -1558,6 +1569,7 @@ class _NodeInfoBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l = context.l10n;
     Widget port(NodePort p) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Row(children: [
@@ -1572,17 +1584,18 @@ class _NodeInfoBody extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
         if (author != null || genre != null)
-          Text([?author, if (genre != null) 'ジャンル: $genre'].join(' · '), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text([?author, if (genre != null) l.nodeprogEditorInfoGenre(genre!)].join(' · '), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         if (description != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(description!, style: RasqTypography.bodySmall)),
         if (inputs.isNotEmpty || hasCondIn) ...[
-          Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text('入力', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+          Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text(l.nodeprogEditorCanvasInputs, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
           for (final p in inputs) port(p),
-          if (hasCondIn) port(const NodePort(label: '条件(上辺)', dataType: '条件')),
+          if (hasCondIn) port(NodePort(label: l.nodeprogEditorInfoCondIn, dataType: '条件')),
         ],
         if (outputs.isNotEmpty || hasCondOut) ...[
-          Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text('出力', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+          Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text(l.nodeprogEditorCanvasOutputs, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
           for (final p in outputs) port(p),
-          if (hasCondOut) port(const NodePort(label: '条件(下辺)', dataType: '条件')),
+          if (hasCondOut) port(NodePort(label: l.nodeprogEditorInfoCondOut, dataType: '条件')),
+
         ],
       ]),
     );

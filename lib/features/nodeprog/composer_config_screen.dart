@@ -11,6 +11,7 @@ import 'package:rrl_renderer/rrl_renderer.dart';
 import '../../backend/rasq_account.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart' show Routes, routerProvider;
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../settings/settings_dsl.dart';
 import '../compose/composer_learning.dart';
@@ -114,10 +115,10 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
       id: 'composerconfig.more',
       anchor: box.localToGlobal(Offset.zero) & box.size,
       dense: true,
-      items: const [
-        RasqDropdownItem('この構成をリセット', 'reset'),
+      items: [
+        RasqDropdownItem(context.l10n.nodeprogComposerResetConfig, 'reset'),
         // グラフカスタマイズ (D-124): 手を入れた構成は自動構成の対象外。
-        RasqDropdownItem('グラフで編集', 'nodes'),
+        RasqDropdownItem(context.l10n.nodeprogTimelineEditAsGraph, 'nodes'),
       ],
     );
     if (!mounted) return;
@@ -169,16 +170,16 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
     final area = ref.watch(settingsAreaProvider(storageSafeAreaFor(accKey))).value ?? const <String, Object?>{};
     final slot = area[composerLearnSlot(_tab)];
     if (slot is! Map) {
-      return const RasqCaption(
-        'まだ学習していません(投稿すると学習します)',
-        detail: '学習プロファイル: まだ確定投稿がありません(投稿すると自動で学習します)',
-        padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+      return RasqCaption(
+        context.l10n.nodeprogComposerLearnNone,
+        detail: context.l10n.nodeprogComposerLearnNoneDetail,
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
       );
     }
     final count = (slot['count'] as num?)?.toInt() ?? 0;
     return RasqCaption(
-      'これまでの投稿 $count 件から学習しています',
-      detail: '学習プロファイル: 確定投稿 $count 件(手動で切り替えた投稿は強く学習・半減期 90 日)',
+      context.l10n.nodeprogComposerLearnCount(count),
+      detail: context.l10n.nodeprogComposerLearnCountDetail(count),
       padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
     );
   }
@@ -191,7 +192,7 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
     if (pos == 0 && neg == 0) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
-      child: Text('実績: 連動 $pos 回 / 確認で解除 $neg 回', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      child: Text(context.l10n.nodeprogComposerRelationStats(pos, neg), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
     );
   }
 
@@ -215,57 +216,57 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
     final f = _current;
     return Scaffold(
       appBar: RasqPageHeader(
-        title: '投稿先のカスタマイズ',
-        actions: [Builder(builder: (ctx) => RasqIconButton(icon: Icons.more_horiz, tooltip: 'その他', onPressed: () => _moreMenu(ctx)))],
+        title: context.l10n.nodeprogEditorTitleComposer,
+        actions: [Builder(builder: (ctx) => RasqIconButton(icon: Icons.more_horiz, tooltip: ctx.l10n.nodeprogEditorMoreTooltip, onPressed: () => _moreMenu(ctx)))],
         bottom: _tabBar(),
       ),
       body: !_loaded
           ? const RasqLoading()
           : _tab.isEmpty
-              ? const RasqEmptyView(title: 'アカウントがありません', hint: 'ログインすると投稿先の条件を組めます')
+              ? RasqEmptyView(title: context.l10n.nodeprogComposerNoAccounts, hint: context.l10n.nodeprogComposerNoAccountsHint)
               : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
-                  const RasqNotice(
-                    margin: EdgeInsets.all(RasqSpacing.sm),
-                    text: '下書きの内容に合うアカウントが、投稿先の候補になります',
-                    detail: 'アカウントごとに絞り込みを組むと、下書きの内容(と内部のフォーマット)が合うアカウントが投稿先の候補になります。',
+                  RasqNotice(
+                    margin: const EdgeInsets.all(RasqSpacing.sm),
+                    text: context.l10n.nodeprogComposerBanner,
+                    detail: context.l10n.nodeprogComposerBannerDetail,
                   ),
                   if (_handEdited)
-                    const RasqNotice.warning(
-                      margin: EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
-                      text: 'ポスト先はノードエディタで編集されています。ここで変えると上書きされます',
-                      detail: 'ポスト先はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。',
+                    RasqNotice.warning(
+                      margin: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
+                      text: context.l10n.nodeprogComposerHandEdited,
+                      detail: context.l10n.nodeprogComposerHandEditedDetail,
                     ),
                   // ---- ポスト先の絞り込み(ノード追加で複数 = かつ, D-131)----
-                  const RasqSectionHeader(title: 'ポスト先の絞り込み', topMargin: 0),
+                  RasqSectionHeader(title: context.l10n.nodeprogComposerFiltersHeader, topMargin: 0),
                   _learnCaption(scheme),
                   _filterTile(scheme, f),
                   for (var i = 0; i < f.extraFilters.length; i++) _extraFilterTile(scheme, f, i, linked: false),
-                  _addNodeButton('ノードを追加', () => _update(_tab, f.copyWith(extraFilters: [...f.extraFilters, const ComposerFilterSpec()]))),
+                  _addNodeButton(context.l10n.nodeprogTimelineAddNode, () => _update(_tab, f.copyWith(extraFilters: [...f.extraFilters, const ComposerFilterSpec()]))),
                   // ---- フォーマット (D-131: FOW ではなくページ内)------------
-                  const RasqSectionHeader(title: 'フォーマット'),
-                  const RasqCaption(
-                    '絞り込みに合わなかったときも、別の形で候補に残せます',
-                    detail: '絞り込みに合わなかったとき、代わりのフォーマットで候補に残します(無くなる直前の比較からバイパス)。',
-                    padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+                  RasqSectionHeader(title: context.l10n.nodeprogComposerFormatHeader),
+                  RasqCaption(
+                    context.l10n.nodeprogComposerFormatCaption,
+                    detail: context.l10n.nodeprogComposerFormatCaptionDetail,
+                    padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
                   ),
                   _formatBlock(f),
                   // ---- 投稿加工(正規表現、ノード追加で複数, D-130/D-131)----
-                  const RasqSectionHeader(title: '投稿加工(正規表現)'),
+                  RasqSectionHeader(title: context.l10n.nodeprogCatalogComposerRegexTitle),
                   _regexTile(scheme, f),
                   for (var i = 0; i < f.extraRegexes.length; i++) _extraRegexTile(scheme, f, i),
-                  _addNodeButton('ノードを追加', () => _update(_tab, f.copyWith(extraRegexes: [...f.extraRegexes, const ComposerRegexSpec()]))),
+                  _addNodeButton(context.l10n.nodeprogTimelineAddNode, () => _update(_tab, f.copyWith(extraRegexes: [...f.extraRegexes, const ComposerRegexSpec()]))),
                   // RASQ のタブでは、RASQ への連動投稿を設定で有効にしているときだけ (D-286)。
                   if (_tab != _rasqLabel || (ref.watch(settingsAreaProvider('composer.prefs')).value ?? const {})['rasqLinked'] == true) ...[
                   // ---- 連動投稿の届け方 (D-129/D-131) ------------------------
-                  const RasqSectionHeader(title: '連動投稿の届け方'),
-                  const RasqCaption(
-                    'ほかのアカウントと一緒に送るときの設定です',
-                    detail: '複数選択モードの「ノード連動」でこのアカウントへ送るときの届け方と、連動できる連動元です。',
-                    padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+                  RasqSectionHeader(title: context.l10n.nodeprogComposerDeliveryHeader),
+                  RasqCaption(
+                    context.l10n.nodeprogComposerDeliveryCaption,
+                    detail: context.l10n.nodeprogComposerDeliveryCaptionDetail,
+                    padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
                   ),
                   Builder(builder: (ctx) {
                     return RasqListTile(
-                      title: '届け方: ${composerDeliveryLabel(f.delivery)}',
+                      title: ctx.l10n.nodeprogComposerDeliveryTitle(composerDeliveryLabel(f.delivery)),
                       leading: const Icon(Icons.send_time_extension_outlined),
                       onTap: () async {
                         final box = ctx.findRenderObject() as RenderBox;
@@ -283,18 +284,18 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
                   // (RASQ アカウント行は表示しない)。
                   Padding(
                     padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-                    child: Text('連動元のアカウント(主投稿先がここにあるときだけ連動)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                    child: Text(context.l10n.nodeprogComposerLinkSourcesLabel, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                   ),
                   _linkSourcesTile(scheme, tokens, f),
                   _relationCaption(scheme),
                   // 連動の絞り込み (D-131: F_target — 連動投稿だけに掛かる)。
-                  const RasqCaption(
-                    '連動の絞り込み(一緒に送るときだけ効きます)',
-                    detail: '連動の絞り込み(連動投稿だけに掛かる関門。ポスト先判定には影響しません)',
-                    padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+                  RasqCaption(
+                    context.l10n.nodeprogComposerLinkFiltersCaption,
+                    detail: context.l10n.nodeprogComposerLinkFiltersCaptionDetail,
+                    padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
                   ),
                   for (var i = 0; i < f.linkFilters.length; i++) _extraFilterTile(scheme, f, i, linked: true),
-                  _addNodeButton('ノードを追加', () => _update(_tab, f.copyWith(linkFilters: [...f.linkFilters, const ComposerFilterSpec()]))),
+                  _addNodeButton(context.l10n.nodeprogTimelineAddNode, () => _update(_tab, f.copyWith(linkFilters: [...f.linkFilters, const ComposerFilterSpec()]))),
                   ],
                 ]),
     );
@@ -308,10 +309,16 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
         child: RasqPluginTile(
           leading: Icon(Icons.filter_alt_outlined, size: 22, color: f.enabled ? null : scheme.onSurfaceVariant.withValues(alpha: 0.5)),
           title: f.title,
-          subtitle: f.enabled ? _tab : '$_tab ・ 無効化中',
+          subtitle: f.enabled ? _tab : _tab + context.l10n.nodeprogTimelineDisabledSuffix,
           description: f.enabled
-              ? 'このアカウントの${f.from == '投稿内容' ? '投稿' : f.from == 'リアクション' ? 'リアクションした投稿' : '返信'}を基準に、下書きが${f.what}で合うとき投稿先候補になります。'
-              : '無効化中: このアカウントはポスト先の候補になりません。',
+              ? context.l10n.nodeprogComposerFilterDescription(
+                  f.from == '投稿内容'
+                      ? context.l10n.nodeprogComposerFilterBasisPosts
+                      : f.from == 'リアクション'
+                          ? context.l10n.nodeprogTimelineSuggestFromReacted
+                          : context.l10n.nodeprogComposerFilterBasisReplies,
+                  f.what)
+              : context.l10n.nodeprogComposerFilterDisabled,
           chevron: true,
           onTap: () => _openParams(mode: 'filter'),
         ),
@@ -329,8 +336,8 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
         child: RasqPluginTile(
           icon: linked ? Icons.fork_right : Icons.filter_alt_outlined,
           title: spec.title,
-          subtitle: linked ? '$_tab ・ 連動のみ' : '$_tab ・ かつ',
-          description: linked ? '連動投稿がこの条件に合わないとき、このアカウントへは送られません。' : '前の絞り込みと「かつ」で連結されます。',
+          subtitle: linked ? context.l10n.nodeprogComposerLinkOnlySubtitle(_tab) : context.l10n.nodeprogComposerAndSubtitle(_tab),
+          description: linked ? context.l10n.nodeprogComposerLinkFilterDescription : context.l10n.nodeprogComposerAndDescription,
           chevron: true,
           onTap: () => _openParams(mode: linked ? 'linkfilter' : 'extrafilter', extraIndex: i),
         ),
@@ -338,7 +345,7 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
       RasqIconButton(
         icon: Icons.close,
         size: 18,
-        tooltip: 'ノードを削除',
+        tooltip: context.l10n.nodeprogComposerDeleteNode,
         onPressed: () => _update(
             _tab,
             linked
@@ -354,11 +361,11 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
       Expanded(
         child: RasqPluginTile(
           leading: Icon(Icons.find_replace, size: 22, color: f.regexEnabled ? null : scheme.onSurfaceVariant.withValues(alpha: 0.5)),
-          title: '投稿加工(正規表現)',
-          subtitle: f.regexEnabled ? _tab : '$_tab ・ 無効化中',
+          title: context.l10n.nodeprogCatalogComposerRegexTitle,
+          subtitle: f.regexEnabled ? _tab : _tab + context.l10n.nodeprogTimelineDisabledSuffix,
           description: f.regexEnabled && f.regexPattern.isNotEmpty
-              ? 'このアカウントへ送る本文の「${f.regexPattern}」を「${f.regexReplace}」に置換します。'
-              : '送信時に本文へ正規表現の置換をかけます(例: タグの付け替え・伏せ字)。',
+              ? context.l10n.nodeprogComposerRegexDescription(f.regexPattern, f.regexReplace)
+              : context.l10n.nodeprogComposerRegexDescriptionEmpty,
           chevron: true,
           onTap: () => _openParams(mode: 'regex'),
         ),
@@ -374,9 +381,9 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
       Expanded(
         child: RasqPluginTile(
           icon: Icons.find_replace,
-          title: spec.pattern.isEmpty ? '投稿加工(未設定)' : '「${spec.pattern}」→「${spec.replace}」',
-          subtitle: '$_tab ・ 追加ノード',
-          description: '上の加工に続けて適用されます。',
+          title: spec.pattern.isEmpty ? context.l10n.nodeprogComposerRegexUnset : context.l10n.nodeprogComposerRegexRule(spec.pattern, spec.replace),
+          subtitle: context.l10n.nodeprogComposerExtraNodeSubtitle(_tab),
+          description: context.l10n.nodeprogComposerExtraRegexDescription,
           chevron: true,
           onTap: () => _openParams(mode: 'extraregex', extraIndex: i),
         ),
@@ -384,7 +391,7 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
       RasqIconButton(
         icon: Icons.close,
         size: 18,
-        tooltip: 'ノードを削除',
+        tooltip: context.l10n.nodeprogComposerDeleteNode,
         onPressed: () => _update(_tab, f.copyWith(extraRegexes: [for (var k = 0; k < f.extraRegexes.length; k++) if (k != i) f.extraRegexes[k]])),
       ),
       const SizedBox(width: RasqSpacing.sm),
@@ -419,7 +426,7 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
           child: TextField(
             controller: _fallbackCw,
             style: RasqTypography.bodySmall,
-            decoration: const InputDecoration(labelText: '注釈', isDense: true),
+            decoration: InputDecoration(labelText: context.l10n.nodeprogComposerCwLabel, isDense: true),
             onChanged: (v) => _update(_tab, _current.copyWith(fallbackCw: v.trim())),
           ),
         ),
@@ -445,7 +452,7 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
         if (others.isEmpty)
           Padding(
             padding: const EdgeInsets.all(RasqSpacing.md),
-            child: Text('他のアカウントがありません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            child: Text(context.l10n.nodeprogComposerNoOtherAccounts, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
         for (final a in others)
           InkWell(
@@ -466,7 +473,7 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
     return RasqIconButton(
       icon: Icons.more_horiz,
       size: 18,
-      tooltip: mode == 'regex' ? '投稿加工の操作' : 'ポスト先の操作',
+      tooltip: mode == 'regex' ? context.l10n.nodeprogComposerRegexMenuTooltip : context.l10n.nodeprogComposerFilterMenuTooltip,
       onPressed: () async {
         final box = ctx.findRenderObject() as RenderBox;
         final pick = await _manager.showDropdown<String>(
@@ -474,8 +481,8 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
           anchor: box.localToGlobal(Offset.zero) & box.size,
           dense: true,
           items: [
-            const RasqDropdownItem('パラメーターを編集', 'params'),
-            RasqDropdownItem(enabled ? '一時的な無効化' : '無効化の解除', 'toggle'),
+            RasqDropdownItem(context.l10n.nodeprogTimelineMenuEditParams, 'params'),
+            RasqDropdownItem(enabled ? context.l10n.nodeprogTimelineMenuDisable : context.l10n.nodeprogTimelineMenuEnable, 'toggle'),
           ],
         );
         if (!mounted) return;
@@ -506,7 +513,8 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
     manager
         .showFow<bool>(
           id: composerConfigParamsFowId,
-          semanticsLabel: 'ノードを設定',
+          semanticsLabel: context.l10n.nodeprogEditorParamsTitle,
+
           spec: spec,
           builder: (ctx, handle) => _ComposerParamsPanel(
             account: account,
@@ -614,18 +622,19 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
     final tokens = RasqTokens.of(context);
     final f = widget.filterOf();
     final spec = _filterSpec();
+    final l = context.l10n;
     final root = _isRegex
         ? (widget.mode == 'regex'
-            ? const RrlNode(t: 'Column', c: [
-                RrlNode(t: 'SwitchListTile', k: 'regexEnabled', p: {'title': '投稿加工を有効にする', 'subtitle': 'このアカウントへ送る本文にパターン置換をかけます', 'value': '\$.settings.regexEnabled'}, on: {'change': 'settings.set'}),
+            ? RrlNode(t: 'Column', c: [
+                RrlNode(t: 'SwitchListTile', k: 'regexEnabled', p: {'title': l.nodeprogComposerParamsRegexEnabled, 'subtitle': l.nodeprogComposerParamsRegexEnabledSubtitle, 'value': '\$.settings.regexEnabled'}, on: const {'change': 'settings.set'}),
               ])
-            : const RrlNode(t: 'Column', c: [RrlNode(t: 'Text', p: {'text': '上の加工に続けて適用される追加ノードです。'})]))
+            : RrlNode(t: 'Column', c: [RrlNode(t: 'Text', p: {'text': l.nodeprogComposerParamsExtraRegex})]))
         : RrlNode(t: 'Column', c: [
             if (widget.mode == 'filter')
-              const RrlNode(t: 'SwitchListTile', k: 'enabled', p: {'title': '絞り込みを有効にする', 'subtitle': '無効のときこのアカウントはポスト先の候補になりません', 'value': '\$.settings.enabled'}, on: {'change': 'settings.set'}),
-            const RrlNode(t: 'SectionHeader', p: {'title': 'なにを見る?'}),
+              RrlNode(t: 'SwitchListTile', k: 'enabled', p: {'title': l.nodeprogComposerParamsFilterEnabled, 'subtitle': l.nodeprogComposerParamsFilterEnabledSubtitle, 'value': '\$.settings.enabled'}, on: const {'change': 'settings.set'}),
+            RrlNode(t: 'SectionHeader', p: {'title': l.nodeprogComposerParamsWhat}),
             for (final o in suggestWhatOptions) _radio('what', o, o),
-            const RrlNode(t: 'SectionHeader', p: {'title': 'なにから読み取る?'}),
+            RrlNode(t: 'SectionHeader', p: {'title': l.nodeprogTimelineParamsSuggestFrom}),
             // 学習プロファイル (D-132): 確定投稿の学習ループが基準になる。
             for (final o in composerSuggestFromOptions) _radio('from', o, o),
           ]);
@@ -661,18 +670,18 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
               child: TextButton(
                 onPressed: widget.onCancel,
                 style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerLeft),
-                child: Text('キャンセル', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+                child: Text(l.nodeprogEditorCancelButton, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
               ),
             ),
           ),
-          Text('ノードを設定', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Text(l.nodeprogEditorParamsTitle, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           Expanded(
             child: Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: widget.onConfirm,
                 style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerRight),
-                child: Text('決定', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+                child: Text(l.nodeprogEditorConfirmButton, style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
               ),
             ),
           ),
@@ -680,13 +689,13 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
       ),
       RasqPluginTile(
         icon: _isRegex ? Icons.find_replace : (widget.mode == 'linkfilter' ? Icons.fork_right : Icons.filter_alt_outlined),
-        title: _isRegex ? '投稿加工(正規表現)' : (widget.mode == 'linkfilter' ? '連動の絞り込み' : spec.title),
+        title: _isRegex ? l.nodeprogCatalogComposerRegexTitle : (widget.mode == 'linkfilter' ? l.nodeprogCatalogComposerLinkgateTitle : spec.title),
         subtitle: widget.account,
         description: _isRegex
-            ? '送信時に本文へ正規表現の置換をかけます。'
+            ? l.nodeprogComposerParamsRegexDescription
             : widget.mode == 'linkfilter'
-                ? rasqDetail(context, '一緒に送るときだけ効く条件です。', '連動投稿だけに掛かる関門です(ポスト先判定には影響しません)。')
-                : '下書きがこの条件に合うとき、このアカウントが投稿先候補になります。',
+                ? rasqDetail(context, l.nodeprogComposerParamsLinkFilterDescription, l.nodeprogComposerParamsLinkFilterDetail)
+                : l.nodeprogComposerParamsFilterDescription,
         chevron: false,
       ),
       const Divider(height: 1),
@@ -700,7 +709,7 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
               child: TextField(
                 controller: _pattern,
                 style: RasqTypography.bodySmall,
-                decoration: const InputDecoration(labelText: 'パターン(正規表現)', hintText: r'例: #ネタバレ\s*', isDense: true),
+                decoration: InputDecoration(labelText: l.nodeprogComposerParamsPatternLabel, hintText: l.nodeprogComposerParamsPatternHint, isDense: true),
                 onChanged: (v) => _applyRegex(pattern: v),
               ),
             ),
@@ -709,7 +718,8 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
               child: TextField(
                 controller: _replace,
                 style: RasqTypography.bodySmall,
-                decoration: const InputDecoration(labelText: '置換(空 = 削除)', isDense: true),
+                decoration: InputDecoration(labelText: l.nodeprogComposerParamsReplaceLabel, isDense: true),
+
                 onChanged: (v) => _applyRegex(replace: v),
               ),
             ),

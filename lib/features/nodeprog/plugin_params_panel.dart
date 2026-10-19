@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
+import '../../l10n/l10n.dart';
 import '../plugins/slot_plugins.dart';
 
 /// ノードエディター(自由キャンバス)の「ノードを設定」FOW (D-171): スロットの
@@ -61,15 +62,16 @@ class _PluginParamsPanelState extends ConsumerState<PluginParamsPanel> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
+    final l = context.l10n;
     final p = _params;
     final root = p?.root ??
         RrlNode(t: 'Column', c: [
           RrlNode(t: 'Text', p: {
             'text': _missing
-                ? 'このプラグインは登録されていません(ストアから入れ直してください)。'
+                ? l.nodeprogEditorParamsMissing
                 : _loading
-                    ? 'パラメーターを読み込んでいます…'
-                    : 'このプラグインにパラメーターはありません。'
+                    ? l.nodeprogEditorParamsLoading
+                    : l.nodeprogEditorParamsNone
           }),
         ]);
     final host = RrlHost(
@@ -89,24 +91,25 @@ class _PluginParamsPanelState extends ConsumerState<PluginParamsPanel> {
               child: TextButton(
                 onPressed: widget.onCancel,
                 style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerLeft),
-                child: Text('キャンセル', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+                child: Text(l.nodeprogEditorCancelButton, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
               ),
             ),
           ),
-          Text('ノードを設定', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Text(l.nodeprogEditorParamsTitle, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           Expanded(
             child: Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => widget.onConfirm(_values),
                 style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerRight),
-                child: Text('決定', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+                child: Text(l.nodeprogEditorConfirmButton, style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
               ),
             ),
           ),
         ]),
       ),
-      RasqPluginTile(icon: Icons.extension_outlined, title: widget.title, subtitle: 'TLプラグイン', description: rasqDetail(context, 'プラグインの並べ方で投稿を並べ替えます。', '投稿リストをプラグインのソート(tl.sort)で並べ替えます。パラメーターはノードの「パラメーター」ポートに入ります。'), chevron: false),
+      RasqPluginTile(icon: Icons.extension_outlined, title: widget.title, subtitle: l.nodeprogEditorPluginSortAuthor, description: rasqDetail(context, l.nodeprogEditorPluginSortDescription, l.nodeprogEditorParamsPluginDetail), chevron: false),
+
       const Divider(height: 1),
       Expanded(child: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), children: [RrlRenderer(node: root, host: host)])),
     ]);

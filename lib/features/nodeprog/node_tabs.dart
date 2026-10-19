@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../settings/settings_dsl.dart';
 import 'node_graph.dart';
 
@@ -28,7 +29,8 @@ class NodeTab {
   NodeTab copyWith({String? label, bool? shared}) => NodeTab(id: id, label: label ?? this.label, shared: shared ?? this.shared);
 
   Map<String, Object?> toJson() => {'id': id, 'label': label};
-  factory NodeTab.fromJson(Map<String, Object?> j, {bool shared = false}) => NodeTab(id: j['id'] as String, label: j['label'] as String? ?? 'ノードTL', shared: shared);
+  factory NodeTab.fromJson(Map<String, Object?> j, {bool shared = false}) => NodeTab(id: j['id'] as String, label: j['label'] as String? ?? appL10n.nodeprogEditorNodeTabDefaultLabel
+, shared: shared);
 }
 
 /// 共有のタブの一覧 (D-384)。

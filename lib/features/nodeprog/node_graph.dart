@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
+
 /// ノードプログラミング (D-090): タイムライン/投稿先のカスタマイズ画面の
 /// GUI ノードグラフ。まだ実行系はなく(RAi 未実装)、グラフの編集と保存
 /// (KV `nodeprog.<scope>.v1`)まで — 実行は RAi/プラグイン統合側で配線する。
@@ -41,7 +43,7 @@ class NodePort {
       );
 
   /// 表示名: `テキスト(.dic)` のように形式を添える。
-  String get typeLabel => format == null ? dataType : '$dataType($format)';
+  String get typeLabel => format == null ? dataType : appL10n.nodeprogCatalogTypeWithFormat(dataType, format!);
 }
 
 /// データ形式 → 色(ポートのドットと接続線の色分け)。
@@ -226,11 +228,12 @@ class NodeCatalogEntry {
   /// パレットタイルの 1 行入出力表示(例: `入力: 間隔(数値) → 出力: クロック(クロック)`)。
   String get ioSummary {
     String side(List<NodePort> ps, {bool cond = false}) {
-      final parts = [for (final p in ps) '${p.label}(${p.typeLabel})', if (cond) '条件'];
-      return parts.isEmpty ? 'なし' : parts.join('・');
+      final l = appL10n;
+      final parts = [for (final p in ps) l.nodeprogCatalogPortWithType(p.label, p.typeLabel), if (cond) l.nodeprogCatalogIoCond];
+      return parts.isEmpty ? l.nodeprogCatalogIoNone : parts.join(l.nodeprogCatalogListSeparator);
     }
 
-    return '入力: ${side(inputs, cond: hasCondIn)} → 出力: ${side(outputs, cond: hasCondOut)}';
+    return appL10n.nodeprogCatalogIoSummary(side(inputs, cond: hasCondIn), side(outputs, cond: hasCondOut));
   }
 
   /// タイルの先頭に付ける形式色ドット(重複なし・登場順)。
@@ -274,22 +277,24 @@ class CustomFunctionDef {
   Map<String, Object?> toJson() => {'id': id, 'name': name, 'kind': kind, 'tags': tags, 'inputs': inputs, 'outputs': outputs};
   factory CustomFunctionDef.fromJson(Map<String, Object?> j) => CustomFunctionDef(
         id: j['id'] as String,
-        name: j['name'] as String? ?? '関数',
+        name: j['name'] as String? ?? appL10n.nodeprogCatalogCustomFunctionDefaultName,
         kind: j['kind'] as String? ?? 'data',
         tags: (j['tags'] as List?)?.cast<String>() ?? const [],
         inputs: (j['inputs'] as List?)?.cast<String>() ?? const [],
         outputs: (j['outputs'] as List?)?.cast<String>() ?? const [],
       );
 
-  NodeCatalogEntry toCatalogEntry() => kind == 'cond'
+  NodeCatalogEntry toCatalogEntry() {
+    final l = appL10n;
+    return kind == 'cond'
       ? NodeCatalogEntry(
           type: id,
           title: name,
           icon: Icons.auto_fix_high_outlined,
-          genre: '関数',
-          author: 'カスタム関数',
-          description: '条件 ${tags.join('・')} を受ける、自分で作った関数です。',
-          detail: '条件タグ ${tags.join('・')} を受けるカスタム関数です(中身の配線はプラグイン/RAi で)。',
+          genre: l.nodeprogCatalogGenreFunction,
+          author: l.nodeprogCatalogCustomFunctionAuthor,
+          description: l.nodeprogCatalogCustomFunctionCondDescription(tags.join(l.nodeprogCatalogListSeparator)),
+          detail: l.nodeprogCatalogCustomFunctionCondDetail(tags.join(l.nodeprogCatalogListSeparator)),
           hasCondIn: true,
           hasCondOut: true,
           condBranches: tags.isEmpty ? const ['条件'] : tags,
@@ -298,24 +303,26 @@ class CustomFunctionDef {
           type: id,
           title: name,
           icon: Icons.auto_fix_high_outlined,
-          genre: '関数',
-          author: 'カスタム関数',
-          description: '自分で作った関数です。',
-          detail: 'カスタム関数です(中身の配線はプラグイン/RAi で)。',
+          genre: l.nodeprogCatalogGenreFunction,
+          author: l.nodeprogCatalogCustomFunctionAuthor,
+          description: l.nodeprogCatalogCustomFunctionDataDescription,
+          detail: l.nodeprogCatalogCustomFunctionDataDetail,
           inputs: [for (final t in inputs) NodePort(label: t, dataType: t)],
           outputs: [for (final t in outputs) NodePort(label: t, dataType: t)],
         );
+  }
 }
 
 /// 組み込みノード(ワイヤーフレーム「GUIノードの例」より)。データ形式は
 /// クロック/数値/テキスト/投稿リスト — 色分けと接続可否の単位 (D-092)。
-const builtinNodeCatalog = <NodeCatalogEntry>[
+/// 文言は [AppLocalizations] から (D-486)。画面の外では [builtinNodeCatalog](いまの表示の言語)。
+List<NodeCatalogEntry> builtinNodeCatalogOf(AppLocalizations l) => <NodeCatalogEntry>[
   NodeCatalogEntry(
     type: 'clock',
-    title: 'クロックメーカー',
+    title: l.nodeprogCatalogClockTitle,
     icon: Icons.schedule,
-    genre: '生成',
-    description: '一定間隔でクロックを出します。TL の自動更新などのトリガーに使います。',
+    genre: l.nodeprogCatalogGenreGenerate,
+    description: l.nodeprogCatalogClockDescription,
     inputs: [NodePort(label: '間隔', value: '15秒', dataType: '数値')],
     outputs: [NodePort(label: 'クロック', dataType: 'クロック')],
   ),
@@ -323,19 +330,19 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   // 分割(テキスト → テキスト配列)、結合(テキスト配列 → テキスト)。
   NodeCatalogEntry(
     type: 'text.const',
-    title: 'テキスト',
+    title: l.nodeprogCatalogTextConstTitle,
     icon: Icons.short_text,
-    genre: '変換',
-    description: '書いた文をテキストとして出します。類似性 / キーワードの基準や、分割の入力に繋げます。',
+    genre: l.nodeprogCatalogGenreConvert,
+    description: l.nodeprogCatalogTextConstDescription,
     inputs: [NodePort(label: '文', value: '', dataType: '設定')],
     outputs: [NodePort(label: 'テキスト', dataType: 'テキスト')],
   ),
   NodeCatalogEntry(
     type: 'convert.split',
-    title: '分割',
+    title: l.nodeprogCatalogConvertSplitTitle,
     icon: Icons.call_split,
-    genre: '変換',
-    description: 'テキストを区切り(改行 / カンマ / 空白)でテキスト配列にします。キーワードリストや保存の入力に繋げます。',
+    genre: l.nodeprogCatalogGenreConvert,
+    description: l.nodeprogCatalogConvertSplitDescription,
     inputs: [
       NodePort(label: 'テキスト', dataType: 'テキスト'),
       NodePort(label: '区切り', value: '改行', dataType: '設定', options: ['改行', 'カンマ', '空白']),
@@ -344,10 +351,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'convert.join',
-    title: '結合',
+    title: l.nodeprogCatalogConvertJoinTitle,
     icon: Icons.call_merge,
-    genre: '変換',
-    description: 'テキスト配列を区切り(改行 / カンマ / 空白)で 1 つのテキストにします。',
+    genre: l.nodeprogCatalogGenreConvert,
+    description: l.nodeprogCatalogConvertJoinDescription,
     inputs: [
       NodePort(label: 'テキスト配列', dataType: 'テキスト配列'),
       NodePort(label: '区切り', value: '改行', dataType: '設定', options: ['改行', 'カンマ', '空白']),
@@ -356,10 +363,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'list.first',
-    title: '投稿を取り出す',
+    title: l.nodeprogCatalogListFirstTitle,
     icon: Icons.filter_1_outlined,
-    genre: '変換',
-    description: '投稿リストの何番目かの投稿を 1 件取り出します(1 = 先頭)。本文をテキストにして基準や設定に繋げます。',
+    genre: l.nodeprogCatalogGenreConvert,
+    description: l.nodeprogCatalogListFirstDescription,
     inputs: [
       NodePort(label: '投稿リスト', dataType: '投稿リスト'),
       NodePort(label: '番号', value: '1', dataType: '設定'),
@@ -368,19 +375,19 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'post.text',
-    title: '投稿の本文',
+    title: l.nodeprogCatalogPostTextTitle,
     icon: Icons.notes,
-    genre: '変換',
-    description: '投稿 1 件の本文をテキストにします。',
+    genre: l.nodeprogCatalogGenreConvert,
+    description: l.nodeprogCatalogPostTextDescription,
     inputs: [NodePort(label: '投稿', dataType: '投稿')],
     outputs: [NodePort(label: 'テキスト', dataType: 'テキスト')],
   ),
   NodeCatalogEntry(
     type: 'random',
-    title: 'ランダム',
+    title: l.nodeprogCatalogRandomTitle,
     icon: Icons.casino_outlined,
-    genre: '生成',
-    description: '投稿ごとに乱数を出します。範囲は「1-7」のように指定し、小数点を入れると小数点以下もカウントします。シードで再現できます。',
+    genre: l.nodeprogCatalogGenreGenerate,
+    description: l.nodeprogCatalogRandomDescription,
     inputs: [
       NodePort(label: 'シード', value: 'randomseed', dataType: '設定'),
       // 範囲 (D-097): ユーザー指定。整数なら両端含む整数、小数点を含む
@@ -391,29 +398,29 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'file',
-    title: 'ファイルリーダー',
+    title: l.nodeprogCatalogFileTitle,
     icon: Icons.description_outlined,
-    genre: '入力',
-    description: 'ローカルファイルを読み込んでテキストとして出します。',
+    genre: l.nodeprogCatalogGenreInput,
+    description: l.nodeprogCatalogFileDescription,
     inputs: [NodePort(label: 'パス', value: '~/Documents/sample.dic', dataType: 'テキスト')],
     outputs: [NodePort(label: 'テキスト', dataType: 'テキスト')],
   ),
   NodeCatalogEntry(
     type: 'timeline',
-    title: 'タイムライン',
+    title: l.nodeprogCatalogTimelineTitle,
     icon: Icons.view_agenda_outlined,
-    genre: 'タイムライン',
-    description: '最終出力。投稿リストを繋ぐと、この画面のタイムラインに流れます。',
+    genre: l.nodeprogCatalogGenreTimeline,
+    description: l.nodeprogCatalogTimelineDescription,
     inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
   // ---- 実行系 (D-094) — TL 取得 → 加工 → タイムライン、で実際に動く。
   NodeCatalogEntry(
     type: 'tl.source',
-    title: 'タイムライン取得',
+    title: l.nodeprogCatalogTlSourceTitle,
     icon: Icons.download_outlined,
-    genre: 'タイムライン',
-    description: '選んだタイムラインを取得して、投稿リストとして渡します。',
-    detail: '選んだタイムラインを取得して、投稿リスト(RRLタグ付き)として渡します。',
+    genre: l.nodeprogCatalogGenreTimeline,
+    description: l.nodeprogCatalogTlSourceDescription,
+    detail: l.nodeprogCatalogTlSourceDetail,
     inputs: [
       NodePort(label: 'TL', value: 'home', dataType: '設定', options: ['home', 'social', 'local', 'global']),
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
@@ -422,30 +429,30 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'sort',
-    title: '並べ替え',
+    title: l.nodeprogCatalogSortTitle,
     icon: Icons.swap_vert,
-    genre: '加工',
-    description: '下に繋いだ条件に合う投稿を先頭に並べ替えます(元の順序は保たれます)。',
+    genre: l.nodeprogCatalogGenreProcess,
+    description: l.nodeprogCatalogSortDescription,
     inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
     hasCondOut: true,
   ),
   NodeCatalogEntry(
     type: 'remove',
-    title: '消去',
+    title: l.nodeprogCatalogRemoveTitle,
     icon: Icons.delete_sweep_outlined,
-    genre: '加工',
-    description: '下に繋いだ条件に合う投稿を取り除きます。',
+    genre: l.nodeprogCatalogGenreProcess,
+    description: l.nodeprogCatalogRemoveDescription,
     inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
     hasCondOut: true,
   ),
   NodeCatalogEntry(
     type: 'cond',
-    title: '条件',
+    title: l.nodeprogCatalogCondTitle,
     icon: Icons.filter_alt_outlined,
-    genre: '条件',
-    description: '指定したタグの内容を見て True/False を返します。下に数珠繋ぎで「かつ」、同じ接続部から並列で「または」。',
+    genre: l.nodeprogCatalogGenreCondition,
+    description: l.nodeprogCatalogCondDescription,
     inputs: [
       NodePort(label: 'タグ', value: '本文', dataType: '設定', options: condTagOptions),
       NodePort(label: '演算', value: '含む', dataType: '設定', options: condOpOptions),
@@ -458,8 +465,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     type: 'not',
     title: 'Not',
     icon: Icons.block_outlined,
-    genre: '条件',
-    description: '下に繋いだ条件の否定を返します。',
+    genre: l.nodeprogCatalogGenreCondition,
+    description: l.nodeprogCatalogNotDescription,
     hasCondIn: true,
     hasCondOut: true,
   ),
@@ -468,29 +475,29 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   // 「関数出力」に繋いだ鎖の結果が関数ノードの出力になる。
   NodeCatalogEntry(
     type: 'fn.input',
-    title: '関数入力',
+    title: l.nodeprogCatalogFnInputTitle,
     icon: Icons.login,
-    genre: '関数',
-    description: '関数の中身の入口。呼び出し元から渡された投稿リストがここから出ます(関数の中身の編集画面専用)。',
+    genre: l.nodeprogCatalogGenreFunction,
+    description: l.nodeprogCatalogFnInputDescription,
     outputs: [NodePort(label: '入力', dataType: '投稿リスト')],
   ),
   NodeCatalogEntry(
     type: 'fn.output',
-    title: '関数出力',
+    title: l.nodeprogCatalogFnOutputTitle,
     icon: Icons.logout,
-    genre: '関数',
-    description: '関数の中身の出口。ここに繋いだ投稿リストが関数ノードの出力になります(未接続なら素通し)。',
+    genre: l.nodeprogCatalogGenreFunction,
+    description: l.nodeprogCatalogFnOutputDescription,
     inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
   // 検索絞り込み (D-125): このページの検索ワード/タグ(または指定ワード)に
   // 合う投稿だけ通す。検索/トレンド系 TL の既定チェーンに置かれる。
   NodeCatalogEntry(
     type: 'filter.query',
-    title: '検索絞り込み',
+    title: l.nodeprogCatalogFilterQueryTitle,
     icon: Icons.manage_search,
-    genre: '加工',
-    description: '検索ワードに合う投稿だけ通します(「除外」で逆に落とします)。',
-    detail: '検索ワードに合う投稿だけ通します。ワードが空のときは、このページの検索ワード/タグを使います。「除外」を true にすると、合う投稿を落とします(ワードミュート)。',
+    genre: l.nodeprogCatalogGenreProcess,
+    description: l.nodeprogCatalogFilterQueryDescription,
+    detail: l.nodeprogCatalogFilterQueryDetail,
     inputs: [
       NodePort(label: '投稿リスト', dataType: '投稿リスト'),
       NodePort(label: '検索ワード', value: '', dataType: '設定'),
@@ -501,11 +508,11 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   // マージ (D-106): 複数の投稿リストを 1 本のタイムラインへ合流。
   NodeCatalogEntry(
     type: 'merge',
-    title: 'マージ',
+    title: l.nodeprogCatalogMergeTitle,
     icon: Icons.merge_type,
-    genre: '加工',
-    description: '繋いだ投稿リストを時刻順に 1 本にまとめます。',
-    detail: '繋いだ投稿リストを時刻順に 1 本へ合流します。別アカウントに流れてきた同じ投稿は 1 枚に畳み、タイルの ↓ でアカウントを選べます。',
+    genre: l.nodeprogCatalogGenreProcess,
+    description: l.nodeprogCatalogMergeDescription,
+    detail: l.nodeprogCatalogMergeDetail,
     inputs: [
       NodePort(label: '投稿リスト1', dataType: '投稿リスト'),
       NodePort(label: '投稿リスト2', dataType: '投稿リスト'),
@@ -518,20 +525,20 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   // 入力の代わりになるだけ(通常 TL のタイムラインノードの置き換え)。
   NodeCatalogEntry(
     type: 'timeline.relational',
-    title: '関連タイムライン',
+    title: l.nodeprogCatalogTimelineRelationalTitle,
     icon: Icons.hub_outlined,
-    genre: 'タイムライン',
-    description: '関連タイムラインの絞り込みの出口です。',
-    detail: '関連TLの前段絞り込みの最終出力。繋いだ投稿リストが会話イベント構築の入力になります(処理系は変わりません)。',
+    genre: l.nodeprogCatalogGenreTimeline,
+    description: l.nodeprogCatalogTimelineRelationalDescription,
+    detail: l.nodeprogCatalogTimelineRelationalDetail,
     inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
   // ---- 取得系 (D-097): リスト/検索/DM/トレンド。
   NodeCatalogEntry(
     type: 'tl.list',
-    title: 'リストTL取得',
+    title: l.nodeprogCatalogTlListTitle,
     icon: Icons.list_alt_outlined,
-    genre: '取得',
-    description: 'Misskey のリストのタイムラインを取得します(リスト名で指定)。',
+    genre: l.nodeprogCatalogGenreFetch,
+    description: l.nodeprogCatalogTlListDescription,
     inputs: [
       NodePort(label: 'リスト', value: '', dataType: '設定'),
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
@@ -540,10 +547,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'tl.search',
-    title: '検索TL取得',
+    title: l.nodeprogCatalogTlSearchTitle,
     icon: Icons.search,
-    genre: '取得',
-    description: '検索ワードにヒットする投稿を取得します。',
+    genre: l.nodeprogCatalogGenreFetch,
+    description: l.nodeprogCatalogTlSearchDescription,
     inputs: [
       NodePort(label: '検索ワード', value: '', dataType: '設定'),
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
@@ -552,10 +559,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'tl.dm',
-    title: 'DM取得',
+    title: l.nodeprogCatalogTlDmTitle,
     icon: Icons.mail_outline,
-    genre: '取得',
-    description: '相手(ハンドル)との DM を取得します。',
+    genre: l.nodeprogCatalogGenreFetch,
+    description: l.nodeprogCatalogTlDmDescription,
     inputs: [
       NodePort(label: '相手', value: '', dataType: '設定'),
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
@@ -564,20 +571,20 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'trend.tags',
-    title: 'トレンド取得',
+    title: l.nodeprogCatalogTrendTagsTitle,
     icon: Icons.trending_up,
-    genre: '取得',
-    description: 'いまのトレンドタグを文字列の配列として出します(類似度/キーワードの入力に)。',
+    genre: l.nodeprogCatalogGenreFetch,
+    description: l.nodeprogCatalogTrendTagsDescription,
     outputs: [NodePort(label: 'タグ', dataType: 'テキスト配列')],
   ),
   // トレンド検索結果取得 (D-106): トレンド上位タグを検索して投稿リストに。
   NodeCatalogEntry(
     type: 'tl.feed',
-    title: 'カスタムフィード取得',
+    title: l.nodeprogCatalogTlFeedTitle,
     icon: Icons.rss_feed,
-    genre: '取得',
-    description: 'Bluesky のカスタムフィードを取得します。',
-    detail: 'Bluesky のカスタムフィード(フィードジェネレーター)のタイムラインを取得します(at:// の URI で指定。TL カスタマイズでは検索して選べます)。',
+    genre: l.nodeprogCatalogGenreFetch,
+    description: l.nodeprogCatalogTlFeedDescription,
+    detail: l.nodeprogCatalogTlFeedDetail,
     inputs: [
       NodePort(label: 'フィード', value: '', dataType: '設定'),
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
@@ -587,20 +594,20 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   // RASQ リスト (D-346): SNS を跨いだ人のリスト(Central)。リスト内の人の情報を取れるリストだけ選べる。
   NodeCatalogEntry(
     type: 'tl.rasqlist',
-    title: 'RASQ リスト取得',
+    title: l.nodeprogCatalogTlRasqlistTitle,
     icon: Icons.people_alt_outlined,
-    genre: '取得',
-    description: 'いくつもの SNS の人をまとめた RASQ リストの投稿を取得します。',
-    detail: 'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取得します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。',
+    genre: l.nodeprogCatalogGenreFetch,
+    description: l.nodeprogCatalogTlRasqlistDescription,
+    detail: l.nodeprogCatalogTlRasqlistDetail,
     inputs: [NodePort(label: 'リスト', value: '', dataType: '設定')],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
   NodeCatalogEntry(
     type: 'trend.posts',
-    title: 'トレンド検索結果取得',
+    title: l.nodeprogCatalogTrendPostsTitle,
     icon: Icons.travel_explore,
-    genre: '取得',
-    description: 'いまのトレンド上位タグを検索して、その投稿を 1 本に合流して出します。',
+    genre: l.nodeprogCatalogGenreFetch,
+    description: l.nodeprogCatalogTrendPostsDescription,
     inputs: [
       NodePort(label: 'タグ数', value: '3', dataType: '設定'),
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
@@ -611,11 +618,11 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   // 条件を評価し、成立したポスト先が投稿先のサジェストになる。
   NodeCatalogEntry(
     type: 'composer.target',
-    title: 'ポスト先',
+    title: l.nodeprogCatalogComposerTargetTitle,
     icon: Icons.send_outlined,
-    genre: 'コンポーザー',
-    description: '投稿先アカウントの候補です。下の条件に合うと投稿先になります。',
-    detail: '投稿先アカウントの候補。下に条件をぶら下げると、投稿内容がその条件に合うときこのアカウントが投稿先になります(上に置いたものほど優先。手動で選び直せます)。',
+    genre: l.nodeprogCatalogGenreComposer,
+    description: l.nodeprogCatalogComposerTargetDescription,
+    detail: l.nodeprogCatalogComposerTargetDetail,
     inputs: [NodePort(label: 'アカウント', value: '', dataType: '設定')],
     hasCondOut: true,
   ),
@@ -624,11 +631,11 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   // フォーマットでこのアカウントに投稿する。
   NodeCatalogEntry(
     type: 'composer.fallback',
-    title: '代わりのフォーマットで投稿',
+    title: l.nodeprogCatalogComposerFallbackTitle,
     icon: Icons.alt_route,
-    genre: 'コンポーザー',
-    description: '絞り込みで外れたとき、別の形でこのアカウントに投稿します。',
-    detail: '絞り込みで投稿先から外れた場合のバイパス。下の条件(通常は直前の比較の Not)が成立したとき、代わりのフォーマットでこのアカウントに投稿します。',
+    genre: l.nodeprogCatalogGenreComposer,
+    description: l.nodeprogCatalogComposerFallbackDescription,
+    detail: l.nodeprogCatalogComposerFallbackDetail,
     inputs: [
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
       NodePort(label: 'フォーマット', value: '注釈を付ける', dataType: '設定', options: ['注釈を付ける', 'フォロワー限定', '連合なし']),
@@ -641,11 +648,11 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   // (サジェストのポスト先判定には影響しない)。
   NodeCatalogEntry(
     type: 'composer.linkgate',
-    title: '連動の絞り込み',
+    title: l.nodeprogCatalogComposerLinkgateTitle,
     icon: Icons.fork_right,
-    genre: 'コンポーザー',
-    description: '一緒に送る投稿だけに効く絞り込みです。',
-    detail: '連動投稿だけに掛かる絞り込みです。下の条件が成立しないと、このアカウントへの連動投稿は送られません(通常のポスト先判定には影響しません)。',
+    genre: l.nodeprogCatalogGenreComposer,
+    description: l.nodeprogCatalogComposerLinkgateDescription,
+    detail: l.nodeprogCatalogComposerLinkgateDetail,
     inputs: [NodePort(label: 'アカウント', value: '', dataType: '設定')],
     hasCondOut: true,
   ),
@@ -653,11 +660,11 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   // アカウント空 = すべての投稿先に適用。コンポーザースコープ専用。
   NodeCatalogEntry(
     type: 'composer.regex',
-    title: '投稿加工(正規表現)',
+    title: l.nodeprogCatalogComposerRegexTitle,
     icon: Icons.find_replace,
-    genre: 'コンポーザー',
-    description: '送信するときに本文の一部を置き換えます。',
-    detail: '送信時に本文へ正規表現の置換をかけます(パターンに一致した部分を置換)。アカウントが空のときは全ての投稿先に適用します。',
+    genre: l.nodeprogCatalogGenreComposer,
+    description: l.nodeprogCatalogComposerRegexDescription,
+    detail: l.nodeprogCatalogComposerRegexDetail,
     inputs: [
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
       NodePort(label: 'パターン', value: '', dataType: '設定'),
@@ -666,10 +673,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'tl.myreactions',
-    title: 'リアクション済み取得',
+    title: l.nodeprogCatalogTlMyreactionsTitle,
     icon: Icons.favorite_border,
-    genre: '取得',
-    description: 'TL で自分がリアクションした投稿を取得します(好みのプロファイル作りに)。',
+    genre: l.nodeprogCatalogGenreFetch,
+    description: l.nodeprogCatalogTlMyreactionsDescription,
     inputs: [NodePort(label: 'アカウント', value: '', dataType: '設定')],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
@@ -677,20 +684,20 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   // テキスト配列(トレンド取得/読み出し等)がそのまま一覧になる。
   NodeCatalogEntry(
     type: 'trend.frame',
-    title: 'トレンド枠',
+    title: l.nodeprogCatalogTrendFrameTitle,
     icon: Icons.tag,
-    genre: 'タイムライン',
-    description: 'トレンドホームの「トレンド」一覧の最終出力。タグ(テキスト配列)を繋ぐとそのまま一覧に出ます。',
+    genre: l.nodeprogCatalogGenreTimeline,
+    description: l.nodeprogCatalogTrendFrameDescription,
     inputs: [NodePort(label: 'タグ', dataType: 'テキスト配列')],
   ),
   // ---- 生成系 ML (D-097): 類似度/キーワード一致 + 演算子条件。
   NodeCatalogEntry(
     type: 'ml.similar',
-    title: '類似度 (SigLIP)',
+    title: l.nodeprogCatalogMlSimilarTitle,
     icon: Icons.auto_awesome_outlined,
     genre: 'ML',
-    description: '基準と各投稿の似ている度合いを 0〜1 で出します。',
-    detail: '基準(テキスト/配列/ベクトル)と各投稿の類似度を、この TL 内での相対値 0〜1 で出します(0.8 ≒ 上位 2 割相当)。ML 不達時は n-gram 類似度に縮退します。',
+    description: l.nodeprogCatalogMlSimilarDescription,
+    detail: l.nodeprogCatalogMlSimilarDetail,
     inputs: [
       NodePort(label: '基準', value: '', dataType: 'テキスト'),
       NodePort(label: '基準リスト', dataType: 'テキスト配列'),
@@ -702,30 +709,30 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   // ---- 結果ノード + storage.safe (D-104)。
   NodeCatalogEntry(
     type: 'ml.gliner',
-    title: 'GLiNER抽出',
+    title: l.nodeprogCatalogMlGlinerTitle,
     icon: Icons.sell_outlined,
     genre: 'ML',
-    description: '投稿リストから特徴語(頻出順)を抽出して文字列の配列で出します。',
+    description: l.nodeprogCatalogMlGlinerDescription,
     inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
     outputs: [NodePort(label: '特徴語', dataType: 'テキスト配列')],
   ),
   NodeCatalogEntry(
     type: 'ml.siglip',
-    title: 'SigLIP埋め込み',
+    title: l.nodeprogCatalogMlSiglipTitle,
     icon: Icons.grain,
     genre: 'ML',
-    description: '投稿リストの傾向をまとめて出します。',
-    detail: '投稿リストの平均埋め込み(プロファイル)をベクトルで出します。ML 不達時は n-gram プロファイルに縮退します。',
+    description: l.nodeprogCatalogMlSiglipDescription,
+    detail: l.nodeprogCatalogMlSiglipDetail,
     inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
     outputs: [NodePort(label: '埋め込み', dataType: 'ベクトル')],
   ),
   NodeCatalogEntry(
     type: 'storage.save',
-    title: '保存 (storage.safe)',
+    title: l.nodeprogCatalogStorageSaveTitle,
     icon: Icons.save_outlined,
-    genre: '保存',
-    description: '繋いだデータを保存します。',
-    detail: '繋いだデータをスロットに保存します。storage.safe は依存関係の子プラグインにも渡せる安全な置き場(プラグイン側の受け渡しは初回起動時に確認)。',
+    genre: l.nodeprogCatalogGenreStorage,
+    description: l.nodeprogCatalogStorageSaveDescription,
+    detail: l.nodeprogCatalogStorageSaveDetail,
     inputs: [
       NodePort(label: 'スロット', value: '', dataType: '設定'),
       NodePort(label: 'テキスト配列', dataType: 'テキスト配列'),
@@ -734,10 +741,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'storage.load',
-    title: '読み出し (storage.safe)',
+    title: l.nodeprogCatalogStorageLoadTitle,
     icon: Icons.file_open_outlined,
-    genre: '保存',
-    description: 'スロットに保存したデータを読み出します。',
+    genre: l.nodeprogCatalogGenreStorage,
+    description: l.nodeprogCatalogStorageLoadDescription,
     inputs: [NodePort(label: 'スロット', value: '', dataType: '設定')],
     outputs: [
       NodePort(label: 'テキスト配列', dataType: 'テキスト配列'),
@@ -746,10 +753,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'ml.keyword',
-    title: 'キーワード一致 (GLiNER)',
+    title: l.nodeprogCatalogMlKeywordTitle,
     icon: Icons.label_important_outline,
     genre: 'ML',
-    description: 'キーワード(または配列)と各投稿の特徴語の一致数を出します。',
+    description: l.nodeprogCatalogMlKeywordDescription,
     inputs: [
       NodePort(label: 'キーワード', value: '', dataType: 'テキスト'),
       NodePort(label: 'キーワードリスト', dataType: 'テキスト配列'),
@@ -758,11 +765,11 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'ml.tendency',
-    title: '指向性/刺激性 (プロファイル)',
+    title: l.nodeprogCatalogMlTendencyTitle,
     icon: Icons.tune,
     genre: 'ML',
-    description: '好みの設定への合い具合(0〜1)を各投稿に出します。',
-    detail: 'storage.safe のトレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)への適合度(0〜1)を各投稿に出します。プロファイルは検索ホームのトレンド ⚙ で編集し、他のノードからも同じスロットを読めます。',
+    description: l.nodeprogCatalogMlTendencyDescription,
+    detail: l.nodeprogCatalogMlTendencyDetail,
     inputs: [
       NodePort(label: '投稿リスト', dataType: '投稿リスト'),
       NodePort(label: 'プロファイル', value: 'trend.profile', dataType: '設定'),
@@ -771,11 +778,11 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   NodeCatalogEntry(
     type: 'compare',
-    title: '比較',
+    title: l.nodeprogCatalogCompareTitle,
     icon: Icons.functions,
-    genre: '条件',
-    description: '数値としきい値を比べて True/False を返します。',
-    detail: '数値(類似度・乱数など)としきい値を比べて True/False を返す演算子条件です。値元が未接続・値が取れないとき(スロットが空など)は False になります。',
+    genre: l.nodeprogCatalogGenreCondition,
+    description: l.nodeprogCatalogCompareDescription,
+    detail: l.nodeprogCatalogCompareDetail,
     inputs: [
       NodePort(label: '値元', dataType: '数値'),
       NodePort(label: '演算', value: '以上', dataType: '設定', options: ['以上', '以下', '等しい']),
@@ -785,6 +792,9 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     hasCondOut: true,
   ),
 ];
+
+/// いまの表示の言語の [builtinNodeCatalogOf](`BuildContext` の無いところ・テスト用)。
+List<NodeCatalogEntry> get builtinNodeCatalog => builtinNodeCatalogOf(appL10n);
 
 /// 保存済みノードをカタログの最新形に追従させる (D-113)。追加された入力
 /// (「アカウント」等)や選択肢(リスト名/アカウント一覧)を既存グラフにも

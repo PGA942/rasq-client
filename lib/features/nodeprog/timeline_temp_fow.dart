@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../app/router.dart' show routerProvider;
 import '../home/timeline_search.dart';
 import 'timeline_config_screen.dart';
@@ -67,7 +68,7 @@ Future<void> showTimelineTempFow(WidgetRef ref, {required List<(String, String)>
   try {
     await manager.showFow<void>(
       id: timelineTempFowId,
-      semanticsLabel: 'タイムラインを一時的に変える',
+      semanticsLabel: appL10n.nodeprogTimelineTempSemantics,
       spec: spec,
       barrierBehavior: OverlayBarrierBehavior.dismiss,
       onBarrierTap: () => collapseTimelineTempFow(spec),
@@ -198,9 +199,9 @@ class _TimelineTempFowBodyState extends ConsumerState<TimelineTempFowBody> {
     final n = matches.length;
     return Row(mainAxisSize: MainAxisSize.min, children: [
       if (q != null)
-        Text(at >= 0 ? '${at + 1} / $n' : '$n 件', key: const ValueKey('tl.search.count'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-      RasqIconButton(key: const ValueKey('tl.search.prev'), icon: Icons.keyboard_arrow_up, size: 20, tooltip: '前の該当投稿', onPressed: n > 0 && at != 0 ? () => _go(-1) : null),
-      RasqIconButton(key: const ValueKey('tl.search.next'), icon: Icons.keyboard_arrow_down, size: 20, tooltip: '次の該当投稿', onPressed: n > 0 && (at < 0 || at < n - 1) ? () => _go(1) : null),
+        Text(at >= 0 ? '${at + 1} / $n' : context.l10n.nodeprogTimelineLimitItems(n), key: const ValueKey('tl.search.count'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      RasqIconButton(key: const ValueKey('tl.search.prev'), icon: Icons.keyboard_arrow_up, size: 20, tooltip: context.l10n.nodeprogTimelineSearchPrev, onPressed: n > 0 && at != 0 ? () => _go(-1) : null),
+      RasqIconButton(key: const ValueKey('tl.search.next'), icon: Icons.keyboard_arrow_down, size: 20, tooltip: context.l10n.nodeprogTimelineSearchNext, onPressed: n > 0 && (at < 0 || at < n - 1) ? () => _go(1) : null),
     ]);
   }
 
@@ -211,13 +212,13 @@ class _TimelineTempFowBodyState extends ConsumerState<TimelineTempFowBody> {
       expanded: !_stick && (_chipsOpen || _focus.hasFocus || fuzzy),
       controller: _search,
       focusNode: _focus,
-      hintText: 'このタイムラインから探す',
+      hintText: context.l10n.nodeprogTimelineSearchHint,
       onSubmitted: (_) => _go(1),
       // stick の ∨ は展開モードへ。
       onDropdownTap: _stick ? widget.spec.expandStick : () => setState(() => _chipsOpen = !_chipsOpen),
       filterChips: [
         RasqFilterChipItem(
-          label: '近似検索',
+          label: context.l10n.nodeprogTimelineSearchFuzzy,
           selected: fuzzy,
           onTap: () {
             ref.read(timelineSearchProvider.notifier).setFuzzy(_id, !fuzzy);
@@ -239,7 +240,7 @@ class _TimelineTempFowBodyState extends ConsumerState<TimelineTempFowBody> {
         padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.xs, 0),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(child: _searchBox()),
-          RasqIconButton(key: const ValueKey('tl.temp.close'), icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: widget.onClose),
+          RasqIconButton(key: const ValueKey('tl.temp.close'), icon: Icons.close, size: 20, tooltip: context.l10n.nodeprogTimelineTempClose, onPressed: widget.onClose),
         ]),
       );
     }
@@ -248,9 +249,10 @@ class _TimelineTempFowBodyState extends ConsumerState<TimelineTempFowBody> {
         key: timelineTempHeaderKey,
         height: 40,
         child: Row(children: [
-          TextButton(key: const ValueKey('tl.temp.cancel'), onPressed: _cancel, child: Text('キャンセル', style: TextStyle(color: scheme.onSurfaceVariant))),
-          Expanded(child: Center(child: Text('タイムラインを一時変更', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis))),
-          TextButton(key: const ValueKey('tl.temp.confirm'), onPressed: _confirm, child: Text('決定', style: TextStyle(color: scheme.primary))),
+          TextButton(key: const ValueKey('tl.temp.cancel'), onPressed: _cancel, child: Text(context.l10n.nodeprogEditorCancelButton, style: TextStyle(color: scheme.onSurfaceVariant))),
+          Expanded(child: Center(child: Text(context.l10n.nodeprogTimelineTempTitle, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis))),
+          TextButton(key: const ValueKey('tl.temp.confirm'), onPressed: _confirm, child: Text(context.l10n.nodeprogEditorConfirmButton, style: TextStyle(color: scheme.primary))),
+
         ]),
       ),
       Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.xs), child: _searchBox()),

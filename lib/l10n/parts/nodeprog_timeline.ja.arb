@@ -1,0 +1,1177 @@
+{
+  "nodeprogTimelineTabDmCommon": "DM(共通)",
+  "@nodeprogTimelineTabDmCommon": {
+    "description": "TL のカスタマイズのタブ: すべての DM のページに効く共通の設定。"
+  },
+  "nodeprogTimelineTabThisDm": "このDM",
+  "@nodeprogTimelineTabThisDm": {
+    "description": "TL のカスタマイズのタブ: この DM のページだけの設定。"
+  },
+  "nodeprogTimelineTabTrendPage": "トレンドページ",
+  "@nodeprogTimelineTabTrendPage": {
+    "description": "トレンドの TL のカスタマイズのタブ。"
+  },
+  "nodeprogTimelineTabTrendTl": "トレンド TL",
+  "@nodeprogTimelineTabTrendTl": {
+    "description": "トレンドの TL のカスタマイズのタブ。"
+  },
+  "nodeprogTimelineTabThisList": "このリスト",
+  "@nodeprogTimelineTabThisList": {
+    "description": "TL のカスタマイズのタブ: 開いているリストの TL。"
+  },
+  "nodeprogTimelineReorderTabs": "タブの並べ替え",
+  "@nodeprogTimelineReorderTabs": {
+    "description": "タブを並べ替えるシートの見出しとボタン。"
+  },
+  "nodeprogTimelineShareTab": "すべてのアカウントで共有",
+  "@nodeprogTimelineShareTab": {
+    "description": "… メニューの項目(チェック付き)。"
+  },
+  "nodeprogTimelineResetConfig": "このTLの構成をリセット",
+  "@nodeprogTimelineResetConfig": {
+    "description": "… メニューの項目。"
+  },
+  "nodeprogTimelineEditAsGraph": "グラフで編集",
+  "@nodeprogTimelineEditAsGraph": {
+    "description": "… メニューの項目(ノードエディターで開く)。"
+  },
+  "nodeprogTimelinePluginWithVersion": "TLプラグイン ・ v{version}",
+  "@nodeprogTimelinePluginWithVersion": {
+    "description": "アルゴリズムのタイルの副題(プラグインの版つき)。{version} = 版。",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineAlgoChronoDescription": "取得したままの時刻順に整えます。",
+  "@nodeprogTimelineAlgoChronoDescription": {
+    "description": "アルゴリズム「時刻順」の説明。"
+  },
+  "nodeprogTimelineAlgoTendencyDescription": "好みの設定に合わない投稿を除き、合う順に並べます。",
+  "@nodeprogTimelineAlgoTendencyDescription": {
+    "description": "アルゴリズム「指向性/刺激性」の説明。"
+  },
+  "nodeprogTimelineAlgoTendencyDetail": "トレンドプロファイル(指向性/刺激性・好きなジャンル)に合わない投稿を除外し、適合度順に並べます。",
+  "@nodeprogTimelineAlgoTendencyDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineAlgoSuggestDescription": "{from}({kind})を基準に、{what}で合う投稿を先頭へ並べ替えます。",
+  "@nodeprogTimelineAlgoSuggestDescription": {
+    "description": "アルゴリズム「おすすめ」の説明。{from} = 基準の取得元、{kind} = 基準の種類、{what} = 比べ方。",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      },
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineSuggestFromMyPosts": "自分の投稿",
+  "@nodeprogTimelineSuggestFromMyPosts": {
+    "description": "おすすめの基準の種類。"
+  },
+  "nodeprogTimelineSuggestFromMyReplies": "自分の返信",
+  "@nodeprogTimelineSuggestFromMyReplies": {
+    "description": "おすすめの基準の種類。"
+  },
+  "nodeprogTimelineSuggestFromReacted": "リアクションした投稿",
+  "@nodeprogTimelineSuggestFromReacted": {
+    "description": "おすすめの基準の種類。"
+  },
+  "nodeprogTimelineSourceHomeLabel": "フォロー中 (home)",
+  "@nodeprogTimelineSourceHomeLabel": {
+    "description": "取得元のタイルの説明: SNS が宣言していないときの home の TL の名前。"
+  },
+  "nodeprogTimelineSourceRasqTitle": "RASQ の投稿を取得",
+  "@nodeprogTimelineSourceRasqTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceRasqDescription": "TL: 自分とフォロー中の RASQ アカウントの投稿",
+  "@nodeprogTimelineSourceRasqDescription": {
+    "description": "取得元のタイルの説明。"
+  },
+  "nodeprogTimelineSourceRasqSearchTitle": "RASQ 検索",
+  "@nodeprogTimelineSourceRasqSearchTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceRasqSearchPageQuery": "検索: このページの検索ワード / タグ(フォローしていない人の投稿も)",
+  "@nodeprogTimelineSourceRasqSearchPageQuery": {
+    "description": "取得元のタイルの説明(検索ワードが空)。"
+  },
+  "nodeprogTimelineSourceRasqSearchWord": "検索: {word}(フォローしていない人の投稿も)",
+  "@nodeprogTimelineSourceRasqSearchWord": {
+    "description": "取得元のタイルの説明。{word} = 検索ワード。",
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineSourceRasqListTitle": "RASQ リストを取得",
+  "@nodeprogTimelineSourceRasqListTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceRasqListDescription": "RASQ リスト: {name}",
+  "@nodeprogTimelineSourceRasqListDescription": {
+    "description": "取得元のタイルの説明。{name} = リストの名前(未選択なら「未選択」)。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineNotSelected": "未選択",
+  "@nodeprogTimelineNotSelected": {
+    "description": "リスト / フィードなどがまだ選ばれていないとき。"
+  },
+  "nodeprogTimelineSectionTitle": "セクション",
+  "@nodeprogTimelineSectionTitle": {
+    "description": "セクション(ノードを包む枠)の名前・提供元の欄。"
+  },
+  "nodeprogTimelineSectionDescription": "{max, plural, other{ノードを {max} つまで包む枠(画面では入れた順に角丸の枠で出す)}}",
+  "@nodeprogTimelineSectionDescription": {
+    "description": "セクションの説明。{max} = 入れられるノードの数。",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineSourceAstellTitle": "ASTell のタイル",
+  "@nodeprogTimelineSourceAstellTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceAstellDescription": "{count, plural, other{いま開いている ASTell のルーム({count} 件まで)}}",
+  "@nodeprogTimelineSourceAstellDescription": {
+    "description": "取得元のタイルの説明。{count} = 出す件数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineSourceSwingDescription": "{count, plural, other{Swing を出している人({count} 件まで)}}",
+  "@nodeprogTimelineSourceSwingDescription": {
+    "description": "取得元のタイルの説明。{count} = 出す件数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineSourceTrendFollowingTitle": "フォロー中の反応",
+  "@nodeprogTimelineSourceTrendFollowingTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceTrendFollowingDescription": "フォロー中の人の、このページのワード / タグの投稿",
+  "@nodeprogTimelineSourceTrendFollowingDescription": {
+    "description": "取得元のタイルの説明。"
+  },
+  "nodeprogTimelineTrendPluginAll": "入れているトレンドプラグイン全部",
+  "@nodeprogTimelineTrendPluginAll": {
+    "description": "トレンドプラグインのノード: プラグインを選んでいないとき。"
+  },
+  "nodeprogTimelineTrendPluginMissing": "{id}(入っていません)",
+  "@nodeprogTimelineTrendPluginMissing": {
+    "description": "トレンドプラグインのノード: 選んだプラグインが入っていないとき。{id} = プラグインの id。",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineTrendPluginAuthor": "トレンドプラグイン",
+  "@nodeprogTimelineTrendPluginAuthor": {
+    "description": "トレンドプラグインのノードの提供元の欄。"
+  },
+  "nodeprogTimelineTrendPluginDescription": "{name} ・ {form}",
+  "@nodeprogTimelineTrendPluginDescription": {
+    "description": "トレンドプラグインのノードの説明。{name} = プラグインの名前、{form} = 形式の説明。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "form": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineCurrentAccount": "(現在のアカウント)",
+  "@nodeprogTimelineCurrentAccount": {
+    "description": "取得元のアカウントが空のとき。"
+  },
+  "nodeprogTimelineAllAccounts": "全部のアカウント",
+  "@nodeprogTimelineAllAccounts": {
+    "description": "トレンドを取得のノード: アカウントが空(全部のアカウント)のときの提供元の欄。"
+  },
+  "nodeprogTimelineSourceTrendTitle": "トレンドを取得",
+  "@nodeprogTimelineSourceTrendTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceTrendTagsAllDescription": "種別: トレンドタイル(RASQ アカウントの SNS アカウント全部のトレンドのワード)",
+  "@nodeprogTimelineSourceTrendTagsAllDescription": {
+    "description": "取得元のタイルの説明。"
+  },
+  "nodeprogTimelineSourceTrendTagsDescription": "種別: トレンドタイル(このアカウントのサーバーのトレンドのワード)",
+  "@nodeprogTimelineSourceTrendTagsDescription": {
+    "description": "取得元のタイルの説明。"
+  },
+  "nodeprogTimelineSourceSearchTitle": "検索結果を取得",
+  "@nodeprogTimelineSourceSearchTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceSearchPageQuery": "検索: このページの検索ワード / タグ",
+  "@nodeprogTimelineSourceSearchPageQuery": {
+    "description": "取得元のタイルの説明(検索ワードが空)。"
+  },
+  "nodeprogTimelineSourceSearchWord": "検索: {word}",
+  "@nodeprogTimelineSourceSearchWord": {
+    "description": "取得元のタイルの説明。{word} = 検索ワード。",
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineSourceTodayTitle": "Today を取得",
+  "@nodeprogTimelineSourceTodayTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceTodayDescription": "TL: Today(注目の投稿)",
+  "@nodeprogTimelineSourceTodayDescription": {
+    "description": "取得元のタイルの説明。"
+  },
+  "nodeprogTimelineSourceSelfTitle": "{name}を取得",
+  "@nodeprogTimelineSourceSelfTitle": {
+    "description": "取得元のタイルの名前: 開いているページそのものの投稿。{name} = ページの名前。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineSourceDmTitle": "DM取得",
+  "@nodeprogTimelineSourceDmTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceFeedTitle": "カスタムフィードを取得",
+  "@nodeprogTimelineSourceFeedTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceListTitle": "リストTLを取得",
+  "@nodeprogTimelineSourceListTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceTimelineTitle": "タイムラインを取得",
+  "@nodeprogTimelineSourceTimelineTitle": {
+    "description": "取得元のタイルの名前。"
+  },
+  "nodeprogTimelineSourceTlDescription": "TL: {tl}",
+  "@nodeprogTimelineSourceTlDescription": {
+    "description": "取得元のタイルの説明。{tl} = 取得する TL の説明。",
+    "placeholders": {
+      "tl": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineSourceDmPeer": "DM: @{peer}",
+  "@nodeprogTimelineSourceDmPeer": {
+    "description": "取得元のタイルの説明の中身。{peer} = DM の相手のハンドル。",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineSourceTrendTlKind": "種別: トレンド TL(トレンド上位タグの検索結果)",
+  "@nodeprogTimelineSourceTrendTlKind": {
+    "description": "取得元のタイルの説明の中身。"
+  },
+  "nodeprogTimelineSourceFeedName": "フィード: {name}",
+  "@nodeprogTimelineSourceFeedName": {
+    "description": "取得元のタイルの説明の中身。{name} = フィードの名前(または URI)。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineSourceListName": "リスト: {name}",
+  "@nodeprogTimelineSourceListName": {
+    "description": "取得元のタイルの説明の中身。{name} = リストの名前。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineMenuInfo": "詳細",
+  "@nodeprogTimelineMenuInfo": {
+    "description": "部品の … メニューの項目。"
+  },
+  "nodeprogTimelineMenuEditParams": "パラメーターを編集",
+  "@nodeprogTimelineMenuEditParams": {
+    "description": "部品の … メニューの項目。"
+  },
+  "nodeprogTimelineMenuDisable": "一時的な無効化",
+  "@nodeprogTimelineMenuDisable": {
+    "description": "部品の … メニューの項目。"
+  },
+  "nodeprogTimelineMenuEnable": "無効化の解除",
+  "@nodeprogTimelineMenuEnable": {
+    "description": "部品の … メニューの項目。"
+  },
+  "nodeprogTimelineMenuStore": "プラグインのストアページへ移動",
+  "@nodeprogTimelineMenuStore": {
+    "description": "部品の … メニューの項目。"
+  },
+  "nodeprogTimelineMenuKindToTiles": "種別をトレンドタイルに",
+  "@nodeprogTimelineMenuKindToTiles": {
+    "description": "部品の … メニューの項目。"
+  },
+  "nodeprogTimelineMenuKindToTl": "種別をトレンド TL に",
+  "@nodeprogTimelineMenuKindToTl": {
+    "description": "部品の … メニューの項目。"
+  },
+  "nodeprogTimelineMenuLimit": "{count, plural, other{件数: {count}}}",
+  "@nodeprogTimelineMenuLimit": {
+    "description": "部品の … メニューの項目。{count} = いまの件数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineMenuForm": "形式: {form}",
+  "@nodeprogTimelineMenuForm": {
+    "description": "部品の … メニューの項目。{form} = いまの形式。",
+    "placeholders": {
+      "form": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineMenuDisplay": "表示モード: {mode}",
+  "@nodeprogTimelineMenuDisplay": {
+    "description": "部品の … メニューの項目。{mode} = いまの表示モード。",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineLimitItems": "{count, plural, other{{count} 件}}",
+  "@nodeprogTimelineLimitItems": {
+    "description": "件数の選択肢。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineInfoProvider": "提供: {provider}",
+  "@nodeprogTimelineInfoProvider": {
+    "description": "部品の詳細のシート。{provider} = 提供元。",
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineInfoSupported": "対応: {sns}",
+  "@nodeprogTimelineInfoSupported": {
+    "description": "部品の詳細のシート。{sns} = 対応する SNS の一覧。",
+    "placeholders": {
+      "sns": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineReorderAlgorithms": "アルゴリズムの並べ替え",
+  "@nodeprogTimelineReorderAlgorithms": {
+    "description": "並べ替えのシートの見出しとボタン。"
+  },
+  "nodeprogTimelineReorderSources": "タイムラインの並べ替え",
+  "@nodeprogTimelineReorderSources": {
+    "description": "並べ替えのシートの見出し。"
+  },
+  "nodeprogTimelineBannerDmCommon": "すべての DM ページに使う設定です",
+  "@nodeprogTimelineBannerDmCommon": {
+    "description": "TL のカスタマイズの説明のバナー(DM 共通)。"
+  },
+  "nodeprogTimelineBannerDmPage": "この DM ページだけの設定です",
+  "@nodeprogTimelineBannerDmPage": {
+    "description": "TL のカスタマイズの説明のバナー(DM の 1 ページ)。"
+  },
+  "nodeprogTimelineBanner": "タイムラインの中身と並び方を決められます",
+  "@nodeprogTimelineBanner": {
+    "description": "TL のカスタマイズの説明のバナー。"
+  },
+  "nodeprogTimelineBannerDmCommonDetail": "DM のメイン設定です。個別設定のない全ての DM ページに適用されます。アルゴリズムは上から順に適用されます。",
+  "@nodeprogTimelineBannerDmCommonDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineBannerDmPageDetail": "この DM ページだけの設定です(保存すると DM 共通設定より優先されます)。アルゴリズムは上から順に適用されます。",
+  "@nodeprogTimelineBannerDmPageDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineBannerDetail": "タイムラインのアルゴリズムや取り込み、表示するタイムラインなどを指定できます。アルゴリズムは上から順に適用されます。",
+  "@nodeprogTimelineBannerDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineCreateNameLabel": "タイムラインの名前",
+  "@nodeprogTimelineCreateNameLabel": {
+    "description": "タイムラインを作る FOW の名前の欄。"
+  },
+  "nodeprogTimelineCreateNameHint": "例: 友だち / 写真",
+  "@nodeprogTimelineCreateNameHint": {
+    "description": "タイムラインを作る FOW の名前の欄のヒント。"
+  },
+  "nodeprogTimelineTempSearchOnly": "プラグインが並べるタイムラインです。ここでは探すだけできます",
+  "@nodeprogTimelineTempSearchOnly": {
+    "description": "一時変更 FOW: プラグインが並べる TL のとき。"
+  },
+  "nodeprogTimelineTempChanged": "このタイムラインを一時的に変えています(保存していません)。",
+  "@nodeprogTimelineTempChanged": {
+    "description": "一時変更 FOW: 一時的に変えているとき。"
+  },
+  "nodeprogTimelineTempRevert": "元に戻す",
+  "@nodeprogTimelineTempRevert": {
+    "description": "一時変更 FOW のボタン。"
+  },
+  "nodeprogTimelineTempSave": "この内容で保存",
+  "@nodeprogTimelineTempSave": {
+    "description": "一時変更 FOW のボタン。"
+  },
+  "nodeprogTimelineTempNotice": "ここでの変更は一時的です。保存するまで元の設定は変わりません",
+  "@nodeprogTimelineTempNotice": {
+    "description": "一時変更 FOW の案内。"
+  },
+  "nodeprogTimelineTempNoticeDetail": "ここでの変更はこのタイムラインに一時的に効きます。保存するまで、元の設定は変わりません。",
+  "@nodeprogTimelineTempNoticeDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineCreateCaption": "取り込むタイムラインとアルゴリズムを選んで「決定」",
+  "@nodeprogTimelineCreateCaption": {
+    "description": "タイムラインを作る FOW の案内。"
+  },
+  "nodeprogTimelineHandEdited": "この TL はノードエディタで編集されています。ここで変えると上書きされます",
+  "@nodeprogTimelineHandEdited": {
+    "description": "ノードエディターで手を入れた TL の警告。"
+  },
+  "nodeprogTimelineHandEditedDetail": "この TL はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。",
+  "@nodeprogTimelineHandEditedDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineAlgorithmsHeader": "アルゴリズム",
+  "@nodeprogTimelineAlgorithmsHeader": {
+    "description": "TL のカスタマイズの節の見出し。"
+  },
+  "nodeprogTimelineAddAlgorithm": "アルゴリズムを追加",
+  "@nodeprogTimelineAddAlgorithm": {
+    "description": "TL のカスタマイズの追加のタイル。"
+  },
+  "nodeprogTimelineSectionSubtitle": "{count, plural, other{セクション ・ {count} / {max}}}",
+  "@nodeprogTimelineSectionSubtitle": {
+    "description": "セクションのタイルの副題。{count} = 入れたノードの数、{max} = 入れられる数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineDisabledSuffix": " ・ 無効化中",
+  "@nodeprogTimelineDisabledSuffix": {
+    "description": "副題の後ろに付ける、一時的に無効にしている印(前に区切り)。"
+  },
+  "nodeprogTimelineDisabled": "無効化中",
+  "@nodeprogTimelineDisabled": {
+    "description": "一時的に無効にしている印。"
+  },
+  "nodeprogTimelineMetaSeparator": " ・ ",
+  "@nodeprogTimelineMetaSeparator": {
+    "description": "副題に並べる語の区切り(前後に空白)。"
+  },
+  "nodeprogTimelineSectionMenuTooltip": "セクションの操作",
+  "@nodeprogTimelineSectionMenuTooltip": {
+    "description": "セクションの … ボタン。"
+  },
+  "nodeprogTimelineAddNode": "ノードを追加",
+  "@nodeprogTimelineAddNode": {
+    "description": "セクションにノードを足すボタン・メニューの項目。"
+  },
+  "nodeprogTimelineNodeMenuTooltip": "ノードの操作",
+  "@nodeprogTimelineNodeMenuTooltip": {
+    "description": "セクションの中のノードの … ボタン。"
+  },
+  "nodeprogTimelineSectionRename": "見出しを変更",
+  "@nodeprogTimelineSectionRename": {
+    "description": "セクションの … メニューの項目。"
+  },
+  "nodeprogTimelineSectionRenameTitle": "セクションの見出し",
+  "@nodeprogTimelineSectionRenameTitle": {
+    "description": "セクションの見出しを変えるダイアログの見出し。"
+  },
+  "nodeprogTimelineMenuTakeOut": "セクションから出す",
+  "@nodeprogTimelineMenuTakeOut": {
+    "description": "セクションの中のノードの … メニューの項目。"
+  },
+  "nodeprogTimelineDisplayHeader": "表示モード",
+  "@nodeprogTimelineDisplayHeader": {
+    "description": "TL のカスタマイズの節の見出し。"
+  },
+  "nodeprogTimelineDisplayTitle": "表示: {mode}",
+  "@nodeprogTimelineDisplayTitle": {
+    "description": "表示モードの行。{mode} = いまの表示モード。",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineDisplaySubtitle": "同じ投稿を、通常の TL / 会話のまとまり(関連 TL)/ 投稿した人の並びで見せます",
+  "@nodeprogTimelineDisplaySubtitle": {
+    "description": "表示モードの行の説明。"
+  },
+  "nodeprogTimelineSourcesHeader": "SNSタイムライン",
+  "@nodeprogTimelineSourcesHeader": {
+    "description": "TL のカスタマイズの節の見出し(取得元)。"
+  },
+  "nodeprogTimelineReorderDone": "並べ替えを終える",
+  "@nodeprogTimelineReorderDone": {
+    "description": "取得元の並べ替えのボタン(並べ替え中)。"
+  },
+  "nodeprogTimelineTrendPageCaption": "検索ホームに上から順に出します。セクションでトレンドと Today の区間を分けます",
+  "@nodeprogTimelineTrendPageCaption": {
+    "description": "トレンドページの取得元の節の説明。"
+  },
+  "nodeprogTimelineTrendPageCaptionDetail": "検索ホームに上から順に出します。既定は「トレンド」(全部のアカウントのトレンドのタイル)と「Today」のセクションです。アルゴリズムはトレンドのタイルに掛かります(重いものは使えません)。",
+  "@nodeprogTimelineTrendPageCaptionDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineSourcesCaption": "複数を重ねると 1 本にまとまり、同じ投稿は 1 つになります",
+  "@nodeprogTimelineSourcesCaption": {
+    "description": "取得元の節の説明。"
+  },
+  "nodeprogTimelineSourcesCaptionDetail": "複数を重ねると 1 本に合流し、同じ投稿は 1 枚に畳まれます(タイルの ↓ でアカウント切替)。投稿加工プラグインは各タイムライン提供元(SNSプラグイン)側で適用されます。",
+  "@nodeprogTimelineSourcesCaptionDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineReorderHint": "長押しでつかんで動かします。セクションの中(3 つまで)へも出し入れできます",
+  "@nodeprogTimelineReorderHint": {
+    "description": "取得元の並べ替え中の案内。"
+  },
+  "nodeprogTimelineAddSource": "タイムラインを追加",
+  "@nodeprogTimelineAddSource": {
+    "description": "取得元の節の追加のボタン。"
+  },
+  "nodeprogTimelineClockHeader": "自動更新",
+  "@nodeprogTimelineClockHeader": {
+    "description": "TL のカスタマイズの節の見出し。"
+  },
+  "nodeprogTimelineClockInterval": "間隔: {interval}",
+  "@nodeprogTimelineClockInterval": {
+    "description": "自動更新の間隔の行。{interval} = 間隔(なしなら「なし」)。",
+    "placeholders": {
+      "interval": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineAlgorithmMenuTooltip": "アルゴリズムの操作",
+  "@nodeprogTimelineAlgorithmMenuTooltip": {
+    "description": "アルゴリズムのタイルの … ボタン。"
+  },
+  "nodeprogTimelineSourceMenuTooltip": "タイムラインの操作",
+  "@nodeprogTimelineSourceMenuTooltip": {
+    "description": "取得元のタイルの … ボタン。"
+  },
+  "nodeprogTimelineTendencyGenres": "{count, plural, other{好きなジャンル {count}}}",
+  "@nodeprogTimelineTendencyGenres": {
+    "description": "指向性/刺激性(傾向)の要約。{count} = 好きなジャンルの数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineTendencyDisliked": "{count, plural, other{好きではない {count}}}",
+  "@nodeprogTimelineTendencyDisliked": {
+    "description": "指向性/刺激性(傾向)の要約。{count} = 好きではないジャンルの数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineTendencyExamples": "{count, plural, other{例 {count}}}",
+  "@nodeprogTimelineTendencyExamples": {
+    "description": "指向性/刺激性(傾向)の要約。{count} = 例の数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineTendencyStimulus": "{count, plural, other{刺激性の上限 {count}}}",
+  "@nodeprogTimelineTendencyStimulus": {
+    "description": "指向性/刺激性(傾向)の要約。{count} = 上限を下げた刺激性の数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineTendencyPinnedTitle": "指向性/刺激性(傾向)",
+  "@nodeprogTimelineTendencyPinnedTitle": {
+    "description": "アルゴリズムの一番最後に固定で掛かる項目の名前。"
+  },
+  "nodeprogTimelineTendencyPinnedSubtitle": "いつも最後",
+  "@nodeprogTimelineTendencyPinnedSubtitle": {
+    "description": "アルゴリズムの一番最後に固定で掛かる項目の副題。"
+  },
+  "nodeprogTimelineTendencyPinnedEmpty": "傾向 FOW の設定",
+  "@nodeprogTimelineTendencyPinnedEmpty": {
+    "description": "アルゴリズムの一番最後に固定で掛かる項目の説明(要約が無いとき)。"
+  },
+  "nodeprogTimelineTendencyPinnedInfo": "傾向 FOW で設定した指向性/刺激性を、アルゴリズムの一番最後に掛けます。ここでは外せません(変える / 止めるときは傾向 FOW で)",
+  "@nodeprogTimelineTendencyPinnedInfo": {
+    "description": "ℹ️ のツールチップ。"
+  },
+  "nodeprogTimelineParamsSuggestWhat": "なにをサジェストする?",
+  "@nodeprogTimelineParamsSuggestWhat": {
+    "description": "部品のパラメーターの節の見出し(サジェスト)。"
+  },
+  "nodeprogTimelineParamsSuggestFrom": "なにから読み取る?",
+  "@nodeprogTimelineParamsSuggestFrom": {
+    "description": "部品のパラメーターの節の見出し(サジェスト)。"
+  },
+  "nodeprogTimelineParamsPluginPending": "このプラグインの設定は準備中です。",
+  "@nodeprogTimelineParamsPluginPending": {
+    "description": "部品のパラメーターの説明。"
+  },
+  "nodeprogTimelineParamsQueryFilter": "ワードが空のときは、このページの検索ワード/タグで絞り込みます。ワードは下の欄で指定できます。",
+  "@nodeprogTimelineParamsQueryFilter": {
+    "description": "部品のパラメーターの説明(検索絞り込み)。"
+  },
+  "nodeprogTimelineParamsTendency": "好みの設定を使います。下から変えられます。",
+  "@nodeprogTimelineParamsTendency": {
+    "description": "部品のパラメーターの説明(指向性/刺激性)。"
+  },
+  "nodeprogTimelineParamsChrono": "時系列順にパラメーターはありません。",
+  "@nodeprogTimelineParamsChrono": {
+    "description": "部品のパラメーターの説明(時系列順)。"
+  },
+  "nodeprogTimelineParamsPluginPendingDetail": "このプラグインのパラメーター(RRL 設定ページ)は、ノード定義の配布(ストア統合)でここに表示されます。",
+  "@nodeprogTimelineParamsPluginPendingDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineParamsTendencyDetail": "storage.safe のトレンドプロファイルを使います。下のオプションから指向性/刺激性・好きなジャンル・アクションからのジャンル選択を編集できます(検索ホームのトレンド ⚙ と同じもの)。",
+  "@nodeprogTimelineParamsTendencyDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineParamsTrendPlugin": "トレンドプラグインが出した候補のワードを、選んだ形式で出します。",
+  "@nodeprogTimelineParamsTrendPlugin": {
+    "description": "部品のパラメーターの説明(トレンドプラグイン)。"
+  },
+  "nodeprogTimelineParamsTrendPluginDetail": "スロット trend.suggest の答え(候補のワード)を、トレンドを取得 = トレンドのタイル / Today = 上位の語の投稿のダイジェスト / カスタム = 候補のチップ で出します。件数は … から。",
+  "@nodeprogTimelineParamsTrendPluginDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineParamsForm": "形式",
+  "@nodeprogTimelineParamsForm": {
+    "description": "部品のパラメーターの節の見出し(トレンドプラグイン)。"
+  },
+  "nodeprogTimelineParamsRasq": "自分とフォロー中の人の RASQ の投稿を取り込みます。RASQ にログインしているときだけ流れます。",
+  "@nodeprogTimelineParamsRasq": {
+    "description": "部品のパラメーターの説明。"
+  },
+  "nodeprogTimelineParamsRasqDetail": "自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。RASQ アカウントにログインしているときだけ流れます。パラメーターはありません。",
+  "@nodeprogTimelineParamsRasqDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineParamsRasqSearch": "RASQ の公開の投稿を検索して取り込みます。フォローしていない人の投稿も入ります。",
+  "@nodeprogTimelineParamsRasqSearch": {
+    "description": "部品のパラメーターの説明。"
+  },
+  "nodeprogTimelineParamsRasqSearchDetail": "RASQ の公開の投稿(フォロー中かどうかに関係なく)を、下のワードで検索して取り込みます。空にすると、このページの検索ワード / タグで探します。表示モードを「ユーザー」にすると、投稿した人のタイルで並びます。",
+  "@nodeprogTimelineParamsRasqSearchDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineParamsRasqList": "RASQ リストの投稿を取り込みます。下で選ぶと、そのリストをフォローします。",
+  "@nodeprogTimelineParamsRasqList": {
+    "description": "部品のパラメーターの説明。"
+  },
+  "nodeprogTimelineParamsRasqListDetail": "RASQ リストの投稿を取り込みます(Central が、見たときにリスト内の人の投稿を集めます)。下の欄で、自分のリスト・フォロー中のリストから選ぶか、公開リストを検索して選びます。選ぶと、そのリストをフォローします。",
+  "@nodeprogTimelineParamsRasqListDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelineParamsSelfDetail": "{name}をそのまま取り込みます。パラメーターはありません。",
+  "@nodeprogTimelineParamsSelfDetail": {
+    "description": "開発者モードの説明。{name} = 開いているページの投稿の名前。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineParamsAccount": "アカウント",
+  "@nodeprogTimelineParamsAccount": {
+    "description": "部品のパラメーターの節の見出し。"
+  },
+  "nodeprogTimelineParamsTlKind": "TL 種別(この SNS が出せるもの)",
+  "@nodeprogTimelineParamsTlKind": {
+    "description": "部品のパラメーターの節の見出し。"
+  },
+  "nodeprogTimelineParamsList": "リスト(このアカウントのもの)",
+  "@nodeprogTimelineParamsList": {
+    "description": "部品のパラメーターの節の見出し。"
+  },
+  "nodeprogTimelineParamsNoLists": "このアカウントにはリストがありません(または取得できません)。",
+  "@nodeprogTimelineParamsNoLists": {
+    "description": "部品のパラメーター: リストが無いとき。"
+  },
+  "nodeprogTimelineParamsFeed": "カスタムフィード(下の欄で検索して選ぶ)",
+  "@nodeprogTimelineParamsFeed": {
+    "description": "部品のパラメーターの節の見出し。"
+  },
+  "nodeprogTimelineParamsTendencyEdit": "トレンドの指向性/刺激性",
+  "@nodeprogTimelineParamsTendencyEdit": {
+    "description": "部品のパラメーター(指向性/刺激性)の項目。"
+  },
+  "nodeprogTimelineParamsGenresEdit": "好きなジャンル/方向性",
+  "@nodeprogTimelineParamsGenresEdit": {
+    "description": "部品のパラメーター(指向性/刺激性)の項目。"
+  },
+  "nodeprogTimelineParamsPickGenresSubtitle": "類似した話題でまとめて、話題性の強いものから",
+  "@nodeprogTimelineParamsPickGenresSubtitle": {
+    "description": "部品のパラメーター(指向性/刺激性)の項目「アクションからジャンルを選択」の説明。"
+  },
+  "nodeprogTimelineParamsRasqSearchWordLabel": "検索ワード(空 = このページのワード / タグ)",
+  "@nodeprogTimelineParamsRasqSearchWordLabel": {
+    "description": "RASQ 検索のワードの欄。"
+  },
+  "nodeprogTimelineParamsRasqListSearchLabel": "RASQ リストを検索(名前 / @作った人 / 共有リンク)",
+  "@nodeprogTimelineParamsRasqListSearchLabel": {
+    "description": "RASQ リストの検索の欄。"
+  },
+  "nodeprogTimelineParamsFeedSearchLabel": "フィードを検索",
+  "@nodeprogTimelineParamsFeedSearchLabel": {
+    "description": "カスタムフィードの検索の欄。"
+  },
+  "nodeprogTimelineParamsFeedNotFound": "見つかりません",
+  "@nodeprogTimelineParamsFeedNotFound": {
+    "description": "カスタムフィードの検索で何も当たらないとき。"
+  },
+  "nodeprogTimelineParamsQueryLabel": "検索ワード(空 = このページの検索ワード)",
+  "@nodeprogTimelineParamsQueryLabel": {
+    "description": "検索絞り込みのワードの欄。"
+  },
+  "nodeprogTimelineParamsExcludeTitle": "このワードを含む投稿を除外する",
+  "@nodeprogTimelineParamsExcludeTitle": {
+    "description": "検索絞り込みのスイッチ。"
+  },
+  "nodeprogTimelineParamsExcludeSubtitle": "オフなら含む投稿だけ通します",
+  "@nodeprogTimelineParamsExcludeSubtitle": {
+    "description": "検索絞り込みのスイッチの説明。"
+  },
+  "nodeprogTimelineCreateTitle": "タイムラインを作成",
+  "@nodeprogTimelineCreateTitle": {
+    "description": "タイムラインを作る FOW の見出しと読み上げ。"
+  },
+  "nodeprogTimelineCreateDefaultName": "タイムライン {number}",
+  "@nodeprogTimelineCreateDefaultName": {
+    "description": "名前を入れずに作ったタイムラインの名前。{number} = 通し番号。",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineCreateShareTitle": "他のアカウントにも適用しますか",
+  "@nodeprogTimelineCreateShareTitle": {
+    "description": "タイムラインを作るときの確認の見出し。"
+  },
+  "nodeprogTimelineCreateShareMessage": "「すべてのアカウントに適用」にすると、どのアカウントでもこのタイムラインが並び、中身の変更も全部に効きます(あとで … メニューから変えられます)。",
+  "@nodeprogTimelineCreateShareMessage": {
+    "description": "タイムラインを作るときの確認の本文。"
+  },
+  "nodeprogTimelineCreateShareConfirm": "すべてのアカウントに適用",
+  "@nodeprogTimelineCreateShareConfirm": {
+    "description": "タイムラインを作るときの確認のボタン。"
+  },
+  "nodeprogTimelineCreateShareCancel": "このアカウントだけ",
+  "@nodeprogTimelineCreateShareCancel": {
+    "description": "タイムラインを作るときの確認のボタン。"
+  },
+  "nodeprogTimelineLoadFailed": "読み込めませんでした",
+  "@nodeprogTimelineLoadFailed": {
+    "description": "セクションのノードの中身が読み込めなかったとき。"
+  },
+  "nodeprogTimelineNodeTrend": "トレンド",
+  "@nodeprogTimelineNodeTrend": {
+    "description": "ノードの名前(トレンドのタイル)。"
+  },
+  "nodeprogTimelineNodeTabFallback": "ノード TL",
+  "@nodeprogTimelineNodeTabFallback": {
+    "description": "ノードの名前: 見つからないノードのタブ。"
+  },
+  "nodeprogTimelineReload": "読み直す",
+  "@nodeprogTimelineReload": {
+    "description": "セクションの読み直しのボタン。"
+  },
+  "nodeprogTimelineAstellEmpty": "いま開いている ASTell はありません",
+  "@nodeprogTimelineAstellEmpty": {
+    "description": "ASTell のタイルのノードが空のとき。"
+  },
+  "nodeprogTimelineAstellEmptyQuery": "「{query}」の ASTell はありません",
+  "@nodeprogTimelineAstellEmptyQuery": {
+    "description": "ASTell のタイルのノードが空のとき。{query} = このページの検索ワード。",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineSwingEmpty": "いま Swing はありません",
+  "@nodeprogTimelineSwingEmpty": {
+    "description": "Swing のノードが空のとき。"
+  },
+  "nodeprogTimelineSwingEmptyQuery": "「{query}」の Swing はありません",
+  "@nodeprogTimelineSwingEmptyQuery": {
+    "description": "Swing のノードが空のとき。{query} = このページの検索ワード。",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelineTrendEmpty": "トレンドはまだありません",
+  "@nodeprogTimelineTrendEmpty": {
+    "description": "トレンドのノードが空のとき。"
+  },
+  "nodeprogTimelineTrendFollowingNoQuery": "トレンド TL で出ます",
+  "@nodeprogTimelineTrendFollowingNoQuery": {
+    "description": "フォロー中の反応のノード: このページにワードが無いとき。"
+  },
+  "nodeprogTimelineTrendFollowingEmpty": "フォロー中の人の反応はまだありません",
+  "@nodeprogTimelineTrendFollowingEmpty": {
+    "description": "フォロー中の反応のノードが空のとき。"
+  },
+  "nodeprogTimelinePostsEmpty": "まだありません",
+  "@nodeprogTimelinePostsEmpty": {
+    "description": "TL のノードが空のとき。"
+  },
+  "nodeprogTimelineEventsEmpty": "会話のまとまりはまだありません",
+  "@nodeprogTimelineEventsEmpty": {
+    "description": "表示モード「関連」で空のとき。"
+  },
+  "nodeprogTimelineUsersEmpty": "まだいません",
+  "@nodeprogTimelineUsersEmpty": {
+    "description": "表示モード「ユーザー」で空のとき。"
+  },
+  "nodeprogTimelineUserPostCount": "{count, plural, other{{count} 件の投稿}}",
+  "@nodeprogTimelineUserPostCount": {
+    "description": "表示モード「ユーザー」の人の副題。{count} = その人の投稿の数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nodeprogTimelineTempSemantics": "タイムラインを一時的に変える",
+  "@nodeprogTimelineTempSemantics": {
+    "description": "一時変更 FOW の読み上げ。"
+  },
+  "nodeprogTimelineSearchPrev": "前の該当投稿",
+  "@nodeprogTimelineSearchPrev": {
+    "description": "TL 内の検索のボタン。"
+  },
+  "nodeprogTimelineSearchNext": "次の該当投稿",
+  "@nodeprogTimelineSearchNext": {
+    "description": "TL 内の検索のボタン。"
+  },
+  "nodeprogTimelineSearchHint": "このタイムラインから探す",
+  "@nodeprogTimelineSearchHint": {
+    "description": "TL 内の検索の欄のヒント。"
+  },
+  "nodeprogTimelineSearchFuzzy": "近似検索",
+  "@nodeprogTimelineSearchFuzzy": {
+    "description": "TL 内の検索のチップ。"
+  },
+  "nodeprogTimelineTempClose": "閉じる",
+  "@nodeprogTimelineTempClose": {
+    "description": "一時変更 FOW を閉じるボタン。"
+  },
+  "nodeprogTimelineTempTitle": "タイムラインを一時変更",
+  "@nodeprogTimelineTempTitle": {
+    "description": "一時変更 FOW の見出し。"
+  },
+  "nodeprogTimelinePaletteSuggestTitle": "サジェスト",
+  "@nodeprogTimelinePaletteSuggestTitle": {
+    "description": "部品の追加のパレットのタイルの名前。"
+  },
+  "nodeprogTimelinePaletteSuggestDescription": "あなたの投稿や反応に近い投稿を先頭に並べます。",
+  "@nodeprogTimelinePaletteSuggestDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteSuggestDetail": "[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合う投稿を先頭へ並べ替えます。",
+  "@nodeprogTimelinePaletteSuggestDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelinePaletteFilterTitle": "絞り込み",
+  "@nodeprogTimelinePaletteFilterTitle": {
+    "description": "部品の追加のパレットのタイルの名前。"
+  },
+  "nodeprogTimelinePaletteFilterDescription": "あなたの投稿や反応に合わない投稿を除きます。",
+  "@nodeprogTimelinePaletteFilterDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteFilterDetail": "[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合わない投稿を除外します(サジェストと同じパラメーター)。",
+  "@nodeprogTimelinePaletteFilterDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelinePaletteQueryFilterTitle": "検索絞り込み",
+  "@nodeprogTimelinePaletteQueryFilterTitle": {
+    "description": "部品の追加のパレットのタイルの名前。"
+  },
+  "nodeprogTimelinePaletteQueryFilterDescription": "このページの検索ワード/タグ(または指定ワード)に合う投稿だけ通します。",
+  "@nodeprogTimelinePaletteQueryFilterDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteTendencyTitle": "指向性/刺激性",
+  "@nodeprogTimelinePaletteTendencyTitle": {
+    "description": "部品の追加のパレットのタイルの名前。"
+  },
+  "nodeprogTimelinePaletteTendencyDescription": "好みの設定に合わない投稿を除き、合う順に並べます。",
+  "@nodeprogTimelinePaletteTendencyDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteTendencyDetail": "トレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)に合わない投稿を除外し、適合度順に並べます。プロファイルは検索ホームのトレンド ⚙ で編集します。",
+  "@nodeprogTimelinePaletteTendencyDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelinePalettePickGenresTitle": "アクションからジャンルを選択",
+  "@nodeprogTimelinePalettePickGenresTitle": {
+    "description": "部品の追加のパレットのタイルの名前。"
+  },
+  "nodeprogTimelinePalettePickGenresDescription": "反応した投稿の話題から、好きなジャンルを選びます。",
+  "@nodeprogTimelinePalettePickGenresDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePalettePickGenresDetail": "リアクションした投稿を類似した話題でまとめ、話題性の強いものから「好き / 好きではない」で好きなジャンルを決めます(指向性/刺激性の部品がこのプロファイルを使います)。",
+  "@nodeprogTimelinePalettePickGenresDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelinePaletteChronoTitle": "時系列順",
+  "@nodeprogTimelinePaletteChronoTitle": {
+    "description": "部品の追加のパレットのタイルの名前。"
+  },
+  "nodeprogTimelinePaletteChronoDescription": "取得したままの時刻順に整えます。",
+  "@nodeprogTimelinePaletteChronoDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteThisDmDescription": "この DM ページのメッセージをそのまま取り込みます。",
+  "@nodeprogTimelinePaletteThisDmDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteThisDmDetail": "この DM ページのメッセージをそのまま取り込みます(共通設定ではそれぞれのページの DM)。",
+  "@nodeprogTimelinePaletteThisDmDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelinePaletteSearchResultsDescription": "このアカウントで、このページの検索ワード / タグを検索した結果を取り込みます。",
+  "@nodeprogTimelinePaletteSearchResultsDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteRasqPostsTitle": "RASQ の投稿",
+  "@nodeprogTimelinePaletteRasqPostsTitle": {
+    "description": "部品の追加のパレットのタイルの名前。"
+  },
+  "nodeprogTimelinePaletteRasqPostsDescription": "自分とフォロー中の人の RASQ の投稿を取り込みます。",
+  "@nodeprogTimelinePaletteRasqPostsDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteRasqPostsDetail": "自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。SNS の投稿と同じタイムラインに混ぜられます。",
+  "@nodeprogTimelinePaletteRasqPostsDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelinePaletteTimelineTitle": "タイムライン",
+  "@nodeprogTimelinePaletteTimelineTitle": {
+    "description": "部品の追加のパレットのタイルの名前。"
+  },
+  "nodeprogTimelinePaletteTimelineDescription": "アカウントのタイムラインを取り込みます。種類は追加後に選べます。",
+  "@nodeprogTimelinePaletteTimelineDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteTimelineDetail": "アカウントの基本タイムラインを取り込みます。種類はその SNS が出せるもの(フォロー中 / ローカル / グローバル / Discover …)から、アカウントと合わせて追加後のタイルで選べます。",
+  "@nodeprogTimelinePaletteTimelineDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelinePaletteListTlTitle": "リストTL",
+  "@nodeprogTimelinePaletteListTlTitle": {
+    "description": "部品の追加のパレットのタイルの名前。"
+  },
+  "nodeprogTimelinePaletteListTlDescription": "アカウントのリストを取り込みます。リストは追加後に選べます。",
+  "@nodeprogTimelinePaletteListTlDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteListTlDetail": "アカウントと、そのアカウントに含まれるリストのタイムラインを取り込みます(追加後のタイルで選択)。",
+  "@nodeprogTimelinePaletteListTlDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelinePaletteFeedTitle": "カスタムフィード(Bluesky)",
+  "@nodeprogTimelinePaletteFeedTitle": {
+    "description": "部品の追加のパレットのタイルの名前。"
+  },
+  "nodeprogTimelinePaletteFeedDescription": "Bluesky のカスタムフィードを探して取り込みます。",
+  "@nodeprogTimelinePaletteFeedDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteFeedDetail": "Bluesky のカスタムフィードを検索して取り込みます(SNS を跨いだリストは「RASQ リスト」)。",
+  "@nodeprogTimelinePaletteFeedDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelinePaletteRasqListTitle": "RASQ リスト",
+  "@nodeprogTimelinePaletteRasqListTitle": {
+    "description": "部品の追加のパレットのタイルの名前。"
+  },
+  "nodeprogTimelinePaletteRasqListDescription": "いくつもの SNS の人をまとめたリストの投稿を取り込みます。",
+  "@nodeprogTimelinePaletteRasqListDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteRasqListDetail": "RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取り込みます。自分のリスト・フォロー中のリストから選ぶか、公開リストを検索します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。",
+  "@nodeprogTimelinePaletteRasqListDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelinePaletteTrendDescription": "いまのトレンドを取り込みます。種別(トレンドタイル / トレンド TL)は追加後に切り替えます。",
+  "@nodeprogTimelinePaletteTrendDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteTrendDetail": "トレンドタイル = サーバーのトレンドのワードのタイル、トレンド TL = いまのトレンド上位タグの検索結果を 1 本に合流した投稿。",
+  "@nodeprogTimelinePaletteTrendDetail": {
+    "description": "開発者モードの説明。"
+  },
+  "nodeprogTimelinePaletteTrendFollowingDescription": "フォロー中の人の、このページのワード / タグの投稿を出します。",
+  "@nodeprogTimelinePaletteTrendFollowingDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteDmPeerDescription": "@{peer} との DM を取り込みます。",
+  "@nodeprogTimelinePaletteDmPeerDescription": {
+    "description": "部品の追加のパレット(DM)のタイルの説明。{peer} = 相手のハンドル。",
+    "placeholders": {
+      "peer": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelinePaletteSectionDescription": "ノードを 3 つまで包む枠です。画面では見出しの下に、入れた順で出します。",
+  "@nodeprogTimelinePaletteSectionDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteAstellDescription": "いま開いている ASTell のルームをタイルで出します。",
+  "@nodeprogTimelinePaletteAstellDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteSwingDescription": "Swing を出している人を並べます。",
+  "@nodeprogTimelinePaletteSwingDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteTrendPluginTitle": "{form}: {name}",
+  "@nodeprogTimelinePaletteTrendPluginTitle": {
+    "description": "部品の追加のパレットのタイルの名前。{form} = 形式、{name} = トレンドプラグインの名前。",
+    "placeholders": {
+      "form": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelinePaletteTrendPluginDetail": "{form}(スロット trend.suggest の答えを、この形式のノードで出します)",
+  "@nodeprogTimelinePaletteTrendPluginDetail": {
+    "description": "開発者モードの説明。{form} = 形式の説明。",
+    "placeholders": {
+      "form": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelinePaletteTodayTitle": "Today: {account}",
+  "@nodeprogTimelinePaletteTodayTitle": {
+    "description": "部品の追加のパレットのタイルの名前。{account} = アカウントの表記。",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelinePaletteSnsPluginAuthor": "SNSプラグイン",
+  "@nodeprogTimelinePaletteSnsPluginAuthor": {
+    "description": "部品の追加のパレットのタイルの提供元(ジャンルの絞り込みにも使う)。"
+  },
+  "nodeprogTimelinePaletteListsAuthor": "リスト系",
+  "@nodeprogTimelinePaletteListsAuthor": {
+    "description": "部品の追加のパレットのタイルの提供元(ジャンルの絞り込みにも使う)。"
+  },
+  "nodeprogTimelinePaletteTodayDescription": "このアカウントの Today(注目の投稿)を取り込みます。",
+  "@nodeprogTimelinePaletteTodayDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteTrendTagsTitle": "トレンド: {account}",
+  "@nodeprogTimelinePaletteTrendTagsTitle": {
+    "description": "部品の追加のパレットのタイルの名前。{account} = アカウントの表記(または「全部のアカウント」)。",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelinePaletteTrendTagsAllDescription": "RASQ アカウントの SNS アカウント全部のトレンドのワードを、タイルで出します。",
+  "@nodeprogTimelinePaletteTrendTagsAllDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteTrendTagsDescription": "このアカウントのサーバーのトレンドのワードを、タイルで出します。",
+  "@nodeprogTimelinePaletteTrendTagsDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteSearchResultsTitle": "検索結果: {account}",
+  "@nodeprogTimelinePaletteSearchResultsTitle": {
+    "description": "部品の追加のパレットのタイルの名前。{account} = アカウントの表記。",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelinePaletteSelfDescription": "{name}をそのまま取り込みます。",
+  "@nodeprogTimelinePaletteSelfDescription": {
+    "description": "部品の追加のパレットのタイルの説明。{name} = 開いているページの投稿の名前。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeprogTimelinePaletteRasqSearchDescription": "フォローしていない人も含めて、RASQ の投稿を検索して取り込みます。表示モード「ユーザー」で人のタイルに。",
+  "@nodeprogTimelinePaletteRasqSearchDescription": {
+    "description": "部品の追加のパレットのタイルの説明。"
+  },
+  "nodeprogTimelinePaletteEmptyTitle": "コンポーネントが見つかりません",
+  "@nodeprogTimelinePaletteEmptyTitle": {
+    "description": "部品の追加のパレットで何も当たらないとき。"
+  },
+  "nodeprogTimelinePaletteEmptyHint": "検索ワードを変えてみてください",
+  "@nodeprogTimelinePaletteEmptyHint": {
+    "description": "部品の追加のパレットで何も当たらないときのヒント。"
+  }
+}

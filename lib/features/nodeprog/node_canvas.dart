@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../../l10n/l10n.dart';
 import 'node_graph.dart';
 
 /// ノードキャンバスの描画部 (D-235): エディタ([NodeEditorScreen])と、RAi チャットのインライン表示
@@ -262,9 +263,10 @@ class NodeCard extends StatelessWidget {
             ),
           ),
         ),
-        if (node.inputs.isNotEmpty) _sectionLabel(scheme, '入力'),
+        if (node.inputs.isNotEmpty) _sectionLabel(scheme, context.l10n.nodeprogEditorCanvasInputs),
         for (var i = 0; i < node.inputs.length; i++) _inputRow(scheme, i),
-        if (node.outputs.isNotEmpty) _sectionLabel(scheme, '出力'),
+        if (node.outputs.isNotEmpty) _sectionLabel(scheme, context.l10n.nodeprogEditorCanvasOutputs),
+
         for (var j = 0; j < node.outputs.length; j++) _outputRow(scheme, j),
         // 条件接続部・下辺 (D-094/D-099): 分岐ごとのドット(位置はポート座標計算 `condOutCenter` と同じ等間隔)。
         if (node.condOutCount > 0)
