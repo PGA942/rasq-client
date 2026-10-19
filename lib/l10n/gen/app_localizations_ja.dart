@@ -6432,4 +6432,1302 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get storePkgKindAssets => 'アセットパック';
+
+  @override
+  String get vcSectionInvited => '招待';
+
+  @override
+  String get vcSectionRecommended => 'おすすめ';
+
+  @override
+  String get vcSectionUpcoming => '近日開催';
+
+  @override
+  String get vcSectionTrending => 'トレンド';
+
+  @override
+  String get vcSectionFollowing => 'フォロー中';
+
+  @override
+  String vcSectionSettingsTooltip(String title) {
+    return '$titleの設定';
+  }
+
+  @override
+  String get vcSearchHint => 'ASTell / Swing を検索';
+
+  @override
+  String get vcSearchRefineHint => 'さらに絞る';
+
+  @override
+  String vcSearchTermChip(String term) {
+    return '「$term」 ×';
+  }
+
+  @override
+  String get vcSearchClear => '消す';
+
+  @override
+  String get vcCreateTooltip => 'VC を作成';
+
+  @override
+  String get vcHomeLoadError => 'VC を取得できませんでした';
+
+  @override
+  String vcJoinedRoom(String title) {
+    return '参加中: $title';
+  }
+
+  @override
+  String vcJoinedPeers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人 ・ タップで開く',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get vcConnecting => '接続しています…';
+
+  @override
+  String vcInvitedBy(String name) {
+    return '$name から招待 ・ タップで見る';
+  }
+
+  @override
+  String get vcInviteDecline => '辞退';
+
+  @override
+  String get vcRecommendedEmpty => 'おすすめの VC はまだありません';
+
+  @override
+  String get vcTrendingEmpty => 'トレンドの VC はまだありません';
+
+  @override
+  String get vcFollowingEmpty => 'フォロー中のユーザーの VC はありません';
+
+  @override
+  String get vcSearchNoResults => '見つかりませんでした';
+
+  @override
+  String get vcSearchNoResultsInSection => 'この節にはありません';
+
+  @override
+  String vcSearchNoResultsFor(String query) {
+    return '「$query」に当たる ASTell / Swing はありません';
+  }
+
+  @override
+  String get vcTileOpen => '見てみる';
+
+  @override
+  String get vcBookmarkRemove => 'ブックマークから削除';
+
+  @override
+  String get vcBookmarkSave => 'ブックマークに保存';
+
+  @override
+  String get vcRemindCancel => '開始通知を解除';
+
+  @override
+  String get vcRemindSet => '開始を通知';
+
+  @override
+  String get vcMenuTooltip => 'メニュー';
+
+  @override
+  String vcScheduledAt(String when) {
+    return '開催予定 $when';
+  }
+
+  @override
+  String get vcSummaryPrivate => 'ざっくり要約は非公開です。';
+
+  @override
+  String get vcTileStripEmpty => 'VC はまだありません';
+
+  @override
+  String get vcLinkCopied => 'リンクをコピーしました';
+
+  @override
+  String get vcBookmarkSaved => 'ブックマークに保存しました';
+
+  @override
+  String get vcBookmarkRemoved => 'ブックマークから削除しました';
+
+  @override
+  String vcRemindRegistered(String when) {
+    return '$when に通知します';
+  }
+
+  @override
+  String get vcRemindRemoved => '通知を解除しました';
+
+  @override
+  String get vcRemindUnavailable => 'この端末では通知を登録できませんでした';
+
+  @override
+  String get vcRemindNotScheduled => '開催予定のないルームです';
+
+  @override
+  String get vcMenuShareAsPost => '投稿で共有';
+
+  @override
+  String get vcMenuCopyLink => 'リンクをコピー';
+
+  @override
+  String get vcMenuStartNow => '今すぐ開催する';
+
+  @override
+  String get vcMenuBackToRoom => 'ルームへ戻る';
+
+  @override
+  String get vcMenuJoin => '参加する';
+
+  @override
+  String get vcMenuClose => '終了する';
+
+  @override
+  String get vcMenuUnfollowHost => 'ホストのフォローを解除';
+
+  @override
+  String get vcMenuFollowHost => 'ホストをフォロー';
+
+  @override
+  String get vcMenuMute => 'ミュート';
+
+  @override
+  String get vcMenuReport => '報告';
+
+  @override
+  String vcUnfollowed(String name) {
+    return '$name のフォローを解除しました';
+  }
+
+  @override
+  String vcFollowed(String name) {
+    return '$name をフォローしました';
+  }
+
+  @override
+  String vcReportWhatRoom(String title) {
+    return 'ルーム「$title」';
+  }
+
+  @override
+  String vcMenuNotYet(String title, String action) {
+    return '「$title」の操作($action)は M5 後段で入ります';
+  }
+
+  @override
+  String get vcCloseRoomTitle => 'ルームを終了';
+
+  @override
+  String vcCloseScheduledBody(String title) {
+    return '「$title」の予約を取り消します。ブックマークや開始通知を登録した人には届きません。';
+  }
+
+  @override
+  String vcCloseRoomBody(String title) {
+    return '「$title」を終了します。参加中のメンバーは退出になります。';
+  }
+
+  @override
+  String vcClosedScheduled(String title) {
+    return '「$title」の予約を取り消しました';
+  }
+
+  @override
+  String vcClosedRoom(String title) {
+    return '「$title」を終了しました';
+  }
+
+  @override
+  String vcCloseFailed(String error) {
+    return '終了できませんでした: $error';
+  }
+
+  @override
+  String get vcTileBack => '戻る';
+
+  @override
+  String get vcReminderNotificationTitle => 'ブックマークしたVCが始まります！';
+
+  @override
+  String vcReminderNotificationBody(String host, String title) {
+    return '$host の「$title」';
+  }
+
+  @override
+  String vcShareTextScheduled(String title, String when) {
+    return '「$title」を $when に開催します';
+  }
+
+  @override
+  String vcShareTextOpen(String title) {
+    return '「$title」を開催中です';
+  }
+
+  @override
+  String get vcViewerPluginsTooltip => '全画面表示プラグイン(準備中)';
+
+  @override
+  String vcViewerSharedBy(String name) {
+    return '$name が共有';
+  }
+
+  @override
+  String get vcViewerSave => '保存';
+
+  @override
+  String get vcViewerSaveNotYet => '保存は準備中です';
+
+  @override
+  String get vcViewerShare => '共有';
+
+  @override
+  String get vcViewerShareNotYet => '共有は準備中です';
+
+  @override
+  String get vcBarSpeaker => 'スピーカー';
+
+  @override
+  String get vcBarMic => 'マイク';
+
+  @override
+  String get vcBarScreen => '画面共有';
+
+  @override
+  String get vcBarFullscreen => '全画面(共有枠に画面があるとき)';
+
+  @override
+  String get vcBarCaptions => '字幕(文字起こし)';
+
+  @override
+  String vcCallConnectFailed(String error) {
+    return '通話の接続に失敗しました: $error';
+  }
+
+  @override
+  String get vcOpenNotFound => 'このルームは見つかりません(終了したか、リンクが違うかもしれません)';
+
+  @override
+  String get vcOpenFailed => 'ルームを開けませんでした';
+
+  @override
+  String get vcOpenGoHome => 'ASTell のホームへ';
+
+  @override
+  String vcOpenHost(String name, String handle) {
+    return 'ホスト: $name(@$handle)';
+  }
+
+  @override
+  String get vcOpenRoom => 'ルームを開く';
+
+  @override
+  String get vcShareBlockDirect => 'ダイレクトの投稿は ASTell に共有できません';
+
+  @override
+  String get vcShareBlockLocalOnly => 'ローカル限定の投稿は ASTell に共有できません';
+
+  @override
+  String get vcShareBlockUnknownVisibility => '公開範囲が分からない投稿は ASTell に共有できません';
+
+  @override
+  String get vcShareBlockLimited => '公開範囲が限定された投稿は ASTell に共有できません';
+
+  @override
+  String get vcShares => '共有';
+
+  @override
+  String vcSharesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '共有 ($count)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get vcSharesShowAll => 'すべての共有を見る';
+
+  @override
+  String get vcSharesEmpty => 'チャットで 📌 したものがここに並びます。';
+
+  @override
+  String get vcShareActions => '共有の操作';
+
+  @override
+  String get vcShareTranscriptSource => 'RASQ ・ 文字起こし';
+
+  @override
+  String get vcUnpin => 'ピン留めを外す';
+
+  @override
+  String get vcYou => 'あなた';
+
+  @override
+  String get vcNoDescription => '説明はありません。';
+
+  @override
+  String get vcReportReasonSpam => 'スパム';
+
+  @override
+  String get vcReportReasonHarassment => '嫌がらせ・暴言';
+
+  @override
+  String get vcReportReasonIllegal => '違法・危険な内容';
+
+  @override
+  String get vcReportReasonOther => 'その他';
+
+  @override
+  String get vcJoinPolicyAnyone => '誰でも';
+
+  @override
+  String get vcJoinPolicyAnyoneHint => '公開ルームは誰でも参加できます';
+
+  @override
+  String get vcJoinPolicyFollowers => 'フォロワーだけ';
+
+  @override
+  String get vcJoinPolicyFollowersHint => 'あなた(ホスト)を RASQ アカウントでフォローしている人';
+
+  @override
+  String get vcJoinPolicyFollowing => 'フォロー中の人だけ';
+
+  @override
+  String get vcJoinPolicyFollowingHint => 'あなたがフォローしている人';
+
+  @override
+  String get vcJoinPolicyMutual => '相互フォローだけ';
+
+  @override
+  String get vcJoinPolicyMutualHint => 'お互いにフォローしている人';
+
+  @override
+  String get vcSharePolicyEveryone => '全員';
+
+  @override
+  String get vcSharePolicyModerators => 'モデレーターだけ';
+
+  @override
+  String vcShareContentWarning(String warning) {
+    return '⚠ $warning(閲覧注意)';
+  }
+
+  @override
+  String vcSharePluginWant(String name) {
+    return '「$name」を使いたい';
+  }
+
+  @override
+  String get vcKindPost => '投稿';
+
+  @override
+  String get vcKindMedia => 'メディア';
+
+  @override
+  String get vcKindVideo => '動画';
+
+  @override
+  String get vcKindLink => 'リンク';
+
+  @override
+  String get vcKindText => 'テキスト';
+
+  @override
+  String get vcKindPlugin => 'プラグイン';
+
+  @override
+  String get vcMediaInsecureContext => 'Web 版の通話は https で開いたときだけ使えます';
+
+  @override
+  String get vcMediaPermissionDenied => 'マイク(カメラ)の許可がありません。端末の設定で許可してください';
+
+  @override
+  String get vcMediaNoDevice => 'マイク(カメラ)が見つかりません';
+
+  @override
+  String get vcMediaUnsupported => 'この端末では使えません';
+
+  @override
+  String vcMediaUnsupportedDetail(String detail) {
+    return 'この端末では使えません($detail)';
+  }
+
+  @override
+  String get vcMediaMicClosed => '閉じた通話のマイクは開けません';
+
+  @override
+  String get vcStreamNotConnected => '配信サーバーに繋がっていません';
+
+  @override
+  String get vcStreamPublishFailed => '映像を配信サーバーに上げられませんでした';
+
+  @override
+  String get vcScreenSharingNotification => '画面を共有しています';
+
+  @override
+  String get vcScreenPickTitle => '共有する画面を選ぶ';
+
+  @override
+  String get vcScreenPickScreen => '画面全体';
+
+  @override
+  String get vcScreenPickWindow => 'ウィンドウ';
+
+  @override
+  String get vcScreenPickCancel => 'やめる';
+
+  @override
+  String get vcScreenPickShare => '共有する';
+
+  @override
+  String get vcNoticeAudioBlocked => '音が止まっています。画面をタップすると鳴ります';
+
+  @override
+  String vcNoticeCallFull(int cap) {
+    return '通話は満員です($cap 人まで)。配信があれば、配信で聞けます';
+  }
+
+  @override
+  String get vcNoticeHoldWaiting => '開催までお待ちください。保留音を鳴らしています';
+
+  @override
+  String get vcNoticeStarted => '開催が始まりました';
+
+  @override
+  String get vcNoticeHoldIdle => '静かなので保留音を鳴らしています';
+
+  @override
+  String get vcShareClassImage => '画像';
+
+  @override
+  String get vcShareClassFile => 'ファイル';
+
+  @override
+  String get vcShareClassTranscript => '文字起こし';
+
+  @override
+  String get vcShareStyleCards => 'カード(横スライド)';
+
+  @override
+  String get vcShareStyleList => '一覧(レガシー)';
+
+  @override
+  String get vcTermsRequired => '利用規約への同意が必要です(ASTell のいちばん上の案内から同意できます)';
+
+  @override
+  String get vcClosedByModeration => '運営によりルームが閉鎖されました';
+
+  @override
+  String get vcClosedByHost => 'ホストがルームを終了しました';
+
+  @override
+  String get vcKickedBanned => 'このルームから BAN されました';
+
+  @override
+  String get vcKickedSanctioned => 'アカウントの処置により退出させられました';
+
+  @override
+  String get vcKickedByModerator => 'モデレーターにルームから退出させられました';
+
+  @override
+  String vcShareHeld(String seconds) {
+    return '検閲中: $seconds 秒後に判定して配信されます(アカウントの処置)';
+  }
+
+  @override
+  String vcShareRejected(String source) {
+    return '検閲で却下されました($source)。この発言は配信されていません';
+  }
+
+  @override
+  String get vcNotInRoom => 'ルームに入っていません';
+
+  @override
+  String vcStreamReceiveFailed(String error) {
+    return '映像を受けられません: $error';
+  }
+
+  @override
+  String get vcStreamBlockedByScreenShare => '画面共有中は配信を始められません(共有をやめてから)';
+
+  @override
+  String vcStreamStartFailed(String error) {
+    return '配信を始められません: $error';
+  }
+
+  @override
+  String vcStreamClearFailed(String error) {
+    return '配信の印を消せませんでした: $error';
+  }
+
+  @override
+  String get vcScreenShareBlockedByStream => '配信中は画面共有を始められません(配信を止めてから)';
+
+  @override
+  String vcScreenShareStartFailed(String error) {
+    return '画面共有を始められません: $error';
+  }
+
+  @override
+  String get vcStreamUnavailable => '配信はまだ使えません(配信サーバーが未設定)';
+
+  @override
+  String vcStreamForbidden(String message) {
+    return '許可されていません($message)';
+  }
+
+  @override
+  String get vcTtsNotConfigured => '読み上げバックエンドが未設定です(CENTRAL_TTS_URL)';
+
+  @override
+  String get vcLoginRequired => 'RASQ アカウントにログインしてください';
+
+  @override
+  String vcCreateUninvite(String name) {
+    return '$name の招待をやめる';
+  }
+
+  @override
+  String vcCreateInvite(String name) {
+    return '$name を招待';
+  }
+
+  @override
+  String get vcCreateCancel => 'キャンセル';
+
+  @override
+  String get vcCreateShareAfterOn => '作成後に投稿で共有する(オン)';
+
+  @override
+  String get vcCreateShareAfter => '作成後に投稿で共有する';
+
+  @override
+  String vcCreateScheduled(String title, String when) {
+    return '「$title」を $when に予約しました';
+  }
+
+  @override
+  String get vcCreateScheduleInPast => '開催予定は今より後にしてください';
+
+  @override
+  String vcCreateGenresMax(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ジャンルは $max 個までです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get vcCreateTitleRequired => 'タイトルを入力してください';
+
+  @override
+  String vcCreateInviteFailed(String error) {
+    return '招待を送れませんでした: $error';
+  }
+
+  @override
+  String vcCreateFailed(String error) {
+    return '作成できませんでした: $error';
+  }
+
+  @override
+  String get vcCreateSearchAdd => '検索して追加';
+
+  @override
+  String get vcCreateHandleHint => '@handle(RASQ アカウント)';
+
+  @override
+  String vcCreateHandleNotFound(String handle) {
+    return '見つかりませんでした: $handle';
+  }
+
+  @override
+  String get vcCreateAddInvitee => '招待に追加';
+
+  @override
+  String get vcCreateTitleHint => 'タイトル';
+
+  @override
+  String get vcCreateInviteFollowers => 'フォロワーを招待';
+
+  @override
+  String vcCreateInviteFollowersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'フォロワーを招待($count)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get vcCreateWelcomeToggle => '参加時にウェルカムメッセージを表示する';
+
+  @override
+  String get vcCreateWelcomeHint => 'ウェルカムメッセージを設定..';
+
+  @override
+  String vcCreateGenresLabel(int max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      max,
+      locale: localeName,
+      other: 'ジャンルを選定(最大 $max)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get vcCreateGenreHint => 'ジャンルを入力';
+
+  @override
+  String get vcCreateGenreAdd => 'ジャンルを追加';
+
+  @override
+  String get vcCreateSchedule => '開催を予約する';
+
+  @override
+  String get vcCreateScheduleCaption => '予約中は、あなたが入るまで他の人は入れません。';
+
+  @override
+  String get vcCreateScheduleCaptionDetail =>
+      '予約中はあなた(とモデレーター)が入るまで他の人は参加できません。近日開催の節と共有リンクから開始通知を登録できます。';
+
+  @override
+  String get vcCreateSummaryHint => 'ざっくり要約(任意。空なら自動で作ります)';
+
+  @override
+  String get vcCreateMicAfterCreate => 'マイク(作成後に切替)';
+
+  @override
+  String get vcCreateScheduleButton => '予約';
+
+  @override
+  String get vcCreateButton => '作成';
+
+  @override
+  String get vcRoomHostPresent => '参加中';
+
+  @override
+  String get vcRoomHostBeforeStart => '開催前';
+
+  @override
+  String get vcRoomHostAbsent => '不在';
+
+  @override
+  String vcRoomMembersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人が参加しています',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get vcRoomMembersHostOnly => 'ホストのほかには、まだ誰もいません';
+
+  @override
+  String get vcRoomMembersNone => 'まだ誰もいません';
+
+  @override
+  String vcRoomMembersRest(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '他$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get vcRoomScreenShown => '共有枠に表示中';
+
+  @override
+  String get vcRoomScreenShow => '画面共有を表示';
+
+  @override
+  String vcRoomNotYet(String what) {
+    return '$what は準備中です';
+  }
+
+  @override
+  String get vcRoomDeviceSettingsTitle => 'ASTell の設定(この端末)';
+
+  @override
+  String get vcRoomEditBar => '下段のボタンの並びを編集';
+
+  @override
+  String get vcRoomEditBarSubtitle => '並べ替え / 表示 / 非表示 / プラグインのボタンを追加';
+
+  @override
+  String get vcRoomAutoShareLabel => 'チャットの内容を自動で共有欄に出す(ピン留めしなくても)';
+
+  @override
+  String get vcRoomShareStyleLabel => '共有欄の表示';
+
+  @override
+  String get vcRoomAutoPlayLabel => '自動再生';
+
+  @override
+  String get vcRoomAutoPlayScreen => '画面共有が始まったら共有枠に出す';
+
+  @override
+  String get vcRoomHoldMusicLabel => '保留音';
+
+  @override
+  String get vcRoomHoldMusicDevice => '保留音を鳴らす(この端末)';
+
+  @override
+  String get vcRoomDeviceSettingsCaption => 'ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。';
+
+  @override
+  String get vcRoomDeviceSettingsCaptionDetail =>
+      'ルームごとの設定(参加できる人・読み上げなど)は、参加してからルームの歯車で変えられます(オーナー)。';
+
+  @override
+  String get vcRoomClose => '閉じる';
+
+  @override
+  String get vcRoomShare => '共有';
+
+  @override
+  String get vcRoomHost => 'ホスト';
+
+  @override
+  String get vcRoomMembers => '参加メンバー';
+
+  @override
+  String get vcRoomLocked => '運営により新しい入室が止められています。';
+
+  @override
+  String get vcRoomLockedDetail => '運営により新規入室が停止されています(D-151)。';
+
+  @override
+  String get vcRoomRemindOn => '開始を通知します';
+
+  @override
+  String get vcRoomWaitForHost => 'ホストが始めるまで参加できません';
+
+  @override
+  String get vcRoomRemindOff => '通知を解除';
+
+  @override
+  String get vcRoomSummary => 'ざっくり要約';
+
+  @override
+  String get vcRoomSummaryPrivate => 'このルームはざっくり要約を公開していません。';
+
+  @override
+  String vcRoomWelcome(String message) {
+    return 'ようこそ: $message';
+  }
+
+  @override
+  String get vcRoomMicAfterJoin => 'マイク(参加後に切替)';
+
+  @override
+  String get vcRoomCaptions => '字幕';
+
+  @override
+  String get vcRoomJoin => '参加';
+
+  @override
+  String get vcRoomSettings => '設定';
+
+  @override
+  String get vcRoomTabHome => 'ホーム';
+
+  @override
+  String get vcRoomTabChat => 'チャット';
+
+  @override
+  String get vcRoomTabToc => '目次';
+
+  @override
+  String get vcRoomTabRoom => 'ルーム';
+
+  @override
+  String get vcRoomLeft => '退出しました';
+
+  @override
+  String get vcRoomLeave => '退出';
+
+  @override
+  String get vcRoomStreamingScreen => '画面を配信しています';
+
+  @override
+  String get vcRoomStreamingCamera => 'カメラで配信しています';
+
+  @override
+  String get vcRoomStopSharing => '共有をやめる';
+
+  @override
+  String get vcRoomStopStream => '配信を止める';
+
+  @override
+  String get vcRoomSpeakerUnmute => 'スピーカーミュート解除';
+
+  @override
+  String get vcRoomSpeakerMute => 'スピーカーミュート';
+
+  @override
+  String get vcRoomMutedByModerator => 'モデレーターにミュートされています';
+
+  @override
+  String get vcRoomMicOpening => 'マイクを準備中(押すとやめる)';
+
+  @override
+  String get vcRoomMicOff => 'マイクオフ';
+
+  @override
+  String get vcRoomMicOn => 'マイクオン';
+
+  @override
+  String get vcRoomScreenShareOff => '画面共有オフ';
+
+  @override
+  String get vcRoomFullscreen => '全画面';
+
+  @override
+  String get vcRoomCaptionsOff => '字幕オフ';
+
+  @override
+  String get vcRoomCaptionsOn => '字幕オン';
+
+  @override
+  String get vcRoomShareAsLinkLimited => '公開範囲が限定された投稿なので、リンクとして共有します';
+
+  @override
+  String vcRoomShareAsLinkFailed(String error) {
+    return '投稿を取れなかったのでリンクとして共有します: $error';
+  }
+
+  @override
+  String vcRoomPickFileFailed(String error) {
+    return 'ファイルを選択できませんでした: $error';
+  }
+
+  @override
+  String get vcRoomStream => '配信';
+
+  @override
+  String vcRoomLiveCardTitle(String kind, String title) {
+    return '$kind: $title';
+  }
+
+  @override
+  String vcRoomPeerScreen(String name) {
+    return '$name の画面';
+  }
+
+  @override
+  String vcRoomPeerScreenTitled(String name, String title) {
+    return '$name の画面 — $title';
+  }
+
+  @override
+  String get vcRoomAllShares => 'すべての共有';
+
+  @override
+  String get vcRoomSettingsTitle => 'VC の設定';
+
+  @override
+  String get vcRoomModerationLabel => 'モデレーション(オーナー)';
+
+  @override
+  String get vcRoomJoinPolicyLabel => '参加できる人';
+
+  @override
+  String get vcRoomSharePolicyLabel => '共有(チャットへの投稿)できる人';
+
+  @override
+  String vcRoomModeratorsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'モデレーター($count)— メンバーの「…」から追加',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get vcRoomRemoveModerator => 'モデレーターを外す';
+
+  @override
+  String get vcRoomTendencyLabel => '発信傾向';
+
+  @override
+  String get vcRoomTendencyFilter => '荒らしの入室を断る(試験中)';
+
+  @override
+  String get vcRoomTendencyCaption => 'オンにすると、敵対的と判定された人は入れません。判定はまだ仮のものです。';
+
+  @override
+  String get vcRoomTendencyCaptionDetail =>
+      '本命は rasq-judge の GoEmotion(発信の感情傾向)で、学習が要るので今はサーバーのダミー判定(表示名に hostile / 荒らし を含む人だけ敵対的)。オンにすると敵対的と判定された人は入室できません。メンバー行の「…」から判定結果を見られます。';
+
+  @override
+  String get vcRoomHostStreamLabel => '配信(ホスト)';
+
+  @override
+  String get vcRoomStreamCamera => 'カメラで配信する';
+
+  @override
+  String get vcRoomStreamScreen => '画面を配信する';
+
+  @override
+  String get vcRoomStreamScreenIos => 'iPhone / iPad はこのアプリの画面だけ(ほかのアプリは映りません)';
+
+  @override
+  String get vcRoomHostStreamCaption => '映像と声を配信します。通話に入りきらない人も配信で聞けます。';
+
+  @override
+  String vcRoomHostStreamCaptionDetail(int cap) {
+    return '映像とマイクを配信サーバー(LiveKit)に上げます。参加者は通話の声のまま映像を見られ、通話に入りきらない人($cap 人目より後)は配信であなたの声を聞きます。';
+  }
+
+  @override
+  String get vcRoomHoldMusicRoom => 'このルームで保留音を許す(オーナー)';
+
+  @override
+  String get vcRoomHoldMusicCaption => '開始を待つ間や、しばらく誰も話さないときに鳴ります。';
+
+  @override
+  String vcRoomHoldMusicCaptionDetail(int minutes) {
+    return '開催予約の開始を待っている間と、全員がマイクを下ろして(画面共有 / 配信も無く)チャットが $minutes 分以上流れていない間に鳴ります。誰かが話し始めるか、チャットが流れると止まります。';
+  }
+
+  @override
+  String get vcRoomTts => '読み上げ';
+
+  @override
+  String get vcRoomTtsUnavailable => '読み上げ(使えません)';
+
+  @override
+  String vcRoomTtsDetail(String model) {
+    return '読み上げ($model、プリセット音声)';
+  }
+
+  @override
+  String vcRoomTtsDetailUnavailable(String model) {
+    return '読み上げ($model、プリセット音声) — サーバー未設定';
+  }
+
+  @override
+  String get vcRoomTtsNone => '読み上げなし';
+
+  @override
+  String get vcRoomTtsCaptionOwner => '読み上げの声はサーバーで作ります(アプリでの再生は準備中)。';
+
+  @override
+  String get vcRoomTtsCaptionGuest => '読み上げ音声はホストが選びます。';
+
+  @override
+  String get vcRoomTtsCaptionOwnerDetail =>
+      'チャットと共有の読み上げは Central 側で合成します(端末での再生は今後の対応)。';
+
+  @override
+  String get vcRoomDiagnosticsLabel => '接続の状態(開発者向け)';
+
+  @override
+  String get vcRoomDiagnosticsOpen => '通話 / 配信の接続を見る';
+
+  @override
+  String get vcRoomDiagnosticsOpenSubtitle => 'ICE の状態・候補・送受信の量・受けているトラック';
+
+  @override
+  String get vcRoomDiagnosticsTitle => '接続の状態';
+
+  @override
+  String vcRoomHostStreamTitle(String name) {
+    return '$name の配信';
+  }
+
+  @override
+  String get vcRoomPostViewNotYet => 'この投稿の表示(対応 SNS プラグインが未導入)';
+
+  @override
+  String get vcRoomOpen => '開く';
+
+  @override
+  String get vcRoomDelete => '削除';
+
+  @override
+  String get vcRoomCopied => 'コピーしました';
+
+  @override
+  String vcRoomReportWhatShare(String headline) {
+    return '共有「$headline」';
+  }
+
+  @override
+  String get vcRoomPinToFrame => '共有枠に表示';
+
+  @override
+  String get vcRoomUnfollow => 'フォロー解除';
+
+  @override
+  String get vcRoomFollow => 'フォロー';
+
+  @override
+  String get vcRoomUnmute => 'ミュート解除';
+
+  @override
+  String get vcRoomModUnmute => '全員向けミュートを解除';
+
+  @override
+  String get vcRoomModMute => '全員向けにミュート';
+
+  @override
+  String get vcRoomKick => 'キック';
+
+  @override
+  String get vcRoomMakeModerator => 'モデレーターにする';
+
+  @override
+  String get vcRoomShowTendency => '発信傾向を見る(試験中)';
+
+  @override
+  String get vcRoomUnblock => 'ブロック解除';
+
+  @override
+  String get vcRoomBlock => 'ブロック';
+
+  @override
+  String get vcRoomReport => '通報';
+
+  @override
+  String vcRoomTendencyResult(String name, String source, String summary) {
+    return '$name の発信傾向($source): $summary';
+  }
+
+  @override
+  String vcRoomTendencyResultHostile(
+    String name,
+    String source,
+    String summary,
+  ) {
+    return '$name の発信傾向($source): $summary — 敵対的';
+  }
+
+  @override
+  String vcRoomUnblocked(String name) {
+    return '$name のブロックを解除しました';
+  }
+
+  @override
+  String vcRoomBlocked(String name) {
+    return '$name をブロックしました(発言を隠し、あなたのルームには入れません)';
+  }
+
+  @override
+  String vcRoomActionFailed(String error) {
+    return 'できませんでした: $error';
+  }
+
+  @override
+  String get vcRoomPinToShares => '共有欄にピン留め';
+
+  @override
+  String vcRoomReportWhatChat(String name) {
+    return '$name の発言';
+  }
+
+  @override
+  String get vcRoomShowSummary => 'プレビューにざっくり要約を表示する';
+
+  @override
+  String get vcRoomAutoGenre => 'ジャンルを自動選択する';
+
+  @override
+  String get vcRoomEditAutoGenres => '自動選択されたジャンルを編集';
+
+  @override
+  String get vcRoomGenres => 'ジャンル';
+
+  @override
+  String get vcRoomChatEmpty => '話した内容の文字起こしと、チャット・共有がここに並びます。';
+
+  @override
+  String vcRoomChatHiddenBlocked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ブロック中のユーザーの発言 $count 件を隠しています',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get vcRoomTyping => '入力中…';
+
+  @override
+  String get vcRoomDraft => '下書き';
+
+  @override
+  String get vcRoomTypingLabel => '入力中';
+
+  @override
+  String get vcRoomChatActions => 'チャットの操作';
+
+  @override
+  String vcRoomTocStart(String title) {
+    return '開始: $title';
+  }
+
+  @override
+  String vcRoomTocShared(String name, String kind, String headline) {
+    return '$name が $kind を共有: $headline';
+  }
+
+  @override
+  String get vcRoomTocCaption => '共有と文字起こしの区切りです。';
+
+  @override
+  String vcRoomMembersWithCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '参加メンバー($count)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get vcRoomModerator => 'モデレーター';
+
+  @override
+  String get vcRoomCustomPlugins => 'カスタムプラグイン';
+
+  @override
+  String vcRoomUpdateFailed(String error) {
+    return '設定を更新できませんでした: $error';
+  }
+
+  @override
+  String get vcRoomShareAction => '共有する';
+
+  @override
+  String get vcRoomSendDone => '送信完了する';
+
+  @override
+  String vcRoomPeerScreenTap(String name) {
+    return '$name の画面(タップで全画面)';
+  }
+
+  @override
+  String get vcRoomPinnedSharesEmpty => 'ピン留めした共有がここに出ます';
+
+  @override
+  String vcRoomCompactShare(String headline) {
+    return '共有: $headline';
+  }
+
+  @override
+  String get vcRoomNoTranscripts => '文字起こしはまだありません';
+
+  @override
+  String get vcRoomTranscriptsDisabled => '文字起こしは無効(要約非公開)';
+
+  @override
+  String get vcRoomSharesCollapse => '共有を畳む';
+
+  @override
+  String get vcRoomSharesExpand => '共有をすべて表示';
+
+  @override
+  String vcRoomSharedByPinned(String name) {
+    return '$name が共有 ・ 📌';
+  }
+
+  @override
+  String vcRoomSharedByAuto(String name) {
+    return '$name が共有 ・ 自動表示';
+  }
+
+  @override
+  String vcRoomTranscriptMetaPinned(String name, String time) {
+    return '$name ・ $time ・ 📌';
+  }
+
+  @override
+  String vcRoomTranscriptMetaAuto(String name, String time) {
+    return '$name ・ $time ・ 自動表示';
+  }
+
+  @override
+  String get vcRoomMuted => 'ミュート中';
+
+  @override
+  String get vcRoomScreenFrameActions => '共有枠の操作';
+
+  @override
+  String vcRoomMemberSelf(String name) {
+    return '$name(あなた)';
+  }
+
+  @override
+  String get vcRoomForceMuted => '強制ミュート';
+
+  @override
+  String get vcRoomMemberActions => 'メンバーの操作';
+
+  @override
+  String get vcRoomDiagnosticsLogHint =>
+      'ブラウザ / Xcode のログにも「astell call:」「astell stream:」で出ます。';
+
+  @override
+  String get vcRoomCopy => 'コピー';
+
+  @override
+  String vcRoomBansLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'BAN($count)— メンバー行の「…」から',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String vcRoomBansLoadFailed(String error) {
+    return 'BAN 一覧を読めませんでした: $error';
+  }
+
+  @override
+  String get vcRoomUnban => 'BAN を解除';
+
+  @override
+  String vcRoomReportBody(String what) {
+    return '$what を通報します。RASQ の審査で確認します。';
+  }
+
+  @override
+  String get vcRoomReportNoteHint => '補足(任意)';
+
+  @override
+  String vcRoomReportFailed(String error) {
+    return '通報できませんでした: $error';
+  }
+
+  @override
+  String get vcRoomReportSubmit => '通報する';
+
+  @override
+  String get vcRoomReported => '通報しました。審査で確認します';
+
+  @override
+  String vcRoomLiveBy(String name, String kind) {
+    return '$name が$kind中';
+  }
 }

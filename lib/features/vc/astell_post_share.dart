@@ -1,6 +1,8 @@
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../l10n/l10n.dart';
+
 /// SNS 投稿の AsTell へのインライン共有 (D-166/S-013)。
 ///
 /// 共有 `kind: "post"` の payload はサーバーの `PostPayload` と同じ形:
@@ -49,11 +51,11 @@ const astellShareableVisibility = {'public', 'home', 'unlisted'};
 /// 限定公開 / DM / ローカル限定 / 公開範囲が不明な投稿は、共有する人にしか読めないかもしれない。
 /// その本文をルーム全員へ配らない。リンクだけの共有は別(見る側の権限で開く)。サーバーも同じ検査をする。
 String? astellShareBlockReason(Post p) {
-  if (p.source != PostSource.note || p.isDirect) return 'ダイレクトの投稿は ASTell に共有できません';
-  if (p.localOnly) return 'ローカル限定の投稿は ASTell に共有できません';
+  if (p.source != PostSource.note || p.isDirect) return appL10n.vcShareBlockDirect;
+  if (p.localOnly) return appL10n.vcShareBlockLocalOnly;
   final v = p.visibility;
-  if (v == null || v.isEmpty) return '公開範囲が分からない投稿は ASTell に共有できません';
-  if (!astellShareableVisibility.contains(v)) return '公開範囲が限定された投稿は ASTell に共有できません';
+  if (v == null || v.isEmpty) return appL10n.vcShareBlockUnknownVisibility;
+  if (!astellShareableVisibility.contains(v)) return appL10n.vcShareBlockLimited;
   return null;
 }
 

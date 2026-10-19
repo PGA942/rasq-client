@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../l10n/l10n.dart';
 import '../home/action_bar_config.dart';
 import '../home/plugin_actions.dart';
 import '../plugins/slot_plugins.dart';
@@ -32,12 +33,12 @@ abstract final class AstellBarIds {
 /// 既定の並び = これまでの下段の並び(スピーカー / マイク / 画面共有 / 全画面 / 字幕)。「プラグインアクション」(選ぶシート)は
 /// D-328 で廃止: プラグインのボタンは各プラグインが宣言し、並びの最後の 1 つ(字幕)の手前に自動で入る。
 /// アイコン名は編集画面のタイルと (+) の検索に出るもの(下段では状態に応じたアイコンを出す)。
-const astellBarBuiltinActions = <ActionDescriptor>[
-  ActionDescriptor(id: AstellBarIds.speaker, genreTag: 'Speaker', label: 'スピーカー', icon: 'volume_up', doneIcon: 'volume_up', countSource: CountSource.none),
-  ActionDescriptor(id: AstellBarIds.mic, genreTag: 'Mic', label: 'マイク', icon: 'mic', doneIcon: 'mic', countSource: CountSource.none),
-  ActionDescriptor(id: AstellBarIds.screen, genreTag: 'Screen', label: '画面共有', icon: 'desktop_windows', doneIcon: 'desktop_windows', countSource: CountSource.none),
-  ActionDescriptor(id: AstellBarIds.fullscreen, genreTag: 'Fullscreen', label: '全画面(共有枠に画面があるとき)', icon: 'fullscreen', doneIcon: 'fullscreen', countSource: CountSource.none),
-  ActionDescriptor(id: AstellBarIds.captions, genreTag: 'Captions', label: '字幕(文字起こし)', icon: 'subtitles', doneIcon: 'subtitles', countSource: CountSource.none),
+List<ActionDescriptor> get astellBarBuiltinActions => <ActionDescriptor>[
+  ActionDescriptor(id: AstellBarIds.speaker, genreTag: 'Speaker', label: appL10n.vcBarSpeaker, icon: 'volume_up', doneIcon: 'volume_up', countSource: CountSource.none),
+  ActionDescriptor(id: AstellBarIds.mic, genreTag: 'Mic', label: appL10n.vcBarMic, icon: 'mic', doneIcon: 'mic', countSource: CountSource.none),
+  ActionDescriptor(id: AstellBarIds.screen, genreTag: 'Screen', label: appL10n.vcBarScreen, icon: 'desktop_windows', doneIcon: 'desktop_windows', countSource: CountSource.none),
+  ActionDescriptor(id: AstellBarIds.fullscreen, genreTag: 'Fullscreen', label: appL10n.vcBarFullscreen, icon: 'fullscreen', doneIcon: 'fullscreen', countSource: CountSource.none),
+  ActionDescriptor(id: AstellBarIds.captions, genreTag: 'Captions', label: appL10n.vcBarCaptions, icon: 'subtitles', doneIcon: 'subtitles', countSource: CountSource.none),
 ];
 
 // ── プラグインのボタン (D-324 → D-328) ──────────────────────────────────

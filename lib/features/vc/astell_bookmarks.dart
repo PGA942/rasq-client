@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/l10n.dart';
 import '../../notify/local_notifier.dart';
 import '../settings/settings_dsl.dart';
 import 'astell_models.dart';
@@ -97,7 +98,7 @@ Future<AstellReminderResult> toggleAstellReminder(WidgetRef ref, AstellRoom room
   final at = room.scheduledAt;
   if (at == null || !room.isScheduled) return AstellReminderResult.notScheduled;
   final id = astellNotificationId(room.id);
-  final ok = await notifier.schedule(id: id, title: 'ブックマークしたVCが始まります！', body: '${room.ownerDisplayName} の「${room.title}」', at: at, payload: 'rasq://astell/${Uri.encodeComponent(room.id)}');
+  final ok = await notifier.schedule(id: id, title: appL10n.vcReminderNotificationTitle, body: appL10n.vcReminderNotificationBody(room.ownerDisplayName, room.title), at: at, payload: 'rasq://astell/${Uri.encodeComponent(room.id)}');
   if (!ok) return AstellReminderResult.unavailable;
   await store.set(astellRemindersSlot, [...current.map((r) => r.toJson()), AstellReminder(roomId: room.id, title: room.title, at: at, notificationId: id).toJson()]);
   ref.invalidate(astellRemindersProvider);

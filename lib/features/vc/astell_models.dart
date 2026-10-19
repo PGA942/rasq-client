@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../../l10n/l10n.dart';
+
 /// AsTell (VC) のワイヤ型 (D-139)。正本は `rasq-central/docs/API.md` §3。
 /// クライアント側 `lib/features/vc/*` とサーバー `src/astell/mod.rs` で同じ形。
 
@@ -133,7 +135,7 @@ class AstellRoom {
   UserSummary get owner => _rasqUser(id: ownerId, handle: ownerHandle, displayName: ownerDisplayName, avatarUrl: ownerAvatarUrl);
 
   /// タイル/プレビューに出す要約文(ワイヤーフレームの空表示つき)。
-  String get summaryText => description.isEmpty ? '説明はありません。' : description;
+  String get summaryText => description.isEmpty ? appL10n.vcNoDescription : description;
 
   factory AstellRoom.fromJson(Map<String, Object?> j) => AstellRoom(
         id: j['id'] as String? ?? '',
@@ -244,24 +246,24 @@ class AstellTendency {
 }
 
 /// 通報の理由 (D-150、`POST /reports`)。
-const astellReportReasons = <({String id, String label})>[
-  (id: 'spam', label: 'スパム'),
-  (id: 'harassment', label: '嫌がらせ・暴言'),
-  (id: 'illegal', label: '違法・危険な内容'),
-  (id: 'other', label: 'その他'),
-];
+List<({String id, String label})> get astellReportReasons => <({String id, String label})>[
+      (id: 'spam', label: appL10n.vcReportReasonSpam),
+      (id: 'harassment', label: appL10n.vcReportReasonHarassment),
+      (id: 'illegal', label: appL10n.vcReportReasonIllegal),
+      (id: 'other', label: appL10n.vcReportReasonOther),
+    ];
 
 /// 参加ポリシーの表示 (D-149)。
-const astellJoinPolicies = <({String id, String label, String hint})>[
-  (id: 'anyone', label: '誰でも', hint: '公開ルームは誰でも参加できます'),
-  (id: 'followers', label: 'フォロワーだけ', hint: 'あなた(ホスト)を RASQ アカウントでフォローしている人'),
-  (id: 'following', label: 'フォロー中の人だけ', hint: 'あなたがフォローしている人'),
-  (id: 'mutual', label: '相互フォローだけ', hint: 'お互いにフォローしている人'),
-];
-const astellSharePolicies = <({String id, String label})>[
-  (id: 'everyone', label: '全員'),
-  (id: 'moderators', label: 'モデレーターだけ'),
-];
+List<({String id, String label, String hint})> get astellJoinPolicies => <({String id, String label, String hint})>[
+      (id: 'anyone', label: appL10n.vcJoinPolicyAnyone, hint: appL10n.vcJoinPolicyAnyoneHint),
+      (id: 'followers', label: appL10n.vcJoinPolicyFollowers, hint: appL10n.vcJoinPolicyFollowersHint),
+      (id: 'following', label: appL10n.vcJoinPolicyFollowing, hint: appL10n.vcJoinPolicyFollowingHint),
+      (id: 'mutual', label: appL10n.vcJoinPolicyMutual, hint: appL10n.vcJoinPolicyMutualHint),
+    ];
+List<({String id, String label})> get astellSharePolicies => <({String id, String label})>[
+      (id: 'everyone', label: appL10n.vcSharePolicyEveryone),
+      (id: 'moderators', label: appL10n.vcSharePolicyModerators),
+    ];
 
 /// BAN の 1 件 (D-149)。
 @immutable
@@ -457,19 +459,19 @@ class AstellShare {
         'text' => payload['text'] as String? ?? '',
         'link' => payload['title'] as String? ?? payload['url'] as String? ?? '',
         // CW 付きの投稿は本文を出さず注意書きだけ (TERMS-10)。
-        'post' => contentWarning != null ? '⚠ $contentWarning(閲覧注意)' : payload['body'] as String? ?? payload['text'] as String? ?? '投稿',
-        'media' => payload['title'] as String? ?? 'メディア',
-        'plugin' => '「${payload['name'] ?? payload['pluginId'] ?? 'プラグイン'}」を使いたい',
+        'post' => contentWarning != null ? appL10n.vcShareContentWarning(contentWarning!) : payload['body'] as String? ?? payload['text'] as String? ?? appL10n.vcKindPost,
+        'media' => payload['title'] as String? ?? appL10n.vcKindMedia,
+        'plugin' => appL10n.vcSharePluginWant('${payload['name'] ?? payload['pluginId'] ?? appL10n.vcKindPlugin}'),
         _ => kind,
       };
 
   /// 種別の日本語ラベル(stick のタイルのピル)。
   String get kindLabel => switch (kind) {
-        'post' => '投稿',
-        'media' => (payload['mimeType'] as String? ?? '').startsWith('video/') ? '動画' : 'メディア',
-        'link' => 'リンク',
-        'text' => 'テキスト',
-        'plugin' => 'プラグイン',
+        'post' => appL10n.vcKindPost,
+        'media' => (payload['mimeType'] as String? ?? '').startsWith('video/') ? appL10n.vcKindVideo : appL10n.vcKindMedia,
+        'link' => appL10n.vcKindLink,
+        'text' => appL10n.vcKindText,
+        'plugin' => appL10n.vcKindPlugin,
         _ => kind,
       };
 

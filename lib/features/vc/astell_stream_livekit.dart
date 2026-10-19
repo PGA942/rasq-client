@@ -6,6 +6,7 @@ import 'package:flutter_background/flutter_background.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
 import 'package:livekit_client/livekit_client.dart' as lk;
 
+import '../../l10n/l10n.dart';
 import 'astell_media.dart';
 import 'astell_models.dart';
 import 'astell_stream.dart';
@@ -84,7 +85,7 @@ class LiveKitAstellStreamer extends AstellStreamer {
   @override
   Future<void> publish(String kind, {required bool mic, String? screenSourceId}) async {
     final lp = _room?.localParticipant;
-    if (lp == null || !_canPublish) throw StateError('配信サーバーに繋がっていません');
+    if (lp == null || !_canPublish) throw StateError(appL10n.vcStreamNotConnected);
     if (kind == 'screen' && astellInsecureWebContext()) throw const AstellMediaException(AstellMediaIssue.insecureContext);
     final source = kind == 'screen' ? lk.TrackSource.screenShareVideo : lk.TrackSource.camera;
     try {
@@ -108,7 +109,7 @@ class LiveKitAstellStreamer extends AstellStreamer {
       }
       // 上がったか: 何も上げずに戻る道がある(iOS の setScreenShareEnabled など)。黙って「共有中」にしない。
       if (lp.getTrackPublicationBySource(source) == null) {
-        throw const AstellMediaException(AstellMediaIssue.unsupported, '映像を配信サーバーに上げられませんでした');
+        throw AstellMediaException(AstellMediaIssue.unsupported, appL10n.vcStreamPublishFailed);
       }
       await lp.setMicrophoneEnabled(mic);
     } catch (e) {
@@ -136,11 +137,11 @@ class LiveKitAstellStreamer extends AstellStreamer {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     final granted = await rtc.Helper.requestCapturePermission();
     if (!granted) throw const AstellMediaException(AstellMediaIssue.permissionDenied);
-    const config = FlutterBackgroundAndroidConfig(
+    final config = FlutterBackgroundAndroidConfig(
       notificationTitle: 'RASQ ASTell',
-      notificationText: '画面を共有しています',
+      notificationText: appL10n.vcScreenSharingNotification,
       notificationImportance: AndroidNotificationImportance.normal,
-      notificationIcon: AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
+      notificationIcon: const AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
     );
     if (await FlutterBackground.initialize(androidConfig: config) && !FlutterBackground.isBackgroundExecutionEnabled) {
       await FlutterBackground.enableBackgroundExecution();
@@ -249,7 +250,7 @@ class LiveKitAstellStreamer extends AstellStreamer {
   AstellStreamDiagnostics diagnostics() {
     final room = _room;
     if (room == null) return const AstellStreamDiagnostics(connection: 'disconnected');
-    String pubLine(lk.TrackPublication pub) => '${pub.source.name} ${pub.kind.name}${pub.muted ? '(ミュート)' : ''}';
+    String pubLine(lk.TrackPublication pub) => '${pub.source.name} ${pub.kind.name}${pub.muted ? '(ミュート)' : ''}'; // l10n-ignore: 開発者向けの接続の様子(ログと同じ行)
     return AstellStreamDiagnostics(
       connection: room.connectionState.name,
       canPublish: canPublish,
@@ -260,9 +261,9 @@ class LiveKitAstellStreamer extends AstellStreamer {
           p.identity: [
             for (final pub in p.trackPublications.values)
               '${pubLine(pub)}: ${switch (pub.subscriptionState) {
-                lk.TrackSubscriptionState.subscribed => '受信中${pub.kind == lk.TrackType.VIDEO && pub.streamState == lk.StreamState.paused ? '(サーバーが一時停止 — 表示されていない)' : ''}',
-                lk.TrackSubscriptionState.notAllowed => '許可されていない',
-                lk.TrackSubscriptionState.unsubscribed => '未受信',
+                lk.TrackSubscriptionState.subscribed => '受信中${pub.kind == lk.TrackType.VIDEO && pub.streamState == lk.StreamState.paused ? '(サーバーが一時停止 — 表示されていない)' : ''}', // l10n-ignore: 開発者向け。「受信中」は AstellStreamDiagnostics.subscribed が数える印
+                lk.TrackSubscriptionState.notAllowed => '許可されていない', // l10n-ignore: 開発者向けの接続の様子
+                lk.TrackSubscriptionState.unsubscribed => '未受信', // l10n-ignore: 開発者向けの接続の様子
               }}',
           ],
       },
@@ -303,9 +304,10 @@ bool get astellNeedsScreenPicker => !kIsWeb && const {TargetPlatform.macOS, Targ
 
 /// 画面 / ウィンドウを選ぶ(LiveKit の選択ダイアログ)。やめたら null。
 Future<String?> pickAstellScreenSource(BuildContext context) async {
+  final l = context.l10n;
   final source = await showDialog<rtc.DesktopCapturerSource>(
     context: context,
-    builder: (_) => lk.ScreenSelectDialog(titleText: '共有する画面を選ぶ', screenTabText: '画面全体', windowTabText: 'ウィンドウ', cancelText: 'やめる', shareText: '共有する'),
+    builder: (_) => lk.ScreenSelectDialog(titleText: l.vcScreenPickTitle, screenTabText: l.vcScreenPickScreen, windowTabText: l.vcScreenPickWindow, cancelText: l.vcScreenPickCancel, shareText: l.vcScreenPickShare),
   );
   return source?.id;
 }

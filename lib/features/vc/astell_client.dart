@@ -6,6 +6,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../backend/orgate_client.dart';
 import '../../backend/redact.dart';
+import '../../l10n/l10n.dart';
 import 'astell_models.dart';
 
 /// AsTell の境界 (D-139)。RASQ Central の `/astell/*`(`rasq-central/docs/API.md`
@@ -128,7 +129,7 @@ class MockAstellClient implements AstellClient {
               displayName: 'SpaceQuant',
               kind: 'media',
               payload: const {
-                'title': 'Barbados III 打ち上げ映像',
+                'title': 'Barbados III 打ち上げ映像', // l10n-ignore: モックのデータ
                 'mimeType': 'video/mp4',
                 'url': 'https://picsum.photos/seed/rrl1/600/400',
                 'thumbnailUrl': 'https://picsum.photos/seed/rrl1/600/400',
@@ -143,17 +144,17 @@ class MockAstellClient implements AstellClient {
   final List<AstellRoom> _rooms = [];
   final Map<String, List<AstellShare>> _shares = {};
 
-  static const _me = AstellPeer(peerId: 'me', accountId: 'me', handle: 'me', displayName: 'あなた', micOn: false);
+  static const _me = AstellPeer(peerId: 'me', accountId: 'me', handle: 'me', displayName: 'あなた', micOn: false); // l10n-ignore: モックのデータ
 
   static List<AstellRoom> seededRooms() => [
         AstellRoom(
           id: 'r-launch',
           ownerId: 'douglas',
           ownerHandle: 'douglas',
-          ownerDisplayName: 'ダグラス',
-          title: '打ち上げの打ち上げ',
-          description: '打ち上げ成功、おめでとう!後援会(?)のみんなでお酒スクエアしています。山ハヤくんはダグラスのおごり!(?)',
-          genres: const ['#打上会', 'スペースライフ', '宇宙', 'ロケット発射', '発射', 'バルバトスIII', '周回軌道'],
+          ownerDisplayName: 'ダグラス', // l10n-ignore: モックのデータ
+          title: '打ち上げの打ち上げ', // l10n-ignore: モックのデータ
+          description: '打ち上げ成功、おめでとう!後援会(?)のみんなでお酒スクエアしています。山ハヤくんはダグラスのおごり!(?)', // l10n-ignore: モックのデータ
+          genres: const ['#打上会', 'スペースライフ', '宇宙', 'ロケット発射', '発射', 'バルバトスIII', '周回軌道'], // l10n-ignore: モックのデータ
           createdAt: DateTime(2026, 9, 6, 20),
           peerCount: 5,
           // あなたはこのルームのモデレーター (D-149 のデモ)。
@@ -163,8 +164,8 @@ class MockAstellClient implements AstellClient {
           id: 'r-surprise',
           ownerId: 'yomogi',
           ownerHandle: 'yomogimochi',
-          ownerDisplayName: 'よもぎもち',
-          title: 'サプライズ',
+          ownerDisplayName: 'よもぎもち', // l10n-ignore: モックのデータ
+          title: 'サプライズ', // l10n-ignore: モックのデータ
           createdAt: DateTime(2026, 9, 6, 19, 30),
           peerCount: 2,
         ),
@@ -174,8 +175,8 @@ class MockAstellClient implements AstellClient {
           ownerHandle: 'spacequant',
           ownerDisplayName: 'SpaceQuant',
           title: 'Launch LIVE',
-          description: 'バルバトスIIIロケット、発進!技術者たちがロケットの状態を議論しています。',
-          genres: const ['発射', 'バルバトスIII', '周回軌道'],
+          description: 'バルバトスIIIロケット、発進!技術者たちがロケットの状態を議論しています。', // l10n-ignore: モックのデータ
+          genres: const ['発射', 'バルバトスIII', '周回軌道'], // l10n-ignore: モックのデータ
           createdAt: DateTime(2026, 9, 6, 18),
           peerCount: 2500,
           live: true,
@@ -187,24 +188,24 @@ class MockAstellClient implements AstellClient {
           ownerHandle: 'sublrony',
           ownerDisplayName: 'Sublrony',
           title: 'Create Game',
-          description: 'ゲーム制作の作業配信。エディタの画面を流しながら雑談中。',
-          genres: const ['ゲーム制作', '作業配信'],
+          description: 'ゲーム制作の作業配信。エディタの画面を流しながら雑談中。', // l10n-ignore: モックのデータ
+          genres: const ['ゲーム制作', '作業配信'], // l10n-ignore: モックのデータ
           createdAt: DateTime(2026, 9, 6, 17),
           peerCount: 2,
           live: true,
           thumbnailUrl: Uri.parse('https://picsum.photos/seed/rrl2/600/400'),
           // ホストが動画(作業画面の録画)を配信中のダミー (D-145)。
-          hostStream: AstellHostStream(kind: 'video', title: 'エディタ作業 — 敵キャラのAI', thumbnailUrl: Uri.parse('https://picsum.photos/seed/rrl2/600/400'), startedAt: DateTime(2026, 9, 6, 17, 5)),
+          hostStream: AstellHostStream(kind: 'video', title: 'エディタ作業 — 敵キャラのAI', thumbnailUrl: Uri.parse('https://picsum.photos/seed/rrl2/600/400'), startedAt: DateTime(2026, 9, 6, 17, 5)), // l10n-ignore: モックのデータ
         ),
         // 開催予約中のダミー (D-159): 近日開催の節に出る。
         AstellRoom(
           id: 'r-planned',
           ownerId: 'yomogimochi',
           ownerHandle: 'yomogimochi',
-          ownerDisplayName: 'よもぎもち',
-          title: '打ち上げ反省会',
-          description: '打ち上げ会の翌週。撮れた写真を見ながら振り返り。',
-          genres: const ['打上会', '写真'],
+          ownerDisplayName: 'よもぎもち', // l10n-ignore: モックのデータ
+          title: '打ち上げ反省会', // l10n-ignore: モックのデータ
+          description: '打ち上げ会の翌週。撮れた写真を見ながら振り返り。', // l10n-ignore: モックのデータ
+          genres: const ['打上会', '写真'], // l10n-ignore: モックのデータ
           createdAt: DateTime.now(),
           scheduledAt: DateTime.now().add(const Duration(days: 2, hours: 3)),
         ),
@@ -213,23 +214,23 @@ class MockAstellClient implements AstellClient {
   /// ダミーの文字起こし(打ち上げの打ち上げ)。ワイヤーフレームの 3 行。
   static List<AstellTranscript> seededTranscripts(String roomId) => switch (roomId) {
         'r-launch' => [
-            AstellTranscript(id: 't1', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', text: 'いい感じに行ったねー', lang: 'ja', createdAt: DateTime(2026, 9, 6, 20, 3)),
-            AstellTranscript(id: 't2', accountId: 'yamahaya', handle: 'yamahaya', displayName: '山ハヤ', text: '振動まわりだけちょい気がかり', lang: 'ja', createdAt: DateTime(2026, 9, 6, 20, 4)),
-            AstellTranscript(id: 't3', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', text: 'そうやねー分離の後エンジンのスタビライザー周りが', lang: 'ja', createdAt: DateTime(2026, 9, 6, 20, 5)),
+            AstellTranscript(id: 't1', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', text: 'いい感じに行ったねー', lang: 'ja', createdAt: DateTime(2026, 9, 6, 20, 3)), // l10n-ignore: モックのデータ
+            AstellTranscript(id: 't2', accountId: 'yamahaya', handle: 'yamahaya', displayName: '山ハヤ', text: '振動まわりだけちょい気がかり', lang: 'ja', createdAt: DateTime(2026, 9, 6, 20, 4)), // l10n-ignore: モックのデータ
+            AstellTranscript(id: 't3', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', text: 'そうやねー分離の後エンジンのスタビライザー周りが', lang: 'ja', createdAt: DateTime(2026, 9, 6, 20, 5)), // l10n-ignore: モックのデータ
           ],
         _ => const [],
       };
 
   static List<AstellPeer> seededPeers(String roomId) => switch (roomId) {
         'r-launch' => [
-            const AstellPeer(peerId: 'p1', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', micOn: true),
+            const AstellPeer(peerId: 'p1', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', micOn: true), // l10n-ignore: モックのデータ
             // TiVard は画面共有中 (D-146 のデモ)。サムネイルはカタログの picsum。
-            AstellPeer(peerId: 'p2', accountId: 'tivard', handle: 'tivard', displayName: 'TiVard', micOn: true, screenShare: AstellScreenShare(title: '打ち上げ映像(エディタ)', thumbnailUrl: Uri.parse('https://picsum.photos/seed/rrl1/600/400'))),
-            const AstellPeer(peerId: 'p3', accountId: 'yamahaya', handle: 'yamahaya', displayName: '山ハヤ'),
-            const AstellPeer(peerId: 'p4', accountId: 'a4', handle: 'a4', displayName: 'ゲスト A'),
-            const AstellPeer(peerId: 'p5', accountId: 'a5', handle: 'a5', displayName: 'ゲスト B'),
+            AstellPeer(peerId: 'p2', accountId: 'tivard', handle: 'tivard', displayName: 'TiVard', micOn: true, screenShare: AstellScreenShare(title: '打ち上げ映像(エディタ)', thumbnailUrl: Uri.parse('https://picsum.photos/seed/rrl1/600/400'))), // l10n-ignore: モックのデータ
+            const AstellPeer(peerId: 'p3', accountId: 'yamahaya', handle: 'yamahaya', displayName: '山ハヤ'), // l10n-ignore: モックのデータ
+            const AstellPeer(peerId: 'p4', accountId: 'a4', handle: 'a4', displayName: 'ゲスト A'), // l10n-ignore: モックのデータ
+            const AstellPeer(peerId: 'p5', accountId: 'a5', handle: 'a5', displayName: 'ゲスト B'), // l10n-ignore: モックのデータ
           ],
-        _ => const [AstellPeer(peerId: 'p1', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', micOn: true)],
+        _ => const [AstellPeer(peerId: 'p1', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', micOn: true)], // l10n-ignore: モックのデータ
       };
 
   @override
@@ -258,7 +259,7 @@ class MockAstellClient implements AstellClient {
       id: 'mock-${DateTime.now().microsecondsSinceEpoch}',
       ownerId: 'me',
       ownerHandle: 'me',
-      ownerDisplayName: 'あなた',
+      ownerDisplayName: 'あなた', // l10n-ignore: モックのデータ
       title: req.title,
       description: req.description,
       genres: req.genres,
@@ -426,9 +427,9 @@ class MockAstellClient implements AstellClient {
 
   // ── 招待 / ブロック / 通報 / 発信傾向 (D-150) ──
   static const seededFollowers = [
-    AstellFollowEntry(id: 'douglas', handle: 'douglas', displayName: 'ダグラス'),
+    AstellFollowEntry(id: 'douglas', handle: 'douglas', displayName: 'ダグラス'), // l10n-ignore: モックのデータ
     AstellFollowEntry(id: 'tivard', handle: 'tivard', displayName: 'TiVard'),
-    AstellFollowEntry(id: 'yamahaya', handle: 'yamahaya', displayName: '山ハヤ'),
+    AstellFollowEntry(id: 'yamahaya', handle: 'yamahaya', displayName: '山ハヤ'), // l10n-ignore: モックのデータ
   ];
   final Map<String, Set<String>> _invites = {'r-surprise': {'me'}};
   final Set<String> _blocks = {};
@@ -501,7 +502,7 @@ class MockAstellClient implements AstellClient {
         if (p.accountId == accountId) name = p.displayName;
       }
     }
-    final hostile = (name ?? '').toLowerCase().contains('hostile') || (name ?? '').contains('荒らし');
+    final hostile = (name ?? '').toLowerCase().contains('hostile') || (name ?? '').contains('荒らし'); // l10n-ignore: モックの判定の語(データ)
     return AstellTendency(
       accountId: accountId,
       labels: hostile ? const [(label: 'anger', score: 0.62), (label: 'annoyance', score: 0.48), (label: 'disgust', score: 0.31)] : const [(label: 'neutral', score: 0.71), (label: 'joy', score: 0.22), (label: 'curiosity', score: 0.18)],
@@ -517,7 +518,7 @@ class MockAstellClient implements AstellClient {
     if (u == null || u.host.isEmpty) throw StateError('not a post url');
     return {
       'url': url, 'sns': 'misskey', 'instance': u.host, 'postId': u.pathSegments.isEmpty ? 'x' : u.pathSegments.last,
-      'author': 'モックの投稿者', 'handle': 'mock', 'body': 'モックで解決した投稿: $url', 'media': const [],
+      'author': 'モックの投稿者', 'handle': 'mock', 'body': 'モックで解決した投稿: $url', 'media': const [], // l10n-ignore: モックのデータ
       'createdAt': DateTime.now().toUtc().toIso8601String(),
     };
   }
@@ -532,13 +533,13 @@ class MockAstellClient implements AstellClient {
 
   @override
   Future<AstellTtsVoices> ttsVoices() async => const AstellTtsVoices(enabled: false, model: 'CosyVoice2-0.5B', voices: [
-        (id: 'ja_female_1', label: '女性 1(日本語)'),
-        (id: 'ja_male_1', label: '男性 1(日本語)'),
+        (id: 'ja_female_1', label: '女性 1(日本語)'), // l10n-ignore: モックのデータ
+        (id: 'ja_male_1', label: '男性 1(日本語)'), // l10n-ignore: モックのデータ
         (id: 'en_female_1', label: 'Female 1 (English)'),
       ]);
 
   @override
-  Future<List<int>> speak(String roomId, String text, {String? voice}) async => throw StateError('読み上げバックエンドが未設定です(CENTRAL_TTS_URL)');
+  Future<List<int>> speak(String roomId, String text, {String? voice}) async => throw StateError(appL10n.vcTtsNotConfigured);
 
   @override
   Future<AstellAsset> uploadAsset(String roomId, List<int> bytes, {required String name, required String contentType, String encoding = 'identity'}) async {
@@ -614,13 +615,13 @@ class _MockConnection implements AstellConnection {
         final muted = client._mutedByMod[roomId]?.contains(MockAstellClient._me.peerId) ?? false;
         st['mutedByMod'] = muted;
         if (muted) st['micOn'] = false;
-        _controller.add({'type': 'peer-state', 'peer': {'peerId': MockAstellClient._me.peerId, 'accountId': 'me', 'handle': 'me', 'displayName': 'あなた', 'state': st}});
+        _controller.add({'type': 'peer-state', 'peer': {'peerId': MockAstellClient._me.peerId, 'accountId': 'me', 'handle': 'me', 'displayName': 'あなた', 'state': st}}); // l10n-ignore: モックのデータ
       case 'share':
         final share = AstellShare(
           id: 'ms-${_n++}',
           accountId: 'me',
           handle: 'me',
-          displayName: 'あなた',
+          displayName: 'あなた', // l10n-ignore: モックのデータ
           kind: message['kind'] as String? ?? 'text',
           payload: (message['payload'] as Map?)?.cast<String, Object?>() ?? const {},
           createdAt: DateTime.now(),
@@ -788,7 +789,7 @@ class HttpAstellClient implements AstellClient {
   Future<AstellConnection> connect(String roomId) async {
     await ensureFresh?.call();
     final t = token();
-    if (t == null) throw StateError('RASQ アカウントにログインしてください');
+    if (t == null) throw StateError(appL10n.vcLoginRequired);
     // Bearer はクエリで渡す(API.md §3)。http → ws。
     final url = baseUrl.replace(
       scheme: baseUrl.scheme == 'https' ? 'wss' : 'ws',

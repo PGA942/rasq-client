@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/l10n.dart';
+
 import 'astell_models.dart';
 import 'astell_providers.dart';
 
@@ -27,7 +29,7 @@ String astellRoomLink(AstellRoom room) => room.shareUrl ?? 'rasq://astell/${Uri.
 /// 共有の投稿本文 (D-159): タイトル + 開催予定(あれば)+ リンク。
 String astellShareText(AstellRoom room, String link) {
   final when = room.scheduledAt;
-  final head = when != null && room.isScheduled ? '「${room.title}」を ${formatAstellSchedule(when)} に開催します' : '「${room.title}」を開催中です';
+  final head = when != null && room.isScheduled ? appL10n.vcShareTextScheduled(room.title, formatAstellSchedule(when)) : appL10n.vcShareTextOpen(room.title);
   final genres = room.genres.isEmpty ? '' : ' ${room.genres.take(3).map((g) => '#$g').join(' ')}';
   return '$head$genres\n$link';
 }

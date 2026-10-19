@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../../l10n/l10n.dart';
 import '../../session/session_providers.dart' show emojiCacheProvider;
 import '../../text/inline_spans.dart';
 import 'astell_models.dart';
@@ -95,17 +96,17 @@ class AstellShareCards extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(count == 0 ? '共有' : '共有 ($count)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                child: Text(count == 0 ? context.l10n.vcShares : context.l10n.vcSharesCount(count), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               ),
               // 狭くてカードを出せないときは、見出しの右の「>」から一覧へ。
-              if (cramped && count > 0) RasqIconButton(key: astellShareAllKey, icon: Icons.chevron_right, size: 20, tooltip: 'すべての共有を見る', onPressed: onShowAll),
+              if (cramped && count > 0) RasqIconButton(key: astellShareAllKey, icon: Icons.chevron_right, size: 20, tooltip: context.l10n.vcSharesShowAll, onPressed: onShowAll),
             ],
           ),
         ),
         if (count == 0)
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-            child: Text('チャットで 📌 したものがここに並びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            child: Text(context.l10n.vcSharesEmpty, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           )
         else if (!cramped)
           SizedBox(
@@ -137,7 +138,7 @@ class AstellShareCards extends StatelessWidget {
                 // 右端の「>」: 全てのピン留め(一覧、レガシーの表示)へ。
                 Center(
                   child: Tooltip(
-                    message: 'すべての共有を見る',
+                    message: context.l10n.vcSharesShowAll,
                     child: Material(
                       key: astellShareAllKey,
                       color: scheme.surfaceContainerHigh,
@@ -206,7 +207,7 @@ class _TileFrame extends StatelessWidget {
                   top: 8,
                   child: Builder(
                     builder: (ctx) => Tooltip(
-                      message: '共有の操作',
+                      message: context.l10n.vcShareActions,
                       child: Material(
                         color: Colors.black.withValues(alpha: 0.5),
                         shape: const CircleBorder(),
@@ -338,7 +339,7 @@ class _InlineCard extends ConsumerWidget {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       const RasqBrandIcon(size: 12),
       const SizedBox(width: 3),
-      Flexible(child: Text(transcript != null ? 'RASQ ・ 文字起こし' : 'RASQ', style: style, maxLines: 1, overflow: TextOverflow.ellipsis)),
+      Flexible(child: Text(transcript != null ? context.l10n.vcShareTranscriptSource : 'RASQ', style: style, maxLines: 1, overflow: TextOverflow.ellipsis)),
     ]);
   }
 
@@ -365,7 +366,7 @@ class _InlineCard extends ConsumerWidget {
         builder: (ctx) => RasqIconButton(
           icon: Icons.more_horiz,
           size: 18,
-          tooltip: '共有の操作',
+          tooltip: context.l10n.vcShareActions,
           onPressed: () {
             final box = ctx.findRenderObject() as RenderBox;
             onMore!(box.localToGlobal(Offset.zero) & box.size);
@@ -373,7 +374,7 @@ class _InlineCard extends ConsumerWidget {
         ),
       );
     } else if (onUnpin != null && t != null && t.pinned) {
-      trailing = RasqIconButton(icon: Icons.push_pin, size: 16, color: RasqColors.link, tooltip: 'ピン留めを外す', onPressed: onUnpin);
+      trailing = RasqIconButton(icon: Icons.push_pin, size: 16, color: RasqColors.link, tooltip: context.l10n.vcUnpin, onPressed: onUnpin);
     }
     return Material(
       color: scheme.surfaceContainer,
@@ -432,7 +433,7 @@ class _InlineCard extends ConsumerWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                        RasqRichText(InlineSpans.parse(mine && !isPost ? 'あなた' : name, emojis: emojis), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        RasqRichText(InlineSpans.parse(mine && !isPost ? context.l10n.vcYou : name, emojis: emojis), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
                         _server(context),
                       ]),
                     ),

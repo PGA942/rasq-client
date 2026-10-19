@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../../l10n/l10n.dart';
+
 import 'astell_models.dart';
 import 'astell_stream.dart';
 
@@ -30,7 +32,7 @@ class AstellMediaViewer extends StatelessWidget {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text(share.headline, style: RasqTypography.title.copyWith(color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
-        actions: [RasqIconButton(icon: Icons.more_horiz, color: Colors.white, tooltip: 'メニュー', onPressed: () {})],
+        actions: [RasqIconButton(icon: Icons.more_horiz, color: Colors.white, tooltip: context.l10n.vcMenuTooltip, onPressed: () {})],
       ),
       body: Column(children: [
         Expanded(
@@ -56,12 +58,12 @@ class AstellMediaViewer extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
             child: Row(children: [
-              RasqIconButton(icon: Icons.extension_outlined, color: Colors.white54, tooltip: '全画面表示プラグイン(準備中)', onPressed: null),
+              RasqIconButton(icon: Icons.extension_outlined, color: Colors.white54, tooltip: context.l10n.vcViewerPluginsTooltip, onPressed: null),
               const Spacer(),
-              Text('${share.authorName} が共有', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+              Text(context.l10n.vcViewerSharedBy(share.authorName), style: RasqTypography.caption.copyWith(color: Colors.white70)),
               const Spacer(),
-              RasqIconButton(icon: Icons.download_outlined, color: Colors.white, tooltip: '保存', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存は準備中です')))),
-              RasqIconButton(icon: Icons.ios_share, color: Colors.white, tooltip: '共有', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('共有は準備中です')))),
+              RasqIconButton(icon: Icons.download_outlined, color: Colors.white, tooltip: context.l10n.vcViewerSave, onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.vcViewerSaveNotYet)))),
+              RasqIconButton(icon: Icons.ios_share, color: Colors.white, tooltip: context.l10n.vcViewerShare, onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.vcViewerShareNotYet)))),
             ]),
           ),
         ),

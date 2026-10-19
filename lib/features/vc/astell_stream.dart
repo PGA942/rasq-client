@@ -80,13 +80,13 @@ class AstellStreamDiagnostics {
   final bool? canPlaybackAudio;
 
   /// 受けている(購読した)トラックの数。
-  int get subscribed => remote.values.expand((t) => t).where((t) => t.contains('受信中')).length;
+  int get subscribed => remote.values.expand((t) => t).where((t) => t.contains('受信中')).length; // l10n-ignore: livekit の診断の行の印「受信中」を数える(データ)
 
   List<String> lines() => [
-        '配信: $connection${canPublish ? '(上げられる)' : ''}${publishing != null ? ' / 上げているもの: $publishing' : ''}${canPlaybackAudio == false ? ' / 声: ブラウザが止めている(操作待ち)' : ''}',
-        '自分のトラック: ${local.isEmpty ? 'なし' : local.join(', ')}',
-        if (remote.isEmpty) 'ほかの参加者: なし' else ...[for (final e in remote.entries) '${e.key.length > 8 ? e.key.substring(0, 8) : e.key}: ${e.value.isEmpty ? 'トラック無し' : e.value.join(', ')}'],
-        '受けているトラック: $subscribed',
+        '配信: $connection${canPublish ? '(上げられる)' : ''}${publishing != null ? ' / 上げているもの: $publishing' : ''}${canPlaybackAudio == false ? ' / 声: ブラウザが止めている(操作待ち)' : ''}', // l10n-ignore: 開発者向けの接続の様子(ログと同じ行)
+        '自分のトラック: ${local.isEmpty ? 'なし' : local.join(', ')}', // l10n-ignore: 開発者向けの接続の様子(ログと同じ行)
+        if (remote.isEmpty) 'ほかの参加者: なし' else ...[for (final e in remote.entries) '${e.key.length > 8 ? e.key.substring(0, 8) : e.key}: ${e.value.isEmpty ? 'トラック無し' : e.value.join(', ')}'], // l10n-ignore: 開発者向けの接続の様子(ログと同じ行)
+        '受けているトラック: $subscribed', // l10n-ignore: 開発者向けの接続の様子(ログと同じ行)
       ];
 }
 

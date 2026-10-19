@@ -5520,5 +5520,1892 @@
     }
   },
   "storePkgKindTheme": "着せ替え",
-  "storePkgKindAssets": "アセットパック"
+  "storePkgKindAssets": "アセットパック",
+  "vcSectionInvited": "招待",
+  "@vcSectionInvited": {
+    "description": "VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)"
+  },
+  "vcSectionRecommended": "おすすめ",
+  "@vcSectionRecommended": {
+    "description": "VC ホームの節の見出し / 検索の節のチップ"
+  },
+  "vcSectionUpcoming": "近日開催",
+  "@vcSectionUpcoming": {
+    "description": "VC ホームの節の見出し / 検索の節のチップ(開催予約中のルーム)"
+  },
+  "vcSectionTrending": "トレンド",
+  "@vcSectionTrending": {
+    "description": "VC ホームの節の見出し / 検索の節のチップ"
+  },
+  "vcSectionFollowing": "フォロー中",
+  "@vcSectionFollowing": {
+    "description": "VC ホームの節の見出し / 検索の節のチップ(フォロー中のユーザーのルーム)"
+  },
+  "vcSectionSettingsTooltip": "{title}の設定",
+  "@vcSectionSettingsTooltip": {
+    "description": "節の見出しの歯車のツールチップ。title は節の見出し",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcSearchHint": "ASTell / Swing を検索",
+  "@vcSearchHint": {
+    "description": "VC ホームの検索欄のヒント"
+  },
+  "vcSearchRefineHint": "さらに絞る",
+  "@vcSearchRefineHint": {
+    "description": "語を重ねたあとの検索欄のヒント"
+  },
+  "vcSearchTermChip": "「{term}」 ×",
+  "@vcSearchTermChip": {
+    "description": "重ねた検索語のチップ(押すと外す)。term は語",
+    "placeholders": {
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "vcSearchClear": "消す",
+  "@vcSearchClear": {
+    "description": "検索欄の入力を消すボタンのツールチップ"
+  },
+  "vcCreateTooltip": "VC を作成",
+  "@vcCreateTooltip": {
+    "description": "VC ホームの + ボタンのツールチップ / 作成 FOW の見出し"
+  },
+  "vcHomeLoadError": "VC を取得できませんでした",
+  "@vcHomeLoadError": {
+    "description": "VC ホームを読めなかったときの見出し"
+  },
+  "vcJoinedRoom": "参加中: {title}",
+  "@vcJoinedRoom": {
+    "description": "参加中のルームへの戻り口の行。title はルームの名前",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcJoinedPeers": "{count, plural, other{{count}人 ・ タップで開く}}",
+  "@vcJoinedPeers": {
+    "description": "参加中のルームの行の補足。count は参加人数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vcConnecting": "接続しています…",
+  "@vcConnecting": {
+    "description": "ルームに接続中の表示"
+  },
+  "vcInvitedBy": "{name} から招待 ・ タップで見る",
+  "@vcInvitedBy": {
+    "description": "招待されたルームの行の補足。name はホストの表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcInviteDecline": "辞退",
+  "@vcInviteDecline": {
+    "description": "招待を辞退するボタン"
+  },
+  "vcRecommendedEmpty": "おすすめの VC はまだありません",
+  "@vcRecommendedEmpty": {
+    "description": "おすすめの節が空のとき"
+  },
+  "vcTrendingEmpty": "トレンドの VC はまだありません",
+  "@vcTrendingEmpty": {
+    "description": "トレンドの節が空のとき"
+  },
+  "vcFollowingEmpty": "フォロー中のユーザーの VC はありません",
+  "@vcFollowingEmpty": {
+    "description": "フォロー中の節が空のとき"
+  },
+  "vcSearchNoResults": "見つかりませんでした",
+  "@vcSearchNoResults": {
+    "description": "検索の結果が無いときの見出し"
+  },
+  "vcSearchNoResultsInSection": "この節にはありません",
+  "@vcSearchNoResultsInSection": {
+    "description": "節だけで絞って結果が無いとき"
+  },
+  "vcSearchNoResultsFor": "「{query}」に当たる ASTell / Swing はありません",
+  "@vcSearchNoResultsFor": {
+    "description": "検索の結果が無いとき。query は検索語",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "vcTileOpen": "見てみる",
+  "@vcTileOpen": {
+    "description": "VC タイルの下のボタン(ルームのプレビューを開く)"
+  },
+  "vcBookmarkRemove": "ブックマークから削除",
+  "@vcBookmarkRemove": {
+    "description": "ルームのブックマークを外す(ツールチップ / メニュー)"
+  },
+  "vcBookmarkSave": "ブックマークに保存",
+  "@vcBookmarkSave": {
+    "description": "ルームをブックマークする(ツールチップ / メニュー)"
+  },
+  "vcRemindCancel": "開始通知を解除",
+  "@vcRemindCancel": {
+    "description": "開催予約のルームの開始通知を外す(ツールチップ / メニュー)"
+  },
+  "vcRemindSet": "開始を通知",
+  "@vcRemindSet": {
+    "description": "開催予約のルームの開始を通知する(ツールチップ / メニュー)"
+  },
+  "vcMenuTooltip": "メニュー",
+  "@vcMenuTooltip": {
+    "description": "… ボタンのツールチップ"
+  },
+  "vcScheduledAt": "開催予定 {when}",
+  "@vcScheduledAt": {
+    "description": "開催予約の時刻。when は「9/6 20:00」の形の日時",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "vcSummaryPrivate": "ざっくり要約は非公開です。",
+  "@vcSummaryPrivate": {
+    "description": "ざっくり要約を公開していないルームのタイル"
+  },
+  "vcTileStripEmpty": "VC はまだありません",
+  "@vcTileStripEmpty": {
+    "description": "タイルの並びが空のとき"
+  },
+  "vcLinkCopied": "リンクをコピーしました",
+  "@vcLinkCopied": {
+    "description": "ルームのリンクをコピーしたときのスナックバー"
+  },
+  "vcBookmarkSaved": "ブックマークに保存しました",
+  "@vcBookmarkSaved": {
+    "description": "スナックバー"
+  },
+  "vcBookmarkRemoved": "ブックマークから削除しました",
+  "@vcBookmarkRemoved": {
+    "description": "スナックバー"
+  },
+  "vcRemindRegistered": "{when} に通知します",
+  "@vcRemindRegistered": {
+    "description": "開始通知を登録したときのスナックバー。when は開催予定の日時(formatAstellSchedule)",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRemindRemoved": "通知を解除しました",
+  "@vcRemindRemoved": {
+    "description": "スナックバー"
+  },
+  "vcRemindUnavailable": "この端末では通知を登録できませんでした",
+  "@vcRemindUnavailable": {
+    "description": "スナックバー"
+  },
+  "vcRemindNotScheduled": "開催予定のないルームです",
+  "@vcRemindNotScheduled": {
+    "description": "スナックバー"
+  },
+  "vcMenuShareAsPost": "投稿で共有",
+  "@vcMenuShareAsPost": {
+    "description": "タイルの … メニュー"
+  },
+  "vcMenuCopyLink": "リンクをコピー",
+  "@vcMenuCopyLink": {
+    "description": "タイルの … メニュー / 共有の操作"
+  },
+  "vcMenuStartNow": "今すぐ開催する",
+  "@vcMenuStartNow": {
+    "description": "タイルの … メニュー(自分の開催予約のルーム)"
+  },
+  "vcMenuBackToRoom": "ルームへ戻る",
+  "@vcMenuBackToRoom": {
+    "description": "タイルの … メニュー(参加中の自分のルーム)"
+  },
+  "vcMenuJoin": "参加する",
+  "@vcMenuJoin": {
+    "description": "タイルの … メニュー(自分のルーム)"
+  },
+  "vcMenuClose": "終了する",
+  "@vcMenuClose": {
+    "description": "タイルの … メニュー / ルームを終了する確認シートのボタン"
+  },
+  "vcMenuUnfollowHost": "ホストのフォローを解除",
+  "@vcMenuUnfollowHost": {
+    "description": "タイルの … メニュー"
+  },
+  "vcMenuFollowHost": "ホストをフォロー",
+  "@vcMenuFollowHost": {
+    "description": "タイルの … メニュー"
+  },
+  "vcMenuMute": "ミュート",
+  "@vcMenuMute": {
+    "description": "タイルの … メニュー"
+  },
+  "vcMenuReport": "報告",
+  "@vcMenuReport": {
+    "description": "タイルの … メニュー / 共有の操作"
+  },
+  "vcUnfollowed": "{name} のフォローを解除しました",
+  "@vcUnfollowed": {
+    "description": "スナックバー。name はホストの表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcFollowed": "{name} をフォローしました",
+  "@vcFollowed": {
+    "description": "スナックバー。name はホストの表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcReportWhatRoom": "ルーム「{title}」",
+  "@vcReportWhatRoom": {
+    "description": "通報シートの対象の名前(「〜を通報します」に入る)。title はルームの名前",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcMenuNotYet": "「{title}」の操作({action})は M5 後段で入ります",
+  "@vcMenuNotYet": {
+    "description": "まだ無い操作を選んだとき。title はルームの名前、action は操作の id",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "vcCloseRoomTitle": "ルームを終了",
+  "@vcCloseRoomTitle": {
+    "description": "ルームを終了する確認シートの見出し"
+  },
+  "vcCloseScheduledBody": "「{title}」の予約を取り消します。ブックマークや開始通知を登録した人には届きません。",
+  "@vcCloseScheduledBody": {
+    "description": "開催予約を取り消す確認の本文。title はルームの名前",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcCloseRoomBody": "「{title}」を終了します。参加中のメンバーは退出になります。",
+  "@vcCloseRoomBody": {
+    "description": "ルームを終了する確認の本文。title はルームの名前",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcClosedScheduled": "「{title}」の予約を取り消しました",
+  "@vcClosedScheduled": {
+    "description": "スナックバー。title はルームの名前",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcClosedRoom": "「{title}」を終了しました",
+  "@vcClosedRoom": {
+    "description": "スナックバー。title はルームの名前",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcCloseFailed": "終了できませんでした: {error}",
+  "@vcCloseFailed": {
+    "description": "スナックバー。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcTileBack": "戻る",
+  "@vcTileBack": {
+    "description": "VC タイルの下のボタン(参加中のルームへ戻る)"
+  },
+  "vcReminderNotificationTitle": "ブックマークしたVCが始まります！",
+  "@vcReminderNotificationTitle": {
+    "description": "開始通知(端末の通知)の見出し"
+  },
+  "vcReminderNotificationBody": "{host} の「{title}」",
+  "@vcReminderNotificationBody": {
+    "description": "開始通知(端末の通知)の本文。host はホストの表示名、title はルームの名前",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcShareTextScheduled": "「{title}」を {when} に開催します",
+  "@vcShareTextScheduled": {
+    "description": "ルームを投稿で共有するときの本文の頭。title はルームの名前、when は開催予定の日時",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "vcShareTextOpen": "「{title}」を開催中です",
+  "@vcShareTextOpen": {
+    "description": "ルームを投稿で共有するときの本文の頭。title はルームの名前",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcViewerPluginsTooltip": "全画面表示プラグイン(準備中)",
+  "@vcViewerPluginsTooltip": {
+    "description": "共有メディアの全画面表示の下段のボタンのツールチップ"
+  },
+  "vcViewerSharedBy": "{name} が共有",
+  "@vcViewerSharedBy": {
+    "description": "共有メディアの全画面表示の下段。name は共有した人の表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcViewerSave": "保存",
+  "@vcViewerSave": {
+    "description": "共有メディアの全画面表示の保存ボタン"
+  },
+  "vcViewerSaveNotYet": "保存は準備中です",
+  "@vcViewerSaveNotYet": {
+    "description": "スナックバー"
+  },
+  "vcViewerShare": "共有",
+  "@vcViewerShare": {
+    "description": "共有メディアの全画面表示の共有ボタン"
+  },
+  "vcViewerShareNotYet": "共有は準備中です",
+  "@vcViewerShareNotYet": {
+    "description": "スナックバー"
+  },
+  "vcBarSpeaker": "スピーカー",
+  "@vcBarSpeaker": {
+    "description": "ルームの下段のボタンの名前(並びの編集画面に出る)"
+  },
+  "vcBarMic": "マイク",
+  "@vcBarMic": {
+    "description": "ルームの下段のボタンの名前(並びの編集画面に出る)"
+  },
+  "vcBarScreen": "画面共有",
+  "@vcBarScreen": {
+    "description": "ルームの下段のボタンの名前(並びの編集画面に出る)"
+  },
+  "vcBarFullscreen": "全画面(共有枠に画面があるとき)",
+  "@vcBarFullscreen": {
+    "description": "ルームの下段のボタンの名前(並びの編集画面に出る)"
+  },
+  "vcBarCaptions": "字幕(文字起こし)",
+  "@vcBarCaptions": {
+    "description": "ルームの下段のボタンの名前(並びの編集画面に出る)"
+  },
+  "vcCallConnectFailed": "通話の接続に失敗しました: {error}",
+  "@vcCallConnectFailed": {
+    "description": "通話(WebRTC)の接続の失敗。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcOpenNotFound": "このルームは見つかりません(終了したか、リンクが違うかもしれません)",
+  "@vcOpenNotFound": {
+    "description": "リンクから開いたルームが無いとき"
+  },
+  "vcOpenFailed": "ルームを開けませんでした",
+  "@vcOpenFailed": {
+    "description": "リンクから開いたルームを開けなかったときの見出し"
+  },
+  "vcOpenGoHome": "ASTell のホームへ",
+  "@vcOpenGoHome": {
+    "description": "リンクから開いた画面のボタン"
+  },
+  "vcOpenHost": "ホスト: {name}(@{handle})",
+  "@vcOpenHost": {
+    "description": "リンクから開いたルームのホスト。name は表示名、handle はハンドル",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "vcOpenRoom": "ルームを開く",
+  "@vcOpenRoom": {
+    "description": "リンクから開いた画面のボタン"
+  },
+  "vcShareBlockDirect": "ダイレクトの投稿は ASTell に共有できません",
+  "@vcShareBlockDirect": {
+    "description": "投稿を ASTell に本文ごと共有できない理由"
+  },
+  "vcShareBlockLocalOnly": "ローカル限定の投稿は ASTell に共有できません",
+  "@vcShareBlockLocalOnly": {
+    "description": "投稿を ASTell に本文ごと共有できない理由"
+  },
+  "vcShareBlockUnknownVisibility": "公開範囲が分からない投稿は ASTell に共有できません",
+  "@vcShareBlockUnknownVisibility": {
+    "description": "投稿を ASTell に本文ごと共有できない理由"
+  },
+  "vcShareBlockLimited": "公開範囲が限定された投稿は ASTell に共有できません",
+  "@vcShareBlockLimited": {
+    "description": "投稿を ASTell に本文ごと共有できない理由"
+  },
+  "vcShares": "共有",
+  "@vcShares": {
+    "description": "ルームの共有欄の見出し(共有が無いとき)"
+  },
+  "vcSharesCount": "{count, plural, other{共有 ({count})}}",
+  "@vcSharesCount": {
+    "description": "ルームの共有欄の見出し。count は共有の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vcSharesShowAll": "すべての共有を見る",
+  "@vcSharesShowAll": {
+    "description": "共有欄の「>」のツールチップ"
+  },
+  "vcSharesEmpty": "チャットで 📌 したものがここに並びます。",
+  "@vcSharesEmpty": {
+    "description": "共有欄が空のとき"
+  },
+  "vcShareActions": "共有の操作",
+  "@vcShareActions": {
+    "description": "共有カードの … のツールチップ"
+  },
+  "vcShareTranscriptSource": "RASQ ・ 文字起こし",
+  "@vcShareTranscriptSource": {
+    "description": "ピン留めした文字起こしのカードの出どころ"
+  },
+  "vcUnpin": "ピン留めを外す",
+  "@vcUnpin": {
+    "description": "共有 / 文字起こしのピン留めを外す(ツールチップ / メニュー)"
+  },
+  "vcYou": "あなた",
+  "@vcYou": {
+    "description": "自分の表示名の代わり"
+  },
+  "vcNoDescription": "説明はありません。",
+  "@vcNoDescription": {
+    "description": "ルームの要約が空のとき(タイル / プレビュー)"
+  },
+  "vcReportReasonSpam": "スパム",
+  "@vcReportReasonSpam": {
+    "description": "通報の理由"
+  },
+  "vcReportReasonHarassment": "嫌がらせ・暴言",
+  "@vcReportReasonHarassment": {
+    "description": "通報の理由"
+  },
+  "vcReportReasonIllegal": "違法・危険な内容",
+  "@vcReportReasonIllegal": {
+    "description": "通報の理由"
+  },
+  "vcReportReasonOther": "その他",
+  "@vcReportReasonOther": {
+    "description": "通報の理由"
+  },
+  "vcJoinPolicyAnyone": "誰でも",
+  "@vcJoinPolicyAnyone": {
+    "description": "ルームに参加できる人(参加ポリシー)"
+  },
+  "vcJoinPolicyAnyoneHint": "公開ルームは誰でも参加できます",
+  "@vcJoinPolicyAnyoneHint": {
+    "description": "参加ポリシーの説明"
+  },
+  "vcJoinPolicyFollowers": "フォロワーだけ",
+  "@vcJoinPolicyFollowers": {
+    "description": "ルームに参加できる人(参加ポリシー)"
+  },
+  "vcJoinPolicyFollowersHint": "あなた(ホスト)を RASQ アカウントでフォローしている人",
+  "@vcJoinPolicyFollowersHint": {
+    "description": "参加ポリシーの説明"
+  },
+  "vcJoinPolicyFollowing": "フォロー中の人だけ",
+  "@vcJoinPolicyFollowing": {
+    "description": "ルームに参加できる人(参加ポリシー)"
+  },
+  "vcJoinPolicyFollowingHint": "あなたがフォローしている人",
+  "@vcJoinPolicyFollowingHint": {
+    "description": "参加ポリシーの説明"
+  },
+  "vcJoinPolicyMutual": "相互フォローだけ",
+  "@vcJoinPolicyMutual": {
+    "description": "ルームに参加できる人(参加ポリシー)"
+  },
+  "vcJoinPolicyMutualHint": "お互いにフォローしている人",
+  "@vcJoinPolicyMutualHint": {
+    "description": "参加ポリシーの説明"
+  },
+  "vcSharePolicyEveryone": "全員",
+  "@vcSharePolicyEveryone": {
+    "description": "共有(チャットへの投稿)できる人"
+  },
+  "vcSharePolicyModerators": "モデレーターだけ",
+  "@vcSharePolicyModerators": {
+    "description": "共有(チャットへの投稿)できる人"
+  },
+  "vcShareContentWarning": "⚠ {warning}(閲覧注意)",
+  "@vcShareContentWarning": {
+    "description": "CW 付きの投稿の共有の見出し(本文は出さない)。warning は CW の文",
+    "placeholders": {
+      "warning": {
+        "type": "String"
+      }
+    }
+  },
+  "vcSharePluginWant": "「{name}」を使いたい",
+  "@vcSharePluginWant": {
+    "description": "プラグインの共有の見出し。name はプラグインの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcKindPost": "投稿",
+  "@vcKindPost": {
+    "description": "共有の種別"
+  },
+  "vcKindMedia": "メディア",
+  "@vcKindMedia": {
+    "description": "共有の種別"
+  },
+  "vcKindVideo": "動画",
+  "@vcKindVideo": {
+    "description": "共有の種別"
+  },
+  "vcKindLink": "リンク",
+  "@vcKindLink": {
+    "description": "共有の種別"
+  },
+  "vcKindText": "テキスト",
+  "@vcKindText": {
+    "description": "共有の種別"
+  },
+  "vcKindPlugin": "プラグイン",
+  "@vcKindPlugin": {
+    "description": "共有の種別"
+  },
+  "vcMediaInsecureContext": "Web 版の通話は https で開いたときだけ使えます",
+  "@vcMediaInsecureContext": {
+    "description": "通話のマイクを使えない理由"
+  },
+  "vcMediaPermissionDenied": "マイク(カメラ)の許可がありません。端末の設定で許可してください",
+  "@vcMediaPermissionDenied": {
+    "description": "通話のマイクを使えない理由"
+  },
+  "vcMediaNoDevice": "マイク(カメラ)が見つかりません",
+  "@vcMediaNoDevice": {
+    "description": "通話のマイクを使えない理由"
+  },
+  "vcMediaUnsupported": "この端末では使えません",
+  "@vcMediaUnsupported": {
+    "description": "通話のマイクを使えない理由"
+  },
+  "vcMediaUnsupportedDetail": "この端末では使えません({detail})",
+  "@vcMediaUnsupportedDetail": {
+    "description": "通話のマイクを使えない理由。detail は端末の例外の内容",
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "vcMediaMicClosed": "閉じた通話のマイクは開けません",
+  "@vcMediaMicClosed": {
+    "description": "退出したあとにマイクを開こうとしたときの失敗"
+  },
+  "vcStreamNotConnected": "配信サーバーに繋がっていません",
+  "@vcStreamNotConnected": {
+    "description": "配信を上げようとしたが配信サーバー(LiveKit)に繋がっていないとき"
+  },
+  "vcStreamPublishFailed": "映像を配信サーバーに上げられませんでした",
+  "@vcStreamPublishFailed": {
+    "description": "配信 / 画面共有の映像を上げられなかったとき"
+  },
+  "vcScreenSharingNotification": "画面を共有しています",
+  "@vcScreenSharingNotification": {
+    "description": "Android の画面共有中の前面サービスの通知の本文"
+  },
+  "vcScreenPickTitle": "共有する画面を選ぶ",
+  "@vcScreenPickTitle": {
+    "description": "デスクトップの画面 / ウィンドウを選ぶダイアログの見出し"
+  },
+  "vcScreenPickScreen": "画面全体",
+  "@vcScreenPickScreen": {
+    "description": "画面を選ぶダイアログのタブ"
+  },
+  "vcScreenPickWindow": "ウィンドウ",
+  "@vcScreenPickWindow": {
+    "description": "画面を選ぶダイアログのタブ"
+  },
+  "vcScreenPickCancel": "やめる",
+  "@vcScreenPickCancel": {
+    "description": "画面を選ぶダイアログのボタン"
+  },
+  "vcScreenPickShare": "共有する",
+  "@vcScreenPickShare": {
+    "description": "画面を選ぶダイアログのボタン"
+  },
+  "vcNoticeAudioBlocked": "音が止まっています。画面をタップすると鳴ります",
+  "@vcNoticeAudioBlocked": {
+    "description": "Web: ブラウザが声の自動再生を止めているときの案内"
+  },
+  "vcNoticeCallFull": "通話は満員です({cap} 人まで)。配信があれば、配信で聞けます",
+  "@vcNoticeCallFull": {
+    "description": "満員で通話に入れなかったときの案内。cap は通話に入れる人数",
+    "placeholders": {
+      "cap": {
+        "type": "int"
+      }
+    }
+  },
+  "vcNoticeHoldWaiting": "開催までお待ちください。保留音を鳴らしています",
+  "@vcNoticeHoldWaiting": {
+    "description": "開催予約の開始待ちの案内"
+  },
+  "vcNoticeStarted": "開催が始まりました",
+  "@vcNoticeStarted": {
+    "description": "開催予約のルームが始まったときの案内"
+  },
+  "vcNoticeHoldIdle": "静かなので保留音を鳴らしています",
+  "@vcNoticeHoldIdle": {
+    "description": "しばらく誰も話さないときの案内"
+  },
+  "vcShareClassImage": "画像",
+  "@vcShareClassImage": {
+    "description": "共有欄に自動で出すメディアの種類"
+  },
+  "vcShareClassFile": "ファイル",
+  "@vcShareClassFile": {
+    "description": "共有欄に自動で出すメディアの種類 / ファイルを共有するボタン"
+  },
+  "vcShareClassTranscript": "文字起こし",
+  "@vcShareClassTranscript": {
+    "description": "共有欄に自動で出すメディアの種類 / 文字起こしのカード"
+  },
+  "vcShareStyleCards": "カード(横スライド)",
+  "@vcShareStyleCards": {
+    "description": "共有欄の表示の選択肢"
+  },
+  "vcShareStyleList": "一覧(レガシー)",
+  "@vcShareStyleList": {
+    "description": "共有欄の表示の選択肢"
+  },
+  "vcTermsRequired": "利用規約への同意が必要です(ASTell のいちばん上の案内から同意できます)",
+  "@vcTermsRequired": {
+    "description": "同意待ちのアカウントがルームに入れなかったとき"
+  },
+  "vcClosedByModeration": "運営によりルームが閉鎖されました",
+  "@vcClosedByModeration": {
+    "description": "ルームが閉じられたときの案内"
+  },
+  "vcClosedByHost": "ホストがルームを終了しました",
+  "@vcClosedByHost": {
+    "description": "ルームが閉じられたときの案内"
+  },
+  "vcKickedBanned": "このルームから BAN されました",
+  "@vcKickedBanned": {
+    "description": "ルームから追い出されたときの案内"
+  },
+  "vcKickedSanctioned": "アカウントの処置により退出させられました",
+  "@vcKickedSanctioned": {
+    "description": "ルームから追い出されたときの案内"
+  },
+  "vcKickedByModerator": "モデレーターにルームから退出させられました",
+  "@vcKickedByModerator": {
+    "description": "ルームから追い出されたときの案内"
+  },
+  "vcShareHeld": "検閲中: {seconds} 秒後に判定して配信されます(アカウントの処置)",
+  "@vcShareHeld": {
+    "description": "アカウントの処置で共有が保留されたとき。seconds は秒数(不明なら ?)",
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "vcShareRejected": "検閲で却下されました({source})。この発言は配信されていません",
+  "@vcShareRejected": {
+    "description": "共有が却下されたとき。source は判定の出どころ(review など)",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "vcNotInRoom": "ルームに入っていません",
+  "@vcNotInRoom": {
+    "description": "ルームに入らずに配信へ繋ごうとしたときの失敗"
+  },
+  "vcStreamReceiveFailed": "映像を受けられません: {error}",
+  "@vcStreamReceiveFailed": {
+    "description": "配信 / 画面共有の映像を受けられないときの案内。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcStreamBlockedByScreenShare": "画面共有中は配信を始められません(共有をやめてから)",
+  "@vcStreamBlockedByScreenShare": {
+    "description": "配信を始められないとき"
+  },
+  "vcStreamStartFailed": "配信を始められません: {error}",
+  "@vcStreamStartFailed": {
+    "description": "配信を始められないとき。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcStreamClearFailed": "配信の印を消せませんでした: {error}",
+  "@vcStreamClearFailed": {
+    "description": "配信を止めたあとルームの印を消せなかったとき。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcScreenShareBlockedByStream": "配信中は画面共有を始められません(配信を止めてから)",
+  "@vcScreenShareBlockedByStream": {
+    "description": "画面共有を始められないとき"
+  },
+  "vcScreenShareStartFailed": "画面共有を始められません: {error}",
+  "@vcScreenShareStartFailed": {
+    "description": "画面共有を始められないとき。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcStreamUnavailable": "配信はまだ使えません(配信サーバーが未設定)",
+  "@vcStreamUnavailable": {
+    "description": "配信の失敗(サーバーが 501)"
+  },
+  "vcStreamForbidden": "許可されていません({message})",
+  "@vcStreamForbidden": {
+    "description": "配信の失敗(サーバーが 403)。message はサーバーの文",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "vcTtsNotConfigured": "読み上げバックエンドが未設定です(CENTRAL_TTS_URL)",
+  "@vcTtsNotConfigured": {
+    "description": "読み上げを使えないとき(モック)"
+  },
+  "vcLoginRequired": "RASQ アカウントにログインしてください",
+  "@vcLoginRequired": {
+    "description": "ログインせずにルームへ繋ごうとしたとき"
+  },
+  "vcCreateUninvite": "{name} の招待をやめる",
+  "@vcCreateUninvite": {
+    "description": "作成画面の招待のチップのツールチップ。name は表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcCreateInvite": "{name} を招待",
+  "@vcCreateInvite": {
+    "description": "作成画面の招待のチップのツールチップ。name は表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcCreateCancel": "キャンセル",
+  "@vcCreateCancel": {
+    "description": "作成 FOW の閉じるボタン"
+  },
+  "vcCreateShareAfterOn": "作成後に投稿で共有する(オン)",
+  "@vcCreateShareAfterOn": {
+    "description": "作成 FOW の共有のアイコンのツールチップ(オン)"
+  },
+  "vcCreateShareAfter": "作成後に投稿で共有する",
+  "@vcCreateShareAfter": {
+    "description": "作成 FOW の共有のアイコンのツールチップ"
+  },
+  "vcCreateScheduled": "「{title}」を {when} に予約しました",
+  "@vcCreateScheduled": {
+    "description": "スナックバー。title はルームの名前、when は開催予定の日時",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "vcCreateScheduleInPast": "開催予定は今より後にしてください",
+  "@vcCreateScheduleInPast": {
+    "description": "スナックバー"
+  },
+  "vcCreateGenresMax": "{max, plural, other{ジャンルは {max} 個までです}}",
+  "@vcCreateGenresMax": {
+    "description": "スナックバー。max はジャンルの上限",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "vcCreateTitleRequired": "タイトルを入力してください",
+  "@vcCreateTitleRequired": {
+    "description": "スナックバー"
+  },
+  "vcCreateInviteFailed": "招待を送れませんでした: {error}",
+  "@vcCreateInviteFailed": {
+    "description": "スナックバー。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcCreateFailed": "作成できませんでした: {error}",
+  "@vcCreateFailed": {
+    "description": "スナックバー。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcCreateSearchAdd": "検索して追加",
+  "@vcCreateSearchAdd": {
+    "description": "作成画面の招待の「+」/ そのシートの見出し"
+  },
+  "vcCreateHandleHint": "@handle(RASQ アカウント)",
+  "@vcCreateHandleHint": {
+    "description": "招待するアカウントを探す入力欄のヒント"
+  },
+  "vcCreateHandleNotFound": "見つかりませんでした: {handle}",
+  "@vcCreateHandleNotFound": {
+    "description": "招待するアカウントが見つからないとき。handle は入力した値",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "vcCreateAddInvitee": "招待に追加",
+  "@vcCreateAddInvitee": {
+    "description": "招待するアカウントを探すシートのボタン"
+  },
+  "vcCreateTitleHint": "タイトル",
+  "@vcCreateTitleHint": {
+    "description": "作成画面のタイトルの入力欄のヒント"
+  },
+  "vcCreateInviteFollowers": "フォロワーを招待",
+  "@vcCreateInviteFollowers": {
+    "description": "作成画面の節の見出し"
+  },
+  "vcCreateInviteFollowersCount": "{count, plural, other{フォロワーを招待({count})}}",
+  "@vcCreateInviteFollowersCount": {
+    "description": "作成画面の節の見出し。count は招待する人数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vcCreateWelcomeToggle": "参加時にウェルカムメッセージを表示する",
+  "@vcCreateWelcomeToggle": {
+    "description": "作成画面のスイッチ"
+  },
+  "vcCreateWelcomeHint": "ウェルカムメッセージを設定..",
+  "@vcCreateWelcomeHint": {
+    "description": "作成画面の入力欄のヒント"
+  },
+  "vcCreateGenresLabel": "{max, plural, other{ジャンルを選定(最大 {max})}}",
+  "@vcCreateGenresLabel": {
+    "description": "作成画面の節の見出し。max はジャンルの上限",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "vcCreateGenreHint": "ジャンルを入力",
+  "@vcCreateGenreHint": {
+    "description": "作成画面の入力欄のヒント"
+  },
+  "vcCreateGenreAdd": "ジャンルを追加",
+  "@vcCreateGenreAdd": {
+    "description": "作成画面のボタンのツールチップ"
+  },
+  "vcCreateSchedule": "開催を予約する",
+  "@vcCreateSchedule": {
+    "description": "作成画面のスイッチ"
+  },
+  "vcCreateScheduleCaption": "予約中は、あなたが入るまで他の人は入れません。",
+  "@vcCreateScheduleCaption": {
+    "description": "開催予約の注記"
+  },
+  "vcCreateScheduleCaptionDetail": "予約中はあなた(とモデレーター)が入るまで他の人は参加できません。近日開催の節と共有リンクから開始通知を登録できます。",
+  "@vcCreateScheduleCaptionDetail": {
+    "description": "開催予約の注記(開発者モードの詳しい説明)"
+  },
+  "vcCreateSummaryHint": "ざっくり要約(任意。空なら自動で作ります)",
+  "@vcCreateSummaryHint": {
+    "description": "作成画面の入力欄のヒント"
+  },
+  "vcCreateMicAfterCreate": "マイク(作成後に切替)",
+  "@vcCreateMicAfterCreate": {
+    "description": "作成画面のマイクのボタンのツールチップ"
+  },
+  "vcCreateScheduleButton": "予約",
+  "@vcCreateScheduleButton": {
+    "description": "作成画面のボタン(開催予約)"
+  },
+  "vcCreateButton": "作成",
+  "@vcCreateButton": {
+    "description": "作成画面のボタン"
+  },
+  "vcRoomHostPresent": "参加中",
+  "@vcRoomHostPresent": {
+    "description": "ホストの行のピル(ホストがルームにいる)"
+  },
+  "vcRoomHostBeforeStart": "開催前",
+  "@vcRoomHostBeforeStart": {
+    "description": "ホストの行のピル(開催予約中)"
+  },
+  "vcRoomHostAbsent": "不在",
+  "@vcRoomHostAbsent": {
+    "description": "ホストの行のピル(ホストがいない)"
+  },
+  "vcRoomMembersCount": "{count, plural, other{{count} 人が参加しています}}",
+  "@vcRoomMembersCount": {
+    "description": "参加メンバーの顔ぶれが取れていないときの人数。count は人数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vcRoomMembersHostOnly": "ホストのほかには、まだ誰もいません",
+  "@vcRoomMembersHostOnly": {
+    "description": "参加メンバーがホストだけのとき"
+  },
+  "vcRoomMembersNone": "まだ誰もいません",
+  "@vcRoomMembersNone": {
+    "description": "参加メンバーがいないとき"
+  },
+  "vcRoomMembersRest": "{count, plural, other{他{count}人}}",
+  "@vcRoomMembersRest": {
+    "description": "参加メンバー行の 3 人より後の人数。count は人数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vcRoomScreenShown": "共有枠に表示中",
+  "@vcRoomScreenShown": {
+    "description": "画面共有の枠のツールチップ(表示中)"
+  },
+  "vcRoomScreenShow": "画面共有を表示",
+  "@vcRoomScreenShow": {
+    "description": "画面共有の枠のツールチップ"
+  },
+  "vcRoomNotYet": "{what} は準備中です",
+  "@vcRoomNotYet": {
+    "description": "まだ無い機能を押したとき。what は機能の名前",
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomDeviceSettingsTitle": "ASTell の設定(この端末)",
+  "@vcRoomDeviceSettingsTitle": {
+    "description": "参加前 / 作成前の歯車のシートの見出し"
+  },
+  "vcRoomEditBar": "下段のボタンの並びを編集",
+  "@vcRoomEditBar": {
+    "description": "設定の行"
+  },
+  "vcRoomEditBarSubtitle": "並べ替え / 表示 / 非表示 / プラグインのボタンを追加",
+  "@vcRoomEditBarSubtitle": {
+    "description": "設定の行の補足"
+  },
+  "vcRoomAutoShareLabel": "チャットの内容を自動で共有欄に出す(ピン留めしなくても)",
+  "@vcRoomAutoShareLabel": {
+    "description": "設定の節の見出し"
+  },
+  "vcRoomShareStyleLabel": "共有欄の表示",
+  "@vcRoomShareStyleLabel": {
+    "description": "設定の節の見出し"
+  },
+  "vcRoomAutoPlayLabel": "自動再生",
+  "@vcRoomAutoPlayLabel": {
+    "description": "設定の節の見出し"
+  },
+  "vcRoomAutoPlayScreen": "画面共有が始まったら共有枠に出す",
+  "@vcRoomAutoPlayScreen": {
+    "description": "設定のスイッチ"
+  },
+  "vcRoomHoldMusicLabel": "保留音",
+  "@vcRoomHoldMusicLabel": {
+    "description": "設定の節の見出し"
+  },
+  "vcRoomHoldMusicDevice": "保留音を鳴らす(この端末)",
+  "@vcRoomHoldMusicDevice": {
+    "description": "設定のスイッチ"
+  },
+  "vcRoomDeviceSettingsCaption": "ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。",
+  "@vcRoomDeviceSettingsCaption": {
+    "description": "参加前の設定のシートの注記"
+  },
+  "vcRoomDeviceSettingsCaptionDetail": "ルームごとの設定(参加できる人・読み上げなど)は、参加してからルームの歯車で変えられます(オーナー)。",
+  "@vcRoomDeviceSettingsCaptionDetail": {
+    "description": "参加前の設定のシートの注記(開発者モードの詳しい説明)"
+  },
+  "vcRoomClose": "閉じる",
+  "@vcRoomClose": {
+    "description": "FOW / シートを閉じるボタン"
+  },
+  "vcRoomShare": "共有",
+  "@vcRoomShare": {
+    "description": "共有ボタン(ツールチップ / ボタン / 見出し)"
+  },
+  "vcRoomHost": "ホスト",
+  "@vcRoomHost": {
+    "description": "プレビュー / ルームの節の見出し、メンバーの役割"
+  },
+  "vcRoomMembers": "参加メンバー",
+  "@vcRoomMembers": {
+    "description": "プレビュー / ルームの節の見出し"
+  },
+  "vcRoomLocked": "運営により新しい入室が止められています。",
+  "@vcRoomLocked": {
+    "description": "新規入室が止められたルームの注記"
+  },
+  "vcRoomLockedDetail": "運営により新規入室が停止されています(D-151)。",
+  "@vcRoomLockedDetail": {
+    "description": "新規入室が止められたルームの注記(開発者モードの詳しい説明)"
+  },
+  "vcRoomRemindOn": "開始を通知します",
+  "@vcRoomRemindOn": {
+    "description": "開始通知を登録済みのときの補足"
+  },
+  "vcRoomWaitForHost": "ホストが始めるまで参加できません",
+  "@vcRoomWaitForHost": {
+    "description": "開催予約中のルームの補足"
+  },
+  "vcRoomRemindOff": "通知を解除",
+  "@vcRoomRemindOff": {
+    "description": "開始通知を外すボタン"
+  },
+  "vcRoomSummary": "ざっくり要約",
+  "@vcRoomSummary": {
+    "description": "プレビューの節の見出し"
+  },
+  "vcRoomSummaryPrivate": "このルームはざっくり要約を公開していません。",
+  "@vcRoomSummaryPrivate": {
+    "description": "ざっくり要約を公開していないルームのプレビュー"
+  },
+  "vcRoomWelcome": "ようこそ: {message}",
+  "@vcRoomWelcome": {
+    "description": "プレビューのウェルカムメッセージ。message はホストが書いた文",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomMicAfterJoin": "マイク(参加後に切替)",
+  "@vcRoomMicAfterJoin": {
+    "description": "プレビューのマイクのボタンのツールチップ"
+  },
+  "vcRoomCaptions": "字幕",
+  "@vcRoomCaptions": {
+    "description": "字幕のボタンのツールチップ / 作成画面のボタン"
+  },
+  "vcRoomJoin": "参加",
+  "@vcRoomJoin": {
+    "description": "プレビューの参加ボタン"
+  },
+  "vcRoomSettings": "設定",
+  "@vcRoomSettings": {
+    "description": "歯車のボタンのツールチップ"
+  },
+  "vcRoomTabHome": "ホーム",
+  "@vcRoomTabHome": {
+    "description": "ルームのタブ"
+  },
+  "vcRoomTabChat": "チャット",
+  "@vcRoomTabChat": {
+    "description": "ルームのタブ"
+  },
+  "vcRoomTabToc": "目次",
+  "@vcRoomTabToc": {
+    "description": "ルームのタブ"
+  },
+  "vcRoomTabRoom": "ルーム",
+  "@vcRoomTabRoom": {
+    "description": "ルームのタブ"
+  },
+  "vcRoomLeft": "退出しました",
+  "@vcRoomLeft": {
+    "description": "ルームから退出したあとの表示"
+  },
+  "vcRoomLeave": "退出",
+  "@vcRoomLeave": {
+    "description": "ルームから退出するボタン"
+  },
+  "vcRoomStreamingScreen": "画面を配信しています",
+  "@vcRoomStreamingScreen": {
+    "description": "自分が配信中の帯 / 配信の設定"
+  },
+  "vcRoomStreamingCamera": "カメラで配信しています",
+  "@vcRoomStreamingCamera": {
+    "description": "自分が配信中の帯 / 配信の設定"
+  },
+  "vcRoomStopSharing": "共有をやめる",
+  "@vcRoomStopSharing": {
+    "description": "画面共有中の帯のボタン"
+  },
+  "vcRoomStopStream": "配信を止める",
+  "@vcRoomStopStream": {
+    "description": "配信中の帯のボタン / 配信の設定"
+  },
+  "vcRoomSpeakerUnmute": "スピーカーミュート解除",
+  "@vcRoomSpeakerUnmute": {
+    "description": "下段のボタンのツールチップ"
+  },
+  "vcRoomSpeakerMute": "スピーカーミュート",
+  "@vcRoomSpeakerMute": {
+    "description": "下段のボタンのツールチップ"
+  },
+  "vcRoomMutedByModerator": "モデレーターにミュートされています",
+  "@vcRoomMutedByModerator": {
+    "description": "下段のマイクのボタンのツールチップ(強制ミュート中)"
+  },
+  "vcRoomMicOpening": "マイクを準備中(押すとやめる)",
+  "@vcRoomMicOpening": {
+    "description": "下段のマイクのボタンのツールチップ"
+  },
+  "vcRoomMicOff": "マイクオフ",
+  "@vcRoomMicOff": {
+    "description": "下段のマイクのボタンのツールチップ(押すとオフ)"
+  },
+  "vcRoomMicOn": "マイクオン",
+  "@vcRoomMicOn": {
+    "description": "下段のマイクのボタンのツールチップ(押すとオン)"
+  },
+  "vcRoomScreenShareOff": "画面共有オフ",
+  "@vcRoomScreenShareOff": {
+    "description": "下段の画面共有のボタンのツールチップ(押すとやめる)"
+  },
+  "vcRoomFullscreen": "全画面",
+  "@vcRoomFullscreen": {
+    "description": "全画面のボタン / メニュー"
+  },
+  "vcRoomCaptionsOff": "字幕オフ",
+  "@vcRoomCaptionsOff": {
+    "description": "下段の字幕のボタンのツールチップ(押すとオフ)/ 字幕が切れているときの表示"
+  },
+  "vcRoomCaptionsOn": "字幕オン",
+  "@vcRoomCaptionsOn": {
+    "description": "下段の字幕のボタンのツールチップ(押すとオン)"
+  },
+  "vcRoomShareAsLinkLimited": "公開範囲が限定された投稿なので、リンクとして共有します",
+  "@vcRoomShareAsLinkLimited": {
+    "description": "スナックバー"
+  },
+  "vcRoomShareAsLinkFailed": "投稿を取れなかったのでリンクとして共有します: {error}",
+  "@vcRoomShareAsLinkFailed": {
+    "description": "スナックバー。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomPickFileFailed": "ファイルを選択できませんでした: {error}",
+  "@vcRoomPickFileFailed": {
+    "description": "スナックバー。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomStream": "配信",
+  "@vcRoomStream": {
+    "description": "ホストの配信(画面共有と並べる種別の名前)"
+  },
+  "vcRoomLiveCardTitle": "{kind}: {title}",
+  "@vcRoomLiveCardTitle": {
+    "description": "配信のカードの見出し。kind は「画面共有」か「配信」、title は配信の題(無ければホストの表示名)",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomPeerScreen": "{name} の画面",
+  "@vcRoomPeerScreen": {
+    "description": "参加者の画面共有の見出し。name は表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomPeerScreenTitled": "{name} の画面 — {title}",
+  "@vcRoomPeerScreenTitled": {
+    "description": "参加者の画面共有の見出し。name は表示名、title は画面の題",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomAllShares": "すべての共有",
+  "@vcRoomAllShares": {
+    "description": "すべての共有のシートの見出し"
+  },
+  "vcRoomSettingsTitle": "VC の設定",
+  "@vcRoomSettingsTitle": {
+    "description": "ルームの歯車のシートの見出し"
+  },
+  "vcRoomModerationLabel": "モデレーション(オーナー)",
+  "@vcRoomModerationLabel": {
+    "description": "ルームの設定の節の見出し"
+  },
+  "vcRoomJoinPolicyLabel": "参加できる人",
+  "@vcRoomJoinPolicyLabel": {
+    "description": "ルームの設定の節の見出し"
+  },
+  "vcRoomSharePolicyLabel": "共有(チャットへの投稿)できる人",
+  "@vcRoomSharePolicyLabel": {
+    "description": "ルームの設定の節の見出し"
+  },
+  "vcRoomModeratorsLabel": "{count, plural, other{モデレーター({count})— メンバーの「…」から追加}}",
+  "@vcRoomModeratorsLabel": {
+    "description": "ルームの設定の節の見出し。count はモデレーターの数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vcRoomRemoveModerator": "モデレーターを外す",
+  "@vcRoomRemoveModerator": {
+    "description": "モデレーターを外す(ツールチップ / メニュー)"
+  },
+  "vcRoomTendencyLabel": "発信傾向",
+  "@vcRoomTendencyLabel": {
+    "description": "ルームの設定の節の見出し"
+  },
+  "vcRoomTendencyFilter": "荒らしの入室を断る(試験中)",
+  "@vcRoomTendencyFilter": {
+    "description": "ルームの設定のスイッチ"
+  },
+  "vcRoomTendencyCaption": "オンにすると、敵対的と判定された人は入れません。判定はまだ仮のものです。",
+  "@vcRoomTendencyCaption": {
+    "description": "発信傾向の注記"
+  },
+  "vcRoomTendencyCaptionDetail": "本命は rasq-judge の GoEmotion(発信の感情傾向)で、学習が要るので今はサーバーのダミー判定(表示名に hostile / 荒らし を含む人だけ敵対的)。オンにすると敵対的と判定された人は入室できません。メンバー行の「…」から判定結果を見られます。",
+  "@vcRoomTendencyCaptionDetail": {
+    "description": "発信傾向の注記(開発者モードの詳しい説明)"
+  },
+  "vcRoomHostStreamLabel": "配信(ホスト)",
+  "@vcRoomHostStreamLabel": {
+    "description": "ルームの設定の節の見出し"
+  },
+  "vcRoomStreamCamera": "カメラで配信する",
+  "@vcRoomStreamCamera": {
+    "description": "ルームの設定の行"
+  },
+  "vcRoomStreamScreen": "画面を配信する",
+  "@vcRoomStreamScreen": {
+    "description": "ルームの設定の行"
+  },
+  "vcRoomStreamScreenIos": "iPhone / iPad はこのアプリの画面だけ(ほかのアプリは映りません)",
+  "@vcRoomStreamScreenIos": {
+    "description": "画面の配信の補足(iOS)"
+  },
+  "vcRoomHostStreamCaption": "映像と声を配信します。通話に入りきらない人も配信で聞けます。",
+  "@vcRoomHostStreamCaption": {
+    "description": "配信の注記"
+  },
+  "vcRoomHostStreamCaptionDetail": "映像とマイクを配信サーバー(LiveKit)に上げます。参加者は通話の声のまま映像を見られ、通話に入りきらない人({cap} 人目より後)は配信であなたの声を聞きます。",
+  "@vcRoomHostStreamCaptionDetail": {
+    "description": "配信の注記(開発者モードの詳しい説明)。cap は通話に入れる人数",
+    "placeholders": {
+      "cap": {
+        "type": "int"
+      }
+    }
+  },
+  "vcRoomHoldMusicRoom": "このルームで保留音を許す(オーナー)",
+  "@vcRoomHoldMusicRoom": {
+    "description": "ルームの設定のスイッチ"
+  },
+  "vcRoomHoldMusicCaption": "開始を待つ間や、しばらく誰も話さないときに鳴ります。",
+  "@vcRoomHoldMusicCaption": {
+    "description": "保留音の注記"
+  },
+  "vcRoomHoldMusicCaptionDetail": "開催予約の開始を待っている間と、全員がマイクを下ろして(画面共有 / 配信も無く)チャットが {minutes} 分以上流れていない間に鳴ります。誰かが話し始めるか、チャットが流れると止まります。",
+  "@vcRoomHoldMusicCaptionDetail": {
+    "description": "保留音の注記(開発者モードの詳しい説明)。minutes は分",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "vcRoomTts": "読み上げ",
+  "@vcRoomTts": {
+    "description": "ルームの設定の節の見出し"
+  },
+  "vcRoomTtsUnavailable": "読み上げ(使えません)",
+  "@vcRoomTtsUnavailable": {
+    "description": "ルームの設定の節の見出し(読み上げを使えないとき)"
+  },
+  "vcRoomTtsDetail": "読み上げ({model}、プリセット音声)",
+  "@vcRoomTtsDetail": {
+    "description": "ルームの設定の節の見出し(開発者モード)。model は音声合成のモデル名",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomTtsDetailUnavailable": "読み上げ({model}、プリセット音声) — サーバー未設定",
+  "@vcRoomTtsDetailUnavailable": {
+    "description": "ルームの設定の節の見出し(開発者モード、使えないとき)。model は音声合成のモデル名",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomTtsNone": "読み上げなし",
+  "@vcRoomTtsNone": {
+    "description": "読み上げの声の選択肢"
+  },
+  "vcRoomTtsCaptionOwner": "読み上げの声はサーバーで作ります(アプリでの再生は準備中)。",
+  "@vcRoomTtsCaptionOwner": {
+    "description": "読み上げの注記(オーナー)"
+  },
+  "vcRoomTtsCaptionGuest": "読み上げ音声はホストが選びます。",
+  "@vcRoomTtsCaptionGuest": {
+    "description": "読み上げの注記(参加者)"
+  },
+  "vcRoomTtsCaptionOwnerDetail": "チャットと共有の読み上げは Central 側で合成します(端末での再生は今後の対応)。",
+  "@vcRoomTtsCaptionOwnerDetail": {
+    "description": "読み上げの注記(開発者モードの詳しい説明)"
+  },
+  "vcRoomDiagnosticsLabel": "接続の状態(開発者向け)",
+  "@vcRoomDiagnosticsLabel": {
+    "description": "ルームの設定の節の見出し(開発者モード)"
+  },
+  "vcRoomDiagnosticsOpen": "通話 / 配信の接続を見る",
+  "@vcRoomDiagnosticsOpen": {
+    "description": "ルームの設定の行(開発者モード)"
+  },
+  "vcRoomDiagnosticsOpenSubtitle": "ICE の状態・候補・送受信の量・受けているトラック",
+  "@vcRoomDiagnosticsOpenSubtitle": {
+    "description": "ルームの設定の行の補足(開発者モード)"
+  },
+  "vcRoomDiagnosticsTitle": "接続の状態",
+  "@vcRoomDiagnosticsTitle": {
+    "description": "接続の状態のシートの見出し"
+  },
+  "vcRoomHostStreamTitle": "{name} の配信",
+  "@vcRoomHostStreamTitle": {
+    "description": "ホストの配信の全画面の見出し。name はホストの表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomPostViewNotYet": "この投稿の表示(対応 SNS プラグインが未導入)",
+  "@vcRoomPostViewNotYet": {
+    "description": "まだ無い機能の名前(「〜 は準備中です」に入る)"
+  },
+  "vcRoomOpen": "開く",
+  "@vcRoomOpen": {
+    "description": "共有の操作のメニュー"
+  },
+  "vcRoomDelete": "削除",
+  "@vcRoomDelete": {
+    "description": "共有の操作のメニュー"
+  },
+  "vcRoomCopied": "コピーしました",
+  "@vcRoomCopied": {
+    "description": "スナックバー"
+  },
+  "vcRoomReportWhatShare": "共有「{headline}」",
+  "@vcRoomReportWhatShare": {
+    "description": "通報シートの対象の名前。headline は共有の見出し",
+    "placeholders": {
+      "headline": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomPinToFrame": "共有枠に表示",
+  "@vcRoomPinToFrame": {
+    "description": "参加者の … メニュー(画面共有を共有枠に出す)"
+  },
+  "vcRoomUnfollow": "フォロー解除",
+  "@vcRoomUnfollow": {
+    "description": "参加者 / チャットの … メニュー"
+  },
+  "vcRoomFollow": "フォロー",
+  "@vcRoomFollow": {
+    "description": "参加者 / チャットの … メニュー"
+  },
+  "vcRoomUnmute": "ミュート解除",
+  "@vcRoomUnmute": {
+    "description": "参加者 / チャットの … メニュー、メンバー行のツールチップ"
+  },
+  "vcRoomModUnmute": "全員向けミュートを解除",
+  "@vcRoomModUnmute": {
+    "description": "参加者 / チャットの … メニュー(モデレーター)"
+  },
+  "vcRoomModMute": "全員向けにミュート",
+  "@vcRoomModMute": {
+    "description": "参加者 / チャットの … メニュー(モデレーター)"
+  },
+  "vcRoomKick": "キック",
+  "@vcRoomKick": {
+    "description": "参加者 / チャットの … メニュー(モデレーター)"
+  },
+  "vcRoomMakeModerator": "モデレーターにする",
+  "@vcRoomMakeModerator": {
+    "description": "参加者の … メニュー(オーナー)"
+  },
+  "vcRoomShowTendency": "発信傾向を見る(試験中)",
+  "@vcRoomShowTendency": {
+    "description": "参加者の … メニュー(モデレーター)"
+  },
+  "vcRoomUnblock": "ブロック解除",
+  "@vcRoomUnblock": {
+    "description": "参加者 / チャットの … メニュー"
+  },
+  "vcRoomBlock": "ブロック",
+  "@vcRoomBlock": {
+    "description": "参加者 / チャットの … メニュー"
+  },
+  "vcRoomReport": "通報",
+  "@vcRoomReport": {
+    "description": "参加者 / チャットの … メニュー、通報シートの見出し"
+  },
+  "vcRoomTendencyResult": "{name} の発信傾向({source}): {summary}",
+  "@vcRoomTendencyResult": {
+    "description": "スナックバー。name は表示名、source は判定の出どころ、summary はラベルと割合の並び",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      },
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomTendencyResultHostile": "{name} の発信傾向({source}): {summary} — 敵対的",
+  "@vcRoomTendencyResultHostile": {
+    "description": "スナックバー(敵対的と判定)。name は表示名、source は判定の出どころ、summary はラベルと割合の並び",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      },
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomUnblocked": "{name} のブロックを解除しました",
+  "@vcRoomUnblocked": {
+    "description": "スナックバー。name は表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomBlocked": "{name} をブロックしました(発言を隠し、あなたのルームには入れません)",
+  "@vcRoomBlocked": {
+    "description": "スナックバー。name は表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomActionFailed": "できませんでした: {error}",
+  "@vcRoomActionFailed": {
+    "description": "操作の失敗のスナックバー。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomPinToShares": "共有欄にピン留め",
+  "@vcRoomPinToShares": {
+    "description": "チャットの … メニュー / ピンのツールチップ"
+  },
+  "vcRoomReportWhatChat": "{name} の発言",
+  "@vcRoomReportWhatChat": {
+    "description": "通報シートの対象の名前。name は発言者の表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomShowSummary": "プレビューにざっくり要約を表示する",
+  "@vcRoomShowSummary": {
+    "description": "ルームのホームのスイッチ / 作成画面のスイッチ"
+  },
+  "vcRoomAutoGenre": "ジャンルを自動選択する",
+  "@vcRoomAutoGenre": {
+    "description": "ルームのホームのスイッチ / 作成画面のスイッチ"
+  },
+  "vcRoomEditAutoGenres": "自動選択されたジャンルを編集",
+  "@vcRoomEditAutoGenres": {
+    "description": "ルームのホームの節の見出し(オーナー)"
+  },
+  "vcRoomGenres": "ジャンル",
+  "@vcRoomGenres": {
+    "description": "ルームのホームの節の見出し"
+  },
+  "vcRoomChatEmpty": "話した内容の文字起こしと、チャット・共有がここに並びます。",
+  "@vcRoomChatEmpty": {
+    "description": "チャットのタブが空のとき"
+  },
+  "vcRoomChatHiddenBlocked": "{count, plural, other{ブロック中のユーザーの発言 {count} 件を隠しています}}",
+  "@vcRoomChatHiddenBlocked": {
+    "description": "チャットのタブの注記。count は隠した数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vcRoomTyping": "入力中…",
+  "@vcRoomTyping": {
+    "description": "下書きが空のときの表示"
+  },
+  "vcRoomDraft": "下書き",
+  "@vcRoomDraft": {
+    "description": "自分の下書きの印"
+  },
+  "vcRoomTypingLabel": "入力中",
+  "@vcRoomTypingLabel": {
+    "description": "ほかの人の下書きの印"
+  },
+  "vcRoomChatActions": "チャットの操作",
+  "@vcRoomChatActions": {
+    "description": "チャット行の … のツールチップ"
+  },
+  "vcRoomTocStart": "開始: {title}",
+  "@vcRoomTocStart": {
+    "description": "目次の最初の行。title はルームの名前",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomTocShared": "{name} が {kind} を共有: {headline}",
+  "@vcRoomTocShared": {
+    "description": "目次の共有の行。name は表示名、kind は共有の種別の id、headline は共有の見出し",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      },
+      "headline": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomTocCaption": "共有と文字起こしの区切りです。",
+  "@vcRoomTocCaption": {
+    "description": "目次のタブの注記"
+  },
+  "vcRoomMembersWithCount": "{count, plural, other{参加メンバー({count})}}",
+  "@vcRoomMembersWithCount": {
+    "description": "ルームのタブの節の見出し。count は人数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vcRoomModerator": "モデレーター",
+  "@vcRoomModerator": {
+    "description": "メンバーの役割のピル"
+  },
+  "vcRoomCustomPlugins": "カスタムプラグイン",
+  "@vcRoomCustomPlugins": {
+    "description": "ルームのタブの節の見出し"
+  },
+  "vcRoomUpdateFailed": "設定を更新できませんでした: {error}",
+  "@vcRoomUpdateFailed": {
+    "description": "スナックバー。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomShareAction": "共有する",
+  "@vcRoomShareAction": {
+    "description": "下段の共有のボタン(ファイルを選んで共有)"
+  },
+  "vcRoomSendDone": "送信完了する",
+  "@vcRoomSendDone": {
+    "description": "下段の送信のボタンのツールチップ"
+  },
+  "vcRoomPeerScreenTap": "{name} の画面(タップで全画面)",
+  "@vcRoomPeerScreenTap": {
+    "description": "stick の画面のツールチップ。name は表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomPinnedSharesEmpty": "ピン留めした共有がここに出ます",
+  "@vcRoomPinnedSharesEmpty": {
+    "description": "共有枠が空のとき"
+  },
+  "vcRoomCompactShare": "共有: {headline}",
+  "@vcRoomCompactShare": {
+    "description": "縮めたルームの最後の共有の行。headline は共有の見出し",
+    "placeholders": {
+      "headline": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomNoTranscripts": "文字起こしはまだありません",
+  "@vcRoomNoTranscripts": {
+    "description": "縮めたルームの字幕の行"
+  },
+  "vcRoomTranscriptsDisabled": "文字起こしは無効(要約非公開)",
+  "@vcRoomTranscriptsDisabled": {
+    "description": "縮めたルームの字幕の行"
+  },
+  "vcRoomSharesCollapse": "共有を畳む",
+  "@vcRoomSharesCollapse": {
+    "description": "共有欄の開け閉めのツールチップ"
+  },
+  "vcRoomSharesExpand": "共有をすべて表示",
+  "@vcRoomSharesExpand": {
+    "description": "共有欄の開け閉めのツールチップ"
+  },
+  "vcRoomSharedByPinned": "{name} が共有 ・ 📌",
+  "@vcRoomSharedByPinned": {
+    "description": "共有の一覧の行の補足(ピン留め)。name は共有した人の表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomSharedByAuto": "{name} が共有 ・ 自動表示",
+  "@vcRoomSharedByAuto": {
+    "description": "共有の一覧の行の補足(自動表示)。name は共有した人の表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomTranscriptMetaPinned": "{name} ・ {time} ・ 📌",
+  "@vcRoomTranscriptMetaPinned": {
+    "description": "文字起こしの一覧の行の補足(ピン留め)。name は話した人、time は時刻(HH:mm)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomTranscriptMetaAuto": "{name} ・ {time} ・ 自動表示",
+  "@vcRoomTranscriptMetaAuto": {
+    "description": "文字起こしの一覧の行の補足(自動表示)。name は話した人、time は時刻(HH:mm)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomMuted": "ミュート中",
+  "@vcRoomMuted": {
+    "description": "共有枠のピル"
+  },
+  "vcRoomScreenFrameActions": "共有枠の操作",
+  "@vcRoomScreenFrameActions": {
+    "description": "共有枠の … のツールチップ"
+  },
+  "vcRoomMemberSelf": "{name}(あなた)",
+  "@vcRoomMemberSelf": {
+    "description": "メンバー行の自分の名前。name は表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomForceMuted": "強制ミュート",
+  "@vcRoomForceMuted": {
+    "description": "メンバー行のピル(モデレーターにミュートされた)"
+  },
+  "vcRoomMemberActions": "メンバーの操作",
+  "@vcRoomMemberActions": {
+    "description": "メンバー行の … のツールチップ"
+  },
+  "vcRoomDiagnosticsLogHint": "ブラウザ / Xcode のログにも「astell call:」「astell stream:」で出ます。",
+  "@vcRoomDiagnosticsLogHint": {
+    "description": "接続の状態のシートの注記(開発者向け)"
+  },
+  "vcRoomCopy": "コピー",
+  "@vcRoomCopy": {
+    "description": "接続の状態のシートのボタン"
+  },
+  "vcRoomBansLabel": "{count, plural, other{BAN({count})— メンバー行の「…」から}}",
+  "@vcRoomBansLabel": {
+    "description": "ルームの設定の節の見出し。count は BAN の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vcRoomBansLoadFailed": "BAN 一覧を読めませんでした: {error}",
+  "@vcRoomBansLoadFailed": {
+    "description": "BAN 一覧の読み込みの失敗。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomUnban": "BAN を解除",
+  "@vcRoomUnban": {
+    "description": "BAN の行のボタンのツールチップ"
+  },
+  "vcRoomReportBody": "{what} を通報します。RASQ の審査で確認します。",
+  "@vcRoomReportBody": {
+    "description": "通報シートの本文。what は対象の名前(表示名 / ルーム「…」/ 共有「…」など)",
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomReportNoteHint": "補足(任意)",
+  "@vcRoomReportNoteHint": {
+    "description": "通報シートの入力欄のヒント"
+  },
+  "vcRoomReportFailed": "通報できませんでした: {error}",
+  "@vcRoomReportFailed": {
+    "description": "スナックバー。error は失敗の内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "vcRoomReportSubmit": "通報する",
+  "@vcRoomReportSubmit": {
+    "description": "通報シートのボタン"
+  },
+  "vcRoomReported": "通報しました。審査で確認します",
+  "@vcRoomReported": {
+    "description": "スナックバー"
+  },
+  "vcRoomLiveBy": "{name} が{kind}中",
+  "@vcRoomLiveBy": {
+    "description": "配信の帯の見出し。name はホストの表示名、kind は「画面共有」か「配信」",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      }
+    }
+  }
 }

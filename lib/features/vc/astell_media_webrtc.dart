@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import '../../l10n/l10n.dart';
 import 'astell_audio_platform.dart';
 import 'astell_media.dart';
 import 'astell_web_audio.dart';
@@ -74,7 +75,7 @@ class WebRtcAstellMedia implements AstellMedia {
   @override
   Future<void> openMic() {
     if (_mic != null) return Future.value();
-    if (_disposed) return Future.error(StateError('閉じた通話のマイクは開けません'));
+    if (_disposed) return Future.error(StateError(appL10n.vcMediaMicClosed));
     return _opening ??= _openMic().whenComplete(() => _opening = null);
   }
 
@@ -84,7 +85,7 @@ class WebRtcAstellMedia implements AstellMedia {
     // 先に通話の音のセッション(Android の通話のモード)と許可。許可が無いまま getUserMedia に進まない。
     await _startSession();
     if (!await _audio.requestMic()) throw const AstellMediaException(AstellMediaIssue.permissionDenied);
-    if (_disposed) throw StateError('閉じた通話のマイクは開けません');
+    if (_disposed) throw StateError(appL10n.vcMediaMicClosed);
     final MediaStream stream;
     try {
       stream = await _userMedia({
@@ -97,7 +98,7 @@ class WebRtcAstellMedia implements AstellMedia {
     // 開いている間に退出した: 掴んだマイクはすぐ離す。
     if (_disposed || _mic != null) {
       await _stopStream(stream);
-      if (_disposed) throw StateError('閉じた通話のマイクは開けません');
+      if (_disposed) throw StateError(appL10n.vcMediaMicClosed);
       return;
     }
     final track = stream.getAudioTracks().firstOrNull;
