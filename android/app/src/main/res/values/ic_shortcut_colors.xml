@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ホーム画面のショートカットのアイコンの色 (D-483): 背景はランチャーのアイコンと同じ白、字形は RASQ のアクセント(RasqColors.accent)。 -->
+<resources>
+    <color name="ic_shortcut_background">#FFFFFF</color>
+    <color name="ic_shortcut_glyph">#F09937</color>
+</resources>

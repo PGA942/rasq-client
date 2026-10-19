@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ホーム画面のショートカットのアイコン (D-483): quick_actions が名前(Dart の appShortcutAndroidIcon)で引くので、
+     リリースの版の resource shrinking で消されないよう残す。 -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_shortcut_*" />

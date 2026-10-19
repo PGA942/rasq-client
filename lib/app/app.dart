@@ -19,6 +19,7 @@ import '../features/store/plugin_updates.dart' show pluginAutoUpdateProvider;
 import '../features/theme/theme_packs.dart';
 import '../notify/central_inbox.dart';
 import '../shell/rasq_terms_gate.dart';
+import 'app_shortcuts.dart';
 import 'providers.dart';
 import 'router.dart';
 
@@ -41,6 +42,8 @@ class RasqApp extends ConsumerWidget {
     ref.watch(notificationTapRouterProvider);
     // Android のプッシュ (D-449): FCM のトークンが変われば登録し直す / 開いている間に届いたら端末の通知 / 押したら通知のページ。
     ref.watch(pushBridgeProvider);
+    // ホーム画面のアプリのショートカット (D-483): 検索 / 新しいポスト / メッセージを作成 / RAiと探す。Web / デスクトップは何もしない。
+    ref.watch(appShortcutsProvider);
     // アルゴリズムとコミュニティへの貢献 (D-363): 同意しているあいだ束 / RAi のやりとりを集めて送る(状態の変化でアプリは建て直さない)。
     ref.listen(contributionProvider, (_, _) {});
     // RASQ の機能の紹介 (D-471): 起動したときに「入れて最初の起動か」を見て、端末の印を立てておく(ログインより前に)。

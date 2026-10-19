@@ -1,0 +1,6 @@
+/* ホーム画面のアプリのショートカット (D-483)。キー = Info.plist の UIApplicationShortcutItemTitle(日本語の既定)。
+   Dart の appShortcutLabels(lib/app/app_shortcuts.dart、Android の名前)と揃える。 */
+"検索" = "検索";
+"新しいポスト" = "新しいポスト";
+"メッセージを作成" = "メッセージを作成";
+"RAiと探す" = "RAiと探す";

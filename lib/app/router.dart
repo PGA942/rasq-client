@@ -96,6 +96,9 @@ abstract final class Routes {
   static const vc = '/vc';
   static const notifications = '/notifications';
   static const dm = '/dm';
+
+  /// DM のルーム(相手ごと)。
+  static String dmRoom(String peerId) => '$dm/room/${Uri.encodeComponent(peerId)}';
   static const settings = '/settings';
 
   /// プラグインボタン (D-210): 宣言されたボタンの有効 / 無効と束ねる閾値。
@@ -148,6 +151,9 @@ abstract final class Routes {
 
   /// RAi ホーム (D-179)。
   static const rai = '/rai';
+
+  /// RAi ホームを入力欄にフォーカスして開く (D-483: ホーム画面のショートカット「RAiと探す」)。
+  static const raiAsk = '/rai?ask=1';
 
   /// RAi のアチーブメント (D-215)。
   static const raiAchievements = '/rai/achievements';
@@ -460,7 +466,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/rasq/:handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!)),
           GoRoute(path: '/rasq-collections/:ref', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqCollectionScreen(idOrCode: s.pathParameters['ref']!)),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
-          GoRoute(path: Routes.rai, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiHomeScreen(), routes: [
+          GoRoute(path: Routes.rai, parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RaiHomeScreen(ask: s.uri.queryParameters['ask'] == '1'), routes: [
             GoRoute(path: 'achievements', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiAchievementsScreen()),
           ]),
           GoRoute(path: Routes.bookmarks, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BookmarksScreen()),

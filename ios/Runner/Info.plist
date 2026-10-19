@@ -120,5 +120,44 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<!-- ホーム画面のアプリのショートカット (D-483): アイコンの長押し / App ライブラリのクイックアクション。種類は
+	     lib/app/app_shortcuts.dart の AppShortcut.type と同じ値(quick_actions が Dart へ渡す)。アイコンは SF Symbols。
+	     名前はここの日本語が既定(そのまま InfoPlist.strings のキー)で、ja.lproj / en.lproj の InfoPlist.strings が端末の言語で上書きする。
+	     Dart の appShortcutLabels(Android の名前)と揃える。 -->
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>rasq.search</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>検索</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>magnifyingglass</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>rasq.post</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>新しいポスト</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>square.and.pencil</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>rasq.message</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>メッセージを作成</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>envelope</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>rasq.rai</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>RAiと探す</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>sparkles</string>
+		</dict>
+	</array>
 </dict>
 </plist>

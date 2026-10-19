@@ -119,7 +119,10 @@ class _StandbySlotState extends ConsumerState<_StandbySlot> {
 /// サイドバー (D-214): ヘッダーの ← の右の RAi アイコンで開く。開いている間は入力タイルが消え、
 /// 「新しい会話」/ 会話の履歴 / アチーブメント / マクロ(ダミー)が出る。
 class RaiHomeScreen extends ConsumerStatefulWidget {
-  const RaiHomeScreen({super.key});
+  const RaiHomeScreen({super.key, this.ask = false});
+
+  /// 開いたら入力欄にフォーカスする (D-483: ホーム画面のショートカット「RAiと探す」、`/rai?ask=1`)。
+  final bool ask;
   @override
   ConsumerState<RaiHomeScreen> createState() => _RaiHomeScreenState();
 }
@@ -132,7 +135,7 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
     super.initState();
     _rai; // ignore: unnecessary_statements, dispose では ref を使えないので先に解決しておく
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) showRai(ref, mode: RaiMode.assistant);
+      if (mounted) showRai(ref, mode: RaiMode.assistant, asking: widget.ask);
     });
   }
 
