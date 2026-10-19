@@ -64,6 +64,7 @@ class FowSpec {
     this.dimBehind = false,
     this.spanColumnsBelow,
     this.stickCollapse = false,
+    this.motion = true,
   })  : heightStops = [...heightStops]..sort(),
         heightFactor = ValueNotifier(initialHeightFactor.clamp(minHeightFactor, maxHeightFactor));
 
@@ -226,6 +227,12 @@ class FowSpec {
 
   /// stick → 展開モード(ハンドル / 空いたところのタップ)。null = 最上段へ。
   VoidCallback? onExpandStick;
+
+  // ---- 出入りの動き (D-476) ----------------------------------------------
+
+  /// 開く / 閉じるときにホストが動かすか(付け先の側からすべり込み + フェード、アンカーは少し拡大)。既定 true。
+  /// **自分で出入りを動かす FOW は false**(二重に動かさない)。モーションの抑制(`MediaQuery.disableAnimations`)では常に動かさない。
+  final bool motion;
 
   bool get canStick => stickCollapse || confirmMode == FowConfirmMode.stick;
 
