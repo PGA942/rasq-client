@@ -4,7 +4,8 @@
   "title": "開発者モード",
   "defaults": {
     "enabled": false,
-    "iosScreenGlimpse": false
+    "iosScreenGlimpse": false,
+    "raiAndroid3d": false
   },
   "root": {
     "t": "Column",
@@ -37,6 +38,20 @@
           "value": "$.settings.iosScreenGlimpse",
           "subtitle": "iPhone / iPad の「SNS サービスを探す」に「いつものブラウザで見て探す」を出します",
           "detail": "D-417 の Broadcast Upload Extension(ScreenGlimpseBroadcast)が画面収録の選択に出ない端末があるため(未解決)、iOS では既定で隠しています(D-418)。オンにすると入口を出します。Android は常に出します。",
+          "dev": true
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "raiAndroid3d",
+        "p": {
+          "title": "3D の RAi を試す(Android)",
+          "value": "$.settings.raiAndroid3d",
+          "subtitle": "Android でも RAi のマスコットを 3D で表示します",
+          "detail": "Android で RAi が開かない報告があり、3D の土台(flutter_angle)の初期化が疑わしいため、既定は 2D です(D-516)。オンにすると 3D を試します。20 秒たっても出ない / 失敗したときは自動で 2D に戻し、RAi のサイドバーの「診断」に理由を残します。iPhone / iPad / Mac は常に 3D です。",
           "dev": true
         },
         "on": {

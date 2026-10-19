@@ -173,5 +173,17 @@
   "raiTraceStatusRunning": "実行中",
   "raiTraceStatusPending": "未実行",
   "raiTraceCaption": "{count, plural, other{工程 {count} 手順}}",
-  "@raiTraceCaption": {"placeholders": {"count": {"type": "int"}}}
+  "@raiTraceCaption": {"placeholders": {"count": {"type": "int"}}},
+  "raiDiagTitle": "診断(開発者モード)",
+  "raiDiag3dOn": "3D の RAi: 使う",
+  "raiDiag3dOff": "3D の RAi: 使わない(2D で表示)",
+  "raiDiag3dOffAndroid": "3D の RAi: 使わない(Android は既定で 2D。開発者モードの「3D の RAi を試す(Android)」でオン)",
+  "raiDiag3dFailed": "3D の RAi: 失敗したので 2D に切り替えました({reason})",
+  "@raiDiag3dFailed": {"description": "reason は失敗の理由(英語のログの文のまま)", "placeholders": {"reason": {"type": "String"}}},
+  "raiDiagLlm": "端末内 LLM: {phase}({message})",
+  "@raiDiagLlm": {"description": "phase は状態の名前(notInstalled など、そのまま)、message は理由", "placeholders": {"phase": {"type": "String"}, "message": {"type": "String"}}},
+  "raiDiagEmbedding": "埋め込みモデル: {phase}({message})",
+  "@raiDiagEmbedding": {"description": "phase は状態の名前(ready など、そのまま)、message は理由", "placeholders": {"phase": {"type": "String"}, "message": {"type": "String"}}},
+  "raiDiagEmpty": "記録された失敗はありません",
+  "raiDiagRetry3d": "3D をもう一度試す"
 }

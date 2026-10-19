@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'rai_diagnostics.dart';
 import 'rai_reference.dart';
 import '../../l10n/l10n.dart';
 
@@ -213,9 +214,16 @@ final emojiVisionModelProvider = Provider<RaiEmbeddingModel>((_) => const Unavai
 StreamProvider<RaiEmbeddingStatus> _statusOf(Provider<RaiEmbeddingModel> p) => StreamProvider<RaiEmbeddingStatus>((ref) async* {
       final m = ref.watch(p);
       yield m.current;
-      unawaited(m.refresh());
+      _refreshSafely(ref, m);
       yield* m.statuses;
     });
+
+/// 状態の確かめの失敗で画面(RAi など)を開けなくしない (D-516): 記録だけする。
+void _refreshSafely(Ref ref, RaiEmbeddingModel m) {
+  unawaited(Future.sync(m.refresh).catchError((Object e) {
+    if (ref.mounted) ref.read(raiDiagnosticsProvider.notifier).add('embedding', 'refresh: $e');
+  }));
+}
 
 final emojiTextStatusProvider = _statusOf(emojiTextModelProvider);
 final emojiVisionStatusProvider = _statusOf(emojiVisionModelProvider);
@@ -227,6 +235,6 @@ final postVisionStatusProvider = _statusOf(postVisionModelProvider);
 final raiEmbeddingStatusProvider = StreamProvider<RaiEmbeddingStatus>((ref) async* {
   final m = ref.watch(raiEmbeddingModelProvider);
   yield m.current;
-  unawaited(m.refresh());
+  _refreshSafely(ref, m);
   yield* m.statuses;
 });

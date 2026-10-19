@@ -7404,6 +7404,45 @@
       }
     }
   },
+  "raiDiagTitle": "診断(開発者モード)",
+  "raiDiag3dOn": "3D の RAi: 使う",
+  "raiDiag3dOff": "3D の RAi: 使わない(2D で表示)",
+  "raiDiag3dOffAndroid": "3D の RAi: 使わない(Android は既定で 2D。開発者モードの「3D の RAi を試す(Android)」でオン)",
+  "raiDiag3dFailed": "3D の RAi: 失敗したので 2D に切り替えました({reason})",
+  "@raiDiag3dFailed": {
+    "description": "reason は失敗の理由(英語のログの文のまま)",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "raiDiagLlm": "端末内 LLM: {phase}({message})",
+  "@raiDiagLlm": {
+    "description": "phase は状態の名前(notInstalled など、そのまま)、message は理由",
+    "placeholders": {
+      "phase": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "raiDiagEmbedding": "埋め込みモデル: {phase}({message})",
+  "@raiDiagEmbedding": {
+    "description": "phase は状態の名前(ready など、そのまま)、message は理由",
+    "placeholders": {
+      "phase": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "raiDiagEmpty": "記録された失敗はありません",
+  "raiDiagRetry3d": "3D をもう一度試す",
   "raiFunctionsSettingMissing": "「{area}」に「{key}」という設定はありません(ある: {keys})",
   "@raiFunctionsSettingMissing": {
     "description": "RAi の関数 settings.get / set の結果(ユーザーにも注記で見える)。keys は「, 」区切りのある設定のキー",
