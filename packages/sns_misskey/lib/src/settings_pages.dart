@@ -4,7 +4,8 @@ import 'miauth.dart';
 
 /// Misskey プラグインの設定第二階層ページ (D-044, rasq.settings-page/1)。
 ///
-/// - `account`  … source: remote — `i` / `i/update` に読み書き(サーバー保存)
+/// - `account`  … source: remote — `i` / `i/update` に読み書き(サーバー保存)。プロフィールの文字(名前・
+///   自己紹介・場所・誕生日)、公開範囲、フォロー / フォロワー一覧の公開範囲、Bot / Cat (D-482)
 /// - `timeline` … ローカル保存 — [MisskeySession.applySettings] で TL 取得
 ///   パラメーター(withRenotes / withReplies)に反映
 /// - `safety`   … ローカル保存 — ホストが投稿タイルの閲覧注意メディア/CW の
@@ -39,29 +40,93 @@ Map<String, Object?> _webLink(String path, String title, {String? subtitle}) => 
       'on': {'tap': 'web.open'},
     };
 
+/// 文字の設定(名前・自己紹介など)。「保存」で `settings.set`(payload.text、D-482)。
+Map<String, Object?> _input(String k, String label, int maxLength, {bool multiline = false}) => {
+      't': 'Input',
+      'k': k,
+      'p': {'label': label, 'value': r'$.settings.' + k, 'maxLength': maxLength, 'multiline': multiline, 'submitLabel': '保存', 'clearOnSubmit': false, 'allowEmpty': true, 'pad': 16},
+      'on': {'submit': 'settings.set'},
+    };
+
+const _visibilities = [('public', '公開'), ('followers', 'フォロワーだけ'), ('private', '非公開')];
+
 final Map<String, Object?> _account = {
   'schema': 'rasq.settings-page/1',
   'area': 'account',
   'title': 'アカウント',
   'source': 'remote',
-  'defaults': {'isLocked': false, 'isExplorable': true, 'hideOnlineStatus': false, 'publicReactions': true, 'isBot': false, 'isCat': false},
+  'defaults': MisskeyAccountSettings.defaults,
   'root': {
     't': 'Column',
     'c': [
+      {'t': 'SectionHeader', 'p': {'title': 'プロフィール'}},
+      _input('name', '名前', 50),
+      _input('description', '自己紹介', 1500, multiline: true),
+      _input('location', '場所', 50),
+      _input('birthday', '誕生日(例: 2000-01-31)', 10),
+      _webLink('settings/profile', 'アイコン・バナー・補足情報', subtitle: 'web 版で編集します'),
       {'t': 'SectionHeader', 'p': {'title': '公開範囲'}},
       _switch('isLocked', 'フォローを承認制にする', subtitle: 'フォローされる前にあなたの承認が必要になります'),
+      _switch('autoAcceptFollowed', 'フォロー中の人からのフォローは自動で承認'),
       _switch('isExplorable', 'アカウントを見つけやすくする', subtitle: '「みつける」やユーザー検索に表示されます'),
       _switch('hideOnlineStatus', 'オンライン状態を隠す'),
       _switch('publicReactions', 'リアクション一覧を公開する'),
+      _switch('noCrawle', '検索エンジンに載せない', subtitle: '検索エンジンによるインデックスを避けるよう求めます'),
+      {'t': 'SectionHeader', 'p': {'title': 'フォローの一覧を見せる相手'}},
+      for (final (v, label) in _visibilities) _radio('followingVisibility', v, label),
+      {'t': 'SectionHeader', 'p': {'title': 'フォロワーの一覧を見せる相手'}},
+      for (final (v, label) in _visibilities) _radio('followersVisibility', v, label),
       {'t': 'SectionHeader', 'p': {'title': 'アカウントの種類'}},
       _switch('isBot', 'Botとして設定'),
       _switch('isCat', 'Catにする', subtitle: '発言が Cat 語になり、猫耳が付きます'),
-      {'t': 'SectionHeader', 'p': {'title': 'web で行う設定'}},
-      _webLink('settings/profile', 'プロフィールの編集(名前・自己紹介など)'),
-      {'t': 'Text', 'p': {'text': 'これらの設定は接続先の Misskey サーバーに保存されます。'}},
+      {'t': 'Text', 'p': {'text': 'これらの設定は接続先の Misskey サーバーに保存されます。', 'pad': 16}},
     ],
   },
 };
+
+/// `account` ページ (source: remote) のキーと値の形(`i` / `i/update`、D-044 / D-482)。
+/// 画面のキーはここに無いと書けない(許可リスト)。
+abstract final class MisskeyAccountSettings {
+  static const boolKeys = ['isLocked', 'autoAcceptFollowed', 'isExplorable', 'hideOnlineStatus', 'publicReactions', 'noCrawle', 'isBot', 'isCat'];
+  static const textKeys = ['name', 'description', 'location', 'birthday'];
+  static const visibilityKeys = ['followingVisibility', 'followersVisibility'];
+  static const visibilities = ['public', 'followers', 'private'];
+
+  static const Map<String, Object?> defaults = {
+    'name': '', 'description': '', 'location': '', 'birthday': '', //
+    'isLocked': false, 'autoAcceptFollowed': true, 'isExplorable': true, 'hideOnlineStatus': false,
+    'publicReactions': true, 'noCrawle': false, 'followingVisibility': 'public', 'followersVisibility': 'public',
+    'isBot': false, 'isCat': false,
+  };
+
+  /// `i` → 画面の値。古いサーバー(2023.12 より前)はフォロー / フォロワーの公開範囲を `ffVisibility` 1 つで持つ。
+  static Map<String, Object?> read(Map<String, Object?> i) => {
+        for (final k in boolKeys) k: i[k] is bool ? i[k] : defaults[k],
+        for (final k in textKeys) k: i[k] is String ? i[k] : '',
+        for (final k in visibilityKeys) k: i[k] as String? ?? i['ffVisibility'] as String? ?? 'public',
+      };
+
+  /// 1 キーを `i/update` の本文に。許可リストに無いキーは [UnsupportedError]、形の違う値は [ArgumentError]。
+  static Map<String, Object?> update(String key, Object? value) {
+    if (boolKeys.contains(key)) {
+      if (value is! bool) throw ArgumentError.value(value, key, '値は true / false です');
+      return {key: value};
+    }
+    if (textKeys.contains(key)) {
+      final s = '${value ?? ''}'.trim();
+      if (key == 'birthday' && s.isNotEmpty && !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(s)) {
+        throw ArgumentError.value(value, key, '誕生日は 2000-01-31 の形で入れてください');
+      }
+      // 名前・場所・誕生日は空 = 消す(null)。
+      return {key: s.isEmpty && key != 'description' ? null : s};
+    }
+    if (visibilityKeys.contains(key)) {
+      if (!visibilities.contains(value)) throw ArgumentError.value(value, key, '公開範囲は public / followers / private です');
+      return {key: value};
+    }
+    throw UnsupportedError('unknown remote setting: account.$key');
+  }
+}
 
 final Map<String, Object?> _timeline = {
   'schema': 'rasq.settings-page/1',

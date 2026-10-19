@@ -151,9 +151,13 @@ abstract final class RrlComponentRegistry {
     'Button': (ctx) => FilledButton(onPressed: ctx.tapHandler('tap'), child: Text(rrlString(ctx.props['label']))),
     // 入力欄(ページ型のカスタムプラグイン、rasq-client D-357)。`change {text}`(打つたび)/ `submit {text}`(送信)。
     // 値は手元が持ち、`p.value` が変わったときだけ書き戻す(打っている途中の再描画で消えない)。
-    'Input': (ctx) => _RrlInput(
+    // `label` = 欄の名前 / `allowEmpty` = 空でも送れる / `pad` = 左右の余白(上下はその 1/4)(設定ページの文字の欄、D-482)。
+    'Input': (ctx) {
+      final input = _RrlInput(
           key: ValueKey('rrl.input.${ctx.node.k ?? ''}'),
           hint: ctx.props['hint'] == null ? null : rrlString(ctx.props['hint']),
+          label: ctx.props['label'] == null ? null : rrlString(ctx.props['label']),
+          allowEmpty: rrlTruthy(ctx.props['allowEmpty']),
           value: ctx.props['value'] == null ? '' : rrlString(ctx.props['value']),
           multiline: rrlTruthy(ctx.props['multiline']),
           maxLength: (ctx.props['maxLength'] as num?)?.toInt(),
@@ -161,7 +165,10 @@ abstract final class RrlComponentRegistry {
           clearOnSubmit: ctx.props['clearOnSubmit'] != false,
           onChanged: ctx.node.on.containsKey('change') ? (t) => ctx.emit('change', {'text': t}) : null,
           onSubmit: ctx.node.on.containsKey('submit') ? (t) => ctx.emit('submit', {'text': t}) : null,
-        ),
+        );
+      final pad = (ctx.props['pad'] as num?)?.toDouble();
+      return pad == null ? input : Padding(padding: EdgeInsets.symmetric(horizontal: pad, vertical: pad / 4), child: input);
+    },
     'ActionButton': (ctx) => RasqActionButton.iconCount(
           icon: rrlIconFor(rrlString(ctx.props['icon'])),
           doneIcon: ctx.props['doneIcon'] == null ? null : rrlIconFor(rrlString(ctx.props['doneIcon'])),
@@ -333,8 +340,14 @@ abstract final class RrlComponentRegistry {
 /// なので、`change` を出しても相手が `value` を書き戻すまでつまみと数値が動かなかった。
 /// ローカルに「いま触っている値」を持ち、props の `value` が変わったらそちらに合わせる。
 class _RrlInput extends StatefulWidget {
-  const _RrlInput({super.key, this.hint, required this.value, this.multiline = false, this.maxLength, this.submitLabel, this.clearOnSubmit = true, this.onChanged, this.onSubmit});
+  const _RrlInput({super.key, this.hint, this.label, required this.value, this.multiline = false, this.maxLength, this.submitLabel, this.clearOnSubmit = true, this.allowEmpty = false, this.onChanged, this.onSubmit});
   final String? hint;
+
+  /// 欄の名前(枠の上に残る。設定ページの「名前」「自己紹介」、D-482)。
+  final String? label;
+
+  /// 空のまま送れる(設定ページで項目を消すとき、D-482)。
+  final bool allowEmpty;
   final String value;
   final bool multiline;
   final int? maxLength;
@@ -363,7 +376,7 @@ class _RrlInputState extends State<_RrlInput> {
 
   void _submit() {
     final text = _controller.text;
-    if (text.trim().isEmpty || widget.onSubmit == null) return;
+    if ((text.trim().isEmpty && !widget.allowEmpty) || widget.onSubmit == null) return;
     widget.onSubmit!(text);
     if (widget.clearOnSubmit) _controller.clear();
   }
@@ -377,6 +390,7 @@ class _RrlInputState extends State<_RrlInput> {
         textInputAction: widget.multiline ? TextInputAction.newline : TextInputAction.send,
         decoration: InputDecoration(
           hintText: widget.hint,
+          labelText: widget.label,
           isDense: true,
           suffixIcon: widget.onSubmit == null
               ? null

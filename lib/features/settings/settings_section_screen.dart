@@ -13,6 +13,7 @@ import '../notifications/notifications_screen.dart';
 import '../relational/relational_timeline_view.dart' show openRelationalTuning;
 import '../theme/theme_packs.dart';
 import '../trend/tendency_fows.dart';
+import 'settings_dsl.dart' show settingsRowVisible;
 import 'settings_sections.dart';
 
 /// Generic first-level settings page driven by [settingsSections].
@@ -32,7 +33,8 @@ class SettingsSectionScreen extends ConsumerWidget {
         // 「RASQについて」の最上部 (D-291): RASQ アカウントのタイル(サイドバーのバンドルタイルと同じ見た目)。
         // 押すとアカウントの FOW。これまでの「アカウント >」の行は、これに置き換えた。
         if (sectionId == 'about') const RasqAccountTile(key: ValueKey('settings.about.account')),
-        for (final r in section.rows)
+        // SNS プラグインの設定ページの行は、プラグインが宣言したものだけ (D-482)。
+        for (final r in section.rows.where((r) => settingsRowVisible(ref, r.route)))
           if (sectionId == 'appearance' && r.title == 'フォントやカラースキーム')
             // 着せ替えの画面へ (D-375): 以前はここでライト / ダークのシートだけを開き、入れた着せ替えを選ぶ画面に行けなかった。
             // ライト / ダークは着せ替えの画面の上に置いた。

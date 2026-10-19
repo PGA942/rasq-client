@@ -10,3 +10,4 @@ export 'src/misskey_plugin.dart';
 export 'src/misskey_session.dart';
 export 'src/miauth.dart';
 export 'src/mappers.dart';
+export 'src/settings_pages.dart' show MisskeyAccountSettings;

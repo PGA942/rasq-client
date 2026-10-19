@@ -7,6 +7,7 @@ import 'package:rasq_store/rasq_store.dart' show FollowState;
 
 import 'mappers.dart';
 import 'misskey_api.dart';
+import 'settings_pages.dart' show MisskeyAccountSettings;
 
 /// Authenticated Misskey session.
 class MisskeySession extends SnsSessionBase {
@@ -119,23 +120,20 @@ class MisskeySession extends SnsSessionBase {
     _withReplies = values['withReplies'] == true;
   }
 
-  /// `account` ページ (source: remote) が読み書きするキー。
-  static const accountSettingKeys = ['isLocked', 'isExplorable', 'hideOnlineStatus', 'publicReactions', 'isBot', 'isCat'];
-
-  Map<String, Object?> _accountSettings(Map<String, Object?> i) => {for (final k in accountSettingKeys) k: i[k] == true};
+  /// `account` ページ (source: remote) が読み書きするキー(許可リスト、D-482 で文字と公開範囲を追加)。
+  static List<String> get accountSettingKeys => MisskeyAccountSettings.defaults.keys.toList();
 
   @override
   Future<Map<String, Object?>> settingsRead(String area) async {
     if (area != 'account') throw UnsupportedError('unknown remote settings area: $area');
-    return _accountSettings(await api.callMap('i'));
+    return MisskeyAccountSettings.read(await api.callMap('i'));
   }
 
   @override
   Future<Map<String, Object?>> settingsWrite(String area, String key, Object? value) async {
-    if (area != 'account' || !accountSettingKeys.contains(key)) {
-      throw UnsupportedError('unknown remote setting: $area.$key');
-    }
-    return _accountSettings(await api.callMap('i/update', {key: value == true}));
+    if (area != 'account') throw UnsupportedError('unknown remote setting: $area.$key');
+    // i/update は更新後の自分を返す(サーバーが弾いた変更もそのまま見える)。
+    return MisskeyAccountSettings.read(await api.callMap('i/update', MisskeyAccountSettings.update(key, value)));
   }
 
   String? _cachedMyId;

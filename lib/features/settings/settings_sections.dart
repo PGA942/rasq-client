@@ -53,8 +53,8 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('リソースと広告', route: '/settings/dsl/resources'),
     SettingsRow('ヘルプ、法的表示', route: Routes.settingsLegal),
   ],
-      note: '上の 4 つは、使っている SNS のプラグインが用意するページです。',
-      noteDetail: 'アカウント / タイムライン / セキュリティ / プライバシーは、選んでいる SNS のプラグインが提供する設定ページです(プラグインが持たないページは開けません)。'),
+      note: 'アカウント / タイムライン / セキュリティ / プライバシーは、使っている SNS のプラグインが用意するページです(プラグインが用意していないものは出ません)。',
+      noteDetail: 'アカウント / タイムライン / セキュリティ / プライバシーは、設定するアカウントの SNS プラグインが提供する設定ページです(sns.settingsPages。宣言されていないページの行は出さない、D-482)。'),
   'appearance': SettingsSection('アプリの外観', [
     SettingsRow('インターフェースの表示サイズ', route: '/settings/dsl/appearance.display'),
     SettingsRow('フォントやカラースキーム', subtitle: '着せ替え(色・アイコン・背景の画像)', route: Routes.settingsTheme),
