@@ -1272,6 +1272,11 @@ void _fuelBudgetTests() {
       expect(fuelBudgetFor(permissions: const {RasqPermissions.tagMedia}), RasqWasmPlugin.mediaFuelBudget);
     });
 
+    test('viewer.overlay(全画面表示プラグイン)も画像を受け取って復号するので重いほう (D-519)', () {
+      // QR コード検出のサンプルの宣言そのまま(fow.widget / mute.words だけでも、スロットで重いほう)。
+      expect(fuelBudgetFor(permissions: const {RasqPermissions.fowWidget, 'mute.words'}, slots: const {kViewerOverlaySlot}), RasqWasmPlugin.mediaFuelBudget);
+    });
+
     test('それ以外は絞られる', () {
       expect(fuelBudgetFor(permissions: const {RasqPermissions.network}), RasqWasmPlugin.standardFuelBudget);
       expect(fuelBudgetFor(permissions: const {RasqPermissions.storageSafe}, slots: const {'tl'}), RasqWasmPlugin.standardFuelBudget);

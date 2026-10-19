@@ -58,9 +58,9 @@
     },
     "media_fullscreen_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/media-fullscreen-plugin.git",
-      "commit": "9edb02daa901d9047bad5f2c4603d434ac46367f",
-      "version": "0.2.1",
-      "sha256": "10c0549b556ca4ca2fbe7039d843b78f35be5b1864eaf38d25e0aca65c24060f"
+      "commit": "d5c3017457c2bb7ace5d4d6b81a43c9d63562fe4",
+      "version": "0.2.2",
+      "sha256": "817e6e48c062844183dee30f2cee0aa462484790ead6cc94361ed01ecb473fb4"
     },
     "media_process_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/media-process-plugin.git",
