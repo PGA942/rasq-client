@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../../notify/local_notifier.dart';
 
 /// **いま見ている画面を少しだけ読み取る** (D-415、Android の本物は D-416)。
@@ -342,8 +343,8 @@ bool isBroadcastGlimpse(ScreenGlimpse g) => g is NativeScreenGlimpse && g.broadc
 
 /// 準備できたときに出す案内。
 String glimpseArmedHint(ScreenGlimpse g) => isBroadcastGlimpse(g)
-    ? '画面の配信を始めました。ブラウザで探したい画面を開いたら、画面上部の赤い表示(またはコントロールセンター)から配信を止めてください。止める直前の 3 秒だけを読み取り、RASQ に戻ると結果が出ます。'
-    : '通知を出しました。ブラウザで探したい画面を開いてから、通知をタップしてください。タップすると、その画面を 3 秒だけ読み取ります。';
+    ? appL10n.onboardingDiscoverGlimpseArmedBroadcast
+    : appL10n.onboardingDiscoverGlimpseArmedNotification;
 
 /// 読み取る長さ。
 const discoverGlimpseDuration = Duration(seconds: 3);
@@ -351,8 +352,8 @@ const discoverGlimpseDuration = Duration(seconds: 3);
 /// 通知の id と payload。payload は `rasq://` の形(通知のタップで探す画面へ戻る)。ダミーの流れだけ(Android は端末が通知を出す)。
 const discoverGlimpseNotificationId = 415000;
 const discoverGlimpsePayload = 'rasq://sns-discover/content?glimpse=1';
-const discoverGlimpseNotificationTitle = 'RASQ で探す';
-const discoverGlimpseNotificationBody = 'タップすると、いま見ている画面を 3 秒だけ読み取ります';
+String get discoverGlimpseNotificationTitle => appL10n.onboardingDiscoverGlimpseNotificationTitle;
+String get discoverGlimpseNotificationBody => appL10n.onboardingDiscoverGlimpseNotificationBody;
 
 /// 通知を出す。出せたら true。
 Future<bool> showDiscoverGlimpseNotification(LocalNotifier notifier) =>

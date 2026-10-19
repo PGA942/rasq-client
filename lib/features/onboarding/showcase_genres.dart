@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../../backend/server_info_api.dart' show ShowcaseCandidate;
+import '../../l10n/l10n.dart';
 import '../child_safe/child_gate.dart';
 import '../rai/rai_reference.dart' show RaiEmbedder, cosine;
 
@@ -11,11 +12,26 @@ import '../rai/rai_reference.dart' show RaiEmbedder, cosine;
 /// ジャンルの分からない投稿(挨拶・雑談・内輪の話)は見本にしない。
 @immutable
 class ShowcaseGenre {
-  const ShowcaseGenre(this.id, this.label, {required this.words, required this.prototypes});
+  const ShowcaseGenre(this.id, {required this.words, required this.prototypes});
   final String id;
 
   /// 画面に出す名前(チップ)。
-  final String label;
+  String get label => switch (id) {
+        'game' => appL10n.onboardingGenreGame,
+        'anime' => appL10n.onboardingGenreAnime,
+        'music' => appL10n.onboardingGenreMusic,
+        'art' => appL10n.onboardingGenreArt,
+        'photo' => appL10n.onboardingGenrePhoto,
+        'food' => appL10n.onboardingGenreFood,
+        'tech' => appL10n.onboardingGenreTech,
+        'animal' => appL10n.onboardingGenreAnimal,
+        'sports' => appL10n.onboardingGenreSports,
+        'travel' => appL10n.onboardingGenreTravel,
+        'books' => appL10n.onboardingGenreBooks,
+        'movie' => appL10n.onboardingGenreMovie,
+        'nature' => appL10n.onboardingGenreNature,
+        _ => id,
+      };
 
   /// 語の辞書(小文字で比べる。ハッシュタグもこれで当たる)。
   final List<String> words;
@@ -25,55 +41,55 @@ class ShowcaseGenre {
 }
 
 const showcaseGenres = <ShowcaseGenre>[
-  ShowcaseGenre('game', 'ゲーム', words: [
-    'ゲーム', 'game', 'スプラ', 'ポケモン', 'ガチャ', 'switch', 'スイッチ', 'steam', 'マイクラ', 'minecraft', 'プレイ', 'ランクマ', 'ガチマ', 'ウデマエ', '攻略', 'ボス', 'レベル上げ', 'モンハン', 'ドラクエ', 'ff14', 'apex', 'valorant', 'ソシャゲ', 'ゲーセン', '音ゲー',
-  ], prototypes: ['ゲームをプレイした感想', '新作ゲームの攻略とガチャ', 'Playing a video game']),
-  ShowcaseGenre('anime', 'アニメ・マンガ', words: [
-    'アニメ', 'anime', 'マンガ', '漫画', 'manga', '今期', '作画', '声優', '推し', '最新話', 'コミック', '単行本', 'ジャンプ', 'vtuber', '配信見', 'コミケ', '同人',
-  ], prototypes: ['アニメやマンガの感想', '推しのキャラクターと声優', 'Watching anime and reading manga']),
-  ShowcaseGenre('music', '音楽', words: [
-    '音楽', 'music', '新曲', 'この曲', 'アルバム', 'ライブ', 'live', 'ギター', 'ピアノ', 'ベース', 'ドラム', '歌', 'カラオケ', 'バンド', 'フェス', 'dtm', '作曲', 'ボカロ', 'spotify', 'プレイリスト',
-  ], prototypes: ['音楽を聴いた感想、好きな曲', 'ライブやコンサートに行った', 'Listening to music and songs']),
-  ShowcaseGenre('art', 'イラスト・創作', words: [
-    'イラスト', '絵を', 'お絵かき', '落書き', 'らくがき', 'illust', 'drawing', 'art', '創作', '模写', '描いた', '厚塗り', 'clip studio', 'クリスタ', '手芸', '刺繍', 'ハンドメイド', '工作', 'プラモ',
-  ], prototypes: ['イラストを描いた、絵の練習', '創作や作品づくり、ものづくり', 'Drawing an illustration']),
-  ShowcaseGenre('photo', '写真', words: [
-    '写真', 'photo', 'カメラ', 'camera', '撮った', '撮影', '一枚', 'レンズ', 'フィルム', '夕焼け', '朝焼け', '星空', '風景',
-  ], prototypes: ['写真を撮った、カメラと風景', '空と景色の写真', 'Taking photos of scenery']),
-  ShowcaseGenre('food', '食べ物', words: [
-    'ごはん', 'ご飯', 'ランチ', 'ディナー', '朝ごはん', '晩ごはん', '料理', '自炊', 'レシピ', 'ラーメン', 'カレー', 'パン', 'ケーキ', 'スイーツ', 'お菓子', 'カフェ', 'コーヒー', '紅茶', 'おいしい', '美味しい', 'うまい', '弁当', '寿司', '焼肉', 'food', 'lunch', 'cooking',
-  ], prototypes: ['ご飯を食べた、料理とおいしいもの', 'ラーメンやカフェ、お菓子', 'Cooking and eating food']),
-  ShowcaseGenre('tech', 'IT・プログラミング', words: [
-    'プログラミング', 'プログラム', 'コード', 'code', 'rust', 'python', 'javascript', 'typescript', 'flutter', 'dart', 'linux', 'github', 'gitlab', 'エンジニア', '開発', 'バグ', 'デプロイ', 'サーバー構築', '自宅サーバー', 'pc', '自作pc', 'キーボード', 'ai', 'llm', 'android', 'iphone',
-  ], prototypes: ['プログラミングとソフトウェア開発', 'パソコンやサーバー、コードを書く', 'Programming and software']),
-  ShowcaseGenre('animal', '動物・ペット', words: [
-    '猫', 'ねこ', 'ネコ', 'にゃん', 'cat', '犬', 'いぬ', 'イヌ', 'わんこ', 'dog', '柴犬', 'ペット', 'うさぎ', 'ハムスター', 'インコ', '動物園', '水族館',
-  ], prototypes: ['猫や犬などペットの様子', '動物がかわいい', 'Pets, cats and dogs']),
-  ShowcaseGenre('sports', 'スポーツ', words: [
-    'スポーツ', '野球', 'サッカー', 'バスケ', 'テニス', 'ラグビー', 'バレー', '陸上', 'マラソン', 'ランニング', '筋トレ', 'ジム', '試合', '優勝', 'ゴール', 'ホームラン', '代表戦', 'f1', '競馬', 'sports', 'soccer', 'baseball',
-  ], prototypes: ['スポーツの試合を観戦した', '野球やサッカーの応援', 'Watching a sports game']),
-  ShowcaseGenre('travel', '旅行・おでかけ', words: [
-    '旅行', '旅', 'おでかけ', 'お出かけ', '観光', '温泉', 'ホテル', '旅館', '新幹線', '飛行機', '空港', '鉄道', '電車旅', 'ドライブ', 'キャンプ', '登山', 'travel', 'trip',
-  ], prototypes: ['旅行やおでかけに行った', '観光地と電車の旅', 'Traveling and sightseeing']),
-  ShowcaseGenre('books', '本・読書', words: [
-    '読書', '小説', '読了', '読んだ', '新刊', '書店', '本屋', '図書館', 'エッセイ', 'book', 'novel', 'reading',
-  ], prototypes: ['本を読んだ感想、読書', '小説を読み終えた', 'Reading a book']),
-  ShowcaseGenre('movie', '映画・ドラマ', words: [
-    '映画', 'ドラマ', '映画館', '上映', '試写', 'netflix', 'ネトフリ', 'アマプラ', '特撮', 'movie', 'film', 'cinema',
-  ], prototypes: ['映画やドラマを観た感想', '映画館で新作を観た', 'Watching a movie']),
-  ShowcaseGenre('nature', '季節・自然', words: [
-    '紅葉', '桜', 'お花見', '紫陽花', 'あじさい', 'ひまわり', '花が', '雪景色', '初雪', '梅雨', '季節', '散歩道', '植物', '家庭菜園', 'ガーデニング', '盆栽', '虹',
-  ], prototypes: ['天気と季節の移り変わり', '花が咲いた、紅葉', 'Weather and seasons']),
+  ShowcaseGenre('game', words: [
+    'ゲーム', 'game', 'スプラ', 'ポケモン', 'ガチャ', 'switch', 'スイッチ', 'steam', 'マイクラ', 'minecraft', 'プレイ', 'ランクマ', 'ガチマ', 'ウデマエ', '攻略', 'ボス', 'レベル上げ', 'モンハン', 'ドラクエ', 'ff14', 'apex', 'valorant', 'ソシャゲ', 'ゲーセン', '音ゲー', // l10n-ignore
+  ], prototypes: ['ゲームをプレイした感想', '新作ゲームの攻略とガチャ', 'Playing a video game']), // l10n-ignore
+  ShowcaseGenre('anime', words: [
+    'アニメ', 'anime', 'マンガ', '漫画', 'manga', '今期', '作画', '声優', '推し', '最新話', 'コミック', '単行本', 'ジャンプ', 'vtuber', '配信見', 'コミケ', '同人', // l10n-ignore
+  ], prototypes: ['アニメやマンガの感想', '推しのキャラクターと声優', 'Watching anime and reading manga']), // l10n-ignore
+  ShowcaseGenre('music', words: [
+    '音楽', 'music', '新曲', 'この曲', 'アルバム', 'ライブ', 'live', 'ギター', 'ピアノ', 'ベース', 'ドラム', '歌', 'カラオケ', 'バンド', 'フェス', 'dtm', '作曲', 'ボカロ', 'spotify', 'プレイリスト', // l10n-ignore
+  ], prototypes: ['音楽を聴いた感想、好きな曲', 'ライブやコンサートに行った', 'Listening to music and songs']), // l10n-ignore
+  ShowcaseGenre('art', words: [
+    'イラスト', '絵を', 'お絵かき', '落書き', 'らくがき', 'illust', 'drawing', 'art', '創作', '模写', '描いた', '厚塗り', 'clip studio', 'クリスタ', '手芸', '刺繍', 'ハンドメイド', '工作', 'プラモ', // l10n-ignore
+  ], prototypes: ['イラストを描いた、絵の練習', '創作や作品づくり、ものづくり', 'Drawing an illustration']), // l10n-ignore
+  ShowcaseGenre('photo', words: [
+    '写真', 'photo', 'カメラ', 'camera', '撮った', '撮影', '一枚', 'レンズ', 'フィルム', '夕焼け', '朝焼け', '星空', '風景', // l10n-ignore
+  ], prototypes: ['写真を撮った、カメラと風景', '空と景色の写真', 'Taking photos of scenery']), // l10n-ignore
+  ShowcaseGenre('food', words: [
+    'ごはん', 'ご飯', 'ランチ', 'ディナー', '朝ごはん', '晩ごはん', '料理', '自炊', 'レシピ', 'ラーメン', 'カレー', 'パン', 'ケーキ', 'スイーツ', 'お菓子', 'カフェ', 'コーヒー', '紅茶', 'おいしい', '美味しい', 'うまい', '弁当', '寿司', '焼肉', 'food', 'lunch', 'cooking', // l10n-ignore
+  ], prototypes: ['ご飯を食べた、料理とおいしいもの', 'ラーメンやカフェ、お菓子', 'Cooking and eating food']), // l10n-ignore
+  ShowcaseGenre('tech', words: [
+    'プログラミング', 'プログラム', 'コード', 'code', 'rust', 'python', 'javascript', 'typescript', 'flutter', 'dart', 'linux', 'github', 'gitlab', 'エンジニア', '開発', 'バグ', 'デプロイ', 'サーバー構築', '自宅サーバー', 'pc', '自作pc', 'キーボード', 'ai', 'llm', 'android', 'iphone', // l10n-ignore
+  ], prototypes: ['プログラミングとソフトウェア開発', 'パソコンやサーバー、コードを書く', 'Programming and software']), // l10n-ignore
+  ShowcaseGenre('animal', words: [
+    '猫', 'ねこ', 'ネコ', 'にゃん', 'cat', '犬', 'いぬ', 'イヌ', 'わんこ', 'dog', '柴犬', 'ペット', 'うさぎ', 'ハムスター', 'インコ', '動物園', '水族館', // l10n-ignore
+  ], prototypes: ['猫や犬などペットの様子', '動物がかわいい', 'Pets, cats and dogs']), // l10n-ignore
+  ShowcaseGenre('sports', words: [
+    'スポーツ', '野球', 'サッカー', 'バスケ', 'テニス', 'ラグビー', 'バレー', '陸上', 'マラソン', 'ランニング', '筋トレ', 'ジム', '試合', '優勝', 'ゴール', 'ホームラン', '代表戦', 'f1', '競馬', 'sports', 'soccer', 'baseball', // l10n-ignore
+  ], prototypes: ['スポーツの試合を観戦した', '野球やサッカーの応援', 'Watching a sports game']), // l10n-ignore
+  ShowcaseGenre('travel', words: [
+    '旅行', '旅', 'おでかけ', 'お出かけ', '観光', '温泉', 'ホテル', '旅館', '新幹線', '飛行機', '空港', '鉄道', '電車旅', 'ドライブ', 'キャンプ', '登山', 'travel', 'trip', // l10n-ignore
+  ], prototypes: ['旅行やおでかけに行った', '観光地と電車の旅', 'Traveling and sightseeing']), // l10n-ignore
+  ShowcaseGenre('books', words: [
+    '読書', '小説', '読了', '読んだ', '新刊', '書店', '本屋', '図書館', 'エッセイ', 'book', 'novel', 'reading', // l10n-ignore
+  ], prototypes: ['本を読んだ感想、読書', '小説を読み終えた', 'Reading a book']), // l10n-ignore
+  ShowcaseGenre('movie', words: [
+    '映画', 'ドラマ', '映画館', '上映', '試写', 'netflix', 'ネトフリ', 'アマプラ', '特撮', 'movie', 'film', 'cinema', // l10n-ignore
+  ], prototypes: ['映画やドラマを観た感想', '映画館で新作を観た', 'Watching a movie']), // l10n-ignore
+  ShowcaseGenre('nature', words: [
+    '紅葉', '桜', 'お花見', '紫陽花', 'あじさい', 'ひまわり', '花が', '雪景色', '初雪', '梅雨', '季節', '散歩道', '植物', '家庭菜園', 'ガーデニング', '盆栽', '虹', // l10n-ignore
+  ], prototypes: ['天気と季節の移り変わり', '花が咲いた、紅葉', 'Weather and seasons']), // l10n-ignore
 ];
 
 /// MiniLM で「ジャンルの無い投稿」に寄せる見本の文(挨拶・雑談・内輪)。これより近いジャンルが無ければ、見本にしない。
 const _noGenrePrototypes = [
-  'おはようございます、おやすみなさい',
-  '疲れた、眠い、ただいま',
-  'それな、わかる、ありがとう',
-  'よろしくお願いします、フォローありがとう',
-  '今日も一日がんばろう',
-  'このサーバーの管理人さん、住人のみなさん',
+  'おはようございます、おやすみなさい', // l10n-ignore
+  '疲れた、眠い、ただいま', // l10n-ignore
+  'それな、わかる、ありがとう', // l10n-ignore
+  'よろしくお願いします、フォローありがとう', // l10n-ignore
+  '今日も一日がんばろう', // l10n-ignore
+  'このサーバーの管理人さん、住人のみなさん', // l10n-ignore
 ];
 
 /// 判定の結果。
@@ -193,7 +209,7 @@ class ShowcasePick {
 }
 
 /// 見本にしない語(本文と、投稿した人の名前に。Central S-072 と同じ最低限の網。名前に 🔞 を付けている人の投稿は出さない)。
-const _blockWords = ['nsfw', 'r18', 'r-18', '18禁', '閲覧注意', 'エロ', 'グロ', '🔞'];
+const _blockWords = ['nsfw', 'r18', 'r-18', '18禁', '閲覧注意', 'エロ', 'グロ', '🔞']; // l10n-ignore
 
 /// 見本に出してよい投稿か(Central でも落としているが、RASQ リストのスナップショットにも同じ網をかける)。
 /// 公開だけ / ローカルのみでない / 返信・リノートでない / CW・センシティブな添付が無い / 15 文字以上 / 刺激の強い語が無い / 見守りの判定 (D-307) で隠れない。

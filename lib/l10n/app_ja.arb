@@ -2471,6 +2471,677 @@
   "@nodeprogTimelinePaletteEmptyHint": {
     "description": "部品の追加のパレットで何も当たらないときのヒント。"
   },
+  "onboardingBack": "戻る",
+  "onboardingHandleTooShort": "3 文字以上にしてください",
+  "onboardingHandleTooLong": "32 文字までです",
+  "onboardingHandleInvalid": "半角の英小文字・数字・_ だけ使えます",
+  "onboardingAccountTitleNew": "新しい RASQ アカウントを作る",
+  "onboardingAccountTitle": "RASQ アカウントを作る",
+  "onboardingAccountDescription": "RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。入れたプラグイン・設定・アカウントのまとまりを、ほかの端末でも使えます。",
+  "onboardingHandleLabel": "ユーザー名(@ のあとの名前)",
+  "onboardingHandleHelper": "半角の英小文字・数字・_ で 3〜32 文字",
+  "onboardingPasswordLabel": "パスワード({min} 文字以上)",
+  "@onboardingPasswordLabel": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingPasswordHide": "隠す",
+  "onboardingPasswordShow": "表示",
+  "onboardingPasswordConfirmLabel": "パスワード(確認)",
+  "onboardingPasswordMismatch": "一致しません",
+  "onboardingPasswordCaption": "ほかの端末や Web 版から、このアカウントにログインするときに使います。",
+  "onboardingAgeHeading": "年齢",
+  "onboardingAgeCaption": "RASQ は 13 歳以上で使えます。18 歳未満の人は、次のページで保護者の同意を確かめます。",
+  "onboardingNoCentral": "RASQ Central の接続先が未設定です",
+  "onboardingSetCentral": "接続先を設定",
+  "onboardingNext": "次へ",
+  "onboardingCreateFailed": "RASQ アカウントを作成できませんでした: {error}",
+  "@onboardingCreateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingTermsTitle": "利用規約とプライバシーポリシー",
+  "onboardingTermsNoDraft": "先に ① のページでユーザー名などを入れてください",
+  "onboardingTermsRead": "利用規約を読む",
+  "onboardingPrivacyRead": "プライバシーポリシーを読む",
+  "onboardingAgree": "利用規約とプライバシーポリシーに同意する",
+  "onboardingChildSafeHeading": "チャイルドセーフ(18 歳未満)",
+  "onboardingChildSafeNote": "{age}の人は、保護者の同意が必要です。保護者の RASQ アカウントとつなぐと、保護者が使い方(見られる投稿の強さ・時間・使える機能)を決められます(設定 → チャイルドセーフ → チャイルドモード)。",
+  "@onboardingChildSafeNote": {
+    "description": "age = 年齢の区分の名前(例: 13〜15 歳)",
+    "placeholders": {
+      "age": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingGuardianConsent": "保護者の同意を得ています",
+  "onboardingChildLogin": "保護者からのコードでログインする",
+  "onboardingChildLoginCaption": "保護者があなたのアカウントを作ってくれた場合は、ここで登録せず、受け取ったコードでログインしてください。",
+  "onboardingBundleHeading": "アカウントバンドル",
+  "onboardingBundleReplace": "この端末の SNS アカウントで置き換える",
+  "onboardingBundleReplaceSubtitle": "{count, plural, other{ログイン中の {count} 件を、この RASQ アカウントにまとめます}}",
+  "@onboardingBundleReplaceSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingBundleKeep": "置き換えない",
+  "onboardingBundleKeepSubtitle": "SNS アカウントはこの端末だけに残します",
+  "onboardingTermsContributionNote": "「アルゴリズムとコミュニティへの貢献」は、この登録には含まれません(別の任意の同意で、既定は「提供しない」です)。RASQ アカウントはいつでも削除できます。",
+  "onboardingRegister": "同意して登録する",
+  "onboardingSnsTitle": "SNS アカウントでログイン",
+  "onboardingSnsDescription": "RASQ アカウントができました。使っている SNS のアカウントでログインしてください。まだ SNS を使っていなければ、「SNS サービスを探す」から合うサーバーやリストを探せます。",
+  "onboardingSnsLoginWith": "{service}でログイン",
+  "@onboardingSnsLoginWith": {
+    "description": "service = SNS の名前(Bluesky / Misskey / mixi2 / Mastodon)",
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingSnsPluginLoadNote": "初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。",
+  "onboardingSignupGuideClosed": "{name} はいま新しい登録を受け付けていないか、招待制です。招待のリンクを持っていなければ、別のサーバーを選んでください。",
+  "@onboardingSignupGuideClosed": {
+    "description": "RAi の登録の案内。name = サーバーの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingSignupGuideMastodonOpened": "{name} の登録ページを開きました。サーバーのルールが出たら読んで、「同意する」を押してください。",
+  "@onboardingSignupGuideMastodonOpened": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingSignupGuideMastodonForm": "表示名・ユーザー名・メールアドレス・パスワードを入れます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。",
+  "onboardingSignupGuideMastodonMail": "登録を押すと、確認のメールが届きます。メールのリンクを開いて、メールアドレスを確かめてください。",
+  "onboardingSignupGuideOpened": "{name} のページを開きました。ページの「新規登録」を押してください。",
+  "@onboardingSignupGuideOpened": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingSignupGuideForm": "ユーザー名とパスワードを決めます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。",
+  "onboardingSignupGuideChecks": "サーバーによっては、メールアドレス・招待コード・ロボットでないことの確認を聞かれます。画面の案内のとおりに入れてください。",
+  "onboardingSignupGuideRules": "サーバーのルール(利用規約)を読んで同意します。メールの確認を求められたら、届いたメールのリンクを開いてください。",
+  "onboardingSignupGuideDone": "登録が終わったら、下の「登録できた」を押してください。RASQ からこのサーバーにログインします。",
+  "@onboardingSignupGuideDone": {
+    "description": "最後の手順。このあとに onboardingSignupGuideThen… などの文が続けて並ぶ"
+  },
+  "onboardingSignupGuideThenPost": "ログインできたら、さっきの投稿を開きます。",
+  "onboardingSignupGuideThenList": "ログインできたら、RASQ リスト「{name}」を開きます。",
+  "@onboardingSignupGuideThenList": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingSignupGuideRasqLater": "RASQ アカウントは、あとからサイドバーの … で作れます。",
+  "onboardingSignupTitleFallback": "サーバーに登録",
+  "onboardingSignupNoTarget": "登録するサーバーが選ばれていません",
+  "onboardingSignupDone": "登録できた(ログインへ)",
+  "onboardingSignupTitle": "{name} に登録",
+  "@onboardingSignupTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingSignupGuideHeading": "RAi の案内",
+  "onboardingSignupGuidePrev": "前へ",
+  "onboardingSignupNoWebView": "この端末では、アプリの中で登録ページを開けません。ブラウザで開いて登録し、終わったらこの画面に戻ってください。",
+  "onboardingSignupOpenBrowser": "ブラウザで登録ページを開く",
+  "onboardingSignupPostNotFound": "{account} では、さっきの投稿を見つけられませんでした",
+  "@onboardingSignupPostNotFound": {
+    "description": "account = ログインしたアカウント(handle@instance)",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingEntryCreateNew": "新しく RASQ アカウントを作成",
+  "onboardingEntryCreate": "RASQ アカウントを作成",
+  "onboardingEntryLogin": "RASQ アカウントにログイン",
+  "onboardingEntryDiscover": "SNS サービスを探す(画像・人・RAi から)",
+  "onboardingEntryResume": "{name}で続ける",
+  "@onboardingEntryResume": {
+    "description": "name = RASQ アカウントの表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingEntryResumeWithHandle": "{name}(@{handle})で続ける",
+  "@onboardingEntryResumeWithHandle": {
+    "description": "name = 表示名(無ければユーザー名)、handle = ユーザー名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingEntryResumeFallbackName": "RASQ アカウント",
+  "@onboardingEntryResumeFallbackName": {
+    "description": "表示名もユーザー名も無いときの名前"
+  },
+  "onboardingEntrySnsOnly": "SNS アカウントだけで使う",
+  "onboardingEntrySkip": "スキップしてこの端末だけで使う",
+  "onboardingEntryHaveAccount": "RASQ アカウントを持っている",
+  "onboardingEntryLoginQuestion": "RASQ アカウントにログインしますか?",
+  "onboardingEntryCreateQuestion": "RASQ アカウントを作成しますか?",
+  "onboardingEntryLoginBody": "RASQ アカウントに入ると、束ねた SNS アカウント・導入したプラグイン・設定が、この端末に戻ります。",
+  "onboardingEntryCreateBody": "RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。作成すると、導入したプラグイン・設定・アカウントの束ね方が RASQ Central に保存され、別の端末からも同じ状態で使えます。",
+  "onboardingEntryWebNote": "Web 版では、SNS のログイン情報を RASQ のサーバーの保管庫に預けます(サーバーの鍵で暗号化し、RASQ のサーバーは復号できます)。SNS だけで使うこともできますが、そのときはこのタブを閉じるとログインが消えます。",
+  "onboardingEntrySnsOnlyNote": "SNS アカウントだけで使うこともできます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます。",
+  "onboardingEntrySkipNote": "スキップしても RASQ は使えます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます(あとからサイドバーの … で作成できます)。",
+  "onboardingShowcaseTitle": "サーバーとリストを見てみる",
+  "onboardingShowcaseServersHint": "タップすると、そのサーバーに登録できます",
+  "onboardingShowcaseOpenServer": "サーバーを開く",
+  "onboardingShowcaseSignupServer": "このサーバーに登録",
+  "onboardingShowcaseListsHint": "SNS をまたいだ人のリストです。タップすると、リストの人がいるサーバーに登録できます",
+  "onboardingShowcaseListCannotSignup": "このリストのサーバーには、アプリから登録できません",
+  "onboardingShowcasePickServer": "どのサーバーに登録しますか?",
+  "onboardingShowcasePickServerSubtitle": "{host} ・ {kind}",
+  "@onboardingShowcasePickServerSubtitle": {
+    "description": "kind = SNS の種類の名前",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingShowcasePostImages": "{count, plural, other{画像 {count} 枚}}",
+  "@onboardingShowcasePostImages": {
+    "description": "見本の投稿の添付の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingGenreGame": "ゲーム",
+  "@onboardingGenreGame": {
+    "description": "見本の投稿のジャンルのチップ"
+  },
+  "onboardingGenreAnime": "アニメ・マンガ",
+  "onboardingGenreMusic": "音楽",
+  "onboardingGenreArt": "イラスト・創作",
+  "onboardingGenrePhoto": "写真",
+  "onboardingGenreFood": "食べ物",
+  "onboardingGenreTech": "IT・プログラミング",
+  "onboardingGenreAnimal": "動物・ペット",
+  "onboardingGenreSports": "スポーツ",
+  "onboardingGenreTravel": "旅行・おでかけ",
+  "onboardingGenreBooks": "本・読書",
+  "onboardingGenreMovie": "映画・ドラマ",
+  "onboardingGenreNature": "季節・自然",
+  "onboardingPasswordTooShort": "{min} 文字以上にしてください",
+  "@onboardingPasswordTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingPasswordTooLong": "256 文字までです",
+  "onboardingPasswordRepeated": "同じ字の繰り返しは使えません",
+  "onboardingTermsOutdated": "利用規約が新しくなっています。アプリを更新してから、もう一度登録してください",
+  "onboardingNoServer": "RASQ サーバーの接続先が設定されていません",
+  "onboardingHandleTaken": "このユーザー名はもう使われています",
+  "onboardingHandleUnusable": "このユーザー名は使えません({error})",
+  "@onboardingHandleUnusable": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingHandleKept": "{reason}。ユーザー名は @{handle} のままです(プロフィールの編集で変えられます)",
+  "@onboardingHandleKept": {
+    "description": "reason = onboardingHandleTaken / onboardingHandleUnusable の文",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      },
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingPasswordSetFailed": "アカウントは作成しましたが、パスワードを設定できませんでした({error})。設定 →「アカウントの保護」から設定してください",
+  "@onboardingPasswordSetFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingRestored": "この端末の RASQ アカウントへ戻りました",
+  "onboardingNudgeTitle": "RASQ アカウントを作りますか?",
+  "onboardingNudgeMessage": "RASQ アカウントがあると、入れたプラグインや設定・SNS のアカウントのまとまりを、ほかの端末でも使えます。Swing や RASQ リストも RASQ アカウントから使います。あとからサイドバーの … でも作れます。",
+  "onboardingNudgeCreate": "作る",
+  "onboardingNudgeLogin": "ログイン(持っている人)",
+  "onboardingNudgeLater": "あとで",
+  "onboardingNudgeCreated": "RASQ アカウント @{handle} を作成しました",
+  "@onboardingNudgeCreated": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingFeedTitle": "公開 RASQ リストから",
+  "onboardingFeedCaption": "SNS をまたいだ人のリストで、よく読まれている投稿です",
+  "onboardingFeedEmpty": "いまは表示できる投稿がありません",
+  "onboardingFeedListName": "リスト「{name}」",
+  "@onboardingFeedListName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingDiscoverTitle": "SNS サービスを探す",
+  "onboardingDiscoverIntro": "好きなものから、合いそうな SNS のサーバーと RASQ リスト(SNS をまたいだ人のリスト)を探します。",
+  "onboardingDiscoverContentTitle": "好きな画像やコンテンツから探す",
+  "@onboardingDiscoverContentTitle": {
+    "description": "探す画面の入口と、その画面の見出し"
+  },
+  "onboardingDiscoverContentSubtitle": "画像を選んで、探したい部分を囲んで",
+  "onboardingDiscoverPeopleTitle": "有力なユーザー / インフルエンサーから探す",
+  "@onboardingDiscoverPeopleTitle": {
+    "description": "探す画面の入口と、その画面の見出し"
+  },
+  "onboardingDiscoverPeopleSubtitle": "好きな人の名前や分野から",
+  "onboardingDiscoverExportTitle": "外部 SNS のエクスポートデータから探す",
+  "onboardingDiscoverExportSubtitle": "準備中",
+  "onboardingDiscoverAskTitle": "RAi に聞く",
+  "@onboardingDiscoverAskTitle": {
+    "description": "探す画面の入口・見出し・人から探すで見つからなかったときのボタン"
+  },
+  "onboardingDiscoverAskSubtitle": "どんな SNS が合うか、話しながら探します",
+  "onboardingDiscoverRaiBlocked": "保護者が RAi を止めています",
+  "onboardingDiscoverCannotLogin": "{host} には、アプリからログインできません",
+  "@onboardingDiscoverCannotLogin": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingDiscoverCannotSignup": "{host} には、アプリから登録できません",
+  "@onboardingDiscoverCannotSignup": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingDiscoverAddAccountBlocked": "保護者が SNS アカウントの追加を止めています",
+  "onboardingDiscoverDummyResult": "見本の結果です(サーバーの外部サービスが未設定)",
+  "onboardingDiscoverPeopleWebHeading": "SNS の人(Web 検索)",
+  "onboardingDiscoverListsHeading": "RASQ リスト",
+  "onboardingDiscoverServersHeading": "サーバー",
+  "onboardingDiscoverListMembers": "{count, plural, other{{count} 人}}",
+  "@onboardingDiscoverListMembers": {
+    "description": "RASQ リストの候補の人数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverListOwner": "@{handle} のリスト",
+  "@onboardingDiscoverListOwner": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingDiscoverListHosts": "サーバー: {hosts}",
+  "@onboardingDiscoverListHosts": {
+    "description": "hosts = サーバー名を onboardingDiscoverListSeparator でつないだもの",
+    "placeholders": {
+      "hosts": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingDiscoverListSeparator": "、",
+  "@onboardingDiscoverListSeparator": {
+    "description": "サーバー名の区切り"
+  },
+  "onboardingDiscoverListOpenImport": "リストを開いて取り込む",
+  "onboardingDiscoverListSignup": "リストの人のサーバーに登録",
+  "onboardingDiscoverLoginButton": "ログイン",
+  "onboardingDiscoverSignupButton": "登録する",
+  "onboardingDiscoverSearchFailed": "うまく探せませんでした。時間をおいて、もう一度試してください",
+  "onboardingDiscoverGlimpseStoppedSystem": "画面の読み取りが止められました(端末の「共有を停止」や画面のロック)。もう一度「いつものブラウザで見て探す」から始めてください",
+  "onboardingDiscoverGlimpseStoppedShort": "配信がすぐに止まったので、読み取れませんでした。ブラウザで探したい画面を開いてから止めてください",
+  "onboardingDiscoverGlimpseStoppedTimeout": "10 分たったので、画面の読み取りの準備を止めました",
+  "onboardingDiscoverGlimpseStoppedKilled": "画面の読み取りが端末に止められました。もう一度始めてください",
+  "onboardingDiscoverGlimpseStoppedEmpty": "画面を読み取れませんでした(写しが取れませんでした)",
+  "onboardingDiscoverGlimpseFailed": "画面を読み取れませんでした",
+  "onboardingDiscoverGlimpseBroadcastDenied": "画面の配信が始まりませんでした。読み取るには、もう一度押して「ブロードキャストを開始」を選んでください(読み取るのは配信を止める直前の 3 秒だけです)",
+  "onboardingDiscoverGlimpseDenied": "画面の読み取りが許可されませんでした。読み取るには、もう一度押して「開始」を選んでください(読み取るのはボタンを押したあとの 3 秒だけです)",
+  "onboardingDiscoverGlimpseNotificationsDenied": "通知を出せませんでした。読み取りのボタンは通知に出るので、端末の設定で RASQ の通知を許可してください",
+  "onboardingDiscoverGlimpseUnavailable": "この端末では画面を読み取れません。画像を選ぶか、アプリの中のブラウザで探してください",
+  "onboardingDiscoverNotificationFailed": "通知を出せませんでした。端末の設定で RASQ の通知を許可してください",
+  "onboardingDiscoverGlimpseResultMissing": "読み取った画面が見つかりませんでした(時間がたって消えたか、もう送りました)",
+  "onboardingDiscoverPicksFull": "{max, plural, other{画像は {max} 枚までです。外してから追加してください}}",
+  "@onboardingDiscoverPicksFull": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverPickFailed": "画像を読み込めませんでした",
+  "onboardingDiscoverPicksOver": "{over, plural, other{画像は {max} 枚までです。{over} 枚は追加しませんでした}}",
+  "@onboardingDiscoverPicksOver": {
+    "placeholders": {
+      "over": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverPicksUnreadable": "{count, plural, other{読み込めない画像が {count} 枚ありました}}",
+  "@onboardingDiscoverPicksUnreadable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverNoticeSeparator": "。",
+  "@onboardingDiscoverNoticeSeparator": {
+    "description": "画像の追加の知らせを 2 つ並べるときの区切り"
+  },
+  "onboardingDiscoverPicksSkipped": "{count, plural, other{送れる大きさ(1 枚 10 MiB・合計 24 MiB・{max} 枚まで)に収まらない画像を {count} 枚外しました}}",
+  "@onboardingDiscoverPicksSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverImageFormat": "JPEG / PNG / WebP の画像を選んでください",
+  "onboardingDiscoverImageFormatSize": "JPEG / PNG / WebP の 10 MiB までの画像を選んでください",
+  "onboardingDiscoverNoCentral": "RASQ Central の接続先が未設定です",
+  "onboardingDiscoverContentIntro": "好きな画像を選んで、探したい部分を囲むと、探す言葉を RAi が作ります。画像はサーバーに保存しません(探し終えたら捨てます)。",
+  "onboardingDiscoverPicksCount": "{count, plural, other{{count} / {max} 枚。タップで囲み直し、長押しで並べ替えます}}",
+  "@onboardingDiscoverPicksCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverPickImages": "画像を選ぶ",
+  "onboardingDiscoverAddImages": "画像を追加",
+  "onboardingDiscoverTakePhoto": "写真を撮る",
+  "onboardingDiscoverSearchOne": "この画像で探す",
+  "onboardingDiscoverSearchMany": "{count, plural, other{この {count} 枚で探す}}",
+  "@onboardingDiscoverSearchMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverOtherWays": "ほかの方法",
+  "onboardingDiscoverGlimpseButton": "いつものブラウザで見て探す",
+  "onboardingDiscoverBrowseButton": "アプリの中のブラウザで探す",
+  "@onboardingDiscoverBrowseButton": {
+    "description": "ボタンと、その画面の見出し"
+  },
+  "onboardingDiscoverGlimpseCancel": "やめる",
+  "onboardingDiscoverGlimpseCapturing": "画面を読み取っています({elapsed} / {total} 秒)",
+  "@onboardingDiscoverGlimpseCapturing": {
+    "placeholders": {
+      "elapsed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverGlimpseDone": "{frames, plural, other{画面を {seconds} 秒読み取りました({frames} コマ)}}",
+  "@onboardingDiscoverGlimpseDone": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      },
+      "frames": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverGlimpseDoneDummy": "{frames, plural, other{画面を {seconds} 秒読み取りました({frames} コマ)。いまは試作のため、ダミーの写しです}}",
+  "@onboardingDiscoverGlimpseDoneDummy": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      },
+      "frames": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverPictureIndex": "{index} 枚目",
+  "@onboardingDiscoverPictureIndex": {
+    "description": "選んだ画像の何枚目か(1 から)",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverFrameIndex": "{index} コマ目",
+  "@onboardingDiscoverFrameIndex": {
+    "description": "画面の読み取りの何コマ目か(1 から)",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverQueryHeading": "探す言葉",
+  "onboardingDiscoverNoResults": "合うリストやサーバーは見つかりませんでした",
+  "onboardingDiscoverPickWhole": "全体",
+  "@onboardingDiscoverPickWhole": {
+    "description": "選んだ画像の囲み: 画像全体"
+  },
+  "onboardingDiscoverPickRect": "四角",
+  "@onboardingDiscoverPickRect": {
+    "description": "選んだ画像の囲み: 四角"
+  },
+  "onboardingDiscoverPickLasso": "なぞり",
+  "@onboardingDiscoverPickLasso": {
+    "description": "選んだ画像の囲み: なぞって囲った"
+  },
+  "onboardingDiscoverPickRemove": "外す",
+  "onboardingDiscoverGlimpseDummyNote": "いまは試作のため、画面は読まずにダミーの写しを送ります",
+  "onboardingDiscoverCaptureFailed": "この画面を読み取れませんでした",
+  "onboardingDiscoverBrowseAddressHint": "調べたい言葉 / URL",
+  "onboardingDiscoverBrowseCapture": "この画面から探す",
+  "onboardingDiscoverManualIntro": "この端末では、アプリの中でブラウザを開けません。いつものブラウザで見て、ページの URL と気になった文を貼り付けてください。",
+  "onboardingDiscoverManualOpenBrowser": "ブラウザを開く",
+  "onboardingDiscoverManualUrl": "ページの URL",
+  "onboardingDiscoverManualText": "気になった文(任意)",
+  "onboardingDiscoverManualSubmit": "この内容で探す",
+  "onboardingDiscoverPeopleIntro": "好きな人の名前や、気になる分野を入れてください。まず公開の RASQ リストの中から探します。",
+  "onboardingDiscoverPeopleQueryLabel": "人の名前 / 分野",
+  "onboardingDiscoverPeopleQueryHint": "例: 鉄道写真、イラストレーター",
+  "onboardingDiscoverPeopleSearch": "探す",
+  "onboardingDiscoverPeopleNotFound": "RASQ リストでは見つかりませんでした",
+  "onboardingDiscoverPeopleNotFoundHint": "好きな画像やページから探すか、RAi に聞いてみてください。",
+  "onboardingDiscoverPeopleTryContent": "画像やコンテンツから探す",
+  "onboardingDiscoverPeopleBrave": "RASQ リストに無かったので、Web 検索から見つけた候補です",
+  "onboardingDiscoverPersonOpenProfile": "プロフィールをブラウザで開く",
+  "onboardingDiscoverPersonLists": "この人が入っている RASQ リスト",
+  "onboardingDiscoverAskFailed": "うまく答えられませんでした。時間をおいて、もう一度聞いてください",
+  "onboardingDiscoverAskEmptyTitle": "合う SNS、一緒に探します！",
+  "onboardingDiscoverAskEmptyBody": "好きなこと・見たいもの・どんな人とつながりたいかを教えてください。合いそうな SNS のサーバーと RASQ リストを探します。",
+  "onboardingDiscoverAskEmptyCloud": "会話は RASQ のサーバーの RAi(クラウド)に送ります。",
+  "onboardingDiscoverAskModelLabel": "クラウド版 RAi",
+  "onboardingDiscoverAskHint": "どんなことが好きですか?",
+  "onboardingDiscoverEditorTitle": "囲って検索",
+  "onboardingDiscoverEditorTitleStep": "囲って検索({step})",
+  "@onboardingDiscoverEditorTitleStep": {
+    "description": "step = 「1 / 3」のような何枚目か",
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingDiscoverEditorHint": "探したい部分を囲んでください。囲まずに決定すると、画像全体で探します。2 本の指で拡大・移動できます。",
+  "onboardingDiscoverEditorHintSelected": "囲んだ部分だけを切り抜いて探します。描き直すと囲みを置き換えます。",
+  "onboardingDiscoverEditorToolRect": "四角",
+  "onboardingDiscoverEditorToolLasso": "なぞる",
+  "onboardingDiscoverEditorResetView": "元の大きさに戻す",
+  "onboardingDiscoverEditorClear": "囲みを消す",
+  "onboardingDiscoverEditorDoneWhole": "決定(画像全体)",
+  "onboardingDiscoverEditorDone": "決定",
+  "onboardingDiscoverGlimpseArmedBroadcast": "画面の配信を始めました。ブラウザで探したい画面を開いたら、画面上部の赤い表示(またはコントロールセンター)から配信を止めてください。止める直前の 3 秒だけを読み取り、RASQ に戻ると結果が出ます。",
+  "onboardingDiscoverGlimpseArmedNotification": "通知を出しました。ブラウザで探したい画面を開いてから、通知をタップしてください。タップすると、その画面を 3 秒だけ読み取ります。",
+  "onboardingDiscoverGlimpseNotificationTitle": "RASQ で探す",
+  "@onboardingDiscoverGlimpseNotificationTitle": {
+    "description": "画面の読み取りの通知の見出し"
+  },
+  "onboardingDiscoverGlimpseNotificationBody": "タップすると、いま見ている画面を 3 秒だけ読み取ります",
+  "@onboardingDiscoverGlimpseNotificationBody": {
+    "description": "画面の読み取りの通知の本文"
+  },
+  "onboardingDiscoverApiImageFormat": "jpeg / png / webp の画像だけ送れます",
+  "onboardingDiscoverApiImageSize": "画像は 10 MiB までです",
+  "onboardingDiscoverApiImageAndFrames": "画像とコマは一緒に送れません",
+  "onboardingDiscoverApiFramesCount": "{max, plural, other{コマは {max} 枚までです}}",
+  "@onboardingDiscoverApiFramesCount": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingDiscoverApiFrameFormat": "jpeg / png / webp のコマだけ送れます",
+  "onboardingDiscoverApiFrameSize": "コマは 1 枚 10 MiB までです",
+  "onboardingDiscoverApiFramesTotal": "コマは合計 24 MiB までです",
+  "onboardingDiscoverApiEmpty": "画像・本文・URL のどれかが要ります",
+  "onboardingTourPageSnsTitle": "いくつもの SNS を、ひとつの場所で",
+  "onboardingTourPageSnsBody": "Misskey・Mastodon・Bluesky などのアカウントを、まとめて使えます。RASQ アカウントがあれば、設定やアカウントのまとまりを、ほかの端末でも使えます。",
+  "onboardingTourPageSnsPicture": "Bluesky・Misskey・mixi2・Mastodon が RASQ にまとまる絵",
+  "@onboardingTourPageSnsPicture": {
+    "description": "機能の紹介のページの絵の説明(読み上げ)"
+  },
+  "onboardingTourPageTimelineTitle": "タイムラインは、ノードで組み立てる",
+  "onboardingTourPageTimelineBody": "ホームの TL は、ノードを並べて自分好みに組み立てられます。トレンドや Today も、ノードとして TL に置けます。",
+  "onboardingTourPageTimelineNote": "TL の歯車から変えられます。",
+  "onboardingTourPageTimelinePicture": "「SNS タイムライン」「トレンドを取得」「Today」のノードが縦に並んだ絵",
+  "@onboardingTourPageTimelinePicture": {
+    "description": "機能の紹介のページの絵の説明(読み上げ)"
+  },
+  "onboardingTourPageTrendTitle": "トレンドと Today",
+  "onboardingTourPageTrendBody": "いま話題の言葉と投稿を、トレンドと Today で見られます。はじめは恐れ・嫌悪・怒りを 45% までに抑えているので、強い怒りや嫌悪の投稿は、おすすめ / トレンド / Today / 関連 TL で下がるか、出なくなります。",
+  "onboardingTourPageTrendNoteSupervised": "この上限はいつでも変えられます。見守り中は、保護者の設定でさらに抑えます。",
+  "onboardingTourPageTrendNote": "この上限はいつでも変えられます。",
+  "onboardingTourPageTrendPicture": "刺激性のレーダー",
+  "@onboardingTourPageTrendPicture": {
+    "description": "機能の紹介のページの絵の説明(読み上げ)"
+  },
+  "onboardingTourPageAstellTitle": "ASTell で、声でつながる",
+  "onboardingTourPageAstellBody": "ASTell は、声で話せるルームです。聞くだけの参加もでき、下の ASTell のタブから入れます。",
+  "onboardingTourPageAstellPicture": "ASTell のアンテナと、話している印の波形",
+  "@onboardingTourPageAstellPicture": {
+    "description": "機能の紹介のページの絵の説明(読み上げ)"
+  },
+  "onboardingTourPageSwingTitle": "Swing で、気軽に流す",
+  "onboardingTourPageSwingBody": "Swing は、時間がたつと消える投稿です。フォロワーや RASQ リストの人に届き、1〜24 時間で消えます。",
+  "onboardingTourPageSwingNote": "RASQ アカウントで使えます。",
+  "onboardingTourPageSwingPicture": "Swing の丸いアイコンが並んだ絵",
+  "@onboardingTourPageSwingPicture": {
+    "description": "機能の紹介のページの絵の説明(読み上げ)"
+  },
+  "onboardingTourPageRaiTitle": "迷ったら RAi に",
+  "onboardingTourPageRaiBody": "RAi は RASQ のアシスタントです。やりたいことを聞くと、ボタンの場所まで案内したり、代わりに操作したりします。",
+  "onboardingTourPageRaiPicture": "RAi と吹き出し",
+  "@onboardingTourPageRaiPicture": {
+    "description": "機能の紹介のページの絵の説明(読み上げ)"
+  },
+  "onboardingTourPagePluginsTitle": "プラグインで、広げる",
+  "onboardingTourPagePluginsBody": "SNS も、表示も、機能も、プラグインで足せます。プラグインストアで探して入れられます。",
+  "onboardingTourPagePluginsPicture": "プラグインのタイルが並んだ絵",
+  "@onboardingTourPagePluginsPicture": {
+    "description": "機能の紹介のページの絵の説明(読み上げ)"
+  },
+  "onboardingTourTitle": "RASQ の使い方",
+  "onboardingTourSkip": "スキップ",
+  "onboardingTourBack": "戻る",
+  "onboardingTourPageSemantics": "{number} / {total} ページ",
+  "@onboardingTourPageSemantics": {
+    "description": "読み上げ: いま何ページ目か",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingTourStart": "はじめる",
+  "onboardingTourNext": "次へ",
+  "onboardingTourOpenTendency": "いま設定を見る",
+  "onboardingTourNodeSnsTimeline": "SNS タイムライン",
+  "@onboardingTourNodeSnsTimeline": {
+    "description": "タイムラインのページの絵のノードの名前"
+  },
+  "onboardingTourNodeTrend": "トレンドを取得",
+  "@onboardingTourNodeTrend": {
+    "description": "タイムラインのページの絵のノードの名前"
+  },
+  "onboardingTourRaiBubble": "TL にリストを足したい",
+  "@onboardingTourRaiBubble": {
+    "description": "RAi のページの絵の吹き出し(利用者の質問の例)"
+  },
   "settingsActionBarTitle": "プラグインボタン",
   "settingsActionBarBackTooltip": "戻る",
   "settingsActionBarBundleManual": "手動配置(バーの (+) から足すまで出ない)",

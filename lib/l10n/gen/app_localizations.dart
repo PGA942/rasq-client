@@ -3296,6 +3296,1650 @@ abstract class AppLocalizations {
   /// **'検索ワードを変えてみてください'**
   String get nodeprogTimelinePaletteEmptyHint;
 
+  /// No description provided for @onboardingBack.
+  ///
+  /// In ja, this message translates to:
+  /// **'戻る'**
+  String get onboardingBack;
+
+  /// No description provided for @onboardingHandleTooShort.
+  ///
+  /// In ja, this message translates to:
+  /// **'3 文字以上にしてください'**
+  String get onboardingHandleTooShort;
+
+  /// No description provided for @onboardingHandleTooLong.
+  ///
+  /// In ja, this message translates to:
+  /// **'32 文字までです'**
+  String get onboardingHandleTooLong;
+
+  /// No description provided for @onboardingHandleInvalid.
+  ///
+  /// In ja, this message translates to:
+  /// **'半角の英小文字・数字・_ だけ使えます'**
+  String get onboardingHandleInvalid;
+
+  /// No description provided for @onboardingAccountTitleNew.
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい RASQ アカウントを作る'**
+  String get onboardingAccountTitleNew;
+
+  /// No description provided for @onboardingAccountTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントを作る'**
+  String get onboardingAccountTitle;
+
+  /// No description provided for @onboardingAccountDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。入れたプラグイン・設定・アカウントのまとまりを、ほかの端末でも使えます。'**
+  String get onboardingAccountDescription;
+
+  /// No description provided for @onboardingHandleLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザー名(@ のあとの名前)'**
+  String get onboardingHandleLabel;
+
+  /// No description provided for @onboardingHandleHelper.
+  ///
+  /// In ja, this message translates to:
+  /// **'半角の英小文字・数字・_ で 3〜32 文字'**
+  String get onboardingHandleHelper;
+
+  /// No description provided for @onboardingPasswordLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'パスワード({min} 文字以上)'**
+  String onboardingPasswordLabel(int min);
+
+  /// No description provided for @onboardingPasswordHide.
+  ///
+  /// In ja, this message translates to:
+  /// **'隠す'**
+  String get onboardingPasswordHide;
+
+  /// No description provided for @onboardingPasswordShow.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示'**
+  String get onboardingPasswordShow;
+
+  /// No description provided for @onboardingPasswordConfirmLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'パスワード(確認)'**
+  String get onboardingPasswordConfirmLabel;
+
+  /// No description provided for @onboardingPasswordMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'一致しません'**
+  String get onboardingPasswordMismatch;
+
+  /// No description provided for @onboardingPasswordCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかの端末や Web 版から、このアカウントにログインするときに使います。'**
+  String get onboardingPasswordCaption;
+
+  /// No description provided for @onboardingAgeHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'年齢'**
+  String get onboardingAgeHeading;
+
+  /// No description provided for @onboardingAgeCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ は 13 歳以上で使えます。18 歳未満の人は、次のページで保護者の同意を確かめます。'**
+  String get onboardingAgeCaption;
+
+  /// No description provided for @onboardingNoCentral.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ Central の接続先が未設定です'**
+  String get onboardingNoCentral;
+
+  /// No description provided for @onboardingSetCentral.
+  ///
+  /// In ja, this message translates to:
+  /// **'接続先を設定'**
+  String get onboardingSetCentral;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In ja, this message translates to:
+  /// **'次へ'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingCreateFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントを作成できませんでした: {error}'**
+  String onboardingCreateFailed(String error);
+
+  /// No description provided for @onboardingTermsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用規約とプライバシーポリシー'**
+  String get onboardingTermsTitle;
+
+  /// No description provided for @onboardingTermsNoDraft.
+  ///
+  /// In ja, this message translates to:
+  /// **'先に ① のページでユーザー名などを入れてください'**
+  String get onboardingTermsNoDraft;
+
+  /// No description provided for @onboardingTermsRead.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用規約を読む'**
+  String get onboardingTermsRead;
+
+  /// No description provided for @onboardingPrivacyRead.
+  ///
+  /// In ja, this message translates to:
+  /// **'プライバシーポリシーを読む'**
+  String get onboardingPrivacyRead;
+
+  /// No description provided for @onboardingAgree.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用規約とプライバシーポリシーに同意する'**
+  String get onboardingAgree;
+
+  /// No description provided for @onboardingChildSafeHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'チャイルドセーフ(18 歳未満)'**
+  String get onboardingChildSafeHeading;
+
+  /// age = 年齢の区分の名前(例: 13〜15 歳)
+  ///
+  /// In ja, this message translates to:
+  /// **'{age}の人は、保護者の同意が必要です。保護者の RASQ アカウントとつなぐと、保護者が使い方(見られる投稿の強さ・時間・使える機能)を決められます(設定 → チャイルドセーフ → チャイルドモード)。'**
+  String onboardingChildSafeNote(String age);
+
+  /// No description provided for @onboardingGuardianConsent.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者の同意を得ています'**
+  String get onboardingGuardianConsent;
+
+  /// No description provided for @onboardingChildLogin.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者からのコードでログインする'**
+  String get onboardingChildLogin;
+
+  /// No description provided for @onboardingChildLoginCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者があなたのアカウントを作ってくれた場合は、ここで登録せず、受け取ったコードでログインしてください。'**
+  String get onboardingChildLoginCaption;
+
+  /// No description provided for @onboardingBundleHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントバンドル'**
+  String get onboardingBundleHeading;
+
+  /// No description provided for @onboardingBundleReplace.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末の SNS アカウントで置き換える'**
+  String get onboardingBundleReplace;
+
+  /// No description provided for @onboardingBundleReplaceSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{ログイン中の {count} 件を、この RASQ アカウントにまとめます}}'**
+  String onboardingBundleReplaceSubtitle(int count);
+
+  /// No description provided for @onboardingBundleKeep.
+  ///
+  /// In ja, this message translates to:
+  /// **'置き換えない'**
+  String get onboardingBundleKeep;
+
+  /// No description provided for @onboardingBundleKeepSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS アカウントはこの端末だけに残します'**
+  String get onboardingBundleKeepSubtitle;
+
+  /// No description provided for @onboardingTermsContributionNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'「アルゴリズムとコミュニティへの貢献」は、この登録には含まれません(別の任意の同意で、既定は「提供しない」です)。RASQ アカウントはいつでも削除できます。'**
+  String get onboardingTermsContributionNote;
+
+  /// No description provided for @onboardingRegister.
+  ///
+  /// In ja, this message translates to:
+  /// **'同意して登録する'**
+  String get onboardingRegister;
+
+  /// No description provided for @onboardingSnsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS アカウントでログイン'**
+  String get onboardingSnsTitle;
+
+  /// No description provided for @onboardingSnsDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントができました。使っている SNS のアカウントでログインしてください。まだ SNS を使っていなければ、「SNS サービスを探す」から合うサーバーやリストを探せます。'**
+  String get onboardingSnsDescription;
+
+  /// service = SNS の名前(Bluesky / Misskey / mixi2 / Mastodon)
+  ///
+  /// In ja, this message translates to:
+  /// **'{service}でログイン'**
+  String onboardingSnsLoginWith(String service);
+
+  /// No description provided for @onboardingSnsPluginLoadNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。'**
+  String get onboardingSnsPluginLoadNote;
+
+  /// RAi の登録の案内。name = サーバーの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} はいま新しい登録を受け付けていないか、招待制です。招待のリンクを持っていなければ、別のサーバーを選んでください。'**
+  String onboardingSignupGuideClosed(String name);
+
+  /// No description provided for @onboardingSignupGuideMastodonOpened.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の登録ページを開きました。サーバーのルールが出たら読んで、「同意する」を押してください。'**
+  String onboardingSignupGuideMastodonOpened(String name);
+
+  /// No description provided for @onboardingSignupGuideMastodonForm.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示名・ユーザー名・メールアドレス・パスワードを入れます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。'**
+  String get onboardingSignupGuideMastodonForm;
+
+  /// No description provided for @onboardingSignupGuideMastodonMail.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録を押すと、確認のメールが届きます。メールのリンクを開いて、メールアドレスを確かめてください。'**
+  String get onboardingSignupGuideMastodonMail;
+
+  /// No description provided for @onboardingSignupGuideOpened.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} のページを開きました。ページの「新規登録」を押してください。'**
+  String onboardingSignupGuideOpened(String name);
+
+  /// No description provided for @onboardingSignupGuideForm.
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザー名とパスワードを決めます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。'**
+  String get onboardingSignupGuideForm;
+
+  /// No description provided for @onboardingSignupGuideChecks.
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーによっては、メールアドレス・招待コード・ロボットでないことの確認を聞かれます。画面の案内のとおりに入れてください。'**
+  String get onboardingSignupGuideChecks;
+
+  /// No description provided for @onboardingSignupGuideRules.
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーのルール(利用規約)を読んで同意します。メールの確認を求められたら、届いたメールのリンクを開いてください。'**
+  String get onboardingSignupGuideRules;
+
+  /// 最後の手順。このあとに onboardingSignupGuideThen… などの文が続けて並ぶ
+  ///
+  /// In ja, this message translates to:
+  /// **'登録が終わったら、下の「登録できた」を押してください。RASQ からこのサーバーにログインします。'**
+  String get onboardingSignupGuideDone;
+
+  /// No description provided for @onboardingSignupGuideThenPost.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインできたら、さっきの投稿を開きます。'**
+  String get onboardingSignupGuideThenPost;
+
+  /// No description provided for @onboardingSignupGuideThenList.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインできたら、RASQ リスト「{name}」を開きます。'**
+  String onboardingSignupGuideThenList(String name);
+
+  /// No description provided for @onboardingSignupGuideRasqLater.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントは、あとからサイドバーの … で作れます。'**
+  String get onboardingSignupGuideRasqLater;
+
+  /// No description provided for @onboardingSignupTitleFallback.
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーに登録'**
+  String get onboardingSignupTitleFallback;
+
+  /// No description provided for @onboardingSignupNoTarget.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録するサーバーが選ばれていません'**
+  String get onboardingSignupNoTarget;
+
+  /// No description provided for @onboardingSignupDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録できた(ログインへ)'**
+  String get onboardingSignupDone;
+
+  /// No description provided for @onboardingSignupTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} に登録'**
+  String onboardingSignupTitle(String name);
+
+  /// No description provided for @onboardingSignupGuideHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi の案内'**
+  String get onboardingSignupGuideHeading;
+
+  /// No description provided for @onboardingSignupGuidePrev.
+  ///
+  /// In ja, this message translates to:
+  /// **'前へ'**
+  String get onboardingSignupGuidePrev;
+
+  /// No description provided for @onboardingSignupNoWebView.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では、アプリの中で登録ページを開けません。ブラウザで開いて登録し、終わったらこの画面に戻ってください。'**
+  String get onboardingSignupNoWebView;
+
+  /// No description provided for @onboardingSignupOpenBrowser.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザで登録ページを開く'**
+  String get onboardingSignupOpenBrowser;
+
+  /// account = ログインしたアカウント(handle@instance)
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} では、さっきの投稿を見つけられませんでした'**
+  String onboardingSignupPostNotFound(String account);
+
+  /// No description provided for @onboardingEntryCreateNew.
+  ///
+  /// In ja, this message translates to:
+  /// **'新しく RASQ アカウントを作成'**
+  String get onboardingEntryCreateNew;
+
+  /// No description provided for @onboardingEntryCreate.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントを作成'**
+  String get onboardingEntryCreate;
+
+  /// No description provided for @onboardingEntryLogin.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログイン'**
+  String get onboardingEntryLogin;
+
+  /// No description provided for @onboardingEntryDiscover.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS サービスを探す(画像・人・RAi から)'**
+  String get onboardingEntryDiscover;
+
+  /// name = RASQ アカウントの表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}で続ける'**
+  String onboardingEntryResume(String name);
+
+  /// name = 表示名(無ければユーザー名)、handle = ユーザー名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}(@{handle})で続ける'**
+  String onboardingEntryResumeWithHandle(String name, String handle);
+
+  /// 表示名もユーザー名も無いときの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウント'**
+  String get onboardingEntryResumeFallbackName;
+
+  /// No description provided for @onboardingEntrySnsOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS アカウントだけで使う'**
+  String get onboardingEntrySnsOnly;
+
+  /// No description provided for @onboardingEntrySkip.
+  ///
+  /// In ja, this message translates to:
+  /// **'スキップしてこの端末だけで使う'**
+  String get onboardingEntrySkip;
+
+  /// No description provided for @onboardingEntryHaveAccount.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントを持っている'**
+  String get onboardingEntryHaveAccount;
+
+  /// No description provided for @onboardingEntryLoginQuestion.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインしますか?'**
+  String get onboardingEntryLoginQuestion;
+
+  /// No description provided for @onboardingEntryCreateQuestion.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントを作成しますか?'**
+  String get onboardingEntryCreateQuestion;
+
+  /// No description provided for @onboardingEntryLoginBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントに入ると、束ねた SNS アカウント・導入したプラグイン・設定が、この端末に戻ります。'**
+  String get onboardingEntryLoginBody;
+
+  /// No description provided for @onboardingEntryCreateBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。作成すると、導入したプラグイン・設定・アカウントの束ね方が RASQ Central に保存され、別の端末からも同じ状態で使えます。'**
+  String get onboardingEntryCreateBody;
+
+  /// No description provided for @onboardingEntryWebNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'Web 版では、SNS のログイン情報を RASQ のサーバーの保管庫に預けます(サーバーの鍵で暗号化し、RASQ のサーバーは復号できます)。SNS だけで使うこともできますが、そのときはこのタブを閉じるとログインが消えます。'**
+  String get onboardingEntryWebNote;
+
+  /// No description provided for @onboardingEntrySnsOnlyNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS アカウントだけで使うこともできます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます。'**
+  String get onboardingEntrySnsOnlyNote;
+
+  /// No description provided for @onboardingEntrySkipNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'スキップしても RASQ は使えます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます(あとからサイドバーの … で作成できます)。'**
+  String get onboardingEntrySkipNote;
+
+  /// No description provided for @onboardingShowcaseTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーとリストを見てみる'**
+  String get onboardingShowcaseTitle;
+
+  /// No description provided for @onboardingShowcaseServersHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'タップすると、そのサーバーに登録できます'**
+  String get onboardingShowcaseServersHint;
+
+  /// No description provided for @onboardingShowcaseOpenServer.
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーを開く'**
+  String get onboardingShowcaseOpenServer;
+
+  /// No description provided for @onboardingShowcaseSignupServer.
+  ///
+  /// In ja, this message translates to:
+  /// **'このサーバーに登録'**
+  String get onboardingShowcaseSignupServer;
+
+  /// No description provided for @onboardingShowcaseListsHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS をまたいだ人のリストです。タップすると、リストの人がいるサーバーに登録できます'**
+  String get onboardingShowcaseListsHint;
+
+  /// No description provided for @onboardingShowcaseListCannotSignup.
+  ///
+  /// In ja, this message translates to:
+  /// **'このリストのサーバーには、アプリから登録できません'**
+  String get onboardingShowcaseListCannotSignup;
+
+  /// No description provided for @onboardingShowcasePickServer.
+  ///
+  /// In ja, this message translates to:
+  /// **'どのサーバーに登録しますか?'**
+  String get onboardingShowcasePickServer;
+
+  /// kind = SNS の種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{host} ・ {kind}'**
+  String onboardingShowcasePickServerSubtitle(String host, String kind);
+
+  /// 見本の投稿の添付の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{画像 {count} 枚}}'**
+  String onboardingShowcasePostImages(int count);
+
+  /// 見本の投稿のジャンルのチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'ゲーム'**
+  String get onboardingGenreGame;
+
+  /// No description provided for @onboardingGenreAnime.
+  ///
+  /// In ja, this message translates to:
+  /// **'アニメ・マンガ'**
+  String get onboardingGenreAnime;
+
+  /// No description provided for @onboardingGenreMusic.
+  ///
+  /// In ja, this message translates to:
+  /// **'音楽'**
+  String get onboardingGenreMusic;
+
+  /// No description provided for @onboardingGenreArt.
+  ///
+  /// In ja, this message translates to:
+  /// **'イラスト・創作'**
+  String get onboardingGenreArt;
+
+  /// No description provided for @onboardingGenrePhoto.
+  ///
+  /// In ja, this message translates to:
+  /// **'写真'**
+  String get onboardingGenrePhoto;
+
+  /// No description provided for @onboardingGenreFood.
+  ///
+  /// In ja, this message translates to:
+  /// **'食べ物'**
+  String get onboardingGenreFood;
+
+  /// No description provided for @onboardingGenreTech.
+  ///
+  /// In ja, this message translates to:
+  /// **'IT・プログラミング'**
+  String get onboardingGenreTech;
+
+  /// No description provided for @onboardingGenreAnimal.
+  ///
+  /// In ja, this message translates to:
+  /// **'動物・ペット'**
+  String get onboardingGenreAnimal;
+
+  /// No description provided for @onboardingGenreSports.
+  ///
+  /// In ja, this message translates to:
+  /// **'スポーツ'**
+  String get onboardingGenreSports;
+
+  /// No description provided for @onboardingGenreTravel.
+  ///
+  /// In ja, this message translates to:
+  /// **'旅行・おでかけ'**
+  String get onboardingGenreTravel;
+
+  /// No description provided for @onboardingGenreBooks.
+  ///
+  /// In ja, this message translates to:
+  /// **'本・読書'**
+  String get onboardingGenreBooks;
+
+  /// No description provided for @onboardingGenreMovie.
+  ///
+  /// In ja, this message translates to:
+  /// **'映画・ドラマ'**
+  String get onboardingGenreMovie;
+
+  /// No description provided for @onboardingGenreNature.
+  ///
+  /// In ja, this message translates to:
+  /// **'季節・自然'**
+  String get onboardingGenreNature;
+
+  /// No description provided for @onboardingPasswordTooShort.
+  ///
+  /// In ja, this message translates to:
+  /// **'{min} 文字以上にしてください'**
+  String onboardingPasswordTooShort(int min);
+
+  /// No description provided for @onboardingPasswordTooLong.
+  ///
+  /// In ja, this message translates to:
+  /// **'256 文字までです'**
+  String get onboardingPasswordTooLong;
+
+  /// No description provided for @onboardingPasswordRepeated.
+  ///
+  /// In ja, this message translates to:
+  /// **'同じ字の繰り返しは使えません'**
+  String get onboardingPasswordRepeated;
+
+  /// No description provided for @onboardingTermsOutdated.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用規約が新しくなっています。アプリを更新してから、もう一度登録してください'**
+  String get onboardingTermsOutdated;
+
+  /// No description provided for @onboardingNoServer.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ サーバーの接続先が設定されていません'**
+  String get onboardingNoServer;
+
+  /// No description provided for @onboardingHandleTaken.
+  ///
+  /// In ja, this message translates to:
+  /// **'このユーザー名はもう使われています'**
+  String get onboardingHandleTaken;
+
+  /// No description provided for @onboardingHandleUnusable.
+  ///
+  /// In ja, this message translates to:
+  /// **'このユーザー名は使えません({error})'**
+  String onboardingHandleUnusable(String error);
+
+  /// reason = onboardingHandleTaken / onboardingHandleUnusable の文
+  ///
+  /// In ja, this message translates to:
+  /// **'{reason}。ユーザー名は @{handle} のままです(プロフィールの編集で変えられます)'**
+  String onboardingHandleKept(String reason, String handle);
+
+  /// No description provided for @onboardingPasswordSetFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントは作成しましたが、パスワードを設定できませんでした({error})。設定 →「アカウントの保護」から設定してください'**
+  String onboardingPasswordSetFailed(String error);
+
+  /// No description provided for @onboardingRestored.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末の RASQ アカウントへ戻りました'**
+  String get onboardingRestored;
+
+  /// No description provided for @onboardingNudgeTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントを作りますか?'**
+  String get onboardingNudgeTitle;
+
+  /// No description provided for @onboardingNudgeMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントがあると、入れたプラグインや設定・SNS のアカウントのまとまりを、ほかの端末でも使えます。Swing や RASQ リストも RASQ アカウントから使います。あとからサイドバーの … でも作れます。'**
+  String get onboardingNudgeMessage;
+
+  /// No description provided for @onboardingNudgeCreate.
+  ///
+  /// In ja, this message translates to:
+  /// **'作る'**
+  String get onboardingNudgeCreate;
+
+  /// No description provided for @onboardingNudgeLogin.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログイン(持っている人)'**
+  String get onboardingNudgeLogin;
+
+  /// No description provided for @onboardingNudgeLater.
+  ///
+  /// In ja, this message translates to:
+  /// **'あとで'**
+  String get onboardingNudgeLater;
+
+  /// No description provided for @onboardingNudgeCreated.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウント @{handle} を作成しました'**
+  String onboardingNudgeCreated(String handle);
+
+  /// No description provided for @onboardingFeedTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開 RASQ リストから'**
+  String get onboardingFeedTitle;
+
+  /// No description provided for @onboardingFeedCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS をまたいだ人のリストで、よく読まれている投稿です'**
+  String get onboardingFeedCaption;
+
+  /// No description provided for @onboardingFeedEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'いまは表示できる投稿がありません'**
+  String get onboardingFeedEmpty;
+
+  /// No description provided for @onboardingFeedListName.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト「{name}」'**
+  String onboardingFeedListName(String name);
+
+  /// No description provided for @onboardingDiscoverTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS サービスを探す'**
+  String get onboardingDiscoverTitle;
+
+  /// No description provided for @onboardingDiscoverIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなものから、合いそうな SNS のサーバーと RASQ リスト(SNS をまたいだ人のリスト)を探します。'**
+  String get onboardingDiscoverIntro;
+
+  /// 探す画面の入口と、その画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'好きな画像やコンテンツから探す'**
+  String get onboardingDiscoverContentTitle;
+
+  /// No description provided for @onboardingDiscoverContentSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を選んで、探したい部分を囲んで'**
+  String get onboardingDiscoverContentSubtitle;
+
+  /// 探す画面の入口と、その画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'有力なユーザー / インフルエンサーから探す'**
+  String get onboardingDiscoverPeopleTitle;
+
+  /// No description provided for @onboardingDiscoverPeopleSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きな人の名前や分野から'**
+  String get onboardingDiscoverPeopleSubtitle;
+
+  /// No description provided for @onboardingDiscoverExportTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'外部 SNS のエクスポートデータから探す'**
+  String get onboardingDiscoverExportTitle;
+
+  /// No description provided for @onboardingDiscoverExportSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中'**
+  String get onboardingDiscoverExportSubtitle;
+
+  /// 探す画面の入口・見出し・人から探すで見つからなかったときのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi に聞く'**
+  String get onboardingDiscoverAskTitle;
+
+  /// No description provided for @onboardingDiscoverAskSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'どんな SNS が合うか、話しながら探します'**
+  String get onboardingDiscoverAskSubtitle;
+
+  /// No description provided for @onboardingDiscoverRaiBlocked.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が RAi を止めています'**
+  String get onboardingDiscoverRaiBlocked;
+
+  /// No description provided for @onboardingDiscoverCannotLogin.
+  ///
+  /// In ja, this message translates to:
+  /// **'{host} には、アプリからログインできません'**
+  String onboardingDiscoverCannotLogin(String host);
+
+  /// No description provided for @onboardingDiscoverCannotSignup.
+  ///
+  /// In ja, this message translates to:
+  /// **'{host} には、アプリから登録できません'**
+  String onboardingDiscoverCannotSignup(String host);
+
+  /// No description provided for @onboardingDiscoverAddAccountBlocked.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が SNS アカウントの追加を止めています'**
+  String get onboardingDiscoverAddAccountBlocked;
+
+  /// No description provided for @onboardingDiscoverDummyResult.
+  ///
+  /// In ja, this message translates to:
+  /// **'見本の結果です(サーバーの外部サービスが未設定)'**
+  String get onboardingDiscoverDummyResult;
+
+  /// No description provided for @onboardingDiscoverPeopleWebHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS の人(Web 検索)'**
+  String get onboardingDiscoverPeopleWebHeading;
+
+  /// No description provided for @onboardingDiscoverListsHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト'**
+  String get onboardingDiscoverListsHeading;
+
+  /// No description provided for @onboardingDiscoverServersHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバー'**
+  String get onboardingDiscoverServersHeading;
+
+  /// RASQ リストの候補の人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 人}}'**
+  String onboardingDiscoverListMembers(int count);
+
+  /// No description provided for @onboardingDiscoverListOwner.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} のリスト'**
+  String onboardingDiscoverListOwner(String handle);
+
+  /// hosts = サーバー名を onboardingDiscoverListSeparator でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバー: {hosts}'**
+  String onboardingDiscoverListHosts(String hosts);
+
+  /// サーバー名の区切り
+  ///
+  /// In ja, this message translates to:
+  /// **'、'**
+  String get onboardingDiscoverListSeparator;
+
+  /// No description provided for @onboardingDiscoverListOpenImport.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストを開いて取り込む'**
+  String get onboardingDiscoverListOpenImport;
+
+  /// No description provided for @onboardingDiscoverListSignup.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストの人のサーバーに登録'**
+  String get onboardingDiscoverListSignup;
+
+  /// No description provided for @onboardingDiscoverLoginButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログイン'**
+  String get onboardingDiscoverLoginButton;
+
+  /// No description provided for @onboardingDiscoverSignupButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録する'**
+  String get onboardingDiscoverSignupButton;
+
+  /// No description provided for @onboardingDiscoverSearchFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'うまく探せませんでした。時間をおいて、もう一度試してください'**
+  String get onboardingDiscoverSearchFailed;
+
+  /// No description provided for @onboardingDiscoverGlimpseStoppedSystem.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面の読み取りが止められました(端末の「共有を停止」や画面のロック)。もう一度「いつものブラウザで見て探す」から始めてください'**
+  String get onboardingDiscoverGlimpseStoppedSystem;
+
+  /// No description provided for @onboardingDiscoverGlimpseStoppedShort.
+  ///
+  /// In ja, this message translates to:
+  /// **'配信がすぐに止まったので、読み取れませんでした。ブラウザで探したい画面を開いてから止めてください'**
+  String get onboardingDiscoverGlimpseStoppedShort;
+
+  /// No description provided for @onboardingDiscoverGlimpseStoppedTimeout.
+  ///
+  /// In ja, this message translates to:
+  /// **'10 分たったので、画面の読み取りの準備を止めました'**
+  String get onboardingDiscoverGlimpseStoppedTimeout;
+
+  /// No description provided for @onboardingDiscoverGlimpseStoppedKilled.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面の読み取りが端末に止められました。もう一度始めてください'**
+  String get onboardingDiscoverGlimpseStoppedKilled;
+
+  /// No description provided for @onboardingDiscoverGlimpseStoppedEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面を読み取れませんでした(写しが取れませんでした)'**
+  String get onboardingDiscoverGlimpseStoppedEmpty;
+
+  /// No description provided for @onboardingDiscoverGlimpseFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面を読み取れませんでした'**
+  String get onboardingDiscoverGlimpseFailed;
+
+  /// No description provided for @onboardingDiscoverGlimpseBroadcastDenied.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面の配信が始まりませんでした。読み取るには、もう一度押して「ブロードキャストを開始」を選んでください(読み取るのは配信を止める直前の 3 秒だけです)'**
+  String get onboardingDiscoverGlimpseBroadcastDenied;
+
+  /// No description provided for @onboardingDiscoverGlimpseDenied.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面の読み取りが許可されませんでした。読み取るには、もう一度押して「開始」を選んでください(読み取るのはボタンを押したあとの 3 秒だけです)'**
+  String get onboardingDiscoverGlimpseDenied;
+
+  /// No description provided for @onboardingDiscoverGlimpseNotificationsDenied.
+  ///
+  /// In ja, this message translates to:
+  /// **'通知を出せませんでした。読み取りのボタンは通知に出るので、端末の設定で RASQ の通知を許可してください'**
+  String get onboardingDiscoverGlimpseNotificationsDenied;
+
+  /// No description provided for @onboardingDiscoverGlimpseUnavailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では画面を読み取れません。画像を選ぶか、アプリの中のブラウザで探してください'**
+  String get onboardingDiscoverGlimpseUnavailable;
+
+  /// No description provided for @onboardingDiscoverNotificationFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'通知を出せませんでした。端末の設定で RASQ の通知を許可してください'**
+  String get onboardingDiscoverNotificationFailed;
+
+  /// No description provided for @onboardingDiscoverGlimpseResultMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み取った画面が見つかりませんでした(時間がたって消えたか、もう送りました)'**
+  String get onboardingDiscoverGlimpseResultMissing;
+
+  /// No description provided for @onboardingDiscoverPicksFull.
+  ///
+  /// In ja, this message translates to:
+  /// **'{max, plural, other{画像は {max} 枚までです。外してから追加してください}}'**
+  String onboardingDiscoverPicksFull(int max);
+
+  /// No description provided for @onboardingDiscoverPickFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を読み込めませんでした'**
+  String get onboardingDiscoverPickFailed;
+
+  /// No description provided for @onboardingDiscoverPicksOver.
+  ///
+  /// In ja, this message translates to:
+  /// **'{over, plural, other{画像は {max} 枚までです。{over} 枚は追加しませんでした}}'**
+  String onboardingDiscoverPicksOver(int over, int max);
+
+  /// No description provided for @onboardingDiscoverPicksUnreadable.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{読み込めない画像が {count} 枚ありました}}'**
+  String onboardingDiscoverPicksUnreadable(int count);
+
+  /// 画像の追加の知らせを 2 つ並べるときの区切り
+  ///
+  /// In ja, this message translates to:
+  /// **'。'**
+  String get onboardingDiscoverNoticeSeparator;
+
+  /// No description provided for @onboardingDiscoverPicksSkipped.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{送れる大きさ(1 枚 10 MiB・合計 24 MiB・{max} 枚まで)に収まらない画像を {count} 枚外しました}}'**
+  String onboardingDiscoverPicksSkipped(int count, int max);
+
+  /// No description provided for @onboardingDiscoverImageFormat.
+  ///
+  /// In ja, this message translates to:
+  /// **'JPEG / PNG / WebP の画像を選んでください'**
+  String get onboardingDiscoverImageFormat;
+
+  /// No description provided for @onboardingDiscoverImageFormatSize.
+  ///
+  /// In ja, this message translates to:
+  /// **'JPEG / PNG / WebP の 10 MiB までの画像を選んでください'**
+  String get onboardingDiscoverImageFormatSize;
+
+  /// No description provided for @onboardingDiscoverNoCentral.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ Central の接続先が未設定です'**
+  String get onboardingDiscoverNoCentral;
+
+  /// No description provided for @onboardingDiscoverContentIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きな画像を選んで、探したい部分を囲むと、探す言葉を RAi が作ります。画像はサーバーに保存しません(探し終えたら捨てます)。'**
+  String get onboardingDiscoverContentIntro;
+
+  /// No description provided for @onboardingDiscoverPicksCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} / {max} 枚。タップで囲み直し、長押しで並べ替えます}}'**
+  String onboardingDiscoverPicksCount(int count, int max);
+
+  /// No description provided for @onboardingDiscoverPickImages.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を選ぶ'**
+  String get onboardingDiscoverPickImages;
+
+  /// No description provided for @onboardingDiscoverAddImages.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を追加'**
+  String get onboardingDiscoverAddImages;
+
+  /// No description provided for @onboardingDiscoverTakePhoto.
+  ///
+  /// In ja, this message translates to:
+  /// **'写真を撮る'**
+  String get onboardingDiscoverTakePhoto;
+
+  /// No description provided for @onboardingDiscoverSearchOne.
+  ///
+  /// In ja, this message translates to:
+  /// **'この画像で探す'**
+  String get onboardingDiscoverSearchOne;
+
+  /// No description provided for @onboardingDiscoverSearchMany.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{この {count} 枚で探す}}'**
+  String onboardingDiscoverSearchMany(int count);
+
+  /// No description provided for @onboardingDiscoverOtherWays.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかの方法'**
+  String get onboardingDiscoverOtherWays;
+
+  /// No description provided for @onboardingDiscoverGlimpseButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'いつものブラウザで見て探す'**
+  String get onboardingDiscoverGlimpseButton;
+
+  /// ボタンと、その画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリの中のブラウザで探す'**
+  String get onboardingDiscoverBrowseButton;
+
+  /// No description provided for @onboardingDiscoverGlimpseCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'やめる'**
+  String get onboardingDiscoverGlimpseCancel;
+
+  /// No description provided for @onboardingDiscoverGlimpseCapturing.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面を読み取っています({elapsed} / {total} 秒)'**
+  String onboardingDiscoverGlimpseCapturing(int elapsed, int total);
+
+  /// No description provided for @onboardingDiscoverGlimpseDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'{frames, plural, other{画面を {seconds} 秒読み取りました({frames} コマ)}}'**
+  String onboardingDiscoverGlimpseDone(int seconds, int frames);
+
+  /// No description provided for @onboardingDiscoverGlimpseDoneDummy.
+  ///
+  /// In ja, this message translates to:
+  /// **'{frames, plural, other{画面を {seconds} 秒読み取りました({frames} コマ)。いまは試作のため、ダミーの写しです}}'**
+  String onboardingDiscoverGlimpseDoneDummy(int seconds, int frames);
+
+  /// 選んだ画像の何枚目か(1 から)
+  ///
+  /// In ja, this message translates to:
+  /// **'{index} 枚目'**
+  String onboardingDiscoverPictureIndex(int index);
+
+  /// 画面の読み取りの何コマ目か(1 から)
+  ///
+  /// In ja, this message translates to:
+  /// **'{index} コマ目'**
+  String onboardingDiscoverFrameIndex(int index);
+
+  /// No description provided for @onboardingDiscoverQueryHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'探す言葉'**
+  String get onboardingDiscoverQueryHeading;
+
+  /// No description provided for @onboardingDiscoverNoResults.
+  ///
+  /// In ja, this message translates to:
+  /// **'合うリストやサーバーは見つかりませんでした'**
+  String get onboardingDiscoverNoResults;
+
+  /// 選んだ画像の囲み: 画像全体
+  ///
+  /// In ja, this message translates to:
+  /// **'全体'**
+  String get onboardingDiscoverPickWhole;
+
+  /// 選んだ画像の囲み: 四角
+  ///
+  /// In ja, this message translates to:
+  /// **'四角'**
+  String get onboardingDiscoverPickRect;
+
+  /// 選んだ画像の囲み: なぞって囲った
+  ///
+  /// In ja, this message translates to:
+  /// **'なぞり'**
+  String get onboardingDiscoverPickLasso;
+
+  /// No description provided for @onboardingDiscoverPickRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'外す'**
+  String get onboardingDiscoverPickRemove;
+
+  /// No description provided for @onboardingDiscoverGlimpseDummyNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'いまは試作のため、画面は読まずにダミーの写しを送ります'**
+  String get onboardingDiscoverGlimpseDummyNote;
+
+  /// No description provided for @onboardingDiscoverCaptureFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'この画面を読み取れませんでした'**
+  String get onboardingDiscoverCaptureFailed;
+
+  /// No description provided for @onboardingDiscoverBrowseAddressHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'調べたい言葉 / URL'**
+  String get onboardingDiscoverBrowseAddressHint;
+
+  /// No description provided for @onboardingDiscoverBrowseCapture.
+  ///
+  /// In ja, this message translates to:
+  /// **'この画面から探す'**
+  String get onboardingDiscoverBrowseCapture;
+
+  /// No description provided for @onboardingDiscoverManualIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では、アプリの中でブラウザを開けません。いつものブラウザで見て、ページの URL と気になった文を貼り付けてください。'**
+  String get onboardingDiscoverManualIntro;
+
+  /// No description provided for @onboardingDiscoverManualOpenBrowser.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザを開く'**
+  String get onboardingDiscoverManualOpenBrowser;
+
+  /// No description provided for @onboardingDiscoverManualUrl.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページの URL'**
+  String get onboardingDiscoverManualUrl;
+
+  /// No description provided for @onboardingDiscoverManualText.
+  ///
+  /// In ja, this message translates to:
+  /// **'気になった文(任意)'**
+  String get onboardingDiscoverManualText;
+
+  /// No description provided for @onboardingDiscoverManualSubmit.
+  ///
+  /// In ja, this message translates to:
+  /// **'この内容で探す'**
+  String get onboardingDiscoverManualSubmit;
+
+  /// No description provided for @onboardingDiscoverPeopleIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きな人の名前や、気になる分野を入れてください。まず公開の RASQ リストの中から探します。'**
+  String get onboardingDiscoverPeopleIntro;
+
+  /// No description provided for @onboardingDiscoverPeopleQueryLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'人の名前 / 分野'**
+  String get onboardingDiscoverPeopleQueryLabel;
+
+  /// No description provided for @onboardingDiscoverPeopleQueryHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'例: 鉄道写真、イラストレーター'**
+  String get onboardingDiscoverPeopleQueryHint;
+
+  /// No description provided for @onboardingDiscoverPeopleSearch.
+  ///
+  /// In ja, this message translates to:
+  /// **'探す'**
+  String get onboardingDiscoverPeopleSearch;
+
+  /// No description provided for @onboardingDiscoverPeopleNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストでは見つかりませんでした'**
+  String get onboardingDiscoverPeopleNotFound;
+
+  /// No description provided for @onboardingDiscoverPeopleNotFoundHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きな画像やページから探すか、RAi に聞いてみてください。'**
+  String get onboardingDiscoverPeopleNotFoundHint;
+
+  /// No description provided for @onboardingDiscoverPeopleTryContent.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像やコンテンツから探す'**
+  String get onboardingDiscoverPeopleTryContent;
+
+  /// No description provided for @onboardingDiscoverPeopleBrave.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストに無かったので、Web 検索から見つけた候補です'**
+  String get onboardingDiscoverPeopleBrave;
+
+  /// No description provided for @onboardingDiscoverPersonOpenProfile.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィールをブラウザで開く'**
+  String get onboardingDiscoverPersonOpenProfile;
+
+  /// No description provided for @onboardingDiscoverPersonLists.
+  ///
+  /// In ja, this message translates to:
+  /// **'この人が入っている RASQ リスト'**
+  String get onboardingDiscoverPersonLists;
+
+  /// No description provided for @onboardingDiscoverAskFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'うまく答えられませんでした。時間をおいて、もう一度聞いてください'**
+  String get onboardingDiscoverAskFailed;
+
+  /// No description provided for @onboardingDiscoverAskEmptyTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'合う SNS、一緒に探します！'**
+  String get onboardingDiscoverAskEmptyTitle;
+
+  /// No description provided for @onboardingDiscoverAskEmptyBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなこと・見たいもの・どんな人とつながりたいかを教えてください。合いそうな SNS のサーバーと RASQ リストを探します。'**
+  String get onboardingDiscoverAskEmptyBody;
+
+  /// No description provided for @onboardingDiscoverAskEmptyCloud.
+  ///
+  /// In ja, this message translates to:
+  /// **'会話は RASQ のサーバーの RAi(クラウド)に送ります。'**
+  String get onboardingDiscoverAskEmptyCloud;
+
+  /// No description provided for @onboardingDiscoverAskModelLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'クラウド版 RAi'**
+  String get onboardingDiscoverAskModelLabel;
+
+  /// No description provided for @onboardingDiscoverAskHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'どんなことが好きですか?'**
+  String get onboardingDiscoverAskHint;
+
+  /// No description provided for @onboardingDiscoverEditorTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'囲って検索'**
+  String get onboardingDiscoverEditorTitle;
+
+  /// step = 「1 / 3」のような何枚目か
+  ///
+  /// In ja, this message translates to:
+  /// **'囲って検索({step})'**
+  String onboardingDiscoverEditorTitleStep(String step);
+
+  /// No description provided for @onboardingDiscoverEditorHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'探したい部分を囲んでください。囲まずに決定すると、画像全体で探します。2 本の指で拡大・移動できます。'**
+  String get onboardingDiscoverEditorHint;
+
+  /// No description provided for @onboardingDiscoverEditorHintSelected.
+  ///
+  /// In ja, this message translates to:
+  /// **'囲んだ部分だけを切り抜いて探します。描き直すと囲みを置き換えます。'**
+  String get onboardingDiscoverEditorHintSelected;
+
+  /// No description provided for @onboardingDiscoverEditorToolRect.
+  ///
+  /// In ja, this message translates to:
+  /// **'四角'**
+  String get onboardingDiscoverEditorToolRect;
+
+  /// No description provided for @onboardingDiscoverEditorToolLasso.
+  ///
+  /// In ja, this message translates to:
+  /// **'なぞる'**
+  String get onboardingDiscoverEditorToolLasso;
+
+  /// No description provided for @onboardingDiscoverEditorResetView.
+  ///
+  /// In ja, this message translates to:
+  /// **'元の大きさに戻す'**
+  String get onboardingDiscoverEditorResetView;
+
+  /// No description provided for @onboardingDiscoverEditorClear.
+  ///
+  /// In ja, this message translates to:
+  /// **'囲みを消す'**
+  String get onboardingDiscoverEditorClear;
+
+  /// No description provided for @onboardingDiscoverEditorDoneWhole.
+  ///
+  /// In ja, this message translates to:
+  /// **'決定(画像全体)'**
+  String get onboardingDiscoverEditorDoneWhole;
+
+  /// No description provided for @onboardingDiscoverEditorDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get onboardingDiscoverEditorDone;
+
+  /// No description provided for @onboardingDiscoverGlimpseArmedBroadcast.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面の配信を始めました。ブラウザで探したい画面を開いたら、画面上部の赤い表示(またはコントロールセンター)から配信を止めてください。止める直前の 3 秒だけを読み取り、RASQ に戻ると結果が出ます。'**
+  String get onboardingDiscoverGlimpseArmedBroadcast;
+
+  /// No description provided for @onboardingDiscoverGlimpseArmedNotification.
+  ///
+  /// In ja, this message translates to:
+  /// **'通知を出しました。ブラウザで探したい画面を開いてから、通知をタップしてください。タップすると、その画面を 3 秒だけ読み取ります。'**
+  String get onboardingDiscoverGlimpseArmedNotification;
+
+  /// 画面の読み取りの通知の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ で探す'**
+  String get onboardingDiscoverGlimpseNotificationTitle;
+
+  /// 画面の読み取りの通知の本文
+  ///
+  /// In ja, this message translates to:
+  /// **'タップすると、いま見ている画面を 3 秒だけ読み取ります'**
+  String get onboardingDiscoverGlimpseNotificationBody;
+
+  /// No description provided for @onboardingDiscoverApiImageFormat.
+  ///
+  /// In ja, this message translates to:
+  /// **'jpeg / png / webp の画像だけ送れます'**
+  String get onboardingDiscoverApiImageFormat;
+
+  /// No description provided for @onboardingDiscoverApiImageSize.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像は 10 MiB までです'**
+  String get onboardingDiscoverApiImageSize;
+
+  /// No description provided for @onboardingDiscoverApiImageAndFrames.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像とコマは一緒に送れません'**
+  String get onboardingDiscoverApiImageAndFrames;
+
+  /// No description provided for @onboardingDiscoverApiFramesCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'{max, plural, other{コマは {max} 枚までです}}'**
+  String onboardingDiscoverApiFramesCount(int max);
+
+  /// No description provided for @onboardingDiscoverApiFrameFormat.
+  ///
+  /// In ja, this message translates to:
+  /// **'jpeg / png / webp のコマだけ送れます'**
+  String get onboardingDiscoverApiFrameFormat;
+
+  /// No description provided for @onboardingDiscoverApiFrameSize.
+  ///
+  /// In ja, this message translates to:
+  /// **'コマは 1 枚 10 MiB までです'**
+  String get onboardingDiscoverApiFrameSize;
+
+  /// No description provided for @onboardingDiscoverApiFramesTotal.
+  ///
+  /// In ja, this message translates to:
+  /// **'コマは合計 24 MiB までです'**
+  String get onboardingDiscoverApiFramesTotal;
+
+  /// No description provided for @onboardingDiscoverApiEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像・本文・URL のどれかが要ります'**
+  String get onboardingDiscoverApiEmpty;
+
+  /// No description provided for @onboardingTourPageSnsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'いくつもの SNS を、ひとつの場所で'**
+  String get onboardingTourPageSnsTitle;
+
+  /// No description provided for @onboardingTourPageSnsBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'Misskey・Mastodon・Bluesky などのアカウントを、まとめて使えます。RASQ アカウントがあれば、設定やアカウントのまとまりを、ほかの端末でも使えます。'**
+  String get onboardingTourPageSnsBody;
+
+  /// 機能の紹介のページの絵の説明(読み上げ)
+  ///
+  /// In ja, this message translates to:
+  /// **'Bluesky・Misskey・mixi2・Mastodon が RASQ にまとまる絵'**
+  String get onboardingTourPageSnsPicture;
+
+  /// No description provided for @onboardingTourPageTimelineTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインは、ノードで組み立てる'**
+  String get onboardingTourPageTimelineTitle;
+
+  /// No description provided for @onboardingTourPageTimelineBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホームの TL は、ノードを並べて自分好みに組み立てられます。トレンドや Today も、ノードとして TL に置けます。'**
+  String get onboardingTourPageTimelineBody;
+
+  /// No description provided for @onboardingTourPageTimelineNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'TL の歯車から変えられます。'**
+  String get onboardingTourPageTimelineNote;
+
+  /// 機能の紹介のページの絵の説明(読み上げ)
+  ///
+  /// In ja, this message translates to:
+  /// **'「SNS タイムライン」「トレンドを取得」「Today」のノードが縦に並んだ絵'**
+  String get onboardingTourPageTimelinePicture;
+
+  /// No description provided for @onboardingTourPageTrendTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドと Today'**
+  String get onboardingTourPageTrendTitle;
+
+  /// No description provided for @onboardingTourPageTrendBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'いま話題の言葉と投稿を、トレンドと Today で見られます。はじめは恐れ・嫌悪・怒りを 45% までに抑えているので、強い怒りや嫌悪の投稿は、おすすめ / トレンド / Today / 関連 TL で下がるか、出なくなります。'**
+  String get onboardingTourPageTrendBody;
+
+  /// No description provided for @onboardingTourPageTrendNoteSupervised.
+  ///
+  /// In ja, this message translates to:
+  /// **'この上限はいつでも変えられます。見守り中は、保護者の設定でさらに抑えます。'**
+  String get onboardingTourPageTrendNoteSupervised;
+
+  /// No description provided for @onboardingTourPageTrendNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'この上限はいつでも変えられます。'**
+  String get onboardingTourPageTrendNote;
+
+  /// 機能の紹介のページの絵の説明(読み上げ)
+  ///
+  /// In ja, this message translates to:
+  /// **'刺激性のレーダー'**
+  String get onboardingTourPageTrendPicture;
+
+  /// No description provided for @onboardingTourPageAstellTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell で、声でつながる'**
+  String get onboardingTourPageAstellTitle;
+
+  /// No description provided for @onboardingTourPageAstellBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell は、声で話せるルームです。聞くだけの参加もでき、下の ASTell のタブから入れます。'**
+  String get onboardingTourPageAstellBody;
+
+  /// 機能の紹介のページの絵の説明(読み上げ)
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell のアンテナと、話している印の波形'**
+  String get onboardingTourPageAstellPicture;
+
+  /// No description provided for @onboardingTourPageSwingTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で、気軽に流す'**
+  String get onboardingTourPageSwingTitle;
+
+  /// No description provided for @onboardingTourPageSwingBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing は、時間がたつと消える投稿です。フォロワーや RASQ リストの人に届き、1〜24 時間で消えます。'**
+  String get onboardingTourPageSwingBody;
+
+  /// No description provided for @onboardingTourPageSwingNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントで使えます。'**
+  String get onboardingTourPageSwingNote;
+
+  /// 機能の紹介のページの絵の説明(読み上げ)
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing の丸いアイコンが並んだ絵'**
+  String get onboardingTourPageSwingPicture;
+
+  /// No description provided for @onboardingTourPageRaiTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'迷ったら RAi に'**
+  String get onboardingTourPageRaiTitle;
+
+  /// No description provided for @onboardingTourPageRaiBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi は RASQ のアシスタントです。やりたいことを聞くと、ボタンの場所まで案内したり、代わりに操作したりします。'**
+  String get onboardingTourPageRaiBody;
+
+  /// 機能の紹介のページの絵の説明(読み上げ)
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi と吹き出し'**
+  String get onboardingTourPageRaiPicture;
+
+  /// No description provided for @onboardingTourPagePluginsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインで、広げる'**
+  String get onboardingTourPagePluginsTitle;
+
+  /// No description provided for @onboardingTourPagePluginsBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS も、表示も、機能も、プラグインで足せます。プラグインストアで探して入れられます。'**
+  String get onboardingTourPagePluginsBody;
+
+  /// 機能の紹介のページの絵の説明(読み上げ)
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインのタイルが並んだ絵'**
+  String get onboardingTourPagePluginsPicture;
+
+  /// No description provided for @onboardingTourTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の使い方'**
+  String get onboardingTourTitle;
+
+  /// No description provided for @onboardingTourSkip.
+  ///
+  /// In ja, this message translates to:
+  /// **'スキップ'**
+  String get onboardingTourSkip;
+
+  /// No description provided for @onboardingTourBack.
+  ///
+  /// In ja, this message translates to:
+  /// **'戻る'**
+  String get onboardingTourBack;
+
+  /// 読み上げ: いま何ページ目か
+  ///
+  /// In ja, this message translates to:
+  /// **'{number} / {total} ページ'**
+  String onboardingTourPageSemantics(int number, int total);
+
+  /// No description provided for @onboardingTourStart.
+  ///
+  /// In ja, this message translates to:
+  /// **'はじめる'**
+  String get onboardingTourStart;
+
+  /// No description provided for @onboardingTourNext.
+  ///
+  /// In ja, this message translates to:
+  /// **'次へ'**
+  String get onboardingTourNext;
+
+  /// No description provided for @onboardingTourOpenTendency.
+  ///
+  /// In ja, this message translates to:
+  /// **'いま設定を見る'**
+  String get onboardingTourOpenTendency;
+
+  /// タイムラインのページの絵のノードの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS タイムライン'**
+  String get onboardingTourNodeSnsTimeline;
+
+  /// タイムラインのページの絵のノードの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドを取得'**
+  String get onboardingTourNodeTrend;
+
+  /// RAi のページの絵の吹き出し(利用者の質問の例)
+  ///
+  /// In ja, this message translates to:
+  /// **'TL にリストを足したい'**
+  String get onboardingTourRaiBubble;
+
   /// No description provided for @settingsActionBarTitle.
   ///
   /// In ja, this message translates to:

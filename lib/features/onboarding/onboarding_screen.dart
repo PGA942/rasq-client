@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart' show centralSignedInAccountIdsProvider, orgateAccountProvider;
+import '../../l10n/l10n.dart';
 import 'onboarding_steps.dart';
 
 /// RASQ アカウントの入口 (D-138 → D-301): SNS のログインより先に出る。
@@ -110,14 +111,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     Widget create({required bool primary}) => action(
           key: const ValueKey('onboarding.create'),
           icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const RasqBrandIcon(size: 18),
-          label: returning ? '新しく RASQ アカウントを作成' : 'RASQ アカウントを作成',
+          label: returning ? context.l10n.onboardingEntryCreateNew : context.l10n.onboardingEntryCreate,
           onPressed: _busy || !centralOk ? null : _create,
           primary: primary,
         );
     Widget login({required bool primary}) => action(
           key: const ValueKey('onboarding.login'),
           icon: const Icon(Icons.login, size: 18),
-          label: 'RASQ アカウントにログイン',
+          label: context.l10n.onboardingEntryLogin,
           onPressed: _busy || !centralOk ? null : _login,
           primary: primary,
         );
@@ -127,7 +128,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       key: const ValueKey('onboarding.discover'),
       onPressed: _busy ? null : () => context.push(Routes.snsDiscover),
       icon: const Icon(Icons.travel_explore, size: 18),
-      label: const Text('SNS サービスを探す(画像・人・RAi から)'),
+      label: Text(context.l10n.onboardingEntryDiscover),
     );
     final resumeButtons = [
       for (final r in resumable) ...[
@@ -136,7 +137,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           key: ValueKey('onboarding.resume.${r.id}'),
           onPressed: _busy ? null : () => _resume(r),
           icon: const Icon(Icons.swap_horiz, size: 18),
-          label: Text('${r.displayName ?? r.handle ?? 'RASQ アカウント'}${r.handle == null ? '' : '(@${r.handle})'}で続ける', overflow: TextOverflow.ellipsis),
+          label: Text(r.handle == null ? context.l10n.onboardingEntryResume(r.displayName ?? context.l10n.onboardingEntryResumeFallbackName) : context.l10n.onboardingEntryResumeWithHandle(r.displayName ?? r.handle!, r.handle!), overflow: TextOverflow.ellipsis),
           style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
         ),
       ],
@@ -145,7 +146,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           key: const ValueKey('onboarding.skip'),
           onPressed: _busy ? null : _skip,
           style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-          child: Text(returning ? 'SNS アカウントだけで使う' : 'スキップしてこの端末だけで使う'),
+          child: Text(returning ? context.l10n.onboardingEntrySnsOnly : context.l10n.onboardingEntrySkip),
         );
 
     // 初回 (D-414): ① のページ(ユーザー名・パスワード・年齢)そのもの。下に、持っている人のログイン / スキップ。
@@ -159,14 +160,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: TextButton(
                 key: const ValueKey('onboarding.login'),
                 onPressed: _busy || !centralOk ? null : _login,
-                child: const Text('RASQ アカウントを持っている', textAlign: TextAlign.center),
+                child: Text(context.l10n.onboardingEntryHaveAccount, textAlign: TextAlign.center),
               ),
             ),
             Expanded(
               child: TextButton(
                 key: const ValueKey('onboarding.skip'),
                 onPressed: _busy ? null : _skip,
-                child: const Text('スキップしてこの端末だけで使う', textAlign: TextAlign.center),
+                child: Text(context.l10n.onboardingEntrySkip, textAlign: TextAlign.center),
               ),
             ),
           ]),
@@ -179,13 +180,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Padding(padding: EdgeInsets.only(top: RasqSpacing.xxl, bottom: RasqSpacing.md), child: Center(child: RasqLogo(height: 44))),
-            Text(returning ? 'RASQ アカウントにログインしますか?' : 'RASQ アカウントを作成しますか?', style: RasqTypography.title, textAlign: TextAlign.center),
+            Text(returning ? context.l10n.onboardingEntryLoginQuestion : context.l10n.onboardingEntryCreateQuestion, style: RasqTypography.title, textAlign: TextAlign.center),
             const SizedBox(height: RasqSpacing.md),
             Text(
               returning
-                  ? 'RASQ アカウントに入ると、束ねた SNS アカウント・導入したプラグイン・設定が、この端末に戻ります。'
-                  : 'RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。'
-                      '作成すると、導入したプラグイン・設定・アカウントの束ね方が RASQ Central に保存され、別の端末からも同じ状態で使えます。',
+                  ? context.l10n.onboardingEntryLoginBody
+                  : context.l10n.onboardingEntryCreateBody,
               style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: RasqSpacing.sm),
@@ -194,9 +194,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   // Web 版 (D-300) は、SNS のログインも RASQ アカウントに預けてある。
                   ? (kIsWeb
                       // 規約案 02 第 4 項 (D-372): Web 版の保管庫はサーバーが復号できる方式。
-                      ? 'Web 版では、SNS のログイン情報を RASQ のサーバーの保管庫に預けます(サーバーの鍵で暗号化し、RASQ のサーバーは復号できます)。SNS だけで使うこともできますが、そのときはこのタブを閉じるとログインが消えます。'
-                      : 'SNS アカウントだけで使うこともできます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます。')
-                  : 'スキップしても RASQ は使えます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます(あとからサイドバーの … で作成できます)。',
+                      ? context.l10n.onboardingEntryWebNote
+                      : context.l10n.onboardingEntrySnsOnlyNote)
+                  : context.l10n.onboardingEntrySkipNote,
               style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
             ),
             const Spacer(),
@@ -204,8 +204,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             login(primary: true),
             if (!centralOk)
               Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                Text('RASQ Central の接続先が未設定です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-                TextButton(onPressed: () => context.push('${Routes.settings}/server'), child: const Text('接続先を設定')),
+                Text(context.l10n.onboardingNoCentral, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                TextButton(onPressed: () => context.push('${Routes.settings}/server'), child: Text(context.l10n.onboardingSetCentral)),
               ]),
             ...resumeButtons,
             const SizedBox(height: RasqSpacing.sm),

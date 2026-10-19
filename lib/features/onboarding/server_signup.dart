@@ -13,6 +13,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../app/router.dart';
 import '../../backend/rasq_collections_api.dart' show RasqCollection;
 import '../../backend/server_info_api.dart';
+import '../../l10n/l10n.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../collections/rasq_list_picker.dart' show importRasqListToHomeWith;
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
@@ -85,7 +86,7 @@ final serverSignupTargetProvider = NotifierProvider<ServerSignupTargetNotifier, 
 /// タイルをタップした: 登録のページへ。見守り (D-307) で SNS アカウントを増やせない端末では、理由だけ伝える。
 void startServerSignup(BuildContext context, WidgetRef ref, ServerSignupTarget target) {
   if (!ref.read(childGateProvider).canAddAccounts) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保護者が SNS アカウントの追加を止めています')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.onboardingDiscoverAddAccountBlocked)));
     return;
   }
   ref.read(serverSignupTargetProvider.notifier).set(target);
@@ -93,25 +94,26 @@ void startServerSignup(BuildContext context, WidgetRef ref, ServerSignupTarget t
 }
 
 /// RAi の案内の手順(文字)。アプリの中の WebView では、手順ごとにページの中の入力欄 / ボタンを指す(`signup_pointer.dart`、D-414)。
-List<String> signupGuideSteps(ServerSignupTarget t, {bool hasRasqAccount = true}) {
+List<String> signupGuideSteps(ServerSignupTarget t, {bool hasRasqAccount = true, AppLocalizations? l10n}) {
+  final l = l10n ?? appL10n;
   final mastodon = t.software?.toLowerCase() == 'mastodon';
   return [
-    if (t.registrationOpen == false) '${t.displayName} はいま新しい登録を受け付けていないか、招待制です。招待のリンクを持っていなければ、別のサーバーを選んでください。',
+    if (t.registrationOpen == false) l.onboardingSignupGuideClosed(t.displayName),
     if (mastodon) ...[
-      '${t.displayName} の登録ページを開きました。サーバーのルールが出たら読んで、「同意する」を押してください。',
-      '表示名・ユーザー名・メールアドレス・パスワードを入れます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。',
-      '登録を押すと、確認のメールが届きます。メールのリンクを開いて、メールアドレスを確かめてください。',
+      l.onboardingSignupGuideMastodonOpened(t.displayName),
+      l.onboardingSignupGuideMastodonForm,
+      l.onboardingSignupGuideMastodonMail,
     ] else ...[
-      '${t.displayName} のページを開きました。ページの「新規登録」を押してください。',
-      'ユーザー名とパスワードを決めます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。',
-      'サーバーによっては、メールアドレス・招待コード・ロボットでないことの確認を聞かれます。画面の案内のとおりに入れてください。',
-      'サーバーのルール(利用規約)を読んで同意します。メールの確認を求められたら、届いたメールのリンクを開いてください。',
+      l.onboardingSignupGuideOpened(t.displayName),
+      l.onboardingSignupGuideForm,
+      l.onboardingSignupGuideChecks,
+      l.onboardingSignupGuideRules,
     ],
     [
-      '登録が終わったら、下の「登録できた」を押してください。RASQ からこのサーバーにログインします。',
-      if (t.post != null) 'ログインできたら、さっきの投稿を開きます。',
-      if (t.list != null) 'ログインできたら、RASQ リスト「${t.list!.name}」を開きます。',
-      if (!hasRasqAccount) 'RASQ アカウントは、あとからサイドバーの … で作れます。',
+      l.onboardingSignupGuideDone,
+      if (t.post != null) l.onboardingSignupGuideThenPost,
+      if (t.list != null) l.onboardingSignupGuideThenList(t.list!.name),
+      if (!hasRasqAccount) l.onboardingSignupGuideRasqLater,
     ].join(''),
   ];
 }
@@ -205,9 +207,9 @@ class _ServerSignupScreenState extends ConsumerState<ServerSignupScreen> {
   Widget build(BuildContext context) {
     final t = ref.watch(serverSignupTargetProvider);
     if (t == null) {
-      return Scaffold(appBar: AppBar(title: const Text('サーバーに登録')), body: const Center(child: Text('登録するサーバーが選ばれていません')));
+      return Scaffold(appBar: AppBar(title: Text(context.l10n.onboardingSignupTitleFallback)), body: Center(child: Text(context.l10n.onboardingSignupNoTarget)));
     }
-    final steps = signupGuideSteps(t, hasRasqAccount: ref.watch(hasRasqAccountProvider));
+    final steps = signupGuideSteps(t, hasRasqAccount: ref.watch(hasRasqAccountProvider), l10n: context.l10n);
     _stepCount = steps.length;
     final step = _step.clamp(0, steps.length - 1);
     final web = ref.watch(signupWebAreaProvider)(context, t.signupUrl, _hooks);
@@ -223,14 +225,14 @@ class _ServerSignupScreenState extends ConsumerState<ServerSignupScreen> {
         key: const ValueKey('signup.done'),
         onPressed: () => context.push(t.loginLocation),
         icon: const Icon(Icons.login, size: 18),
-        label: const Text('登録できた(ログインへ)'),
+        label: Text(context.l10n.onboardingSignupDone),
         style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
       ),
     );
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: () => context.pop()),
-        title: Text('${t.displayName} に登録', overflow: TextOverflow.ellipsis),
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: context.l10n.onboardingBack, onPressed: () => context.pop()),
+        title: Text(context.l10n.onboardingSignupTitle(t.displayName), overflow: TextOverflow.ellipsis),
         centerTitle: false,
       ),
       body: SafeArea(
@@ -283,14 +285,14 @@ class SignupRaiGuide extends StatelessWidget {
         Row(children: [
           const RaiIcon(size: 32),
           const SizedBox(width: RasqSpacing.sm),
-          Expanded(child: Text('RAi の案内', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
+          Expanded(child: Text(context.l10n.onboardingSignupGuideHeading, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
           Text('${index + 1}/${steps.length}', key: const ValueKey('signup.guide.count'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ]),
         const SizedBox(height: RasqSpacing.xs),
         Text(steps[index], key: const ValueKey('signup.guide.text'), style: RasqTypography.bodySmall),
         Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-          TextButton(key: const ValueKey('signup.guide.prev'), onPressed: onPrev, child: const Text('前へ')),
-          TextButton(key: const ValueKey('signup.guide.next'), onPressed: onNext, child: const Text('次へ')),
+          TextButton(key: const ValueKey('signup.guide.prev'), onPressed: onPrev, child: Text(context.l10n.onboardingSignupGuidePrev)),
+          TextButton(key: const ValueKey('signup.guide.next'), onPressed: onNext, child: Text(context.l10n.onboardingNext)),
         ]),
       ]),
     );
@@ -361,14 +363,14 @@ class _ExternalSignupPanel extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.open_in_browser, size: 40, color: scheme.onSurfaceVariant),
           const SizedBox(height: RasqSpacing.sm),
-          Text('この端末では、アプリの中で登録ページを開けません。ブラウザで開いて登録し、終わったらこの画面に戻ってください。',
+          Text(context.l10n.onboardingSignupNoWebView,
               style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
           const SizedBox(height: RasqSpacing.md),
           OutlinedButton.icon(
             key: const ValueKey('signup.openBrowser'),
             onPressed: () => launchUrl(url, mode: LaunchMode.externalApplication),
             icon: const Icon(Icons.open_in_new, size: 18),
-            label: const Text('ブラウザで登録ページを開く'),
+            label: Text(context.l10n.onboardingSignupOpenBrowser),
           ),
           const SizedBox(height: RasqSpacing.xs),
           SelectableText(url.toString(), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
@@ -410,7 +412,7 @@ Future<void> _openSignupTarget(ProviderContainer c, ServerSignupTarget t, Accoun
   if (post != null) {
     final found = await c.read(postResolverProvider)(post, account);
     if (found == null) {
-      toast('${account.handle}@${account.instance} では、さっきの投稿を見つけられませんでした');
+      toast(appL10n.onboardingSignupPostNotFound('${account.handle}@${account.instance}'));
       return;
     }
     unawaited(router.push('/post/${Uri.encodeComponent(found.id)}', extra: found));
