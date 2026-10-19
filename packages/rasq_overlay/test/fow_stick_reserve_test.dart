@@ -42,7 +42,7 @@ void main() {
     expect(heightOf(tester, 'col1'), closeTo(680, 0.5));
     expect(heightOf(tester, 'col0'), 800);
     // 中身の下端が FOW の上端にそろう。
-    final panel = find.byWidgetPredicate((w) => w is Material && w.elevation == 8);
+    final panel = find.byWidgetPredicate(isFrontmostFowPanel);
     expect(tester.getBottomLeft(find.byKey(const ValueKey('col1'))).dy, closeTo(tester.getTopLeft(panel).dy, 0.5));
 
     // 展開モード(stick でない)では縮めない(これまでどおり上に重なる)。

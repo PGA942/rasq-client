@@ -763,10 +763,11 @@ class _FowPanelState extends State<_FowPanel> {
     final panel = FowSnapshotBoundary(
       key: spec.previewBoundaryKey,
       child: Material(
+        key: kFowPanelKey,
         color: skin?.color?.call(context) ?? scheme.surface,
-        // 最前面のパネルだけ影付き(枠線は全パネル共通のグレー、D-052)。
-        elevation: widget.frontmost ? 8 : 0,
-        shape: RoundedRectangleBorder(side: BorderSide(color: scheme.outlineVariant), borderRadius: radius),
+        // 最前面のパネルだけ影付き(枠線は全パネル共通のグレー、D-052)。影は浅く、ふちは細い線 (D-479: [kFowElevation] / [fowRimSide])。
+        elevation: widget.frontmost ? kFowElevation : 0,
+        shape: RoundedRectangleBorder(side: fowRimSide(scheme), borderRadius: radius),
         clipBehavior: Clip.antiAlias,
         child: skin?.decorate?.call(context, content) ?? content,
       ),

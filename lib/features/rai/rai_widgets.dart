@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../ads/export_ad.dart';
 
@@ -319,7 +320,8 @@ class RaiPromptBar extends StatelessWidget {
     final canSend = !busy && controller.text.trim().isNotEmpty;
     return Material(
       color: scheme.surface,
-      elevation: 6,
+      // 外側の影は FOW と同じ浅さ (D-479: [kFowElevation]。以前は 6 で灰色の余白に見えた)。
+      elevation: kFowElevation,
       shape: raiBarShape(scheme),
       clipBehavior: Clip.antiAlias,
       child: Padding(
@@ -486,7 +488,8 @@ class _RaiBarState extends State<RaiBar> {
       onPanCancel: widget.onDragEnd,
       child: Material(
       color: scheme.surface,
-      elevation: 6,
+      // 外側の影は FOW と同じ浅さ (D-479: [kFowElevation]。以前は 6 で灰色の余白に見えた)。
+      elevation: kFowElevation,
       shape: raiBarShape(scheme),
       clipBehavior: Clip.antiAlias,
       child: Padding(

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'fow.dart';
 import 'overlay_entry.dart';
 import 'overlay_layer.dart';
 import 'overlay_manager.dart';
@@ -14,15 +15,19 @@ import 'overlay_manager.dart';
 /// ```
 ///            .-○-.        ← 元のボタン(○)を [clearance] 空けて包む
 ///   ________/     \________
-///  | キャンセル  タイトル  OK |  ← 外形は中身から [outlineOffset] 外側
+///  | キャンセル  タイトル  OK |  ← 外形は中身から [outlineOffset](= 細い線 [kFowRimWidth])外側
 ///  |  …中身…                  |
 ///  |          ━━              |  ← ハンドル
 ///   ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 /// ```
 ///
-/// - D-477 (2026-10-19): パネルの辺をボタンの丸の端まで寄せ([kTetherPanelInset])、首は丸の真横より**パネルと反対の側**
+/// - D-477 (2026-10-19): パネルの辺をボタンの丸の端まで寄せ(D-479 でアイコンの範囲まで)、首は丸の真横より**パネルと反対の側**
 ///   ([kTetherNeckAngle])で丸を離れ、横に長い裾([kTetherNeckFlare])でパネルの辺へなだらかに着く。画面の端で上辺に裾の
 ///   場所が無いときは、首を横の辺へ流す。
+/// - D-479 (2026-10-19): パネルの辺はボタンの丸ではなく**アイコンの範囲**([kTetherIconExtent] + [kTetherIconGap])まで寄せる
+///   (ボタンがパネルに埋まって見える。首は丸のうちパネルの辺より外の部分だけを包む)。ボタンの押せる範囲はパネルの辺から
+///   反対側へずらし([TetheredPanel] の首のタップ)、中身のタップとぶつけない。ふちは灰色の帯と青い線をやめ、FOW と同じ
+///   細い線([kFowRimWidth] / [fowRimColor])と浅い影([kFowElevation])。
 /// - 形は [TetherOutline](純粋な幾何。テストもここ)、置き方と描画は [TetheredPanel]。オーバーレイに出すのは
 ///   [TetheredPanelPresets.showTetheredPanel]。
 /// - 座標はオーバーレイ(画面全体)の座標 = グローバル座標(ドロップダウンの anchor と同じ前提)。
@@ -48,9 +53,25 @@ const double kTetherNeckAngle = 20;
 /// 首の裾の横の長さ(px)。首が丸を離れる点から、パネルの辺に着く点まで。長いほど肩がなだらか。
 const double kTetherNeckFlare = 44;
 
-/// パネルの外形の辺を、ボタンの丸(アイコンの範囲)の端からどれだけ内側(ボタンの中心の側)へ寄せるか(px)。
-/// 0 = 外形の辺がボタンの丸の端に接する。正にするとボタンがパネルのふちに重なる(ふちは [TetheredPanel.outlineOffset])。
-const double kTetherPanelInset = 3;
+/// ボタンのアイコンの大きさ(px)。パネルの外形の辺はボタンの中心からこの半分 + [kTetherIconGap] のところ(D-479)。
+/// コンポーザーのアクションバーのアイコンは 20px。
+const double kTetherIconExtent = 20;
+
+/// パネルの外形の辺とアイコンの範囲の端のすき間(px)。0 = 外形の線がアイコンの範囲の端に接する。
+/// 以前(D-477)は辺をボタンの丸の端から 3px 内側までしか寄せていなかった。
+const double kTetherIconGap = 1;
+
+/// ボタンの中心からパネルの外形の辺まで(px)。
+double tetherReach({double iconExtent = kTetherIconExtent, double iconGap = kTetherIconGap}) => iconExtent / 2 + iconGap;
+
+/// 首のタップの範囲(D-479): ボタンの丸と同じ大きさ(少なくとも [kMinInteractiveDimension] の正方形)を、パネルの辺から
+/// **パネルと反対の側**へずらして置く(下に開くなら、範囲の下端 = パネルの辺)。中身(見出しのボタンなど)のタップと
+/// ぶつからず、パネルの外へ出ている首のふくらみはそのまま押せる。
+Rect tetherHitRect({required Offset button, required double buttonRadius, required double reach, required TetherSide side}) {
+  final s = math.max(kMinInteractiveDimension, buttonRadius * 2);
+  final edge = side == TetherSide.below ? button.dy + reach : button.dy - reach;
+  return Rect.fromLTWH(button.dx - s / 2, side == TetherSide.below ? edge - s : edge, s, s);
+}
 
 /// 外形の幾何。[rect] = 外形(輪郭の線)の矩形、[button] = 元のボタンの中心、[buttonRadius] = 元のボタンの半径。
 @immutable
@@ -180,7 +201,7 @@ class TetherOutline {
 
 /// [TetheredPanel] の置き場所を決める(純粋な計算。テストもここ)。
 /// [area] = 置いてよい範囲(画面からキーボード / ノッチ / 余白を除いたもの)。
-/// [reach] = ボタンの中心からパネルの外形の辺まで(= ボタンの半径 − [kTetherPanelInset])。
+/// [reach] = ボタンの中心からパネルの外形の辺まで(= [tetherReach]。アイコンの範囲の半分 + すき間)。
 @visibleForTesting
 ({TetherSide side, double left, double maxHeight}) tetherPlacement({required Rect anchor, required Rect area, required double width, required double reach, required TetherSide preferred, double minHeight = 200}) {
   final c = anchor.center;
@@ -204,12 +225,13 @@ class TetheredPanel extends StatelessWidget {
     this.onAnchorTap,
     this.width = 320,
     this.preferredSide = TetherSide.below,
-    this.outlineOffset = 6,
+    this.outlineOffset = kFowRimWidth,
     this.clearance = 3,
-    this.panelInset = kTetherPanelInset,
+    this.iconExtent = kTetherIconExtent,
+    this.iconGap = kTetherIconGap,
     this.neckAngle = kTetherNeckAngle,
     this.neckFlare = kTetherNeckFlare,
-    this.strokeWidth = 1.5,
+    this.strokeWidth = kFowRimWidth,
     this.margin = 8,
     this.progress = 1,
   });
@@ -223,14 +245,17 @@ class TetheredPanel extends StatelessWidget {
   final double width;
   final TetherSide preferredSide;
 
-  /// 外形の線を中身からどれだけ外に出すか(px。スケッチの「6px」)。外形と中身の間はふちの色。
+  /// 外形の線を中身からどれだけ外に出すか(px)。D-479 で スケッチの「6px」の灰色の帯をやめ、細い線([kFowRimWidth])だけ。
   final double outlineOffset;
 
   /// 首がボタンを包むすき間(px。スケッチの「3px」)。
   final double clearance;
 
-  /// [kTetherPanelInset]。外形の辺はボタンの丸の端からこれだけ内側(D-477。以前は丸 + すき間の外に 10px の首)。
-  final double panelInset;
+  /// [kTetherIconExtent]。外形の辺はボタンの中心から この半分 + [iconGap](D-479。D-477 ではボタンの丸の端から 3px 内側)。
+  final double iconExtent;
+
+  /// [kTetherIconGap]。
+  final double iconGap;
 
   /// [kTetherNeckAngle](度)。
   final double neckAngle;
@@ -256,7 +281,7 @@ class TetheredPanel extends StatelessWidget {
         preferred: preferredSide,
         offset: outlineOffset,
         clearance: clearance,
-        panelInset: panelInset,
+        reach: tetherReach(iconExtent: iconExtent, iconGap: iconGap),
         neckAngle: neckAngle,
         neckFlare: neckFlare,
         insets: EdgeInsets.fromLTRB(mq.padding.left + margin, mq.padding.top + margin, mq.padding.right + margin, math.max(mq.padding.bottom, mq.viewInsets.bottom) + margin),
@@ -266,7 +291,7 @@ class TetheredPanel extends StatelessWidget {
           id: _TetherSlot.paint,
           child: IgnorePointer(
             child: CustomPaint(
-              painter: _TetherPainter(holder: holder, rim: scheme.surfaceContainerHighest, outline: scheme.primary.withValues(alpha: 0.7), card: scheme.surface, head: scheme.surface, shadow: Colors.black, strokeWidth: strokeWidth, offset: outlineOffset),
+              painter: _TetherPainter(holder: holder, rim: fowRimColor(scheme), card: scheme.surface, shadow: Colors.black, strokeWidth: strokeWidth),
             ),
           ),
         ),
@@ -274,9 +299,11 @@ class TetheredPanel extends StatelessWidget {
           id: _TetherSlot.panel,
           child: Material(type: MaterialType.transparency, child: child),
         ),
+        // 首の中のボタンの見た目(ボタンの中心)と、押せる範囲(パネルと反対の側へずらす、[tetherHitRect])は別に置く。
+        LayoutId(id: _TetherSlot.head, child: IgnorePointer(child: Center(child: anchorChild))),
         LayoutId(
-          id: _TetherSlot.head,
-          child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: onAnchorTap, child: Center(child: anchorChild)),
+          id: _TetherSlot.hit,
+          child: GestureDetector(key: const ValueKey('rasqOverlay.tether.hit'), behavior: HitTestBehavior.opaque, onTap: onAnchorTap),
         ),
       ],
     );
@@ -296,7 +323,7 @@ class TetheredPanel extends StatelessWidget {
   }
 }
 
-enum _TetherSlot { paint, panel, head }
+enum _TetherSlot { paint, panel, head, hit }
 
 /// レイアウトで決まった形を、描画へ渡す入れ物(描画はレイアウトのあと)。
 class _TetherHolder {
@@ -304,14 +331,14 @@ class _TetherHolder {
 }
 
 class _TetherDelegate extends MultiChildLayoutDelegate {
-  _TetherDelegate({required this.holder, required this.anchor, required this.width, required this.preferred, required this.offset, required this.clearance, required this.panelInset, required this.neckAngle, required this.neckFlare, required this.insets});
+  _TetherDelegate({required this.holder, required this.anchor, required this.width, required this.preferred, required this.offset, required this.clearance, required this.reach, required this.neckAngle, required this.neckFlare, required this.insets});
   final _TetherHolder holder;
   final Rect anchor;
   final double width;
   final TetherSide preferred;
   final double offset;
   final double clearance;
-  final double panelInset;
+  final double reach;
   final double neckAngle;
   final double neckFlare;
   final EdgeInsets insets;
@@ -319,7 +346,6 @@ class _TetherDelegate extends MultiChildLayoutDelegate {
   @override
   void performLayout(Size size) {
     final buttonRadius = math.min(anchor.width, anchor.height) / 2;
-    final reach = buttonRadius - panelInset;
     final area = insets.deflateRect(Offset.zero & size);
     final place = tetherPlacement(anchor: anchor, area: area, width: width, reach: reach, preferred: preferred);
     final w = math.min(width, area.width);
@@ -334,44 +360,42 @@ class _TetherDelegate extends MultiChildLayoutDelegate {
     positionChild(_TetherSlot.paint, Offset.zero);
     layoutChild(_TetherSlot.head, BoxConstraints.tight(Size.square(buttonRadius * 2)));
     positionChild(_TetherSlot.head, c - Offset(buttonRadius, buttonRadius));
+    final hit = tetherHitRect(button: c, buttonRadius: buttonRadius, reach: reach, side: place.side);
+    layoutChild(_TetherSlot.hit, BoxConstraints.tight(hit.size));
+    positionChild(_TetherSlot.hit, hit.topLeft);
   }
 
   @override
   bool shouldRelayout(_TetherDelegate old) =>
       old.anchor != anchor || old.width != width || old.preferred != preferred || old.offset != offset || old.clearance != clearance ||
-      old.panelInset != panelInset ||
+      old.reach != reach ||
       old.neckAngle != neckAngle ||
       old.neckFlare != neckFlare || old.insets != insets || old.holder != holder;
 }
 
 class _TetherPainter extends CustomPainter {
-  _TetherPainter({required this.holder, required this.rim, required this.outline, required this.card, required this.head, required this.shadow, required this.strokeWidth, required this.offset});
+  _TetherPainter({required this.holder, required this.rim, required this.card, required this.shadow, required this.strokeWidth});
   final _TetherHolder holder;
   final Color rim;
-  final Color outline;
   final Color card;
-  final Color head;
   final Color shadow;
   final double strokeWidth;
-  final double offset;
 
   @override
   void paint(Canvas canvas, Size size) {
     final o = holder.outline;
     if (o == null) return;
     final path = o.path();
-    canvas.drawShadow(path, shadow.withValues(alpha: 0.5), 6, false);
-    canvas.drawPath(path, Paint()..color = rim);
-    // 中身の面(外形から [offset] 内側)と、首の中のボタンの面。
-    canvas.drawRRect(RRect.fromRectAndRadius(o.rect.deflate(offset), Radius.circular(math.max(0.0, o.cornerRadius - offset))), Paint()..color = card);
-    canvas.drawCircle(o.button, o.buttonRadius, Paint()..color = head);
+    // D-479: 面は首ごと 1 枚(灰色の帯は無し)、ふちは FOW と同じ細い線と浅い影。
+    canvas.drawShadow(path, shadow, kFowElevation, false);
+    canvas.drawPath(path, Paint()..color = card);
     canvas.drawPath(
       path,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
         ..strokeJoin = StrokeJoin.round
-        ..color = outline,
+        ..color = rim,
     );
   }
 
@@ -395,6 +419,7 @@ extension TetheredPanelPresets on OverlayManager {
     String? ownerId,
     double width = 320,
     TetherSide preferredSide = TetherSide.below,
+    double iconExtent = kTetherIconExtent,
   }) async {
     final result = await show(RasqOverlayEntry(
       id: id,
@@ -427,6 +452,7 @@ extension TetheredPanelPresets on OverlayManager {
               anchor: anchor,
               width: width,
               preferredSide: preferredSide,
+              iconExtent: iconExtent,
               progress: t,
               anchorChild: anchorChild,
               onAnchorTap: handle.cancel,

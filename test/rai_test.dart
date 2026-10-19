@@ -28,6 +28,7 @@ import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 
 import 'support/fake_rai_embedding_model.dart';
 import 'support/fake_rai_llm.dart';
@@ -289,8 +290,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.model')));
     await tester.pumpAndSettle();
     expect(find.text('モデル'), findsOneWidget); // FOW タイトル
-    expect(tester.getRect(find.byWidgetPredicate((w) => w is Material && w.elevation == 8)).bottom, lessThanOrEqualTo(tester.getRect(find.byType(RaiBar)).top + 1)); // バーの上に付く
-    expect(tester.getSize(find.byWidgetPredicate((w) => w is Material && w.elevation == 8)).width, closeTo(tester.getSize(find.byType(RasqApp)).width - 16, 1)); // 幅は入力ウィジェットに揃う (D-185)
+    expect(tester.getRect(find.byWidgetPredicate(isFrontmostFowPanel)).bottom, lessThanOrEqualTo(tester.getRect(find.byType(RaiBar)).top + 1)); // バーの上に付く
+    expect(tester.getSize(find.byWidgetPredicate(isFrontmostFowPanel)).width, closeTo(tester.getSize(find.byType(RasqApp)).width - 16, 1)); // 幅は入力ウィジェットに揃う (D-185)
     expect(find.text('ローカル'), findsWidgets);
     expect(find.text('完遂率 -%'), findsWidgets);
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.name.qwen3.5-2b-q4km'))).data, 'QA Mini'); // コードネーム (D-198)

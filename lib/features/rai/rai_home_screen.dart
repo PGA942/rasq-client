@@ -246,7 +246,7 @@ class RaiSidebar extends ConsumerWidget {
       child: Material(
         key: const ValueKey('rai.sidebar'),
         color: scheme.surface,
-        elevation: 6, // FOW(8)と区別(テストが elevation 8 で FOW を探す)
+        elevation: 6,
         child: SafeArea(
           child: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.xl), children: [
             Padding(

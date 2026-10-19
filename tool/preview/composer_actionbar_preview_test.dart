@@ -118,18 +118,19 @@ void main() {
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('tethered_panel_shapes.png'));
   });
 
-  // 1 つずつ大きめに(首の形を詰めるとき用。D-477)。
-  for (final (name, anchor, side, icon) in [
-    ('below', const Rect.fromLTWH(158, 30, 44, 44), TetherSide.below, Icons.tag),
-    ('edge', const Rect.fromLTWH(312, 30, 44, 44), TetherSide.below, Icons.photo_camera_outlined),
-    ('above', const Rect.fromLTWH(30, 186, 44, 44), TetherSide.above, Icons.emoji_emotions_outlined),
+  // 1 つずつ大きめに(首の形を詰めるとき用。D-477)。暗いテーマでも 1 つ(ふちの線の見え方、D-479)。
+  for (final (name, anchor, side, icon, dark) in [
+    ('below', const Rect.fromLTWH(158, 30, 44, 44), TetherSide.below, Icons.tag, false),
+    ('edge', const Rect.fromLTWH(312, 30, 44, 44), TetherSide.below, Icons.photo_camera_outlined, false),
+    ('above', const Rect.fromLTWH(30, 186, 44, 44), TetherSide.above, Icons.emoji_emotions_outlined, false),
+    ('below_dark', const Rect.fromLTWH(158, 30, 44, 44), TetherSide.below, Icons.tag, true),
   ]) {
     testWidgets('つながったパネル単体(拡大): $name', (tester) async {
       tester.view.physicalSize = const Size(1080, 720);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xFF3D7BFF)),
+        theme: dark ? RasqTheme.dark() : ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xFF3D7BFF)),
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: TetheredPanel(

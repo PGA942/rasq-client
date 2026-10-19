@@ -41,11 +41,11 @@ double _diff(double a, double b) {
   return d;
 }
 
-/// 首の形 (D-477): ボタンの中心からパネルの外形の辺まで = ボタンの半径 − [kTetherPanelInset]。
+/// 首の形 (D-477 / D-479): ボタンの中心からパネルの外形の辺まで = アイコンの範囲の半分 + すき間([tetherReach])。
 const r = 22.0;
-const reach = r - kTetherPanelInset;
+final reach = tetherReach();
 
-/// ボタンにつながったパネル (D-474 / D-477)。
+/// ボタンにつながったパネル (D-474 / D-477 / D-479)。
 void main() {
   group('TetherOutline(形)', () {
     const button = Offset(180, 100);
@@ -62,8 +62,9 @@ void main() {
       expect(path.contains(button), isTrue); // ボタンは首の中
       expect(path.contains(rect.center), isTrue);
       expect(path.contains(Offset(button.dx, rect.top - 1)), isTrue); // 首はパネルとつながっている
-      // パネルの辺はボタンの丸の端まで寄る(ボタンの下端はパネルの中)。
-      expect(rect.top, lessThan(button.dy + r));
+      // パネルの辺はアイコンの範囲の端まで寄る (D-479): ボタンの丸の下半分はパネルに埋まる。
+      expect(reach, kTetherIconExtent / 2 + kTetherIconGap);
+      expect(rect.top - button.dy, lessThan(r - 8)); // D-477 は r − 3 = 19、いまは 11
       expect(path.contains(Offset(button.dx, button.dy + r - 1)), isTrue);
       // 首は丸の真横より上(パネルと反対の側)で丸を離れる: 真横の丸の外側 1px はまだ首の中(裾が広がっている)。
       expect(path.contains(Offset(button.dx - r - 3 - 1, button.dy + 2)), isTrue);
@@ -124,6 +125,30 @@ void main() {
     });
   });
 
+  group('tetherHitRect(首のタップの範囲、D-479)', () {
+    const button = Offset(180, 100);
+    test('下に開く: 範囲の下端 = パネルの辺(中身とぶつからない)、首のふくらみは範囲の中、大きさは最小のタップの大きさ以上', () {
+      final hit = tetherHitRect(button: button, buttonRadius: r, reach: reach, side: TetherSide.below);
+      expect(hit.bottom, closeTo(button.dy + reach, 0.01));
+      expect(hit.width, greaterThanOrEqualTo(kMinInteractiveDimension));
+      expect(hit.height, greaterThanOrEqualTo(kMinInteractiveDimension));
+      expect(hit.center.dx, button.dx);
+      expect(hit.center.dy, lessThan(button.dy)); // パネルと反対の側(上)へずれる
+      expect(hit.contains(Offset(button.dx, button.dy - r - 2)), isTrue); // 首の丸のてっぺん
+      expect(hit.contains(button), isTrue);
+      // 範囲はパネルの外形の辺より内側(中身の側)へ入らない。
+      final rect = Rect.fromLTWH(30, button.dy + reach, 300, 200);
+      expect(hit.intersect(rect).height, lessThanOrEqualTo(0));
+    });
+
+    test('上に開く: 上下が裏返る', () {
+      final hit = tetherHitRect(button: button, buttonRadius: r, reach: reach, side: TetherSide.above);
+      expect(hit.top, closeTo(button.dy - reach, 0.01));
+      expect(hit.center.dy, greaterThan(button.dy));
+      expect(hit.contains(Offset(button.dx, button.dy + r + 2)), isTrue);
+    });
+  });
+
   group('tetherPlacement(置き場所)', () {
     const area = Rect.fromLTWH(8, 8, 344, 764);
     test('下に余裕があれば下(スケッチのとおり)、無ければ上', () {
@@ -157,11 +182,20 @@ void main() {
       ),
     ));
     final body = tester.getRect(find.byKey(const ValueKey('body')));
-    // 外形の辺はボタンの丸の端から [kTetherPanelInset] 内側、中身はそこから 6px 内側。
-    expect(body.top, closeTo(anchor.bottom - kTetherPanelInset + 6, 0.01));
-    expect(body.width, 240 - 12); // 外形は中身から 6px 外
+    // 外形の辺はアイコンの範囲の端(+ すき間)、中身はそこから細いふちの線のぶん内側 (D-479)。
+    expect(body.top, closeTo(anchor.center.dy + kTetherIconExtent / 2 + kTetherIconGap + kFowRimWidth, 0.01));
+    expect(body.width, 240 - 2 * kFowRimWidth); // 外形は中身から線 1 本ぶん外
     expect(tester.getCenter(find.byKey(const ValueKey('glyph'))), anchor.center);
     await tester.tap(find.byKey(const ValueKey('glyph')));
     expect(tapped, 1);
+    // 首のふくらみ(パネルより上)も押せる。
+    await tester.tapAt(Offset(anchor.center.dx, anchor.top));
+    expect(tapped, 2);
+    // 押せる範囲はパネルと反対の側へずれている: ボタンの下(パネルの中身)のタップは首に取られない。
+    final hit = tester.getRect(find.byKey(const ValueKey('rasqOverlay.tether.hit')));
+    expect(hit.bottom, closeTo(body.top - kFowRimWidth, 0.01));
+    expect(hit.center.dy, lessThan(anchor.center.dy));
+    await tester.tapAt(Offset(anchor.center.dx, body.top + 4));
+    expect(tapped, 2);
   });
 }
