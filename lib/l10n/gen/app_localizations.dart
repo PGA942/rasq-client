@@ -8078,6 +8078,1164 @@ abstract class AppLocalizations {
   /// **'TL にリストを足したい'**
   String get onboardingTourRaiBubble;
 
+  /// No description provided for @pluginsCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get pluginsCancel;
+
+  /// No description provided for @pluginsClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get pluginsClose;
+
+  /// No description provided for @pluginsSwingNotPackage.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing のプラグインは .rasqpkg か .wasm です'**
+  String get pluginsSwingNotPackage;
+
+  /// No description provided for @pluginsSwingNoRequires.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing では、ほかのプラグインを土台にする子プラグインは配れません'**
+  String get pluginsSwingNoRequires;
+
+  /// No description provided for @pluginsSwingSingleOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で配れるのは、プラグイン 1 つだけの入れ物です'**
+  String get pluginsSwingSingleOnly;
+
+  /// No description provided for @pluginsPageNotPage.
+  ///
+  /// In ja, this message translates to:
+  /// **'ページ型のプラグインではありません'**
+  String get pluginsPageNotPage;
+
+  /// ids は土台のプラグインの id を「 / 」でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかのプラグイン({ids})を土台にしているため、Swing では配れません'**
+  String pluginsPageSwingRequires(String ids);
+
+  /// No description provided for @pluginsPageSwingChild.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかのプラグインの入れ物に入っている子プラグインのため、Swing では配れません'**
+  String get pluginsPageSwingChild;
+
+  /// names はプラグインの名前を「 / 」でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'子プラグイン({names})と一緒の入れ物のため、Swing では配れません'**
+  String pluginsPageSwingSiblings(String names);
+
+  /// No description provided for @pluginsArtifactMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'{pluginId}: 取り直した配布物がインストール時と違うため読み込みません(ストアで入れ直してください)'**
+  String pluginsArtifactMismatch(String pluginId);
+
+  /// No description provided for @pluginsIsSnsPlugin.
+  ///
+  /// In ja, this message translates to:
+  /// **'{id} は SNS プラグインです(スロットには登録できません)'**
+  String pluginsIsSnsPlugin(String id);
+
+  /// plugin.manifest はプラグインの関数の名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'plugin.manifest がありません'**
+  String get pluginsManifestMissing;
+
+  /// No description provided for @pluginsManifestIdEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'plugin.manifest.id が空です'**
+  String get pluginsManifestIdEmpty;
+
+  /// surfaces: swing、solo はマニフェストの書き方(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing で配れるのは、Swing の面(surfaces: swing、solo)のページ型だけです'**
+  String get pluginsSwingSurfaceOnly;
+
+  /// No description provided for @pluginsRasqPageSurfaceOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のページに置けるのは、プロフィールの面(surfaces: profile、solo)のページ型だけです'**
+  String get pluginsRasqPageSurfaceOnly;
+
+  /// No description provided for @pluginsIdMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布物の目次は {expected} なのに、wasm は {actual} を名乗っています'**
+  String pluginsIdMismatch(String expected, String actual);
+
+  /// slots はスロットの id を「, 」でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を登録しました({slots})'**
+  String pluginsRegistered(String name, String slots);
+
+  /// No description provided for @pluginsRegisterFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録できませんでした: {error}'**
+  String pluginsRegisterFailed(String error);
+
+  /// No description provided for @pluginsImageReceiveFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}: 画像を受け取れませんでした({error})'**
+  String pluginsImageReceiveFailed(String name, String error);
+
+  /// No description provided for @pluginsSharedNoSession.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}: 共有セッションに入っていないため、みんなの値は変えられません'**
+  String pluginsSharedNoSession(String name);
+
+  /// No description provided for @pluginsMuteAddTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュート語に追加'**
+  String get pluginsMuteAddTitle;
+
+  /// name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} が「{word}」をミュート語に追加しようとしています。'**
+  String pluginsMuteAddMessage(String name, String word);
+
+  /// No description provided for @pluginsMuteAddConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加'**
+  String get pluginsMuteAddConfirm;
+
+  /// No description provided for @pluginsMuteAdded.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{word}」をミュート語に追加しました'**
+  String pluginsMuteAdded(String word);
+
+  /// No description provided for @pluginsEffectSendFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}: 効果映像を送れませんでした({error})'**
+  String pluginsEffectSendFailed(String name, String error);
+
+  /// No description provided for @pluginsImageScaled.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}: 編集のため画像を小さくしました'**
+  String pluginsImageScaled(String name);
+
+  /// No description provided for @pluginsErrorReturned.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインがエラーを返しました'**
+  String get pluginsErrorReturned;
+
+  /// メディアの加工のジャンル(既定の 5 種)
+  ///
+  /// In ja, this message translates to:
+  /// **'色調'**
+  String get pluginsGenreTone;
+
+  /// No description provided for @pluginsGenreProcess.
+  ///
+  /// In ja, this message translates to:
+  /// **'加工'**
+  String get pluginsGenreProcess;
+
+  /// No description provided for @pluginsGenreTransform.
+  ///
+  /// In ja, this message translates to:
+  /// **'変形'**
+  String get pluginsGenreTransform;
+
+  /// No description provided for @pluginsGenreAdd.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加'**
+  String get pluginsGenreAdd;
+
+  /// No description provided for @pluginsGenreDraw.
+  ///
+  /// In ja, this message translates to:
+  /// **'描画'**
+  String get pluginsGenreDraw;
+
+  /// サイドロードしたプラグインの段(フル機能)
+  ///
+  /// In ja, this message translates to:
+  /// **'フル'**
+  String get pluginsTrustFull;
+
+  /// No description provided for @pluginsTrustBundled.
+  ///
+  /// In ja, this message translates to:
+  /// **'フル(同梱)'**
+  String get pluginsTrustBundled;
+
+  /// No description provided for @pluginsTrustRestricted.
+  ///
+  /// In ja, this message translates to:
+  /// **'制限'**
+  String get pluginsTrustRestricted;
+
+  /// No description provided for @pluginsTrustSwing.
+  ///
+  /// In ja, this message translates to:
+  /// **'制限(Swing)'**
+  String get pluginsTrustSwing;
+
+  /// 開発者向けの説明。rasq build はコマンド(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の開発者鍵で署名した .rspkg / .rasqpkg はフル機能。rasq build が署名します'**
+  String get pluginsTrustHint;
+
+  /// 画像 / 動画の加工画面(pro_image_editor)の共通のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get pluginsEditorCancel;
+
+  /// No description provided for @pluginsEditorUndo.
+  ///
+  /// In ja, this message translates to:
+  /// **'ひとつ戻す'**
+  String get pluginsEditorUndo;
+
+  /// No description provided for @pluginsEditorRedo.
+  ///
+  /// In ja, this message translates to:
+  /// **'やり直す'**
+  String get pluginsEditorRedo;
+
+  /// No description provided for @pluginsEditorDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'完了'**
+  String get pluginsEditorDone;
+
+  /// No description provided for @pluginsEditorRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get pluginsEditorRemove;
+
+  /// No description provided for @pluginsEditorBack.
+  ///
+  /// In ja, this message translates to:
+  /// **'戻る'**
+  String get pluginsEditorBack;
+
+  /// 狭い画面で道具をまとめたボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get pluginsEditorMore;
+
+  /// No description provided for @pluginsEditorApplying.
+  ///
+  /// In ja, this message translates to:
+  /// **'変更を適用しています'**
+  String get pluginsEditorApplying;
+
+  /// No description provided for @pluginsEditorPreparing.
+  ///
+  /// In ja, this message translates to:
+  /// **'エディターを準備しています'**
+  String get pluginsEditorPreparing;
+
+  /// No description provided for @pluginsEditorPleaseWait.
+  ///
+  /// In ja, this message translates to:
+  /// **'お待ちください…'**
+  String get pluginsEditorPleaseWait;
+
+  /// No description provided for @pluginsEditorCloseWarningTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'加工をやめますか？'**
+  String get pluginsEditorCloseWarningTitle;
+
+  /// No description provided for @pluginsEditorCloseWarningMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'変更は保存されません。'**
+  String get pluginsEditorCloseWarningMessage;
+
+  /// No description provided for @pluginsEditorCloseWarningConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'やめる'**
+  String get pluginsEditorCloseWarningConfirm;
+
+  /// No description provided for @pluginsEditorCloseWarningCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'続ける'**
+  String get pluginsEditorCloseWarningCancel;
+
+  /// No description provided for @pluginsEditorLayerEdit.
+  ///
+  /// In ja, this message translates to:
+  /// **'編集'**
+  String get pluginsEditorLayerEdit;
+
+  /// No description provided for @pluginsEditorLayerRotateScale.
+  ///
+  /// In ja, this message translates to:
+  /// **'回転と拡縮'**
+  String get pluginsEditorLayerRotateScale;
+
+  /// No description provided for @pluginsEditorPaint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ペイント'**
+  String get pluginsEditorPaint;
+
+  /// No description provided for @pluginsEditorZoom.
+  ///
+  /// In ja, this message translates to:
+  /// **'ズーム'**
+  String get pluginsEditorZoom;
+
+  /// No description provided for @pluginsEditorFreehand.
+  ///
+  /// In ja, this message translates to:
+  /// **'フリーハンド'**
+  String get pluginsEditorFreehand;
+
+  /// No description provided for @pluginsEditorArrow.
+  ///
+  /// In ja, this message translates to:
+  /// **'矢印'**
+  String get pluginsEditorArrow;
+
+  /// No description provided for @pluginsEditorLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'直線'**
+  String get pluginsEditorLine;
+
+  /// No description provided for @pluginsEditorRectangle.
+  ///
+  /// In ja, this message translates to:
+  /// **'四角'**
+  String get pluginsEditorRectangle;
+
+  /// No description provided for @pluginsEditorCircle.
+  ///
+  /// In ja, this message translates to:
+  /// **'丸'**
+  String get pluginsEditorCircle;
+
+  /// No description provided for @pluginsEditorDashLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'点線'**
+  String get pluginsEditorDashLine;
+
+  /// No description provided for @pluginsEditorBlur.
+  ///
+  /// In ja, this message translates to:
+  /// **'ぼかし'**
+  String get pluginsEditorBlur;
+
+  /// No description provided for @pluginsEditorPixelate.
+  ///
+  /// In ja, this message translates to:
+  /// **'モザイク'**
+  String get pluginsEditorPixelate;
+
+  /// No description provided for @pluginsEditorLineWidth.
+  ///
+  /// In ja, this message translates to:
+  /// **'線の太さ'**
+  String get pluginsEditorLineWidth;
+
+  /// No description provided for @pluginsEditorEraser.
+  ///
+  /// In ja, this message translates to:
+  /// **'消しゴム'**
+  String get pluginsEditorEraser;
+
+  /// No description provided for @pluginsEditorFill.
+  ///
+  /// In ja, this message translates to:
+  /// **'塗り'**
+  String get pluginsEditorFill;
+
+  /// No description provided for @pluginsEditorOpacity.
+  ///
+  /// In ja, this message translates to:
+  /// **'不透明度'**
+  String get pluginsEditorOpacity;
+
+  /// No description provided for @pluginsEditorColor.
+  ///
+  /// In ja, this message translates to:
+  /// **'色'**
+  String get pluginsEditorColor;
+
+  /// No description provided for @pluginsEditorTextHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'テキストを入力'**
+  String get pluginsEditorTextHint;
+
+  /// No description provided for @pluginsEditorText.
+  ///
+  /// In ja, this message translates to:
+  /// **'テキスト'**
+  String get pluginsEditorText;
+
+  /// No description provided for @pluginsEditorTextAlign.
+  ///
+  /// In ja, this message translates to:
+  /// **'揃え'**
+  String get pluginsEditorTextAlign;
+
+  /// No description provided for @pluginsEditorFontScale.
+  ///
+  /// In ja, this message translates to:
+  /// **'文字の大きさ'**
+  String get pluginsEditorFontScale;
+
+  /// No description provided for @pluginsEditorTextBackground.
+  ///
+  /// In ja, this message translates to:
+  /// **'背景'**
+  String get pluginsEditorTextBackground;
+
+  /// No description provided for @pluginsEditorCropRotate.
+  ///
+  /// In ja, this message translates to:
+  /// **'クロップ / 回転'**
+  String get pluginsEditorCropRotate;
+
+  /// No description provided for @pluginsEditorRotate.
+  ///
+  /// In ja, this message translates to:
+  /// **'回転'**
+  String get pluginsEditorRotate;
+
+  /// No description provided for @pluginsEditorFlip.
+  ///
+  /// In ja, this message translates to:
+  /// **'反転'**
+  String get pluginsEditorFlip;
+
+  /// No description provided for @pluginsEditorTilt.
+  ///
+  /// In ja, this message translates to:
+  /// **'傾き'**
+  String get pluginsEditorTilt;
+
+  /// No description provided for @pluginsEditorTiltHorizontal.
+  ///
+  /// In ja, this message translates to:
+  /// **'水平'**
+  String get pluginsEditorTiltHorizontal;
+
+  /// No description provided for @pluginsEditorTiltVertical.
+  ///
+  /// In ja, this message translates to:
+  /// **'垂直'**
+  String get pluginsEditorTiltVertical;
+
+  /// No description provided for @pluginsEditorRatio.
+  ///
+  /// In ja, this message translates to:
+  /// **'比率'**
+  String get pluginsEditorRatio;
+
+  /// No description provided for @pluginsEditorReset.
+  ///
+  /// In ja, this message translates to:
+  /// **'リセット'**
+  String get pluginsEditorReset;
+
+  /// No description provided for @pluginsEditorTune.
+  ///
+  /// In ja, this message translates to:
+  /// **'調整'**
+  String get pluginsEditorTune;
+
+  /// No description provided for @pluginsEditorBrightness.
+  ///
+  /// In ja, this message translates to:
+  /// **'明るさ'**
+  String get pluginsEditorBrightness;
+
+  /// No description provided for @pluginsEditorContrast.
+  ///
+  /// In ja, this message translates to:
+  /// **'コントラスト'**
+  String get pluginsEditorContrast;
+
+  /// No description provided for @pluginsEditorSaturation.
+  ///
+  /// In ja, this message translates to:
+  /// **'彩度'**
+  String get pluginsEditorSaturation;
+
+  /// No description provided for @pluginsEditorExposure.
+  ///
+  /// In ja, this message translates to:
+  /// **'露出'**
+  String get pluginsEditorExposure;
+
+  /// No description provided for @pluginsEditorHue.
+  ///
+  /// In ja, this message translates to:
+  /// **'色相'**
+  String get pluginsEditorHue;
+
+  /// No description provided for @pluginsEditorTemperature.
+  ///
+  /// In ja, this message translates to:
+  /// **'色温度'**
+  String get pluginsEditorTemperature;
+
+  /// No description provided for @pluginsEditorFade.
+  ///
+  /// In ja, this message translates to:
+  /// **'フェード'**
+  String get pluginsEditorFade;
+
+  /// No description provided for @pluginsEditorTint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ティント'**
+  String get pluginsEditorTint;
+
+  /// No description provided for @pluginsEditorFilter.
+  ///
+  /// In ja, this message translates to:
+  /// **'フィルター'**
+  String get pluginsEditorFilter;
+
+  /// No description provided for @pluginsEditorSticker.
+  ///
+  /// In ja, this message translates to:
+  /// **'ステッカー'**
+  String get pluginsEditorSticker;
+
+  /// No description provided for @pluginsEditorEmoji.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字'**
+  String get pluginsEditorEmoji;
+
+  /// No description provided for @pluginsEditorEmojiSearch.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索'**
+  String get pluginsEditorEmojiSearch;
+
+  /// No description provided for @pluginsEditorEmojiRecent.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近'**
+  String get pluginsEditorEmojiRecent;
+
+  /// No description provided for @pluginsEditorEmojiSmileys.
+  ///
+  /// In ja, this message translates to:
+  /// **'顔と人'**
+  String get pluginsEditorEmojiSmileys;
+
+  /// No description provided for @pluginsEditorEmojiAnimals.
+  ///
+  /// In ja, this message translates to:
+  /// **'動物と自然'**
+  String get pluginsEditorEmojiAnimals;
+
+  /// No description provided for @pluginsEditorEmojiFood.
+  ///
+  /// In ja, this message translates to:
+  /// **'食べ物'**
+  String get pluginsEditorEmojiFood;
+
+  /// No description provided for @pluginsEditorEmojiActivities.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクティビティ'**
+  String get pluginsEditorEmojiActivities;
+
+  /// No description provided for @pluginsEditorEmojiTravel.
+  ///
+  /// In ja, this message translates to:
+  /// **'旅行と場所'**
+  String get pluginsEditorEmojiTravel;
+
+  /// No description provided for @pluginsEditorEmojiObjects.
+  ///
+  /// In ja, this message translates to:
+  /// **'もの'**
+  String get pluginsEditorEmojiObjects;
+
+  /// No description provided for @pluginsEditorEmojiSymbols.
+  ///
+  /// In ja, this message translates to:
+  /// **'記号'**
+  String get pluginsEditorEmojiSymbols;
+
+  /// No description provided for @pluginsEditorEmojiFlags.
+  ///
+  /// In ja, this message translates to:
+  /// **'旗'**
+  String get pluginsEditorEmojiFlags;
+
+  /// No description provided for @pluginsMediaCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get pluginsMediaCancel;
+
+  /// No description provided for @pluginsMediaClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get pluginsMediaClose;
+
+  /// No description provided for @pluginsMediaApply.
+  ///
+  /// In ja, this message translates to:
+  /// **'適用'**
+  String get pluginsMediaApply;
+
+  /// 落書きの紙から SVG を渡したプラグインが SVG を返さなかった。name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} が SVG を返さなかったので、使いませんでした'**
+  String pluginsMediaNotSvg(String name);
+
+  /// 落書きの紙(SVG の加工)でプラグインのボタンを押したが、今の絵を受け取れなかった
+  ///
+  /// In ja, this message translates to:
+  /// **'いまは使えません(紙の「完了」が見つかりません)'**
+  String get pluginsMediaPaperDoneMissing;
+
+  /// No description provided for @pluginsMediaBarEdit.
+  ///
+  /// In ja, this message translates to:
+  /// **'バーの編集'**
+  String get pluginsMediaBarEdit;
+
+  /// No description provided for @pluginsMediaAudioUnsupported.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では音声を動画にできません(Android / iOS / macOS だけ)。音声のまま添付できます'**
+  String get pluginsMediaAudioUnsupported;
+
+  /// No description provided for @pluginsMediaOpenAudioFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'音声を開けませんでした: {error}'**
+  String pluginsMediaOpenAudioFailed(String error);
+
+  /// No description provided for @pluginsMediaOpenVideoFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を開けませんでした: {error}'**
+  String pluginsMediaOpenVideoFailed(String error);
+
+  /// No description provided for @pluginsMediaReexportFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を書き出し直せませんでした: {error}'**
+  String pluginsMediaReexportFailed(String error);
+
+  /// No description provided for @pluginsMediaCropWithMovingObject.
+  ///
+  /// In ja, this message translates to:
+  /// **'クロップ / 回転と、動くオブジェクトは一緒に使えません。静止画で入れました'**
+  String get pluginsMediaCropWithMovingObject;
+
+  /// No description provided for @pluginsMediaExportFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を書き出せませんでした: {error}'**
+  String pluginsMediaExportFailed(String error);
+
+  /// No description provided for @pluginsMediaOverlayFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動くオブジェクトを重ねられなかったので、静止画で入れました: {error}'**
+  String pluginsMediaOverlayFailed(String error);
+
+  /// label はプラグインのボタンの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{label}: フィルターを受け取れませんでした'**
+  String pluginsMediaFilterNotReceived(String label);
+
+  /// label はプラグインのボタンの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{label}: 描画が多すぎるので {count, plural, other{{count} 個}}を省きました'**
+  String pluginsMediaFilterDropped(String label, int count);
+
+  /// names はフィルターの名前を「 / 」でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'適用できなかったフィルター: {names}(この加工は入っていません)'**
+  String pluginsMediaFiltersFailed(String names);
+
+  /// No description provided for @pluginsMediaCropWithMovingPost.
+  ///
+  /// In ja, this message translates to:
+  /// **'クロップ / 回転と、動く投稿は一緒に使えません。投稿は静止画で入れました'**
+  String get pluginsMediaCropWithMovingPost;
+
+  /// No description provided for @pluginsMediaVideoImageUnreadable.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画にできなかったので、静止画で入れました(画像を読めませんでした)'**
+  String get pluginsMediaVideoImageUnreadable;
+
+  /// No description provided for @pluginsMediaVideoPostFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画にできなかったので、投稿は静止画で入れました: {error}'**
+  String pluginsMediaVideoPostFailed(String error);
+
+  /// No description provided for @pluginsMediaToVideoTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画に変換しますか?'**
+  String get pluginsMediaToVideoTitle;
+
+  /// note は置くもの(動く投稿 / 動画)の説明の 1 行。「動画にする」「静止画で貼る」は pluginsMediaToVideoConfirm / pluginsMediaToVideoStill と同じ語
+  ///
+  /// In ja, this message translates to:
+  /// **'{note}\n「動画にする」と、置いた場所で動く動画として書き出します。「静止画で貼る」は今の画像だけを貼ります。'**
+  String pluginsMediaToVideoMessage(String note);
+
+  /// No description provided for @pluginsMediaToVideoConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画にする'**
+  String get pluginsMediaToVideoConfirm;
+
+  /// No description provided for @pluginsMediaToVideoStill.
+  ///
+  /// In ja, this message translates to:
+  /// **'静止画で貼る'**
+  String get pluginsMediaToVideoStill;
+
+  /// No description provided for @pluginsMediaImageUnreadable.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を読めませんでした'**
+  String get pluginsMediaImageUnreadable;
+
+  /// No description provided for @pluginsMediaExportOnDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'完了すると、動画として書き出します'**
+  String get pluginsMediaExportOnDone;
+
+  /// 加工画面に置いた投稿のオブジェクトの編集の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ノート'**
+  String get pluginsMediaObjectNote;
+
+  /// No description provided for @pluginsMediaObjectVideo.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画'**
+  String get pluginsMediaObjectVideo;
+
+  /// No description provided for @pluginsMediaObjectImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像'**
+  String get pluginsMediaObjectImage;
+
+  /// No description provided for @pluginsMediaAddImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を追加'**
+  String get pluginsMediaAddImage;
+
+  /// No description provided for @pluginsMediaAddVideo.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を追加'**
+  String get pluginsMediaAddVideo;
+
+  /// No description provided for @pluginsMediaVideoLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を読み込めませんでした'**
+  String get pluginsMediaVideoLoadFailed;
+
+  /// 開発者モードの詳しい説明。ext は拡張子、bytes はファイルの大きさ
+  ///
+  /// In ja, this message translates to:
+  /// **'動画(.{ext}、{bytes} バイト)の最初のコマを取れませんでした: {error}'**
+  String pluginsMediaVideoLoadFailedDetail(String ext, int bytes, String error);
+
+  /// No description provided for @pluginsMediaFirstFrameFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画の最初のコマを取れませんでした'**
+  String get pluginsMediaFirstFrameFailed;
+
+  /// No description provided for @pluginsMediaVideoAsObject.
+  ///
+  /// In ja, this message translates to:
+  /// **'動画をオブジェクトとして置きます。'**
+  String get pluginsMediaVideoAsObject;
+
+  /// No description provided for @pluginsMediaAddFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'メディアを追加できませんでした: {error}'**
+  String pluginsMediaAddFailed(String error);
+
+  /// No description provided for @pluginsMediaAudioConverting.
+  ///
+  /// In ja, this message translates to:
+  /// **'音声を動画に変換しています…'**
+  String get pluginsMediaAudioConverting;
+
+  /// name はプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} はここでは編集できません(プラグインのパネルで操作してください)'**
+  String pluginsMediaPanelNotEditable(String name);
+
+  /// No description provided for @pluginsMediaSnapDragUnset.
+  ///
+  /// In ja, this message translates to:
+  /// **'この上にドラッグ(解除)'**
+  String get pluginsMediaSnapDragUnset;
+
+  /// No description provided for @pluginsMediaSnapDragSet.
+  ///
+  /// In ja, this message translates to:
+  /// **'この上にドラッグ(合わせる先にする)'**
+  String get pluginsMediaSnapDragSet;
+
+  /// No description provided for @pluginsMediaSnapPick.
+  ///
+  /// In ja, this message translates to:
+  /// **'合わせる先を選ぶ…'**
+  String get pluginsMediaSnapPick;
+
+  /// No description provided for @pluginsMediaSnapClearAll.
+  ///
+  /// In ja, this message translates to:
+  /// **'合わせる先をすべて解除'**
+  String get pluginsMediaSnapClearAll;
+
+  /// No description provided for @pluginsMediaSnapTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'合わせる先'**
+  String get pluginsMediaSnapTitle;
+
+  /// No description provided for @pluginsMediaSnapEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'名前の付いた枠がありません'**
+  String get pluginsMediaSnapEmpty;
+
+  /// 合わせる先の枠の大きさ(画素)
+  ///
+  /// In ja, this message translates to:
+  /// **'{width} × {height}'**
+  String pluginsMediaSnapSize(int width, int height);
+
+  /// 合わせる先の枠の大きさ(画素)と傾き(度)
+  ///
+  /// In ja, this message translates to:
+  /// **'{width} × {height}、{angle}°'**
+  String pluginsMediaSnapSizeAngle(int width, int height, int angle);
+
+  /// No description provided for @pluginsMediaPanelNoResult.
+  ///
+  /// In ja, this message translates to:
+  /// **'適用できませんでした(プラグインが結果を返しませんでした)'**
+  String get pluginsMediaPanelNoResult;
+
+  /// No description provided for @pluginsMediaPanelNoEdits.
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラグインに編集はありません'**
+  String get pluginsMediaPanelNoEdits;
+
+  /// No description provided for @pluginsMediaObjectEditSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'{title} の編集'**
+  String pluginsMediaObjectEditSemantics(String title);
+
+  /// No description provided for @pluginsMediaObjectLoop.
+  ///
+  /// In ja, this message translates to:
+  /// **'繰り返し再生'**
+  String get pluginsMediaObjectLoop;
+
+  /// No description provided for @pluginsMediaObjectLoopSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフ = 終わったら最後のコマで止まる'**
+  String get pluginsMediaObjectLoopSubtitle;
+
+  /// No description provided for @pluginsMediaObjectSpeed.
+  ///
+  /// In ja, this message translates to:
+  /// **'再生の速さ'**
+  String get pluginsMediaObjectSpeed;
+
+  /// No description provided for @pluginsMediaObjectVolume.
+  ///
+  /// In ja, this message translates to:
+  /// **'音'**
+  String get pluginsMediaObjectVolume;
+
+  /// No description provided for @pluginsMediaObjectMuted.
+  ///
+  /// In ja, this message translates to:
+  /// **'消音'**
+  String get pluginsMediaObjectMuted;
+
+  /// No description provided for @pluginsMediaObjectOpacity.
+  ///
+  /// In ja, this message translates to:
+  /// **'不透明度'**
+  String get pluginsMediaObjectOpacity;
+
+  /// No description provided for @pluginsMediaObjectRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'このオブジェクトを削除'**
+  String get pluginsMediaObjectRemove;
+
+  /// No description provided for @pluginsMediaFilterAdjustSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'{title} の調整'**
+  String pluginsMediaFilterAdjustSemantics(String title);
+
+  /// No description provided for @pluginsMediaFilterObjectHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵の上で、ドラッグで移動、つまんで拡縮 / 回転できます。'**
+  String get pluginsMediaFilterObjectHint;
+
+  /// No description provided for @pluginsMediaFilterRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'このフィルターを外す'**
+  String get pluginsMediaFilterRemove;
+
+  /// No description provided for @pluginsMediaStickerEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'ステッカーがありません。ストアで入れると、ここに並びます'**
+  String get pluginsMediaStickerEmpty;
+
+  /// 開発者モードの詳しい説明。assets はストアのカテゴリの id(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'ステッカーがありません。ストアでアセットパック(カテゴリ「assets」)を入れると、ここに並びます。'**
+  String get pluginsMediaStickerEmptyDetail;
+
+  /// No description provided for @pluginsMediaStickerGenerate.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインで作る'**
+  String get pluginsMediaStickerGenerate;
+
+  /// SVG の落書きの画面の既定の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'落書き'**
+  String get pluginsPaintTitle;
+
+  /// No description provided for @pluginsPaintCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get pluginsPaintCancel;
+
+  /// No description provided for @pluginsPaintDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'完了'**
+  String get pluginsPaintDone;
+
+  /// No description provided for @pluginsPaintCanvasSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'落書きの紙'**
+  String get pluginsPaintCanvasSemantics;
+
+  /// No description provided for @pluginsPaintFillLeak.
+  ///
+  /// In ja, this message translates to:
+  /// **'線で閉じた形の中をタップしてください'**
+  String get pluginsPaintFillLeak;
+
+  /// No description provided for @pluginsPaintFillOnLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'線の内側をタップしてください'**
+  String get pluginsPaintFillOnLine;
+
+  /// No description provided for @pluginsPaintFillEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'塗れる形がありませんでした'**
+  String get pluginsPaintFillEmpty;
+
+  /// No description provided for @pluginsPaintToolPen.
+  ///
+  /// In ja, this message translates to:
+  /// **'ペン'**
+  String get pluginsPaintToolPen;
+
+  /// No description provided for @pluginsPaintToolEraser.
+  ///
+  /// In ja, this message translates to:
+  /// **'消しゴム'**
+  String get pluginsPaintToolEraser;
+
+  /// No description provided for @pluginsPaintToolLasso.
+  ///
+  /// In ja, this message translates to:
+  /// **'投げ輪'**
+  String get pluginsPaintToolLasso;
+
+  /// No description provided for @pluginsPaintToolFill.
+  ///
+  /// In ja, this message translates to:
+  /// **'塗る'**
+  String get pluginsPaintToolFill;
+
+  /// No description provided for @pluginsPaintUndo.
+  ///
+  /// In ja, this message translates to:
+  /// **'取り消し'**
+  String get pluginsPaintUndo;
+
+  /// No description provided for @pluginsPaintRedo.
+  ///
+  /// In ja, this message translates to:
+  /// **'やり直し'**
+  String get pluginsPaintRedo;
+
+  /// No description provided for @pluginsPaintClear.
+  ///
+  /// In ja, this message translates to:
+  /// **'全部消す'**
+  String get pluginsPaintClear;
+
+  /// No description provided for @pluginsPaintStabilizer.
+  ///
+  /// In ja, this message translates to:
+  /// **'手ぶれ補正'**
+  String get pluginsPaintStabilizer;
+
+  /// 手ぶれ補正のスライダーが 0 のときの短い表示(1 文字程度)
+  ///
+  /// In ja, this message translates to:
+  /// **'切'**
+  String get pluginsPaintStabilizerOff;
+
+  /// No description provided for @pluginsPaintEraserCut.
+  ///
+  /// In ja, this message translates to:
+  /// **'切る'**
+  String get pluginsPaintEraserCut;
+
+  /// No description provided for @pluginsPaintEraserWhole.
+  ///
+  /// In ja, this message translates to:
+  /// **'線ごと'**
+  String get pluginsPaintEraserWhole;
+
+  /// No description provided for @pluginsPaintLassoHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'囲んで選ぶ(線の半分以上が入ったもの)'**
+  String get pluginsPaintLassoHint;
+
+  /// No description provided for @pluginsPaintSelectionDelete.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get pluginsPaintSelectionDelete;
+
+  /// No description provided for @pluginsPaintSelectionDuplicate.
+  ///
+  /// In ja, this message translates to:
+  /// **'複製'**
+  String get pluginsPaintSelectionDuplicate;
+
+  /// No description provided for @pluginsPaintSelectionRecolor.
+  ///
+  /// In ja, this message translates to:
+  /// **'色を変える'**
+  String get pluginsPaintSelectionRecolor;
+
+  /// No description provided for @pluginsPaintSelectionDeselect.
+  ///
+  /// In ja, this message translates to:
+  /// **'解除'**
+  String get pluginsPaintSelectionDeselect;
+
+  /// No description provided for @pluginsPaintFillHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'線で閉じた形の中をタップすると、線の下に塗ります'**
+  String get pluginsPaintFillHint;
+
+  /// No description provided for @pluginsPaintWidthSemantics.
+  ///
+  /// In ja, this message translates to:
+  /// **'太さ {width}'**
+  String pluginsPaintWidthSemantics(String width);
+
+  /// color は #rrggbb の色の値
+  ///
+  /// In ja, this message translates to:
+  /// **'色 {color}'**
+  String pluginsPaintColorSemantics(String color);
+
+  /// No description provided for @pluginsPaintNibMili.
+  ///
+  /// In ja, this message translates to:
+  /// **'ミリペン'**
+  String get pluginsPaintNibMili;
+
+  /// No description provided for @pluginsPaintNibKabura.
+  ///
+  /// In ja, this message translates to:
+  /// **'カプラペン'**
+  String get pluginsPaintNibKabura;
+
+  /// No description provided for @pluginsPaintNibBrush.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラシニブ'**
+  String get pluginsPaintNibBrush;
+
   /// プロフィールの編集画面(RASQ アカウント / SNS)の見出し
   ///
   /// In ja, this message translates to:
@@ -19287,6 +20445,792 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'アセットパック'**
   String get storePkgKindAssets;
+
+  /// No description provided for @trendTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド'**
+  String get trendTitle;
+
+  /// No description provided for @trendTabNotes.
+  ///
+  /// In ja, this message translates to:
+  /// **'ノート'**
+  String get trendTabNotes;
+
+  /// No description provided for @trendTabFollowing.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get trendTabFollowing;
+
+  /// No description provided for @trendTabUsers.
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザー'**
+  String get trendTabUsers;
+
+  /// No description provided for @trendBackToHome.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドホームへ戻る'**
+  String get trendBackToHome;
+
+  /// アカウントの選択で、このトレンドを出したアカウントに付ける印の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドに出したアカウント'**
+  String get trendSourceAccountMark;
+
+  /// No description provided for @trendSettingsTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド設定'**
+  String get trendSettingsTooltip;
+
+  /// No description provided for @trendCustomizeTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド TL をカスタマイズ'**
+  String get trendCustomizeTooltip;
+
+  /// No description provided for @trendReload.
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get trendReload;
+
+  /// No description provided for @trendEmptyTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'なんにもないようです'**
+  String get trendEmptyTitle;
+
+  /// No description provided for @trendEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ワードやフィルタを変えると見つかるかもしれません'**
+  String get trendEmptyHint;
+
+  /// No description provided for @trendFollowingEmptyTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中の投稿はありません'**
+  String get trendFollowingEmptyTitle;
+
+  /// No description provided for @trendFollowingEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'このワードについてフォロイーはまだ投稿していません'**
+  String get trendFollowingEmptyHint;
+
+  /// No description provided for @trendUsersBlocked.
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がユーザーの検索を止めています'**
+  String get trendUsersBlocked;
+
+  /// No description provided for @trendUsersEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザーはいません'**
+  String get trendUsersEmpty;
+
+  /// トレンドのユーザーの一覧の行の補足。count はリアクションの合計
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション {count}'**
+  String trendUserReactions(int count);
+
+  /// No description provided for @trendMenuOpenAs.
+  ///
+  /// In ja, this message translates to:
+  /// **'別のアカウントで開く'**
+  String get trendMenuOpenAs;
+
+  /// No description provided for @trendMenuReport.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報'**
+  String get trendMenuReport;
+
+  /// account は SNS アカウント(@名前@サーバー)
+  ///
+  /// In ja, this message translates to:
+  /// **'{account}(トレンドに出したアカウント)'**
+  String trendMenuAccountSourced(String account);
+
+  /// No description provided for @trendReportTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報'**
+  String get trendReportTitle;
+
+  /// No description provided for @trendReportMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド「{tag}」を通報します。RASQ の審査で確認します。通報したトレンドは、トレンドの一覧に出なくなります。'**
+  String trendReportMessage(String tag);
+
+  /// server はトレンドを出したサーバー
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド「{tag}」({server})を通報します。RASQ の審査で確認します。通報したトレンドは、トレンドの一覧に出なくなります。'**
+  String trendReportMessageWithServer(String tag, String server);
+
+  /// No description provided for @trendReportNoteHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'補足(任意)'**
+  String get trendReportNoteHint;
+
+  /// No description provided for @trendReportSend.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報する'**
+  String get trendReportSend;
+
+  /// No description provided for @trendReportSent.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報しました。RASQ の審査で確認します'**
+  String get trendReportSent;
+
+  /// No description provided for @trendReportStored.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末に控えました。RASQ アカウントに繋がったら送ります'**
+  String get trendReportStored;
+
+  /// No description provided for @trendReportFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'送れなかったので、この端末に控えました(あとで送り直します)'**
+  String get trendReportFailed;
+
+  /// No description provided for @trendReportUnhide.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示に戻す'**
+  String get trendReportUnhide;
+
+  /// ノードの見出しで、プラグインが 1 つに決まらないときの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプラグイン'**
+  String get trendPluginFallbackName;
+
+  /// No description provided for @trendPluginLoadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした'**
+  String get trendPluginLoadFailed;
+
+  /// No description provided for @trendPluginNoWords.
+  ///
+  /// In ja, this message translates to:
+  /// **'候補のワードはまだありません'**
+  String get trendPluginNoWords;
+
+  /// Today のノードで、候補のワードを 1 つずつかぎかっこで囲む
+  ///
+  /// In ja, this message translates to:
+  /// **'「{word}」'**
+  String trendPluginWordQuoted(String word);
+
+  /// words は trendPluginWordQuoted を並べたもの
+  ///
+  /// In ja, this message translates to:
+  /// **'{words}の投稿はまだありません'**
+  String trendPluginTodayEmpty(String words);
+
+  /// words は trendPluginWordQuoted を並べたもの
+  ///
+  /// In ja, this message translates to:
+  /// **'{words}の投稿'**
+  String trendPluginTodayHeading(String words);
+
+  /// 刺激性の 8 つの感情の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'喜び'**
+  String get trendEmotionJoy;
+
+  /// No description provided for @trendEmotionTrust.
+  ///
+  /// In ja, this message translates to:
+  /// **'信頼'**
+  String get trendEmotionTrust;
+
+  /// No description provided for @trendEmotionFear.
+  ///
+  /// In ja, this message translates to:
+  /// **'恐れ'**
+  String get trendEmotionFear;
+
+  /// No description provided for @trendEmotionSurprise.
+  ///
+  /// In ja, this message translates to:
+  /// **'驚き'**
+  String get trendEmotionSurprise;
+
+  /// No description provided for @trendEmotionSadness.
+  ///
+  /// In ja, this message translates to:
+  /// **'悲しみ'**
+  String get trendEmotionSadness;
+
+  /// No description provided for @trendEmotionDisgust.
+  ///
+  /// In ja, this message translates to:
+  /// **'嫌悪'**
+  String get trendEmotionDisgust;
+
+  /// No description provided for @trendEmotionAnger.
+  ///
+  /// In ja, this message translates to:
+  /// **'怒り'**
+  String get trendEmotionAnger;
+
+  /// No description provided for @trendEmotionAnticipation.
+  ///
+  /// In ja, this message translates to:
+  /// **'期待'**
+  String get trendEmotionAnticipation;
+
+  /// No description provided for @trendExamplesNoCandidates.
+  ///
+  /// In ja, this message translates to:
+  /// **'候補がありません'**
+  String get trendExamplesNoCandidates;
+
+  /// No description provided for @trendExamplesAllow.
+  ///
+  /// In ja, this message translates to:
+  /// **'好き'**
+  String get trendExamplesAllow;
+
+  /// No description provided for @trendExamplesDeny.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きではない'**
+  String get trendExamplesDeny;
+
+  /// No description provided for @trendExamplesDecide.
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get trendExamplesDecide;
+
+  /// source は出どころの名前(最近のアクション / プラグインなど)
+  ///
+  /// In ja, this message translates to:
+  /// **'{source}を読み込めませんでした: {error}'**
+  String trendExamplesLoadFailed(String source, String error);
+
+  /// No description provided for @trendExamplesAllSeen.
+  ///
+  /// In ja, this message translates to:
+  /// **'全部見ました'**
+  String get trendExamplesAllSeen;
+
+  /// allowLabel / denyLabel はボタンの名前(好き / 好きではない など)、allow / deny はその数
+  ///
+  /// In ja, this message translates to:
+  /// **'{allowLabel} {allow} / {denyLabel} {deny}。決定で保存します'**
+  String trendExamplesAllSeenHint(
+    String allowLabel,
+    int allow,
+    String denyLabel,
+    int deny,
+  );
+
+  /// No description provided for @trendExamplesIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'中身を見て、下の「{allowLabel}」/「{denyLabel}」(右 / 左スワイプでも)で例にします。新しいものは、例との近さで分けます。'**
+  String trendExamplesIntro(String allowLabel, String denyLabel);
+
+  /// intro は説明の文(trendExamplesIntro など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{intro}({allowLabel} {allow} / {denyLabel} {deny}・残り {remaining, plural, other{{remaining} 件}})'**
+  String trendExamplesSummary(
+    String intro,
+    String allowLabel,
+    int allow,
+    String denyLabel,
+    int deny,
+    int remaining,
+  );
+
+  /// No description provided for @trendExamplesSearch.
+  ///
+  /// In ja, this message translates to:
+  /// **'探す'**
+  String get trendExamplesSearch;
+
+  /// No description provided for @trendExamplesSkip.
+  ///
+  /// In ja, this message translates to:
+  /// **'とばす'**
+  String get trendExamplesSkip;
+
+  /// 話題のカードの右上の、ほかの投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'+{count, plural, other{{count} 件}}'**
+  String trendExamplesMorePosts(int count);
+
+  /// No description provided for @trendExamplesPostsUnreadable.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿を読めませんでした(名前と説明で比べます)'**
+  String get trendExamplesPostsUnreadable;
+
+  /// No description provided for @trendExamplesOthers.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほか {count, plural, other{{count} 件}}'**
+  String trendExamplesOthers(int count);
+
+  /// No description provided for @trendExamplesSourceActions.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近のアクション'**
+  String get trendExamplesSourceActions;
+
+  /// No description provided for @trendExamplesSourceActionsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近のアクションがありません'**
+  String get trendExamplesSourceActionsEmpty;
+
+  /// No description provided for @trendExamplesSourceActionsEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションやブックマークをすると、ここから選べます'**
+  String get trendExamplesSourceActionsEmptyHint;
+
+  /// No description provided for @trendExamplesSourcePlugins.
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン'**
+  String get trendExamplesSourcePlugins;
+
+  /// No description provided for @trendExamplesSourcePluginsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'入れているプラグインはありません'**
+  String get trendExamplesSourcePluginsEmpty;
+
+  /// No description provided for @trendExamplesSourceClips.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ'**
+  String get trendExamplesSourceClips;
+
+  /// No description provided for @trendExamplesSourceClipsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップはありません'**
+  String get trendExamplesSourceClipsEmpty;
+
+  /// No description provided for @trendExamplesSourceLists.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get trendExamplesSourceLists;
+
+  /// No description provided for @trendExamplesSourceListsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストはありません'**
+  String get trendExamplesSourceListsEmpty;
+
+  /// No description provided for @trendExamplesSourceStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストア'**
+  String get trendExamplesSourceStore;
+
+  /// No description provided for @trendExamplesSourceStoreHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアを探す(空 = 一覧)'**
+  String get trendExamplesSourceStoreHint;
+
+  /// No description provided for @trendExamplesSourceStoreEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりませんでした'**
+  String get trendExamplesSourceStoreEmpty;
+
+  /// 例の種類の札
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン'**
+  String get trendExamplesKindPlugin;
+
+  /// No description provided for @trendExamplesKindClip.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ'**
+  String get trendExamplesKindClip;
+
+  /// No description provided for @trendExamplesKindList.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get trendExamplesKindList;
+
+  /// No description provided for @trendExamplesKindPost.
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get trendExamplesKindPost;
+
+  /// No description provided for @trendExamplesKindText.
+  ///
+  /// In ja, this message translates to:
+  /// **'ことば'**
+  String get trendExamplesKindText;
+
+  /// No description provided for @trendProfileSheetTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプロファイル設定'**
+  String get trendProfileSheetTitle;
+
+  /// No description provided for @trendProfileClose.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get trendProfileClose;
+
+  /// No description provided for @trendProfileDecide.
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get trendProfileDecide;
+
+  /// No description provided for @trendProfileGenres.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性'**
+  String get trendProfileGenres;
+
+  /// No description provided for @trendProfileGenresSnsDefault.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性(SNS 側の設定に任せる)'**
+  String get trendProfileGenresSnsDefault;
+
+  /// No description provided for @trendProfileGenresAuto.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性(アクションから自動抽出)'**
+  String get trendProfileGenresAuto;
+
+  /// No description provided for @trendProfileAddGenrePill.
+  ///
+  /// In ja, this message translates to:
+  /// **'+ ジャンルを追加'**
+  String get trendProfileAddGenrePill;
+
+  /// No description provided for @trendProfileEdit.
+  ///
+  /// In ja, this message translates to:
+  /// **'編集'**
+  String get trendProfileEdit;
+
+  /// No description provided for @trendProfileTendencyTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの指向性/刺激性'**
+  String get trendProfileTendencyTitle;
+
+  /// directivity は trendProfileDirNarrow などの語、stimulus は trendProfileStimNone か trendProfileStimCapped
+  ///
+  /// In ja, this message translates to:
+  /// **'指向性 {directivity} ・ 刺激性 {stimulus}'**
+  String trendProfileTendencySummary(String directivity, String stimulus);
+
+  /// No description provided for @trendProfilePluginsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプラグインの設定'**
+  String get trendProfilePluginsTitle;
+
+  /// No description provided for @trendProfilePluginsSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'TL のノード / 検索の候補'**
+  String get trendProfilePluginsSubtitle;
+
+  /// 開発者モードの詳しい説明。trend.suggest はスロットの id(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'trend.suggest のプラグイン。TL のカスタマイズのノード(トレンドを取得 / Today / カスタム)と検索の候補で出します'**
+  String get trendProfilePluginsDetail;
+
+  /// No description provided for @trendProfileCacheNetworkTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャッシュネットワークの設定'**
+  String get trendProfileCacheNetworkTitle;
+
+  /// No description provided for @trendProfileComingSoon.
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中'**
+  String get trendProfileComingSoon;
+
+  /// No description provided for @trendProfileAlgorithmTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アルゴリズム(ノード)を編集'**
+  String get trendProfileAlgorithmTitle;
+
+  /// No description provided for @trendProfileAlgorithmSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの集め方・並べ方を編集します'**
+  String get trendProfileAlgorithmSubtitle;
+
+  /// 開発者モードの詳しい説明。ml.tendency はノードの id(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの取得・並べ替えの鎖(ml.tendency ノードでこのプロファイルを使えます)'**
+  String get trendProfileAlgorithmDetail;
+
+  /// No description provided for @trendProfileSharedCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'この設定は、おすすめ / トレンド / 関連 TL で共通です。'**
+  String get trendProfileSharedCaption;
+
+  /// 開発者モードの詳しい説明。storage.safe / trend.profile は保存先の名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'このプロファイルは storage.safe(trend.profile)に保存され、おすすめ / トレンド / 関連 TL の既定と、ノードエディタの「指向性/刺激性」ノードが共通で読みます。'**
+  String get trendProfileSharedCaptionDetail;
+
+  /// No description provided for @trendProfileDirNarrow.
+  ///
+  /// In ja, this message translates to:
+  /// **'狭い'**
+  String get trendProfileDirNarrow;
+
+  /// No description provided for @trendProfileDirWide.
+  ///
+  /// In ja, this message translates to:
+  /// **'広い'**
+  String get trendProfileDirWide;
+
+  /// No description provided for @trendProfileDirNormal.
+  ///
+  /// In ja, this message translates to:
+  /// **'ふつう'**
+  String get trendProfileDirNormal;
+
+  /// No description provided for @trendProfileStimNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'制限なし'**
+  String get trendProfileStimNone;
+
+  /// emotions は感情の名前(最大 3 つ)を trendProfileListSeparator でつないだもの
+  ///
+  /// In ja, this message translates to:
+  /// **'{emotions}を抑える'**
+  String trendProfileStimCapped(String emotions);
+
+  /// 感情の名前を並べるときの区切り
+  ///
+  /// In ja, this message translates to:
+  /// **'・'**
+  String get trendProfileListSeparator;
+
+  /// No description provided for @trendProfileDirectivityTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの指向性'**
+  String get trendProfileDirectivityTitle;
+
+  /// No description provided for @trendProfileDirectivitySubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'狭いほど、好きなジャンルから外れた投稿を出しません。'**
+  String get trendProfileDirectivitySubtitle;
+
+  /// No description provided for @trendProfileDirectivityDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性への近さのしきい値(狭い ⇄ 広い)。狭いほど外れた投稿を落とします。'**
+  String get trendProfileDirectivityDetail;
+
+  /// No description provided for @trendProfileShareTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'設定を共有'**
+  String get trendProfileShareTitle;
+
+  /// No description provided for @trendProfileShareSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'おすすめ / トレンド / 関連 TL にこの設定を使います'**
+  String get trendProfileShareSubtitle;
+
+  /// No description provided for @trendProfileShareDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフにすると TL の既定適用を止めます(ノードで明示した分は効きます)'**
+  String get trendProfileShareDetail;
+
+  /// No description provided for @trendProfileStimulusTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの刺激性'**
+  String get trendProfileStimulusTitle;
+
+  /// No description provided for @trendProfileStimulusCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'各感情の上限。中心に寄せるほど抑えます'**
+  String get trendProfileStimulusCaption;
+
+  /// No description provided for @trendProfileStimulusReset.
+  ///
+  /// In ja, this message translates to:
+  /// **'刺激性をリセット'**
+  String get trendProfileStimulusReset;
+
+  /// No description provided for @trendProfileEchoChamberWarning.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。'**
+  String get trendProfileEchoChamberWarning;
+
+  /// No description provided for @trendProfileStimulusEstimate.
+  ///
+  /// In ja, this message translates to:
+  /// **'刺激性は、いまは言葉の傾向から推定しています。'**
+  String get trendProfileStimulusEstimate;
+
+  /// 開発者モードの詳しい説明
+  ///
+  /// In ja, this message translates to:
+  /// **'刺激性は語彙ルールで推定しています。'**
+  String get trendProfileStimulusEstimateDetail;
+
+  /// No description provided for @trendProfileTendencySaved.
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの指向性/刺激性を保存しました'**
+  String get trendProfileTendencySaved;
+
+  /// No description provided for @trendProfileSnsDefaultTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS 側の設定に任せる'**
+  String get trendProfileSnsDefaultTitle;
+
+  /// No description provided for @trendProfileSnsDefaultSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'オンの間は端末側で絞りません'**
+  String get trendProfileSnsDefaultSubtitle;
+
+  /// No description provided for @trendProfileAutoGenreTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'あなたのアクションから自動抽出'**
+  String get trendProfileAutoGenreTitle;
+
+  /// No description provided for @trendProfileAutoGenreSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションした投稿の特徴語を好きなジャンルに足します'**
+  String get trendProfileAutoGenreSubtitle;
+
+  /// No description provided for @trendProfilePickFromActions.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近のアクションから好きなものを選択'**
+  String get trendProfilePickFromActions;
+
+  /// No description provided for @trendProfileGenresTapToRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性(タップで外す)'**
+  String get trendProfileGenresTapToRemove;
+
+  /// No description provided for @trendProfileNoneYet.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだありません'**
+  String get trendProfileNoneYet;
+
+  /// No description provided for @trendProfileAddGenreHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'ジャンル/キーワードを追加'**
+  String get trendProfileAddGenreHint;
+
+  /// No description provided for @trendProfileAddGenre.
+  ///
+  /// In ja, this message translates to:
+  /// **'ジャンルを追加'**
+  String get trendProfileAddGenre;
+
+  /// allow / deny は好きな例 / 好きではない例の数
+  ///
+  /// In ja, this message translates to:
+  /// **'例(好き {allow} / 好きではない {deny}。タップで外す)'**
+  String trendProfileExamplesLabel(int allow, int deny);
+
+  /// 好きな例のチップ。label は例の短い名前
+  ///
+  /// In ja, this message translates to:
+  /// **'好き: {label}'**
+  String trendProfileExampleAllow(String label);
+
+  /// 好きではない例のチップ。label は例の短い名前
+  ///
+  /// In ja, this message translates to:
+  /// **'好きではない: {label}'**
+  String trendProfileExampleDeny(String label);
+
+  /// No description provided for @trendProfileDislikedTapToRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きではない(タップで外す)'**
+  String get trendProfileDislikedTapToRemove;
+
+  /// No description provided for @trendProfileGenresSaved.
+  ///
+  /// In ja, this message translates to:
+  /// **'好きなジャンル/方向性を保存しました'**
+  String get trendProfileGenresSaved;
+
+  /// No description provided for @trendProfilePickTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションからジャンルを選択'**
+  String get trendProfilePickTitle;
+
+  /// No description provided for @trendProfilePickIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近のアクションを話題ごとに出しています。カードを選んで「好き」/「好きではない」へ(右/左スワイプでも)。'**
+  String get trendProfilePickIntro;
+
+  /// 開発者モードの詳しい説明。perPage は 1 ページのカードの数
+  ///
+  /// In ja, this message translates to:
+  /// **'最近のアクションを類似した話題でまとめ、話題性の強いものから {perPage, plural, other{{perPage} 件}}ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。'**
+  String trendProfilePickIntroDetail(int perPage);
 
   /// VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)
   ///

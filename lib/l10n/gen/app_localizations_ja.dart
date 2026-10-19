@@ -4861,6 +4861,669 @@ class AppLocalizationsJa extends AppLocalizations {
   String get onboardingTourRaiBubble => 'TL にリストを足したい';
 
   @override
+  String get pluginsCancel => 'キャンセル';
+
+  @override
+  String get pluginsClose => '閉じる';
+
+  @override
+  String get pluginsSwingNotPackage => 'Swing のプラグインは .rasqpkg か .wasm です';
+
+  @override
+  String get pluginsSwingNoRequires => 'Swing では、ほかのプラグインを土台にする子プラグインは配れません';
+
+  @override
+  String get pluginsSwingSingleOnly => 'Swing で配れるのは、プラグイン 1 つだけの入れ物です';
+
+  @override
+  String get pluginsPageNotPage => 'ページ型のプラグインではありません';
+
+  @override
+  String pluginsPageSwingRequires(String ids) {
+    return 'ほかのプラグイン($ids)を土台にしているため、Swing では配れません';
+  }
+
+  @override
+  String get pluginsPageSwingChild =>
+      'ほかのプラグインの入れ物に入っている子プラグインのため、Swing では配れません';
+
+  @override
+  String pluginsPageSwingSiblings(String names) {
+    return '子プラグイン($names)と一緒の入れ物のため、Swing では配れません';
+  }
+
+  @override
+  String pluginsArtifactMismatch(String pluginId) {
+    return '$pluginId: 取り直した配布物がインストール時と違うため読み込みません(ストアで入れ直してください)';
+  }
+
+  @override
+  String pluginsIsSnsPlugin(String id) {
+    return '$id は SNS プラグインです(スロットには登録できません)';
+  }
+
+  @override
+  String get pluginsManifestMissing => 'plugin.manifest がありません';
+
+  @override
+  String get pluginsManifestIdEmpty => 'plugin.manifest.id が空です';
+
+  @override
+  String get pluginsSwingSurfaceOnly =>
+      'Swing で配れるのは、Swing の面(surfaces: swing、solo)のページ型だけです';
+
+  @override
+  String get pluginsRasqPageSurfaceOnly =>
+      'RASQ のページに置けるのは、プロフィールの面(surfaces: profile、solo)のページ型だけです';
+
+  @override
+  String pluginsIdMismatch(String expected, String actual) {
+    return '配布物の目次は $expected なのに、wasm は $actual を名乗っています';
+  }
+
+  @override
+  String pluginsRegistered(String name, String slots) {
+    return '$name を登録しました($slots)';
+  }
+
+  @override
+  String pluginsRegisterFailed(String error) {
+    return '登録できませんでした: $error';
+  }
+
+  @override
+  String pluginsImageReceiveFailed(String name, String error) {
+    return '$name: 画像を受け取れませんでした($error)';
+  }
+
+  @override
+  String pluginsSharedNoSession(String name) {
+    return '$name: 共有セッションに入っていないため、みんなの値は変えられません';
+  }
+
+  @override
+  String get pluginsMuteAddTitle => 'ミュート語に追加';
+
+  @override
+  String pluginsMuteAddMessage(String name, String word) {
+    return '$name が「$word」をミュート語に追加しようとしています。';
+  }
+
+  @override
+  String get pluginsMuteAddConfirm => '追加';
+
+  @override
+  String pluginsMuteAdded(String word) {
+    return '「$word」をミュート語に追加しました';
+  }
+
+  @override
+  String pluginsEffectSendFailed(String name, String error) {
+    return '$name: 効果映像を送れませんでした($error)';
+  }
+
+  @override
+  String pluginsImageScaled(String name) {
+    return '$name: 編集のため画像を小さくしました';
+  }
+
+  @override
+  String get pluginsErrorReturned => 'プラグインがエラーを返しました';
+
+  @override
+  String get pluginsGenreTone => '色調';
+
+  @override
+  String get pluginsGenreProcess => '加工';
+
+  @override
+  String get pluginsGenreTransform => '変形';
+
+  @override
+  String get pluginsGenreAdd => '追加';
+
+  @override
+  String get pluginsGenreDraw => '描画';
+
+  @override
+  String get pluginsTrustFull => 'フル';
+
+  @override
+  String get pluginsTrustBundled => 'フル(同梱)';
+
+  @override
+  String get pluginsTrustRestricted => '制限';
+
+  @override
+  String get pluginsTrustSwing => '制限(Swing)';
+
+  @override
+  String get pluginsTrustHint =>
+      '自分の開発者鍵で署名した .rspkg / .rasqpkg はフル機能。rasq build が署名します';
+
+  @override
+  String get pluginsEditorCancel => 'キャンセル';
+
+  @override
+  String get pluginsEditorUndo => 'ひとつ戻す';
+
+  @override
+  String get pluginsEditorRedo => 'やり直す';
+
+  @override
+  String get pluginsEditorDone => '完了';
+
+  @override
+  String get pluginsEditorRemove => '削除';
+
+  @override
+  String get pluginsEditorBack => '戻る';
+
+  @override
+  String get pluginsEditorMore => 'その他';
+
+  @override
+  String get pluginsEditorApplying => '変更を適用しています';
+
+  @override
+  String get pluginsEditorPreparing => 'エディターを準備しています';
+
+  @override
+  String get pluginsEditorPleaseWait => 'お待ちください…';
+
+  @override
+  String get pluginsEditorCloseWarningTitle => '加工をやめますか？';
+
+  @override
+  String get pluginsEditorCloseWarningMessage => '変更は保存されません。';
+
+  @override
+  String get pluginsEditorCloseWarningConfirm => 'やめる';
+
+  @override
+  String get pluginsEditorCloseWarningCancel => '続ける';
+
+  @override
+  String get pluginsEditorLayerEdit => '編集';
+
+  @override
+  String get pluginsEditorLayerRotateScale => '回転と拡縮';
+
+  @override
+  String get pluginsEditorPaint => 'ペイント';
+
+  @override
+  String get pluginsEditorZoom => 'ズーム';
+
+  @override
+  String get pluginsEditorFreehand => 'フリーハンド';
+
+  @override
+  String get pluginsEditorArrow => '矢印';
+
+  @override
+  String get pluginsEditorLine => '直線';
+
+  @override
+  String get pluginsEditorRectangle => '四角';
+
+  @override
+  String get pluginsEditorCircle => '丸';
+
+  @override
+  String get pluginsEditorDashLine => '点線';
+
+  @override
+  String get pluginsEditorBlur => 'ぼかし';
+
+  @override
+  String get pluginsEditorPixelate => 'モザイク';
+
+  @override
+  String get pluginsEditorLineWidth => '線の太さ';
+
+  @override
+  String get pluginsEditorEraser => '消しゴム';
+
+  @override
+  String get pluginsEditorFill => '塗り';
+
+  @override
+  String get pluginsEditorOpacity => '不透明度';
+
+  @override
+  String get pluginsEditorColor => '色';
+
+  @override
+  String get pluginsEditorTextHint => 'テキストを入力';
+
+  @override
+  String get pluginsEditorText => 'テキスト';
+
+  @override
+  String get pluginsEditorTextAlign => '揃え';
+
+  @override
+  String get pluginsEditorFontScale => '文字の大きさ';
+
+  @override
+  String get pluginsEditorTextBackground => '背景';
+
+  @override
+  String get pluginsEditorCropRotate => 'クロップ / 回転';
+
+  @override
+  String get pluginsEditorRotate => '回転';
+
+  @override
+  String get pluginsEditorFlip => '反転';
+
+  @override
+  String get pluginsEditorTilt => '傾き';
+
+  @override
+  String get pluginsEditorTiltHorizontal => '水平';
+
+  @override
+  String get pluginsEditorTiltVertical => '垂直';
+
+  @override
+  String get pluginsEditorRatio => '比率';
+
+  @override
+  String get pluginsEditorReset => 'リセット';
+
+  @override
+  String get pluginsEditorTune => '調整';
+
+  @override
+  String get pluginsEditorBrightness => '明るさ';
+
+  @override
+  String get pluginsEditorContrast => 'コントラスト';
+
+  @override
+  String get pluginsEditorSaturation => '彩度';
+
+  @override
+  String get pluginsEditorExposure => '露出';
+
+  @override
+  String get pluginsEditorHue => '色相';
+
+  @override
+  String get pluginsEditorTemperature => '色温度';
+
+  @override
+  String get pluginsEditorFade => 'フェード';
+
+  @override
+  String get pluginsEditorTint => 'ティント';
+
+  @override
+  String get pluginsEditorFilter => 'フィルター';
+
+  @override
+  String get pluginsEditorSticker => 'ステッカー';
+
+  @override
+  String get pluginsEditorEmoji => '絵文字';
+
+  @override
+  String get pluginsEditorEmojiSearch => '検索';
+
+  @override
+  String get pluginsEditorEmojiRecent => '最近';
+
+  @override
+  String get pluginsEditorEmojiSmileys => '顔と人';
+
+  @override
+  String get pluginsEditorEmojiAnimals => '動物と自然';
+
+  @override
+  String get pluginsEditorEmojiFood => '食べ物';
+
+  @override
+  String get pluginsEditorEmojiActivities => 'アクティビティ';
+
+  @override
+  String get pluginsEditorEmojiTravel => '旅行と場所';
+
+  @override
+  String get pluginsEditorEmojiObjects => 'もの';
+
+  @override
+  String get pluginsEditorEmojiSymbols => '記号';
+
+  @override
+  String get pluginsEditorEmojiFlags => '旗';
+
+  @override
+  String get pluginsMediaCancel => 'キャンセル';
+
+  @override
+  String get pluginsMediaClose => '閉じる';
+
+  @override
+  String get pluginsMediaApply => '適用';
+
+  @override
+  String pluginsMediaNotSvg(String name) {
+    return '$name が SVG を返さなかったので、使いませんでした';
+  }
+
+  @override
+  String get pluginsMediaPaperDoneMissing => 'いまは使えません(紙の「完了」が見つかりません)';
+
+  @override
+  String get pluginsMediaBarEdit => 'バーの編集';
+
+  @override
+  String get pluginsMediaAudioUnsupported =>
+      'この端末では音声を動画にできません(Android / iOS / macOS だけ)。音声のまま添付できます';
+
+  @override
+  String pluginsMediaOpenAudioFailed(String error) {
+    return '音声を開けませんでした: $error';
+  }
+
+  @override
+  String pluginsMediaOpenVideoFailed(String error) {
+    return '動画を開けませんでした: $error';
+  }
+
+  @override
+  String pluginsMediaReexportFailed(String error) {
+    return '動画を書き出し直せませんでした: $error';
+  }
+
+  @override
+  String get pluginsMediaCropWithMovingObject =>
+      'クロップ / 回転と、動くオブジェクトは一緒に使えません。静止画で入れました';
+
+  @override
+  String pluginsMediaExportFailed(String error) {
+    return '動画を書き出せませんでした: $error';
+  }
+
+  @override
+  String pluginsMediaOverlayFailed(String error) {
+    return '動くオブジェクトを重ねられなかったので、静止画で入れました: $error';
+  }
+
+  @override
+  String pluginsMediaFilterNotReceived(String label) {
+    return '$label: フィルターを受け取れませんでした';
+  }
+
+  @override
+  String pluginsMediaFilterDropped(String label, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 個',
+    );
+    return '$label: 描画が多すぎるので $_temp0を省きました';
+  }
+
+  @override
+  String pluginsMediaFiltersFailed(String names) {
+    return '適用できなかったフィルター: $names(この加工は入っていません)';
+  }
+
+  @override
+  String get pluginsMediaCropWithMovingPost =>
+      'クロップ / 回転と、動く投稿は一緒に使えません。投稿は静止画で入れました';
+
+  @override
+  String get pluginsMediaVideoImageUnreadable =>
+      '動画にできなかったので、静止画で入れました(画像を読めませんでした)';
+
+  @override
+  String pluginsMediaVideoPostFailed(String error) {
+    return '動画にできなかったので、投稿は静止画で入れました: $error';
+  }
+
+  @override
+  String get pluginsMediaToVideoTitle => '動画に変換しますか?';
+
+  @override
+  String pluginsMediaToVideoMessage(String note) {
+    return '$note\n「動画にする」と、置いた場所で動く動画として書き出します。「静止画で貼る」は今の画像だけを貼ります。';
+  }
+
+  @override
+  String get pluginsMediaToVideoConfirm => '動画にする';
+
+  @override
+  String get pluginsMediaToVideoStill => '静止画で貼る';
+
+  @override
+  String get pluginsMediaImageUnreadable => '画像を読めませんでした';
+
+  @override
+  String get pluginsMediaExportOnDone => '完了すると、動画として書き出します';
+
+  @override
+  String get pluginsMediaObjectNote => 'ノート';
+
+  @override
+  String get pluginsMediaObjectVideo => '動画';
+
+  @override
+  String get pluginsMediaObjectImage => '画像';
+
+  @override
+  String get pluginsMediaAddImage => '画像を追加';
+
+  @override
+  String get pluginsMediaAddVideo => '動画を追加';
+
+  @override
+  String get pluginsMediaVideoLoadFailed => '動画を読み込めませんでした';
+
+  @override
+  String pluginsMediaVideoLoadFailedDetail(
+    String ext,
+    int bytes,
+    String error,
+  ) {
+    return '動画(.$ext、$bytes バイト)の最初のコマを取れませんでした: $error';
+  }
+
+  @override
+  String get pluginsMediaFirstFrameFailed => '動画の最初のコマを取れませんでした';
+
+  @override
+  String get pluginsMediaVideoAsObject => '動画をオブジェクトとして置きます。';
+
+  @override
+  String pluginsMediaAddFailed(String error) {
+    return 'メディアを追加できませんでした: $error';
+  }
+
+  @override
+  String get pluginsMediaAudioConverting => '音声を動画に変換しています…';
+
+  @override
+  String pluginsMediaPanelNotEditable(String name) {
+    return '$name はここでは編集できません(プラグインのパネルで操作してください)';
+  }
+
+  @override
+  String get pluginsMediaSnapDragUnset => 'この上にドラッグ(解除)';
+
+  @override
+  String get pluginsMediaSnapDragSet => 'この上にドラッグ(合わせる先にする)';
+
+  @override
+  String get pluginsMediaSnapPick => '合わせる先を選ぶ…';
+
+  @override
+  String get pluginsMediaSnapClearAll => '合わせる先をすべて解除';
+
+  @override
+  String get pluginsMediaSnapTitle => '合わせる先';
+
+  @override
+  String get pluginsMediaSnapEmpty => '名前の付いた枠がありません';
+
+  @override
+  String pluginsMediaSnapSize(int width, int height) {
+    return '$width × $height';
+  }
+
+  @override
+  String pluginsMediaSnapSizeAngle(int width, int height, int angle) {
+    return '$width × $height、$angle°';
+  }
+
+  @override
+  String get pluginsMediaPanelNoResult => '適用できませんでした(プラグインが結果を返しませんでした)';
+
+  @override
+  String get pluginsMediaPanelNoEdits => 'このプラグインに編集はありません';
+
+  @override
+  String pluginsMediaObjectEditSemantics(String title) {
+    return '$title の編集';
+  }
+
+  @override
+  String get pluginsMediaObjectLoop => '繰り返し再生';
+
+  @override
+  String get pluginsMediaObjectLoopSubtitle => 'オフ = 終わったら最後のコマで止まる';
+
+  @override
+  String get pluginsMediaObjectSpeed => '再生の速さ';
+
+  @override
+  String get pluginsMediaObjectVolume => '音';
+
+  @override
+  String get pluginsMediaObjectMuted => '消音';
+
+  @override
+  String get pluginsMediaObjectOpacity => '不透明度';
+
+  @override
+  String get pluginsMediaObjectRemove => 'このオブジェクトを削除';
+
+  @override
+  String pluginsMediaFilterAdjustSemantics(String title) {
+    return '$title の調整';
+  }
+
+  @override
+  String get pluginsMediaFilterObjectHint => '絵の上で、ドラッグで移動、つまんで拡縮 / 回転できます。';
+
+  @override
+  String get pluginsMediaFilterRemove => 'このフィルターを外す';
+
+  @override
+  String get pluginsMediaStickerEmpty => 'ステッカーがありません。ストアで入れると、ここに並びます';
+
+  @override
+  String get pluginsMediaStickerEmptyDetail =>
+      'ステッカーがありません。ストアでアセットパック(カテゴリ「assets」)を入れると、ここに並びます。';
+
+  @override
+  String get pluginsMediaStickerGenerate => 'プラグインで作る';
+
+  @override
+  String get pluginsPaintTitle => '落書き';
+
+  @override
+  String get pluginsPaintCancel => 'キャンセル';
+
+  @override
+  String get pluginsPaintDone => '完了';
+
+  @override
+  String get pluginsPaintCanvasSemantics => '落書きの紙';
+
+  @override
+  String get pluginsPaintFillLeak => '線で閉じた形の中をタップしてください';
+
+  @override
+  String get pluginsPaintFillOnLine => '線の内側をタップしてください';
+
+  @override
+  String get pluginsPaintFillEmpty => '塗れる形がありませんでした';
+
+  @override
+  String get pluginsPaintToolPen => 'ペン';
+
+  @override
+  String get pluginsPaintToolEraser => '消しゴム';
+
+  @override
+  String get pluginsPaintToolLasso => '投げ輪';
+
+  @override
+  String get pluginsPaintToolFill => '塗る';
+
+  @override
+  String get pluginsPaintUndo => '取り消し';
+
+  @override
+  String get pluginsPaintRedo => 'やり直し';
+
+  @override
+  String get pluginsPaintClear => '全部消す';
+
+  @override
+  String get pluginsPaintStabilizer => '手ぶれ補正';
+
+  @override
+  String get pluginsPaintStabilizerOff => '切';
+
+  @override
+  String get pluginsPaintEraserCut => '切る';
+
+  @override
+  String get pluginsPaintEraserWhole => '線ごと';
+
+  @override
+  String get pluginsPaintLassoHint => '囲んで選ぶ(線の半分以上が入ったもの)';
+
+  @override
+  String get pluginsPaintSelectionDelete => '削除';
+
+  @override
+  String get pluginsPaintSelectionDuplicate => '複製';
+
+  @override
+  String get pluginsPaintSelectionRecolor => '色を変える';
+
+  @override
+  String get pluginsPaintSelectionDeselect => '解除';
+
+  @override
+  String get pluginsPaintFillHint => '線で閉じた形の中をタップすると、線の下に塗ります';
+
+  @override
+  String pluginsPaintWidthSemantics(String width) {
+    return '太さ $width';
+  }
+
+  @override
+  String pluginsPaintColorSemantics(String color) {
+    return '色 $color';
+  }
+
+  @override
+  String get pluginsPaintNibMili => 'ミリペン';
+
+  @override
+  String get pluginsPaintNibKabura => 'カプラペン';
+
+  @override
+  String get pluginsPaintNibBrush => 'ブラシニブ';
+
+  @override
   String get profileEditTitle => 'プロフィールの更新';
 
   @override
@@ -11774,6 +12437,470 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get storePkgKindAssets => 'アセットパック';
+
+  @override
+  String get trendTitle => 'トレンド';
+
+  @override
+  String get trendTabNotes => 'ノート';
+
+  @override
+  String get trendTabFollowing => 'フォロー中';
+
+  @override
+  String get trendTabUsers => 'ユーザー';
+
+  @override
+  String get trendBackToHome => 'トレンドホームへ戻る';
+
+  @override
+  String get trendSourceAccountMark => 'トレンドに出したアカウント';
+
+  @override
+  String get trendSettingsTooltip => 'トレンド設定';
+
+  @override
+  String get trendCustomizeTooltip => 'トレンド TL をカスタマイズ';
+
+  @override
+  String get trendReload => '再読み込み';
+
+  @override
+  String get trendEmptyTitle => 'なんにもないようです';
+
+  @override
+  String get trendEmptyHint => 'ワードやフィルタを変えると見つかるかもしれません';
+
+  @override
+  String get trendFollowingEmptyTitle => 'フォロー中の投稿はありません';
+
+  @override
+  String get trendFollowingEmptyHint => 'このワードについてフォロイーはまだ投稿していません';
+
+  @override
+  String get trendUsersBlocked => '保護者がユーザーの検索を止めています';
+
+  @override
+  String get trendUsersEmpty => 'ユーザーはいません';
+
+  @override
+  String trendUserReactions(int count) {
+    return 'リアクション $count';
+  }
+
+  @override
+  String get trendMenuOpenAs => '別のアカウントで開く';
+
+  @override
+  String get trendMenuReport => '通報';
+
+  @override
+  String trendMenuAccountSourced(String account) {
+    return '$account(トレンドに出したアカウント)';
+  }
+
+  @override
+  String get trendReportTitle => '通報';
+
+  @override
+  String trendReportMessage(String tag) {
+    return 'トレンド「$tag」を通報します。RASQ の審査で確認します。通報したトレンドは、トレンドの一覧に出なくなります。';
+  }
+
+  @override
+  String trendReportMessageWithServer(String tag, String server) {
+    return 'トレンド「$tag」($server)を通報します。RASQ の審査で確認します。通報したトレンドは、トレンドの一覧に出なくなります。';
+  }
+
+  @override
+  String get trendReportNoteHint => '補足(任意)';
+
+  @override
+  String get trendReportSend => '通報する';
+
+  @override
+  String get trendReportSent => '通報しました。RASQ の審査で確認します';
+
+  @override
+  String get trendReportStored => 'この端末に控えました。RASQ アカウントに繋がったら送ります';
+
+  @override
+  String get trendReportFailed => '送れなかったので、この端末に控えました(あとで送り直します)';
+
+  @override
+  String get trendReportUnhide => '表示に戻す';
+
+  @override
+  String get trendPluginFallbackName => 'トレンドプラグイン';
+
+  @override
+  String get trendPluginLoadFailed => '読み込めませんでした';
+
+  @override
+  String get trendPluginNoWords => '候補のワードはまだありません';
+
+  @override
+  String trendPluginWordQuoted(String word) {
+    return '「$word」';
+  }
+
+  @override
+  String trendPluginTodayEmpty(String words) {
+    return '$wordsの投稿はまだありません';
+  }
+
+  @override
+  String trendPluginTodayHeading(String words) {
+    return '$wordsの投稿';
+  }
+
+  @override
+  String get trendEmotionJoy => '喜び';
+
+  @override
+  String get trendEmotionTrust => '信頼';
+
+  @override
+  String get trendEmotionFear => '恐れ';
+
+  @override
+  String get trendEmotionSurprise => '驚き';
+
+  @override
+  String get trendEmotionSadness => '悲しみ';
+
+  @override
+  String get trendEmotionDisgust => '嫌悪';
+
+  @override
+  String get trendEmotionAnger => '怒り';
+
+  @override
+  String get trendEmotionAnticipation => '期待';
+
+  @override
+  String get trendExamplesNoCandidates => '候補がありません';
+
+  @override
+  String get trendExamplesAllow => '好き';
+
+  @override
+  String get trendExamplesDeny => '好きではない';
+
+  @override
+  String get trendExamplesDecide => '決定';
+
+  @override
+  String trendExamplesLoadFailed(String source, String error) {
+    return '$sourceを読み込めませんでした: $error';
+  }
+
+  @override
+  String get trendExamplesAllSeen => '全部見ました';
+
+  @override
+  String trendExamplesAllSeenHint(
+    String allowLabel,
+    int allow,
+    String denyLabel,
+    int deny,
+  ) {
+    return '$allowLabel $allow / $denyLabel $deny。決定で保存します';
+  }
+
+  @override
+  String trendExamplesIntro(String allowLabel, String denyLabel) {
+    return '中身を見て、下の「$allowLabel」/「$denyLabel」(右 / 左スワイプでも)で例にします。新しいものは、例との近さで分けます。';
+  }
+
+  @override
+  String trendExamplesSummary(
+    String intro,
+    String allowLabel,
+    int allow,
+    String denyLabel,
+    int deny,
+    int remaining,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '$remaining 件',
+    );
+    return '$intro($allowLabel $allow / $denyLabel $deny・残り $_temp0)';
+  }
+
+  @override
+  String get trendExamplesSearch => '探す';
+
+  @override
+  String get trendExamplesSkip => 'とばす';
+
+  @override
+  String trendExamplesMorePosts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '+$_temp0';
+  }
+
+  @override
+  String get trendExamplesPostsUnreadable => '投稿を読めませんでした(名前と説明で比べます)';
+
+  @override
+  String trendExamplesOthers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return 'ほか $_temp0';
+  }
+
+  @override
+  String get trendExamplesSourceActions => '最近のアクション';
+
+  @override
+  String get trendExamplesSourceActionsEmpty => '最近のアクションがありません';
+
+  @override
+  String get trendExamplesSourceActionsEmptyHint =>
+      'リアクションやブックマークをすると、ここから選べます';
+
+  @override
+  String get trendExamplesSourcePlugins => 'プラグイン';
+
+  @override
+  String get trendExamplesSourcePluginsEmpty => '入れているプラグインはありません';
+
+  @override
+  String get trendExamplesSourceClips => 'クリップ';
+
+  @override
+  String get trendExamplesSourceClipsEmpty => 'クリップはありません';
+
+  @override
+  String get trendExamplesSourceLists => 'リスト';
+
+  @override
+  String get trendExamplesSourceListsEmpty => 'リストはありません';
+
+  @override
+  String get trendExamplesSourceStore => 'ストア';
+
+  @override
+  String get trendExamplesSourceStoreHint => 'ストアを探す(空 = 一覧)';
+
+  @override
+  String get trendExamplesSourceStoreEmpty => '見つかりませんでした';
+
+  @override
+  String get trendExamplesKindPlugin => 'プラグイン';
+
+  @override
+  String get trendExamplesKindClip => 'クリップ';
+
+  @override
+  String get trendExamplesKindList => 'リスト';
+
+  @override
+  String get trendExamplesKindPost => '投稿';
+
+  @override
+  String get trendExamplesKindText => 'ことば';
+
+  @override
+  String get trendProfileSheetTitle => 'トレンドプロファイル設定';
+
+  @override
+  String get trendProfileClose => '閉じる';
+
+  @override
+  String get trendProfileDecide => '決定';
+
+  @override
+  String get trendProfileGenres => '好きなジャンル/方向性';
+
+  @override
+  String get trendProfileGenresSnsDefault => '好きなジャンル/方向性(SNS 側の設定に任せる)';
+
+  @override
+  String get trendProfileGenresAuto => '好きなジャンル/方向性(アクションから自動抽出)';
+
+  @override
+  String get trendProfileAddGenrePill => '+ ジャンルを追加';
+
+  @override
+  String get trendProfileEdit => '編集';
+
+  @override
+  String get trendProfileTendencyTitle => 'トレンドの指向性/刺激性';
+
+  @override
+  String trendProfileTendencySummary(String directivity, String stimulus) {
+    return '指向性 $directivity ・ 刺激性 $stimulus';
+  }
+
+  @override
+  String get trendProfilePluginsTitle => 'トレンドプラグインの設定';
+
+  @override
+  String get trendProfilePluginsSubtitle => 'TL のノード / 検索の候補';
+
+  @override
+  String get trendProfilePluginsDetail =>
+      'trend.suggest のプラグイン。TL のカスタマイズのノード(トレンドを取得 / Today / カスタム)と検索の候補で出します';
+
+  @override
+  String get trendProfileCacheNetworkTitle => 'キャッシュネットワークの設定';
+
+  @override
+  String get trendProfileComingSoon => '準備中';
+
+  @override
+  String get trendProfileAlgorithmTitle => 'アルゴリズム(ノード)を編集';
+
+  @override
+  String get trendProfileAlgorithmSubtitle => 'トレンドの集め方・並べ方を編集します';
+
+  @override
+  String get trendProfileAlgorithmDetail =>
+      'トレンドの取得・並べ替えの鎖(ml.tendency ノードでこのプロファイルを使えます)';
+
+  @override
+  String get trendProfileSharedCaption => 'この設定は、おすすめ / トレンド / 関連 TL で共通です。';
+
+  @override
+  String get trendProfileSharedCaptionDetail =>
+      'このプロファイルは storage.safe(trend.profile)に保存され、おすすめ / トレンド / 関連 TL の既定と、ノードエディタの「指向性/刺激性」ノードが共通で読みます。';
+
+  @override
+  String get trendProfileDirNarrow => '狭い';
+
+  @override
+  String get trendProfileDirWide => '広い';
+
+  @override
+  String get trendProfileDirNormal => 'ふつう';
+
+  @override
+  String get trendProfileStimNone => '制限なし';
+
+  @override
+  String trendProfileStimCapped(String emotions) {
+    return '$emotionsを抑える';
+  }
+
+  @override
+  String get trendProfileListSeparator => '・';
+
+  @override
+  String get trendProfileDirectivityTitle => 'トレンドの指向性';
+
+  @override
+  String get trendProfileDirectivitySubtitle => '狭いほど、好きなジャンルから外れた投稿を出しません。';
+
+  @override
+  String get trendProfileDirectivityDetail =>
+      '好きなジャンル/方向性への近さのしきい値(狭い ⇄ 広い)。狭いほど外れた投稿を落とします。';
+
+  @override
+  String get trendProfileShareTitle => '設定を共有';
+
+  @override
+  String get trendProfileShareSubtitle => 'おすすめ / トレンド / 関連 TL にこの設定を使います';
+
+  @override
+  String get trendProfileShareDetail => 'オフにすると TL の既定適用を止めます(ノードで明示した分は効きます)';
+
+  @override
+  String get trendProfileStimulusTitle => 'トレンドの刺激性';
+
+  @override
+  String get trendProfileStimulusCaption => '各感情の上限。中心に寄せるほど抑えます';
+
+  @override
+  String get trendProfileStimulusReset => '刺激性をリセット';
+
+  @override
+  String get trendProfileEchoChamberWarning =>
+      'トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。';
+
+  @override
+  String get trendProfileStimulusEstimate => '刺激性は、いまは言葉の傾向から推定しています。';
+
+  @override
+  String get trendProfileStimulusEstimateDetail => '刺激性は語彙ルールで推定しています。';
+
+  @override
+  String get trendProfileTendencySaved => 'トレンドの指向性/刺激性を保存しました';
+
+  @override
+  String get trendProfileSnsDefaultTitle => 'SNS 側の設定に任せる';
+
+  @override
+  String get trendProfileSnsDefaultSubtitle => 'オンの間は端末側で絞りません';
+
+  @override
+  String get trendProfileAutoGenreTitle => 'あなたのアクションから自動抽出';
+
+  @override
+  String get trendProfileAutoGenreSubtitle => 'リアクションした投稿の特徴語を好きなジャンルに足します';
+
+  @override
+  String get trendProfilePickFromActions => '最近のアクションから好きなものを選択';
+
+  @override
+  String get trendProfileGenresTapToRemove => '好きなジャンル/方向性(タップで外す)';
+
+  @override
+  String get trendProfileNoneYet => 'まだありません';
+
+  @override
+  String get trendProfileAddGenreHint => 'ジャンル/キーワードを追加';
+
+  @override
+  String get trendProfileAddGenre => 'ジャンルを追加';
+
+  @override
+  String trendProfileExamplesLabel(int allow, int deny) {
+    return '例(好き $allow / 好きではない $deny。タップで外す)';
+  }
+
+  @override
+  String trendProfileExampleAllow(String label) {
+    return '好き: $label';
+  }
+
+  @override
+  String trendProfileExampleDeny(String label) {
+    return '好きではない: $label';
+  }
+
+  @override
+  String get trendProfileDislikedTapToRemove => '好きではない(タップで外す)';
+
+  @override
+  String get trendProfileGenresSaved => '好きなジャンル/方向性を保存しました';
+
+  @override
+  String get trendProfilePickTitle => 'アクションからジャンルを選択';
+
+  @override
+  String get trendProfilePickIntro =>
+      '最近のアクションを話題ごとに出しています。カードを選んで「好き」/「好きではない」へ(右/左スワイプでも)。';
+
+  @override
+  String trendProfilePickIntroDetail(int perPage) {
+    String _temp0 = intl.Intl.pluralLogic(
+      perPage,
+      locale: localeName,
+      other: '$perPage 件',
+    );
+    return '最近のアクションを類似した話題でまとめ、話題性の強いものから $_temp0ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。';
+  }
 
   @override
   String get vcSectionInvited => '招待';

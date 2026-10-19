@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
+import '../../l10n/l10n.dart';
 import 'media_filter.dart';
 
 /// カスタムフィルターの調整 FOW (D-257、スロット契約 v0.13): `filter.preview` の `params` をスライダーで出す。
@@ -14,8 +15,8 @@ Future<bool?> showMediaFilterFow(OverlayManager manager, {required String title,
   if (manager.contains(mediaFilterFowId)) manager.close(mediaFilterFowId);
   return manager.showFow<bool>(
     id: mediaFilterFowId,
-    spec: FowSpec(title: title, cancelText: '閉じる', initialHeightFactor: 0.38, minHeightFactor: 0.2, maxHeightFactor: 0.7, maxWidth: 560),
-    semanticsLabel: '$title の調整',
+    spec: FowSpec(title: title, cancelText: appL10n.pluginsMediaClose, initialHeightFactor: 0.38, minHeightFactor: 0.2, maxHeightFactor: 0.7, maxWidth: 560),
+    semanticsLabel: appL10n.pluginsMediaFilterAdjustSemantics(title),
     builder: (_, _) => _Body(spec: spec, onChanged: onChanged, onRemove: () => manager.close(mediaFilterFowId, result: true)),
   );
 }
@@ -71,13 +72,13 @@ class _BodyState extends State<_Body> {
       if (spec.object != null)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
-          child: Text('絵の上で、ドラッグで移動、つまんで拡縮 / 回転できます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text(context.l10n.pluginsMediaFilterObjectHint, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ),
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
         child: Align(
           alignment: Alignment.centerLeft,
-          child: OutlinedButton.icon(key: const ValueKey('filter.remove'), onPressed: widget.onRemove, icon: const Icon(Icons.layers_clear_outlined, size: 18), label: const Text('このフィルターを外す'), style: OutlinedButton.styleFrom(foregroundColor: scheme.error)),
+          child: OutlinedButton.icon(key: const ValueKey('filter.remove'), onPressed: widget.onRemove, icon: const Icon(Icons.layers_clear_outlined, size: 18), label: Text(context.l10n.pluginsMediaFilterRemove), style: OutlinedButton.styleFrom(foregroundColor: scheme.error)),
         ),
       ),
     ]);

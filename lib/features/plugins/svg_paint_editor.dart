@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
+import '../../l10n/l10n.dart';
 import 'svgpaint/eraser.dart';
 import 'svgpaint/fill.dart';
 import 'svgpaint/geometry.dart';
@@ -498,9 +499,9 @@ class _SvgPaintEditorState extends State<SvgPaintEditor> {
     final fill = r.fill;
     if (fill == null) {
       _showToast(switch (r.failure!) {
-        FillFailure.leak => '線で閉じた形の中をタップしてください',
-        FillFailure.onLine => '線の内側をタップしてください',
-        FillFailure.empty => '塗れる形がありませんでした',
+        FillFailure.leak => context.l10n.pluginsPaintFillLeak,
+        FillFailure.onLine => context.l10n.pluginsPaintFillOnLine,
+        FillFailure.empty => context.l10n.pluginsPaintFillEmpty,
       });
       return;
     }
@@ -595,12 +596,12 @@ class _SvgPaintEditorState extends State<SvgPaintEditor> {
             child: Row(children: [
               Padding(
                 padding: const EdgeInsets.only(left: RasqSpacing.xs),
-                child: TextButton(key: const ValueKey('svgpaint.cancel'), onPressed: () => widget.onDone(null), child: const Text('キャンセル')),
+                child: TextButton(key: const ValueKey('svgpaint.cancel'), onPressed: () => widget.onDone(null), child: Text(context.l10n.pluginsPaintCancel)),
               ),
-              Expanded(child: Text(widget.title ?? '落書き', style: RasqTypography.title, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text(widget.title ?? context.l10n.pluginsPaintTitle, style: RasqTypography.title, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis)),
               Padding(
                 padding: const EdgeInsets.only(right: RasqSpacing.sm),
-                child: FilledButton(key: const ValueKey('svgpaint.done'), onPressed: _done, child: const Text('完了')),
+                child: FilledButton(key: const ValueKey('svgpaint.done'), onPressed: _done, child: Text(context.l10n.pluginsPaintDone)),
               ),
             ]),
           ),
@@ -621,7 +622,7 @@ class _SvgPaintEditorState extends State<SvgPaintEditor> {
             decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: scheme.shadow.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2))]),
             foregroundDecoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant)),
             child: Semantics(
-              label: '落書きの紙',
+              label: context.l10n.pluginsPaintCanvasSemantics,
               child: Listener(
                 behavior: HitTestBehavior.opaque,
                 onPointerDown: _down,
@@ -653,14 +654,14 @@ class _SvgPaintEditorState extends State<SvgPaintEditor> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
-                _ToolButton(key: const ValueKey('svgpaint.tool.pen'), icon: Icons.draw, label: 'ペン', selected: pen, onTap: () => _setTool(_Tool.pen)),
-                _ToolButton(key: const ValueKey('svgpaint.tool.eraser'), icon: Icons.auto_fix_normal, label: '消しゴム', selected: _tool == _Tool.eraser, onTap: () => _setTool(_Tool.eraser)),
-                _ToolButton(key: const ValueKey('svgpaint.tool.lasso'), icon: Icons.highlight_alt, label: '投げ輪', selected: _tool == _Tool.lasso, onTap: () => _setTool(_Tool.lasso)),
-                _ToolButton(key: const ValueKey('svgpaint.tool.fill'), icon: Icons.format_color_fill, label: '塗る', selected: _tool == _Tool.fill, onTap: () => _setTool(_Tool.fill)),
+                _ToolButton(key: const ValueKey('svgpaint.tool.pen'), icon: Icons.draw, label: context.l10n.pluginsPaintToolPen, selected: pen, onTap: () => _setTool(_Tool.pen)),
+                _ToolButton(key: const ValueKey('svgpaint.tool.eraser'), icon: Icons.auto_fix_normal, label: context.l10n.pluginsPaintToolEraser, selected: _tool == _Tool.eraser, onTap: () => _setTool(_Tool.eraser)),
+                _ToolButton(key: const ValueKey('svgpaint.tool.lasso'), icon: Icons.highlight_alt, label: context.l10n.pluginsPaintToolLasso, selected: _tool == _Tool.lasso, onTap: () => _setTool(_Tool.lasso)),
+                _ToolButton(key: const ValueKey('svgpaint.tool.fill'), icon: Icons.format_color_fill, label: context.l10n.pluginsPaintToolFill, selected: _tool == _Tool.fill, onTap: () => _setTool(_Tool.fill)),
                 const SizedBox(width: RasqSpacing.sm),
-                IconButton(key: const ValueKey('svgpaint.undo'), icon: const Icon(Icons.undo), tooltip: '取り消し', onPressed: _undo.isEmpty ? null : _undoStep),
-                IconButton(key: const ValueKey('svgpaint.redo'), icon: const Icon(Icons.redo), tooltip: 'やり直し', onPressed: _redo.isEmpty ? null : _redoStep),
-                IconButton(key: const ValueKey('svgpaint.clear'), icon: const Icon(Icons.delete_sweep), tooltip: '全部消す', onPressed: _items.isEmpty ? null : _clear),
+                IconButton(key: const ValueKey('svgpaint.undo'), icon: const Icon(Icons.undo), tooltip: context.l10n.pluginsPaintUndo, onPressed: _undo.isEmpty ? null : _undoStep),
+                IconButton(key: const ValueKey('svgpaint.redo'), icon: const Icon(Icons.redo), tooltip: context.l10n.pluginsPaintRedo, onPressed: _redo.isEmpty ? null : _redoStep),
+                IconButton(key: const ValueKey('svgpaint.clear'), icon: const Icon(Icons.delete_sweep), tooltip: context.l10n.pluginsPaintClear, onPressed: _items.isEmpty ? null : _clear),
               ]),
             ),
             if (_showSettings && pen) _stabilizerRow(),
@@ -696,18 +697,18 @@ class _SvgPaintEditorState extends State<SvgPaintEditor> {
 
   Widget _stabilizerRow() => Row(children: [
         const SizedBox(width: RasqSpacing.sm),
-        Text('手ぶれ補正', style: RasqTypography.caption),
+        Text(context.l10n.pluginsPaintStabilizer, style: RasqTypography.caption),
         Expanded(
           child: Slider(
             key: const ValueKey('svgpaint.stabilizer'),
             value: _prefs.stabilizer.toDouble(),
             max: SvgPaintPrefs.maxStabilizer.toDouble(),
             divisions: SvgPaintPrefs.maxStabilizer,
-            label: _prefs.stabilizer == 0 ? '切' : '${_prefs.stabilizer}',
+            label: _prefs.stabilizer == 0 ? context.l10n.pluginsPaintStabilizerOff : '${_prefs.stabilizer}',
             onChanged: (v) => _setPrefs(_prefs.copyWith(stabilizer: v.round())),
           ),
         ),
-        SizedBox(width: 28, child: Text(_prefs.stabilizer == 0 ? '切' : '${_prefs.stabilizer}', style: RasqTypography.caption)),
+        SizedBox(width: 28, child: Text(_prefs.stabilizer == 0 ? context.l10n.pluginsPaintStabilizerOff : '${_prefs.stabilizer}', style: RasqTypography.caption)),
       ]);
 
   Widget _contextRow(ColorScheme scheme) {
@@ -731,7 +732,7 @@ class _SvgPaintEditorState extends State<SvgPaintEditor> {
           IconButton(
             key: const ValueKey('svgpaint.settings'),
             icon: const Icon(Icons.tune),
-            tooltip: '手ぶれ補正',
+            tooltip: context.l10n.pluginsPaintStabilizer,
             isSelected: _showSettings,
             onPressed: () => setState(() => _showSettings = !_showSettings),
           ),
@@ -741,34 +742,34 @@ class _SvgPaintEditorState extends State<SvgPaintEditor> {
           _ToolButton(
             key: const ValueKey('svgpaint.eraser.cut'),
             icon: Icons.content_cut,
-            label: '切る',
+            label: context.l10n.pluginsPaintEraserCut,
             selected: !_prefs.wholeEraser,
             onTap: () => _setPrefs(_prefs.copyWith(wholeEraser: false)),
           ),
           _ToolButton(
             key: const ValueKey('svgpaint.eraser.whole'),
             icon: Icons.layers_clear,
-            label: '線ごと',
+            label: context.l10n.pluginsPaintEraserWhole,
             selected: _prefs.wholeEraser,
             onTap: () => _setPrefs(_prefs.copyWith(wholeEraser: true)),
           ),
         ]);
       case _Tool.lasso:
-        if (_selection.isEmpty) return _hint('囲んで選ぶ(線の半分以上が入ったもの)');
+        if (_selection.isEmpty) return _hint(context.l10n.pluginsPaintLassoHint);
         return Row(children: [
-          _ToolButton(key: const ValueKey('svgpaint.sel.delete'), icon: Icons.delete_outline, label: '削除', selected: false, onTap: _deleteSelection),
-          _ToolButton(key: const ValueKey('svgpaint.sel.duplicate'), icon: Icons.copy_all, label: '複製', selected: false, onTap: _duplicateSelection),
+          _ToolButton(key: const ValueKey('svgpaint.sel.delete'), icon: Icons.delete_outline, label: context.l10n.pluginsPaintSelectionDelete, selected: false, onTap: _deleteSelection),
+          _ToolButton(key: const ValueKey('svgpaint.sel.duplicate'), icon: Icons.copy_all, label: context.l10n.pluginsPaintSelectionDuplicate, selected: false, onTap: _duplicateSelection),
           _ToolButton(
             key: const ValueKey('svgpaint.sel.recolor'),
             icon: Icons.palette_outlined,
-            label: '色を変える',
+            label: context.l10n.pluginsPaintSelectionRecolor,
             selected: false,
             onTap: () => _recolorSelection(svgPaintColors[_prefs.color]),
           ),
-          _ToolButton(key: const ValueKey('svgpaint.sel.deselect'), icon: Icons.deselect, label: '解除', selected: false, onTap: () => _select(const {})),
+          _ToolButton(key: const ValueKey('svgpaint.sel.deselect'), icon: Icons.deselect, label: context.l10n.pluginsPaintSelectionDeselect, selected: false, onTap: () => _select(const {})),
         ]);
       case _Tool.fill:
-        return _hint('線で閉じた形の中をタップすると、線の下に塗ります');
+        return _hint(context.l10n.pluginsPaintFillHint);
     }
   }
 
@@ -935,7 +936,7 @@ class _WidthButton extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: '太さ ${svgLiteNum(width)}',
+      label: context.l10n.pluginsPaintWidthSemantics(svgLiteNum(width)),
       child: InkResponse(
         onTap: onTap,
         radius: 22,
@@ -964,7 +965,7 @@ class _ColorButton extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: '色 ${svgLiteHex(color)}',
+      label: context.l10n.pluginsPaintColorSemantics(svgLiteHex(color)),
       child: InkResponse(
         onTap: onTap,
         radius: 20,

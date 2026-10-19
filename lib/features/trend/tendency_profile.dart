@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../nodeprog/node_tabs.dart';
 import '../relational/relational_engine.dart';
 import '../settings/settings_dsl.dart';
+import '../../l10n/l10n.dart';
 import 'example_match.dart';
 
 /// トレンドの指向性 / 刺激性のプロファイル (D-153、ワイヤーフレーム p.2)。
@@ -42,16 +43,17 @@ class TendencyProfile {
 
   static const slot = 'trend.profile';
   static const emotions = ['joy', 'trust', 'fear', 'surprise', 'sadness', 'disgust', 'anger', 'anticipation'];
-  static const emotionLabels = {
-    'joy': '喜び',
-    'trust': '信頼',
-    'fear': '恐れ',
-    'surprise': '驚き',
-    'sadness': '悲しみ',
-    'disgust': '嫌悪',
-    'anger': '怒り',
-    'anticipation': '期待',
-  };
+  /// 感情の名前(表示の言語)。
+  static Map<String, String> get emotionLabels => {
+        'joy': appL10n.trendEmotionJoy,
+        'trust': appL10n.trendEmotionTrust,
+        'fear': appL10n.trendEmotionFear,
+        'surprise': appL10n.trendEmotionSurprise,
+        'sadness': appL10n.trendEmotionSadness,
+        'disgust': appL10n.trendEmotionDisgust,
+        'anger': appL10n.trendEmotionAnger,
+        'anticipation': appL10n.trendEmotionAnticipation,
+      };
 
   /// false なら TL に何も掛けない(ノードで明示的に使う分は効く)。
   final bool enabled;
@@ -159,14 +161,14 @@ class TendencyProfile {
 // ── 刺激性: 語彙ルール(emotion8 と同じ 8 軸)──────────────────────
 
 const _emotionLexicon = <String, List<String>>{
-  'joy': ['嬉し', 'うれし', '楽し', 'たのし', '最高', 'やった', '幸せ', 'しあわせ', '笑', 'www', 'ｗｗ', 'happy', 'joy', 'lol', 'yay', '🎉', '😂', '😆', '🥳', '😊'],
-  'trust': ['ありがと', '感謝', '安心', '信頼', '助か', 'おかげ', '頼り', 'thanks', 'thank you', 'trust', 'reliable', '🙏', '🤝'],
-  'fear': ['怖', 'こわ', '不安', '恐', 'ヤバい', 'やばい', '危な', 'パニック', '震え', 'scary', 'afraid', 'fear', 'terrif', 'panic', '😱', '😨', '😰'],
-  'surprise': ['驚', 'おどろ', 'びっくり', 'まさか', 'えっ', 'え？', '!?', '！？', '衝撃', 'wow', 'omg', 'surpris', 'whoa', '😮', '😲', '🤯'],
-  'sadness': ['悲し', 'かなし', '辛', 'つら', '泣', '寂し', 'さみし', '残念', '落ち込', 'しんど', 'sad', 'cry', 'lonely', 'miss you', 'depress', '😢', '😭', '😞'],
-  'disgust': ['気持ち悪', 'きもい', 'キモ', '嫌', 'いや', '最悪', 'うざ', 'ウザ', '不快', 'ゴミ', 'クズ', 'disgust', 'gross', 'awful', 'trash', 'garbage', '🤮', '🤢', '😒'],
-  'anger': ['怒', 'むかつ', 'ムカ', '許せ', 'ふざけ', '死ね', '殺', '黙れ', 'くたばれ', 'バカ', '馬鹿', 'アホ', 'angry', 'furious', 'hate', 'shut up', 'idiot', 'stupid', 'wtf', '😡', '🤬', '💢'],
-  'anticipation': ['楽しみ', 'たのしみ', 'ワクワク', 'わくわく', '待ち', '期待', '予定', '明日', '来週', '近日', 'soon', 'excited', "can't wait", 'looking forward', 'upcoming', '👀', '✨', '🔜'],
+  'joy': ['嬉し', 'うれし', '楽し', 'たのし', '最高', 'やった', '幸せ', 'しあわせ', '笑', 'www', 'ｗｗ', 'happy', 'joy', 'lol', 'yay', '🎉', '😂', '😆', '🥳', '😊'], // l10n-ignore: 刺激性の語彙(照合のデータ)
+  'trust': ['ありがと', '感謝', '安心', '信頼', '助か', 'おかげ', '頼り', 'thanks', 'thank you', 'trust', 'reliable', '🙏', '🤝'], // l10n-ignore: 刺激性の語彙(照合のデータ)
+  'fear': ['怖', 'こわ', '不安', '恐', 'ヤバい', 'やばい', '危な', 'パニック', '震え', 'scary', 'afraid', 'fear', 'terrif', 'panic', '😱', '😨', '😰'], // l10n-ignore: 刺激性の語彙(照合のデータ)
+  'surprise': ['驚', 'おどろ', 'びっくり', 'まさか', 'えっ', 'え？', '!?', '！？', '衝撃', 'wow', 'omg', 'surpris', 'whoa', '😮', '😲', '🤯'], // l10n-ignore: 刺激性の語彙(照合のデータ)
+  'sadness': ['悲し', 'かなし', '辛', 'つら', '泣', '寂し', 'さみし', '残念', '落ち込', 'しんど', 'sad', 'cry', 'lonely', 'miss you', 'depress', '😢', '😭', '😞'], // l10n-ignore: 刺激性の語彙(照合のデータ)
+  'disgust': ['気持ち悪', 'きもい', 'キモ', '嫌', 'いや', '最悪', 'うざ', 'ウザ', '不快', 'ゴミ', 'クズ', 'disgust', 'gross', 'awful', 'trash', 'garbage', '🤮', '🤢', '😒'], // l10n-ignore: 刺激性の語彙(照合のデータ)
+  'anger': ['怒', 'むかつ', 'ムカ', '許せ', 'ふざけ', '死ね', '殺', '黙れ', 'くたばれ', 'バカ', '馬鹿', 'アホ', 'angry', 'furious', 'hate', 'shut up', 'idiot', 'stupid', 'wtf', '😡', '🤬', '💢'], // l10n-ignore: 刺激性の語彙(照合のデータ)
+  'anticipation': ['楽しみ', 'たのしみ', 'ワクワク', 'わくわく', '待ち', '期待', '予定', '明日', '来週', '近日', 'soon', 'excited', "can't wait", 'looking forward', 'upcoming', '👀', '✨', '🔜'], // l10n-ignore: 刺激性の語彙(照合のデータ)
 };
 
 /// 8 感情の強さ 0〜1(語彙の当たり数で飽和)。emotion8(ml.infer)配線後は

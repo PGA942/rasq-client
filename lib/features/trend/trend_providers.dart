@@ -216,7 +216,7 @@ Future<List<TrendTag>?> _legacyTrendFrame(Ref ref, String? accKey, List<TrendTag
 /// どちらも取れなければ空(フォロイーのタグ投稿は [trendFollowingPostsProvider] がそのまま出す)。
 typedef TrendFollowingActivity = ({List<AstellRoom> rooms, List<ConversationEvent> events});
 
-String _normTag(String tag) => tag.trim().replaceFirst(RegExp(r'^[#＃]'), '').toLowerCase();
+String _normTag(String tag) => tag.trim().replaceFirst(RegExp(r'^[#＃]'), '').toLowerCase(); // l10n-ignore: ハッシュタグの記号(全角の＃)
 
 bool astellRoomMatchesTag(AstellRoom r, String tag) {
   final t = _normTag(tag);

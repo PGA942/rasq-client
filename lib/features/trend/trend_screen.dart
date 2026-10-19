@@ -9,6 +9,7 @@ import '../home/create_fow.dart' show RadialCreateFab;
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/third_column.dart' show paneBack;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
@@ -105,7 +106,8 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     final opened = _account == null ? null : ref.watch(sessionsProvider).value?.allSessions.where((x) => x.account.key == _account).firstOrNull?.account;
     // 選ぶ一覧の印: このトレンドを出したアカウント (D-388)。
     final sources = ref.watch(sourcedTrendsProvider).value?.sources[trendKey(widget.tag)] ?? const <AccountId>[];
-    final tabs = [const RasqTabItem('ノート'), const RasqTabItem('フォロー中'), const RasqTabItem('ユーザー')];
+    final l10n = context.l10n;
+    final tabs = [RasqTabItem(l10n.trendTabNotes), RasqTabItem(l10n.trendTabFollowing), RasqTabItem(l10n.trendTabUsers)];
 
     // チャイルドセーフ (D-307): 検索結果も TL と同じ絞り込み。
     final gate = ref.watch(childGateProvider);
@@ -141,7 +143,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
               RasqIconButton(
                 icon: Icons.arrow_back_ios_new,
                 size: 18,
-                tooltip: 'トレンドホームへ戻る',
+                tooltip: l10n.trendBackToHome,
                 onPressed: () {
                   if (!paneBack(context)) Navigator.of(context).maybePop();
                 },
@@ -150,7 +152,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
               // タップでその場にアカウントの選択(RASQ アカウント + その SNS アカウント、トレンドに出したアカウントに印)。
               Transform.translate(
                 offset: const Offset(0, (RasqSizes.searchBarHeight - RasqSizes.minTap) / 2),
-                child: HeaderAccountButton(key: const ValueKey('trend.accountButton'), id: 'trend.account', account: opened, marked: sources, markLabel: 'トレンドに出したアカウント', onPick: _switchAccount),
+                child: HeaderAccountButton(key: const ValueKey('trend.accountButton'), id: 'trend.account', account: opened, marked: sources, markLabel: l10n.trendSourceAccountMark, onPick: _switchAccount),
               ),
               const SizedBox(width: RasqSpacing.xs),
               Expanded(
@@ -177,8 +179,8 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
             ),
             // トレンドもタイムラインと同じ (D-090/D-103): RAi は TL のタブ行では隠し、設定だけ置く。
             // 傾向 FOW(指向性 / 刺激性、D-153)と、歯車 = トレンド TL のカスタマイズ (D-124 → D-431、TL と同じ画面)。
-            RasqIconButton(key: const ValueKey('trend.tendency'), icon: Icons.tune, size: 20, tooltip: 'トレンド設定', onPressed: () => showTrendProfileSheet(context, ref)),
-            RasqIconButton(key: const ValueKey('trend.customize'), icon: Icons.settings, size: 20, tooltip: 'トレンド TL をカスタマイズ', onPressed: () => context.push(Routes.tlConfig('trend'))),
+            RasqIconButton(key: const ValueKey('trend.tendency'), icon: Icons.tune, size: 20, tooltip: l10n.trendSettingsTooltip, onPressed: () => showTrendProfileSheet(context, ref)),
+            RasqIconButton(key: const ValueKey('trend.customize'), icon: Icons.settings, size: 20, tooltip: l10n.trendCustomizeTooltip, onPressed: () => context.push(Routes.tlConfig('trend'))),
           ]),
           Expanded(
             child: TabBarView(children: [
@@ -195,17 +197,17 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   // 並び (D-442): トレンド TL のカスタマイズの「SNSタイムライン」の順。既定は「フォロー中の反応」のセクション
                   // (AsTell / 会話のまとまり / 投稿 3 件)→ 本体(このページの検索結果)。
                   TlBlocks(key: const ValueKey('trend.blocks.before'), nodes: layout.before, query: widget.tag),
-                  if (layout.main) const RasqSectionHeader(title: 'トレンド', topMargin: 0),
+                  if (layout.main) RasqSectionHeader(title: l10n.trendTitle, topMargin: 0),
                   if (layout.main)
                     tl.when(
                     loading: () => const RasqLoading(),
-                    error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
+                    error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: l10n.trendReload),
                     data: (s) {
                       final posts = apply(s.posts);
                       // 表示モード (D-439): トレンド TL のカスタマイズで関連 TL / ユーザーを選んでいれば、その形で。
                       final display = view.display;
                       return posts.isEmpty
-                          ? const RasqEmptyView(title: 'なんにもないようです', hint: 'ワードやフィルタを変えると見つかるかもしれません')
+                          ? RasqEmptyView(title: l10n.trendEmptyTitle, hint: l10n.trendEmptyHint)
                           : display != TlDisplayMode.timeline
                               ? TlPostsDisplay(key: ValueKey('trend.display.${display.name}'), posts: posts, mode: display, scrollable: false, kind: _kind)
                               : Column(children: [rows(posts), if (s.loadingMore) const RasqLoading()]);
@@ -220,12 +222,12 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                 data: (fp) {
                   final posts = apply(fp);
                   return posts.isEmpty
-                      ? const RasqEmptyView(title: 'フォロー中の投稿はありません', hint: 'このワードについてフォロイーはまだ投稿していません')
+                      ? RasqEmptyView(title: l10n.trendFollowingEmptyTitle, hint: l10n.trendFollowingEmptyHint)
                       : ListView(children: [rows(posts)]);
                 },
               ),
               if (!gate.searchAllowed('users'))
-                const ChildSafeBlockedView(message: '保護者がユーザーの検索を止めています')
+                ChildSafeBlockedView(message: l10n.trendUsersBlocked)
               else
               rankedUsers.when(
                 loading: () => const RasqLoading(),
@@ -234,10 +236,10 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   // ユーザーはリアクション合計順(古い順のみ昇順に反転)。
                   final ranked = [...users]..sort((x, y) => filter.sort == SearchSort.oldest ? x.$2.compareTo(y.$2) : y.$2.compareTo(x.$2));
                   return ranked.isEmpty
-                      ? const RasqEmptyView(title: 'ユーザーはいません')
+                      ? RasqEmptyView(title: l10n.trendUsersEmpty)
                       // このページを開いたアカウント (D-397) の一覧として(フォロー状態はそのアカウントから)。
                       // 行のタップも、このアカウントでプロフィールを開く(UserList が `pushUser(user, account:)` へ渡す、D-469 / D-472)。
-                      : UserList(users: [for (final e in ranked) e.$1.summary], subtitles: {for (final e in ranked) e.$1.summary.id: 'リアクション ${e.$2}'}, account: _account);
+                      : UserList(users: [for (final e in ranked) e.$1.summary], subtitles: {for (final e in ranked) e.$1.summary.id: l10n.trendUserReactions(e.$2)}, account: _account);
                 },
               ),
             ]),

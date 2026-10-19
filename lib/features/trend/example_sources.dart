@@ -3,6 +3,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../plugins/slot_plugins.dart';
 import '../store/store_models.dart';
@@ -116,17 +117,17 @@ Future<List<ExampleCandidate>> storeCandidates(WidgetRef ref, String query) asyn
 List<ExampleSource> ownExampleSources(WidgetRef ref, {List<ExampleCandidate>? recent}) => [
       ExampleSource(
         id: 'actions',
-        label: '最近のアクション',
+        label: appL10n.trendExamplesSourceActions,
         load: (_) => recentActionCandidates(ref),
         preloaded: recent,
-        emptyTitle: '最近のアクションがありません',
-        emptyHint: 'リアクションやブックマークをすると、ここから選べます',
+        emptyTitle: appL10n.trendExamplesSourceActionsEmpty,
+        emptyHint: appL10n.trendExamplesSourceActionsEmptyHint,
       ),
-      ExampleSource(id: 'plugins', label: 'プラグイン', load: (_) async => installedPluginCandidates(ref), emptyTitle: '入れているプラグインはありません'),
-      ExampleSource(id: 'clips', label: 'クリップ', load: (_) => clipCandidates(ref), emptyTitle: 'クリップはありません'),
-      ExampleSource(id: 'lists', label: 'リスト', load: (_) => listCandidates(ref), emptyTitle: 'リストはありません'),
+      ExampleSource(id: 'plugins', label: appL10n.trendExamplesSourcePlugins, load: (_) async => installedPluginCandidates(ref), emptyTitle: appL10n.trendExamplesSourcePluginsEmpty),
+      ExampleSource(id: 'clips', label: appL10n.trendExamplesSourceClips, load: (_) => clipCandidates(ref), emptyTitle: appL10n.trendExamplesSourceClipsEmpty),
+      ExampleSource(id: 'lists', label: appL10n.trendExamplesSourceLists, load: (_) => listCandidates(ref), emptyTitle: appL10n.trendExamplesSourceListsEmpty),
     ];
 
 /// ストアの出どころ(保護者の設定)。
 ExampleSource storeExampleSource(WidgetRef ref) =>
-    ExampleSource(id: 'store', label: 'ストア', load: (q) => storeCandidates(ref, q), searchHint: 'ストアを探す(空 = 一覧)', emptyTitle: '見つかりませんでした');
+    ExampleSource(id: 'store', label: appL10n.trendExamplesSourceStore, load: (q) => storeCandidates(ref, q), searchHint: appL10n.trendExamplesSourceStoreHint, emptyTitle: appL10n.trendExamplesSourceStoreEmpty);

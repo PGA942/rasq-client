@@ -5,6 +5,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../home/post_row.dart';
 import 'example_match.dart';
 
@@ -42,14 +43,16 @@ class ExampleCandidate {
 /// 候補の出どころ(上のチップ 1 つ)。[load] は開いたときに 1 度([searchHint] があれば、検索のたびに)呼ぶ。
 @immutable
 class ExampleSource {
-  const ExampleSource({required this.id, required this.label, required this.load, this.searchHint, this.emptyTitle = '候補がありません', this.emptyHint, this.preloaded});
+  const ExampleSource({required this.id, required this.label, required this.load, this.searchHint, this.emptyTitle, this.emptyHint, this.preloaded});
   final String id;
   final String label;
   final Future<List<ExampleCandidate>> Function(String query) load;
 
   /// 検索できる出どころ(ストアなど)の入力欄のヒント。null = 検索なし。
   final String? searchHint;
-  final String emptyTitle;
+
+  /// 候補が無いときの見出し(null = 「候補がありません」)。
+  final String? emptyTitle;
   final String? emptyHint;
 
   /// 開く前に読んでおいた候補(最初のカードがすぐ出るように)。
@@ -82,11 +85,13 @@ Future<List<ExampleDecision>?> openExamplePickFow(
   required String title,
   required List<ExampleSource> sources,
   ContentExamples initial = ContentExamples.none,
-  String allowLabel = '好き',
-  String denyLabel = '好きではない',
+  String? allowLabel,
+  String? denyLabel,
   String? intro,
   int perPage = 3,
 }) async {
+  final l10n = context.l10n;
+  final allowText = allowLabel ?? l10n.trendExamplesAllow, denyText = denyLabel ?? l10n.trendExamplesDeny;
   final manager = ref.read(overlayManagerProvider);
   final states = {for (final s in sources) s.id: _SourceState()..items = s.preloaded};
   final decisions = <ExampleDecision>[];
@@ -108,7 +113,7 @@ Future<List<ExampleDecision>?> openExamplePickFow(
   final done = await manager.showBottomSheet<bool>(
     id: id,
     title: title,
-    confirmText: '決定',
+    confirmText: l10n.trendExamplesDecide,
     builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
       final scheme = Theme.of(ctx).colorScheme;
       final source = sources.firstWhere((s) => s.id == current);
@@ -150,13 +155,13 @@ Future<List<ExampleDecision>?> openExamplePickFow(
 
       Widget body;
       if (st.error != null) {
-        body = Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('${source.label}を読み込めませんでした: ${st.error}', style: RasqTypography.bodySmall.copyWith(color: scheme.error)));
+        body = Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(l10n.trendExamplesLoadFailed(source.label, '${st.error}'), style: RasqTypography.bodySmall.copyWith(color: scheme.error)));
       } else if (st.items == null) {
         body = const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: RasqLoading());
       } else if (st.items!.isEmpty) {
-        body = Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqEmptyView(title: source.emptyTitle, hint: source.emptyHint));
+        body = Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqEmptyView(title: source.emptyTitle ?? l10n.trendExamplesNoCandidates, hint: source.emptyHint));
       } else if (page.isEmpty) {
-        body = Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqEmptyView(title: '全部見ました', hint: '$allowLabel ${count(true)} / $denyLabel ${count(false)}。決定で保存します'));
+        body = Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqEmptyView(title: l10n.trendExamplesAllSeen, hint: l10n.trendExamplesAllSeenHint(allowText, count(true), denyText, count(false))));
       } else {
         body = Column(mainAxisSize: MainAxisSize.min, children: [
           for (final c in page)
@@ -169,8 +174,8 @@ Future<List<ExampleDecision>?> openExamplePickFow(
                   decide(c, dir == DismissDirection.startToEnd); // 右へ = 許す(好き)
                   return false; // 自分でカードを差し替える
                 },
-                background: Container(alignment: Alignment.centerLeft, padding: const EdgeInsets.only(left: RasqSpacing.page), child: Text(allowLabel, style: const TextStyle(color: RasqColors.link, fontWeight: FontWeight.w700))),
-                secondaryBackground: Container(alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: RasqSpacing.page), child: Text(denyLabel, style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w700))),
+                background: Container(alignment: Alignment.centerLeft, padding: const EdgeInsets.only(left: RasqSpacing.page), child: Text(allowText, style: const TextStyle(color: RasqColors.link, fontWeight: FontWeight.w700))),
+                secondaryBackground: Container(alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: RasqSpacing.page), child: Text(denyText, style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w700))),
                 child: GestureDetector(
                   key: ValueKey('example.card.${c.key}'),
                   behavior: HitTestBehavior.opaque,
@@ -216,7 +221,7 @@ Future<List<ExampleDecision>?> openExamplePickFow(
             Padding(
               padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
               child: Text(
-                '${intro ?? '中身を見て、下の「$allowLabel」/「$denyLabel」(右 / 左スワイプでも)で例にします。新しいものは、例との近さで分けます。'}($allowLabel ${count(true)} / $denyLabel ${count(false)}・残り ${pending.length} 件)',
+                l10n.trendExamplesSummary(intro ?? l10n.trendExamplesIntro(allowText, denyText), allowText, count(true), denyText, count(false), pending.length),
                 key: const ValueKey('example.summary'),
                 style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
               ),
@@ -227,7 +232,7 @@ Future<List<ExampleDecision>?> openExamplePickFow(
                 child: Row(children: [
                   Expanded(child: RasqInput(key: const ValueKey('example.search'), controller: search, hintText: source.searchHint, onSubmitted: (q) => load(source, q.trim()))),
                   const SizedBox(width: RasqSpacing.xs),
-                  RasqIconButton(icon: Icons.search, tooltip: '探す', onPressed: () => load(source, search.text.trim())),
+                  RasqIconButton(icon: Icons.search, tooltip: l10n.trendExamplesSearch, onPressed: () => load(source, search.text.trim())),
                 ]),
               ),
             body,
@@ -237,11 +242,11 @@ Future<List<ExampleDecision>?> openExamplePickFow(
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
           child: Row(children: [
-            Expanded(child: OutlinedButton(key: const ValueKey('example.deny'), onPressed: target == null ? null : () => decide(target, false), child: Text(denyLabel))),
+            Expanded(child: OutlinedButton(key: const ValueKey('example.deny'), onPressed: target == null ? null : () => decide(target, false), child: Text(denyText))),
             const SizedBox(width: RasqSpacing.xs),
-            TextButton(key: const ValueKey('example.skip'), onPressed: target == null ? null : () => skip(target), child: const Text('とばす')),
+            TextButton(key: const ValueKey('example.skip'), onPressed: target == null ? null : () => skip(target), child: Text(l10n.trendExamplesSkip)),
             const SizedBox(width: RasqSpacing.xs),
-            Expanded(child: FilledButton(key: const ValueKey('example.allow'), onPressed: target == null ? null : () => decide(target, true), child: Text(allowLabel))),
+            Expanded(child: FilledButton(key: const ValueKey('example.allow'), onPressed: target == null ? null : () => decide(target, true), child: Text(allowText))),
           ]),
         ),
       ]);
@@ -286,7 +291,7 @@ class _CandidateCard extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         if (kind == ExampleKind.post && c.posts.isNotEmpty)
           // インラインフレームの小表示 (D-156)。右上に話題の件数。
-          InlinePostFrame(post: c.posts.first, maxLines: 3, onTap: onTap, badge: c.posts.length > 1 ? RasqPill(label: '+${c.posts.length - 1} 件', color: RasqColors.sub, textColor: Colors.white) : null)
+          InlinePostFrame(post: c.posts.first, maxLines: 3, onTap: onTap, badge: c.posts.length > 1 ? RasqPill(label: context.l10n.trendExamplesMorePosts(c.posts.length - 1), color: RasqColors.sub, textColor: Colors.white) : null)
         else ...[
           Row(children: [
             Icon(_icons[kind], size: 18, color: scheme.onSurfaceVariant),
@@ -301,8 +306,8 @@ class _CandidateCard extends StatelessWidget {
               child: Wrap(spacing: 4, runSpacing: 4, children: [for (final t in c.tags) RasqPill(label: t, outlined: true)]),
             ),
           for (final p in c.posts.take(2)) Padding(padding: const EdgeInsets.only(top: RasqSpacing.xs), child: InlinePostFrame(post: p, maxLines: 2, onTap: onTap)),
-          if ((kind == ExampleKind.clip || kind == ExampleKind.list) && c.posts.isEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text('投稿を読めませんでした(名前と説明で比べます)', style: caption)),
-          if (more > 0 && kind != ExampleKind.post) Padding(padding: const EdgeInsets.only(top: 2), child: Text('ほか $more 件', style: caption)),
+          if ((kind == ExampleKind.clip || kind == ExampleKind.list) && c.posts.isEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text(context.l10n.trendExamplesPostsUnreadable, style: caption)),
+          if (more > 0 && kind != ExampleKind.post) Padding(padding: const EdgeInsets.only(top: 2), child: Text(context.l10n.trendExamplesOthers(more), style: caption)),
         ],
         if (c.genres.isNotEmpty)
           Padding(

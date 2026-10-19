@@ -9,6 +9,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
+import '../../l10n/l10n.dart';
 import '../../session/rasq_accounts.dart';
 import '../../session/session_providers.dart' show sessionStorageProvider;
 import '../../session/session_storage.dart';
@@ -49,15 +50,15 @@ enum SideloadTrust {
 
   /// 画面に出す短い名前(dev 試験画面 / スロット登録の一覧)。
   String get label => switch (this) {
-        SideloadTrust.full => 'フル',
-        SideloadTrust.bundled => 'フル(同梱)',
-        SideloadTrust.restricted => '制限',
-        SideloadTrust.swing => '制限(Swing)',
+        SideloadTrust.full => appL10n.pluginsTrustFull,
+        SideloadTrust.bundled => appL10n.pluginsTrustBundled,
+        SideloadTrust.restricted => appL10n.pluginsTrustRestricted,
+        SideloadTrust.swing => appL10n.pluginsTrustSwing,
       };
 }
 
 /// 段の説明の 1 行(dev 試験画面 / スロット登録の UI)。
-const sideloadTrustHint = '自分の開発者鍵で署名した .rspkg / .rasqpkg はフル機能。rasq build が署名します';
+String get sideloadTrustHint => appL10n.pluginsTrustHint;
 
 /// FOW の種類(`fow.open` の `spec.type`、権限は `fow.<種類>`)。
 const sideloadFowKinds = {'widget', 'interstitial', 'system'};

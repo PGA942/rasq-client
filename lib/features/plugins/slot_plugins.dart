@@ -16,6 +16,7 @@ import 'package:rrl_renderer/rrl_renderer.dart' show SvgLite;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../text/inline_spans.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/plugin_actions.dart' show actionButtonPrefsProvider, migrateViewerPluginSettings, postTransformActionId;
@@ -241,12 +242,12 @@ const rasqPageSourcePrefix = 'rasqpage:';
 /// 素の `.wasm` はそのまま(1 つ)。外れたら [StateError]。
 void checkSwingPackage(Uint8List data, {required ZstdDecompress decompress}) {
   if (!isRasqPackage(data)) {
-    if (!isWasmBytes(data)) throw StateError('Swing のプラグインは .rasqpkg か .wasm です');
+    if (!isWasmBytes(data)) throw StateError(appL10n.pluginsSwingNotPackage);
     return;
   }
   final pkg = RasqPackage.open(data, decompress: decompress);
-  if (pkg.requires.isNotEmpty) throw StateError('Swing では、ほかのプラグインを土台にする子プラグインは配れません');
-  if (pkg.slotPlugins.length != 1 || pkg.root.isTheme || pkg.root.isAssets) throw StateError('Swing で配れるのは、プラグイン 1 つだけの入れ物です');
+  if (pkg.requires.isNotEmpty) throw StateError(appL10n.pluginsSwingNoRequires);
+  if (pkg.slotPlugins.length != 1 || pkg.root.isTheme || pkg.root.isAssets) throw StateError(appL10n.pluginsSwingSingleOnly);
 }
 
 /// ページ型プラグインを Swing で配れないわけ(配れれば null)。契約 v0.20 / D-424: **親子関係の無い**ページ型は、`swing` を
@@ -256,13 +257,13 @@ void checkSwingPackage(Uint8List data, {required ZstdDecompress decompress}) {
 /// - ほかのプラグインを**土台にする**もの(配布物の `root.requires`、[requires] = インストールの記録)。
 /// ページ型が自分の FOW を子として開くこと(`fow.open`)は数えない。
 String? pageSwingBlockReason(SlotPlugin p, Iterable<SlotPlugin> all, {List<String> requires = const []}) {
-  if (!p.has(SlotIds.page)) return 'ページ型のプラグインではありません';
-  if (requires.isNotEmpty) return 'ほかのプラグイン(${requires.join(' / ')})を土台にしているため、Swing では配れません';
+  if (!p.has(SlotIds.page)) return appL10n.pluginsPageNotPage;
+  if (requires.isNotEmpty) return appL10n.pluginsPageSwingRequires(requires.join(' / '));
   final store = parseStoreSlotSource(p.source);
-  if (store?.child != null) return 'ほかのプラグインの入れ物に入っている子プラグインのため、Swing では配れません';
+  if (store?.child != null) return appL10n.pluginsPageSwingChild;
   final container = splitPackageSource(p.source).container;
   final siblings = [for (final x in all) if (!identical(x, p) && x.source != p.source && splitPackageSource(x.source).container == container) x];
-  if (siblings.isNotEmpty) return '子プラグイン(${siblings.map((x) => x.manifest.name).join(' / ')})と一緒の入れ物のため、Swing では配れません';
+  if (siblings.isNotEmpty) return appL10n.pluginsPageSwingSiblings(siblings.map((x) => x.manifest.name).join(' / '));
   return null;
 }
 
@@ -599,7 +600,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
             final record = ref.read(installedPluginsProvider).where((x) => x.id == pluginId).firstOrNull;
             final expected = version == null ? record?.sha512 : record?.versionInfo(version)?.sha512;
             if (expected != null && expected.isNotEmpty && expected != '-' && sha512.convert(bytes).toString() != expected) {
-              ref.read(slotPluginsNoticeProvider.notifier).set('$pluginId: 取り直した配布物がインストール時と違うため読み込みません(ストアで入れ直してください)');
+              ref.read(slotPluginsNoticeProvider.notifier).set(appL10n.pluginsArtifactMismatch(pluginId));
               continue;
             }
             await register(p, bytes: bytes, persist: false);
@@ -652,7 +653,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       if (swing) checkSwingPackage(data, decompress: ref.read(rasqpkgZstdProvider));
       if (isRasqPackage(data)) {
         final entry = RasqPackage.open(data, decompress: ref.read(rasqpkgZstdProvider)).plugin(pluginId);
-        if (entry.isSns) throw StateError('${entry.id} は SNS プラグインです(スロットには登録できません)');
+        if (entry.isSns) throw StateError(appL10n.pluginsIsSnsPlugin(entry.id));
         data = entry.wasm;
         expectedId = entry.id;
         if (admit?.call(entry.id, null) case final blocked?) throw StateError(blocked);
@@ -666,25 +667,25 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final m = (await runtime.invoke('plugin.manifest', const {}))['value'];
       if (m is! Map) {
         runtime.dispose();
-        throw StateError('plugin.manifest がありません(スロット契約 §1)');
+        throw StateError(appL10n.pluginsManifestMissing);
       }
       final manifest = SlotManifest.fromJson(m.cast<String, Object?>());
       if (manifest.id.isEmpty) {
         runtime.dispose();
-        throw StateError('plugin.manifest.id が空です');
+        throw StateError(appL10n.pluginsManifestIdEmpty);
       }
       if (swing && (manifest.slots.length != 1 || manifest.page == null || !manifest.page!.allows(PluginPageDecl.surfaceSwing))) {
         runtime.dispose();
-        throw StateError('Swing で配れるのは、Swing の面(surfaces: swing、solo)のページ型だけです');
+        throw StateError(appL10n.pluginsSwingSurfaceOnly);
       }
       if (rasqPage && (manifest.page == null || !manifest.page!.allows(PluginPageDecl.surfaceProfile) || manifest.page!.isShared)) {
         runtime.dispose();
-        throw StateError('RASQ のページに置けるのは、プロフィールの面(surfaces: profile、solo)のページ型だけです');
+        throw StateError(appL10n.pluginsRasqPageSurfaceOnly);
       }
       // 配布物の目次が言う id と、wasm 自身が名乗る id が同じこと(別のプラグインを入れ物に紛れ込ませない)。
       if (expectedId != null && manifest.id != expectedId) {
         runtime.dispose();
-        throw StateError('配布物の目次は $expectedId なのに、wasm は ${manifest.id} を名乗っています');
+        throw StateError(appL10n.pluginsIdMismatch(expectedId, manifest.id));
       }
       runtime.dispose();
       if (admit?.call(manifest.id, pluginExamplePieces(name: manifest.name, description: manifest.description, slots: manifest.slots)) case final blocked?) throw StateError(blocked);
@@ -716,12 +717,12 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       }
       _set([for (final p in state) if (!replaces(p)) p, plugin]);
       if (persist) await _persist();
-      ref.read(slotPluginsNoticeProvider.notifier).set('${manifest.name} を登録しました(${manifest.slots.join(', ')})');
+      ref.read(slotPluginsNoticeProvider.notifier).set(appL10n.pluginsRegistered(manifest.name, manifest.slots.join(', ')));
       // 登録している間に鍵の一覧が変わった(listen は、まだ state に無いこのプラグインを見られなかった)。
       if (!plugin.isReviewed && !setEquals(ownFingerprints, ref.read(ownDevKeyFingerprintsProvider))) Future.microtask(_reevaluateSideloadTrust);
       return plugin;
     } catch (e) {
-      if (!_disposed) ref.read(slotPluginsNoticeProvider.notifier).set('登録できませんでした: $e');
+      if (!_disposed) ref.read(slotPluginsNoticeProvider.notifier).set(appL10n.pluginsRegisterFailed(e is StateError ? e.message : '$e'));
       return null;
     }
   }
@@ -835,7 +836,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       type: type,
       initialHeightFactor: (spec['initialHeightFactor'] as num?)?.toDouble() ?? 0.45,
       title: spec['title'] as String?,
-      cancelText: spec['cancelText'] as String? ?? (req.onCancel != null ? '閉じる' : null),
+      cancelText: spec['cancelText'] as String? ?? (req.onCancel != null ? appL10n.pluginsClose : null),
       confirmText: spec['confirmText'] as String?,
       dockAboveFooter: true,
       // 呼び出し元の面と同じカラム(インライン FOW、D-169)。
@@ -905,7 +906,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
           try {
             cb(base64Decode(b64), '${args['mimeType'] ?? 'image/png'}', args['name'] as String?);
           } catch (e) {
-            _toast('${plugin.manifest.name}: 画像を受け取れませんでした($e)');
+            _toast(appL10n.pluginsImageReceiveFailed(plugin.manifest.name, '$e'));
           }
         }
       case RasqHostFns.composerMediaPreview:
@@ -944,7 +945,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         final page = _pages['${args['token']}'];
         if (page == null) return;
         if (!page.hasSession) {
-          _toast('${plugin.manifest.name}: 共有セッションに入っていないため、みんなの値は変えられません');
+          _toast(appL10n.pluginsSharedNoSession(plugin.manifest.name));
           return;
         }
         page.shared(fn, args);
@@ -970,12 +971,12 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   Future<void> _muteAdd(SlotPlugin plugin, String text) async {
     if (text.trim().isEmpty) return;
-    final ok = await ref.read(overlayManagerProvider).showAlert(id: 'slot.mute.${plugin.id}', title: 'ミュート語に追加', message: '${plugin.manifest.name} が「$text」をミュート語に追加しようとしています。', confirmText: '追加', cancelText: 'キャンセル');
+    final ok = await ref.read(overlayManagerProvider).showAlert(id: 'slot.mute.${plugin.id}', title: appL10n.pluginsMuteAddTitle, message: appL10n.pluginsMuteAddMessage(plugin.manifest.name, text), confirmText: appL10n.pluginsMuteAddConfirm, cancelText: appL10n.pluginsCancel);
     if (!ok) return;
     final store = ref.read(settingsAreaProvider(muteWordsArea).notifier);
     final current = [for (final w in ((await ref.read(settingsAreaProvider(muteWordsArea).future))[muteWordsKey] as List? ?? const [])) if (w is String) w];
     if (!current.contains(text)) await store.set(muteWordsKey, [...current, text]);
-    _toast('「$text」をミュート語に追加しました');
+    _toast(appL10n.pluginsMuteAdded(text));
   }
 
   Future<void> _astellShare(SlotPlugin plugin, String kind, Map<String, Object?> payload) async {
@@ -1000,7 +1001,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
           if (mime.startsWith('image/')) 'thumbnailUrl': asset.url.toString(),
         };
       } catch (e) {
-        _toast('${plugin.manifest.name}: 効果映像を送れませんでした($e)');
+        _toast(appL10n.pluginsEffectSendFailed(plugin.manifest.name, '$e'));
         return;
       }
     }
@@ -1022,7 +1023,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       'token': token,
       'action': ?action,
       'room': s.room.toJson(),
-      'me': {'accountId': s.myAccountId, 'peerId': s.myPeerId, 'handle': 'me', 'displayName': 'あなた'},
+      'me': {'accountId': s.myAccountId, 'peerId': s.myPeerId, 'handle': 'me', 'displayName': 'あなた'}, // l10n-ignore: プラグインへ渡す値(自分の表示名の既定)
       'peers': [for (final p in s.peers) _peerJson(p)],
       // 古い → 新しい(ルームのログ順)。直近 10 件。
       'shares': [for (final x in (s.shares.length > 10 ? s.shares.sublist(s.shares.length - 10) : s.shares)) _shareJson(x)],
@@ -1102,7 +1103,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     try {
       final fitted = await fitWithin(bytes, mediaEditMaxSide, mimeType: mimeType);
       if (fitted.scaled) {
-        _toast('${plugin.manifest.name}: 編集のため画像を小さくしました');
+        _toast(appL10n.pluginsImageScaled(plugin.manifest.name));
       }
       return fitted;
     } catch (e) {
@@ -1122,7 +1123,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       try {
         onReplace(base64Decode(v['bytesB64'] as String), '${v['mimeType'] ?? mimeType}', v['name'] as String?);
       } catch (e) {
-        _toast('${plugin.manifest.name}: 画像を受け取れませんでした($e)');
+        _toast(appL10n.pluginsImageReceiveFailed(plugin.manifest.name, '$e'));
       }
     }
   }
@@ -1233,7 +1234,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     var i = cursor;
     while (i > 0) {
       final c = text[i - 1];
-      if (c == ' ' || c == '\n' || c == '\t' || c == '　') break;
+      if (c == ' ' || c == '\n' || c == '\t' || c == '　') break; // l10n-ignore: 全角の空白(区切りの判定)
       i--;
     }
     final tok = text.substring(i, cursor);
@@ -1270,7 +1271,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final r = await plugin.call('page.open', {'token': token, ...args});
       if (r['ok'] != true) {
         final e = r['error'];
-        return (root: null, title: null, error: e is Map ? '${e['code'] ?? ''} ${e['message'] ?? ''}'.trim() : 'プラグインがエラーを返しました');
+        return (root: null, title: null, error: e is Map ? '${e['code'] ?? ''} ${e['message'] ?? ''}'.trim() : appL10n.pluginsErrorReturned);
       }
       final v = (r['value'] as Map?)?.cast<String, Object?>() ?? const {};
       final root = v['root'];
@@ -1300,7 +1301,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final r = await plugin.call('viewer.open', {'token': token, 'url': url, 'mimeType': mimeType, 'width': width, 'height': height, if (bytes != null) 'bytesB64': base64Encode(bytes)});
       if (r['ok'] != true) {
         final e = r['error'];
-        return (root: null, error: e is Map ? '${e['code'] ?? ''} ${e['message'] ?? ''}'.trim() : 'プラグインがエラーを返しました');
+        return (root: null, error: e is Map ? '${e['code'] ?? ''} ${e['message'] ?? ''}'.trim() : appL10n.pluginsErrorReturned);
       }
       final root = (r['value'] as Map?)?['root'];
       return (root: root is Map ? RrlNode.fromJson(root.cast<String, Object?>()) : null, error: null);
@@ -1440,15 +1441,15 @@ class MediaGenre {
   final List<MediaAction> actions;
 }
 
-/// 既定のジャンル 5 種 (契約 v0.4 §2.2): id は固定、ラベル / アイコンはホストが持つ。
+/// 既定のジャンル 5 種 (契約 v0.4 §2.2): id は固定、ラベル(表示の言語)/ アイコンはホストが持つ。
 /// カスタムジャンルはプラグインが `label` / `icon` を付けて宣言する。
-const mediaGenreDefaults = <String, ({String label, IconData icon})>{
-  'tone': (label: '色調', icon: Icons.tune),
-  'process': (label: '加工', icon: Icons.auto_fix_high),
-  'transform': (label: '変形', icon: Icons.crop_rotate),
-  'add': (label: '追加', icon: Icons.add_circle_outline),
-  'draw': (label: '描画', icon: Icons.brush),
-};
+Map<String, ({String label, IconData icon})> get mediaGenreDefaults => {
+      'tone': (label: appL10n.pluginsGenreTone, icon: Icons.tune),
+      'process': (label: appL10n.pluginsGenreProcess, icon: Icons.auto_fix_high),
+      'transform': (label: appL10n.pluginsGenreTransform, icon: Icons.crop_rotate),
+      'add': (label: appL10n.pluginsGenreAdd, icon: Icons.add_circle_outline),
+      'draw': (label: appL10n.pluginsGenreDraw, icon: Icons.brush),
+    };
 
 class MediaAction {
   const MediaAction({required this.id, required this.label, this.icon});

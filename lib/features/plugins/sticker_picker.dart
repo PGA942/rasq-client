@@ -7,6 +7,7 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../home/plugin_actions.dart';
 import '../home/post_row.dart';
+import '../../l10n/l10n.dart';
 import '../store/sticker_packs.dart';
 
 /// 加工画面のステッカー一覧 (D-252): pro_image_editor の `StickerEditorConfigs.builder` の中身。
@@ -33,12 +34,12 @@ class StickerPicker extends ConsumerWidget {
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(RasqSpacing.page),
-                child: Text(rasqDetail(context, 'ステッカーがありません。ストアで入れると、ここに並びます', 'ステッカーがありません。ストアでアセットパック(カテゴリ「assets」)を入れると、ここに並びます。'), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
+                child: Text(rasqDetail(context, context.l10n.pluginsMediaStickerEmpty, context.l10n.pluginsMediaStickerEmptyDetail), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
               ),
             )
           : ListView(controller: scrollController, padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
               if (generators.isNotEmpty) ...[
-                const RasqSectionHeader(title: 'プラグインで作る'),
+                RasqSectionHeader(title: context.l10n.pluginsMediaStickerGenerate),
                 for (final g in generators)
                   RasqListTile(
                     key: ValueKey('sticker.generate.${g.id}'),
