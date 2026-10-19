@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import 'tethered_panel.dart';
+
 /// FOW の背景の着せ替え (D-335): アプリが OverlayHost の上に置く。[decorate] はパネルの中身を受け取り、背景(色 / 画像の
 /// レイヤー)を足して返す。[color] はパネルの地の色(null = テーマの surface)。rasq_overlay は rasq_design に依らないので口だけ持つ。
 class FowPanelSkin extends InheritedWidget {
@@ -42,6 +44,30 @@ const kFowPanelKey = ValueKey<String>('rasqOverlay.fow.panel');
 
 /// 最前面(影付き)の FOW のパネルか([find.byWidgetPredicate] 用)。
 bool isFrontmostFowPanel(Widget w) => w is Material && w.key == kFowPanelKey && w.elevation > 0;
+
+/// ボタンから開く FOW を、**ボタンにつながった形**([TetheredPanel])で出す (D-513)。[FowSpec.anchor] と組で使う。
+///
+/// 中身(builder)・重ね順(子 FOW は上に積む / ドロップダウンはさらに上)・バリア・カラム (D-481: パネルはボタンのカラムの中に
+/// 収める)は FOW のまま。変わるのは見た目と置き方だけ: ドックせず、ボタンの真下(上)に首でつながって出る。ハンドル・掴んで動かす・
+/// 閉じる動きの写し (D-476) は無い(動かすとボタンから離れてしまうので)。
+@immutable
+class FowTether {
+  const FowTether({this.anchorChild, this.preferredSide = TetherSide.below, this.width = 320, this.fitContent = false, this.iconExtent = kTetherIconExtent});
+
+  /// 首の中に描く元のボタンの見た目(アイコン)。パネルがボタンを覆うので、同じアイコンを渡す。
+  final Widget? anchorChild;
+  final TetherSide preferredSide;
+
+  /// パネルの幅(カラムより広ければカラムの幅)。
+  final double width;
+
+  /// true = 中身の高さに合わせる(中身は縮められること: `Column(mainAxisSize: min)` / `shrinkWrap` の ListView)。
+  /// false = [FowSpec.heightFactor] の高さ(入りきらなければ空いているぶん)。
+  final bool fitContent;
+
+  /// [kTetherIconExtent](ボタンのアイコンの大きさ)。
+  final double iconExtent;
+}
 
 /// FOW type (原典: UI_Elements「FOWタイプ（3種）」).
 enum FowPanelType { widget, interstitial, system }
@@ -89,6 +115,7 @@ class FowSpec {
     this.spanColumnsBelow,
     this.stickCollapse = false,
     this.motion = true,
+    this.tether,
   })  : heightStops = [...heightStops]..sort(),
         heightFactor = ValueNotifier(initialHeightFactor.clamp(minHeightFactor, maxHeightFactor));
 
@@ -193,6 +220,9 @@ class FowSpec {
   /// 上付き。**別カラムへ動かした時点で壁付き表示に変更**(anchor は
   /// 解除され [pinnedWall] になる)。
   Rect? anchor;
+
+  /// ボタンにつながった形で出す (D-513)。[anchor] があるときだけ効く(別カラムへ動かして anchor が外れたら、ふつうの FOW)。
+  FowTether? tether;
 
   /// アンカーの下(true)/上(false)。null = 自動(余白で判定)。
   /// 縦ドラッグで確定する。

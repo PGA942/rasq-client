@@ -362,7 +362,10 @@ void main() {
     await tester.pumpWidget(app(localEmojis: const {}));
     await tester.pumpAndSettle();
 
+    // 長押しはすぐ選べる絵文字 (D-512)。ピッカー全体はその「その他」から。
     await tester.longPress(find.byIcon(Icons.favorite_border).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('quickEmoji.more')));
     await tester.pumpAndSettle();
     // ヘッダー行系 (D-055): 閉じる/リアクションのヘッダーがあり、
     // 「謎のアクションバー」(呼び出し元投稿の複製)はパネル内に出さない。

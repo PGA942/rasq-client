@@ -73,11 +73,14 @@ void main() {
     RasqActionBarItem reactionButton(WidgetTester tester, {String id = 'reaction'}) => tester.widget<RasqActionBar>(find.byType(RasqActionBar).first).items.firstWhere((i) => i.id == id);
     List<String?> sent(FakeSnsPlugin p) => [for (final s in p.opened) ...s.reactionsSent];
 
-    testWidgets('Misskey(ふつうのノート): チップが出て、長押しでピッカーが開く', (tester) async {
+    testWidgets('Misskey(ふつうのノート): チップが出て、長押しですぐ選べる絵文字(D-512)→「その他」でピッカーが開く', (tester) async {
       await pump(tester, localEmojis: const {}, reactions: const {'🎉': 3});
       expect(find.byType(RasqReactionChips), findsWidgets);
       expect(reactionButton(tester).label, 'リアクション');
       await tester.longPress(find.byTooltip('リアクション').first);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('quickEmoji.more')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('quickEmoji.more')));
       await tester.pumpAndSettle();
       expect(find.byType(EmojiPanel), findsOneWidget);
     });

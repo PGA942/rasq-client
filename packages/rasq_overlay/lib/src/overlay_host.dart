@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'fow.dart';
 import 'overlay_entry.dart';
 import 'overlay_layer.dart';
 import 'overlay_manager.dart';
+import 'tethered_panel.dart';
 
 /// Renders the content plus every open overlay, honouring layer z-order,
 /// scrims and barrier behaviour. Place it once at the root of the app shell.
@@ -478,6 +481,31 @@ class _FowColumn extends StatelessWidget {
             final pinned = s.pinnedWall != 0;
             var h = (pinned ? 1.0 : s.heightFactor.value) * avail;
             final anchor = pinned ? null : s.anchor;
+            // ボタンにつながった形 (D-513): ドックせず、ボタンにつながったパネルを画面いっぱいの層に置く(パネルはボタンの
+            // カラムの中に収める、D-481)。閉じる動きの写しは撮らない(閉じたらすぐ消える)。
+            final tether = s.tether;
+            if (tether != null && anchor != null) {
+              if (isLeaving) continue;
+              final slot = slotOf(s);
+              s.laidOut = null;
+              children.add(Positioned.fill(
+                key: ValueKey('rasqOverlay.fow.${e.id}'),
+                child: Offstage(
+                  offstage: suspended?.call(e) ?? false,
+                  child: _FowTethered(
+                    entry: e,
+                    tether: tether,
+                    anchor: anchor,
+                    bounds: Rect.fromLTWH(slot.x, 0, slot.width, hostH),
+                    height: s.heightFactor.value * avail,
+                    onCancel: () => onCancel(e),
+                    onConfirm: () => onConfirm(e),
+                    child: buildContent(e),
+                  ),
+                ),
+              ));
+              continue;
+            }
             // 子 FOW は親の付く方向・カラムに追従する(D-067: 方向は親側
             // 指定 — 親が動けば更新される)。
             final parentSpec = (e.ownerId == null ? null : byId[e.ownerId])?.fow;
@@ -622,6 +650,88 @@ class _FowColumn extends StatelessWidget {
         },
       );
     });
+  }
+}
+
+/// ボタンにつながった FOW (D-513)。見出し(FOW と同じ: 左 = headerLeading / キャンセル、真ん中 = タイトル、右 = headerTrailing / 決定)
+/// + 中身を [TetheredPanel] に入れる。首(元のボタン)を押すと閉じる。
+class _FowTethered extends StatelessWidget {
+  const _FowTethered({required this.entry, required this.tether, required this.anchor, required this.bounds, required this.height, required this.onCancel, required this.onConfirm, required this.child});
+  final RasqOverlayEntry entry;
+  final FowTether tether;
+  final Rect anchor;
+  final Rect bounds;
+  final double height;
+  final VoidCallback onCancel;
+  final VoidCallback onConfirm;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final spec = entry.fow ?? FowSpec();
+    Widget panel(double progress) => Builder(builder: (context) {
+          final scheme = Theme.of(context).colorScheme;
+          final header = spec.hasHeader
+              ? SizedBox(
+                  key: const ValueKey('rasqOverlay.fow.header'),
+                  height: 40,
+                  child: Row(children: [
+                    if (spec.headerLeading != null)
+                      spec.headerLeading!
+                    else if (spec.cancelText != null)
+                      TextButton(onPressed: spec.interceptCancel ?? onCancel, child: Text(spec.cancelText!, style: TextStyle(color: scheme.onSurfaceVariant)))
+                    else
+                      const SizedBox(width: 56),
+                    Expanded(child: Center(child: Text(spec.title ?? '', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis))),
+                    if (spec.headerTrailing != null)
+                      spec.headerTrailing!
+                    else if (spec.confirmText != null)
+                      TextButton(onPressed: onConfirm, child: Text(spec.confirmText!, style: TextStyle(color: scheme.primary)))
+                    else
+                      const SizedBox(width: 56),
+                  ]),
+                )
+              : null;
+          final body = tether.fitContent
+              ? Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [?header, Flexible(child: child)])
+              // 高さの決まった FOW: 空いているぶんまで(入りきらなければ中がスクロールする)。
+              : LayoutBuilder(
+                  builder: (context, c) => SizedBox(
+                    height: math.min(height, c.maxHeight),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [?header, Expanded(child: child)]),
+                  ),
+                );
+          return TetheredPanel(
+            key: ValueKey('rasqOverlay.fow.tether.${entry.id}'),
+            anchor: anchor,
+            bounds: bounds,
+            width: tether.width,
+            preferredSide: tether.preferredSide,
+            iconExtent: tether.iconExtent,
+            anchorChild: tether.anchorChild,
+            onAnchorTap: onCancel,
+            progress: progress,
+            child: body,
+          );
+        });
+    final theme = spec.theme;
+    final panelTheme = FowPanelSkin.of(context)?.theme;
+    Widget themed(Widget w) {
+      if (theme == null && panelTheme == null) return w;
+      return Builder(builder: (bctx) {
+        final base = theme?.call(bctx) ?? Theme.of(bctx);
+        return Theme(data: panelTheme?.call(bctx, base) ?? base, child: w);
+      });
+    }
+
+    // 出てくる動き: ボタンの中心から広がる(モーションの抑制中 / motion: false は動かさない)。
+    if (_reducedMotion(context) || !spec.motion) return themed(panel(1));
+    return themed(TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, _) => panel(t),
+    ));
   }
 }
 

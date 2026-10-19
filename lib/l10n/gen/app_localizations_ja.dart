@@ -7462,6 +7462,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profilePostYou => 'あなた';
 
   @override
+  String get quickPickEmojiTitle => 'すぐ選べる絵文字';
+
+  @override
+  String get quickPickEmojiMore => 'その他の絵文字';
+
+  @override
+  String get quickPickSettingsCaption =>
+      'リアクションのボタンやコンポーザーの絵文字のボタンを長押しすると、ボタンにつながったパネルにここの絵文字と最近使った絵文字が並びます。指を離さずに滑らせて、離したところの絵文字を付けます(入れます)。滑らせずに離すと、パネルは開いたままでタップで選べます。';
+
+  @override
+  String get quickPickSettingsAdd => '絵文字を追加';
+
+  @override
+  String get quickPickSettingsReset => '既定に戻す';
+
+  @override
+  String quickPickSettingsRemove(String name) {
+    return '$name を外す';
+  }
+
+  @override
+  String get quickPickSettingsEmpty => '絵文字がありません。パネルには最近使った絵文字だけが並びます';
+
+  @override
   String get raiModeInstruction => 'インストラクション';
 
   @override
@@ -10202,6 +10226,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsSectionsSnsReactionPredictSubtitle => 'だれも付けていない投稿でも予測するか';
+
+  @override
+  String get settingsSectionsSnsQuickEmojiTitle => 'すぐ選べる絵文字';
+
+  @override
+  String get settingsSectionsSnsQuickEmojiSubtitle =>
+      'リアクションのボタンを長押しして、滑らせて選ぶ絵文字';
 
   @override
   String get settingsSectionsSnsAccountPickTitle => '共有 / リノートに使うアカウント';

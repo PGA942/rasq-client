@@ -45,9 +45,12 @@ void main() {
   Finder fowPanel() => find.byWidgetPredicate(isFrontmostFowPanel);
 
   /// いま最前面の FOW が第3カラムの中(左端が第3カラムの左端より右)にあるか。
+  /// ボタンにつながった FOW (D-513) は、そのパネル(ボタンのカラムの中に収める)で見る。
   void expectFowInCol3(WidgetTester tester, String what) {
-    expect(fowPanel(), findsOneWidget, reason: what);
-    expect(tester.getTopLeft(fowPanel()).dx, greaterThanOrEqualTo(tester.getTopLeft(col3).dx - 1), reason: '$what の FOW が第2カラムに出ている');
+    final tethered = find.byKey(kTetherPanelKey);
+    final panel = tethered.evaluate().isNotEmpty ? tethered : fowPanel();
+    expect(panel, findsOneWidget, reason: what);
+    expect(tester.getTopLeft(panel).dx, greaterThanOrEqualTo(tester.getTopLeft(col3).dx - 1), reason: '$what の FOW が第2カラムに出ている');
   }
 
   Future<void> closeFow(WidgetTester tester) async {
@@ -83,7 +86,11 @@ void main() {
 
   testWidgets('第3カラムの検索に並ぶ投稿のリアクション / 共有の FOW も第3カラム (D-481)', (tester) async {
     await pump(tester);
+    // 長押しはすぐ選べる絵文字 (D-512)、その「その他」でピッカー全体。どちらも第3カラム。
     await tester.longPress(inCol3(find.byTooltip('リアクション')).first);
+    await tester.pumpAndSettle();
+    expectFowInCol3(tester, 'すぐ選べる絵文字');
+    await tester.tap(find.byKey(const ValueKey('quickEmoji.more')));
     await tester.pumpAndSettle();
     expect(find.byType(EmojiPanel), findsOneWidget);
     expectFowInCol3(tester, 'リアクション');

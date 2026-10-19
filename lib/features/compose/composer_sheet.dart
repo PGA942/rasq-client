@@ -41,6 +41,7 @@ import 'compose_target.dart';
 import 'media_file_pick.dart';
 import 'drafts_fow.dart';
 import 'emoji_picker_fow.dart';
+import 'quick_emoji_picker.dart';
 import 'mfm_picker_fow.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
@@ -2089,14 +2090,39 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 })),
                 RasqActionButton.icon(key: const ValueKey('composer.tool.cw'), icon: Icons.visibility_outlined, doneIcon: Icons.visibility, done: _cwOn, tooltip: context.l10n.composeToolCw, onTap: () => setState(() => _cwOn = !_cwOn)),
                 if (!_isDm) RasqActionButton.icon(key: const ValueKey('composer.tool.poll'), icon: Icons.poll_outlined, doneIcon: Icons.poll, done: _poll != null, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : context.l10n.composeToolPoll, onTap: _rasqTextOnlyReply && _poll == null ? null : () => setState(() => _poll = _poll == null ? PollDraft() : null)),
-                RasqActionButton.icon(
-                  icon: Icons.emoji_emotions_outlined,
-                  tooltip: context.l10n.composeToolEmoji,
-                  // 絵文字は、**投稿するアカウント**のサーバーのもの (D-278。切り替えに追従する)。
-                  onTap: () => openEmojiPicker(ref, ownerId: _ownerId, column: _column, predictionContext: _text.text, accountKey: _effectivePostAs?.account.key, onPick: (e) {
-                    _insert(e);
-                    _focus.requestFocus();
-                  }),
+                Builder(
+                  builder: (ctx) => RasqActionButton.icon(
+                    key: const ValueKey('composer.tool.emoji'),
+                    icon: Icons.emoji_emotions_outlined,
+                    tooltip: context.l10n.composeToolEmoji,
+                    // 絵文字は、**投稿するアカウント**のサーバーのもの (D-278。切り替えに追従する)。
+                    onTap: () => openEmojiPicker(ref, ownerId: _ownerId, column: _column, predictionContext: _text.text, accountKey: _effectivePostAs?.account.key, onPick: (e) {
+                      _insert(e);
+                      _focus.requestFocus();
+                    }),
+                    // 長押し (D-512): ボタンにつながったすぐ選べる絵文字。指を滑らせて離した絵文字を入れる。バーは画面の下なので上に開く。
+                    onLongPress: () {
+                      final box = ctx.findRenderObject() as RenderBox;
+                      openQuickEmojiPicker(
+                        ref,
+                        id: 'composer.emoji.quick',
+                        ownerId: _ownerId,
+                        anchor: box.localToGlobal(Offset.zero) & box.size,
+                        column: _column,
+                        accountKey: _effectivePostAs?.account.key,
+                        preferredSide: TetherSide.above,
+                        anchorChild: const Icon(Icons.emoji_emotions_outlined, size: 20),
+                        onPick: (e) {
+                          _insert(e);
+                          _focus.requestFocus();
+                        },
+                        onMore: () => openEmojiPicker(ref, ownerId: _ownerId, column: _column, predictionContext: _text.text, accountKey: _effectivePostAs?.account.key, onPick: (e) {
+                          _insert(e);
+                          _focus.requestFocus();
+                        }),
+                      );
+                    },
+                  ),
                 ),
                 // テキスト加工プラグイン (契約 v0.14 §2.3 → D-474): 入力欄の上のチップから、この行の絵文字の隣へ(本文を触るボタンの並び)。
                 ..._textPluginButtons(ref.watch(composerTextPluginsProvider)),

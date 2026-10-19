@@ -29,6 +29,7 @@ import '../features/login/mixi2_login_screen.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
 import '../features/settings/column_layout_screen.dart';
 import '../features/settings/language_screen.dart';
+import '../features/compose/quick_emoji_picker.dart';
 import '../features/theme/theme_settings_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
 import '../features/settings/learning_screen.dart';
@@ -193,6 +194,9 @@ abstract final class Routes {
 
   /// 表示の言語 (D-484): システムに合わせる / 対応する言語。
   static const settingsLanguage = '/settings/language';
+
+  /// すぐ選べる絵文字 (D-512): リアクション / コンポーザーの絵文字のボタンの長押しで並ぶ絵文字。
+  static const settingsQuickEmoji = '/settings/quick-emoji';
 
   /// アプリの外観 → フォントやカラースキーム = 着せ替え (D-335)。
   static const settingsTheme = '/settings/theme';
@@ -464,6 +468,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'emom', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const EmomThresholdScreen()),
             GoRoute(path: 'columns', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ColumnLayoutScreen()),
             GoRoute(path: 'language', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LanguageSettingsScreen()),
+            GoRoute(path: 'quick-emoji', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const QuickEmojiSettingsScreen()),
             GoRoute(path: 'theme', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ThemeSettingsScreen()),
             // プラグインボタン (D-210): 宣言されたボタン / 束ねる閾値。
             GoRoute(path: 'actionbar-plugins', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ActionBarPluginsScreen()),

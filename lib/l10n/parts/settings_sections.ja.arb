@@ -32,6 +32,8 @@
   "settingsSectionsSnsEmojiSearchDetail": "意味の近い絵文字も探す(端末内のモデル)",
   "settingsSectionsSnsReactionPredictTitle": "リアクションの予測",
   "settingsSectionsSnsReactionPredictSubtitle": "だれも付けていない投稿でも予測するか",
+  "settingsSectionsSnsQuickEmojiTitle": "すぐ選べる絵文字",
+  "settingsSectionsSnsQuickEmojiSubtitle": "リアクションのボタンを長押しして、滑らせて選ぶ絵文字",
   "settingsSectionsSnsAccountPickTitle": "共有 / リノートに使うアカウント",
   "settingsSectionsSnsAccountPickSubtitle": "同じ投稿が複数のアカウントに見えるとき",
   "settingsSectionsSnsAccountPickDetail": "複数のアカウントに見えている投稿を、どのアカウントで扱うか",

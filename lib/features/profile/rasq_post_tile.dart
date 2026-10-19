@@ -207,7 +207,8 @@ class RasqPostTileView extends ConsumerWidget {
 
   /// リブロードのバンドル (D-276): ふつうのタイルでは「リブロード / 引用」(リブロードは何度でも)。
   /// 自分のリブロードとして出ているタイルでは「リブロードを取り消す / 引用」(その 1 回だけを取り消す)。
-  Future<void> _rebroadBundle(BuildContext context, WidgetRef ref, Rect anchor, {required bool myRebroad}) async {
+  /// [holding] = ボタンの長押しで開いた(指を滑らせて離して選ぶ、D-512)。
+  Future<void> _rebroadBundle(BuildContext context, WidgetRef ref, Rect anchor, {required bool myRebroad, bool holding = false}) async {
     final l10n = context.l10n;
     if (ref.read(orgateAccountProvider).value == null) return _toast(context, l10n.profilePostLoginToRebroad);
     // SNS のリノートと同じく、ドロップダウンではなくバンドル FOW で出す (D-277)。
@@ -217,6 +218,8 @@ class RasqPostTileView extends ConsumerWidget {
       title: l10n.profilePostRebroad,
       anchor: anchor,
       column: fowColumnOf(context),
+      holding: holding,
+      anchorChild: Icon(Icons.repeat, size: 20, color: myRebroad ? RasqTokens.of(context).link : null),
       items: [
         if (myRebroad) BundleMenuItem(value: 'undo', label: l10n.profilePostRebroadUndo, icon: Icons.repeat, destructive: true) else BundleMenuItem(value: 'rebroad', label: l10n.profilePostRebroad, icon: Icons.repeat),
         BundleMenuItem(value: 'quote', label: l10n.profilePostQuote, icon: Icons.format_quote),
@@ -362,6 +365,8 @@ class RasqPostTileView extends ConsumerWidget {
               doneColor: tokens.link,
               count: post.rebroadCount + post.quoteCount,
               onAnchorTap: (r) => perform(a, r),
+              // 長押しで、指を滑らせて離して選ぶ (D-512)。
+              onAnchorLongPress: (r) => _rebroadBundle(context, ref, r, myRebroad: myRebroad, holding: true),
             ),
           rasqQueueActionId => RasqActionBarItem(
               id: 'queue',
@@ -438,6 +443,7 @@ class RasqPostTileView extends ConsumerWidget {
                       iconUrl: bundleIconUrlOf(e.list),
                       showCount: false,
                       onAnchorTap: (anchor) => showActionBundleMenuFow(ref, anchor: anchor, entry: e, column: fowColumnOf(context), onPick: (a) => perform(a, anchor)),
+                      onAnchorLongPress: (anchor) => showActionBundleMenuFow(ref, anchor: anchor, entry: e, column: fowColumnOf(context), holding: true, onPick: (a) => perform(a, anchor)),
                     ),
                 },
             ],

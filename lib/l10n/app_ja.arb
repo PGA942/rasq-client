@@ -6886,6 +6886,27 @@
   "@profilePostYou": {
     "description": "キューの欄で、自分が付けた絵の印"
   },
+  "quickPickEmojiTitle": "すぐ選べる絵文字",
+  "@quickPickEmojiTitle": {
+    "description": "リアクション / コンポーザーの絵文字のボタンを長押しして出るパネルの見出しと、その設定の画面の名前 (D-512)"
+  },
+  "quickPickEmojiMore": "その他の絵文字",
+  "@quickPickEmojiMore": {
+    "description": "すぐ選べる絵文字のパネルの最後のマス。絵文字ピッカー全体を開く"
+  },
+  "quickPickSettingsCaption": "リアクションのボタンやコンポーザーの絵文字のボタンを長押しすると、ボタンにつながったパネルにここの絵文字と最近使った絵文字が並びます。指を離さずに滑らせて、離したところの絵文字を付けます(入れます)。滑らせずに離すと、パネルは開いたままでタップで選べます。",
+  "quickPickSettingsAdd": "絵文字を追加",
+  "quickPickSettingsReset": "既定に戻す",
+  "quickPickSettingsRemove": "{name} を外す",
+  "@quickPickSettingsRemove": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    },
+    "description": "外すボタンのツールチップ。name = 絵文字の :名前:"
+  },
+  "quickPickSettingsEmpty": "絵文字がありません。パネルには最近使った絵文字だけが並びます",
   "raiModeInstruction": "インストラクション",
   "@raiModeInstruction": {
     "description": "RAi のモード: 操作を教える(RAi がボタンまで移動して指差す)"
@@ -9186,6 +9207,8 @@
   "settingsSectionsSnsEmojiSearchDetail": "意味の近い絵文字も探す(端末内のモデル)",
   "settingsSectionsSnsReactionPredictTitle": "リアクションの予測",
   "settingsSectionsSnsReactionPredictSubtitle": "だれも付けていない投稿でも予測するか",
+  "settingsSectionsSnsQuickEmojiTitle": "すぐ選べる絵文字",
+  "settingsSectionsSnsQuickEmojiSubtitle": "リアクションのボタンを長押しして、滑らせて選ぶ絵文字",
   "settingsSectionsSnsAccountPickTitle": "共有 / リノートに使うアカウント",
   "settingsSectionsSnsAccountPickSubtitle": "同じ投稿が複数のアカウントに見えるとき",
   "settingsSectionsSnsAccountPickDetail": "複数のアカウントに見えている投稿を、どのアカウントで扱うか",

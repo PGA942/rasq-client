@@ -12470,6 +12470,48 @@ abstract class AppLocalizations {
   /// **'あなた'**
   String get profilePostYou;
 
+  /// リアクション / コンポーザーの絵文字のボタンを長押しして出るパネルの見出しと、その設定の画面の名前 (D-512)
+  ///
+  /// In ja, this message translates to:
+  /// **'すぐ選べる絵文字'**
+  String get quickPickEmojiTitle;
+
+  /// すぐ選べる絵文字のパネルの最後のマス。絵文字ピッカー全体を開く
+  ///
+  /// In ja, this message translates to:
+  /// **'その他の絵文字'**
+  String get quickPickEmojiMore;
+
+  /// No description provided for @quickPickSettingsCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションのボタンやコンポーザーの絵文字のボタンを長押しすると、ボタンにつながったパネルにここの絵文字と最近使った絵文字が並びます。指を離さずに滑らせて、離したところの絵文字を付けます(入れます)。滑らせずに離すと、パネルは開いたままでタップで選べます。'**
+  String get quickPickSettingsCaption;
+
+  /// No description provided for @quickPickSettingsAdd.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字を追加'**
+  String get quickPickSettingsAdd;
+
+  /// No description provided for @quickPickSettingsReset.
+  ///
+  /// In ja, this message translates to:
+  /// **'既定に戻す'**
+  String get quickPickSettingsReset;
+
+  /// 外すボタンのツールチップ。name = 絵文字の :名前:
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を外す'**
+  String quickPickSettingsRemove(String name);
+
+  /// No description provided for @quickPickSettingsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字がありません。パネルには最近使った絵文字だけが並びます'**
+  String get quickPickSettingsEmpty;
+
   /// RAi のモード: 操作を教える(RAi がボタンまで移動して指差す)
   ///
   /// In ja, this message translates to:
@@ -16822,6 +16864,18 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'だれも付けていない投稿でも予測するか'**
   String get settingsSectionsSnsReactionPredictSubtitle;
+
+  /// No description provided for @settingsSectionsSnsQuickEmojiTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'すぐ選べる絵文字'**
+  String get settingsSectionsSnsQuickEmojiTitle;
+
+  /// No description provided for @settingsSectionsSnsQuickEmojiSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションのボタンを長押しして、滑らせて選ぶ絵文字'**
+  String get settingsSectionsSnsQuickEmojiSubtitle;
 
   /// No description provided for @settingsSectionsSnsAccountPickTitle.
   ///
