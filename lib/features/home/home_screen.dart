@@ -17,6 +17,7 @@ import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../../shell/scroll_memory.dart';
+import '../../shell/scroll_to_top.dart' show VisibleTabPage;
 import '../settings/settings_dsl.dart';
 import '../nodeprog/node_tabs.dart';
 import '../nodeprog/timeline_temp_fow.dart';
@@ -149,12 +150,16 @@ class HomeScreen extends ConsumerWidget {
           ),
           Expanded(
             child: TabBarView(children: [
-              for (final k in kinds)
-                if (k == TimelineKind.relational)
-                  const RelationalTimelineView(key: ValueKey('tl.view.relational')) // D-022 v0 (ルールベース段)
-                else
-                  // 並べ替え (D-339) で位置が変わっても、TL ごとの State(スクロール位置)を取り違えない。
-                  _TimelineView(key: ValueKey('tl.view.${k.id}'), kind: k),
+              // 見えているタブだけ動かす (D-505 / D-508): 隠れたタブは、いちばん上へ送らない / 読み直さない。
+              for (final (i, k) in kinds.indexed)
+                // 並べ替え (D-339) で位置が変わっても、TL ごとの State(スクロール位置)を取り違えない。
+                VisibleTabPage(
+                  key: ValueKey('tl.page.${k.id}'),
+                  index: i,
+                  child: k == TimelineKind.relational
+                      ? const RelationalTimelineView(key: ValueKey('tl.view.relational')) // D-022 v0 (ルールベース段)
+                      : _TimelineView(key: ValueKey('tl.view.${k.id}'), kind: k),
+                ),
             ]),
           ),
           ]),
