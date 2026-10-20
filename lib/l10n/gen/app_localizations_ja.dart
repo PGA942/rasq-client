@@ -8724,6 +8724,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get raiModelsPhaseReady => '準備完了';
 
   @override
+  String get raiModelsPhaseReadyBundled => '準備完了(同梱)';
+
+  @override
   String get raiModelsPhaseLoading => '読み込み中';
 
   @override
@@ -8957,6 +8960,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get raiModelsEmbeddingUnavailableHere => 'この環境では端末内の埋め込みモデルを使えません';
+
+  @override
+  String get raiModelsChecksumMismatch => 'モデルのファイルが壊れています(sha256 が違います)';
+
+  @override
+  String get raiModelsSizeMismatch => 'モデルのファイルが途中で切れています';
 
   @override
   String get raiModelsCentralNotConfigured => 'RASQ サーバーの接続先が未設定です';

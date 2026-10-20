@@ -216,7 +216,8 @@ class _EmbeddingTile extends ConsumerWidget {
         Wrap(spacing: RasqSpacing.sm, runSpacing: RasqSpacing.xs, children: [
           if (st.phase == RaiEmbeddingPhase.notInstalled || st.phase == RaiEmbeddingPhase.error)
             FilledButton.icon(key: ValueKey('rai.$tag.download'), onPressed: verdict == RaiRamVerdict.no ? null : () => guard(model.install), icon: const Icon(Icons.download, size: 16), label: Text(context.l10n.raiModelsDownload), style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
-          if (st.ready || st.phase == RaiEmbeddingPhase.loading)
+          // 同梱のモデル (D-522) は消せない(消せるのはダウンロードしたものだけ)。
+          if (!st.bundled && (st.ready || st.phase == RaiEmbeddingPhase.loading))
             OutlinedButton.icon(key: ValueKey('rai.$tag.delete'), onPressed: () => guard(model.uninstall), icon: const Icon(Icons.delete_outline, size: 16), label: Text(context.l10n.raiModelsDelete), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
         ]),
       ]),
