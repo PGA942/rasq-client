@@ -449,14 +449,12 @@ class RasqPostTileView extends ConsumerWidget {
                 },
             ],
             trailing: [
-              Builder(
-                builder: (bctx) => RasqActionButton.icon(
-                  key: ValueKey('rasqPost.${post.id}.share'),
-                  icon: Icons.ios_share,
-                  tooltip: l10n.profilePostShare,
-                  // SNS の投稿と同じ共有 FOW (D-279。リンク / 内容のコピー、引用、DM、共有プラグイン)。ボタンにつながった形 (D-513)。
-                  onTap: () => showPostShareFow(ref, post.toPost(central: ref.read(centralBaseUrlProvider)), column: fowColumnOf(context), anchor: anchorRectOf(bctx)),
-                ),
+              RasqActionButton.icon(
+                key: ValueKey('rasqPost.${post.id}.share'),
+                icon: Icons.ios_share,
+                tooltip: l10n.profilePostShare,
+                // SNS の投稿と同じ共有 FOW (D-279。リンク / 内容のコピー、引用、DM、共有プラグイン)。ふつうのフッター付きの FOW (D-521)。
+                onTap: () => showPostShareFow(ref, post.toPost(central: ref.read(centralBaseUrlProvider)), column: fowColumnOf(context)),
               ),
             ],
           ),

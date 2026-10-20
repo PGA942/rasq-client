@@ -7,6 +7,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../../app/router.dart' show routerProvider;
 import '../../l10n/l10n.dart';
 import '../settings/settings_dsl.dart' show settingsAreaProvider;
 import '../trend/tendency_controls.dart';
@@ -15,7 +16,7 @@ import 'user_providers.dart';
 
 /// ユーザーページのタブの並べ替え・絞り込み (D-514)。
 ///
-/// 選んでいるタブをもう一度押すと、そのタブにつながったパネル([showTetheredPanel])で開く。中身は
+/// 選んでいるタブをもう一度押すと、フッター付きのふつうの FOW で開く(D-521。D-514 ではタブにつながったパネル)。中身は
 /// - 検索: 読み込んだこの人の投稿を本文で絞る(端末の中で。SNS の口にはユーザーを指定した投稿の検索が無い)
 /// - 指向性 / 刺激性: トレンドの傾向 FOW (D-153 / D-470) と同じ採点([tendencyScorer])と同じ部品([TendencyControls]、D-518)。
 ///   指向性は好きなジャンル / 好きな例(トレンドの設定のもの)への近さのしきい値、刺激性はレーダーの各感情の上限。隠すのは
@@ -192,22 +193,24 @@ Future<void> saveUserTabView(WidgetRef ref, UserPostsFilter tab, UserTabView v) 
 
 const userTabViewPanelId = 'user.tabView';
 
-/// タブにつながった並べ替え・絞り込みのパネル (D-514)。変えたらすぐ一覧に効く(保存もすぐ)。閉じる / 外のタップ / タブ
-/// (首)のタップで閉じる。[anchor] = タブの名前の矩形(グローバル座標)。[query] = このページのこのタブの検索の語。
+/// 並べ替え・絞り込みのパネル (D-514)。変えたらすぐ一覧に効く(保存もすぐ)。閉じる / タブのもう一度のタップ / 別の画面へ移ると閉じる。
+/// [column] = 開いたカラム(D-481、[fowColumnOf])。[query] = このページのこのタブの検索の語。
 /// [chartHeld] = 指が指向性 / 刺激性の欄に触れている間 true(ページはその間、横のスワイプと戻るジェスチャーを止める)。
 ///
-/// 見た目 (D-517 / D-518): 「このタイムラインから探す」(タイムラインの一時変更 FOW、D-338)と同じ並び = 太字の見出し →
-/// 検索欄(検索画面と同じ丸い枠)→ 太い下線の節(並べ替え / 表示 / 指向性・刺激性)。下は FOW の標準のフッター
-/// ([FowFooter]: 件数 + リセット / 閉じる)。幅は広い画面なら [userTabViewPanelWidth] まで広げ、指向性 / 刺激性を横に並べる。
+/// 出し方 (D-521): **ふつうの FOW**(カラムの下にドック、ハンドル / 見出し / フッター。共有 FOW と同じ)。D-514 / D-518 では
+/// タブにつながった形([showTetheredPanel])だった。後ろの一覧は触れたまま(絞り込みの結果を見ながら変えられる)。
+///
+/// 見た目 (D-517 / D-518): 見出し(タイトル)→ 検索欄(検索画面と同じ丸い枠)→ 太い下線の節(並べ替え / 表示 / 指向性・刺激性)。
+/// 下は FOW の標準のフッター([FowFooter]: 件数 + リセット / 閉じる)。カラムが広ければ指向性 / 刺激性を横に並べる。
 Future<void> showUserTabViewPanel(
   BuildContext ctx,
   WidgetRef ref, {
-  required Rect anchor,
   required UserPostsFilter tab,
   required String tabLabel,
   required ValueNotifier<String> query,
   required ValueNotifier<bool> chartHeld,
   required ({String id, UserPostsFilter filter, String? account}) postsKey,
+  int column = 0,
   bool hasPinned = false,
 }) async {
   final manager = ref.read(overlayManagerProvider);
@@ -218,42 +221,35 @@ Future<void> showUserTabViewPanel(
   final search = TextEditingController(text: query.value);
   void onText() => query.value = search.text;
   search.addListener(onText);
-  // 首(元のタブ)の中は、ページのタブと同じ見た目(∨ + 名前)。名前が首の丸より広くても切らない。
-  final scheme = Theme.of(ctx).colorScheme;
-  final labelColor = TabBarTheme.of(ctx).labelColor ?? scheme.primary;
-  // 首の丸はタブの名前を包む大きさ(高さはタブの高さ以上)。
-  final side = anchor.width > anchor.height ? anchor.width + 8 : anchor.height;
-  final neck = Rect.fromCenter(center: anchor.center, width: side, height: side);
+  // 別の画面へ移ったら閉じる(「このタイムラインから探す」と同じ作法、D-338)。
+  final router = ref.read(routerProvider);
+  void onNavigate() => manager.close(userTabViewPanelId);
+  router.routerDelegate.addListener(onNavigate);
   try {
-    await manager.showTetheredPanel<void>(
+    await manager.showFow<void>(
       id: userTabViewPanelId,
-      anchor: neck,
-      width: userTabViewPanelWidth,
-      iconExtent: 22,
-      title: ctx.l10n.userPageViewTitle(tabLabel),
-      // 見出しの字は「このタイムラインから探す」と同じ大きさ。閉じるはフッターへ (D-517)。
-      titleStyle: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-      cancelText: null,
-      confirmText: null,
-      anchorChild: OverflowBox(
-        maxWidth: double.infinity,
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.keyboard_arrow_down, size: 16, color: labelColor),
-          Text(tabLabel, style: (Theme.of(ctx).textTheme.labelLarge ?? const TextStyle()).merge(RasqTypography.tab).copyWith(color: labelColor), maxLines: 1, softWrap: false),
-        ]),
+      spec: FowSpec(
+        type: FowPanelType.widget,
+        title: ctx.l10n.userPageViewTitle(tabLabel),
+        initialHeightFactor: 0.6,
+        minHeightFactor: 0.3,
+        maxHeightFactor: 0.92,
+        dockAboveFooter: true,
+        columnIndex: column,
+        footer: UserTabViewPanelFooter(tab: tab, search: search, query: query, postsKey: postsKey, onClose: () => manager.close(userTabViewPanelId)),
       ),
-      builder: (_) => UserTabViewPanelBody(tab: tab, tabLabel: tabLabel, search: search, query: query, chartHeld: chartHeld, postsKey: postsKey, hasPinned: hasPinned),
-      footer: (_, handle) => UserTabViewPanelFooter(tab: tab, search: search, query: query, postsKey: postsKey, onClose: handle.close),
+      builder: (_, _) => SingleChildScrollView(
+        key: const ValueKey('user.tabView.panel'),
+        child: UserTabViewPanelBody(tab: tab, tabLabel: tabLabel, search: search, query: query, chartHeld: chartHeld, postsKey: postsKey, hasPinned: hasPinned),
+      ),
     );
   } finally {
+    router.routerDelegate.removeListener(onNavigate);
     chartHeld.value = false;
     search.removeListener(onText);
     search.dispose();
   }
 }
-
-/// パネルの幅の上限。スマホではタブのカラムの幅(-余白)まで縮み、指向性 / 刺激性は縦に積む([tendencyStackBreakpoint])。
-const userTabViewPanelWidth = 560.0;
 
 /// パネルの中身(テストとプレビューからも組める)。
 class UserTabViewPanelBody extends ConsumerWidget {

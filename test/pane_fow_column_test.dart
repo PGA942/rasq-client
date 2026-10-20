@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
+import 'package:rasq_client/app/navigation.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/compose/emoji_panel.dart';
 import 'package:rasq_client/features/home/post_row.dart';
 import 'package:rasq_client/features/search/search_screen.dart';
 import 'package:rasq_client/features/trend/trend_screen.dart';
+import 'package:rasq_client/features/users/user_page_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/third_column.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -51,6 +53,19 @@ void main() {
     final panel = tethered.evaluate().isNotEmpty ? tethered : fowPanel();
     expect(panel, findsOneWidget, reason: what);
     expect(tester.getTopLeft(panel).dx, greaterThanOrEqualTo(tester.getTopLeft(col3).dx - 1), reason: '$what の FOW が第2カラムに出ている');
+  }
+
+  /// ふつうの(ドックする)フッター付きの FOW (D-521): 最前面の FOW のパネルが第3カラムの左右の中にあり、フッターがその下の辺。
+  void expectFooterFowInCol3(WidgetTester tester, String what) {
+    final panel = fowPanel();
+    expect(panel, findsOneWidget, reason: what);
+    final rect = tester.getRect(panel);
+    final c3 = tester.getRect(col3);
+    expect(rect.left, greaterThanOrEqualTo(c3.left - 1), reason: what);
+    expect(rect.right, lessThanOrEqualTo(c3.right + 1), reason: what);
+    final footer = find.descendant(of: panel, matching: find.byType(FowFooter));
+    expect(footer, findsOneWidget, reason: '$what のフッター');
+    expect(tester.getRect(footer).bottom, closeTo(rect.bottom, 1), reason: what);
   }
 
   Future<void> closeFow(WidgetTester tester) async {
@@ -99,6 +114,28 @@ void main() {
     await tester.tap(inCol3(find.byTooltip('共有')).first);
     await tester.pumpAndSettle();
     expectFowInCol3(tester, '共有');
+    // D-521: 共有はボタンにつながらない、ふつうのフッター付きの FOW。第3カラムの幅に収まる。
+    expect(find.byType(TetheredPanel), findsNothing);
+    expectFooterFowInCol3(tester, '共有');
+  });
+
+  testWidgets('第3カラムのユーザーページの「ノートの表示」は、第3カラムのフッター付きの FOW (D-521 / D-481)', (tester) async {
+    await pump(tester);
+    tester.element(inCol3(find.byType(PostRow)).first).pushUser(author);
+    await tester.pumpAndSettle();
+    expect(inCol3(find.byType(UserPageScreen)), findsOneWidget);
+    final tab = inCol3(find.descendant(of: find.byType(TabBar), matching: find.text('ノート')));
+    await tester.tap(tab);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('user.tabView.panel')), findsOneWidget);
+    expect(find.byType(TetheredPanel), findsNothing);
+    expectFowInCol3(tester, 'ノートの表示');
+    expectFooterFowInCol3(tester, 'ノートの表示');
+    expect(find.descendant(of: find.byType(FowFooter), matching: find.byKey(const ValueKey('user.tabView.reset'))), findsOneWidget);
+    // フッターの「閉じる」で閉じる。
+    await tester.tap(find.byKey(const ValueKey('user.tabView.close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('user.tabView.panel')), findsNothing);
   });
 
   testWidgets('検索して第3カラムに開いた結果のリノートも第3カラムのまま (D-481)', (tester) async {

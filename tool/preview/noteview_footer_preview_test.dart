@@ -1,4 +1,4 @@
-// 描画確認ハーネス (D-517 / D-518): FOW のフッター(ノートの表示 / 共有)、リアクションのボタンから出る絵文字ピッカー全体、
+// 描画確認ハーネス (D-517 / D-518 / D-521): FOW のフッター(ノートの表示 / 共有。D-521 でふつうのフッター付きの FOW)、リアクションのボタンから出る絵文字ピッカー全体、
 // トレンドの指向性 / 刺激性(狭い / 広い)と、見た目を揃える元の「このタイムラインから探す」を PNG に(明るい / 暗い)。
 //   RASQ_PREVIEW_FONT=/path/to/NotoSansJP.ttf flutter test tool/preview/noteview_footer_preview_test.dart --update-goldens
 import 'dart:convert';
@@ -14,6 +14,7 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_client/shell/third_column.dart' show ThirdColumnView;
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -72,7 +73,7 @@ void main() {
   String name(String scene) => 'noteview_${tag}_$scene.png';
 
   // ── ノートの表示(ユーザーページのタブ)────────────────────────────
-  for (final (label, dark, size) in [('phone_light', false, const Size(360, 780)), ('phone_dark', true, const Size(360, 780)), ('narrow_light', false, const Size(300, 720)), ('wide_light', false, const Size(900, 700)), ('wide_dark', true, const Size(900, 700))]) {
+  for (final (label, dark, size) in [('phone_light', false, const Size(360, 780)), ('phone_dark', true, const Size(360, 780)), ('narrow_light', false, const Size(300, 720)), ('wide_light', false, const Size(900, 700)), ('wide_dark', true, const Size(900, 700)), ('cols3_light', false, const Size(1200, 800)), ('cols3_dark', true, const Size(1200, 800))]) {
     testWidgets('ノートの表示 $label', (tester) async {
       final c = await pump(tester, dark: dark, size: size, extra: {
         'userPageTabs.v1': jsonEncode({
@@ -89,12 +90,15 @@ void main() {
   }
 
   // ── 共有 ─────────────────────────────────────────────────────────
-  for (final dark in [false, true]) {
-    testWidgets('共有 ${dark ? 'dark' : 'light'}', (tester) async {
-      await pump(tester, dark: dark);
-      await tester.tap(find.byTooltip('共有').first);
+  for (final (label, dark, size) in [('light', false, const Size(360, 780)), ('dark', true, const Size(360, 780)), ('cols3_light', false, const Size(1200, 800)), ('cols3_dark', true, const Size(1200, 800))]) {
+    testWidgets('共有 $label', (tester) async {
+      await pump(tester, dark: dark, size: size);
+      // 3 カラムでは第3カラム(検索)に並ぶ投稿から開く(FOW も第3カラム、D-481)。
+      final col3 = find.byType(ThirdColumnView);
+      final button = size.width >= 1000 && find.descendant(of: col3, matching: find.byTooltip('共有')).evaluate().isNotEmpty ? find.descendant(of: col3, matching: find.byTooltip('共有')).first : find.byTooltip('共有').first;
+      await tester.tap(button);
       await tester.pumpAndSettle();
-      await expectLater(find.byType(RasqApp), matchesGoldenFile(name('share_${dark ? 'dark' : 'light'}')));
+      await expectLater(find.byType(RasqApp), matchesGoldenFile(name('share_$label')));
     });
   }
 
