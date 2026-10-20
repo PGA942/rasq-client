@@ -66,7 +66,7 @@ while IFS=' ' read -r repo asset; do
     *)
       (cd "$dir" && "$RASQ" build --raw --no-sign >/dev/null)
       cp "$dir/dist/$asset" "$OUT/$asset"
-      pkg="$(ls "$dir"/dist/*.rspkg "$dir"/dist/*.rasqpkg 2>/dev/null | head -1)" ;;
+      pkg="$(find "$dir/dist" -maxdepth 1 \( -name '*.rspkg' -o -name '*.rasqpkg' \) -print -quit)" ;; # ls だと片方の形が無いとき pipefail で止まる
   esac
   # 版 = 配布物の名前 <id>-<版>.rspkg(旧 .rasqpkg)から。
   version="$(basename "$(basename "$pkg" .rasqpkg)" .rspkg | sed -E 's/^.*-([0-9][^-]*(-[^-]+)?)$/\1/')"
