@@ -9,6 +9,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
+import '../../l10n/l10n.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/rasq_account_page_api.dart';
@@ -286,7 +287,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     manager.showFow<void>(
       id: viewerFowId,
       spec: _spec,
-      semanticsLabel: '投稿',
+      semanticsLabel: context.l10n.mediaViewerSemantics,
       barrierBehavior: OverlayBarrierBehavior.dismiss,
       onBarrierTap: _collapse,
       barrierEnabled: _barrier,
@@ -514,7 +515,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                 final fixed = 40.0 + 2 + 40 + (video ? 42 : 0) + 56; // 戻る / … / PiP / 枚数の最低幅
                 final barMax = math.max(0.0, c.maxWidth - fixed);
                 return Row(children: [
-                  _Circle(child: RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, color: Colors.white, onPressed: () => Navigator.of(context).maybePop(), tooltip: '戻る')),
+                  _Circle(child: RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, color: Colors.white, onPressed: () => Navigator.of(context).maybePop(), tooltip: context.l10n.mediaViewerBack)),
                   Expanded(child: post.media.length > 1 ? Text('${_page.value + 1} / ${post.media.length}', style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center) : const SizedBox.shrink()),
                   // 全画面アクションバー (D-212 → D-214): `viewer:<accountKey>` の構成。全画面表示プラグインの
                   // トグルもこのバーのボタン(編集画面で並べ替え / 削除 / 検索)。狭ければ横スクロール。
@@ -525,7 +526,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                   // PiP (D-204): 動画のとき。
                   if (video) ...[
                     const SizedBox(width: 2),
-                    _Circle(child: RasqIconButton(key: const ValueKey('viewer.pip'), icon: Icons.picture_in_picture_alt_outlined, color: Colors.white, tooltip: 'PiP で再生', onPressed: _toPip)),
+                    _Circle(child: RasqIconButton(key: const ValueKey('viewer.pip'), icon: Icons.picture_in_picture_alt_outlined, color: Colors.white, tooltip: context.l10n.mediaViewerPip, onPressed: _toPip)),
                   ],
                   const SizedBox(width: 2),
                   // 「…」(D-213): 投稿のメニューに準拠(詳細の代わりに「画像を保存」)。
@@ -534,7 +535,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                       child: RasqIconButton(
                         icon: Icons.more_horiz,
                         color: Colors.white,
-                        tooltip: 'メニュー',
+                        tooltip: context.l10n.mediaViewerMenu,
                         onPressed: () {
                           final box = ctx.findRenderObject() as RenderBox;
                           final rect = box.localToGlobal(Offset.zero) & box.size;
@@ -651,7 +652,7 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
                       ),
                     ),
                 },
-              RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {}),
+              RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.mediaViewerShare, onTap: () {}),
             ]),
             Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
           ]),

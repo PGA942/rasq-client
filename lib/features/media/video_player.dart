@@ -10,6 +10,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../app/navigation.dart';
+import '../../l10n/l10n.dart';
 import '../../app/providers.dart';
 import '../home/post_row.dart';
 
@@ -87,7 +88,7 @@ class VideoSession extends ChangeNotifier {
       if (!_disposed) notifyListeners();
     } catch (e) {
       if (_disposed) return;
-      error = '再生できません: $e';
+      error = appL10n.mediaVideoCannotPlay('$e');
       notifyListeners();
     }
   }
@@ -235,12 +236,12 @@ class VideoControls extends StatelessWidget {
         final time = Text('${fmtDuration(pos)} / ${fmtDuration(total)}', style: RasqTypography.caption.copyWith(color: color));
         final seek = Row(children: [Expanded(child: slider), Padding(padding: const EdgeInsets.only(right: RasqSpacing.sm), child: time)]);
         final buttons = Row(mainAxisSize: MainAxisSize.min, children: [
-          RasqIconButton(key: const ValueKey('video.back5'), icon: Icons.replay_5, color: color, tooltip: '5 秒戻す', onPressed: enabled ? () => session.seekBy(-5) : null),
-          RasqIconButton(key: const ValueKey('video.play'), icon: session.playing ? Icons.pause_circle_filled : Icons.play_circle_fill, size: 32, color: color, tooltip: session.playing ? '一時停止' : '再生', onPressed: enabled ? session.toggle : null),
-          RasqIconButton(key: const ValueKey('video.forward5'), icon: Icons.forward_5, color: color, tooltip: '5 秒送る', onPressed: enabled ? () => session.seekBy(5) : null),
+          RasqIconButton(key: const ValueKey('video.back5'), icon: Icons.replay_5, color: color, tooltip: context.l10n.mediaVideoBack5, onPressed: enabled ? () => session.seekBy(-5) : null),
+          RasqIconButton(key: const ValueKey('video.play'), icon: session.playing ? Icons.pause_circle_filled : Icons.play_circle_fill, size: 32, color: color, tooltip: session.playing ? context.l10n.mediaVideoPause : context.l10n.mediaVideoPlay, onPressed: enabled ? session.toggle : null),
+          RasqIconButton(key: const ValueKey('video.forward5'), icon: Icons.forward_5, color: color, tooltip: context.l10n.mediaVideoForward5, onPressed: enabled ? () => session.seekBy(5) : null),
           PopupMenuButton<double>(
             key: const ValueKey('video.speed'),
-            tooltip: '再生速度',
+            tooltip: context.l10n.mediaVideoSpeed,
             initialValue: session.speed,
             onSelected: session.setSpeed,
             itemBuilder: (_) => [for (final s in VideoSession.speeds) PopupMenuItem(value: s, child: Text('${s}x'))],
@@ -306,7 +307,7 @@ Future<void> showVideoFowWith(OverlayManager manager, MediaItem item, {Post? pos
   try {
     await manager.showFow<void>(
       id: videoFowId,
-      spec: FowSpec(title: '動画', cancelText: '閉じる', initialHeightFactor: 0.6, maxHeightFactor: 0.9, columnIndex: column ?? 0),
+      spec: FowSpec(title: appL10n.mediaVideoFowTitle, cancelText: appL10n.mediaVideoFowClose, initialHeightFactor: 0.6, maxHeightFactor: 0.9, columnIndex: column ?? 0),
       // 高さは FOW に合わせる(足りなければスクロール)。動画の高さは枠の高さから操作 + 投稿ぶんを引いた分。
       builder: (_, _) => LayoutBuilder(builder: (context, c) {
         final h = (c.maxHeight.isFinite ? c.maxHeight - (post == null ? 120 : 220) : 240.0).clamp(120.0, 480.0).toDouble();

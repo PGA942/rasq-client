@@ -3619,6 +3619,353 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listsPickerRasqBadgeSemantics => 'RASQ のユーザー';
 
   @override
+  String get mediaVizStyleMirror => '上下対称のバー';
+
+  @override
+  String get mediaVizStyleBars => '下から伸びるバー';
+
+  @override
+  String get mediaVizStyleLine => '折れ線';
+
+  @override
+  String get mediaVizLeftAvatar => 'アカウントのアイコン';
+
+  @override
+  String get mediaVizLeftFile => '選んだ画像';
+
+  @override
+  String get mediaVizLeftGlyph => '音符のアイコン';
+
+  @override
+  String get mediaVizLeftNone => 'なし(波形を横いっぱいに)';
+
+  @override
+  String get mediaVizTextBelow => '絵の下';
+
+  @override
+  String get mediaVizTextAbove => '絵の上';
+
+  @override
+  String get mediaVizQualityFast => '速い(960×540)';
+
+  @override
+  String get mediaVizQualityStandard => '標準(1280×720)';
+
+  @override
+  String get mediaVizQualityFine => '細かい(2560×1440、約 4 倍かかる)';
+
+  @override
+  String get mediaWavInvalid => 'WAV ではありません';
+
+  @override
+  String get mediaWavMissingChunks => 'WAV の fmt / data がありません';
+
+  @override
+  String mediaWavUnsupported(int format, int bits) {
+    return '未対応の WAV(format $format、$bits bit)';
+  }
+
+  @override
+  String mediaSeconds(String seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String mediaVizTimings(
+    String total,
+    int frameCount,
+    String frames,
+    String encode,
+    String mux,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      frameCount,
+      locale: localeName,
+      other:
+          '合計 $total($frameCount フレーム: 描画 $frames / エンコード $encode / 仕上げ $mux)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mediaAudioVideoUnsupported =>
+      'この端末では音声を動画にできません(Android / iOS / macOS だけ)';
+
+  @override
+  String get mediaViewerSemantics => '投稿';
+
+  @override
+  String get mediaViewerBack => '戻る';
+
+  @override
+  String get mediaViewerPip => 'PiP で再生';
+
+  @override
+  String get mediaViewerMenu => 'メニュー';
+
+  @override
+  String get mediaViewerShare => '共有';
+
+  @override
+  String get mediaPluginAsking => '画像を見ています…';
+
+  @override
+  String get mediaPluginFound => '検出あり';
+
+  @override
+  String get mediaPluginNotFound => '検出なし';
+
+  @override
+  String mediaPluginFailed(String reason) {
+    return '失敗: $reason(オフ → オンでやり直す)';
+  }
+
+  @override
+  String get mediaPluginFetchFailed => '画像を取得できませんでした';
+
+  @override
+  String mediaPluginFetchFailedWithError(String error) {
+    return '画像を取得できませんでした($error)';
+  }
+
+  @override
+  String get mediaPluginDecodeFailed => '画像を読めませんでした';
+
+  @override
+  String mediaVideoCannotPlay(String error) {
+    return '再生できません: $error';
+  }
+
+  @override
+  String get mediaVideoBack5 => '5 秒戻す';
+
+  @override
+  String get mediaVideoPause => '一時停止';
+
+  @override
+  String get mediaVideoPlay => '再生';
+
+  @override
+  String get mediaVideoForward5 => '5 秒送る';
+
+  @override
+  String get mediaVideoSpeed => '再生速度';
+
+  @override
+  String get mediaVideoFowTitle => '動画';
+
+  @override
+  String get mediaVideoFowClose => '閉じる';
+
+  @override
+  String get mediaSaveAsk => '保存するたびに選ぶ';
+
+  @override
+  String get mediaSavePhotos => '写真(カメラロール)';
+
+  @override
+  String get mediaSaveFiles => 'ファイル';
+
+  @override
+  String get mediaSaveBadFileName => '保存するファイル名が正しくありません';
+
+  @override
+  String get mediaSaveOutsideFolder => '保存先のフォルダーの外には書きません';
+
+  @override
+  String get mediaSaveTooManySameName => '同じ名前のファイルが多すぎます';
+
+  @override
+  String get mediaSavePhotosDenied => '写真への保存が許可されていません(設定 App で許可してください)';
+
+  @override
+  String get mediaSavedToPhotos => '写真(アルバム「RASQ」)に保存しました';
+
+  @override
+  String mediaSavedToFilesApp(String folder, String fileName) {
+    return '「ファイル」App の RASQ › $folder に保存しました($fileName)';
+  }
+
+  @override
+  String mediaSavedToPath(String path) {
+    return '保存しました: $path';
+  }
+
+  @override
+  String get mediaColorBlack => '黒';
+
+  @override
+  String get mediaColorNavy => '濃紺';
+
+  @override
+  String get mediaColorInk => '墨';
+
+  @override
+  String get mediaColorDeepGreen => '深緑';
+
+  @override
+  String get mediaColorCrimson => 'えんじ';
+
+  @override
+  String get mediaColorWhite => '白';
+
+  @override
+  String get mediaColorLightGray => '薄い灰';
+
+  @override
+  String get mediaColorYellow => '黄';
+
+  @override
+  String get mediaColorSkyBlue => '水色';
+
+  @override
+  String get mediaColorPink => '桃';
+
+  @override
+  String get mediaColorBlue => '青';
+
+  @override
+  String get mediaColorGreen => '緑';
+
+  @override
+  String get mediaColorOrange => '橙';
+
+  @override
+  String get mediaColorPurple => '紫';
+
+  @override
+  String get mediaVizCancel => 'キャンセル';
+
+  @override
+  String get mediaVizConfirm => '決定';
+
+  @override
+  String get mediaVizSemantics => 'Visualizer の設定';
+
+  @override
+  String get mediaVizRebuildWarning => '決定すると動画を作り直します。ここまでの編集は消えます';
+
+  @override
+  String mediaVizRebuildDetail(int frames) {
+    String _temp0 = intl.Intl.pluralLogic(
+      frames,
+      locale: localeName,
+      other:
+          '今の再生位置のフレーム。決定で動画を書き出し直します($frames フレーム)。ペイントやテキストなど、ここまでの編集は消えます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mediaVizRebuildDetailReducedFps(int frames, String fps) {
+    String _temp0 = intl.Intl.pluralLogic(
+      frames,
+      locale: localeName,
+      other:
+          '今の再生位置のフレーム。決定で動画を書き出し直します($frames フレーム、長いので ${fps}fps に下げます)。ペイントやテキストなど、ここまでの編集は消えます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mediaVizWaveform => '波形';
+
+  @override
+  String get mediaVizBands => '帯域の数(低音 → 高音)';
+
+  @override
+  String get mediaVizFrameRate => 'フレームレート';
+
+  @override
+  String get mediaVizBarColor => 'バーの色';
+
+  @override
+  String get mediaVizBackgroundColor => '背景色';
+
+  @override
+  String get mediaVizLeftImage => '左の絵';
+
+  @override
+  String get mediaVizPickImage => '画像を選ぶ';
+
+  @override
+  String get mediaVizRepickImage => '画像を選び直す';
+
+  @override
+  String get mediaVizPickImageHint => '選ぶまでは音符のアイコン';
+
+  @override
+  String get mediaVizTitleSection => 'タイトル / 説明';
+
+  @override
+  String get mediaVizShowTitle => 'タイトル / 説明を出す';
+
+  @override
+  String get mediaVizTitleHint => 'タイトル(空ならファイル名)';
+
+  @override
+  String get mediaVizDescriptionHint => '説明(無くてもよい)';
+
+  @override
+  String get mediaVizTextScale => '文字の大きさ';
+
+  @override
+  String get mediaVizTextColorAuto => '文字の色: 自動';
+
+  @override
+  String get mediaVizBackgroundVideo => '背景の動画';
+
+  @override
+  String get mediaVizPickVideo => '動画を選ぶ';
+
+  @override
+  String get mediaVizRepickVideo => '動画を選び直す';
+
+  @override
+  String get mediaVizPickVideoHint => '背景色の代わりに動画を流します(音は使いません)';
+
+  @override
+  String mediaVizVideoSelected(String fileName) {
+    return '$fileName — 音声より短ければループします';
+  }
+
+  @override
+  String get mediaVizRemoveVideo => '背景の動画を外す';
+
+  @override
+  String get mediaVizDim => '動画の上に掛ける暗さ';
+
+  @override
+  String get mediaVizDimHint => '波形と文字を読みやすくします';
+
+  @override
+  String get mediaVizFade => 'フェード(絵)';
+
+  @override
+  String get mediaVizFadeIn => 'フェードイン';
+
+  @override
+  String get mediaVizFadeOut => 'フェードアウト';
+
+  @override
+  String get mediaVizFadeNone => 'なし';
+
+  @override
+  String get mediaVizExport => '書き出し';
+
+  @override
+  String get mediaVizExportCaption => '細かくするほど、書き出しに時間がかかります';
+
+  @override
+  String get mediaVizExportDetail =>
+      '波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。';
+
+  @override
+  String mediaVizExportDetailWithLast(String timings) {
+    return '前回の書き出し: $timings。\n波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。';
+  }
+
+  @override
   String get nodeprogCatalogGenreGenerate => '生成';
 
   @override
@@ -5518,6 +5865,180 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get nodeprogTimelinePaletteEmptyHint => '検索ワードを変えてみてください';
+
+  @override
+  String get notificationsPrefReaction => 'リアクションを通知する';
+
+  @override
+  String get notificationsPrefRepost => 'リノートを通知する';
+
+  @override
+  String get notificationsPrefQuote => '引用を通知する';
+
+  @override
+  String get notificationsPrefAstell => 'ASTellを通知する';
+
+  @override
+  String get notificationsPrefTimer => 'タイマー付きブックマークを通知する';
+
+  @override
+  String get notificationsPrefPollEnded => '投票の完了を通知する';
+
+  @override
+  String get notificationsPrefFollow => 'フォローを通知する';
+
+  @override
+  String get notificationsPrefSystem => 'システム通知を表示する';
+
+  @override
+  String get notificationsPrefOther => 'その他の通知を配信する';
+
+  @override
+  String get notificationsTabAll => 'すべて';
+
+  @override
+  String get notificationsTabFollowing => 'フォロー中';
+
+  @override
+  String get notificationsPrefsTitle => '通知プロファイル設定';
+
+  @override
+  String get notificationsEmptyFollowing => 'フォロー中の通知はありません';
+
+  @override
+  String get notificationsClose => '閉じる';
+
+  @override
+  String get notificationsPrefEnabled => '通知オン';
+
+  @override
+  String get notificationsPushTitle => 'プッシュ通知の受け取り';
+
+  @override
+  String get notificationsPushDetail => '通知専用のアクセストークン';
+
+  @override
+  String get notificationsQuickReadAll => '全ての通知を既読';
+
+  @override
+  String get notificationsQuickReadFollowing => 'フォロー中の通知を既読';
+
+  @override
+  String get notificationsQuickOff => '通知オフ';
+
+  @override
+  String get notificationsEmpty => '通知はありません';
+
+  @override
+  String get notificationsRetry => '再読み込み';
+
+  @override
+  String get notificationsRemindersHeader => '開始通知を登録した VC';
+
+  @override
+  String notificationsReminderSchedule(String when) {
+    return '開催予定 $when';
+  }
+
+  @override
+  String get notificationsReminderCancel => '解除';
+
+  @override
+  String get notificationsSystemFallbackTitle => 'システム通知';
+
+  @override
+  String notificationsActorsOne(String name) {
+    return '$nameさん';
+  }
+
+  @override
+  String notificationsActorsTwo(String first, String second) {
+    return '$firstさん、$secondさん';
+  }
+
+  @override
+  String notificationsActorsMore(String first, String second, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$firstさん、$secondさんと他$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notificationsActionReacted(String names) {
+    return '$namesがあなたの投稿にリアクションしました';
+  }
+
+  @override
+  String notificationsActionReposted(String names) {
+    return '$namesがあなたの投稿をリノートしました';
+  }
+
+  @override
+  String notificationsActionPollEnded(String names) {
+    return '$namesが投票が終了しました';
+  }
+
+  @override
+  String notificationsActionOther(String names) {
+    return '$namesが通知';
+  }
+
+  @override
+  String get notificationsMenuTooltip => 'メニュー';
+
+  @override
+  String notificationsFollowFollowed(String name) {
+    return '$nameにフォローされました';
+  }
+
+  @override
+  String notificationsFollowRequested(String name) {
+    return '$nameからフォロー申請が届きました';
+  }
+
+  @override
+  String notificationsFollowAccepted(String name) {
+    return '$nameがフォローを承認しました';
+  }
+
+  @override
+  String notificationsFollowListAdded(String name) {
+    return '$nameがリストに追加しました';
+  }
+
+  @override
+  String get notificationsFollowButton => 'フォロー';
+
+  @override
+  String get notificationsFollowingButton => 'フォロー中';
+
+  @override
+  String get notificationsPostReply => '返信';
+
+  @override
+  String get notificationsPostQuote => '引用';
+
+  @override
+  String get notificationsPostMention => 'メンション';
+
+  @override
+  String get notificationsTimerAstell => 'ブックマークしたVCが始まります！';
+
+  @override
+  String get notificationsTimerBookmark => 'タイマー付きブックマーク';
+
+  @override
+  String get notificationsRasqLoadError => '読み込めませんでした';
+
+  @override
+  String get notificationsRasqEmpty => 'RASQ の通知はありません';
+
+  @override
+  String get notificationsRasqEmptyHint =>
+      'メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます';
 
   @override
   String get onboardingBack => '戻る';

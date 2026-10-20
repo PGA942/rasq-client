@@ -7,6 +7,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 
+import '../../l10n/l10n.dart';
+
 /// 音声だけのファイルを動画にする (D-250 → D-251)。
 ///
 /// 加工画面は動画のエディターなので、音声(`audio/*`)は開くときに **2560×1440 の動画**へ変換する。
@@ -30,44 +32,62 @@ const audioMaxFrames = 7500;
 
 /// 波形の形。
 enum AudioVisualizerStyle {
-  mirror('上下対称のバー'),
-  bars('下から伸びるバー'),
-  line('折れ線');
+  mirror,
+  bars,
+  line;
 
-  const AudioVisualizerStyle(this.label);
-  final String label;
+  /// 選択肢の名前(表示の言語)。
+  String get label => switch (this) {
+        mirror => appL10n.mediaVizStyleMirror,
+        bars => appL10n.mediaVizStyleBars,
+        line => appL10n.mediaVizStyleLine,
+      };
 }
 
 /// 左の絵 (D-253)。
 enum AudioVisualizerLeft {
-  avatar('アカウントのアイコン'),
-  file('選んだ画像'),
-  glyph('音符のアイコン'),
-  none('なし(波形を横いっぱいに)');
+  avatar,
+  file,
+  glyph,
+  none;
 
-  const AudioVisualizerLeft(this.label);
-  final String label;
+  /// 選択肢の名前(表示の言語)。
+  String get label => switch (this) {
+        avatar => appL10n.mediaVizLeftAvatar,
+        file => appL10n.mediaVizLeftFile,
+        glyph => appL10n.mediaVizLeftGlyph,
+        none => appL10n.mediaVizLeftNone,
+      };
 }
 
 /// タイトル / 説明を左の絵のどちらに付けるか。
 enum AudioVisualizerTextPosition {
-  below('絵の下'),
-  above('絵の上');
+  below,
+  above;
 
-  const AudioVisualizerTextPosition(this.label);
-  final String label;
+  /// 選択肢の名前(表示の言語)。
+  String get label => switch (this) {
+        below => appL10n.mediaVizTextBelow,
+        above => appL10n.mediaVizTextAbove,
+      };
 }
 
 /// フレームを描く大きさ(出力はいつも 2560×1440。小さく描いて拡大するほど速い)。左の絵と文字は別の 1 枚として
 /// いつも 2560×1440 で描くので、ここで変わるのは波形とシークバー(と背景の動画)の細かさだけ (D-254)。
 enum AudioVisualizerQuality {
-  fast('速い(960×540)', ui.Size(960, 540)),
-  standard('標準(1280×720)', ui.Size(1280, 720)),
-  fine('細かい(2560×1440、約 4 倍かかる)', audioVideoSize);
+  fast(ui.Size(960, 540)),
+  standard(ui.Size(1280, 720)),
+  fine(audioVideoSize);
 
-  const AudioVisualizerQuality(this.label, this.size);
-  final String label;
+  const AudioVisualizerQuality(this.size);
   final ui.Size size;
+
+  /// 選択肢の名前(表示の言語)。
+  String get label => switch (this) {
+        fast => appL10n.mediaVizQualityFast,
+        standard => appL10n.mediaVizQualityStandard,
+        fine => appL10n.mediaVizQualityFine,
+      };
 }
 
 /// 何を描くか (D-254): 書き出しでは、毎フレーム変わるもの([dynamicOnly])と変わらないもの([staticOnly] = 左の絵と文字、
@@ -264,7 +284,7 @@ class AudioPcm {
   static AudioPcm parseWav(Uint8List bytes, {int maxRate = 24000}) {
     final d = ByteData.sublistView(bytes);
     String tag(int o) => String.fromCharCodes(bytes.sublist(o, o + 4));
-    if (bytes.length < 12 || tag(0) != 'RIFF' || tag(8) != 'WAVE') throw const FormatException('WAV ではありません');
+    if (bytes.length < 12 || tag(0) != 'RIFF' || tag(8) != 'WAVE') throw FormatException(appL10n.mediaWavInvalid);
     int? format, channels, rate, bits;
     var dataAt = -1, dataLen = 0;
     for (var o = 12; o + 8 <= bytes.length;) {
@@ -284,8 +304,8 @@ class AudioPcm {
       }
       o += 8 + len + (len & 1);
     }
-    if (format == null || channels == null || rate == null || bits == null || dataAt < 0 || channels == 0 || rate == 0) throw const FormatException('WAV の fmt / data がありません');
-    if (!((format == 1 && const [8, 16, 24, 32].contains(bits)) || (format == 3 && bits == 32))) throw FormatException('未対応の WAV(format $format、$bits bit)');
+    if (format == null || channels == null || rate == null || bits == null || dataAt < 0 || channels == 0 || rate == 0) throw FormatException(appL10n.mediaWavMissingChunks);
+    if (!((format == 1 && const [8, 16, 24, 32].contains(bits)) || (format == 3 && bits == 32))) throw FormatException(appL10n.mediaWavUnsupported(format, bits));
     final width = bits ~/ 8;
     final step = math.max(1, (rate / maxRate).ceil());
     final frames = dataLen ~/ (width * channels);
@@ -560,9 +580,14 @@ class AudioBuildTimings {
   final Duration mux;
   Duration get total => frames + encode + mux;
 
-  static String _s(Duration d) => '${(d.inMilliseconds / 1000).toStringAsFixed(1)} 秒';
+  static String _s(AppLocalizations l, Duration d) => l.mediaSeconds((d.inMilliseconds / 1000).toStringAsFixed(1));
+
+  /// 内訳の文(表示の言語)。設定 FOW の「書き出し」の節とログに出る。
   @override
-  String toString() => '合計 ${_s(total)}($frameCount フレーム: 描画 ${_s(frames)} / エンコード ${_s(encode)} / 仕上げ ${_s(mux)})';
+  String toString() {
+    final l = appL10n;
+    return l.mediaVizTimings(_s(l, total), frameCount, _s(l, frames), _s(l, encode), _s(l, mux));
+  }
 }
 
 /// 出力のビットレート(平らな絵なので 2560×1440 でも控えめでよい。小さいほどエンコードもアップロードも軽い)。
@@ -579,7 +604,7 @@ const audioBackgroundMaxFps = 15.0;
 /// [leftImage] = 左の絵(呼び出し側が用意。null なら音符)。背景の動画は設定のパスから、その瞬間のコマを取り出して描く
 /// (短ければループ)。[onProgress] = 0..1(フレーム作り 0〜0.7、書き出し 0.7〜1)。
 Future<File> buildAudioVisualizerVideo({required File audio, required AudioPcm pcm, required Directory workDir, AudioVisualizerConfig config = const AudioVisualizerConfig(), String? title, ui.Image? leftImage, void Function(double progress)? onProgress, void Function(AudioBuildTimings timings)? onTimings, bool Function()? cancelled}) async {
-  if (!audioVideoSupported) throw UnsupportedError('この端末では音声を動画にできません(Android / iOS / macOS だけ)');
+  if (!audioVideoSupported) throw UnsupportedError(appL10n.mediaAudioVideoUnsupported);
   final id = DateTime.now().microsecondsSinceEpoch;
   final dir = Directory('${workDir.path}/rasq_audio_$id');
   await dir.create(recursive: true);

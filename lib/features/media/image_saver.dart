@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../../l10n/l10n.dart';
 import '../settings/settings_dsl.dart';
 
 /// 画像 / 動画の保存先 (D-213 → D-334)。設定 → アプリの外観 →「画像・動画の保存先」(`media.save` の `destination`)。
@@ -18,13 +19,28 @@ import '../settings/settings_dsl.dart';
 /// - [files] = ファイル。iPhone / iPad は「ファイル」App の「このiPad(このiPhone)› RASQ › 保存」(書類フォルダを見せている)、
 ///   デスクトップは保存先を選ぶダイアログ(最初はダウンロード)。Android はギャラリーに入れる(アプリの書類は「ファイル」から見えないため)
 enum MediaSaveDestination {
-  ask('保存するたびに選ぶ'),
-  photos('写真(カメラロール)'),
-  files('ファイル');
+  ask,
+  photos,
+  files;
 
-  const MediaSaveDestination(this.label);
-  final String label;
+  /// 選択肢の名前(表示の言語)。
+  String get label => switch (this) {
+        ask => appL10n.mediaSaveAsk,
+        photos => appL10n.mediaSavePhotos,
+        files => appL10n.mediaSaveFiles,
+      };
 }
+
+/// 保存できなかった理由 (利用者に見せる文)。`toString` は文だけ(スナックバーに `$e` で出ても「Bad state: 」が付かない)。
+class MediaSaveException implements Exception {
+  const MediaSaveException(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
+/// iPhone / iPad で保存する書類フォルダの下のフォルダーの名前(端末の上の名前なので、表示の言語に依らず同じ)。
+const _iosSaveFolder = '保存'; // l10n-ignore
 
 const mediaSaveSettingsArea = 'media.save';
 
@@ -100,13 +116,13 @@ String? sanitizeMediaFileName(String raw, {required String fallbackExt}) {
 /// 既にあれば ` (2)` などを付けて**上書きしない**(排他的に作る)。戻りは書いたファイル。
 @visibleForTesting
 Future<File> writeMediaFileExclusive(Directory dir, String name, List<int> bytes) async {
-  if (name.isEmpty || name == '.' || name == '..' || name.contains('/') || name.contains('\\')) throw ArgumentError.value(name, 'name', '保存するファイル名が正しくありません');
+  if (name.isEmpty || name == '.' || name == '..' || name.contains('/') || name.contains('\\')) throw ArgumentError.value(name, 'name', appL10n.mediaSaveBadFileName);
   final dot = name.lastIndexOf('.');
   final base = dot > 0 ? name.substring(0, dot) : name, ext = dot > 0 ? name.substring(dot) : '';
   final root = dir.absolute.path;
   for (var i = 1; i < 1000; i++) {
     final file = File('$root${Platform.pathSeparator}${i == 1 ? name : '$base ($i)$ext'}');
-    if (file.parent.absolute.path != root) throw StateError('保存先のフォルダーの外には書きません');
+    if (file.parent.absolute.path != root) throw MediaSaveException(appL10n.mediaSaveOutsideFolder);
     try {
       await file.create(exclusive: true);
     } on FileSystemException {
@@ -115,16 +131,16 @@ Future<File> writeMediaFileExclusive(Directory dir, String name, List<int> bytes
     await file.writeAsBytes(bytes, flush: true);
     return file;
   }
-  throw StateError('同じ名前のファイルが多すぎます');
+  throw MediaSaveException(appL10n.mediaSaveTooManySameName);
 }
 
 /// 画像 / 動画を保存する(D-334)。テストでは差し替える。
 final imageSaverProvider = Provider<MediaSaver>((ref) => (item, destination) async {
       final res = await http.get(item.url).timeout(const Duration(minutes: 2));
-      if (res.statusCode != 200) throw StateError('HTTP ${res.statusCode}');
+      if (res.statusCode != 200) throw MediaSaveException('HTTP ${res.statusCode}');
       final name = mediaSaveFileName(item);
       if (destination == MediaSaveDestination.photos || (!kIsWeb && Platform.isAndroid)) {
-        if (!await Gal.hasAccess(toAlbum: true) && !await Gal.requestAccess(toAlbum: true)) throw StateError('写真への保存が許可されていません(設定 App で許可してください)');
+        if (!await Gal.hasAccess(toAlbum: true) && !await Gal.requestAccess(toAlbum: true)) throw MediaSaveException(appL10n.mediaSavePhotosDenied);
         if (item.type == MediaType.video) {
           // 動画はファイルから入れる。一時ファイルの名前はアプリが作る(相手の付けた名前を使わない、指摘 #25)。
           final tmp = await writeMediaFileExclusive(await getTemporaryDirectory(), 'rasq_${DateTime.now().microsecondsSinceEpoch}_${_safeId(item.id)}.${_extOf(item)}', res.bodyBytes);
@@ -136,19 +152,19 @@ final imageSaverProvider = Provider<MediaSaver>((ref) => (item, destination) asy
         } else {
           await Gal.putImageBytes(res.bodyBytes, album: 'RASQ', name: name.contains('.') ? name.substring(0, name.lastIndexOf('.')) : name);
         }
-        return '写真(アルバム「RASQ」)に保存しました';
+        return appL10n.mediaSavedToPhotos;
       }
       if (!kIsWeb && Platform.isIOS) {
         // 「ファイル」App の このiPad(このiPhone)› RASQ › 保存(書類フォルダ。Info.plist の UIFileSharingEnabled + LSSupportsOpeningDocumentsInPlace)。
-        final dir = Directory('${(await getApplicationDocumentsDirectory()).path}/保存');
+        final dir = Directory('${(await getApplicationDocumentsDirectory()).path}/$_iosSaveFolder');
         await dir.create(recursive: true);
         final saved = await writeMediaFileExclusive(dir, name, res.bodyBytes);
-        return '「ファイル」App の RASQ › 保存 に保存しました(${saved.uri.pathSegments.last})';
+        return appL10n.mediaSavedToFilesApp(_iosSaveFolder, saved.uri.pathSegments.last);
       }
       // デスクトップ: 保存先を選ぶダイアログ(最初はダウンロード)。
       final downloads = await getDownloadsDirectory();
       final loc = await fs.getSaveLocation(suggestedName: name, initialDirectory: downloads?.path);
       if (loc == null) return null;
       await File(loc.path).writeAsBytes(res.bodyBytes, flush: true);
-      return '保存しました: ${loc.path}';
+      return appL10n.mediaSavedToPath(loc.path);
     });

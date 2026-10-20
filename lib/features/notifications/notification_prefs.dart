@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../../l10n/l10n.dart';
 import '../settings/settings_dsl.dart';
 
 /// 通知プロファイル設定 (種別 ON/OFF)。設定エリアに保存 (D-238)。Applied client-side as a filter.
@@ -51,15 +52,15 @@ class NotificationPrefsStore extends Notifier<NotificationPrefs> {
 
 final notificationPrefsProvider = NotifierProvider<NotificationPrefsStore, NotificationPrefs>(NotificationPrefsStore.new);
 
-/// Rows shown in the 通知プロファイル設定 sheet (ワイヤーフレーム順).
-const notificationPrefRows = <(String, List<NotificationKind>)>[
-  ('リアクションを通知する', [NotificationKind.reaction]),
-  ('リノートを通知する', [NotificationKind.repost]),
-  ('引用を通知する', [NotificationKind.quote]),
-  ('ASTellを通知する', [NotificationKind.vc]),
-  ('タイマー付きブックマークを通知する', [NotificationKind.timer]),
-  ('投票の完了を通知する', [NotificationKind.pollEnded]),
-  ('フォローを通知する', [NotificationKind.follow, NotificationKind.followRequest, NotificationKind.followAccepted]),
-  ('システム通知を表示する', [NotificationKind.system]),
-  ('その他の通知を配信する', [NotificationKind.reply, NotificationKind.mention, NotificationKind.listAdded, NotificationKind.other]),
-];
+/// Rows shown in the 通知プロファイル設定 sheet (ワイヤーフレーム順). 見出しは表示の言語 (D-484)。
+List<(String, List<NotificationKind>)> notificationPrefRowsOf(AppLocalizations l) => [
+      (l.notificationsPrefReaction, [NotificationKind.reaction]),
+      (l.notificationsPrefRepost, [NotificationKind.repost]),
+      (l.notificationsPrefQuote, [NotificationKind.quote]),
+      (l.notificationsPrefAstell, [NotificationKind.vc]),
+      (l.notificationsPrefTimer, [NotificationKind.timer]),
+      (l.notificationsPrefPollEnded, [NotificationKind.pollEnded]),
+      (l.notificationsPrefFollow, [NotificationKind.follow, NotificationKind.followRequest, NotificationKind.followAccepted]),
+      (l.notificationsPrefSystem, [NotificationKind.system]),
+      (l.notificationsPrefOther, [NotificationKind.reply, NotificationKind.mention, NotificationKind.listAdded, NotificationKind.other]),
+    ];

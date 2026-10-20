@@ -6016,6 +6016,606 @@ abstract class AppLocalizations {
   /// **'RASQ のユーザー'**
   String get listsPickerRasqBadgeSemantics;
 
+  /// 音声を動画にするときの波形の形の選択肢(Visualizer の設定)。中央から上下に伸びるバー
+  ///
+  /// In ja, this message translates to:
+  /// **'上下対称のバー'**
+  String get mediaVizStyleMirror;
+
+  /// 音声を動画にするときの波形の形の選択肢。下から上へ伸びるバー
+  ///
+  /// In ja, this message translates to:
+  /// **'下から伸びるバー'**
+  String get mediaVizStyleBars;
+
+  /// 音声を動画にするときの波形の形の選択肢。折れ線グラフ
+  ///
+  /// In ja, this message translates to:
+  /// **'折れ線'**
+  String get mediaVizStyleLine;
+
+  /// 音声の動画の左に出す絵の選択肢。投稿するアカウントのアイコン
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントのアイコン'**
+  String get mediaVizLeftAvatar;
+
+  /// 音声の動画の左に出す絵の選択肢。端末から選んだ画像
+  ///
+  /// In ja, this message translates to:
+  /// **'選んだ画像'**
+  String get mediaVizLeftFile;
+
+  /// 音声の動画の左に出す絵の選択肢。音符の記号
+  ///
+  /// In ja, this message translates to:
+  /// **'音符のアイコン'**
+  String get mediaVizLeftGlyph;
+
+  /// 音声の動画の左に出す絵の選択肢。絵を出さず、波形を横幅いっぱいに描く
+  ///
+  /// In ja, this message translates to:
+  /// **'なし(波形を横いっぱいに)'**
+  String get mediaVizLeftNone;
+
+  /// 音声の動画のタイトル / 説明を置く位置の選択肢。左の絵の下
+  ///
+  /// In ja, this message translates to:
+  /// **'絵の下'**
+  String get mediaVizTextBelow;
+
+  /// 音声の動画のタイトル / 説明を置く位置の選択肢。左の絵の上
+  ///
+  /// In ja, this message translates to:
+  /// **'絵の上'**
+  String get mediaVizTextAbove;
+
+  /// 音声の動画の書き出しの細かさの選択肢。波形を小さく描いて拡大するので速い。数字は描く大きさ(ピクセル)
+  ///
+  /// In ja, this message translates to:
+  /// **'速い(960×540)'**
+  String get mediaVizQualityFast;
+
+  /// 音声の動画の書き出しの細かさの選択肢。標準。数字は描く大きさ(ピクセル)
+  ///
+  /// In ja, this message translates to:
+  /// **'標準(1280×720)'**
+  String get mediaVizQualityStandard;
+
+  /// 音声の動画の書き出しの細かさの選択肢。出力と同じ大きさで描く。標準の約 4 倍の時間がかかる
+  ///
+  /// In ja, this message translates to:
+  /// **'細かい(2560×1440、約 4 倍かかる)'**
+  String get mediaVizQualityFine;
+
+  /// 音声を動画にするとき、取り出した音声が WAV の形式でなかったときのエラー
+  ///
+  /// In ja, this message translates to:
+  /// **'WAV ではありません'**
+  String get mediaWavInvalid;
+
+  /// 音声を動画にするとき、WAV のファイルに必要な部分(fmt / data のチャンク。訳さない)が無かったときのエラー
+  ///
+  /// In ja, this message translates to:
+  /// **'WAV の fmt / data がありません'**
+  String get mediaWavMissingChunks;
+
+  /// 音声を動画にするとき、対応していない WAV の形式だったときのエラー。format は形式の番号、bits は標本のビット数
+  ///
+  /// In ja, this message translates to:
+  /// **'未対応の WAV(format {format}、{bits} bit)'**
+  String mediaWavUnsupported(int format, int bits);
+
+  /// かかった時間 / フェードの長さの秒数。seconds は小数 1 桁まで書式済みの数
+  ///
+  /// In ja, this message translates to:
+  /// **'{seconds} 秒'**
+  String mediaSeconds(String seconds);
+
+  /// 前回の音声の動画の書き出しにかかった時間の内訳(Visualizer の設定の「書き出し」の補足に出る)。total / frames / encode / mux は mediaSeconds の文(合計 / フレームを描く時間 / 動画にエンコードする時間 / 音声と重ねて仕上げる時間)、frameCount はフレームの数
+  ///
+  /// In ja, this message translates to:
+  /// **'{frameCount, plural, other{合計 {total}({frameCount} フレーム: 描画 {frames} / エンコード {encode} / 仕上げ {mux})}}'**
+  String mediaVizTimings(
+    String total,
+    int frameCount,
+    String frames,
+    String encode,
+    String mux,
+  );
+
+  /// 音声を動画にする機能が使えない端末のときのエラー。使えるのは Android / iOS / macOS だけ
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では音声を動画にできません(Android / iOS / macOS だけ)'**
+  String get mediaAudioVideoUnsupported;
+
+  /// 全画面のビューワーで開く投稿のパネルの、読み上げ用の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get mediaViewerSemantics;
+
+  /// 全画面のビューワーの左上の戻るボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'戻る'**
+  String get mediaViewerBack;
+
+  /// 全画面のビューワーで動画を小さな窓(ピクチャー・イン・ピクチャー)で再生するボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'PiP で再生'**
+  String get mediaViewerPip;
+
+  /// 全画面のビューワーの … のボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'メニュー'**
+  String get mediaViewerMenu;
+
+  /// 全画面のビューワーの下の共有ボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'共有'**
+  String get mediaViewerShare;
+
+  /// 全画面のビューワーで、画像を読むプラグイン(QR コードの検出など)が処理している最中の表示
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を見ています…'**
+  String get mediaPluginAsking;
+
+  /// 画像を読むプラグインが何かを見つけて、画像の上に重ねたときの表示
+  ///
+  /// In ja, this message translates to:
+  /// **'検出あり'**
+  String get mediaPluginFound;
+
+  /// 画像を読むプラグインが何も見つけなかったときの表示
+  ///
+  /// In ja, this message translates to:
+  /// **'検出なし'**
+  String get mediaPluginNotFound;
+
+  /// 画像を読むプラグインが失敗したときの表示。reason は理由(エラーの文。空のこともある)。プラグインのボタンをオフにしてオンにするとやり直せる
+  ///
+  /// In ja, this message translates to:
+  /// **'失敗: {reason}(オフ → オンでやり直す)'**
+  String mediaPluginFailed(String reason);
+
+  /// 画像を読むプラグインに渡す画像をダウンロードできなかったときの理由(mediaPluginFailed の reason に入る)
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を取得できませんでした'**
+  String get mediaPluginFetchFailed;
+
+  /// 画像を読むプラグインに渡す画像をダウンロードできなかったときの理由。error はエラーの中身(英語のことがある)
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を取得できませんでした({error})'**
+  String mediaPluginFetchFailedWithError(String error);
+
+  /// 画像を読むプラグインに渡す画像を開けなかった(大きさが 0 など)ときの理由
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を読めませんでした'**
+  String get mediaPluginDecodeFailed;
+
+  /// 動画を再生できなかったときの表示。error はエラーの中身(英語のことがある)
+  ///
+  /// In ja, this message translates to:
+  /// **'再生できません: {error}'**
+  String mediaVideoCannotPlay(String error);
+
+  /// 動画の操作のボタンのツールチップ。5 秒前へ戻る
+  ///
+  /// In ja, this message translates to:
+  /// **'5 秒戻す'**
+  String get mediaVideoBack5;
+
+  /// 動画の操作のボタンのツールチップ。再生中に止める
+  ///
+  /// In ja, this message translates to:
+  /// **'一時停止'**
+  String get mediaVideoPause;
+
+  /// 動画の操作のボタンのツールチップ。止まっているときに再生する
+  ///
+  /// In ja, this message translates to:
+  /// **'再生'**
+  String get mediaVideoPlay;
+
+  /// 動画の操作のボタンのツールチップ。5 秒先へ進む
+  ///
+  /// In ja, this message translates to:
+  /// **'5 秒送る'**
+  String get mediaVideoForward5;
+
+  /// 動画の再生速度を選ぶメニューのボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'再生速度'**
+  String get mediaVideoSpeed;
+
+  /// タイムラインから動画を開いた窓(FOW)の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'動画'**
+  String get mediaVideoFowTitle;
+
+  /// 動画の窓(FOW)を閉じるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get mediaVideoFowClose;
+
+  /// 画像・動画の保存先の設定の選択肢。保存するたびに写真かファイルかを聞く
+  ///
+  /// In ja, this message translates to:
+  /// **'保存するたびに選ぶ'**
+  String get mediaSaveAsk;
+
+  /// 画像・動画の保存先の選択肢。端末の写真(ギャラリー)
+  ///
+  /// In ja, this message translates to:
+  /// **'写真(カメラロール)'**
+  String get mediaSavePhotos;
+
+  /// 画像・動画の保存先の選択肢。ファイルとして保存する
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイル'**
+  String get mediaSaveFiles;
+
+  /// 画像・動画を保存するとき、ファイル名が 1 つの名前になっていなかったときのエラー
+  ///
+  /// In ja, this message translates to:
+  /// **'保存するファイル名が正しくありません'**
+  String get mediaSaveBadFileName;
+
+  /// 画像・動画を保存するとき、書く先が保存先のフォルダーの外になったので止めたときのエラー
+  ///
+  /// In ja, this message translates to:
+  /// **'保存先のフォルダーの外には書きません'**
+  String get mediaSaveOutsideFolder;
+
+  /// 画像・動画を保存するとき、同じ名前のファイルが多くて新しい名前を作れなかったときのエラー
+  ///
+  /// In ja, this message translates to:
+  /// **'同じ名前のファイルが多すぎます'**
+  String get mediaSaveTooManySameName;
+
+  /// 画像・動画を写真に保存しようとしたが、端末で許可されていなかったときのエラー。設定 App は端末の設定のアプリ
+  ///
+  /// In ja, this message translates to:
+  /// **'写真への保存が許可されていません(設定 App で許可してください)'**
+  String get mediaSavePhotosDenied;
+
+  /// 画像・動画を写真に保存したときのお知らせ。RASQ はアルバムの名前で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'写真(アルバム「RASQ」)に保存しました'**
+  String get mediaSavedToPhotos;
+
+  /// iPhone / iPad で画像・動画を「ファイル」App から見える場所に保存したときのお知らせ。「ファイル」App は iOS のアプリの名前(その言語での名前にする)。folder は保存したフォルダーの名前(端末の上の名前で、訳さない)、fileName は保存したファイルの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「ファイル」App の RASQ › {folder} に保存しました({fileName})'**
+  String mediaSavedToFilesApp(String folder, String fileName);
+
+  /// パソコンで画像・動画を保存したときのお知らせ。path は保存したファイルの場所
+  ///
+  /// In ja, this message translates to:
+  /// **'保存しました: {path}'**
+  String mediaSavedToPath(String path);
+
+  /// 音声の動画の色の見本の名前(色の丸にマウスを載せたときのツールチップ)
+  ///
+  /// In ja, this message translates to:
+  /// **'黒'**
+  String get mediaColorBlack;
+
+  /// 音声の動画の背景色の見本の名前(ツールチップ)。濃い紺色
+  ///
+  /// In ja, this message translates to:
+  /// **'濃紺'**
+  String get mediaColorNavy;
+
+  /// 音声の動画の背景色の見本の名前(ツールチップ)。墨のような、ほぼ黒の灰色
+  ///
+  /// In ja, this message translates to:
+  /// **'墨'**
+  String get mediaColorInk;
+
+  /// 音声の動画の背景色の見本の名前(ツールチップ)。濃い緑
+  ///
+  /// In ja, this message translates to:
+  /// **'深緑'**
+  String get mediaColorDeepGreen;
+
+  /// 音声の動画の背景色の見本の名前(ツールチップ)。暗い赤(えんじ色)
+  ///
+  /// In ja, this message translates to:
+  /// **'えんじ'**
+  String get mediaColorCrimson;
+
+  /// 音声の動画の色の見本の名前(ツールチップ)
+  ///
+  /// In ja, this message translates to:
+  /// **'白'**
+  String get mediaColorWhite;
+
+  /// 音声の動画の文字の色の見本の名前(ツールチップ)。薄い灰色
+  ///
+  /// In ja, this message translates to:
+  /// **'薄い灰'**
+  String get mediaColorLightGray;
+
+  /// 音声の動画の色の見本の名前(ツールチップ)。黄色
+  ///
+  /// In ja, this message translates to:
+  /// **'黄'**
+  String get mediaColorYellow;
+
+  /// 音声の動画の色の見本の名前(ツールチップ)
+  ///
+  /// In ja, this message translates to:
+  /// **'水色'**
+  String get mediaColorSkyBlue;
+
+  /// 音声の動画の色の見本の名前(ツールチップ)。桃色
+  ///
+  /// In ja, this message translates to:
+  /// **'桃'**
+  String get mediaColorPink;
+
+  /// 音声の動画のバーの色の見本の名前(ツールチップ)
+  ///
+  /// In ja, this message translates to:
+  /// **'青'**
+  String get mediaColorBlue;
+
+  /// 音声の動画のバーの色の見本の名前(ツールチップ)
+  ///
+  /// In ja, this message translates to:
+  /// **'緑'**
+  String get mediaColorGreen;
+
+  /// 音声の動画のバーの色の見本の名前(ツールチップ)。オレンジ色
+  ///
+  /// In ja, this message translates to:
+  /// **'橙'**
+  String get mediaColorOrange;
+
+  /// 音声の動画のバーの色の見本の名前(ツールチップ)
+  ///
+  /// In ja, this message translates to:
+  /// **'紫'**
+  String get mediaColorPurple;
+
+  /// Visualizer の設定の窓を、変えずに閉じるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get mediaVizCancel;
+
+  /// Visualizer の設定の窓で、設定を決めて動画を書き出し直すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get mediaVizConfirm;
+
+  /// 音声を動画にするときの見た目の設定の窓の、読み上げ用の名前。Visualizer は機能の名前で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'Visualizer の設定'**
+  String get mediaVizSemantics;
+
+  /// Visualizer の設定の窓の上の注意
+  ///
+  /// In ja, this message translates to:
+  /// **'決定すると動画を作り直します。ここまでの編集は消えます'**
+  String get mediaVizRebuildWarning;
+
+  /// Visualizer の設定の窓の上の注意の詳しい説明(上のプレビューは今の再生位置のフレーム)。frames は書き出すフレームの数
+  ///
+  /// In ja, this message translates to:
+  /// **'{frames, plural, other{今の再生位置のフレーム。決定で動画を書き出し直します({frames} フレーム)。ペイントやテキストなど、ここまでの編集は消えます。}}'**
+  String mediaVizRebuildDetail(int frames);
+
+  /// mediaVizRebuildDetail と同じ説明で、音声が長いのでフレームレートを下げるとき。frames は書き出すフレームの数、fps は下げた後のフレームレート(小数 1 桁まで書式済み)
+  ///
+  /// In ja, this message translates to:
+  /// **'{frames, plural, other{今の再生位置のフレーム。決定で動画を書き出し直します({frames} フレーム、長いので {fps}fps に下げます)。ペイントやテキストなど、ここまでの編集は消えます。}}'**
+  String mediaVizRebuildDetailReducedFps(int frames, String fps);
+
+  /// Visualizer の設定の節の見出し。波形の形
+  ///
+  /// In ja, this message translates to:
+  /// **'波形'**
+  String get mediaVizWaveform;
+
+  /// Visualizer の設定のスライダー。波形のバーの数(左から低い音 → 高い音)
+  ///
+  /// In ja, this message translates to:
+  /// **'帯域の数(低音 → 高音)'**
+  String get mediaVizBands;
+
+  /// Visualizer の設定のスライダー。動画の 1 秒あたりのコマ数
+  ///
+  /// In ja, this message translates to:
+  /// **'フレームレート'**
+  String get mediaVizFrameRate;
+
+  /// Visualizer の設定の節の見出し。波形のバーの色
+  ///
+  /// In ja, this message translates to:
+  /// **'バーの色'**
+  String get mediaVizBarColor;
+
+  /// Visualizer の設定の節の見出し。動画の背景の色
+  ///
+  /// In ja, this message translates to:
+  /// **'背景色'**
+  String get mediaVizBackgroundColor;
+
+  /// Visualizer の設定の節の見出し。動画の左に出す絵
+  ///
+  /// In ja, this message translates to:
+  /// **'左の絵'**
+  String get mediaVizLeftImage;
+
+  /// Visualizer の設定の行。左の絵に使う画像を端末から選ぶ(まだ選んでいないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を選ぶ'**
+  String get mediaVizPickImage;
+
+  /// Visualizer の設定の行。左の絵に使う画像を選び直す(もう選んでいるとき。下にファイル名が出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を選び直す'**
+  String get mediaVizRepickImage;
+
+  /// 「画像を選ぶ」の行の補足。画像を選ぶまでは音符の記号を出す
+  ///
+  /// In ja, this message translates to:
+  /// **'選ぶまでは音符のアイコン'**
+  String get mediaVizPickImageHint;
+
+  /// Visualizer の設定の節の見出し。動画に出す文字
+  ///
+  /// In ja, this message translates to:
+  /// **'タイトル / 説明'**
+  String get mediaVizTitleSection;
+
+  /// Visualizer の設定のスイッチ。動画にタイトルと説明を出すか
+  ///
+  /// In ja, this message translates to:
+  /// **'タイトル / 説明を出す'**
+  String get mediaVizShowTitle;
+
+  /// Visualizer の設定の入力欄の薄い字。動画に出すタイトル。空ならファイル名を出す
+  ///
+  /// In ja, this message translates to:
+  /// **'タイトル(空ならファイル名)'**
+  String get mediaVizTitleHint;
+
+  /// Visualizer の設定の入力欄の薄い字。動画に出す説明(省略できる)
+  ///
+  /// In ja, this message translates to:
+  /// **'説明(無くてもよい)'**
+  String get mediaVizDescriptionHint;
+
+  /// Visualizer の設定のスライダー。タイトル / 説明の文字の大きさ
+  ///
+  /// In ja, this message translates to:
+  /// **'文字の大きさ'**
+  String get mediaVizTextScale;
+
+  /// Visualizer の設定の選択肢。タイトル / 説明の文字の色を背景に合わせて自動で決める
+  ///
+  /// In ja, this message translates to:
+  /// **'文字の色: 自動'**
+  String get mediaVizTextColorAuto;
+
+  /// Visualizer の設定の節の見出し。背景に流す動画
+  ///
+  /// In ja, this message translates to:
+  /// **'背景の動画'**
+  String get mediaVizBackgroundVideo;
+
+  /// Visualizer の設定の行。背景に流す動画を選ぶ(まだ選んでいないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を選ぶ'**
+  String get mediaVizPickVideo;
+
+  /// Visualizer の設定の行。背景に流す動画を選び直す(もう選んでいるとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'動画を選び直す'**
+  String get mediaVizRepickVideo;
+
+  /// 「動画を選ぶ」の行の補足。選んだ動画の音は使わない
+  ///
+  /// In ja, this message translates to:
+  /// **'背景色の代わりに動画を流します(音は使いません)'**
+  String get mediaVizPickVideoHint;
+
+  /// 「動画を選び直す」の行の補足。fileName は選んだ動画のファイル名。動画が音声より短ければ繰り返す
+  ///
+  /// In ja, this message translates to:
+  /// **'{fileName} — 音声より短ければループします'**
+  String mediaVizVideoSelected(String fileName);
+
+  /// Visualizer の設定の行。背景の動画をやめて背景色に戻す
+  ///
+  /// In ja, this message translates to:
+  /// **'背景の動画を外す'**
+  String get mediaVizRemoveVideo;
+
+  /// Visualizer の設定のスライダー。背景の動画の上に重ねる暗い膜の濃さ
+  ///
+  /// In ja, this message translates to:
+  /// **'動画の上に掛ける暗さ'**
+  String get mediaVizDim;
+
+  /// 「動画の上に掛ける暗さ」の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'波形と文字を読みやすくします'**
+  String get mediaVizDimHint;
+
+  /// Visualizer の設定の節の見出し。動画の始めと終わりで絵を徐々に出す / 消す
+  ///
+  /// In ja, this message translates to:
+  /// **'フェード(絵)'**
+  String get mediaVizFade;
+
+  /// Visualizer の設定のスライダー。始めに絵を徐々に出す長さ
+  ///
+  /// In ja, this message translates to:
+  /// **'フェードイン'**
+  String get mediaVizFadeIn;
+
+  /// Visualizer の設定のスライダー。終わりに絵を徐々に消す長さ
+  ///
+  /// In ja, this message translates to:
+  /// **'フェードアウト'**
+  String get mediaVizFadeOut;
+
+  /// フェードイン / フェードアウトのスライダーの値が 0 のときの表示
+  ///
+  /// In ja, this message translates to:
+  /// **'なし'**
+  String get mediaVizFadeNone;
+
+  /// Visualizer の設定の節の見出し。動画の書き出しの細かさ
+  ///
+  /// In ja, this message translates to:
+  /// **'書き出し'**
+  String get mediaVizExport;
+
+  /// 書き出しの細かさの選択肢の下の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'細かくするほど、書き出しに時間がかかります'**
+  String get mediaVizExportCaption;
+
+  /// 書き出しの細かさの説明の詳しい補足(前回の書き出しの記録が無いとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。'**
+  String get mediaVizExportDetail;
+
+  /// mediaVizExportDetail と同じ補足で、先頭に前回の書き出しにかかった時間を付けたもの。timings は mediaVizTimings の文
+  ///
+  /// In ja, this message translates to:
+  /// **'前回の書き出し: {timings}。\n波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。'**
+  String mediaVizExportDetailWithLast(String timings);
+
   /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
   ///
   /// In ja, this message translates to:
@@ -9169,6 +9769,294 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'検索ワードを変えてみてください'**
   String get nodeprogTimelinePaletteEmptyHint;
+
+  /// 通知プロファイル設定のシートのスイッチ。リアクションの通知を出すか
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションを通知する'**
+  String get notificationsPrefReaction;
+
+  /// 通知プロファイル設定のシートのスイッチ。リノートの通知を出すか
+  ///
+  /// In ja, this message translates to:
+  /// **'リノートを通知する'**
+  String get notificationsPrefRepost;
+
+  /// 通知プロファイル設定のシートのスイッチ。引用の通知を出すか
+  ///
+  /// In ja, this message translates to:
+  /// **'引用を通知する'**
+  String get notificationsPrefQuote;
+
+  /// 通知プロファイル設定のシートのスイッチ。ASTell(音声のルーム)の通知を出すか。ASTell は製品名で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTellを通知する'**
+  String get notificationsPrefAstell;
+
+  /// 通知プロファイル設定のシートのスイッチ。タイマーを付けたブックマークの時刻が来たときの通知を出すか
+  ///
+  /// In ja, this message translates to:
+  /// **'タイマー付きブックマークを通知する'**
+  String get notificationsPrefTimer;
+
+  /// 通知プロファイル設定のシートのスイッチ。投票が締め切られたときの通知を出すか
+  ///
+  /// In ja, this message translates to:
+  /// **'投票の完了を通知する'**
+  String get notificationsPrefPollEnded;
+
+  /// 通知プロファイル設定のシートのスイッチ。フォローされた / フォロー申請 / 承認の通知を出すか
+  ///
+  /// In ja, this message translates to:
+  /// **'フォローを通知する'**
+  String get notificationsPrefFollow;
+
+  /// 通知プロファイル設定のシートのスイッチ。サーバーやアプリからのお知らせを出すか
+  ///
+  /// In ja, this message translates to:
+  /// **'システム通知を表示する'**
+  String get notificationsPrefSystem;
+
+  /// 通知プロファイル設定のシートのスイッチ。返信・メンション・リストへの追加などの残りの通知を出すか
+  ///
+  /// In ja, this message translates to:
+  /// **'その他の通知を配信する'**
+  String get notificationsPrefOther;
+
+  /// 通知の画面のタブ。すべての通知
+  ///
+  /// In ja, this message translates to:
+  /// **'すべて'**
+  String get notificationsTabAll;
+
+  /// 通知の画面のタブ。フォローしている人からの通知だけ
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get notificationsTabFollowing;
+
+  /// 通知の種類ごとの ON / OFF を選ぶシートの見出し。通知の画面の歯車のボタンのツールチップにも使う
+  ///
+  /// In ja, this message translates to:
+  /// **'通知プロファイル設定'**
+  String get notificationsPrefsTitle;
+
+  /// 通知の画面の「フォロー中」のタブが空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中の通知はありません'**
+  String get notificationsEmptyFollowing;
+
+  /// 通知プロファイル設定のシートを閉じるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get notificationsClose;
+
+  /// 通知プロファイル設定のシートの一番上のスイッチ。通知全体を出すか
+  ///
+  /// In ja, this message translates to:
+  /// **'通知オン'**
+  String get notificationsPrefEnabled;
+
+  /// 通知プロファイル設定のシートの行。押すとプッシュ通知の設定へ進む
+  ///
+  /// In ja, this message translates to:
+  /// **'プッシュ通知の受け取り'**
+  String get notificationsPushTitle;
+
+  /// 「プッシュ通知の受け取り」の行の補足。通知を受け取るためだけに使うアクセストークンを設定する
+  ///
+  /// In ja, this message translates to:
+  /// **'通知専用のアクセストークン'**
+  String get notificationsPushDetail;
+
+  /// 下のナビの通知のボタンを長押ししたときのメニュー。全部の通知を既読にする
+  ///
+  /// In ja, this message translates to:
+  /// **'全ての通知を既読'**
+  String get notificationsQuickReadAll;
+
+  /// 下のナビの通知のボタンを長押ししたときのメニュー。フォローしている人からの通知を既読にする
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中の通知を既読'**
+  String get notificationsQuickReadFollowing;
+
+  /// 下のナビの通知のボタンを長押ししたときのメニュー。通知を止める
+  ///
+  /// In ja, this message translates to:
+  /// **'通知オフ'**
+  String get notificationsQuickOff;
+
+  /// 通知の一覧が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'通知はありません'**
+  String get notificationsEmpty;
+
+  /// 通知を読み込めなかったときの、やり直すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get notificationsRetry;
+
+  /// 通知の画面の上の欄の見出し。開始の通知を登録した、これから始まる音声のルーム(VC)の一覧
+  ///
+  /// In ja, this message translates to:
+  /// **'開始通知を登録した VC'**
+  String get notificationsRemindersHeader;
+
+  /// 開始通知を登録したルームの行の補足。when は開催の日時(書式済みの文字列)
+  ///
+  /// In ja, this message translates to:
+  /// **'開催予定 {when}'**
+  String notificationsReminderSchedule(String when);
+
+  /// 開始通知を登録したルームの行の右端のボタン。登録を外す
+  ///
+  /// In ja, this message translates to:
+  /// **'解除'**
+  String get notificationsReminderCancel;
+
+  /// サーバー / アプリからのお知らせに見出しが無いときの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'システム通知'**
+  String get notificationsSystemFallbackTitle;
+
+  /// 通知をした人が 1 人のときの呼び名(太字で出る)。name は表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}さん'**
+  String notificationsActorsOne(String name);
+
+  /// 通知をした人が 2 人のときの呼び名(太字で出る)。first / second は表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{first}さん、{second}さん'**
+  String notificationsActorsTwo(String first, String second);
+
+  /// 通知をした人が 3 人以上のときの呼び名(太字で出る)。first / second は最初の 2 人の表示名、count は残りの人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{first}さん、{second}さんと他{count}人}}'**
+  String notificationsActorsMore(String first, String second, int count);
+
+  /// リアクションの通知の文。names は通知をした人の呼び名(notificationsActors… の文。太字で出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'{names}があなたの投稿にリアクションしました'**
+  String notificationsActionReacted(String names);
+
+  /// リノートの通知の文。names は通知をした人の呼び名(太字で出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'{names}があなたの投稿をリノートしました'**
+  String notificationsActionReposted(String names);
+
+  /// 投票が締め切られた通知の文。names は投票を作った人などの呼び名(太字で出る。空のこともある)
+  ///
+  /// In ja, this message translates to:
+  /// **'{names}が投票が終了しました'**
+  String notificationsActionPollEnded(String names);
+
+  /// 種類の分からない通知の文。names は通知をした人の呼び名(太字で出る。空のこともある)
+  ///
+  /// In ja, this message translates to:
+  /// **'{names}が通知'**
+  String notificationsActionOther(String names);
+
+  /// 通知の行の右端の … のボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'メニュー'**
+  String get notificationsMenuTooltip;
+
+  /// フォローされた通知の文。name はその人の表示名(太字で出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}にフォローされました'**
+  String notificationsFollowFollowed(String name);
+
+  /// フォロー申請が届いた通知の文。name はその人の表示名(太字で出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}からフォロー申請が届きました'**
+  String notificationsFollowRequested(String name);
+
+  /// こちらのフォロー申請が承認された通知の文。name は承認した人の表示名(太字で出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}がフォローを承認しました'**
+  String notificationsFollowAccepted(String name);
+
+  /// 誰かがこちらを自分のリストに追加した通知の文。name はその人の表示名(太字で出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}がリストに追加しました'**
+  String notificationsFollowListAdded(String name);
+
+  /// フォローの通知の行の右のボタン(まだフォローしていないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー'**
+  String get notificationsFollowButton;
+
+  /// フォローの通知の行の右のボタン(フォローしているとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get notificationsFollowingButton;
+
+  /// 投稿付きの通知の上の小さなラベル。返信が来た
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get notificationsPostReply;
+
+  /// 投稿付きの通知の上の小さなラベル。引用された
+  ///
+  /// In ja, this message translates to:
+  /// **'引用'**
+  String get notificationsPostQuote;
+
+  /// 投稿付きの通知の上の小さなラベル。メンションされた
+  ///
+  /// In ja, this message translates to:
+  /// **'メンション'**
+  String get notificationsPostMention;
+
+  /// ブックマークした音声のルーム(VC)が始まる時刻になった通知の文
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークしたVCが始まります！'**
+  String get notificationsTimerAstell;
+
+  /// タイマーを付けたブックマークの時刻が来た通知の文
+  ///
+  /// In ja, this message translates to:
+  /// **'タイマー付きブックマーク'**
+  String get notificationsTimerBookmark;
+
+  /// RASQ のタブで通知を読み込めなかったとき(下にエラーの中身が出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした'**
+  String get notificationsRasqLoadError;
+
+  /// RASQ のタブが空のとき。RASQ は製品名で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の通知はありません'**
+  String get notificationsRasqEmpty;
+
+  /// RASQ のタブが空のときの補足。Swing は機能の名前で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます'**
+  String get notificationsRasqEmptyHint;
 
   /// No description provided for @onboardingBack.
   ///
