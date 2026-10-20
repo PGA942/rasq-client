@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
+import '../../l10n/l10n.dart';
 import 'audio_visualizer_video.dart';
 
 /// Visualizer の設定 FOW (D-251): 加工画面の下段バーの「Visualizer」から。値を変えると**今の再生位置のフレーム**を
@@ -14,9 +15,10 @@ const audioVisualizerPreviewKey = Key('media.pro.visualizer.preview');
 /// 保存先(端末ごと、全アカウント共通)。
 const audioVisualizerStorageKey = 'editor.audioVisualizer.v1';
 
-const _backgrounds = <(String, Color)>[('黒', Color(0xFF000000)), ('濃紺', Color(0xFF0B1020)), ('墨', Color(0xFF16181C)), ('深緑', Color(0xFF06231B)), ('えんじ', Color(0xFF2A0A12)), ('白', Color(0xFFFFFFFF))];
-const _textColors = <(String, Color)>[('白', Color(0xFFFFFFFF)), ('薄い灰', Color(0xFFCBD5E1)), ('黄', Color(0xFFFFD54F)), ('水色', Color(0xFF35C9E8)), ('桃', Color(0xFFFF5C8A)), ('黒', Color(0xFF000000))];
-const _barColors = <(String, Color)>[('青', Color(0xFF4F8DFD)), ('水色', Color(0xFF35C9E8)), ('緑', Color(0xFF3DDC84)), ('黄', Color(0xFFFFD54F)), ('橙', Color(0xFFFF8A3D)), ('桃', Color(0xFFFF5C8A)), ('紫', Color(0xFFA27BFF)), ('白', Color(0xFFFFFFFF))];
+// 色の見本(名前は表示の言語、D-484)。
+List<(String, Color)> _backgroundsOf(AppLocalizations l) => [(l.mediaColorBlack, const Color(0xFF000000)), (l.mediaColorNavy, const Color(0xFF0B1020)), (l.mediaColorInk, const Color(0xFF16181C)), (l.mediaColorDeepGreen, const Color(0xFF06231B)), (l.mediaColorCrimson, const Color(0xFF2A0A12)), (l.mediaColorWhite, const Color(0xFFFFFFFF))];
+List<(String, Color)> _textColorsOf(AppLocalizations l) => [(l.mediaColorWhite, const Color(0xFFFFFFFF)), (l.mediaColorLightGray, const Color(0xFFCBD5E1)), (l.mediaColorYellow, const Color(0xFFFFD54F)), (l.mediaColorSkyBlue, const Color(0xFF35C9E8)), (l.mediaColorPink, const Color(0xFFFF5C8A)), (l.mediaColorBlack, const Color(0xFF000000))];
+List<(String, Color)> _barColorsOf(AppLocalizations l) => [(l.mediaColorBlue, const Color(0xFF4F8DFD)), (l.mediaColorSkyBlue, const Color(0xFF35C9E8)), (l.mediaColorGreen, const Color(0xFF3DDC84)), (l.mediaColorYellow, const Color(0xFFFFD54F)), (l.mediaColorOrange, const Color(0xFFFF8A3D)), (l.mediaColorPink, const Color(0xFFFF5C8A)), (l.mediaColorPurple, const Color(0xFFA27BFF)), (l.mediaColorWhite, const Color(0xFFFFFFFF))];
 
 /// FOW が外から借りるもの (D-253): 絵の読み込みとファイル選び(選んだファイルは呼び出し側がアプリの保存領域へ写して、
 /// そのパスを返す = 設定として持ち続けられる)。どれも無ければその項目は出るが、選べない / プレビューに出ないだけ。
@@ -39,10 +41,11 @@ class AudioVisualizerFowHost {
 Future<AudioVisualizerConfig?> showAudioVisualizerFow(OverlayManager manager, {required AudioVisualizerConfig initial, required AudioPcm? pcm, required Duration position, String? title, AudioVisualizerFowHost host = const AudioVisualizerFowHost()}) async {
   if (manager.contains(audioVisualizerFowId)) return null;
   var config = initial;
+  final l10n = appL10n;
   final ok = await manager.showFow<bool>(
     id: audioVisualizerFowId,
-    spec: FowSpec(title: 'Visualizer', cancelText: 'キャンセル', confirmText: '決定', initialHeightFactor: 0.8, maxHeightFactor: 0.92, maxWidth: 640),
-    semanticsLabel: 'Visualizer の設定',
+    spec: FowSpec(title: 'Visualizer', cancelText: l10n.mediaVizCancel, confirmText: l10n.mediaVizConfirm, initialHeightFactor: 0.8, maxHeightFactor: 0.92, maxWidth: 640),
+    semanticsLabel: l10n.mediaVizSemantics,
     builder: (_, _) => _Body(initial: initial, pcm: pcm, position: position, title: title, host: host, onChanged: (c) => config = c),
   );
   return ok == true ? config : null;
@@ -151,6 +154,8 @@ class _BodyState extends State<_Body> {
     // 今の再生位置のスペクトル(無音の位置でも形が分かるよう、標本が無ければ山形の見本)。
     final spectrum = pcm == null ? [for (var i = 0; i < _c.bands; i++) 0.25 + 0.6 * (1 - (i / _c.bands - 0.3).abs()).clamp(0.0, 1.0) * (i.isEven ? 1 : 0.7)] : spectrumAt(pcm, widget.position, bands: _c.bands);
     final plan = audioFramePlan(total, fps: _c.fps);
+    final l10n = context.l10n;
+    String seconds(double v) => l10n.mediaSeconds(v.toStringAsFixed(1));
     return ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xs),
@@ -163,23 +168,23 @@ class _BodyState extends State<_Body> {
         ),
       ),
       RasqNotice.warning(
-        text: '決定すると動画を作り直します。ここまでの編集は消えます',
-        detail: '今の再生位置のフレーム。決定で動画を書き出し直します(${plan.frames} フレーム${plan.fps < _c.fps - 0.5 ? '、長いので ${plan.fps.toStringAsFixed(1)}fps に下げます' : ''})。ペイントやテキストなど、ここまでの編集は消えます。',
+        text: l10n.mediaVizRebuildWarning,
+        detail: plan.fps < _c.fps - 0.5 ? l10n.mediaVizRebuildDetailReducedFps(plan.frames, plan.fps.toStringAsFixed(1)) : l10n.mediaVizRebuildDetail(plan.frames),
       ),
-      const RasqSectionHeader(title: '波形'),
+      RasqSectionHeader(title: l10n.mediaVizWaveform),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
         child: Wrap(spacing: RasqSpacing.xs, children: [
           for (final s in AudioVisualizerStyle.values) ChoiceChip(key: ValueKey('viz.style.${s.name}'), label: Text(s.label, style: RasqTypography.caption), selected: _c.style == s, onSelected: (_) => _set(_c.copyWith(style: s))),
         ]),
       ),
-      RasqSliderListTile(key: const ValueKey('viz.bands'), title: '帯域の数(低音 → 高音)', value: _c.bands.toDouble(), min: 16, max: 128, divisions: 28, valueLabel: '${_c.bands}', onChanged: (v) => _set(_c.copyWith(bands: v.round()))),
-      RasqSliderListTile(key: const ValueKey('viz.fps'), title: 'フレームレート', value: _c.fps.toDouble(), min: 10, max: 60, divisions: 10, valueLabel: '${_c.fps}fps', onChanged: (v) => _set(_c.copyWith(fps: v.round()))),
-      const RasqSectionHeader(title: 'バーの色'),
-      _swatches('viz.bar', _barColors, _c.barColor, (c) => _set(_c.copyWith(barColor: c))),
-      const RasqSectionHeader(title: '背景色'),
-      _swatches('viz.bg', _backgrounds, _c.background, (c) => _set(_c.copyWith(background: c))),
-      const RasqSectionHeader(title: '左の絵'),
+      RasqSliderListTile(key: const ValueKey('viz.bands'), title: l10n.mediaVizBands, value: _c.bands.toDouble(), min: 16, max: 128, divisions: 28, valueLabel: '${_c.bands}', onChanged: (v) => _set(_c.copyWith(bands: v.round()))),
+      RasqSliderListTile(key: const ValueKey('viz.fps'), title: l10n.mediaVizFrameRate, value: _c.fps.toDouble(), min: 10, max: 60, divisions: 10, valueLabel: '${_c.fps}fps', onChanged: (v) => _set(_c.copyWith(fps: v.round()))),
+      RasqSectionHeader(title: l10n.mediaVizBarColor),
+      _swatches('viz.bar', _barColorsOf(l10n), _c.barColor, (c) => _set(_c.copyWith(barColor: c))),
+      RasqSectionHeader(title: l10n.mediaVizBackgroundColor),
+      _swatches('viz.bg', _backgroundsOf(l10n), _c.background, (c) => _set(_c.copyWith(background: c))),
+      RasqSectionHeader(title: l10n.mediaVizLeftImage),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
         child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
@@ -190,8 +195,8 @@ class _BodyState extends State<_Body> {
         RasqListTile(
           key: const ValueKey('viz.left.pick'),
           leading: const Icon(Icons.image_outlined),
-          title: _c.leftImagePath == null ? '画像を選ぶ' : '画像を選び直す',
-          subtitle: _c.leftImagePath == null ? '選ぶまでは音符のアイコン' : _fileName(_c.leftImagePath!),
+          title: _c.leftImagePath == null ? l10n.mediaVizPickImage : l10n.mediaVizRepickImage,
+          subtitle: _c.leftImagePath == null ? l10n.mediaVizPickImageHint : _fileName(_c.leftImagePath!),
           onTap: widget.host.pickImage == null
               ? null
               : () async {
@@ -199,16 +204,16 @@ class _BodyState extends State<_Body> {
                   if (path != null && mounted) _set(_c.copyWith(leftImagePath: path));
                 },
         ),
-      const RasqSectionHeader(title: 'タイトル / 説明'),
-      RasqSwitchListTile(key: const ValueKey('viz.title'), title: 'タイトル / 説明を出す', value: _c.showTitle, enabled: _c.showLeft, onChanged: (v) => _set(_c.copyWith(showTitle: v))),
+      RasqSectionHeader(title: l10n.mediaVizTitleSection),
+      RasqSwitchListTile(key: const ValueKey('viz.title'), title: l10n.mediaVizShowTitle, value: _c.showTitle, enabled: _c.showLeft, onChanged: (v) => _set(_c.copyWith(showTitle: v))),
       if (_c.showLeft && _c.showTitle) ...[
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
-          child: RasqInput(key: const ValueKey('viz.title.text'), controller: _title, hintText: 'タイトル(空ならファイル名)', onChanged: (v) => _set(_c.copyWith(title: v.trim().isEmpty ? (widget.title ?? '') : v.trim()))),
+          child: RasqInput(key: const ValueKey('viz.title.text'), controller: _title, hintText: l10n.mediaVizTitleHint, onChanged: (v) => _set(_c.copyWith(title: v.trim().isEmpty ? (widget.title ?? '') : v.trim()))),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-          child: RasqInput(key: const ValueKey('viz.description.text'), controller: _description, hintText: '説明(無くてもよい)', onChanged: (v) => _set(_c.copyWith(description: v.trim()))),
+          child: RasqInput(key: const ValueKey('viz.description.text'), controller: _description, hintText: l10n.mediaVizDescriptionHint, onChanged: (v) => _set(_c.copyWith(description: v.trim()))),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
@@ -216,21 +221,21 @@ class _BodyState extends State<_Body> {
             for (final t in AudioVisualizerTextPosition.values) ChoiceChip(key: ValueKey('viz.text.${t.name}'), label: Text(t.label, style: RasqTypography.caption), selected: _c.textPosition == t, onSelected: (_) => _set(_c.copyWith(textPosition: t))),
           ]),
         ),
-        RasqSliderListTile(key: const ValueKey('viz.text.scale'), title: '文字の大きさ', value: _c.textScale, min: 0.6, max: 2.0, divisions: 14, valueLabel: '${(_c.textScale * 100).round()}%', onChanged: (v) => _set(_c.copyWith(textScale: v))),
+        RasqSliderListTile(key: const ValueKey('viz.text.scale'), title: l10n.mediaVizTextScale, value: _c.textScale, min: 0.6, max: 2.0, divisions: 14, valueLabel: '${(_c.textScale * 100).round()}%', onChanged: (v) => _set(_c.copyWith(textScale: v))),
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, 0),
           child: Row(children: [
-            ChoiceChip(key: const ValueKey('viz.text.color.auto'), label: Text('文字の色: 自動', style: RasqTypography.caption), selected: _c.textColor == null, onSelected: (_) => _set(_c.copyWith(clearTextColor: true))),
+            ChoiceChip(key: const ValueKey('viz.text.color.auto'), label: Text(l10n.mediaVizTextColorAuto, style: RasqTypography.caption), selected: _c.textColor == null, onSelected: (_) => _set(_c.copyWith(clearTextColor: true))),
           ]),
         ),
-        _swatches('viz.text.color', _textColors, _c.textColor ?? const Color(0x00000000), (c) => _set(_c.copyWith(textColor: c))),
+        _swatches('viz.text.color', _textColorsOf(l10n), _c.textColor ?? const Color(0x00000000), (c) => _set(_c.copyWith(textColor: c))),
       ],
-      const RasqSectionHeader(title: '背景の動画'),
+      RasqSectionHeader(title: l10n.mediaVizBackgroundVideo),
       RasqListTile(
         key: const ValueKey('viz.bgvideo.pick'),
         leading: const Icon(Icons.movie_outlined),
-        title: _c.backgroundVideoPath == null ? '動画を選ぶ' : '動画を選び直す',
-        subtitle: _c.backgroundVideoPath == null ? '背景色の代わりに動画を流します(音は使いません)' : '${_fileName(_c.backgroundVideoPath!)} — 音声より短ければループします',
+        title: _c.backgroundVideoPath == null ? l10n.mediaVizPickVideo : l10n.mediaVizRepickVideo,
+        subtitle: _c.backgroundVideoPath == null ? l10n.mediaVizPickVideoHint : l10n.mediaVizVideoSelected(_fileName(_c.backgroundVideoPath!)),
         onTap: widget.host.pickVideo == null
             ? null
             : () async {
@@ -239,13 +244,13 @@ class _BodyState extends State<_Body> {
               },
       ),
       if (_c.backgroundVideoPath != null) ...[
-        RasqListTile(key: const ValueKey('viz.bgvideo.clear'), leading: const Icon(Icons.close), title: '背景の動画を外す', chevron: false, onTap: () => _set(_c.copyWith(clearBackgroundVideo: true))),
-        RasqSliderListTile(key: const ValueKey('viz.bgvideo.dim'), title: '動画の上に掛ける暗さ', subtitle: '波形と文字を読みやすくします', value: _c.backgroundDim, min: 0, max: 0.8, divisions: 16, valueLabel: '${(_c.backgroundDim * 100).round()}%', onChanged: (v) => _set(_c.copyWith(backgroundDim: v))),
+        RasqListTile(key: const ValueKey('viz.bgvideo.clear'), leading: const Icon(Icons.close), title: l10n.mediaVizRemoveVideo, chevron: false, onTap: () => _set(_c.copyWith(clearBackgroundVideo: true))),
+        RasqSliderListTile(key: const ValueKey('viz.bgvideo.dim'), title: l10n.mediaVizDim, subtitle: l10n.mediaVizDimHint, value: _c.backgroundDim, min: 0, max: 0.8, divisions: 16, valueLabel: '${(_c.backgroundDim * 100).round()}%', onChanged: (v) => _set(_c.copyWith(backgroundDim: v))),
       ],
-      const RasqSectionHeader(title: 'フェード(絵)'),
-      RasqSliderListTile(key: const ValueKey('viz.fadein'), title: 'フェードイン', value: _c.fadeIn, min: 0, max: 5, divisions: 10, valueLabel: _c.fadeIn == 0 ? 'なし' : '${_c.fadeIn.toStringAsFixed(1)} 秒', onChanged: (v) => _set(_c.copyWith(fadeIn: v))),
-      RasqSliderListTile(key: const ValueKey('viz.fadeout'), title: 'フェードアウト', value: _c.fadeOut, min: 0, max: 5, divisions: 10, valueLabel: _c.fadeOut == 0 ? 'なし' : '${_c.fadeOut.toStringAsFixed(1)} 秒', onChanged: (v) => _set(_c.copyWith(fadeOut: v))),
-      const RasqSectionHeader(title: '書き出し'),
+      RasqSectionHeader(title: l10n.mediaVizFade),
+      RasqSliderListTile(key: const ValueKey('viz.fadein'), title: l10n.mediaVizFadeIn, value: _c.fadeIn, min: 0, max: 5, divisions: 10, valueLabel: _c.fadeIn == 0 ? l10n.mediaVizFadeNone : seconds(_c.fadeIn), onChanged: (v) => _set(_c.copyWith(fadeIn: v))),
+      RasqSliderListTile(key: const ValueKey('viz.fadeout'), title: l10n.mediaVizFadeOut, value: _c.fadeOut, min: 0, max: 5, divisions: 10, valueLabel: _c.fadeOut == 0 ? l10n.mediaVizFadeNone : seconds(_c.fadeOut), onChanged: (v) => _set(_c.copyWith(fadeOut: v))),
+      RasqSectionHeader(title: l10n.mediaVizExport),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
         child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
@@ -253,8 +258,8 @@ class _BodyState extends State<_Body> {
         ]),
       ),
       RasqCaption(
-        '細かくするほど、書き出しに時間がかかります',
-        detail: '${widget.host.lastTimings == null ? '' : '前回の書き出し: ${widget.host.lastTimings}。\n'}波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。',
+        l10n.mediaVizExportCaption,
+        detail: widget.host.lastTimings == null ? l10n.mediaVizExportDetail : l10n.mediaVizExportDetailWithLast('${widget.host.lastTimings}'),
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
       ),
     ]);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
+import '../../l10n/l10n.dart';
 
 import '../home/plugin_actions.dart';
 import '../media/viewer_plugin_overlay.dart';
@@ -59,7 +60,7 @@ class _ProfileImageViewerScreenState extends ConsumerState<ProfileImageViewerScr
               child: Row(children: [
                 DecoratedBox(
                   decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4), shape: BoxShape.circle),
-                  child: RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, color: Colors.white, onPressed: () => Navigator.of(context).maybePop(), tooltip: '戻る'),
+                  child: RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, color: Colors.white, onPressed: () => Navigator.of(context).maybePop(), tooltip: context.l10n.usersImageViewerBack),
                 ),
                 const SizedBox(width: RasqSpacing.sm),
                 Expanded(child: Text(widget.title ?? '', style: RasqTypography.title.copyWith(color: Colors.white), overflow: TextOverflow.ellipsis)),

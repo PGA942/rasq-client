@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
 
 import '../../backend/rasq_account.dart';
+import '../../l10n/l10n.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../settings/settings_dsl.dart';
 import '../../app/navigation.dart';
@@ -55,7 +56,8 @@ class NotificationsScreen extends ConsumerWidget {
     final me = ref.watch(currentUserProvider);
     // RASQ の通知 (D-285): メンション / 返信 / 引用 / AsTell での引用。RASQ アカウントにログインしているときだけタブが出る。
     final rasq = ref.watch(orgateAccountProvider).value != null;
-    final tabs = [const RasqTabItem('すべて'), const RasqTabItem('フォロー中'), if (rasq) const RasqTabItem('RASQ')];
+    final l10n = context.l10n;
+    final tabs = [RasqTabItem(l10n.notificationsTabAll), RasqTabItem(l10n.notificationsTabFollowing), if (rasq) const RasqTabItem('RASQ')];
     final items = ref.watch(notificationsProvider);
     final prefs = ref.watch(notificationPrefsProvider);
     final viewer = ref.watch(currentAccountProvider);
@@ -73,14 +75,14 @@ class NotificationsScreen extends ConsumerWidget {
         body: Column(children: [
           Row(children: [
             Expanded(child: RasqTabs(items: tabs, showChevron: false)),
-            RasqIconButton(icon: Icons.settings, size: 20, onPressed: () => showNotificationPrefs(ref), tooltip: '通知プロファイル設定'),
+            RasqIconButton(icon: Icons.settings, size: 20, onPressed: () => showNotificationPrefs(ref), tooltip: l10n.notificationsPrefsTitle),
           ]),
           // 登録した開始通知 (D-160): 端末のローカル通知に入れた予定。
           if (showReminders) const _AstellReminders(),
           Expanded(
             child: TabBarView(children: [
               _List(memoryId: 'notifications.all', items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future)),
-              _List(memoryId: 'notifications.following', items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind) && n.actors.any(isFollowed)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future), emptyTitle: 'フォロー中の通知はありません'),
+              _List(memoryId: 'notifications.following', items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind) && n.actors.any(isFollowed)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future), emptyTitle: l10n.notificationsEmptyFollowing),
               if (rasq) const _RasqNotices(),
             ]),
           ),
@@ -93,17 +95,18 @@ class NotificationsScreen extends ConsumerWidget {
 /// 通知プロファイル設定 (bottom sheet): tabs すべて/フォロー中/通知オン + toggles + 通知専用のアクセストークン.
 Future<void> showNotificationPrefs(WidgetRef ref) {
   final manager = ref.read(overlayManagerProvider);
+  final l10n = appL10n;
   return manager.showBottomSheet<void>(
     id: 'notifications.prefs',
-    title: '通知プロファイル設定',
+    title: l10n.notificationsPrefsTitle,
     cancelText: null,
-    confirmText: '閉じる',
+    confirmText: l10n.notificationsClose,
     builder: (ctx) => Consumer(builder: (ctx, r, _) {
       final prefs = r.watch(notificationPrefsProvider);
       final store = r.read(notificationPrefsProvider.notifier);
       return ListView(shrinkWrap: true, children: [
-        RasqSwitchListTile(title: '通知オン', value: prefs.enabled, onChanged: store.setEnabled),
-        for (final row in notificationPrefRows)
+        RasqSwitchListTile(title: ctx.l10n.notificationsPrefEnabled, value: prefs.enabled, onChanged: store.setEnabled),
+        for (final row in notificationPrefRowsOf(ctx.l10n))
           RasqSwitchListTile(
             title: row.$1,
             value: row.$2.every(prefs.isOn),
@@ -113,7 +116,7 @@ Future<void> showNotificationPrefs(WidgetRef ref) {
               }
             },
           ),
-        RasqListTile(title: 'プッシュ通知の受け取り', detail: '通知専用のアクセストークン', onTap: () {
+        RasqListTile(title: ctx.l10n.notificationsPushTitle, detail: ctx.l10n.notificationsPushDetail, onTap: () {
             ref.read(overlayManagerProvider).close('notifications.prefs');
             ref.read(routerProvider).push(Routes.settingsNotifyToken);
           }),
@@ -126,10 +129,11 @@ Future<void> showNotificationPrefs(WidgetRef ref) {
 /// 下ナビ 通知/DM ボタン長押し: 全ての通知を既読 / フォロー中の通知を既読 / 通知オフ.
 Future<void> showNotificationQuickMenu(WidgetRef ref, Rect anchor) async {
   final manager = ref.read(overlayManagerProvider);
-  final pick = await manager.showDropdown<String>(id: 'notifications.quick', anchor: anchor, items: const [
-    RasqDropdownItem('全ての通知を既読', 'readAll'),
-    RasqDropdownItem('フォロー中の通知を既読', 'readFollowing'),
-    RasqDropdownItem('通知オフ', 'off'),
+  final l10n = appL10n;
+  final pick = await manager.showDropdown<String>(id: 'notifications.quick', anchor: anchor, items: [
+    RasqDropdownItem(l10n.notificationsQuickReadAll, 'readAll'),
+    RasqDropdownItem(l10n.notificationsQuickReadFollowing, 'readFollowing'),
+    RasqDropdownItem(l10n.notificationsQuickOff, 'off'),
   ]);
   switch (pick) {
     case 'readAll' || 'readFollowing':
@@ -141,22 +145,23 @@ Future<void> showNotificationQuickMenu(WidgetRef ref, Rect anchor) async {
 }
 
 class _List extends StatelessWidget {
-  const _List({required this.memoryId, required this.items, required this.onRefresh, this.emptyTitle = '通知はありません'});
+  const _List({required this.memoryId, required this.items, required this.onRefresh, this.emptyTitle});
 
   /// 位置を覚える一覧の名前 (D-504): タブを切り替えて戻っても / 第3カラムで作り直されても、前の位置から。
   final String memoryId;
   final AsyncValue<List<NotificationItem>> items;
   final Future<void> Function() onRefresh;
-  final String emptyTitle;
+  /// 空のときの見出し。null なら「通知はありません」。
+  final String? emptyTitle;
 
   @override
   Widget build(BuildContext context) => items.when(
         loading: () => const RasqLoading(),
-        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: onRefresh, retryLabel: '再読み込み'),
+        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: onRefresh, retryLabel: context.l10n.notificationsRetry),
         data: (list) => RefreshIndicator(
           onRefresh: onRefresh,
           child: list.isEmpty
-              ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 120), RasqEmptyView(title: emptyTitle)])
+              ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 120), RasqEmptyView(title: emptyTitle ?? context.l10n.notificationsEmpty)])
               : RememberScroll(
                   id: memoryId,
                   builder: (context, controller) => ListView.separated(
@@ -179,11 +184,11 @@ class _AstellReminders extends ConsumerWidget {
     final reminders = ref.watch(astellRemindersProvider).value ?? const <AstellReminder>[];
     if (reminders.isEmpty) return const SizedBox.shrink();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-      const RasqSectionHeader(title: '開始通知を登録した VC', topMargin: 0),
+      RasqSectionHeader(title: context.l10n.notificationsRemindersHeader, topMargin: 0),
       for (final r in reminders)
         RasqListTile(
           title: r.title,
-          subtitle: '開催予定 ${formatAstellSchedule(r.at)}',
+          subtitle: context.l10n.notificationsReminderSchedule(formatAstellSchedule(r.at)),
           leading: const Icon(Icons.notifications_active, color: RasqColors.accent),
           trailing: TextButton(
             onPressed: () async {
@@ -195,7 +200,7 @@ class _AstellReminders extends ConsumerWidget {
                 await ref.read(localNotifierCancelProvider)(r);
               }
             },
-            child: const Text('解除'),
+            child: Text(context.l10n.notificationsReminderCancel),
           ),
           chevron: false,
           onTap: () async {
@@ -251,7 +256,7 @@ class _SystemTile extends StatelessWidget {
       const SizedBox(width: RasqSpacing.md),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(item.title ?? 'システム通知', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(item.title ?? context.l10n.notificationsSystemFallbackTitle, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
           if (item.body != null && item.body!.isNotEmpty)
             Padding(padding: const EdgeInsets.only(top: 2), child: Text(item.body!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 3, overflow: TextOverflow.ellipsis)),
         ]),
@@ -274,11 +279,23 @@ Future<void> openNotificationActor(BuildContext context, WidgetRef ref, List<Use
   if (pick != null && context.mounted) context.pushUser(actors[pick], account: account);
 }
 
-String _names(List<UserSummary> actors) {
-  if (actors.isEmpty) return '';
-  final shown = actors.take(2).map((a) => '${a.displayName}さん').join('、');
-  final rest = actors.length - 2;
-  return rest > 0 ? '$shownと他$rest人' : shown;
+String _names(AppLocalizations l, List<UserSummary> actors) => switch (actors) {
+      [] => '',
+      [final a] => l.notificationsActorsOne(a.displayName),
+      [final a, final b] => l.notificationsActorsTwo(a.displayName, b.displayName),
+      [final a, final b, ...] => l.notificationsActorsMore(a.displayName, b.displayName, actors.length - 2),
+    };
+
+/// 文の中の [name] だけを太字にする (D-484)。[sentence] は名前の位置に渡した印を入れた文を返す。
+List<RasqSpan> _boldNameSpans(String Function(String name) sentence, String name) {
+  const mark = '\u0000';
+  final parts = sentence(mark).split(mark);
+  return [
+    for (var i = 0; i < parts.length; i++) ...[
+      if (parts[i].isNotEmpty) RasqTextSpan(parts[i]),
+      if (i < parts.length - 1) RasqTextSpan(name, bold: true),
+    ],
+  ];
 }
 
 /// アクション系: アイコンリスト(グループアバター) + 本文(DSL) + 投稿の省略.
@@ -290,11 +307,12 @@ class _ActionTile extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     final emojis = ref.watch(emojiCacheProvider);
-    final (icon, color, verb) = switch (item.kind) {
-      NotificationKind.reaction => (Icons.add_reaction, tokens.live, 'あなたの投稿にリアクションしました'),
-      NotificationKind.repost => (Icons.repeat, tokens.inVc, 'あなたの投稿をリノートしました'),
-      NotificationKind.pollEnded => (Icons.poll, scheme.primary, '投票が終了しました'),
-      _ => (Icons.notifications_none, scheme.onSurfaceVariant, '通知'),
+    final l10n = context.l10n;
+    final (icon, color, sentence) = switch (item.kind) {
+      NotificationKind.reaction => (Icons.add_reaction, tokens.live, l10n.notificationsActionReacted),
+      NotificationKind.repost => (Icons.repeat, tokens.inVc, l10n.notificationsActionReposted),
+      NotificationKind.pollEnded => (Icons.poll, scheme.primary, l10n.notificationsActionPollEnded),
+      _ => (Icons.notifications_none, scheme.onSurfaceVariant, l10n.notificationsActionOther),
     };
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -312,12 +330,12 @@ class _ActionTile extends ConsumerWidget {
           ),
         const Spacer(),
         RasqTimestamp(item.createdAt),
-        RasqIconButton(icon: Icons.more_horiz, size: 18, onPressed: () {}, tooltip: 'メニュー'),
+        RasqIconButton(icon: Icons.more_horiz, size: 18, onPressed: () {}, tooltip: l10n.notificationsMenuTooltip),
       ]),
       Padding(
         padding: const EdgeInsets.only(left: 24 + RasqSpacing.md, top: 4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          RasqRichText([RasqTextSpan(_names(item.actors), bold: true), RasqTextSpan('が$verb')], style: RasqTypography.bodySmall),
+          RasqRichText(_boldNameSpans(sentence, _names(l10n, item.actors)), style: RasqTypography.bodySmall),
           if (item.reactionsByActor.isNotEmpty || item.reaction != null)
             Padding(
               padding: const EdgeInsets.only(top: 2),
@@ -353,11 +371,12 @@ class _FollowTile extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final viewer = ref.watch(currentAccountProvider);
     final u = item.actors.firstOrNull;
-    final (icon, text) = switch (item.kind) {
-      NotificationKind.follow => (Icons.person_add_alt_1, 'にフォローされました'),
-      NotificationKind.followRequest => (Icons.person_add_alt_1_outlined, 'からフォロー申請が届きました'),
-      NotificationKind.followAccepted => (Icons.how_to_reg, 'がフォローを承認しました'),
-      _ => (Icons.playlist_add, 'がリストに追加しました'),
+    final l10n = context.l10n;
+    final (icon, sentence) = switch (item.kind) {
+      NotificationKind.follow => (Icons.person_add_alt_1, l10n.notificationsFollowFollowed),
+      NotificationKind.followRequest => (Icons.person_add_alt_1_outlined, l10n.notificationsFollowRequested),
+      NotificationKind.followAccepted => (Icons.how_to_reg, l10n.notificationsFollowAccepted),
+      _ => (Icons.playlist_add, l10n.notificationsFollowListAdded),
     };
     final st = (u == null || viewer == null) ? const FollowState() : ref.watch(followStateOfProvider((viewer: viewer.key, user: '${viewer.kind.name}:${viewer.instance}:${u.id}')));
     return Row(children: [
@@ -365,8 +384,8 @@ class _FollowTile extends ConsumerWidget {
       const SizedBox(width: RasqSpacing.md),
       if (u != null) RasqAvatar(key: ValueKey('notif.avatar.${item.id}'), imageUrl: u.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: u.displayName, onTap: () => context.pushUser(u, account: item.account.key)),
       const SizedBox(width: RasqSpacing.sm),
-      Expanded(child: RasqRichText([RasqTextSpan(u?.displayName ?? '', bold: true), RasqTextSpan(text)], style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
-      if (u != null && item.kind != NotificationKind.followRequest) RasqTogglePillButton(label: 'フォロー', activeLabel: 'フォロー中', active: st.following, onPressed: () => ref.read(userListHelperProvider).toggleFollow(u)),
+      Expanded(child: RasqRichText(_boldNameSpans(sentence, u?.displayName ?? ''), style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
+      if (u != null && item.kind != NotificationKind.followRequest) RasqTogglePillButton(label: l10n.notificationsFollowButton, activeLabel: l10n.notificationsFollowingButton, active: st.following, onPressed: () => ref.read(userListHelperProvider).toggleFollow(u)),
       if (item.kind == NotificationKind.followRequest) const Icon(Icons.chevron_right),
     ]);
   }
@@ -381,7 +400,7 @@ class _PostTile extends ConsumerWidget {
     final p = item.post;
     final scheme = Theme.of(context).colorScheme;
     final actions = ref.watch(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[];
-    final label = switch (item.kind) { NotificationKind.reply => '返信', NotificationKind.quote => '引用', _ => 'メンション' };
+    final label = switch (item.kind) { NotificationKind.reply => context.l10n.notificationsPostReply, NotificationKind.quote => context.l10n.notificationsPostQuote, _ => context.l10n.notificationsPostMention };
     if (p == null) return Text(label, style: RasqTypography.bodySmall);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [Icon(Icons.subdirectory_arrow_left, size: 16, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text(label, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))]),
@@ -403,7 +422,7 @@ class _TimerTile extends StatelessWidget {
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Icon(Icons.bookmark, color: RasqColors.accent, size: 24),
       const SizedBox(width: RasqSpacing.md),
-      Expanded(child: Text(item.kind == NotificationKind.vc ? 'ブックマークしたVCが始まります！' : 'タイマー付きブックマーク', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurface))),
+      Expanded(child: Text(item.kind == NotificationKind.vc ? context.l10n.notificationsTimerAstell : context.l10n.notificationsTimerBookmark, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurface))),
     ]);
   }
 }
@@ -420,9 +439,9 @@ class _RasqNotices extends ConsumerWidget {
       onRefresh: () => ref.refresh(rasqNoticesProvider.future),
       child: notices.when(
         loading: () => const RasqLoading(),
-        error: (e, _) => ListView(children: [const SizedBox(height: 120), RasqEmptyView(title: '読み込めませんでした', hint: '$e')]),
+        error: (e, _) => ListView(children: [const SizedBox(height: 120), RasqEmptyView(title: context.l10n.notificationsRasqLoadError, hint: e is StateError ? e.message : '$e')]),
         data: (list) => list.isEmpty
-            ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 120), RasqEmptyView(title: 'RASQ の通知はありません', hint: 'メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます')])
+            ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 120), RasqEmptyView(title: context.l10n.notificationsRasqEmpty, hint: context.l10n.notificationsRasqEmptyHint)])
             : RememberScroll(
                 id: 'notifications.rasq',
                 builder: (context, controller) => ListView.separated(

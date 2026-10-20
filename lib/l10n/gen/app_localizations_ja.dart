@@ -1031,6 +1031,332 @@ class AppLocalizationsJa extends AppLocalizations {
   String get childSafeScreensPendingRasqLogin => 'RASQ アカウントにログイン';
 
   @override
+  String get collectionsImportToTimeline => 'タイムラインに取り込む';
+
+  @override
+  String get collectionsNotFound => '見つかりません';
+
+  @override
+  String get collectionsNotFoundHint => '消されたか、非公開になっています';
+
+  @override
+  String get collectionsReload => '再読み込み';
+
+  @override
+  String get collectionsBlockedList => '保護者がこのリストを止めています';
+
+  @override
+  String get collectionsBlockedClip => '保護者がこのクリップを止めています';
+
+  @override
+  String get collectionsMenuCopyLink => 'リンクをコピー';
+
+  @override
+  String get collectionsMenuRefresh => 'いま取り直す';
+
+  @override
+  String get collectionsMenuMakePrivate => '非公開にする';
+
+  @override
+  String get collectionsMenuMakePublic => '公開する';
+
+  @override
+  String get collectionsMenuRename => '名前と説明を変更';
+
+  @override
+  String get collectionsMenuDelete => '削除';
+
+  @override
+  String get collectionsMenuUnpublish => '公開をやめる';
+
+  @override
+  String get collectionsLinkCopied => 'リンクをコピーしました';
+
+  @override
+  String get collectionsRefreshFailed => '取り直せませんでした';
+
+  @override
+  String get collectionsRefreshed => '取り直しました';
+
+  @override
+  String get collectionsRenameTitle => '名前と説明';
+
+  @override
+  String get collectionsSave => '保存';
+
+  @override
+  String get collectionsNameHint => '名前';
+
+  @override
+  String get collectionsDescriptionHint => '説明(任意)';
+
+  @override
+  String collectionsDeleteConfirmTitle(String name) {
+    return '「$name」を削除しますか？';
+  }
+
+  @override
+  String get collectionsDeleteConfirmMessage => 'フォローしている人の一覧からも消えます。';
+
+  @override
+  String get collectionsDeleteButton => '削除';
+
+  @override
+  String get collectionsCancel => 'キャンセル';
+
+  @override
+  String collectionsActionFailed(String error) {
+    return 'できませんでした: $error';
+  }
+
+  @override
+  String get collectionsTabPosts => '投稿';
+
+  @override
+  String get collectionsTabTopics => '話題の目次';
+
+  @override
+  String get collectionsTabMembers => 'メンバー';
+
+  @override
+  String get collectionsTabServers => 'サーバー';
+
+  @override
+  String get collectionsStatusRefreshedOnView => '見たときに新しくしました';
+
+  @override
+  String get collectionsStatusRefreshFailed => '取り直せませんでした(前の内容です)';
+
+  @override
+  String get collectionsStatusFollowingHint =>
+      '同じサーバーに所属しているか、入っている人をフォローしていると、見たときに新しくなります';
+
+  @override
+  String get collectionsKindList => 'RASQ リスト';
+
+  @override
+  String get collectionsKindClip => 'RASQ クリップ';
+
+  @override
+  String get collectionsPrivate => '非公開';
+
+  @override
+  String get collectionsPublic => '公開';
+
+  @override
+  String collectionsMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionsItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionsFollowerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'フォロワー $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionsUpdatedAgo(String ago) {
+    return '更新 $ago';
+  }
+
+  @override
+  String get collectionsSeparator => ' ・ ';
+
+  @override
+  String get collectionsFollowing => 'フォロー中';
+
+  @override
+  String get collectionsFollow => 'フォロー';
+
+  @override
+  String get collectionsNoPostsYet => 'まだ投稿がありません';
+
+  @override
+  String get collectionsNoPostsHintEmpty =>
+      'ユーザーページの … →「RASQ リストに追加」で人を入れられます';
+
+  @override
+  String get collectionsNoPostsHintCollecting => '見られる人が開いたときに集まります';
+
+  @override
+  String get collectionsClipEmpty => 'クリップは空です';
+
+  @override
+  String get collectionsItemGone => 'この投稿は見られなくなりました(消されたか、公開範囲が変わりました)';
+
+  @override
+  String get collectionsItemChecking => '公開範囲を確かめています';
+
+  @override
+  String get collectionsAddMembers => 'メンバーを追加';
+
+  @override
+  String collectionsMembersAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人を追加しました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionsAddFailed(String error) {
+    return '追加できませんでした: $error';
+  }
+
+  @override
+  String get collectionsNoMembers => 'メンバーはいません';
+
+  @override
+  String get collectionsNoMembersHint => '「メンバーを追加」か、ユーザーページの … →「RASQ リストに追加」';
+
+  @override
+  String collectionsMemberSubtitle(String handle, String kind) {
+    return '@$handle ・ $kind';
+  }
+
+  @override
+  String get collectionsRemoveFromListTooltip => 'リストから外す';
+
+  @override
+  String collectionsRemoveFailed(String error) {
+    return '外せませんでした: $error';
+  }
+
+  @override
+  String get collectionsNotFetchableHint =>
+      'リスト内の人の情報を取れるアカウントがありません(入っている人と同じサーバーのアカウントか、入っている人のフォローが要ります)';
+
+  @override
+  String get collectionsNoServer => 'RASQ アカウントのサーバーが設定されていません';
+
+  @override
+  String collectionsCheckFailed(String error) {
+    return '確かめられませんでした: $error';
+  }
+
+  @override
+  String get collectionsPickerEmpty => 'RASQ リストはまだありません';
+
+  @override
+  String get collectionsPickerNoHits => '見つかりません';
+
+  @override
+  String get collectionsPickerMine => '自分のリスト';
+
+  @override
+  String get collectionsPickerNotFetchable => '取れません';
+
+  @override
+  String get collectionsNotLoggedIn => 'ログインしていません';
+
+  @override
+  String collectionsImportRejected(String name, String reason) {
+    return '「$name」は取り込めません($reason)';
+  }
+
+  @override
+  String collectionsAlreadyImported(String name) {
+    return '「$name」はもうホームのタイムラインに入っています';
+  }
+
+  @override
+  String collectionsImported(String name) {
+    return '「$name」をホームのタイムラインに取り込みました(タブ行の歯車で確認できます)';
+  }
+
+  @override
+  String get collectionsTileOpen => '見てみる';
+
+  @override
+  String get collectionsCreateNeedsAccount => 'RASQ リストを作るには RASQ アカウントが必要です';
+
+  @override
+  String get collectionsCreateTitle => '新しい RASQ リスト';
+
+  @override
+  String get collectionsListNameHint => 'リスト名';
+
+  @override
+  String get collectionsPublishSwitch => '公開する';
+
+  @override
+  String get collectionsPublishSwitchSubtitle =>
+      'アカウントページと共有リンクから見られます。フォローした人が見たときにも新しくなります';
+
+  @override
+  String get collectionsCreateButton => '作成';
+
+  @override
+  String collectionsCreateFailed(String error) {
+    return '作成できませんでした: $error';
+  }
+
+  @override
+  String get collectionsUseNeedsAccount => 'RASQ リストを使うには RASQ アカウントが必要です';
+
+  @override
+  String collectionsLoadListsFailed(String error) {
+    return 'リストを読めませんでした: $error';
+  }
+
+  @override
+  String get collectionsAddToListTitle => 'RASQ リストに追加';
+
+  @override
+  String collectionsAddToListSubtitlePublic(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人',
+    );
+    return '$_temp0 ・ 公開';
+  }
+
+  @override
+  String collectionsAddToListSubtitlePrivate(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人',
+    );
+    return '$_temp0 ・ 非公開';
+  }
+
+  @override
+  String get collectionsCreateNewList => '新しいリストを作成';
+
+  @override
+  String collectionsAddedTo(String name) {
+    return '「$name」に追加しました';
+  }
+
+  @override
+  String collectionsAlreadyIn(String name) {
+    return 'すでに「$name」に入っています';
+  }
+
+  @override
   String get composeTargetNormalTitle => 'ノートの作成';
 
   @override
@@ -2919,6 +3245,725 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get languageSettingsListHeader => '表示の言語';
+
+  @override
+  String get listsTitle => 'リスト';
+
+  @override
+  String get listsTabAllLabel => 'すべて';
+
+  @override
+  String get listsSearchHint => 'リスト・クリップを検索';
+
+  @override
+  String get listsShowPrivateClips => '非公開クリップを表示';
+
+  @override
+  String get listsImportTitle => 'リストのインポート';
+
+  @override
+  String get listsCreateTitle => 'リストを作成';
+
+  @override
+  String listsCreateAccountList(String account) {
+    return '$account のリスト';
+  }
+
+  @override
+  String get listsRasqCrossSns => 'RASQ リスト(SNS 横断)';
+
+  @override
+  String get listsCreateConfirm => '作成';
+
+  @override
+  String get listsNameHint => 'リスト名';
+
+  @override
+  String listsCreated(String name) {
+    return '「$name」を作りました';
+  }
+
+  @override
+  String listsCreateUnsupported(String sns) {
+    return '$sns ではリストを作れません';
+  }
+
+  @override
+  String listsCreateFailed(String error) {
+    return 'リストを作れませんでした: $error';
+  }
+
+  @override
+  String get listsEmpty => 'リストはありません';
+
+  @override
+  String get listsNoHits => '見つかりません';
+
+  @override
+  String get listsEmptyHint => '＋でリストを作成できます';
+
+  @override
+  String get listsRasqCreateTitle => '新しい RASQ リスト';
+
+  @override
+  String get listsRasqCreateSubtitle =>
+      'Misskey / Mastodon / Bluesky の人を 1 つのリストに';
+
+  @override
+  String listsSwitchedAccount(String account) {
+    return '$account に切り替えました';
+  }
+
+  @override
+  String get listsSectionClips => 'クリップ';
+
+  @override
+  String get listsSectionLists => 'リスト';
+
+  @override
+  String get listsSectionFeeds => 'カスタムフィード';
+
+  @override
+  String listsMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ユーザー',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listsClipNotesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsClipKindHost => 'RASQ(SNS 横断)';
+
+  @override
+  String get listsClipKindPrivate => '非公開クリップ';
+
+  @override
+  String get listsClipKindPublic => 'クリップ';
+
+  @override
+  String get listsSeparator => ' ・ ';
+
+  @override
+  String get listsFeedUnsave => '保存を外す';
+
+  @override
+  String get listsFeedSave => 'フィードを保存';
+
+  @override
+  String get listsFeedUnsaveFailed => '保存を外せませんでした';
+
+  @override
+  String get listsFeedSaveFailed => '保存できませんでした';
+
+  @override
+  String get listsFeedSaveUnsupported => 'この SNS はフィードの保存に対応していません';
+
+  @override
+  String get listsNotLoggedIn => 'ログインしていません';
+
+  @override
+  String listsFeedAlreadyImported(String name) {
+    return '「$name」はもうホームのタイムラインに入っています';
+  }
+
+  @override
+  String listsFeedImported(String name) {
+    return '「$name」をホームのタイムラインに取り込みました(タブ行の歯車で確認できます)';
+  }
+
+  @override
+  String get listsTabUsers => 'ユーザー';
+
+  @override
+  String get listsTabPosts => '投稿';
+
+  @override
+  String get listsTabTopics => '話題の目次';
+
+  @override
+  String get listsBlockedByGuardian => '保護者がこのリストを止めています';
+
+  @override
+  String get listsTimelineSettingsTooltip => 'リストTL設定';
+
+  @override
+  String get listsAddMembers => 'メンバーを追加';
+
+  @override
+  String listsMembersAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人を追加しました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsNoUsers => 'ユーザーはいません';
+
+  @override
+  String get listsRemoveMember => '外す';
+
+  @override
+  String get listsReload => '再読み込み';
+
+  @override
+  String get listsNoPosts => '投稿はありません';
+
+  @override
+  String get listsFeedDefaultTitle => 'フィード';
+
+  @override
+  String get listsImportToTimeline => 'タイムラインに取り込む';
+
+  @override
+  String get listsFeedTimelineSettingsTooltip => 'フィードTL設定';
+
+  @override
+  String get listsImportSearchHintFeeds => 'カスタムフィードを検索、または共有リンク / URL を入力';
+
+  @override
+  String get listsImportSearchHintRasq => 'RASQ リストを検索、または共有リンク / URL を入力';
+
+  @override
+  String get listsImportSearchHintBoth =>
+      'カスタムフィード / RASQ リストを検索、または共有リンク / URL を入力';
+
+  @override
+  String get listsImportSearchPlain => '検索';
+
+  @override
+  String get listsImportFeedsHelp =>
+      'フィードを検索するか URL を貼ると、リストタイルで表示します。タップでそのフィードのタイムラインへ。';
+
+  @override
+  String get listsImportRasqHelp =>
+      'RASQ リストは「取り込む」でホームのタイムラインへ(リストをフォローします)。取り込めるのは、リスト内の人の情報を取れるリストだけです。';
+
+  @override
+  String get listsImportGenericHelp => 'リストを検索して一括操作を行うことができます。';
+
+  @override
+  String get listsImportLocal => 'ローカルからインポート';
+
+  @override
+  String get listsImportLocalMessage => 'ファイルからのインポートは準備中です。';
+
+  @override
+  String get listsImportLocalDetail =>
+      'CSV/JSON からのインポートはリスト機能(サーバー側)と合わせて実装します。';
+
+  @override
+  String get listsImportPopularFeeds => '人気のフィード';
+
+  @override
+  String get listsImportFeedResults => 'フィードの検索結果';
+
+  @override
+  String get listsImportEnterQuery => '検索語か URL を入れてください';
+
+  @override
+  String get listsImportRasqMine => 'RASQ リスト(自分 / フォロー中)';
+
+  @override
+  String get listsImportRasqResults => 'RASQ リストの検索結果';
+
+  @override
+  String get listsImportButton => '取り込む';
+
+  @override
+  String get listsImportHistory => '履歴';
+
+  @override
+  String get listsImportHistoryEmpty => '履歴はありません';
+
+  @override
+  String get listsTopicsEmpty => '話題はまだありません';
+
+  @override
+  String get listsTopicsEmptyHint => '投稿が集まると、話題ごとに区切ります';
+
+  @override
+  String get listsTopicsCaption => '話題ごとの区切りです。タップすると、その話題の投稿だけを表示します。';
+
+  @override
+  String get listsTopicsCaptionDetail =>
+      '会話イベント(2 投稿以上、リレーショナル TL と同じエンジン)を章にし、単発投稿は 1 つにまとめる(indexForListTimeline)。見出しは投稿の中にある語(タグ / 特徴語 / ドメイン)。';
+
+  @override
+  String listsTopicTimeRange(String start, String end) {
+    return '$start〜$end';
+  }
+
+  @override
+  String listsTopicSubtitle(String time, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '$time ・ $_temp0';
+  }
+
+  @override
+  String listsTopicSubtitleWithPeople(String time, int count, int people) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      people,
+      locale: localeName,
+      other: '$people 人',
+    );
+    return '$time ・ $_temp0 ・ $_temp1';
+  }
+
+  @override
+  String listsTopicSnippet(String name, String body) {
+    return '$name「$body」';
+  }
+
+  @override
+  String listsTopicFilterChip(String label, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '話題: $label($_temp0)';
+  }
+
+  @override
+  String get listsTopicFilterClear => '絞り込みをやめる';
+
+  @override
+  String listsMemberCandidateSubtitle(String handle, String instance) {
+    return '@$handle ・ $instance';
+  }
+
+  @override
+  String listsMemberNotPublished(String name) {
+    return '$name さんは、この SNS のアカウントを公開していません';
+  }
+
+  @override
+  String listsMemberSnsNotFound(String name) {
+    return '$name さんの SNS アカウントが見つかりません';
+  }
+
+  @override
+  String get listsPickerConfirm => '追加';
+
+  @override
+  String get listsPickerNoServer => 'RASQ サーバーに繋がっていません';
+
+  @override
+  String get listsPickerLookupFailed => '調べられませんでした';
+
+  @override
+  String get listsPickerUnavailable => '選べません';
+
+  @override
+  String get listsPickerNone => 'いません';
+
+  @override
+  String get listsPickerSearchHint => 'ユーザーを検索(SNS / RASQ)';
+
+  @override
+  String get listsPickerSnsUsers => 'SNS のユーザー';
+
+  @override
+  String get listsPickerRasqUsers => 'RASQ のユーザー';
+
+  @override
+  String get listsPickerSnsFollowing => 'SNS のフォロー中';
+
+  @override
+  String get listsPickerRasqFollowing => 'RASQ のフォロー中';
+
+  @override
+  String get listsPickerRasqNotice =>
+      'RASQ のユーザーは、その人が公開している同じ SNS のアカウントで追加します。';
+
+  @override
+  String listsPickerRasqNoticeDetail(String path) {
+    return 'Central の公開ページ($path)の snsAccounts から、このセッションと同じ SNS(同じサーバーを優先、確認済みを優先)を選び、userByHandle で引いた id を足す。';
+  }
+
+  @override
+  String listsPickerSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人を選んでいます',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsPickerRasqBadgeSemantics => 'RASQ のユーザー';
+
+  @override
+  String get mediaVizStyleMirror => '上下対称のバー';
+
+  @override
+  String get mediaVizStyleBars => '下から伸びるバー';
+
+  @override
+  String get mediaVizStyleLine => '折れ線';
+
+  @override
+  String get mediaVizLeftAvatar => 'アカウントのアイコン';
+
+  @override
+  String get mediaVizLeftFile => '選んだ画像';
+
+  @override
+  String get mediaVizLeftGlyph => '音符のアイコン';
+
+  @override
+  String get mediaVizLeftNone => 'なし(波形を横いっぱいに)';
+
+  @override
+  String get mediaVizTextBelow => '絵の下';
+
+  @override
+  String get mediaVizTextAbove => '絵の上';
+
+  @override
+  String get mediaVizQualityFast => '速い(960×540)';
+
+  @override
+  String get mediaVizQualityStandard => '標準(1280×720)';
+
+  @override
+  String get mediaVizQualityFine => '細かい(2560×1440、約 4 倍かかる)';
+
+  @override
+  String get mediaWavInvalid => 'WAV ではありません';
+
+  @override
+  String get mediaWavMissingChunks => 'WAV の fmt / data がありません';
+
+  @override
+  String mediaWavUnsupported(int format, int bits) {
+    return '未対応の WAV(format $format、$bits bit)';
+  }
+
+  @override
+  String mediaSeconds(String seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String mediaVizTimings(
+    String total,
+    int frameCount,
+    String frames,
+    String encode,
+    String mux,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      frameCount,
+      locale: localeName,
+      other:
+          '合計 $total($frameCount フレーム: 描画 $frames / エンコード $encode / 仕上げ $mux)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mediaAudioVideoUnsupported =>
+      'この端末では音声を動画にできません(Android / iOS / macOS だけ)';
+
+  @override
+  String get mediaViewerSemantics => '投稿';
+
+  @override
+  String get mediaViewerBack => '戻る';
+
+  @override
+  String get mediaViewerPip => 'PiP で再生';
+
+  @override
+  String get mediaViewerMenu => 'メニュー';
+
+  @override
+  String get mediaViewerShare => '共有';
+
+  @override
+  String get mediaPluginAsking => '画像を見ています…';
+
+  @override
+  String get mediaPluginFound => '検出あり';
+
+  @override
+  String get mediaPluginNotFound => '検出なし';
+
+  @override
+  String mediaPluginFailed(String reason) {
+    return '失敗: $reason(オフ → オンでやり直す)';
+  }
+
+  @override
+  String get mediaPluginFetchFailed => '画像を取得できませんでした';
+
+  @override
+  String mediaPluginFetchFailedWithError(String error) {
+    return '画像を取得できませんでした($error)';
+  }
+
+  @override
+  String get mediaPluginDecodeFailed => '画像を読めませんでした';
+
+  @override
+  String mediaVideoCannotPlay(String error) {
+    return '再生できません: $error';
+  }
+
+  @override
+  String get mediaVideoBack5 => '5 秒戻す';
+
+  @override
+  String get mediaVideoPause => '一時停止';
+
+  @override
+  String get mediaVideoPlay => '再生';
+
+  @override
+  String get mediaVideoForward5 => '5 秒送る';
+
+  @override
+  String get mediaVideoSpeed => '再生速度';
+
+  @override
+  String get mediaVideoFowTitle => '動画';
+
+  @override
+  String get mediaVideoFowClose => '閉じる';
+
+  @override
+  String get mediaSaveAsk => '保存するたびに選ぶ';
+
+  @override
+  String get mediaSavePhotos => '写真(カメラロール)';
+
+  @override
+  String get mediaSaveFiles => 'ファイル';
+
+  @override
+  String get mediaSaveBadFileName => '保存するファイル名が正しくありません';
+
+  @override
+  String get mediaSaveOutsideFolder => '保存先のフォルダーの外には書きません';
+
+  @override
+  String get mediaSaveTooManySameName => '同じ名前のファイルが多すぎます';
+
+  @override
+  String get mediaSavePhotosDenied => '写真への保存が許可されていません(設定 App で許可してください)';
+
+  @override
+  String get mediaSavedToPhotos => '写真(アルバム「RASQ」)に保存しました';
+
+  @override
+  String mediaSavedToFilesApp(String folder, String fileName) {
+    return '「ファイル」App の RASQ › $folder に保存しました($fileName)';
+  }
+
+  @override
+  String mediaSavedToPath(String path) {
+    return '保存しました: $path';
+  }
+
+  @override
+  String get mediaColorBlack => '黒';
+
+  @override
+  String get mediaColorNavy => '濃紺';
+
+  @override
+  String get mediaColorInk => '墨';
+
+  @override
+  String get mediaColorDeepGreen => '深緑';
+
+  @override
+  String get mediaColorCrimson => 'えんじ';
+
+  @override
+  String get mediaColorWhite => '白';
+
+  @override
+  String get mediaColorLightGray => '薄い灰';
+
+  @override
+  String get mediaColorYellow => '黄';
+
+  @override
+  String get mediaColorSkyBlue => '水色';
+
+  @override
+  String get mediaColorPink => '桃';
+
+  @override
+  String get mediaColorBlue => '青';
+
+  @override
+  String get mediaColorGreen => '緑';
+
+  @override
+  String get mediaColorOrange => '橙';
+
+  @override
+  String get mediaColorPurple => '紫';
+
+  @override
+  String get mediaVizCancel => 'キャンセル';
+
+  @override
+  String get mediaVizConfirm => '決定';
+
+  @override
+  String get mediaVizSemantics => 'Visualizer の設定';
+
+  @override
+  String get mediaVizRebuildWarning => '決定すると動画を作り直します。ここまでの編集は消えます';
+
+  @override
+  String mediaVizRebuildDetail(int frames) {
+    String _temp0 = intl.Intl.pluralLogic(
+      frames,
+      locale: localeName,
+      other:
+          '今の再生位置のフレーム。決定で動画を書き出し直します($frames フレーム)。ペイントやテキストなど、ここまでの編集は消えます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mediaVizRebuildDetailReducedFps(int frames, String fps) {
+    String _temp0 = intl.Intl.pluralLogic(
+      frames,
+      locale: localeName,
+      other:
+          '今の再生位置のフレーム。決定で動画を書き出し直します($frames フレーム、長いので ${fps}fps に下げます)。ペイントやテキストなど、ここまでの編集は消えます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mediaVizWaveform => '波形';
+
+  @override
+  String get mediaVizBands => '帯域の数(低音 → 高音)';
+
+  @override
+  String get mediaVizFrameRate => 'フレームレート';
+
+  @override
+  String get mediaVizBarColor => 'バーの色';
+
+  @override
+  String get mediaVizBackgroundColor => '背景色';
+
+  @override
+  String get mediaVizLeftImage => '左の絵';
+
+  @override
+  String get mediaVizPickImage => '画像を選ぶ';
+
+  @override
+  String get mediaVizRepickImage => '画像を選び直す';
+
+  @override
+  String get mediaVizPickImageHint => '選ぶまでは音符のアイコン';
+
+  @override
+  String get mediaVizTitleSection => 'タイトル / 説明';
+
+  @override
+  String get mediaVizShowTitle => 'タイトル / 説明を出す';
+
+  @override
+  String get mediaVizTitleHint => 'タイトル(空ならファイル名)';
+
+  @override
+  String get mediaVizDescriptionHint => '説明(無くてもよい)';
+
+  @override
+  String get mediaVizTextScale => '文字の大きさ';
+
+  @override
+  String get mediaVizTextColorAuto => '文字の色: 自動';
+
+  @override
+  String get mediaVizBackgroundVideo => '背景の動画';
+
+  @override
+  String get mediaVizPickVideo => '動画を選ぶ';
+
+  @override
+  String get mediaVizRepickVideo => '動画を選び直す';
+
+  @override
+  String get mediaVizPickVideoHint => '背景色の代わりに動画を流します(音は使いません)';
+
+  @override
+  String mediaVizVideoSelected(String fileName) {
+    return '$fileName — 音声より短ければループします';
+  }
+
+  @override
+  String get mediaVizRemoveVideo => '背景の動画を外す';
+
+  @override
+  String get mediaVizDim => '動画の上に掛ける暗さ';
+
+  @override
+  String get mediaVizDimHint => '波形と文字を読みやすくします';
+
+  @override
+  String get mediaVizFade => 'フェード(絵)';
+
+  @override
+  String get mediaVizFadeIn => 'フェードイン';
+
+  @override
+  String get mediaVizFadeOut => 'フェードアウト';
+
+  @override
+  String get mediaVizFadeNone => 'なし';
+
+  @override
+  String get mediaVizExport => '書き出し';
+
+  @override
+  String get mediaVizExportCaption => '細かくするほど、書き出しに時間がかかります';
+
+  @override
+  String get mediaVizExportDetail =>
+      '波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。';
+
+  @override
+  String mediaVizExportDetailWithLast(String timings) {
+    return '前回の書き出し: $timings。\n波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。';
+  }
 
   @override
   String get nodeprogCatalogGenreGenerate => '生成';
@@ -4822,6 +5867,180 @@ class AppLocalizationsJa extends AppLocalizations {
   String get nodeprogTimelinePaletteEmptyHint => '検索ワードを変えてみてください';
 
   @override
+  String get notificationsPrefReaction => 'リアクションを通知する';
+
+  @override
+  String get notificationsPrefRepost => 'リノートを通知する';
+
+  @override
+  String get notificationsPrefQuote => '引用を通知する';
+
+  @override
+  String get notificationsPrefAstell => 'ASTellを通知する';
+
+  @override
+  String get notificationsPrefTimer => 'タイマー付きブックマークを通知する';
+
+  @override
+  String get notificationsPrefPollEnded => '投票の完了を通知する';
+
+  @override
+  String get notificationsPrefFollow => 'フォローを通知する';
+
+  @override
+  String get notificationsPrefSystem => 'システム通知を表示する';
+
+  @override
+  String get notificationsPrefOther => 'その他の通知を配信する';
+
+  @override
+  String get notificationsTabAll => 'すべて';
+
+  @override
+  String get notificationsTabFollowing => 'フォロー中';
+
+  @override
+  String get notificationsPrefsTitle => '通知プロファイル設定';
+
+  @override
+  String get notificationsEmptyFollowing => 'フォロー中の通知はありません';
+
+  @override
+  String get notificationsClose => '閉じる';
+
+  @override
+  String get notificationsPrefEnabled => '通知オン';
+
+  @override
+  String get notificationsPushTitle => 'プッシュ通知の受け取り';
+
+  @override
+  String get notificationsPushDetail => '通知専用のアクセストークン';
+
+  @override
+  String get notificationsQuickReadAll => '全ての通知を既読';
+
+  @override
+  String get notificationsQuickReadFollowing => 'フォロー中の通知を既読';
+
+  @override
+  String get notificationsQuickOff => '通知オフ';
+
+  @override
+  String get notificationsEmpty => '通知はありません';
+
+  @override
+  String get notificationsRetry => '再読み込み';
+
+  @override
+  String get notificationsRemindersHeader => '開始通知を登録した VC';
+
+  @override
+  String notificationsReminderSchedule(String when) {
+    return '開催予定 $when';
+  }
+
+  @override
+  String get notificationsReminderCancel => '解除';
+
+  @override
+  String get notificationsSystemFallbackTitle => 'システム通知';
+
+  @override
+  String notificationsActorsOne(String name) {
+    return '$nameさん';
+  }
+
+  @override
+  String notificationsActorsTwo(String first, String second) {
+    return '$firstさん、$secondさん';
+  }
+
+  @override
+  String notificationsActorsMore(String first, String second, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$firstさん、$secondさんと他$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notificationsActionReacted(String names) {
+    return '$namesがあなたの投稿にリアクションしました';
+  }
+
+  @override
+  String notificationsActionReposted(String names) {
+    return '$namesがあなたの投稿をリノートしました';
+  }
+
+  @override
+  String notificationsActionPollEnded(String names) {
+    return '$namesが投票が終了しました';
+  }
+
+  @override
+  String notificationsActionOther(String names) {
+    return '$namesが通知';
+  }
+
+  @override
+  String get notificationsMenuTooltip => 'メニュー';
+
+  @override
+  String notificationsFollowFollowed(String name) {
+    return '$nameにフォローされました';
+  }
+
+  @override
+  String notificationsFollowRequested(String name) {
+    return '$nameからフォロー申請が届きました';
+  }
+
+  @override
+  String notificationsFollowAccepted(String name) {
+    return '$nameがフォローを承認しました';
+  }
+
+  @override
+  String notificationsFollowListAdded(String name) {
+    return '$nameがリストに追加しました';
+  }
+
+  @override
+  String get notificationsFollowButton => 'フォロー';
+
+  @override
+  String get notificationsFollowingButton => 'フォロー中';
+
+  @override
+  String get notificationsPostReply => '返信';
+
+  @override
+  String get notificationsPostQuote => '引用';
+
+  @override
+  String get notificationsPostMention => 'メンション';
+
+  @override
+  String get notificationsTimerAstell => 'ブックマークしたVCが始まります！';
+
+  @override
+  String get notificationsTimerBookmark => 'タイマー付きブックマーク';
+
+  @override
+  String get notificationsRasqLoadError => '読み込めませんでした';
+
+  @override
+  String get notificationsRasqEmpty => 'RASQ の通知はありません';
+
+  @override
+  String get notificationsRasqEmptyHint =>
+      'メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます';
+
+  @override
   String get onboardingBack => '戻る';
 
   @override
@@ -6504,6 +7723,303 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get pluginsPaintNibBrush => 'ブラシニブ';
+
+  @override
+  String get postThreadSortRelevance => '関連順';
+
+  @override
+  String get postThreadSortReactions => 'リアクション数';
+
+  @override
+  String get postThreadSortKeyword => 'キーワード順';
+
+  @override
+  String get postThreadSortDefault => 'デフォルト';
+
+  @override
+  String get postThreadModeRenotes => '引用(リノート)';
+
+  @override
+  String get postThreadModeRenotesShort => '引用';
+
+  @override
+  String get postThreadModeReplies => '返信';
+
+  @override
+  String get postThreadModeRepliesShort => '返信';
+
+  @override
+  String get postThreadModeReactions => 'リアクション';
+
+  @override
+  String get postThreadModeReactionsShort => 'リアクション';
+
+  @override
+  String get postThreadModeQuotes => '共有(引用ノート)';
+
+  @override
+  String get postThreadModeQuotesShort => '共有';
+
+  @override
+  String get postBookmarkClipTooltip => 'クリップに追加(長押し)';
+
+  @override
+  String get postBookmarkRemoveTooltip => 'ブックマークを外す(長押しでクリップへ)';
+
+  @override
+  String get postBookmarkAddTooltip => 'ブックマーク(長押しでクリップへ)';
+
+  @override
+  String get postBookmarkUnsupported => 'このサービスにはブックマークがありません。長押しでクリップに追加できます';
+
+  @override
+  String get postBookmarkRemoved => 'ブックマークを外しました';
+
+  @override
+  String get postBookmarkAdded => 'ブックマークしました';
+
+  @override
+  String postBookmarkError(String error) {
+    return 'ブックマークできませんでした: $error';
+  }
+
+  @override
+  String get postReactionsTitle => 'リアクション';
+
+  @override
+  String get postReactionsTabReplies => '返信';
+
+  @override
+  String get postReactionsTabQuotes => '引用';
+
+  @override
+  String get postReactionsTabReactions => 'リアクション';
+
+  @override
+  String get postReactionsTabShares => '共有';
+
+  @override
+  String get postReactionsBookmarkTooltip => 'ブックマーク';
+
+  @override
+  String get postRepliesEmpty => '返信はありません';
+
+  @override
+  String get postQuotesEmpty => '引用ノートはありません';
+
+  @override
+  String get postRepostersEmpty => 'リノート・引用はありません';
+
+  @override
+  String get postReactionsEmpty => 'リアクションはありません';
+
+  @override
+  String get postReactionsMine => 'あなた';
+
+  @override
+  String postDetailNotFoundOnAccount(String account) {
+    return '$account ではこの投稿を見つけられませんでした';
+  }
+
+  @override
+  String get postDetailTitle => '投稿';
+
+  @override
+  String get postDetailOpenedAccount => '開いたアカウント';
+
+  @override
+  String get postDetailNotFound => '投稿はありません';
+
+  @override
+  String get postReload => '再読み込み';
+
+  @override
+  String get postDetailShowReactions => 'リアクションを表示';
+
+  @override
+  String get postDetailShowMore => 'さらに表示';
+
+  @override
+  String get postRenotesEmpty => 'リノートはありません';
+
+  @override
+  String get postShareAccountTooltip => '共有に使うアカウント';
+
+  @override
+  String get postShareAccountFixedTooltip => '受け取ったアカウントだけで共有できます';
+
+  @override
+  String get postShareSemantics => '共有';
+
+  @override
+  String get postShareContentCopied => '内容をコピーしました';
+
+  @override
+  String get postShareLinkCopied => 'リンクをコピーしました';
+
+  @override
+  String get postShareDmTitle => 'DM へ共有';
+
+  @override
+  String get postShareClose => '閉じる';
+
+  @override
+  String get postShareDmNoRooms => 'DM の相手がいません';
+
+  @override
+  String postShareAstellShared(String room) {
+    return '「$room」に共有しました';
+  }
+
+  @override
+  String get postShareCopyContent => '内容をコピー';
+
+  @override
+  String get postShareCopyLink => 'リンクをコピー';
+
+  @override
+  String get postShareOtherAccount => '他のアカウントで共有';
+
+  @override
+  String get postSharePluginsHeader => 'プラグインに共有';
+
+  @override
+  String get postShareAstellTitle => 'ASTell に共有';
+
+  @override
+  String postShareAstellSubtitle(String room) {
+    return '参加中のルーム「$room」へ投稿を流す';
+  }
+
+  @override
+  String get postSharePluginsEmpty => '共有に対応したプラグインがここに並びます';
+
+  @override
+  String get postSharePluginsEmptyDetail =>
+      'post.share を宣言したプラグイン(と参加中の ASTell)がここに並びます';
+
+  @override
+  String get postShareOtherHeader => 'その他';
+
+  @override
+  String get postShareDmSubtitle => '選んだアカウントの DM にリンクを送る';
+
+  @override
+  String get postShareOpenBrowser => 'ブラウザで開く';
+
+  @override
+  String get postMenuCopyLink => 'リンクをコピー';
+
+  @override
+  String get postMenuUnpin => '固定を外す';
+
+  @override
+  String get postMenuPin => '固定する';
+
+  @override
+  String get postMenuDetail => '詳細';
+
+  @override
+  String get postMenuShare => '共有';
+
+  @override
+  String get postMenuEditActionBar => 'アクションバーを編集';
+
+  @override
+  String get postMenuUnfavorite => 'お気に入り解除';
+
+  @override
+  String get postMenuFavorite => 'お気に入り';
+
+  @override
+  String get postMenuAddToClip => 'クリップに追加';
+
+  @override
+  String get postMenuUnfollow => 'フォロー解除';
+
+  @override
+  String get postMenuFollow => 'フォロー';
+
+  @override
+  String get postMenuUnmute => 'ミュート解除';
+
+  @override
+  String get postMenuMute => 'ミュート';
+
+  @override
+  String get postMenuUnblock => 'ブロック解除';
+
+  @override
+  String get postMenuBlock => 'ブロック';
+
+  @override
+  String get postMenuReport => '報告';
+
+  @override
+  String get postMenuDelete => '削除';
+
+  @override
+  String postBlockConfirmTitle(String name) {
+    return '$name をブロックしますか？';
+  }
+
+  @override
+  String get postCancel => 'キャンセル';
+
+  @override
+  String get postReportConfirmTitle => 'この投稿を報告しますか？';
+
+  @override
+  String get postReportConfirmMessage => 'サーバー管理者に報告します。';
+
+  @override
+  String get postDeleteConfirmTitle => '投稿を削除しますか？';
+
+  @override
+  String get postDeleteConfirmMessage => 'この操作は取り消せません。';
+
+  @override
+  String postSaveMediaLabel(String kind) {
+    String _temp0 = intl.Intl.selectLogic(kind, {
+      'video': '動画を保存',
+      'other': '画像を保存',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String postSaveDestinationTitle(String kind) {
+    String _temp0 = intl.Intl.selectLogic(kind, {
+      'video': '動画の保存先',
+      'other': '画像の保存先',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get postSaveToPhotosSubtitle => 'アルバム「RASQ」に入ります';
+
+  @override
+  String get postSaveToFilesIosSubtitle =>
+      '「ファイル」App の このiPad(このiPhone)› RASQ › 保存';
+
+  @override
+  String get postSaveToFilesSubtitle => '保存する場所を選びます';
+
+  @override
+  String get postSaveRememberTitle => '次からもこの保存先にする';
+
+  @override
+  String get postSaveRememberSubtitle => '設定 → アプリの外観 →「画像・動画の保存先」で変えられます';
+
+  @override
+  String postSaveFailed(String kind, String error) {
+    String _temp0 = intl.Intl.selectLogic(kind, {
+      'video': '動画を保存できませんでした: $error',
+      'other': '画像を保存できませんでした: $error',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get profileEditTitle => 'プロフィールの更新';
@@ -14477,6 +15993,149 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get userPageViewEmptyHint => 'タブをもう一度押して、表示の設定を変えるかリセットしてください';
+
+  @override
+  String get usersImageViewerBack => '戻る';
+
+  @override
+  String get usersFollowRequestsTabRelevance => '関連性';
+
+  @override
+  String get usersFollowRequestsTabFollowing => 'フォロー中';
+
+  @override
+  String get usersFollowRequestsTabOther => 'その他';
+
+  @override
+  String get usersFollowRequestsTitle => 'フォロー申請';
+
+  @override
+  String get usersReload => '再読み込み';
+
+  @override
+  String get usersFollowRequestsEmpty => 'フォロー申請はありません';
+
+  @override
+  String get usersFollowRequestsEmptyOther => 'なし';
+
+  @override
+  String get usersFollowRequestAccept => '許可';
+
+  @override
+  String get usersFollowRequestReject => '拒否';
+
+  @override
+  String get usersFollowsTabFollowing => 'フォロー中';
+
+  @override
+  String get usersFollowsTabFollowers => 'フォロワー';
+
+  @override
+  String get usersFollowsTitle => 'フォロー/フォロワー';
+
+  @override
+  String get usersFollowersEmpty => 'フォロワーはいません';
+
+  @override
+  String get usersFollowingEmpty => 'フォロー中のユーザーはいません';
+
+  @override
+  String get usersPageTabNotes => 'ノート';
+
+  @override
+  String get usersPageTabReplies => '返信';
+
+  @override
+  String get usersPageTabQuotes => '引用';
+
+  @override
+  String get usersPageTabMedia => 'メディア';
+
+  @override
+  String get usersPageTabClips => 'クリップ/Play';
+
+  @override
+  String get usersRestrictedTitle => '制限されたユーザーです';
+
+  @override
+  String get usersRestrictedHint => '「表示」を押すと内容を表示します';
+
+  @override
+  String get usersMenuCopyLink => 'リンクをコピー';
+
+  @override
+  String get usersMenuAddToRasqList => 'RASQ リストに追加';
+
+  @override
+  String get usersMenuServerInfo => 'サーバー情報';
+
+  @override
+  String get usersMenuUnmute => 'ミュート解除';
+
+  @override
+  String get usersMenuMute => 'ミュート';
+
+  @override
+  String get usersMenuUnblock => 'ブロック解除';
+
+  @override
+  String get usersMenuBlock => 'ブロック';
+
+  @override
+  String get usersMenuReport => '報告';
+
+  @override
+  String usersBlockConfirmTitle(String name) {
+    return '$name をブロックしますか？';
+  }
+
+  @override
+  String get usersBlockConfirmMessage => '相手からのフォロー・リアクション・返信が届かなくなります。';
+
+  @override
+  String get usersCancel => 'キャンセル';
+
+  @override
+  String usersReportConfirmTitle(String name) {
+    return '$name を報告しますか？';
+  }
+
+  @override
+  String get usersReportConfirmMessage => 'サーバー管理者に報告します。';
+
+  @override
+  String get usersPostsEmpty => '投稿はありません';
+
+  @override
+  String get usersPinnedBadge => 'ピン留め';
+
+  @override
+  String get usersClipsUnsupportedTitle => 'クリップ / Play';
+
+  @override
+  String get usersClipsUnsupportedHint => 'この SNS はクリップ・Play に対応していません';
+
+  @override
+  String get usersClipsEmpty => '公開クリップ・Play はありません';
+
+  @override
+  String get usersClipsHeader => 'クリップ';
+
+  @override
+  String usersClipNoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get usersClipSubtitleSeparator => ' ・ ';
+
+  @override
+  String get usersNotFound => 'このユーザーは存在しないようです。';
 
   @override
   String get vcSectionInvited => '招待';

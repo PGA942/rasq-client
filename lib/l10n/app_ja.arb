@@ -910,6 +910,448 @@
   "childSafeScreensPendingRefresh": "更新",
   "childSafeScreensPendingLogout": "ログアウト",
   "childSafeScreensPendingRasqLogin": "RASQ アカウントにログイン",
+  "collectionsImportToTimeline": "タイムラインに取り込む",
+  "@collectionsImportToTimeline": {
+    "description": "RASQ リストのページの右上のボタンの説明と、押したあとの知らせの見出し。このリストをホームのタイムラインの取り込み元に足す"
+  },
+  "collectionsNotFound": "見つかりません",
+  "@collectionsNotFound": {
+    "description": "RASQ リスト / クリップのページを開いたが、無かったとき"
+  },
+  "collectionsNotFoundHint": "消されたか、非公開になっています",
+  "@collectionsNotFoundHint": {
+    "description": "RASQ リスト / クリップが見つからないときの補足"
+  },
+  "collectionsReload": "再読み込み",
+  "@collectionsReload": {
+    "description": "RASQ リスト / クリップのページを読めなかったときの、もう一度読むボタン"
+  },
+  "collectionsBlockedList": "保護者がこのリストを止めています",
+  "@collectionsBlockedList": {
+    "description": "見守り(チャイルドセーフ)で、保護者が止めた内容に近い RASQ リストを開いたとき"
+  },
+  "collectionsBlockedClip": "保護者がこのクリップを止めています",
+  "@collectionsBlockedClip": {
+    "description": "見守り(チャイルドセーフ)で、保護者が止めた内容に近い RASQ クリップを開いたとき"
+  },
+  "collectionsMenuCopyLink": "リンクをコピー",
+  "@collectionsMenuCopyLink": {
+    "description": "RASQ リスト / クリップのページの … のメニュー: 共有リンクをコピー"
+  },
+  "collectionsMenuRefresh": "いま取り直す",
+  "@collectionsMenuRefresh": {
+    "description": "… のメニュー: 中身(投稿)を SNS からいま取り直す"
+  },
+  "collectionsMenuMakePrivate": "非公開にする",
+  "@collectionsMenuMakePrivate": {
+    "description": "… のメニュー: 公開している RASQ リストを非公開にする(作った人だけ)"
+  },
+  "collectionsMenuMakePublic": "公開する",
+  "@collectionsMenuMakePublic": {
+    "description": "… のメニュー: 非公開の RASQ リストを公開する(作った人だけ)"
+  },
+  "collectionsMenuRename": "名前と説明を変更",
+  "@collectionsMenuRename": {
+    "description": "… のメニュー: RASQ リストの名前と説明を変える(作った人だけ)"
+  },
+  "collectionsMenuDelete": "削除",
+  "@collectionsMenuDelete": {
+    "description": "… のメニュー: RASQ リストを消す(作った人だけ)"
+  },
+  "collectionsMenuUnpublish": "公開をやめる",
+  "@collectionsMenuUnpublish": {
+    "description": "… のメニュー: 公開した RASQ クリップの公開をやめる(クリップは端末に残る)"
+  },
+  "collectionsLinkCopied": "リンクをコピーしました",
+  "@collectionsLinkCopied": {
+    "description": "共有リンクをコピーしたときの知らせ"
+  },
+  "collectionsRefreshFailed": "取り直せませんでした",
+  "@collectionsRefreshFailed": {
+    "description": "「いま取り直す」で取り直せなかったときの知らせ"
+  },
+  "collectionsRefreshed": "取り直しました",
+  "@collectionsRefreshed": {
+    "description": "「いま取り直す」で取り直したときの知らせ"
+  },
+  "collectionsRenameTitle": "名前と説明",
+  "@collectionsRenameTitle": {
+    "description": "RASQ リストの名前と説明を変えるシートの見出し"
+  },
+  "collectionsSave": "保存",
+  "@collectionsSave": {
+    "description": "名前と説明を変えるシートの決定のボタン"
+  },
+  "collectionsNameHint": "名前",
+  "@collectionsNameHint": {
+    "description": "名前と説明を変えるシートの、名前の欄の薄い文字"
+  },
+  "collectionsDescriptionHint": "説明(任意)",
+  "@collectionsDescriptionHint": {
+    "description": "RASQ リストの説明の欄の薄い文字(書かなくてよい)"
+  },
+  "collectionsDeleteConfirmTitle": "「{name}」を削除しますか？",
+  "@collectionsDeleteConfirmTitle": {
+    "description": "RASQ リストを消す前の確かめの見出し。name はリストの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsDeleteConfirmMessage": "フォローしている人の一覧からも消えます。",
+  "@collectionsDeleteConfirmMessage": {
+    "description": "RASQ リストを消す前の確かめの本文"
+  },
+  "collectionsDeleteButton": "削除",
+  "@collectionsDeleteButton": {
+    "description": "RASQ リストを消す前の確かめの、消すボタン"
+  },
+  "collectionsCancel": "キャンセル",
+  "@collectionsCancel": {
+    "description": "RASQ リストを消す前の確かめの、やめるボタン"
+  },
+  "collectionsActionFailed": "できませんでした: {error}",
+  "@collectionsActionFailed": {
+    "description": "メニューの操作やフォローができなかったときの知らせ。error はエラーの内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsTabPosts": "投稿",
+  "@collectionsTabPosts": {
+    "description": "RASQ リスト / クリップのページのタブ: 投稿"
+  },
+  "collectionsTabTopics": "話題の目次",
+  "@collectionsTabTopics": {
+    "description": "RASQ リストのページのタブ: 投稿を話題ごとに区切った目次"
+  },
+  "collectionsTabMembers": "メンバー",
+  "@collectionsTabMembers": {
+    "description": "RASQ リストのページのタブ: 入っている人"
+  },
+  "collectionsTabServers": "サーバー",
+  "@collectionsTabServers": {
+    "description": "RASQ リスト / クリップのページのタブ: 入っている人 / 投稿のサーバーの情報"
+  },
+  "collectionsStatusRefreshedOnView": "見たときに新しくしました",
+  "@collectionsStatusRefreshedOnView": {
+    "description": "RASQ リスト / クリップのページの見出しの下: 開いたときに中身を取り直した"
+  },
+  "collectionsStatusRefreshFailed": "取り直せませんでした(前の内容です)",
+  "@collectionsStatusRefreshFailed": {
+    "description": "見出しの下: 開いたときに取り直せず、前に取った中身を出している"
+  },
+  "collectionsStatusFollowingHint": "同じサーバーに所属しているか、入っている人をフォローしていると、見たときに新しくなります",
+  "@collectionsStatusFollowingHint": {
+    "description": "見出しの下: フォローしているが、取り直しの資格が無い人への説明"
+  },
+  "collectionsKindList": "RASQ リスト",
+  "@collectionsKindList": {
+    "description": "ページ / タイルの上の種類の名前: RASQ リスト(複数の SNS の人をまとめたもの)"
+  },
+  "collectionsKindClip": "RASQ クリップ",
+  "@collectionsKindClip": {
+    "description": "ページ / タイルの上の種類の名前: RASQ クリップ(複数の SNS の投稿をまとめたもの)"
+  },
+  "collectionsPrivate": "非公開",
+  "@collectionsPrivate": {
+    "description": "RASQ リスト / クリップが非公開であることの印"
+  },
+  "collectionsPublic": "公開",
+  "@collectionsPublic": {
+    "description": "RASQ リスト / クリップが公開であることの印"
+  },
+  "collectionsMemberCount": "{count, plural, other{{count}人}}",
+  "@collectionsMemberCount": {
+    "description": "RASQ リストに入っている人の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionsItemCount": "{count, plural, other{{count}件}}",
+  "@collectionsItemCount": {
+    "description": "RASQ クリップに入っている投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionsFollowerCount": "{count, plural, other{フォロワー {count}}}",
+  "@collectionsFollowerCount": {
+    "description": "RASQ リスト / クリップをフォローしている人の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionsUpdatedAgo": "更新 {ago}",
+  "@collectionsUpdatedAgo": {
+    "description": "RASQ リスト / クリップを最後に取り直した時。ago は「5分前」のような経った時間",
+    "placeholders": {
+      "ago": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsSeparator": " ・ ",
+  "@collectionsSeparator": {
+    "description": "補足の項目(人数・フォロワー・更新・公開かどうかなど)を並べるときの区切り"
+  },
+  "collectionsFollowing": "フォロー中",
+  "@collectionsFollowing": {
+    "description": "RASQ リストのページのフォローのボタン(フォローしているとき)と、リストの候補の行の印"
+  },
+  "collectionsFollow": "フォロー",
+  "@collectionsFollow": {
+    "description": "RASQ リスト / クリップのページのフォローのボタン(フォローしていないとき)"
+  },
+  "collectionsNoPostsYet": "まだ投稿がありません",
+  "@collectionsNoPostsYet": {
+    "description": "RASQ リストの投稿のタブが空のとき"
+  },
+  "collectionsNoPostsHintEmpty": "ユーザーページの … →「RASQ リストに追加」で人を入れられます",
+  "@collectionsNoPostsHintEmpty": {
+    "description": "RASQ リストに誰も入っていないときの補足。「RASQ リストに追加」はユーザーページの … のメニューの項目"
+  },
+  "collectionsNoPostsHintCollecting": "見られる人が開いたときに集まります",
+  "@collectionsNoPostsHintCollecting": {
+    "description": "RASQ リストに人はいるが、投稿をまだ取っていないときの補足"
+  },
+  "collectionsClipEmpty": "クリップは空です",
+  "@collectionsClipEmpty": {
+    "description": "RASQ クリップに投稿が無いとき"
+  },
+  "collectionsItemGone": "この投稿は見られなくなりました(消されたか、公開範囲が変わりました)",
+  "@collectionsItemGone": {
+    "description": "RASQ クリップの投稿が見られなくなったときの行"
+  },
+  "collectionsItemChecking": "公開範囲を確かめています",
+  "@collectionsItemChecking": {
+    "description": "RASQ クリップの投稿が見られるか確かめている途中の行"
+  },
+  "collectionsAddMembers": "メンバーを追加",
+  "@collectionsAddMembers": {
+    "description": "RASQ リストのメンバーのタブのボタン(作った人だけ)"
+  },
+  "collectionsMembersAdded": "{count, plural, other{{count} 人を追加しました}}",
+  "@collectionsMembersAdded": {
+    "description": "RASQ リストに人を足したときの知らせ。count は足した人数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionsAddFailed": "追加できませんでした: {error}",
+  "@collectionsAddFailed": {
+    "description": "RASQ リストに人を足せなかったときの知らせ。error はエラーの内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsNoMembers": "メンバーはいません",
+  "@collectionsNoMembers": {
+    "description": "RASQ リストに誰も入っていないとき"
+  },
+  "collectionsNoMembersHint": "「メンバーを追加」か、ユーザーページの … →「RASQ リストに追加」",
+  "@collectionsNoMembersHint": {
+    "description": "RASQ リストに誰もいないときの、作った人への補足。「メンバーを追加」はこのタブのボタン、「RASQ リストに追加」はユーザーページの … のメニューの項目"
+  },
+  "collectionsMemberSubtitle": "@{handle} ・ {kind}",
+  "@collectionsMemberSubtitle": {
+    "description": "RASQ リストのメンバーの行の補足。handle はユーザー名、kind は SNS の種類(misskey など)",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsRemoveFromListTooltip": "リストから外す",
+  "@collectionsRemoveFromListTooltip": {
+    "description": "RASQ リストのメンバーの行の ✕ のボタンの説明(作った人だけ)"
+  },
+  "collectionsRemoveFailed": "外せませんでした: {error}",
+  "@collectionsRemoveFailed": {
+    "description": "RASQ リストから人を外せなかったときの知らせ。error はエラーの内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsNotFetchableHint": "リスト内の人の情報を取れるアカウントがありません(入っている人と同じサーバーのアカウントか、入っている人のフォローが要ります)",
+  "@collectionsNotFetchableHint": {
+    "description": "RASQ リストをタイムラインに取り込めない理由"
+  },
+  "collectionsNoServer": "RASQ アカウントのサーバーが設定されていません",
+  "@collectionsNoServer": {
+    "description": "RASQ アカウントのサーバー(Central)が設定されていないとき"
+  },
+  "collectionsCheckFailed": "確かめられませんでした: {error}",
+  "@collectionsCheckFailed": {
+    "description": "RASQ リストを取り込めるか確かめられなかったとき。error はエラーの内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsPickerEmpty": "RASQ リストはまだありません",
+  "@collectionsPickerEmpty": {
+    "description": "RASQ リストの候補の列が空のとき(検索語が空)"
+  },
+  "collectionsPickerNoHits": "見つかりません",
+  "@collectionsPickerNoHits": {
+    "description": "RASQ リストの検索に当たるものが無いとき"
+  },
+  "collectionsPickerMine": "自分のリスト",
+  "@collectionsPickerMine": {
+    "description": "RASQ リストの候補の行の印: 自分が作ったリスト"
+  },
+  "collectionsPickerNotFetchable": "取れません",
+  "@collectionsPickerNotFetchable": {
+    "description": "RASQ リストの候補の行の印: リスト内の人の情報を取れない(取り込めない)"
+  },
+  "collectionsNotLoggedIn": "ログインしていません",
+  "@collectionsNotLoggedIn": {
+    "description": "RASQ リストを取り込もうとしたが、アカウントにログインしていないとき"
+  },
+  "collectionsImportRejected": "「{name}」は取り込めません({reason})",
+  "@collectionsImportRejected": {
+    "description": "RASQ リストを取り込めないとき。name はリストの名前、reason は理由の文",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsAlreadyImported": "「{name}」はもうホームのタイムラインに入っています",
+  "@collectionsAlreadyImported": {
+    "description": "取り込もうとした RASQ リストが、もうホームのタイムラインの取り込み元にあるとき。name はリストの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsImported": "「{name}」をホームのタイムラインに取り込みました(タブ行の歯車で確認できます)",
+  "@collectionsImported": {
+    "description": "RASQ リストをホームのタイムラインの取り込み元に足したとき。name はリストの名前。歯車はホームのタブの行の設定のボタン",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsTileOpen": "見てみる",
+  "@collectionsTileOpen": {
+    "description": "投稿などに埋めた RASQ リスト / クリップのタイルの、開くボタン"
+  },
+  "collectionsCreateNeedsAccount": "RASQ リストを作るには RASQ アカウントが必要です",
+  "@collectionsCreateNeedsAccount": {
+    "description": "RASQ アカウントが無いのに RASQ リストを作ろうとしたとき"
+  },
+  "collectionsCreateTitle": "新しい RASQ リスト",
+  "@collectionsCreateTitle": {
+    "description": "RASQ リストを作るシートの見出し"
+  },
+  "collectionsListNameHint": "リスト名",
+  "@collectionsListNameHint": {
+    "description": "RASQ リストを作るシートの、名前の欄の薄い文字"
+  },
+  "collectionsPublishSwitch": "公開する",
+  "@collectionsPublishSwitch": {
+    "description": "RASQ リストを作るシートの、公開するかのスイッチ"
+  },
+  "collectionsPublishSwitchSubtitle": "アカウントページと共有リンクから見られます。フォローした人が見たときにも新しくなります",
+  "@collectionsPublishSwitchSubtitle": {
+    "description": "公開するかのスイッチの補足"
+  },
+  "collectionsCreateButton": "作成",
+  "@collectionsCreateButton": {
+    "description": "RASQ リストを作るシートの決定のボタン"
+  },
+  "collectionsCreateFailed": "作成できませんでした: {error}",
+  "@collectionsCreateFailed": {
+    "description": "RASQ リストを作れなかったときの知らせ。error はエラーの内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsUseNeedsAccount": "RASQ リストを使うには RASQ アカウントが必要です",
+  "@collectionsUseNeedsAccount": {
+    "description": "RASQ アカウントが無いのに RASQ リストに人を足そうとしたとき"
+  },
+  "collectionsLoadListsFailed": "リストを読めませんでした: {error}",
+  "@collectionsLoadListsFailed": {
+    "description": "自分の RASQ リストの一覧を読めなかったときの知らせ。error はエラーの内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsAddToListTitle": "RASQ リストに追加",
+  "@collectionsAddToListTitle": {
+    "description": "ユーザーを RASQ リストに足すシートの見出し(ユーザーページの … のメニューから)"
+  },
+  "collectionsAddToListSubtitlePublic": "{count, plural, other{{count}人}} ・ 公開",
+  "@collectionsAddToListSubtitlePublic": {
+    "description": "RASQ リストに足すシートの、公開のリストの行の補足。count は入っている人数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionsAddToListSubtitlePrivate": "{count, plural, other{{count}人}} ・ 非公開",
+  "@collectionsAddToListSubtitlePrivate": {
+    "description": "RASQ リストに足すシートの、非公開のリストの行の補足。count は入っている人数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionsCreateNewList": "新しいリストを作成",
+  "@collectionsCreateNewList": {
+    "description": "RASQ リストに足すシートの末尾の行。新しい RASQ リストを作ってそこに足す"
+  },
+  "collectionsAddedTo": "「{name}」に追加しました",
+  "@collectionsAddedTo": {
+    "description": "ユーザーを RASQ リストに足したときの知らせ。name はリストの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionsAlreadyIn": "すでに「{name}」に入っています",
+  "@collectionsAlreadyIn": {
+    "description": "足そうとしたユーザーが、もうその RASQ リストに入っているとき。name はリストの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "composeTargetNormalTitle": "ノートの作成",
   "@composeTargetNormalTitle": {
     "description": "コンポーザーの題(新しい投稿)"
@@ -2621,6 +3063,984 @@
     }
   },
   "languageSettingsListHeader": "表示の言語",
+  "listsTitle": "リスト",
+  "@listsTitle": {
+    "description": "リストの画面の見出し。名前の分からない SNS のリストの見出し・タイムラインの名前にも使う"
+  },
+  "listsTabAllLabel": "すべて",
+  "@listsTabAllLabel": {
+    "description": "リストの画面のタブ。全アカウントのリスト / クリップ / フィードと RASQ リストをまとめて出す"
+  },
+  "listsSearchHint": "リスト・クリップを検索",
+  "@listsSearchHint": {
+    "description": "リストの画面の検索欄の薄い文字"
+  },
+  "listsShowPrivateClips": "非公開クリップを表示",
+  "@listsShowPrivateClips": {
+    "description": "リストの画面の検索欄を広げると出る絞り込みのチップ。非公開のクリップも一覧に出す"
+  },
+  "listsImportTitle": "リストのインポート",
+  "@listsImportTitle": {
+    "description": "リストのインポートの画面の見出しと、リストの画面の右上のボタンの説明"
+  },
+  "listsCreateTitle": "リストを作成",
+  "@listsCreateTitle": {
+    "description": "リストの画面の右下の ＋ のボタンの説明と、押すと出る作成先を選ぶメニューの見出し"
+  },
+  "listsCreateAccountList": "{account} のリスト",
+  "@listsCreateAccountList": {
+    "description": "作成先を選ぶメニューの項目と、SNS のリストの名前を入れるシートの見出し。account はアカウント(@handle@サーバー)",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "listsRasqCrossSns": "RASQ リスト(SNS 横断)",
+  "@listsRasqCrossSns": {
+    "description": "作成先を選ぶメニューの項目と、リストの画面の RASQ リストの欄の見出し。RASQ リストは複数の SNS の人を 1 つにまとめられる"
+  },
+  "listsCreateConfirm": "作成",
+  "@listsCreateConfirm": {
+    "description": "SNS のリストの名前を入れるシートの決定のボタン"
+  },
+  "listsNameHint": "リスト名",
+  "@listsNameHint": {
+    "description": "SNS のリストの名前を入れる欄の薄い文字"
+  },
+  "listsCreated": "「{name}」を作りました",
+  "@listsCreated": {
+    "description": "SNS のリストを作ったときの知らせ。name はリストの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listsCreateUnsupported": "{sns} ではリストを作れません",
+  "@listsCreateUnsupported": {
+    "description": "その SNS がリストの作成に対応していないときの知らせ。sns は SNS の名前(Misskey / Mastodon など)",
+    "placeholders": {
+      "sns": {
+        "type": "String"
+      }
+    }
+  },
+  "listsCreateFailed": "リストを作れませんでした: {error}",
+  "@listsCreateFailed": {
+    "description": "SNS のリストを作れなかったときの知らせ。error はエラーの内容",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "listsEmpty": "リストはありません",
+  "@listsEmpty": {
+    "description": "リストの画面のタブに何も無いとき"
+  },
+  "listsNoHits": "見つかりません",
+  "@listsNoHits": {
+    "description": "リストの画面 / インポートの画面で、検索に当たるものが無いとき"
+  },
+  "listsEmptyHint": "＋でリストを作成できます",
+  "@listsEmptyHint": {
+    "description": "リストが無いときの補足。＋ は右下のボタン"
+  },
+  "listsRasqCreateTitle": "新しい RASQ リスト",
+  "@listsRasqCreateTitle": {
+    "description": "リストの画面の RASQ リストの欄の末尾の行(押すと作成のシート)"
+  },
+  "listsRasqCreateSubtitle": "Misskey / Mastodon / Bluesky の人を 1 つのリストに",
+  "@listsRasqCreateSubtitle": {
+    "description": "「新しい RASQ リスト」の行の補足"
+  },
+  "listsSwitchedAccount": "{account} に切り替えました",
+  "@listsSwitchedAccount": {
+    "description": "別のアカウントのリストを開くために、そのアカウントに切り替えたときの知らせ。account はアカウント(@handle@サーバー)",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "listsSectionClips": "クリップ",
+  "@listsSectionClips": {
+    "description": "アカウントのタブの、クリップの欄の見出し"
+  },
+  "listsSectionLists": "リスト",
+  "@listsSectionLists": {
+    "description": "アカウントのタブの、SNS のリストの欄の見出し"
+  },
+  "listsSectionFeeds": "カスタムフィード",
+  "@listsSectionFeeds": {
+    "description": "アカウントのタブの、保存したカスタムフィード(Bluesky)の欄の見出し"
+  },
+  "listsMemberCount": "{count, plural, other{{count} ユーザー}}",
+  "@listsMemberCount": {
+    "description": "SNS のリストの行の、入っている人の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsClipNotesCount": "{count, plural, other{{count}件}}",
+  "@listsClipNotesCount": {
+    "description": "クリップの行の、入っている投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsClipKindHost": "RASQ(SNS 横断)",
+  "@listsClipKindHost": {
+    "description": "クリップの行の種類: 端末の RASQ クリップ(複数の SNS の投稿を入れられる)"
+  },
+  "listsClipKindPrivate": "非公開クリップ",
+  "@listsClipKindPrivate": {
+    "description": "クリップの行の種類: SNS の非公開のクリップ"
+  },
+  "listsClipKindPublic": "クリップ",
+  "@listsClipKindPublic": {
+    "description": "クリップの行の種類: SNS の公開のクリップ"
+  },
+  "listsSeparator": " ・ ",
+  "@listsSeparator": {
+    "description": "行の補足の項目(件数・種類・作者・♥ の数など)を並べるときの区切り"
+  },
+  "listsFeedUnsave": "保存を外す",
+  "@listsFeedUnsave": {
+    "description": "保存済みのカスタムフィードの、しおりのボタンの説明"
+  },
+  "listsFeedSave": "フィードを保存",
+  "@listsFeedSave": {
+    "description": "保存していないカスタムフィードの、しおりのボタンの説明"
+  },
+  "listsFeedUnsaveFailed": "保存を外せませんでした",
+  "@listsFeedUnsaveFailed": {
+    "description": "フィードの保存を外せなかったときの知らせの見出し"
+  },
+  "listsFeedSaveFailed": "保存できませんでした",
+  "@listsFeedSaveFailed": {
+    "description": "フィードを保存できなかったときの知らせの見出し"
+  },
+  "listsFeedSaveUnsupported": "この SNS はフィードの保存に対応していません",
+  "@listsFeedSaveUnsupported": {
+    "description": "フィードの保存に対応していない SNS で、しおりのボタンを押したとき"
+  },
+  "listsNotLoggedIn": "ログインしていません",
+  "@listsNotLoggedIn": {
+    "description": "フィードをタイムラインに取り込もうとしたが、アカウントにログインしていないとき"
+  },
+  "listsFeedAlreadyImported": "「{name}」はもうホームのタイムラインに入っています",
+  "@listsFeedAlreadyImported": {
+    "description": "取り込もうとしたフィードが、もうホームのタイムラインの取り込み元にあるとき。name はフィードの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listsFeedImported": "「{name}」をホームのタイムラインに取り込みました(タブ行の歯車で確認できます)",
+  "@listsFeedImported": {
+    "description": "フィードをホームのタイムラインの取り込み元に足したとき。name はフィードの名前。歯車はホームのタブの行の設定のボタン",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listsTabUsers": "ユーザー",
+  "@listsTabUsers": {
+    "description": "SNS のリストの画面のタブ: 入っている人"
+  },
+  "listsTabPosts": "投稿",
+  "@listsTabPosts": {
+    "description": "SNS のリスト / フィードの画面のタブ: タイムライン"
+  },
+  "listsTabTopics": "話題の目次",
+  "@listsTabTopics": {
+    "description": "SNS のリスト / フィードの画面のタブ: 投稿を話題ごとに区切った目次"
+  },
+  "listsBlockedByGuardian": "保護者がこのリストを止めています",
+  "@listsBlockedByGuardian": {
+    "description": "見守り(チャイルドセーフ)で、保護者が止めた内容に近いリストを開いたとき"
+  },
+  "listsTimelineSettingsTooltip": "リストTL設定",
+  "@listsTimelineSettingsTooltip": {
+    "description": "SNS のリストの画面の右上の歯車のボタンの説明(このリストのタイムラインの設定)"
+  },
+  "listsAddMembers": "メンバーを追加",
+  "@listsAddMembers": {
+    "description": "SNS のリストのユーザーのタブのボタンと、人を選ぶシートの見出し"
+  },
+  "listsMembersAdded": "{count, plural, other{{count} 人を追加しました}}",
+  "@listsMembersAdded": {
+    "description": "リストに人を足したときの知らせ。count は足した人数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsNoUsers": "ユーザーはいません",
+  "@listsNoUsers": {
+    "description": "SNS のリストに誰も入っていないとき"
+  },
+  "listsRemoveMember": "外す",
+  "@listsRemoveMember": {
+    "description": "SNS のリストのユーザーの行の右のボタン。その人をリストから外す"
+  },
+  "listsReload": "再読み込み",
+  "@listsReload": {
+    "description": "タイムラインを読めなかったときの、もう一度読むボタン"
+  },
+  "listsNoPosts": "投稿はありません",
+  "@listsNoPosts": {
+    "description": "リスト / フィードのタイムラインに投稿が無いとき"
+  },
+  "listsFeedDefaultTitle": "フィード",
+  "@listsFeedDefaultTitle": {
+    "description": "名前の分からないカスタムフィードの画面の見出し・タイムラインの名前"
+  },
+  "listsImportToTimeline": "タイムラインに取り込む",
+  "@listsImportToTimeline": {
+    "description": "フィードの画面の右上のボタンの説明と、押したあとの知らせの見出し。開いているフィードをホームのタイムラインの取り込み元に足す"
+  },
+  "listsFeedTimelineSettingsTooltip": "フィードTL設定",
+  "@listsFeedTimelineSettingsTooltip": {
+    "description": "フィードの画面の右上の歯車のボタンの説明(このフィードのタイムラインの設定)"
+  },
+  "listsImportSearchHintFeeds": "カスタムフィードを検索、または共有リンク / URL を入力",
+  "@listsImportSearchHintFeeds": {
+    "description": "リストのインポートの画面の検索欄の薄い文字(Bluesky のアカウントで、RASQ アカウントが無いとき)"
+  },
+  "listsImportSearchHintRasq": "RASQ リストを検索、または共有リンク / URL を入力",
+  "@listsImportSearchHintRasq": {
+    "description": "リストのインポートの画面の検索欄の薄い文字(Bluesky 以外のアカウントで、RASQ アカウントがあるとき)"
+  },
+  "listsImportSearchHintBoth": "カスタムフィード / RASQ リストを検索、または共有リンク / URL を入力",
+  "@listsImportSearchHintBoth": {
+    "description": "リストのインポートの画面の検索欄の薄い文字(Bluesky のアカウントで、RASQ アカウントもあるとき)"
+  },
+  "listsImportSearchPlain": "検索",
+  "@listsImportSearchPlain": {
+    "description": "リストのインポートの画面の検索欄の薄い文字(フィードも RASQ リストも探せないとき)"
+  },
+  "listsImportFeedsHelp": "フィードを検索するか URL を貼ると、リストタイルで表示します。タップでそのフィードのタイムラインへ。",
+  "@listsImportFeedsHelp": {
+    "description": "リストのインポートの画面の説明(Bluesky のカスタムフィード)"
+  },
+  "listsImportRasqHelp": "RASQ リストは「取り込む」でホームのタイムラインへ(リストをフォローします)。取り込めるのは、リスト内の人の情報を取れるリストだけです。",
+  "@listsImportRasqHelp": {
+    "description": "リストのインポートの画面の説明(RASQ リスト)。「取り込む」は行の右のボタン"
+  },
+  "listsImportGenericHelp": "リストを検索して一括操作を行うことができます。",
+  "@listsImportGenericHelp": {
+    "description": "リストのインポートの画面の説明(フィードも RASQ リストも探せないとき)"
+  },
+  "listsImportLocal": "ローカルからインポート",
+  "@listsImportLocal": {
+    "description": "リストのインポートの画面のリンクと、押すと出る知らせの見出し(ファイルから読み込む)"
+  },
+  "listsImportLocalMessage": "ファイルからのインポートは準備中です。",
+  "@listsImportLocalMessage": {
+    "description": "「ローカルからインポート」を押したときの知らせ"
+  },
+  "listsImportLocalDetail": "CSV/JSON からのインポートはリスト機能(サーバー側)と合わせて実装します。",
+  "@listsImportLocalDetail": {
+    "description": "「ローカルからインポート」の知らせの、開発者モードの詳しい説明"
+  },
+  "listsImportPopularFeeds": "人気のフィード",
+  "@listsImportPopularFeeds": {
+    "description": "リストのインポートの画面で、検索語が空のときのフィードの欄の見出し"
+  },
+  "listsImportFeedResults": "フィードの検索結果",
+  "@listsImportFeedResults": {
+    "description": "リストのインポートの画面で、検索したときのフィードの欄の見出し"
+  },
+  "listsImportEnterQuery": "検索語か URL を入れてください",
+  "@listsImportEnterQuery": {
+    "description": "リストのインポートの画面で、フィードの候補が無く、検索語も空のとき"
+  },
+  "listsImportRasqMine": "RASQ リスト(自分 / フォロー中)",
+  "@listsImportRasqMine": {
+    "description": "リストのインポートの画面で、検索語が空のときの RASQ リストの欄の見出し(自分のリストとフォロー中のリスト)"
+  },
+  "listsImportRasqResults": "RASQ リストの検索結果",
+  "@listsImportRasqResults": {
+    "description": "リストのインポートの画面で、検索したときの RASQ リストの欄の見出し"
+  },
+  "listsImportButton": "取り込む",
+  "@listsImportButton": {
+    "description": "リストのインポートの画面の RASQ リストの行の右のボタン。ホームのタイムラインの取り込み元に足す"
+  },
+  "listsImportHistory": "履歴",
+  "@listsImportHistory": {
+    "description": "リストのインポートの画面の、インポートの履歴の欄の見出し"
+  },
+  "listsImportHistoryEmpty": "履歴はありません",
+  "@listsImportHistoryEmpty": {
+    "description": "インポートの履歴が無いとき"
+  },
+  "listsTopicsEmpty": "話題はまだありません",
+  "@listsTopicsEmpty": {
+    "description": "話題の目次のタブに話題が無いとき"
+  },
+  "listsTopicsEmptyHint": "投稿が集まると、話題ごとに区切ります",
+  "@listsTopicsEmptyHint": {
+    "description": "話題の目次が空のときの補足"
+  },
+  "listsTopicsCaption": "話題ごとの区切りです。タップすると、その話題の投稿だけを表示します。",
+  "@listsTopicsCaption": {
+    "description": "話題の目次のタブの上の説明"
+  },
+  "listsTopicsCaptionDetail": "会話イベント(2 投稿以上、リレーショナル TL と同じエンジン)を章にし、単発投稿は 1 つにまとめる(indexForListTimeline)。見出しは投稿の中にある語(タグ / 特徴語 / ドメイン)。",
+  "@listsTopicsCaptionDetail": {
+    "description": "話題の目次の説明の、開発者モードの詳しい説明。indexForListTimeline は関数の名前なので訳さない"
+  },
+  "listsTopicTimeRange": "{start}〜{end}",
+  "@listsTopicTimeRange": {
+    "description": "話題の目次の行の、話題の始まりと終わりの時刻。start / end は時刻(「12:34」か「8/31 12:34」)",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "listsTopicSubtitle": "{time} ・ {count, plural, other{{count} 件}}",
+  "@listsTopicSubtitle": {
+    "description": "話題の目次の行の補足(話している人が 1 人のとき)。time は時刻か時刻の範囲、count は投稿の数",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsTopicSubtitleWithPeople": "{time} ・ {count, plural, other{{count} 件}} ・ {people, plural, other{{people} 人}}",
+  "@listsTopicSubtitleWithPeople": {
+    "description": "話題の目次の行の補足(話している人が 2 人以上のとき)。time は時刻か時刻の範囲、count は投稿の数、people は話している人の数",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "people": {
+        "type": "int"
+      }
+    }
+  },
+  "listsTopicSnippet": "{name}「{body}」",
+  "@listsTopicSnippet": {
+    "description": "話題の目次の行の、代表の投稿の抜き出し。name は投稿した人の表示名、body は本文の頭(40 文字まで)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "body": {
+        "type": "String"
+      }
+    }
+  },
+  "listsTopicFilterChip": "話題: {label}({count, plural, other{{count} 件}})",
+  "@listsTopicFilterChip": {
+    "description": "投稿のタブの上の、話題で絞っているときのチップ。label は話題の見出し、count はその話題の投稿の数",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsTopicFilterClear": "絞り込みをやめる",
+  "@listsTopicFilterClear": {
+    "description": "話題で絞っているときのチップの ✕ のボタンの説明"
+  },
+  "listsMemberCandidateSubtitle": "@{handle} ・ {instance}",
+  "@listsMemberCandidateSubtitle": {
+    "description": "リストに足す人を選ぶシートの、SNS のユーザーの説明(長押しで出る)。handle はユーザー名、instance はサーバー",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      },
+      "instance": {
+        "type": "String"
+      }
+    }
+  },
+  "listsMemberNotPublished": "{name} さんは、この SNS のアカウントを公開していません",
+  "@listsMemberNotPublished": {
+    "description": "RASQ のユーザーをリストに足そうとしたが、その人が同じ SNS のアカウントを公開ページに出していないとき。name は表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listsMemberSnsNotFound": "{name} さんの SNS アカウントが見つかりません",
+  "@listsMemberSnsNotFound": {
+    "description": "RASQ のユーザーが公開している SNS のアカウントを、いまのアカウントから引けなかったとき。name は表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listsPickerConfirm": "追加",
+  "@listsPickerConfirm": {
+    "description": "リストに足す人を選ぶシートの決定のボタン"
+  },
+  "listsPickerNoServer": "RASQ サーバーに繋がっていません",
+  "@listsPickerNoServer": {
+    "description": "RASQ のユーザーを選ぼうとしたが、RASQ のサーバーに繋がっていないとき"
+  },
+  "listsPickerLookupFailed": "調べられませんでした",
+  "@listsPickerLookupFailed": {
+    "description": "RASQ のユーザーの SNS のアカウントを調べられなかったとき"
+  },
+  "listsPickerUnavailable": "選べません",
+  "@listsPickerUnavailable": {
+    "description": "RASQ のユーザーを選べないとき(理由が分からないとき)"
+  },
+  "listsPickerNone": "いません",
+  "@listsPickerNone": {
+    "description": "リストに足す人を選ぶシートの、候補の列に誰もいないとき"
+  },
+  "listsPickerSearchHint": "ユーザーを検索(SNS / RASQ)",
+  "@listsPickerSearchHint": {
+    "description": "リストに足す人を選ぶシートの検索欄の薄い文字"
+  },
+  "listsPickerSnsUsers": "SNS のユーザー",
+  "@listsPickerSnsUsers": {
+    "description": "リストに足す人を選ぶシートの列の見出し: SNS のユーザーの検索結果"
+  },
+  "listsPickerRasqUsers": "RASQ のユーザー",
+  "@listsPickerRasqUsers": {
+    "description": "リストに足す人を選ぶシートの列の見出し: RASQ のユーザーの検索結果"
+  },
+  "listsPickerSnsFollowing": "SNS のフォロー中",
+  "@listsPickerSnsFollowing": {
+    "description": "リストに足す人を選ぶシートの列の見出し: いまの SNS のアカウントがフォローしている人"
+  },
+  "listsPickerRasqFollowing": "RASQ のフォロー中",
+  "@listsPickerRasqFollowing": {
+    "description": "リストに足す人を選ぶシートの列の見出し: RASQ アカウントでフォローしている人"
+  },
+  "listsPickerRasqNotice": "RASQ のユーザーは、その人が公開している同じ SNS のアカウントで追加します。",
+  "@listsPickerRasqNotice": {
+    "description": "リストに足す人を選ぶシートの下の説明"
+  },
+  "listsPickerRasqNoticeDetail": "Central の公開ページ({path})の snsAccounts から、このセッションと同じ SNS(同じサーバーを優先、確認済みを優先)を選び、userByHandle で引いた id を足す。",
+  "@listsPickerRasqNoticeDetail": {
+    "description": "上の説明の、開発者モードの詳しい説明。path は API の道(GET /accounts/{handle})。Central / snsAccounts / userByHandle は名前なので訳さない",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "listsPickerSelectedCount": "{count, plural, other{{count} 人を選んでいます}}",
+  "@listsPickerSelectedCount": {
+    "description": "リストに足す人を選ぶシートの、選んでいる人数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsPickerRasqBadgeSemantics": "RASQ のユーザー",
+  "@listsPickerRasqBadgeSemantics": {
+    "description": "候補のアバターの左下の RASQ の印の読み上げ"
+  },
+  "mediaVizStyleMirror": "上下対称のバー",
+  "@mediaVizStyleMirror": {
+    "description": "音声を動画にするときの波形の形の選択肢(Visualizer の設定)。中央から上下に伸びるバー"
+  },
+  "mediaVizStyleBars": "下から伸びるバー",
+  "@mediaVizStyleBars": {
+    "description": "音声を動画にするときの波形の形の選択肢。下から上へ伸びるバー"
+  },
+  "mediaVizStyleLine": "折れ線",
+  "@mediaVizStyleLine": {
+    "description": "音声を動画にするときの波形の形の選択肢。折れ線グラフ"
+  },
+  "mediaVizLeftAvatar": "アカウントのアイコン",
+  "@mediaVizLeftAvatar": {
+    "description": "音声の動画の左に出す絵の選択肢。投稿するアカウントのアイコン"
+  },
+  "mediaVizLeftFile": "選んだ画像",
+  "@mediaVizLeftFile": {
+    "description": "音声の動画の左に出す絵の選択肢。端末から選んだ画像"
+  },
+  "mediaVizLeftGlyph": "音符のアイコン",
+  "@mediaVizLeftGlyph": {
+    "description": "音声の動画の左に出す絵の選択肢。音符の記号"
+  },
+  "mediaVizLeftNone": "なし(波形を横いっぱいに)",
+  "@mediaVizLeftNone": {
+    "description": "音声の動画の左に出す絵の選択肢。絵を出さず、波形を横幅いっぱいに描く"
+  },
+  "mediaVizTextBelow": "絵の下",
+  "@mediaVizTextBelow": {
+    "description": "音声の動画のタイトル / 説明を置く位置の選択肢。左の絵の下"
+  },
+  "mediaVizTextAbove": "絵の上",
+  "@mediaVizTextAbove": {
+    "description": "音声の動画のタイトル / 説明を置く位置の選択肢。左の絵の上"
+  },
+  "mediaVizQualityFast": "速い(960×540)",
+  "@mediaVizQualityFast": {
+    "description": "音声の動画の書き出しの細かさの選択肢。波形を小さく描いて拡大するので速い。数字は描く大きさ(ピクセル)"
+  },
+  "mediaVizQualityStandard": "標準(1280×720)",
+  "@mediaVizQualityStandard": {
+    "description": "音声の動画の書き出しの細かさの選択肢。標準。数字は描く大きさ(ピクセル)"
+  },
+  "mediaVizQualityFine": "細かい(2560×1440、約 4 倍かかる)",
+  "@mediaVizQualityFine": {
+    "description": "音声の動画の書き出しの細かさの選択肢。出力と同じ大きさで描く。標準の約 4 倍の時間がかかる"
+  },
+  "mediaWavInvalid": "WAV ではありません",
+  "@mediaWavInvalid": {
+    "description": "音声を動画にするとき、取り出した音声が WAV の形式でなかったときのエラー"
+  },
+  "mediaWavMissingChunks": "WAV の fmt / data がありません",
+  "@mediaWavMissingChunks": {
+    "description": "音声を動画にするとき、WAV のファイルに必要な部分(fmt / data のチャンク。訳さない)が無かったときのエラー"
+  },
+  "mediaWavUnsupported": "未対応の WAV(format {format}、{bits} bit)",
+  "@mediaWavUnsupported": {
+    "description": "音声を動画にするとき、対応していない WAV の形式だったときのエラー。format は形式の番号、bits は標本のビット数",
+    "placeholders": {
+      "format": {
+        "type": "int"
+      },
+      "bits": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaSeconds": "{seconds} 秒",
+  "@mediaSeconds": {
+    "description": "かかった時間 / フェードの長さの秒数。seconds は小数 1 桁まで書式済みの数",
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaVizTimings": "{frameCount, plural, other{合計 {total}({frameCount} フレーム: 描画 {frames} / エンコード {encode} / 仕上げ {mux})}}",
+  "@mediaVizTimings": {
+    "description": "前回の音声の動画の書き出しにかかった時間の内訳(Visualizer の設定の「書き出し」の補足に出る)。total / frames / encode / mux は mediaSeconds の文(合計 / フレームを描く時間 / 動画にエンコードする時間 / 音声と重ねて仕上げる時間)、frameCount はフレームの数",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      },
+      "frameCount": {
+        "type": "int"
+      },
+      "frames": {
+        "type": "String"
+      },
+      "encode": {
+        "type": "String"
+      },
+      "mux": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaAudioVideoUnsupported": "この端末では音声を動画にできません(Android / iOS / macOS だけ)",
+  "@mediaAudioVideoUnsupported": {
+    "description": "音声を動画にする機能が使えない端末のときのエラー。使えるのは Android / iOS / macOS だけ"
+  },
+  "mediaViewerSemantics": "投稿",
+  "@mediaViewerSemantics": {
+    "description": "全画面のビューワーで開く投稿のパネルの、読み上げ用の名前"
+  },
+  "mediaViewerBack": "戻る",
+  "@mediaViewerBack": {
+    "description": "全画面のビューワーの左上の戻るボタンのツールチップ"
+  },
+  "mediaViewerPip": "PiP で再生",
+  "@mediaViewerPip": {
+    "description": "全画面のビューワーで動画を小さな窓(ピクチャー・イン・ピクチャー)で再生するボタンのツールチップ"
+  },
+  "mediaViewerMenu": "メニュー",
+  "@mediaViewerMenu": {
+    "description": "全画面のビューワーの … のボタンのツールチップ"
+  },
+  "mediaViewerShare": "共有",
+  "@mediaViewerShare": {
+    "description": "全画面のビューワーの下の共有ボタンのツールチップ"
+  },
+  "mediaPluginAsking": "画像を見ています…",
+  "@mediaPluginAsking": {
+    "description": "全画面のビューワーで、画像を読むプラグイン(QR コードの検出など)が処理している最中の表示"
+  },
+  "mediaPluginFound": "検出あり",
+  "@mediaPluginFound": {
+    "description": "画像を読むプラグインが何かを見つけて、画像の上に重ねたときの表示"
+  },
+  "mediaPluginNotFound": "検出なし",
+  "@mediaPluginNotFound": {
+    "description": "画像を読むプラグインが何も見つけなかったときの表示"
+  },
+  "mediaPluginFailed": "失敗: {reason}(オフ → オンでやり直す)",
+  "@mediaPluginFailed": {
+    "description": "画像を読むプラグインが失敗したときの表示。reason は理由(エラーの文。空のこともある)。プラグインのボタンをオフにしてオンにするとやり直せる",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaPluginFetchFailed": "画像を取得できませんでした",
+  "@mediaPluginFetchFailed": {
+    "description": "画像を読むプラグインに渡す画像をダウンロードできなかったときの理由(mediaPluginFailed の reason に入る)"
+  },
+  "mediaPluginFetchFailedWithError": "画像を取得できませんでした({error})",
+  "@mediaPluginFetchFailedWithError": {
+    "description": "画像を読むプラグインに渡す画像をダウンロードできなかったときの理由。error はエラーの中身(英語のことがある)",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaPluginDecodeFailed": "画像を読めませんでした",
+  "@mediaPluginDecodeFailed": {
+    "description": "画像を読むプラグインに渡す画像を開けなかった(大きさが 0 など)ときの理由"
+  },
+  "mediaVideoCannotPlay": "再生できません: {error}",
+  "@mediaVideoCannotPlay": {
+    "description": "動画を再生できなかったときの表示。error はエラーの中身(英語のことがある)",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaVideoBack5": "5 秒戻す",
+  "@mediaVideoBack5": {
+    "description": "動画の操作のボタンのツールチップ。5 秒前へ戻る"
+  },
+  "mediaVideoPause": "一時停止",
+  "@mediaVideoPause": {
+    "description": "動画の操作のボタンのツールチップ。再生中に止める"
+  },
+  "mediaVideoPlay": "再生",
+  "@mediaVideoPlay": {
+    "description": "動画の操作のボタンのツールチップ。止まっているときに再生する"
+  },
+  "mediaVideoForward5": "5 秒送る",
+  "@mediaVideoForward5": {
+    "description": "動画の操作のボタンのツールチップ。5 秒先へ進む"
+  },
+  "mediaVideoSpeed": "再生速度",
+  "@mediaVideoSpeed": {
+    "description": "動画の再生速度を選ぶメニューのボタンのツールチップ"
+  },
+  "mediaVideoFowTitle": "動画",
+  "@mediaVideoFowTitle": {
+    "description": "タイムラインから動画を開いた窓(FOW)の見出し"
+  },
+  "mediaVideoFowClose": "閉じる",
+  "@mediaVideoFowClose": {
+    "description": "動画の窓(FOW)を閉じるボタン"
+  },
+  "mediaSaveAsk": "保存するたびに選ぶ",
+  "@mediaSaveAsk": {
+    "description": "画像・動画の保存先の設定の選択肢。保存するたびに写真かファイルかを聞く"
+  },
+  "mediaSavePhotos": "写真(カメラロール)",
+  "@mediaSavePhotos": {
+    "description": "画像・動画の保存先の選択肢。端末の写真(ギャラリー)"
+  },
+  "mediaSaveFiles": "ファイル",
+  "@mediaSaveFiles": {
+    "description": "画像・動画の保存先の選択肢。ファイルとして保存する"
+  },
+  "mediaSaveBadFileName": "保存するファイル名が正しくありません",
+  "@mediaSaveBadFileName": {
+    "description": "画像・動画を保存するとき、ファイル名が 1 つの名前になっていなかったときのエラー"
+  },
+  "mediaSaveOutsideFolder": "保存先のフォルダーの外には書きません",
+  "@mediaSaveOutsideFolder": {
+    "description": "画像・動画を保存するとき、書く先が保存先のフォルダーの外になったので止めたときのエラー"
+  },
+  "mediaSaveTooManySameName": "同じ名前のファイルが多すぎます",
+  "@mediaSaveTooManySameName": {
+    "description": "画像・動画を保存するとき、同じ名前のファイルが多くて新しい名前を作れなかったときのエラー"
+  },
+  "mediaSavePhotosDenied": "写真への保存が許可されていません(設定 App で許可してください)",
+  "@mediaSavePhotosDenied": {
+    "description": "画像・動画を写真に保存しようとしたが、端末で許可されていなかったときのエラー。設定 App は端末の設定のアプリ"
+  },
+  "mediaSavedToPhotos": "写真(アルバム「RASQ」)に保存しました",
+  "@mediaSavedToPhotos": {
+    "description": "画像・動画を写真に保存したときのお知らせ。RASQ はアルバムの名前で訳さない"
+  },
+  "mediaSavedToFilesApp": "「ファイル」App の RASQ › {folder} に保存しました({fileName})",
+  "@mediaSavedToFilesApp": {
+    "description": "iPhone / iPad で画像・動画を「ファイル」App から見える場所に保存したときのお知らせ。「ファイル」App は iOS のアプリの名前(その言語での名前にする)。folder は保存したフォルダーの名前(端末の上の名前で、訳さない)、fileName は保存したファイルの名前",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      },
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaSavedToPath": "保存しました: {path}",
+  "@mediaSavedToPath": {
+    "description": "パソコンで画像・動画を保存したときのお知らせ。path は保存したファイルの場所",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaColorBlack": "黒",
+  "@mediaColorBlack": {
+    "description": "音声の動画の色の見本の名前(色の丸にマウスを載せたときのツールチップ)"
+  },
+  "mediaColorNavy": "濃紺",
+  "@mediaColorNavy": {
+    "description": "音声の動画の背景色の見本の名前(ツールチップ)。濃い紺色"
+  },
+  "mediaColorInk": "墨",
+  "@mediaColorInk": {
+    "description": "音声の動画の背景色の見本の名前(ツールチップ)。墨のような、ほぼ黒の灰色"
+  },
+  "mediaColorDeepGreen": "深緑",
+  "@mediaColorDeepGreen": {
+    "description": "音声の動画の背景色の見本の名前(ツールチップ)。濃い緑"
+  },
+  "mediaColorCrimson": "えんじ",
+  "@mediaColorCrimson": {
+    "description": "音声の動画の背景色の見本の名前(ツールチップ)。暗い赤(えんじ色)"
+  },
+  "mediaColorWhite": "白",
+  "@mediaColorWhite": {
+    "description": "音声の動画の色の見本の名前(ツールチップ)"
+  },
+  "mediaColorLightGray": "薄い灰",
+  "@mediaColorLightGray": {
+    "description": "音声の動画の文字の色の見本の名前(ツールチップ)。薄い灰色"
+  },
+  "mediaColorYellow": "黄",
+  "@mediaColorYellow": {
+    "description": "音声の動画の色の見本の名前(ツールチップ)。黄色"
+  },
+  "mediaColorSkyBlue": "水色",
+  "@mediaColorSkyBlue": {
+    "description": "音声の動画の色の見本の名前(ツールチップ)"
+  },
+  "mediaColorPink": "桃",
+  "@mediaColorPink": {
+    "description": "音声の動画の色の見本の名前(ツールチップ)。桃色"
+  },
+  "mediaColorBlue": "青",
+  "@mediaColorBlue": {
+    "description": "音声の動画のバーの色の見本の名前(ツールチップ)"
+  },
+  "mediaColorGreen": "緑",
+  "@mediaColorGreen": {
+    "description": "音声の動画のバーの色の見本の名前(ツールチップ)"
+  },
+  "mediaColorOrange": "橙",
+  "@mediaColorOrange": {
+    "description": "音声の動画のバーの色の見本の名前(ツールチップ)。オレンジ色"
+  },
+  "mediaColorPurple": "紫",
+  "@mediaColorPurple": {
+    "description": "音声の動画のバーの色の見本の名前(ツールチップ)"
+  },
+  "mediaVizCancel": "キャンセル",
+  "@mediaVizCancel": {
+    "description": "Visualizer の設定の窓を、変えずに閉じるボタン"
+  },
+  "mediaVizConfirm": "決定",
+  "@mediaVizConfirm": {
+    "description": "Visualizer の設定の窓で、設定を決めて動画を書き出し直すボタン"
+  },
+  "mediaVizSemantics": "Visualizer の設定",
+  "@mediaVizSemantics": {
+    "description": "音声を動画にするときの見た目の設定の窓の、読み上げ用の名前。Visualizer は機能の名前で訳さない"
+  },
+  "mediaVizRebuildWarning": "決定すると動画を作り直します。ここまでの編集は消えます",
+  "@mediaVizRebuildWarning": {
+    "description": "Visualizer の設定の窓の上の注意"
+  },
+  "mediaVizRebuildDetail": "{frames, plural, other{今の再生位置のフレーム。決定で動画を書き出し直します({frames} フレーム)。ペイントやテキストなど、ここまでの編集は消えます。}}",
+  "@mediaVizRebuildDetail": {
+    "description": "Visualizer の設定の窓の上の注意の詳しい説明(上のプレビューは今の再生位置のフレーム)。frames は書き出すフレームの数",
+    "placeholders": {
+      "frames": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaVizRebuildDetailReducedFps": "{frames, plural, other{今の再生位置のフレーム。決定で動画を書き出し直します({frames} フレーム、長いので {fps}fps に下げます)。ペイントやテキストなど、ここまでの編集は消えます。}}",
+  "@mediaVizRebuildDetailReducedFps": {
+    "description": "mediaVizRebuildDetail と同じ説明で、音声が長いのでフレームレートを下げるとき。frames は書き出すフレームの数、fps は下げた後のフレームレート(小数 1 桁まで書式済み)",
+    "placeholders": {
+      "frames": {
+        "type": "int"
+      },
+      "fps": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaVizWaveform": "波形",
+  "@mediaVizWaveform": {
+    "description": "Visualizer の設定の節の見出し。波形の形"
+  },
+  "mediaVizBands": "帯域の数(低音 → 高音)",
+  "@mediaVizBands": {
+    "description": "Visualizer の設定のスライダー。波形のバーの数(左から低い音 → 高い音)"
+  },
+  "mediaVizFrameRate": "フレームレート",
+  "@mediaVizFrameRate": {
+    "description": "Visualizer の設定のスライダー。動画の 1 秒あたりのコマ数"
+  },
+  "mediaVizBarColor": "バーの色",
+  "@mediaVizBarColor": {
+    "description": "Visualizer の設定の節の見出し。波形のバーの色"
+  },
+  "mediaVizBackgroundColor": "背景色",
+  "@mediaVizBackgroundColor": {
+    "description": "Visualizer の設定の節の見出し。動画の背景の色"
+  },
+  "mediaVizLeftImage": "左の絵",
+  "@mediaVizLeftImage": {
+    "description": "Visualizer の設定の節の見出し。動画の左に出す絵"
+  },
+  "mediaVizPickImage": "画像を選ぶ",
+  "@mediaVizPickImage": {
+    "description": "Visualizer の設定の行。左の絵に使う画像を端末から選ぶ(まだ選んでいないとき)"
+  },
+  "mediaVizRepickImage": "画像を選び直す",
+  "@mediaVizRepickImage": {
+    "description": "Visualizer の設定の行。左の絵に使う画像を選び直す(もう選んでいるとき。下にファイル名が出る)"
+  },
+  "mediaVizPickImageHint": "選ぶまでは音符のアイコン",
+  "@mediaVizPickImageHint": {
+    "description": "「画像を選ぶ」の行の補足。画像を選ぶまでは音符の記号を出す"
+  },
+  "mediaVizTitleSection": "タイトル / 説明",
+  "@mediaVizTitleSection": {
+    "description": "Visualizer の設定の節の見出し。動画に出す文字"
+  },
+  "mediaVizShowTitle": "タイトル / 説明を出す",
+  "@mediaVizShowTitle": {
+    "description": "Visualizer の設定のスイッチ。動画にタイトルと説明を出すか"
+  },
+  "mediaVizTitleHint": "タイトル(空ならファイル名)",
+  "@mediaVizTitleHint": {
+    "description": "Visualizer の設定の入力欄の薄い字。動画に出すタイトル。空ならファイル名を出す"
+  },
+  "mediaVizDescriptionHint": "説明(無くてもよい)",
+  "@mediaVizDescriptionHint": {
+    "description": "Visualizer の設定の入力欄の薄い字。動画に出す説明(省略できる)"
+  },
+  "mediaVizTextScale": "文字の大きさ",
+  "@mediaVizTextScale": {
+    "description": "Visualizer の設定のスライダー。タイトル / 説明の文字の大きさ"
+  },
+  "mediaVizTextColorAuto": "文字の色: 自動",
+  "@mediaVizTextColorAuto": {
+    "description": "Visualizer の設定の選択肢。タイトル / 説明の文字の色を背景に合わせて自動で決める"
+  },
+  "mediaVizBackgroundVideo": "背景の動画",
+  "@mediaVizBackgroundVideo": {
+    "description": "Visualizer の設定の節の見出し。背景に流す動画"
+  },
+  "mediaVizPickVideo": "動画を選ぶ",
+  "@mediaVizPickVideo": {
+    "description": "Visualizer の設定の行。背景に流す動画を選ぶ(まだ選んでいないとき)"
+  },
+  "mediaVizRepickVideo": "動画を選び直す",
+  "@mediaVizRepickVideo": {
+    "description": "Visualizer の設定の行。背景に流す動画を選び直す(もう選んでいるとき)"
+  },
+  "mediaVizPickVideoHint": "背景色の代わりに動画を流します(音は使いません)",
+  "@mediaVizPickVideoHint": {
+    "description": "「動画を選ぶ」の行の補足。選んだ動画の音は使わない"
+  },
+  "mediaVizVideoSelected": "{fileName} — 音声より短ければループします",
+  "@mediaVizVideoSelected": {
+    "description": "「動画を選び直す」の行の補足。fileName は選んだ動画のファイル名。動画が音声より短ければ繰り返す",
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaVizRemoveVideo": "背景の動画を外す",
+  "@mediaVizRemoveVideo": {
+    "description": "Visualizer の設定の行。背景の動画をやめて背景色に戻す"
+  },
+  "mediaVizDim": "動画の上に掛ける暗さ",
+  "@mediaVizDim": {
+    "description": "Visualizer の設定のスライダー。背景の動画の上に重ねる暗い膜の濃さ"
+  },
+  "mediaVizDimHint": "波形と文字を読みやすくします",
+  "@mediaVizDimHint": {
+    "description": "「動画の上に掛ける暗さ」の補足"
+  },
+  "mediaVizFade": "フェード(絵)",
+  "@mediaVizFade": {
+    "description": "Visualizer の設定の節の見出し。動画の始めと終わりで絵を徐々に出す / 消す"
+  },
+  "mediaVizFadeIn": "フェードイン",
+  "@mediaVizFadeIn": {
+    "description": "Visualizer の設定のスライダー。始めに絵を徐々に出す長さ"
+  },
+  "mediaVizFadeOut": "フェードアウト",
+  "@mediaVizFadeOut": {
+    "description": "Visualizer の設定のスライダー。終わりに絵を徐々に消す長さ"
+  },
+  "mediaVizFadeNone": "なし",
+  "@mediaVizFadeNone": {
+    "description": "フェードイン / フェードアウトのスライダーの値が 0 のときの表示"
+  },
+  "mediaVizExport": "書き出し",
+  "@mediaVizExport": {
+    "description": "Visualizer の設定の節の見出し。動画の書き出しの細かさ"
+  },
+  "mediaVizExportCaption": "細かくするほど、書き出しに時間がかかります",
+  "@mediaVizExportCaption": {
+    "description": "書き出しの細かさの選択肢の下の説明"
+  },
+  "mediaVizExportDetail": "波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。",
+  "@mediaVizExportDetail": {
+    "description": "書き出しの細かさの説明の詳しい補足(前回の書き出しの記録が無いとき)"
+  },
+  "mediaVizExportDetailWithLast": "前回の書き出し: {timings}。\n波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。",
+  "@mediaVizExportDetailWithLast": {
+    "description": "mediaVizExportDetail と同じ補足で、先頭に前回の書き出しにかかった時間を付けたもの。timings は mediaVizTimings の文",
+    "placeholders": {
+      "timings": {
+        "type": "String"
+      }
+    }
+  },
   "nodeprogCatalogGenreGenerate": "生成",
   "@nodeprogCatalogGenreGenerate": {
     "description": "ノードのジャンル(パレットの絞り込み・タイルの副題)。"
@@ -5072,6 +6492,267 @@
   "@nodeprogTimelinePaletteEmptyHint": {
     "description": "部品の追加のパレットで何も当たらないときのヒント。"
   },
+  "notificationsPrefReaction": "リアクションを通知する",
+  "@notificationsPrefReaction": {
+    "description": "通知プロファイル設定のシートのスイッチ。リアクションの通知を出すか"
+  },
+  "notificationsPrefRepost": "リノートを通知する",
+  "@notificationsPrefRepost": {
+    "description": "通知プロファイル設定のシートのスイッチ。リノートの通知を出すか"
+  },
+  "notificationsPrefQuote": "引用を通知する",
+  "@notificationsPrefQuote": {
+    "description": "通知プロファイル設定のシートのスイッチ。引用の通知を出すか"
+  },
+  "notificationsPrefAstell": "ASTellを通知する",
+  "@notificationsPrefAstell": {
+    "description": "通知プロファイル設定のシートのスイッチ。ASTell(音声のルーム)の通知を出すか。ASTell は製品名で訳さない"
+  },
+  "notificationsPrefTimer": "タイマー付きブックマークを通知する",
+  "@notificationsPrefTimer": {
+    "description": "通知プロファイル設定のシートのスイッチ。タイマーを付けたブックマークの時刻が来たときの通知を出すか"
+  },
+  "notificationsPrefPollEnded": "投票の完了を通知する",
+  "@notificationsPrefPollEnded": {
+    "description": "通知プロファイル設定のシートのスイッチ。投票が締め切られたときの通知を出すか"
+  },
+  "notificationsPrefFollow": "フォローを通知する",
+  "@notificationsPrefFollow": {
+    "description": "通知プロファイル設定のシートのスイッチ。フォローされた / フォロー申請 / 承認の通知を出すか"
+  },
+  "notificationsPrefSystem": "システム通知を表示する",
+  "@notificationsPrefSystem": {
+    "description": "通知プロファイル設定のシートのスイッチ。サーバーやアプリからのお知らせを出すか"
+  },
+  "notificationsPrefOther": "その他の通知を配信する",
+  "@notificationsPrefOther": {
+    "description": "通知プロファイル設定のシートのスイッチ。返信・メンション・リストへの追加などの残りの通知を出すか"
+  },
+  "notificationsTabAll": "すべて",
+  "@notificationsTabAll": {
+    "description": "通知の画面のタブ。すべての通知"
+  },
+  "notificationsTabFollowing": "フォロー中",
+  "@notificationsTabFollowing": {
+    "description": "通知の画面のタブ。フォローしている人からの通知だけ"
+  },
+  "notificationsPrefsTitle": "通知プロファイル設定",
+  "@notificationsPrefsTitle": {
+    "description": "通知の種類ごとの ON / OFF を選ぶシートの見出し。通知の画面の歯車のボタンのツールチップにも使う"
+  },
+  "notificationsEmptyFollowing": "フォロー中の通知はありません",
+  "@notificationsEmptyFollowing": {
+    "description": "通知の画面の「フォロー中」のタブが空のとき"
+  },
+  "notificationsClose": "閉じる",
+  "@notificationsClose": {
+    "description": "通知プロファイル設定のシートを閉じるボタン"
+  },
+  "notificationsPrefEnabled": "通知オン",
+  "@notificationsPrefEnabled": {
+    "description": "通知プロファイル設定のシートの一番上のスイッチ。通知全体を出すか"
+  },
+  "notificationsPushTitle": "プッシュ通知の受け取り",
+  "@notificationsPushTitle": {
+    "description": "通知プロファイル設定のシートの行。押すとプッシュ通知の設定へ進む"
+  },
+  "notificationsPushDetail": "通知専用のアクセストークン",
+  "@notificationsPushDetail": {
+    "description": "「プッシュ通知の受け取り」の行の補足。通知を受け取るためだけに使うアクセストークンを設定する"
+  },
+  "notificationsQuickReadAll": "全ての通知を既読",
+  "@notificationsQuickReadAll": {
+    "description": "下のナビの通知のボタンを長押ししたときのメニュー。全部の通知を既読にする"
+  },
+  "notificationsQuickReadFollowing": "フォロー中の通知を既読",
+  "@notificationsQuickReadFollowing": {
+    "description": "下のナビの通知のボタンを長押ししたときのメニュー。フォローしている人からの通知を既読にする"
+  },
+  "notificationsQuickOff": "通知オフ",
+  "@notificationsQuickOff": {
+    "description": "下のナビの通知のボタンを長押ししたときのメニュー。通知を止める"
+  },
+  "notificationsEmpty": "通知はありません",
+  "@notificationsEmpty": {
+    "description": "通知の一覧が空のとき"
+  },
+  "notificationsRetry": "再読み込み",
+  "@notificationsRetry": {
+    "description": "通知を読み込めなかったときの、やり直すボタン"
+  },
+  "notificationsRemindersHeader": "開始通知を登録した VC",
+  "@notificationsRemindersHeader": {
+    "description": "通知の画面の上の欄の見出し。開始の通知を登録した、これから始まる音声のルーム(VC)の一覧"
+  },
+  "notificationsReminderSchedule": "開催予定 {when}",
+  "@notificationsReminderSchedule": {
+    "description": "開始通知を登録したルームの行の補足。when は開催の日時(書式済みの文字列)",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsReminderCancel": "解除",
+  "@notificationsReminderCancel": {
+    "description": "開始通知を登録したルームの行の右端のボタン。登録を外す"
+  },
+  "notificationsSystemFallbackTitle": "システム通知",
+  "@notificationsSystemFallbackTitle": {
+    "description": "サーバー / アプリからのお知らせに見出しが無いときの見出し"
+  },
+  "notificationsActorsOne": "{name}さん",
+  "@notificationsActorsOne": {
+    "description": "通知をした人が 1 人のときの呼び名(太字で出る)。name は表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsActorsTwo": "{first}さん、{second}さん",
+  "@notificationsActorsTwo": {
+    "description": "通知をした人が 2 人のときの呼び名(太字で出る)。first / second は表示名",
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "second": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsActorsMore": "{count, plural, other{{first}さん、{second}さんと他{count}人}}",
+  "@notificationsActorsMore": {
+    "description": "通知をした人が 3 人以上のときの呼び名(太字で出る)。first / second は最初の 2 人の表示名、count は残りの人数",
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "second": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsActionReacted": "{names}があなたの投稿にリアクションしました",
+  "@notificationsActionReacted": {
+    "description": "リアクションの通知の文。names は通知をした人の呼び名(notificationsActors… の文。太字で出る)",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsActionReposted": "{names}があなたの投稿をリノートしました",
+  "@notificationsActionReposted": {
+    "description": "リノートの通知の文。names は通知をした人の呼び名(太字で出る)",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsActionPollEnded": "{names}が投票が終了しました",
+  "@notificationsActionPollEnded": {
+    "description": "投票が締め切られた通知の文。names は投票を作った人などの呼び名(太字で出る。空のこともある)",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsActionOther": "{names}が通知",
+  "@notificationsActionOther": {
+    "description": "種類の分からない通知の文。names は通知をした人の呼び名(太字で出る。空のこともある)",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsMenuTooltip": "メニュー",
+  "@notificationsMenuTooltip": {
+    "description": "通知の行の右端の … のボタンのツールチップ"
+  },
+  "notificationsFollowFollowed": "{name}にフォローされました",
+  "@notificationsFollowFollowed": {
+    "description": "フォローされた通知の文。name はその人の表示名(太字で出る)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsFollowRequested": "{name}からフォロー申請が届きました",
+  "@notificationsFollowRequested": {
+    "description": "フォロー申請が届いた通知の文。name はその人の表示名(太字で出る)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsFollowAccepted": "{name}がフォローを承認しました",
+  "@notificationsFollowAccepted": {
+    "description": "こちらのフォロー申請が承認された通知の文。name は承認した人の表示名(太字で出る)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsFollowListAdded": "{name}がリストに追加しました",
+  "@notificationsFollowListAdded": {
+    "description": "誰かがこちらを自分のリストに追加した通知の文。name はその人の表示名(太字で出る)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsFollowButton": "フォロー",
+  "@notificationsFollowButton": {
+    "description": "フォローの通知の行の右のボタン(まだフォローしていないとき)"
+  },
+  "notificationsFollowingButton": "フォロー中",
+  "@notificationsFollowingButton": {
+    "description": "フォローの通知の行の右のボタン(フォローしているとき)"
+  },
+  "notificationsPostReply": "返信",
+  "@notificationsPostReply": {
+    "description": "投稿付きの通知の上の小さなラベル。返信が来た"
+  },
+  "notificationsPostQuote": "引用",
+  "@notificationsPostQuote": {
+    "description": "投稿付きの通知の上の小さなラベル。引用された"
+  },
+  "notificationsPostMention": "メンション",
+  "@notificationsPostMention": {
+    "description": "投稿付きの通知の上の小さなラベル。メンションされた"
+  },
+  "notificationsTimerAstell": "ブックマークしたVCが始まります！",
+  "@notificationsTimerAstell": {
+    "description": "ブックマークした音声のルーム(VC)が始まる時刻になった通知の文"
+  },
+  "notificationsTimerBookmark": "タイマー付きブックマーク",
+  "@notificationsTimerBookmark": {
+    "description": "タイマーを付けたブックマークの時刻が来た通知の文"
+  },
+  "notificationsRasqLoadError": "読み込めませんでした",
+  "@notificationsRasqLoadError": {
+    "description": "RASQ のタブで通知を読み込めなかったとき(下にエラーの中身が出る)"
+  },
+  "notificationsRasqEmpty": "RASQ の通知はありません",
+  "@notificationsRasqEmpty": {
+    "description": "RASQ のタブが空のとき。RASQ は製品名で訳さない"
+  },
+  "notificationsRasqEmptyHint": "メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます",
+  "@notificationsRasqEmptyHint": {
+    "description": "RASQ のタブが空のときの補足。Swing は機能の名前で訳さない"
+  },
   "onboardingBack": "戻る",
   "onboardingHandleTooShort": "3 文字以上にしてください",
   "onboardingHandleTooLong": "32 文字までです",
@@ -6250,6 +7931,405 @@
   "pluginsPaintNibMili": "ミリペン",
   "pluginsPaintNibKabura": "カプラペン",
   "pluginsPaintNibBrush": "ブラシニブ",
+  "postThreadSortRelevance": "関連順",
+  "@postThreadSortRelevance": {
+    "description": "投稿の詳細の返信欄の並び順(ドロップダウンの項目と、欄の帯の右の小さい字)。元の投稿との関連の強い順"
+  },
+  "postThreadSortReactions": "リアクション数",
+  "@postThreadSortReactions": {
+    "description": "返信欄の並び順: リアクションの多い順"
+  },
+  "postThreadSortKeyword": "キーワード順",
+  "@postThreadSortKeyword": {
+    "description": "返信欄の並び順: 元の投稿と同じ語(人名・地名など)を多く含む順"
+  },
+  "postThreadSortDefault": "デフォルト",
+  "@postThreadSortDefault": {
+    "description": "返信欄の並び順: SNS が返した順のまま"
+  },
+  "postThreadModeRenotes": "引用(リノート)",
+  "@postThreadModeRenotes": {
+    "description": "返信欄の帯を長押しして出す、欄の切り替えの項目。投稿をリノートした人の一覧"
+  },
+  "postThreadModeRenotesShort": "引用",
+  "@postThreadModeRenotesShort": {
+    "description": "返信欄の帯に出す欄の名前(リノートした人の一覧のとき)。短く"
+  },
+  "postThreadModeReplies": "返信",
+  "@postThreadModeReplies": {
+    "description": "欄の切り替えの項目: 返信の一覧"
+  },
+  "postThreadModeRepliesShort": "返信",
+  "@postThreadModeRepliesShort": {
+    "description": "返信欄の帯に出す欄の名前(返信の一覧のとき)。短く"
+  },
+  "postThreadModeReactions": "リアクション",
+  "@postThreadModeReactions": {
+    "description": "欄の切り替えの項目: リアクション(絵文字ごと)の一覧。Misskey だけ"
+  },
+  "postThreadModeReactionsShort": "リアクション",
+  "@postThreadModeReactionsShort": {
+    "description": "返信欄の帯に出す欄の名前(リアクションの一覧のとき)。短く"
+  },
+  "postThreadModeQuotes": "共有(引用ノート)",
+  "@postThreadModeQuotes": {
+    "description": "欄の切り替えの項目: この投稿を引用した投稿(引用ノート)の一覧"
+  },
+  "postThreadModeQuotesShort": "共有",
+  "@postThreadModeQuotesShort": {
+    "description": "返信欄の帯に出す欄の名前(引用ノートの一覧のとき)。短く"
+  },
+  "postBookmarkClipTooltip": "クリップに追加(長押し)",
+  "@postBookmarkClipTooltip": {
+    "description": "投稿の詳細の見出しのブックマークのボタンのツールチップ。ブックマークの無い SNS で、長押しでクリップに入れられる"
+  },
+  "postBookmarkRemoveTooltip": "ブックマークを外す(長押しでクリップへ)",
+  "@postBookmarkRemoveTooltip": {
+    "description": "ブックマークのボタンのツールチップ(ブックマーク済み)。長押しでクリップに入れる"
+  },
+  "postBookmarkAddTooltip": "ブックマーク(長押しでクリップへ)",
+  "@postBookmarkAddTooltip": {
+    "description": "ブックマークのボタンのツールチップ(未ブックマーク)。長押しでクリップに入れる"
+  },
+  "postBookmarkUnsupported": "このサービスにはブックマークがありません。長押しでクリップに追加できます",
+  "@postBookmarkUnsupported": {
+    "description": "ブックマークの無い SNS でボタンを短く押したときのスナックバー"
+  },
+  "postBookmarkRemoved": "ブックマークを外しました",
+  "@postBookmarkRemoved": {
+    "description": "ブックマークを外したときのスナックバー"
+  },
+  "postBookmarkAdded": "ブックマークしました",
+  "@postBookmarkAdded": {
+    "description": "ブックマークしたときのスナックバー"
+  },
+  "postBookmarkError": "ブックマークできませんでした: {error}",
+  "@postBookmarkError": {
+    "description": "ブックマーク / 解除に失敗したときのスナックバー。error は失敗の理由(SNS から返った文など)",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "postReactionsTitle": "リアクション",
+  "@postReactionsTitle": {
+    "description": "投稿のリアクションの画面(返信 / 引用 / リアクション / 共有のタブ)の見出し"
+  },
+  "postReactionsTabReplies": "返信",
+  "@postReactionsTabReplies": {
+    "description": "リアクションの画面のタブ: 返信の一覧"
+  },
+  "postReactionsTabQuotes": "引用",
+  "@postReactionsTabQuotes": {
+    "description": "リアクションの画面のタブ: リノート・引用した人の一覧"
+  },
+  "postReactionsTabReactions": "リアクション",
+  "@postReactionsTabReactions": {
+    "description": "リアクションの画面のタブ: 絵文字ごとのリアクションの一覧"
+  },
+  "postReactionsTabShares": "共有",
+  "@postReactionsTabShares": {
+    "description": "リアクションの画面のタブ: この投稿を引用した投稿(引用ノート)の一覧"
+  },
+  "postReactionsBookmarkTooltip": "ブックマーク",
+  "@postReactionsBookmarkTooltip": {
+    "description": "リアクションの画面の見出しのブックマークのボタンのツールチップ"
+  },
+  "postRepliesEmpty": "返信はありません",
+  "@postRepliesEmpty": {
+    "description": "返信の一覧が空のとき"
+  },
+  "postQuotesEmpty": "引用ノートはありません",
+  "@postQuotesEmpty": {
+    "description": "引用ノート(この投稿を引用した投稿)の一覧が空のとき。リアクションの画面の共有のタブと、投稿の詳細の共有の欄"
+  },
+  "postRepostersEmpty": "リノート・引用はありません",
+  "@postRepostersEmpty": {
+    "description": "リアクションの画面の引用のタブ(リノートした人の一覧)が空のとき"
+  },
+  "postReactionsEmpty": "リアクションはありません",
+  "@postReactionsEmpty": {
+    "description": "リアクションの一覧が空のとき"
+  },
+  "postReactionsMine": "あなた",
+  "@postReactionsMine": {
+    "description": "リアクションの一覧で、自分が付けたリアクションの行に付ける小さな印"
+  },
+  "postDetailNotFoundOnAccount": "{account} ではこの投稿を見つけられませんでした",
+  "@postDetailNotFoundOnAccount": {
+    "description": "投稿の詳細の見出しのアカウントのボタンで別のアカウントを選んだが、そのアカウントのサーバーで同じ投稿が見つからなかったときのスナックバー。account はアカウント(@名前@サーバー)",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "postDetailTitle": "投稿",
+  "@postDetailTitle": {
+    "description": "投稿の詳細の画面の見出し"
+  },
+  "postDetailOpenedAccount": "開いたアカウント",
+  "@postDetailOpenedAccount": {
+    "description": "投稿の詳細の見出しのアカウントの選択で、投稿を開いたときのアカウントに付ける印の説明"
+  },
+  "postDetailNotFound": "投稿はありません",
+  "@postDetailNotFound": {
+    "description": "投稿の詳細で、投稿が消えている(404)とき"
+  },
+  "postReload": "再読み込み",
+  "@postReload": {
+    "description": "読み込みに失敗したときのやり直しのボタン"
+  },
+  "postDetailShowReactions": "リアクションを表示",
+  "@postDetailShowReactions": {
+    "description": "投稿の詳細の返信欄の帯の右のボタン。リアクションの画面を開く"
+  },
+  "postDetailShowMore": "さらに表示",
+  "@postDetailShowMore": {
+    "description": "投稿の詳細の返信の一覧の下のボタン"
+  },
+  "postRenotesEmpty": "リノートはありません",
+  "@postRenotesEmpty": {
+    "description": "投稿の詳細の引用(リノート)の欄が空のとき"
+  },
+  "postShareAccountTooltip": "共有に使うアカウント",
+  "@postShareAccountTooltip": {
+    "description": "投稿の共有の画面の見出しのアカウントの選択のツールチップ(選べるアカウントが複数のとき)"
+  },
+  "postShareAccountFixedTooltip": "受け取ったアカウントだけで共有できます",
+  "@postShareAccountFixedTooltip": {
+    "description": "アカウントの選択のツールチップ(非公開の投稿などで、受け取ったアカウントでしか共有できないとき)"
+  },
+  "postShareSemantics": "共有",
+  "@postShareSemantics": {
+    "description": "投稿の共有の画面(FOW)の読み上げの名前"
+  },
+  "postShareContentCopied": "内容をコピーしました",
+  "@postShareContentCopied": {
+    "description": "共有の画面で「内容をコピー」を押したときのスナックバー"
+  },
+  "postShareLinkCopied": "リンクをコピーしました",
+  "@postShareLinkCopied": {
+    "description": "共有の画面で「リンクをコピー」を押したときのスナックバー"
+  },
+  "postShareDmTitle": "DM へ共有",
+  "@postShareDmTitle": {
+    "description": "DM の相手を選ぶ画面の見出し"
+  },
+  "postShareClose": "閉じる",
+  "@postShareClose": {
+    "description": "共有の画面 / DM の相手を選ぶ画面を閉じるボタン"
+  },
+  "postShareDmNoRooms": "DM の相手がいません",
+  "@postShareDmNoRooms": {
+    "description": "DM の相手を選ぶ画面で、DM の相手が 1 人もいないとき"
+  },
+  "postShareAstellShared": "「{room}」に共有しました",
+  "@postShareAstellShared": {
+    "description": "投稿を ASTell のルームに共有したときのスナックバー。room はルームの名前",
+    "placeholders": {
+      "room": {
+        "type": "String"
+      }
+    }
+  },
+  "postShareCopyContent": "内容をコピー",
+  "@postShareCopyContent": {
+    "description": "共有の画面の上段のボタン: 投稿の本文(注意書き付き)をコピーする"
+  },
+  "postShareCopyLink": "リンクをコピー",
+  "@postShareCopyLink": {
+    "description": "共有の画面の上段のボタン: 投稿のリンクをコピーする"
+  },
+  "postShareOtherAccount": "他のアカウントで共有",
+  "@postShareOtherAccount": {
+    "description": "共有の画面の上段のボタン: 選んだアカウントのコンポーザーにリンクを入れて開く"
+  },
+  "postSharePluginsHeader": "プラグインに共有",
+  "@postSharePluginsHeader": {
+    "description": "共有の画面の節の見出し。参加中の ASTell と、共有に対応したプラグインが並ぶ"
+  },
+  "postShareAstellTitle": "ASTell に共有",
+  "@postShareAstellTitle": {
+    "description": "共有の画面の行: 参加中の ASTell のルームに投稿を流す"
+  },
+  "postShareAstellSubtitle": "参加中のルーム「{room}」へ投稿を流す",
+  "@postShareAstellSubtitle": {
+    "description": "「ASTell に共有」の行の補足。room はルームの名前",
+    "placeholders": {
+      "room": {
+        "type": "String"
+      }
+    }
+  },
+  "postSharePluginsEmpty": "共有に対応したプラグインがここに並びます",
+  "@postSharePluginsEmpty": {
+    "description": "共有の画面で、共有に対応したプラグインが 1 つも無いときの説明"
+  },
+  "postSharePluginsEmptyDetail": "post.share を宣言したプラグイン(と参加中の ASTell)がここに並びます",
+  "@postSharePluginsEmptyDetail": {
+    "description": "上と同じ説明の、開発者モードのときの文。post.share はプラグインの宣言の名前(訳さない)"
+  },
+  "postShareOtherHeader": "その他",
+  "@postShareOtherHeader": {
+    "description": "共有の画面の節の見出し(DM へ共有など)"
+  },
+  "postShareDmSubtitle": "選んだアカウントの DM にリンクを送る",
+  "@postShareDmSubtitle": {
+    "description": "共有の画面の「DM へ共有」の行の補足"
+  },
+  "postShareOpenBrowser": "ブラウザで開く",
+  "@postShareOpenBrowser": {
+    "description": "共有の画面の下のボタン: 投稿のリンクをブラウザで開く"
+  },
+  "postMenuCopyLink": "リンクをコピー",
+  "@postMenuCopyLink": {
+    "description": "投稿の「…」のメニューの項目"
+  },
+  "postMenuUnpin": "固定を外す",
+  "@postMenuUnpin": {
+    "description": "投稿のメニューの項目: 自分のアカウントページの固定を外す"
+  },
+  "postMenuPin": "固定する",
+  "@postMenuPin": {
+    "description": "投稿のメニューの項目: 自分のアカウントページに固定する"
+  },
+  "postMenuDetail": "詳細",
+  "@postMenuDetail": {
+    "description": "投稿のメニューの項目: 投稿の詳細を開く"
+  },
+  "postMenuShare": "共有",
+  "@postMenuShare": {
+    "description": "投稿のメニューの項目: 共有の画面を開く"
+  },
+  "postMenuEditActionBar": "アクションバーを編集",
+  "@postMenuEditActionBar": {
+    "description": "投稿のメニューの項目: 投稿の下のボタンの並び(アクションバー)を編集する"
+  },
+  "postMenuUnfavorite": "お気に入り解除",
+  "@postMenuUnfavorite": {
+    "description": "投稿のメニューの項目(お気に入り済み)"
+  },
+  "postMenuFavorite": "お気に入り",
+  "@postMenuFavorite": {
+    "description": "投稿のメニューの項目: お気に入りに入れる"
+  },
+  "postMenuAddToClip": "クリップに追加",
+  "@postMenuAddToClip": {
+    "description": "投稿のメニューの項目"
+  },
+  "postMenuUnfollow": "フォロー解除",
+  "@postMenuUnfollow": {
+    "description": "投稿のメニューの項目: 投稿した人のフォローを外す"
+  },
+  "postMenuFollow": "フォロー",
+  "@postMenuFollow": {
+    "description": "投稿のメニューの項目: 投稿した人をフォローする"
+  },
+  "postMenuUnmute": "ミュート解除",
+  "@postMenuUnmute": {
+    "description": "投稿のメニューの項目: 投稿した人のミュートを外す"
+  },
+  "postMenuMute": "ミュート",
+  "@postMenuMute": {
+    "description": "投稿のメニューの項目: 投稿した人をミュートする"
+  },
+  "postMenuUnblock": "ブロック解除",
+  "@postMenuUnblock": {
+    "description": "投稿のメニューの項目: 投稿した人のブロックを外す"
+  },
+  "postMenuBlock": "ブロック",
+  "@postMenuBlock": {
+    "description": "投稿のメニューの項目、およびブロックの確認のボタン"
+  },
+  "postMenuReport": "報告",
+  "@postMenuReport": {
+    "description": "投稿のメニューの項目、および報告の確認のボタン"
+  },
+  "postMenuDelete": "削除",
+  "@postMenuDelete": {
+    "description": "投稿のメニューの項目(自分の投稿)、および削除の確認のボタン"
+  },
+  "postBlockConfirmTitle": "{name} をブロックしますか？",
+  "@postBlockConfirmTitle": {
+    "description": "ブロックの確認の見出し。name は投稿した人の表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "postCancel": "キャンセル",
+  "@postCancel": {
+    "description": "確認のダイアログのやめるボタン"
+  },
+  "postReportConfirmTitle": "この投稿を報告しますか？",
+  "@postReportConfirmTitle": {
+    "description": "投稿の報告の確認の見出し"
+  },
+  "postReportConfirmMessage": "サーバー管理者に報告します。",
+  "@postReportConfirmMessage": {
+    "description": "投稿の報告の確認の説明"
+  },
+  "postDeleteConfirmTitle": "投稿を削除しますか？",
+  "@postDeleteConfirmTitle": {
+    "description": "投稿の削除の確認の見出し"
+  },
+  "postDeleteConfirmMessage": "この操作は取り消せません。",
+  "@postDeleteConfirmMessage": {
+    "description": "投稿の削除の確認の説明"
+  },
+  "postSaveMediaLabel": "{kind, select, video{動画を保存} other{画像を保存}}",
+  "@postSaveMediaLabel": {
+    "description": "投稿のメニュー / 共有の画面の、添付を端末に保存する項目。kind は video(動画)か image(画像)",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "postSaveDestinationTitle": "{kind, select, video{動画の保存先} other{画像の保存先}}",
+  "@postSaveDestinationTitle": {
+    "description": "保存するたびに保存先を選ぶ設定のとき、保存先を選ぶシートの見出し。kind は video(動画)か image(画像)",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "postSaveToPhotosSubtitle": "アルバム「RASQ」に入ります",
+  "@postSaveToPhotosSubtitle": {
+    "description": "保存先の選択の「写真」の行の補足。RASQ はアルバムの名前(訳さない)"
+  },
+  "postSaveToFilesIosSubtitle": "「ファイル」App の このiPad(このiPhone)› RASQ › 保存",
+  "@postSaveToFilesIosSubtitle": {
+    "description": "保存先の選択の「ファイル」の行の補足(iOS)。「ファイル」App の中のフォルダーの場所。「ファイル」App / このiPad / このiPhone は iOS の表示に合わせる。「RASQ › 保存」は端末に作るフォルダーの実際の名前なので訳さない"
+  },
+  "postSaveToFilesSubtitle": "保存する場所を選びます",
+  "@postSaveToFilesSubtitle": {
+    "description": "保存先の選択の「ファイル」の行の補足(iOS 以外)"
+  },
+  "postSaveRememberTitle": "次からもこの保存先にする",
+  "@postSaveRememberTitle": {
+    "description": "保存先の選択のスイッチ"
+  },
+  "postSaveRememberSubtitle": "設定 → アプリの外観 →「画像・動画の保存先」で変えられます",
+  "@postSaveRememberSubtitle": {
+    "description": "上のスイッチの補足。設定の画面の場所(設定の画面の見出しと揃える)"
+  },
+  "postSaveFailed": "{kind, select, video{動画を保存できませんでした: {error}} other{画像を保存できませんでした: {error}}}",
+  "@postSaveFailed": {
+    "description": "添付の保存に失敗したときのスナックバー。kind は video(動画)か image(画像)、error は失敗の理由",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "profileEditTitle": "プロフィールの更新",
   "@profileEditTitle": {
     "description": "プロフィールの編集画面(RASQ アカウント / SNS)の見出し"
@@ -12313,6 +14393,197 @@
   },
   "userPageViewEmptyTitle": "条件に合う投稿はありません",
   "userPageViewEmptyHint": "タブをもう一度押して、表示の設定を変えるかリセットしてください",
+  "usersImageViewerBack": "戻る",
+  "@usersImageViewerBack": {
+    "description": "プロフィールのアイコン / バナーの全画面表示の左上の戻るボタンのツールチップ"
+  },
+  "usersFollowRequestsTabRelevance": "関連性",
+  "@usersFollowRequestsTabRelevance": {
+    "description": "フォロー申請の画面のタブ: 関連の強い順"
+  },
+  "usersFollowRequestsTabFollowing": "フォロー中",
+  "@usersFollowRequestsTabFollowing": {
+    "description": "フォロー申請の画面のタブ: 自分がフォローしている人からの申請"
+  },
+  "usersFollowRequestsTabOther": "その他",
+  "@usersFollowRequestsTabOther": {
+    "description": "フォロー申請の画面のタブ: それ以外"
+  },
+  "usersFollowRequestsTitle": "フォロー申請",
+  "@usersFollowRequestsTitle": {
+    "description": "フォロー申請の画面の見出し"
+  },
+  "usersReload": "再読み込み",
+  "@usersReload": {
+    "description": "読み込みに失敗したときのやり直しのボタン"
+  },
+  "usersFollowRequestsEmpty": "フォロー申請はありません",
+  "@usersFollowRequestsEmpty": {
+    "description": "フォロー申請が無いとき"
+  },
+  "usersFollowRequestsEmptyOther": "なし",
+  "@usersFollowRequestsEmptyOther": {
+    "description": "フォロー申請の画面の、最初以外のタブが空のとき"
+  },
+  "usersFollowRequestAccept": "許可",
+  "@usersFollowRequestAccept": {
+    "description": "フォロー申請の行のボタン: 申請を受け入れる"
+  },
+  "usersFollowRequestReject": "拒否",
+  "@usersFollowRequestReject": {
+    "description": "フォロー申請の行のボタン: 申請を断る"
+  },
+  "usersFollowsTabFollowing": "フォロー中",
+  "@usersFollowsTabFollowing": {
+    "description": "フォロー / フォロワーの画面のタブ: この人がフォローしている人"
+  },
+  "usersFollowsTabFollowers": "フォロワー",
+  "@usersFollowsTabFollowers": {
+    "description": "フォロー / フォロワーの画面のタブ: この人をフォローしている人"
+  },
+  "usersFollowsTitle": "フォロー/フォロワー",
+  "@usersFollowsTitle": {
+    "description": "フォロー / フォロワーの画面の見出し(ユーザーの名前が分からないとき)"
+  },
+  "usersFollowersEmpty": "フォロワーはいません",
+  "@usersFollowersEmpty": {
+    "description": "フォロワーの一覧が空のとき"
+  },
+  "usersFollowingEmpty": "フォロー中のユーザーはいません",
+  "@usersFollowingEmpty": {
+    "description": "フォロー中の一覧が空のとき"
+  },
+  "usersPageTabNotes": "ノート",
+  "@usersPageTabNotes": {
+    "description": "ユーザーページのタブ: 投稿(返信・引用以外)。Misskey の言い方"
+  },
+  "usersPageTabReplies": "返信",
+  "@usersPageTabReplies": {
+    "description": "ユーザーページのタブ: 返信"
+  },
+  "usersPageTabQuotes": "引用",
+  "@usersPageTabQuotes": {
+    "description": "ユーザーページのタブ: 引用した投稿"
+  },
+  "usersPageTabMedia": "メディア",
+  "@usersPageTabMedia": {
+    "description": "ユーザーページのタブ: 画像・動画の付いた投稿"
+  },
+  "usersPageTabClips": "クリップ/Play",
+  "@usersPageTabClips": {
+    "description": "ユーザーページのタブ: 公開クリップと Play(Misskey の機能の名前)"
+  },
+  "usersRestrictedTitle": "制限されたユーザーです",
+  "@usersRestrictedTitle": {
+    "description": "ユーザーページで、凍結中 / ブロック中などのため中身を隠しているとき"
+  },
+  "usersRestrictedHint": "「表示」を押すと内容を表示します",
+  "@usersRestrictedHint": {
+    "description": "上の補足。「表示」はプロフィールの欄のボタンの名前"
+  },
+  "usersMenuCopyLink": "リンクをコピー",
+  "@usersMenuCopyLink": {
+    "description": "ユーザーページの「…」のメニューの項目"
+  },
+  "usersMenuAddToRasqList": "RASQ リストに追加",
+  "@usersMenuAddToRasqList": {
+    "description": "ユーザーページのメニューの項目: RASQ のリストにこの人を入れる"
+  },
+  "usersMenuServerInfo": "サーバー情報",
+  "@usersMenuServerInfo": {
+    "description": "ユーザーページのメニューの項目: この人のサーバーの情報を開く"
+  },
+  "usersMenuUnmute": "ミュート解除",
+  "@usersMenuUnmute": {
+    "description": "ユーザーページのメニューの項目"
+  },
+  "usersMenuMute": "ミュート",
+  "@usersMenuMute": {
+    "description": "ユーザーページのメニューの項目"
+  },
+  "usersMenuUnblock": "ブロック解除",
+  "@usersMenuUnblock": {
+    "description": "ユーザーページのメニューの項目"
+  },
+  "usersMenuBlock": "ブロック",
+  "@usersMenuBlock": {
+    "description": "ユーザーページのメニューの項目、およびブロックの確認のボタン"
+  },
+  "usersMenuReport": "報告",
+  "@usersMenuReport": {
+    "description": "ユーザーページのメニューの項目、および報告の確認のボタン"
+  },
+  "usersBlockConfirmTitle": "{name} をブロックしますか？",
+  "@usersBlockConfirmTitle": {
+    "description": "ユーザーのブロックの確認の見出し。name はその人の表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "usersBlockConfirmMessage": "相手からのフォロー・リアクション・返信が届かなくなります。",
+  "@usersBlockConfirmMessage": {
+    "description": "ユーザーのブロックの確認の説明"
+  },
+  "usersCancel": "キャンセル",
+  "@usersCancel": {
+    "description": "確認のダイアログのやめるボタン"
+  },
+  "usersReportConfirmTitle": "{name} を報告しますか？",
+  "@usersReportConfirmTitle": {
+    "description": "ユーザーの報告の確認の見出し。name はその人の表示名",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "usersReportConfirmMessage": "サーバー管理者に報告します。",
+  "@usersReportConfirmMessage": {
+    "description": "ユーザーの報告の確認の説明"
+  },
+  "usersPostsEmpty": "投稿はありません",
+  "@usersPostsEmpty": {
+    "description": "ユーザーページのタブの投稿が無いとき"
+  },
+  "usersPinnedBadge": "ピン留め",
+  "@usersPinnedBadge": {
+    "description": "ユーザーページで、プロフィールに固定(ピン留め)された投稿の上に付ける印"
+  },
+  "usersClipsUnsupportedTitle": "クリップ / Play",
+  "@usersClipsUnsupportedTitle": {
+    "description": "クリップ/Play のタブで、SNS がクリップにも Play にも対応していないときの見出し"
+  },
+  "usersClipsUnsupportedHint": "この SNS はクリップ・Play に対応していません",
+  "@usersClipsUnsupportedHint": {
+    "description": "上の説明"
+  },
+  "usersClipsEmpty": "公開クリップ・Play はありません",
+  "@usersClipsEmpty": {
+    "description": "クリップ/Play のタブで、公開されたクリップも Play も無いとき"
+  },
+  "usersClipsHeader": "クリップ",
+  "@usersClipsHeader": {
+    "description": "クリップ/Play のタブの節の見出し(公開クリップの一覧)"
+  },
+  "usersClipNoteCount": "{count, plural, other{{count}件}}",
+  "@usersClipNoteCount": {
+    "description": "公開クリップの行の補足の、クリップに入っている投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "usersClipSubtitleSeparator": " ・ ",
+  "@usersClipSubtitleSeparator": {
+    "description": "公開クリップの行の補足で、投稿の数とクリップの説明のあいだに入れる区切り"
+  },
+  "usersNotFound": "このユーザーは存在しないようです。",
+  "@usersNotFound": {
+    "description": "ユーザーページで、ユーザーが見つからない(404 など)とき"
+  },
   "vcSectionInvited": "招待",
   "@vcSectionInvited": {
     "description": "VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)"

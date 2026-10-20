@@ -8,6 +8,7 @@ import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../backend/limited_http.dart';
+import '../../l10n/l10n.dart';
 import '../home/plugin_actions.dart';
 import '../home/material_icons.dart';
 import '../home/post_row.dart';
@@ -75,10 +76,10 @@ class ViewerPluginStatus {
 
   String get label => switch (phase) {
         ViewerPluginPhase.idle => '',
-        ViewerPluginPhase.asking => '画像を見ています…',
-        ViewerPluginPhase.shown => '検出あり',
-        ViewerPluginPhase.none => '検出なし',
-        ViewerPluginPhase.failed => '失敗: ${message ?? ''}(オフ → オンでやり直す)',
+        ViewerPluginPhase.asking => appL10n.mediaPluginAsking,
+        ViewerPluginPhase.shown => appL10n.mediaPluginFound,
+        ViewerPluginPhase.none => appL10n.mediaPluginNotFound,
+        ViewerPluginPhase.failed => appL10n.mediaPluginFailed(message ?? ''),
       };
 }
 
@@ -161,17 +162,17 @@ class ViewerPluginOverlays {
     var height = 0;
     try {
       final src = await ref.read(viewerImageFetcherProvider)(url);
-      if (src == null) return failAll('画像を取得できませんでした');
+      if (src == null) return failAll(appL10n.mediaPluginFetchFailed);
       final scaled = await downscalePng(src, viewerPluginMaxSide);
       bytes = scaled.$1;
       width = scaled.$2;
       height = scaled.$3;
     } catch (e) {
       debugPrint('viewer overlay: fetch failed: $e');
-      return failAll('画像を取得できませんでした($e)');
+      return failAll(appL10n.mediaPluginFetchFailedWithError('$e'));
     }
     if (_disposed) return;
-    if (width == 0 || height == 0) return failAll('画像を読めませんでした');
+    if (width == 0 || height == 0) return failAll(appL10n.mediaPluginDecodeFailed);
     for (final p in plugins) {
       final (:root, :error) = await _notifier!.viewerOpen(
         p,

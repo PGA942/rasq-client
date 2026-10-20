@@ -16,6 +16,7 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart' show OrgateException;
 import '../../backend/rasq_collections_api.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../child_safe/child_gate.dart';
 import '../child_safe/child_safe_collections.dart' show childSafeCollectionMeta;
@@ -40,6 +41,7 @@ class RasqCollectionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(rasqCollectionProvider(idOrCode));
     final title = detail.value?.collection.name ?? '';
+    final l10n = context.l10n;
     return Scaffold(
       appBar: RasqPageHeader(
         title: title,
@@ -50,12 +52,12 @@ class RasqCollectionScreen extends ConsumerWidget {
               key: const ValueKey('rasqCollection.import'),
               icon: Icons.playlist_add,
               size: 20,
-              tooltip: 'タイムラインに取り込む',
+              tooltip: l10n.collectionsImportToTimeline,
               onPressed: () async {
                 final manager = ref.read(overlayManagerProvider);
                 final msg = await importRasqListToHome(ref, d.summary);
                 ref.invalidate(rasqCollectionProvider(idOrCode));
-                manager.showAlert(id: 'rasqCollection.import', title: 'タイムラインに取り込む', message: msg, confirmText: 'OK');
+                manager.showAlert(id: 'rasqCollection.import', title: l10n.collectionsImportToTimeline, message: msg, confirmText: 'OK');
               },
             ),
         ],
@@ -64,15 +66,15 @@ class RasqCollectionScreen extends ConsumerWidget {
       body: detail.when(
         loading: () => const RasqLoading(),
         error: (e, _) {
-          if (e is OrgateException && e.code.code == '404') return const RasqEmptyView(title: '見つかりません', hint: '消されたか、非公開になっています');
-          return RasqErrorView(code: ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(rasqCollectionProvider(idOrCode)), retryLabel: '再読み込み');
+          if (e is OrgateException && e.code.code == '404') return RasqEmptyView(title: l10n.collectionsNotFound, hint: l10n.collectionsNotFoundHint);
+          return RasqErrorView(code: ErrorCode.internalServerError.copyWith(message: _errorText(e)), onRetry: () => ref.invalidate(rasqCollectionProvider(idOrCode)), retryLabel: l10n.collectionsReload);
         },
         data: (d) {
           // チャイルドセーフ (D-407、指摘 #26): 端末のクリップ / リストと同じく、止める例に近い中身(名前 + 説明 / 投稿)なら
           // 開かない(見出し / 話題の目次も出さない)。開くときも、見せない投稿は外す。
           final guarded = childSafeRasqCollection(ref.watch(childGateProvider), d);
           if (guarded == null) {
-            return ChildSafeBlockedView(message: d.collection.kind == RasqCollectionKind.list ? '保護者がこのリストを止めています' : '保護者がこのクリップを止めています');
+            return ChildSafeBlockedView(message: d.collection.kind == RasqCollectionKind.list ? l10n.collectionsBlockedList : l10n.collectionsBlockedClip);
           }
           return _Body(detail: guarded, idOrCode: idOrCode);
         },
@@ -86,26 +88,27 @@ class RasqCollectionScreen extends ConsumerWidget {
     final messenger = ref.read(rootMessengerKeyProvider).currentState;
     final c = d.collection;
     final isList = c.kind == RasqCollectionKind.list;
+    final l10n = context.l10n;
     final box = context.findRenderObject() as RenderBox?;
     final anchor = box == null ? const Rect.fromLTWH(0, 80, 1, 1) : Rect.fromLTWH(box.size.width - 48, 56, 40, 40);
     final pick = await manager.showDropdown<String>(id: 'rasqCollection.menu', anchor: anchor, items: [
-      if (c.url != null) const RasqDropdownItem('リンクをコピー', 'copy'),
-      if (d.eligible) const RasqDropdownItem('いま取り直す', 'refresh'),
-      if (d.isOwner && isList) RasqDropdownItem(c.isPublic ? '非公開にする' : '公開する', 'visibility'),
-      if (d.isOwner && isList) const RasqDropdownItem('名前と説明を変更', 'rename'),
-      if (d.isOwner && isList) const RasqDropdownItem('削除', 'delete', destructive: true),
-      if (d.isOwner && !isList) const RasqDropdownItem('公開をやめる', 'unpublish', destructive: true),
+      if (c.url != null) RasqDropdownItem(l10n.collectionsMenuCopyLink, 'copy'),
+      if (d.eligible) RasqDropdownItem(l10n.collectionsMenuRefresh, 'refresh'),
+      if (d.isOwner && isList) RasqDropdownItem(c.isPublic ? l10n.collectionsMenuMakePrivate : l10n.collectionsMenuMakePublic, 'visibility'),
+      if (d.isOwner && isList) RasqDropdownItem(l10n.collectionsMenuRename, 'rename'),
+      if (d.isOwner && isList) RasqDropdownItem(l10n.collectionsMenuDelete, 'delete', destructive: true),
+      if (d.isOwner && !isList) RasqDropdownItem(l10n.collectionsMenuUnpublish, 'unpublish', destructive: true),
     ]);
     if (pick == null || api == null) return;
     try {
       switch (pick) {
         case 'copy':
           await Clipboard.setData(ClipboardData(text: c.url!));
-          messenger?.showSnackBar(const SnackBar(content: Text('リンクをコピーしました')));
+          messenger?.showSnackBar(SnackBar(content: Text(l10n.collectionsLinkCopied)));
         case 'refresh':
           final r = await api.refresh(c.id);
           ref.invalidate(rasqCollectionProvider(idOrCode));
-          messenger?.showSnackBar(SnackBar(content: Text(r.refresh == 'failed' ? '取り直せませんでした' : '取り直しました')));
+          messenger?.showSnackBar(SnackBar(content: Text(r.refresh == 'failed' ? l10n.collectionsRefreshFailed : l10n.collectionsRefreshed)));
         case 'visibility':
           await api.update(c.id, isPublic: !c.isPublic);
           ref.invalidate(rasqCollectionProvider(idOrCode));
@@ -115,13 +118,13 @@ class RasqCollectionScreen extends ConsumerWidget {
           final desc = TextEditingController(text: c.description ?? '');
           final ok = await manager.showBottomSheet<bool>(
             id: 'rasqCollection.rename',
-            title: '名前と説明',
-            confirmText: '保存',
+            title: l10n.collectionsRenameTitle,
+            confirmText: l10n.collectionsSave,
             builder: (_) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                TextField(controller: name, maxLength: 60, decoration: const InputDecoration(hintText: '名前')),
-                TextField(controller: desc, maxLength: 500, maxLines: 3, minLines: 1, decoration: const InputDecoration(hintText: '説明(任意)')),
+                TextField(controller: name, maxLength: 60, decoration: InputDecoration(hintText: l10n.collectionsNameHint)),
+                TextField(controller: desc, maxLength: 500, maxLines: 3, minLines: 1, decoration: InputDecoration(hintText: l10n.collectionsDescriptionHint)),
               ]),
             ),
           );
@@ -131,7 +134,7 @@ class RasqCollectionScreen extends ConsumerWidget {
             invalidateRasqCollections(ref);
           }
         case 'delete':
-          final ok = await manager.showAlert(id: 'rasqCollection.delete', title: '「${c.name}」を削除しますか？', message: 'フォローしている人の一覧からも消えます。', confirmText: '削除', cancelText: 'キャンセル', destructive: true);
+          final ok = await manager.showAlert(id: 'rasqCollection.delete', title: l10n.collectionsDeleteConfirmTitle(c.name), message: l10n.collectionsDeleteConfirmMessage, confirmText: l10n.collectionsDeleteButton, cancelText: l10n.collectionsCancel, destructive: true);
           if (!ok) return;
           await api.delete(c.id);
           invalidateRasqCollections(ref);
@@ -148,7 +151,7 @@ class RasqCollectionScreen extends ConsumerWidget {
           if (context.mounted) context.pop();
       }
     } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text('できませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.collectionsActionFailed(_errorText(e)))));
     }
   }
 }
@@ -164,7 +167,8 @@ class _Body extends ConsumerWidget {
     final isList = c.kind == RasqCollectionKind.list;
     final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
     final hosts = [for (final h in c.instances) if (h != 'bsky.social' && h != 'bsky.app') h];
-    final tabs = [const Tab(text: '投稿'), if (isList) const Tab(text: '話題の目次'), if (isList) const Tab(text: 'メンバー'), if (hosts.isNotEmpty) const Tab(text: 'サーバー')];
+    final l10n = context.l10n;
+    final tabs = [Tab(text: l10n.collectionsTabPosts), if (isList) Tab(text: l10n.collectionsTabTopics), if (isList) Tab(text: l10n.collectionsTabMembers), if (hosts.isNotEmpty) Tab(text: l10n.collectionsTabServers)];
     // 話題の目次 (D-368): 投稿を話題ごとに区切る。投稿は RASQ 側の key で引く(見るアカウントで key が変わるため)。
     final topicScope = 'rasq:${c.id}';
     final byKey = <String, Post>{};
@@ -219,11 +223,12 @@ class _Header extends ConsumerWidget {
     final c = detail.collection;
     final isList = c.kind == RasqCollectionKind.list;
     final refreshed = c.refreshedAt;
+    final l10n = context.l10n;
     final status = switch (detail.refresh) {
-      'done' => '見たときに新しくしました',
-      'failed' => '取り直せませんでした(前の内容です)',
+      'done' => l10n.collectionsStatusRefreshedOnView,
+      'failed' => l10n.collectionsStatusRefreshFailed,
       _ when detail.eligible => null,
-      _ when detail.following => '同じサーバーに所属しているか、入っている人をフォローしていると、見たときに新しくなります',
+      _ when detail.following => l10n.collectionsStatusFollowingHint,
       _ => null,
     };
     return Padding(
@@ -232,9 +237,9 @@ class _Header extends ConsumerWidget {
         Row(children: [
           Icon(isList ? Icons.people_alt_outlined : Icons.workspaces_outlined, size: 16, color: RasqColors.sub),
           const SizedBox(width: RasqSpacing.xs),
-          Text(isList ? 'RASQ リスト' : 'RASQ クリップ', style: RasqTypography.caption.copyWith(color: RasqColors.sub, fontWeight: FontWeight.w700)),
+          Text(isList ? l10n.collectionsKindList : l10n.collectionsKindClip, style: RasqTypography.caption.copyWith(color: RasqColors.sub, fontWeight: FontWeight.w700)),
           const SizedBox(width: RasqSpacing.xs),
-          if (!c.isPublic) Text('非公開', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          if (!c.isPublic) Text(l10n.collectionsPrivate, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ]),
         const SizedBox(height: RasqSpacing.xs),
         Text(c.name, style: RasqTypography.title),
@@ -251,10 +256,10 @@ class _Header extends ConsumerWidget {
         const SizedBox(height: RasqSpacing.xs),
         Text(
           [
-            isList ? '${c.itemCount}人' : '${c.itemCount}件',
-            'フォロワー ${c.followerCount}',
-            if (refreshed != null) '更新 ${_ago(refreshed)}',
-          ].join(' ・ '),
+            isList ? l10n.collectionsMemberCount(c.itemCount) : l10n.collectionsItemCount(c.itemCount),
+            l10n.collectionsFollowerCount(c.followerCount),
+            if (refreshed != null) l10n.collectionsUpdatedAgo(_ago(refreshed)),
+          ].join(l10n.collectionsSeparator),
           style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
         ),
         if (status != null) Text(status, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
@@ -290,14 +295,14 @@ class _FollowButtonState extends ConsumerState<_FollowButton> {
               ref.invalidate(rasqCollectionProvider(widget.idOrCode));
               ref.invalidate(followingRasqCollectionsProvider);
             } catch (e) {
-              ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text('できませんでした: $e')));
+              ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(appL10n.collectionsActionFailed(_errorText(e)))));
             } finally {
               if (mounted) setState(() => _busy = false);
             }
           };
     return following
-        ? OutlinedButton(key: const ValueKey('rasqCollection.follow'), onPressed: onPressed, child: const Text('フォロー中'))
-        : FilledButton(key: const ValueKey('rasqCollection.follow'), onPressed: onPressed, child: const Text('フォロー'));
+        ? OutlinedButton(key: const ValueKey('rasqCollection.follow'), onPressed: onPressed, child: Text(context.l10n.collectionsFollowing))
+        : FilledButton(key: const ValueKey('rasqCollection.follow'), onPressed: onPressed, child: Text(context.l10n.collectionsFollow));
   }
 }
 
@@ -316,7 +321,7 @@ class _ListPosts extends StatelessWidget {
   Widget build(BuildContext context) {
     if (detail.posts.isEmpty) {
       return ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
-        RasqEmptyView(title: 'まだ投稿がありません', hint: detail.items.isEmpty ? 'ユーザーページの … →「RASQ リストに追加」で人を入れられます' : '見られる人が開いたときに集まります'),
+        RasqEmptyView(title: context.l10n.collectionsNoPostsYet, hint: detail.items.isEmpty ? context.l10n.collectionsNoPostsHintEmpty : context.l10n.collectionsNoPostsHintCollecting),
       ]);
     }
     final posts = only == null ? detail.posts : [for (final p in detail.posts) if (only!.contains(p.key)) p];
@@ -341,7 +346,7 @@ class _ClipPosts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (detail.items.isEmpty) {
-      return ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [RasqEmptyView(title: 'クリップは空です')]);
+      return ListView(physics: const AlwaysScrollableScrollPhysics(), children: [RasqEmptyView(title: context.l10n.collectionsClipEmpty)]);
     }
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -361,7 +366,7 @@ class _ClipPosts extends StatelessWidget {
             const SizedBox(width: RasqSpacing.xs),
             Expanded(
               child: Text(
-                item.state == RasqItemState.gone ? 'この投稿は見られなくなりました(消されたか、公開範囲が変わりました)' : '公開範囲を確かめています',
+                item.state == RasqItemState.gone ? context.l10n.collectionsItemGone : context.l10n.collectionsItemChecking,
                 style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
               ),
             ),
@@ -417,13 +422,14 @@ class _Members extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // メンバーを追加 (D-366): SNS / RASQ のフォロー中と検索から(作った人だけ)。いまの SNS アカウントから見た人で入れる。
+    final l10n = context.l10n;
     final add = detail.isOwner
         ? Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xs),
             child: OutlinedButton.icon(
               key: const ValueKey('rasqCollection.members.add'),
               icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
-              label: const Text('メンバーを追加'),
+              label: Text(l10n.collectionsAddMembers),
               onPressed: () async {
                 final api = ref.read(rasqCollectionsApiProvider);
                 final session = ref.read(currentSnsSessionProvider);
@@ -433,9 +439,9 @@ class _Members extends ConsumerWidget {
                   if (n == null) return;
                   ref.invalidate(rasqCollectionProvider(idOrCode));
                   ref.invalidate(myRasqCollectionsProvider(RasqCollectionKind.list));
-                  ref.read(rootMessengerKeyProvider).currentState?..clearSnackBars()..showSnackBar(SnackBar(content: Text('$n 人を追加しました')));
+                  ref.read(rootMessengerKeyProvider).currentState?..clearSnackBars()..showSnackBar(SnackBar(content: Text(l10n.collectionsMembersAdded(n))));
                 } catch (e) {
-                  ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text('追加できませんでした: $e')));
+                  ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(l10n.collectionsAddFailed(_errorText(e)))));
                 }
               },
             ),
@@ -444,7 +450,7 @@ class _Members extends ConsumerWidget {
     if (detail.items.isEmpty) {
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         ?add,
-        Expanded(child: RasqEmptyView(title: 'メンバーはいません', hint: detail.isOwner ? '「メンバーを追加」か、ユーザーページの … →「RASQ リストに追加」' : null)),
+        Expanded(child: RasqEmptyView(title: l10n.collectionsNoMembers, hint: detail.isOwner ? l10n.collectionsNoMembersHint : null)),
       ]);
     }
     return ListView(children: [
@@ -453,14 +459,14 @@ class _Members extends ConsumerWidget {
         RasqListTile(
           key: ValueKey('rasqCollection.member.${m.key}'),
           title: m.user.displayName,
-          subtitle: '@${m.handle ?? m.user.account.handle} ・ ${m.kind}',
+          subtitle: l10n.collectionsMemberSubtitle(m.handle ?? m.user.account.handle, m.kind),
           leading: RasqAvatar(imageUrl: m.user.avatarUrl, size: 36, fallbackLabel: m.user.displayName),
           chevron: !detail.isOwner,
           trailing: detail.isOwner
               ? IconButton(
                   key: ValueKey('rasqCollection.member.remove.${m.key}'),
                   icon: const Icon(Icons.close, size: 18),
-                  tooltip: 'リストから外す',
+                  tooltip: l10n.collectionsRemoveFromListTooltip,
                   onPressed: () async {
                     final api = ref.read(rasqCollectionsApiProvider);
                     if (api == null) return;
@@ -469,7 +475,7 @@ class _Members extends ConsumerWidget {
                       ref.invalidate(rasqCollectionProvider(idOrCode));
                       ref.invalidate(myRasqCollectionsProvider(RasqCollectionKind.list));
                     } catch (e) {
-                      ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text('外せませんでした: $e')));
+                      ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(l10n.collectionsRemoveFailed(_errorText(e)))));
                     }
                   },
                 )
@@ -490,11 +496,15 @@ class _Members extends ConsumerWidget {
 
 String _ago(DateTime t) {
   final d = DateTime.now().difference(t);
-  if (d.inMinutes < 1) return 'たった今';
-  if (d.inHours < 1) return '${d.inMinutes}分前';
-  if (d.inDays < 1) return '${d.inHours}時間前';
-  return '${d.inDays}日前';
+  final l = rasqDesignL10n;
+  if (d.inMinutes < 1) return l.designTimeJustNow;
+  if (d.inHours < 1) return l.designTimeMinutesAgo(d.inMinutes);
+  if (d.inDays < 1) return l.designTimeHoursAgo(d.inHours);
+  return l.designTimeDaysAgo(d.inDays);
 }
+
+/// 利用者に見せるエラーの文。[StateError] は「Bad state: 」を付けずに中身だけ。
+String _errorText(Object e) => e is StateError ? e.message : '$e';
 
 /// RASQ リスト / クリップの詳細を、いまの保護者の表示制限に合わせる (D-407、指摘 #26)。中身(名前 + 説明 + 投稿の本文)が
 /// 止める例に近ければ null(開かない)。そうでなければ、見せない投稿 / 項目を外した詳細。見守り中でなければそのまま。

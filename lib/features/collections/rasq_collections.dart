@@ -7,6 +7,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import '../../backend/rasq_account.dart' show orgateAccountProvider;
 import '../../backend/rasq_collections_api.dart';
+import '../../l10n/l10n.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 
 /// RASQ リスト / 公開した RASQ クリップ (D-343/D-344) のプロバイダーと、追加 / 作成のシート。
@@ -48,7 +49,7 @@ final accountRasqCollectionsProvider = FutureProvider.autoDispose.family<List<Ra
 /// 詳細(ページを開いたとき)。資格のある人なら、Central がこの読み込みで取り直す。
 final rasqCollectionProvider = FutureProvider.autoDispose.family<RasqCollectionDetail, String>((ref, idOrCode) async {
   final api = ref.watch(rasqCollectionsApiProvider);
-  if (api == null) throw StateError('RASQ アカウントのサーバーが設定されていません');
+  if (api == null) throw StateError(appL10n.collectionsNoServer);
   return api.get(idOrCode);
 });
 
@@ -75,7 +76,7 @@ Future<RasqCollection?> showCreateRasqListSheet(WidgetRef ref) async {
   final api = ref.read(rasqCollectionsApiProvider);
   final messenger = ref.read(rootMessengerKeyProvider).currentState;
   if (api == null) {
-    messenger?.showSnackBar(const SnackBar(content: Text('RASQ リストを作るには RASQ アカウントが必要です')));
+    messenger?.showSnackBar(SnackBar(content: Text(appL10n.collectionsCreateNeedsAccount)));
     return null;
   }
   final name = TextEditingController();
@@ -83,21 +84,21 @@ Future<RasqCollection?> showCreateRasqListSheet(WidgetRef ref) async {
   var isPublic = false;
   final ok = await manager.showBottomSheet<bool>(
     id: 'rasqList.create',
-    title: '新しい RASQ リスト',
+    title: appL10n.collectionsCreateTitle,
     builder: (_) => StatefulBuilder(
       builder: (context, setState) => Column(mainAxisSize: MainAxisSize.min, children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-          child: TextField(key: const ValueKey('rasqList.create.name'), controller: name, autofocus: true, maxLength: 60, decoration: const InputDecoration(hintText: 'リスト名')),
+          child: TextField(key: const ValueKey('rasqList.create.name'), controller: name, autofocus: true, maxLength: 60, decoration: InputDecoration(hintText: context.l10n.collectionsListNameHint)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-          child: TextField(controller: desc, maxLines: 2, minLines: 1, maxLength: 500, decoration: const InputDecoration(hintText: '説明(任意)')),
+          child: TextField(controller: desc, maxLines: 2, minLines: 1, maxLength: 500, decoration: InputDecoration(hintText: context.l10n.collectionsDescriptionHint)),
         ),
         RasqSwitchListTile(
           key: const ValueKey('rasqList.create.public'),
-          title: '公開する',
-          subtitle: 'アカウントページと共有リンクから見られます。フォローした人が見たときにも新しくなります',
+          title: context.l10n.collectionsPublishSwitch,
+          subtitle: context.l10n.collectionsPublishSwitchSubtitle,
           value: isPublic,
           onChanged: (v) => setState(() => isPublic = v),
         ),
@@ -105,7 +106,7 @@ Future<RasqCollection?> showCreateRasqListSheet(WidgetRef ref) async {
           padding: const EdgeInsets.all(RasqSpacing.page),
           child: SizedBox(
             width: double.infinity,
-            child: FilledButton(key: const ValueKey('rasqList.create.ok'), onPressed: () => manager.close('rasqList.create', result: true), child: const Text('作成')),
+            child: FilledButton(key: const ValueKey('rasqList.create.ok'), onPressed: () => manager.close('rasqList.create', result: true), child: Text(context.l10n.collectionsCreateButton)),
           ),
         ),
       ]),
@@ -118,7 +119,7 @@ Future<RasqCollection?> showCreateRasqListSheet(WidgetRef ref) async {
     ref.invalidate(myRasqCollectionsProvider(RasqCollectionKind.list));
     return c;
   } catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text('作成できませんでした: $e')));
+    messenger?.showSnackBar(SnackBar(content: Text(appL10n.collectionsCreateFailed(e is StateError ? e.message : '$e'))));
     return null;
   }
 }
@@ -130,29 +131,29 @@ Future<void> showAddToRasqListSheet(WidgetRef ref, UserSummary user, {required A
   final api = ref.read(rasqCollectionsApiProvider);
   final messenger = ref.read(rootMessengerKeyProvider).currentState;
   if (api == null) {
-    messenger?.showSnackBar(const SnackBar(content: Text('RASQ リストを使うには RASQ アカウントが必要です')));
+    messenger?.showSnackBar(SnackBar(content: Text(appL10n.collectionsUseNeedsAccount)));
     return;
   }
   List<RasqCollection> lists;
   try {
     lists = await api.mine(RasqCollectionKind.list);
   } catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text('リストを読めませんでした: $e')));
+    messenger?.showSnackBar(SnackBar(content: Text(appL10n.collectionsLoadListsFailed(e is StateError ? e.message : '$e'))));
     return;
   }
   final picked = await manager.showBottomSheet<Object>(
     id: 'rasqList.add',
-    title: 'RASQ リストに追加',
+    title: appL10n.collectionsAddToListTitle,
     builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
       for (final l in lists)
         RasqListTile(
           key: ValueKey('rasqList.add.${l.id}'),
           title: l.name,
-          subtitle: '${l.itemCount}人${l.isPublic ? ' ・ 公開' : ' ・ 非公開'}',
+          subtitle: l.isPublic ? appL10n.collectionsAddToListSubtitlePublic(l.itemCount) : appL10n.collectionsAddToListSubtitlePrivate(l.itemCount),
           leading: const Icon(Icons.people_alt_outlined),
           onTap: () => manager.close('rasqList.add', result: l),
         ),
-      RasqListTile(key: const ValueKey('rasqList.add.create'), title: '新しいリストを作成', leading: const Icon(Icons.add), onTap: () => manager.close('rasqList.add', result: #create)),
+      RasqListTile(key: const ValueKey('rasqList.add.create'), title: appL10n.collectionsCreateNewList, leading: const Icon(Icons.add), onTap: () => manager.close('rasqList.add', result: #create)),
       const SizedBox(height: RasqSpacing.md),
     ]),
   );
@@ -162,10 +163,10 @@ Future<void> showAddToRasqListSheet(WidgetRef ref, UserSummary user, {required A
   try {
     final added = await addRasqListMember(api, target.id, user, via: via);
     messenger?.clearSnackBars();
-    messenger?.showSnackBar(SnackBar(content: Text(added ? '「${target.name}」に追加しました' : 'すでに「${target.name}」に入っています')));
+    messenger?.showSnackBar(SnackBar(content: Text(added ? appL10n.collectionsAddedTo(target.name) : appL10n.collectionsAlreadyIn(target.name))));
     ref.invalidate(myRasqCollectionsProvider(RasqCollectionKind.list));
   } catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text('追加できませんでした: $e')));
+    messenger?.showSnackBar(SnackBar(content: Text(appL10n.collectionsAddFailed(e is StateError ? e.message : '$e'))));
   }
 }
 

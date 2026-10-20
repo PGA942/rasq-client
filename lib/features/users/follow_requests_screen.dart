@@ -6,6 +6,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import 'user_providers.dart';
 
@@ -17,7 +18,7 @@ class FollowRequestsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final list = ref.watch(followRequestsProvider);
     final s = ref.watch(currentSnsSessionProvider);
-    final tabs = [const RasqTabItem('関連性'), const RasqTabItem('フォロー中'), const RasqTabItem('その他')];
+    final tabs = [RasqTabItem(context.l10n.usersFollowRequestsTabRelevance), RasqTabItem(context.l10n.usersFollowRequestsTabFollowing), RasqTabItem(context.l10n.usersFollowRequestsTabOther)];
     Future<void> act(String userId, bool accept) async {
       if (s == null) return;
       accept ? await s.acceptFollowRequest(userId) : await s.rejectFollowRequest(userId);
@@ -27,14 +28,14 @@ class FollowRequestsScreen extends ConsumerWidget {
     return DefaultTabController(
       length: tabs.length,
       child: Scaffold(
-        appBar: RasqPageHeader(title: 'フォロー申請', onMore: () {}, bottom: RasqTabs(items: tabs)),
+        appBar: RasqPageHeader(title: context.l10n.usersFollowRequestsTitle, onMore: () {}, bottom: RasqTabs(items: tabs)),
         body: list.when(
           loading: () => const RasqLoading(),
-          error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(followRequestsProvider), retryLabel: '再読み込み'),
+          error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(followRequestsProvider), retryLabel: context.l10n.usersReload),
           data: (reqs) => TabBarView(children: [
             for (var t = 0; t < 3; t++)
               reqs.isEmpty || t > 0
-                  ? RasqEmptyView(title: t == 0 ? 'フォロー申請はありません' : 'なし')
+                  ? RasqEmptyView(title: t == 0 ? context.l10n.usersFollowRequestsEmpty : context.l10n.usersFollowRequestsEmptyOther)
                   : ListView.separated(
                       itemCount: reqs.length,
                       separatorBuilder: (_, _) => const Divider(),
@@ -45,9 +46,9 @@ class FollowRequestsScreen extends ConsumerWidget {
                           Padding(
                             padding: const EdgeInsets.fromLTRB(RasqSpacing.page + RasqSizes.avatarLg + RasqSpacing.md, 0, RasqSpacing.page, RasqSpacing.md),
                             child: Row(children: [
-                              Expanded(child: FilledButton(onPressed: () => act(r.user.id, true), child: const Text('許可'))),
+                              Expanded(child: FilledButton(onPressed: () => act(r.user.id, true), child: Text(context.l10n.usersFollowRequestAccept))),
                               const SizedBox(width: RasqSpacing.md),
-                              Expanded(child: OutlinedButton(onPressed: () => act(r.user.id, false), child: const Text('拒否'))),
+                              Expanded(child: OutlinedButton(onPressed: () => act(r.user.id, false), child: Text(context.l10n.usersFollowRequestReject))),
                             ]),
                           ),
                         ]);

@@ -8,6 +8,7 @@ import 'package:rasq_store/rasq_store.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -85,7 +86,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     if (!mounted) return;
     setState(() => _resolving = false);
     if (found == null) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('$target ではこの投稿を見つけられませんでした')));
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(context.l10n.postDetailNotFoundOnAccount('$target'))));
       return;
     }
     _applySwitch(found);
@@ -157,8 +158,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final childBlocked = gate.postDetailBlockReason(replyTarget);
     if (childBlocked != null) {
       return Scaffold(
-        appBar: RasqPageHeader(title: '投稿', leadingAvatar: me),
-        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: 'この投稿は表示できません', hint: childBlocked == 'この投稿は表示できません' ? '見守りの設定は保護者が決めています' : childBlocked),
+        appBar: RasqPageHeader(title: context.l10n.postDetailTitle, leadingAvatar: me),
+        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: context.l10n.childSafePostHidden, hint: childBlocked == context.l10n.childSafePostHidden ? context.l10n.childSafeScreensBlockedHint : childBlocked),
       );
     }
     if (replyTarget != null) _ensureReplyComposer(replyTarget);
@@ -199,7 +200,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             size: RasqSizes.avatarSm,
             busy: _resolving,
             marked: [?widget.initial?.account],
-            markLabel: '開いたアカウント',
+            markLabel: context.l10n.postDetailOpenedAccount,
             onPick: (a) => _switchAccount(replyTarget, a),
           );
     final content = thread.when(
@@ -207,15 +208,15 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         error: (e, _) {
           final code = e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e');
           if (code.code == '404') {
-            return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('投稿はありません', style: RasqTypography.title)));
+            return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(context.l10n.postDetailNotFound, style: RasqTypography.title)));
           }
-          return RasqErrorView(code: code, onRetry: () => ref.invalidate(threadProvider(threadKey)), retryLabel: '再読み込み');
+          return RasqErrorView(code: code, onRetry: () => ref.invalidate(threadProvider(threadKey)), retryLabel: context.l10n.postReload);
         },
         data: (t) => body(t.post, gate.filterPosts(t.ancestors), gate.filterPosts(t.descendants)),
       );
     return Scaffold(
       appBar: RasqPageHeader(
-        title: '投稿',
+        title: context.l10n.postDetailTitle,
         leadingAvatar: accountButton == null ? me : null,
         leading: accountButton,
         actions: [if (replyTarget != null) PostBookmarkButton(post: replyTarget, session: session)],
@@ -283,7 +284,7 @@ class _ThreadBody extends ConsumerWidget {
         order: order,
         onSortTap: onSortTap,
         onModeTap: onModeTap,
-        trailing: TextButton(onPressed: onShowReactions, child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('リアクションを表示'), Icon(Icons.chevron_right, size: 18)])),
+        trailing: TextButton(onPressed: onShowReactions, child: Row(mainAxisSize: MainAxisSize.min, children: [Text(context.l10n.postDetailShowReactions), const Icon(Icons.chevron_right, size: 18)])),
       ),
       if (loading) const RasqLoading(),
       if (mode == ThreadSectionMode.replies) ...[
@@ -297,7 +298,7 @@ class _ThreadBody extends ConsumerWidget {
               const Divider(),
             ]),
         ]),
-        if (replies.isNotEmpty) Center(child: TextButton(onPressed: () {}, child: const Text('さらに表示'))),
+        if (replies.isNotEmpty) Center(child: TextButton(onPressed: () {}, child: Text(context.l10n.postDetailShowMore))),
       ] else
         _ModeSection(mode: mode, post: post, order: order, actions: actions),
     ]);
@@ -330,7 +331,7 @@ class _ModeSectionState extends ConsumerState<_ModeSection> {
           loading: () => const RasqLoading(),
           error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
           data: (p) => p.items.isEmpty
-              ? const RasqEmptyView(title: 'リノートはありません')
+              ? RasqEmptyView(title: context.l10n.postRenotesEmpty)
               : UserList(users: sortThreadUsers(p.items, widget.order, post), shrinkWrap: true, account: post.account.key),
         );
       case ThreadSectionMode.reactions:
@@ -347,7 +348,7 @@ class _ModeSectionState extends ConsumerState<_ModeSection> {
           loading: () => const RasqLoading(),
           error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
           data: (list) {
-            if (list.isEmpty) return const RasqEmptyView(title: '引用ノートはありません');
+            if (list.isEmpty) return RasqEmptyView(title: context.l10n.postQuotesEmpty);
             final sorted = sortThreadPosts(list, widget.order, post);
             return Column(children: [
               for (final q in sorted) ...[
