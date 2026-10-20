@@ -12,6 +12,7 @@ import '../../features/rai/rai_reference.dart';
 import '../../features/rai/rai_siglip_tokenizer.dart';
 import '../../features/emoji/emoji_image_decode.dart';
 import 'ort_web.dart';
+import '../../l10n/l10n.dart';
 
 /// Web 版の埋め込みモデル (D-302): 端末の [DeviceRaiEmbeddingModel] と同じ契約を、onnxruntime-web + IndexedDB で満たす。
 /// トークナイザーと前処理は、端末と同じ Dart のコード。
@@ -53,13 +54,14 @@ class WebRaiEmbeddingModel implements RaiEmbeddingModel {
     try {
       _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.downloading, progress: 0));
       final url = spec.downloadUrl(central?.call());
-      if (url == null) throw const RaiEmbeddingException('RASQ サーバーの接続先が未設定です');
+      if (url == null) throw RaiEmbeddingException(appL10n.platformWebServerNotConfigured);
       await _store.download(spec.id, url,
           token: spec.centralPath != null || hfToken == null || hfToken.isEmpty ? null : hfToken, fallbackTotal: spec.sizeMb * 1000 * 1000, onProgress: (p) => _set(RaiEmbeddingStatus(RaiEmbeddingPhase.downloading, progress: p)));
       _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.ready));
     } catch (e) {
-      _set(RaiEmbeddingStatus(RaiEmbeddingPhase.notInstalled, message: 'ダウンロードに失敗しました: $e'));
-      throw RaiEmbeddingException('ダウンロードに失敗しました: $e');
+      final reason = e is StateError ? e.message : '$e';
+      _set(RaiEmbeddingStatus(RaiEmbeddingPhase.notInstalled, message: appL10n.platformWebDownloadFailed(reason)));
+      throw RaiEmbeddingException(appL10n.platformWebDownloadFailed(reason));
     }
   }
 
@@ -106,7 +108,7 @@ class WebRaiEmbeddingModel implements RaiEmbeddingModel {
         _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.ready));
         return _embedder;
       } catch (e) {
-        _set(RaiEmbeddingStatus(RaiEmbeddingPhase.error, message: 'モデルを読み込めません(onnxruntime-web): $e'));
+        _set(RaiEmbeddingStatus(RaiEmbeddingPhase.error, message: appL10n.platformWebModelLoadFailed(e is StateError ? e.message : '$e')));
         return null;
       } finally {
         _loading = null;

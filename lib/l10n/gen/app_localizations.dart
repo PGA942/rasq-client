@@ -94,6 +94,282 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('ja')];
 
+  /// 幅の広い画面で第 3 カラムに開いた投稿 / 会話のページの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get appNavPostTitle;
+
+  /// 第 3 カラムに開いたリアクションの一覧のページの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション'**
+  String get appNavReactionsTitle;
+
+  /// 第 3 カラムに開いたフォロワーの一覧のページの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワー'**
+  String get appNavFollowersTitle;
+
+  /// 第 3 カラムに開いたフォロー中の一覧のページの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get appNavFollowingTitle;
+
+  /// ホーム画面のアプリのアイコンを長押ししたときのショートカット: 検索(Android。iOS は ios/Runner/<言語>.lproj/InfoPlist.strings にも同じ名前を書く)
+  ///
+  /// In ja, this message translates to:
+  /// **'検索'**
+  String get appNavShortcutSearch;
+
+  /// アプリのアイコンのショートカット: 投稿を書く(iOS は InfoPlist.strings にも)
+  ///
+  /// In ja, this message translates to:
+  /// **'新しいポスト'**
+  String get appNavShortcutNewPost;
+
+  /// アプリのアイコンのショートカット: DM を書く(iOS は InfoPlist.strings にも)
+  ///
+  /// In ja, this message translates to:
+  /// **'メッセージを作成'**
+  String get appNavShortcutNewMessage;
+
+  /// アプリのアイコンのショートカット: RAi(アプリの AI)に聞く(iOS は InfoPlist.strings にも)
+  ///
+  /// In ja, this message translates to:
+  /// **'RAiと探す'**
+  String get appNavShortcutAskRai;
+
+  /// チャイルドセーフ: 保護者の設定が済むまでショートカットを使えないときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が設定を決めるまで使えません'**
+  String get appNavShortcutGuardianPending;
+
+  /// ログインしていないときにショートカットを押した案内
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS アカウントにログインすると使えます'**
+  String get appNavShortcutLoginHint;
+
+  /// SNS のブラウザでの認証のあと、アクセストークンが返らなかったときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'アクセストークンを取得できませんでした'**
+  String get backendOauthNoToken;
+
+  /// RASQ サーバーの接続先が無くて SNS にログインできないときの誤り。service はサービス名(Mastodon など)。「RASQ サーバー」は設定の画面の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{service} のログインには RASQ サーバーが必要です。設定 →「RASQ サーバー」で接続先を設定してください。'**
+  String backendOauthServerRequired(String service);
+
+  /// ブラウザで開く認証のページの URL を取れなかったときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'認証 URL を取得できませんでした'**
+  String get backendOauthNoUrl;
+
+  /// ブラウザでの認証を始めたときの案内(サーバーが案内を返さないとき)。「認証を確認」はボタンの名前(loginSnsAuthCheck)と揃える
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザで許可したら、アプリに戻って「認証を確認」を押してください。'**
+  String get backendOauthHint;
+
+  /// サーバーの応答が大きすぎて読むのをやめたときの誤り。maxBytes は上限のバイト数
+  ///
+  /// In ja, this message translates to:
+  /// **'応答が大きすぎます({maxBytes} bytes を超えています)'**
+  String backendResponseTooLarge(int maxBytes);
+
+  /// RASQ アカウントのログイン: メールのコードだけのログインが廃止されたとき
+  ///
+  /// In ja, this message translates to:
+  /// **'メールのコードだけのログインは終わりました。ハンドル(またはメール)とパスワードでログインしてください'**
+  String get backendSecurityPasswordlessRemoved;
+
+  /// RASQ アカウントのログイン: 2 段階目の確認コードが要るとき
+  ///
+  /// In ja, this message translates to:
+  /// **'メールに届いた確認コードを入れてください'**
+  String get backendSecuritySecondFactor;
+
+  /// RASQ アカウントの操作: 試しすぎたとき
+  ///
+  /// In ja, this message translates to:
+  /// **'試行が多すぎます。しばらく待ってから、やり直してください'**
+  String get backendSecurityTooMany;
+
+  /// RASQ アカウントの操作: サーバーがメールを送れないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'このサーバーは、メールを送れる設定になっていません'**
+  String get backendSecurityNoMail;
+
+  /// RASQ アカウントの操作: メールアドレスがほかで使われているとき
+  ///
+  /// In ja, this message translates to:
+  /// **'このメールアドレスは、ほかのアカウントで使われています'**
+  String get backendSecurityEmailUsed;
+
+  /// RASQ アカウントのログイン: ハンドルかパスワードが違うとき
+  ///
+  /// In ja, this message translates to:
+  /// **'ハンドル(メール)かパスワードが違います'**
+  String get backendSecurityBadCredentials;
+
+  /// RASQ アカウントの操作: 確認コードが違うか古いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'コードが違うか、期限が切れています'**
+  String get backendSecurityBadCode;
+
+  /// RASQ アカウントの操作: パスワードが弱いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'このパスワードは弱すぎます(よく使われるもの / 同じ字の繰り返し / ハンドルやメールと同じもの は使えません)'**
+  String get backendSecurityWeakPassword;
+
+  /// RASQ アカウントの操作: パスワードが短いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'パスワードは 8 文字以上にしてください'**
+  String get backendSecurityShortPassword;
+
+  /// RASQ アカウントの操作: メールアドレスの形が違うとき
+  ///
+  /// In ja, this message translates to:
+  /// **'メールアドレスの形が正しくありません'**
+  String get backendSecurityBadEmail;
+
+  /// RASQ アカウントの操作: いまのパスワードが違うとき
+  ///
+  /// In ja, this message translates to:
+  /// **'いまのパスワードが違います'**
+  String get backendSecurityWrongPassword;
+
+  /// RASQ アカウントの操作: パスワードの無いアカウントで、パスワードでの確かめを求めたとき
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントにはパスワードがありません。いまのメールに届く確認コードで確かめてください'**
+  String get backendSecurityNoPassword;
+
+  /// RASQ アカウントの操作: 本人の確かめが要るとき
+  ///
+  /// In ja, this message translates to:
+  /// **'この操作には、いまのパスワードか、いまのメールに届く確認コードが要ります'**
+  String get backendSecurityConfirmRequired;
+
+  /// ASTell のルームにつなげなかったとき(ルームが無い)
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームに入れませんでした(ルームが閉じているか、見つかりません)'**
+  String get backendRoomClosed;
+
+  /// ASTell のルームにつなげなかったとき(参加できない)
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームに入れませんでした(このアカウントでは参加できません)'**
+  String get backendRoomForbidden;
+
+  /// ASTell のルームにつなげなかったとき。error は理由(秘密は伏せてある)
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームに接続できませんでした: {error}'**
+  String backendRoomConnectFailed(String error);
+
+  /// 有料の機能が止まっているときの文(公開テストの間)
+  ///
+  /// In ja, this message translates to:
+  /// **'公開テストでは有料プラグインは使えません'**
+  String get backendPaidFeaturesDisabled;
+
+  /// 年齢の申告の選択肢
+  ///
+  /// In ja, this message translates to:
+  /// **'13〜15 歳'**
+  String get backendAgeTeen;
+
+  /// 年齢の申告の選択肢
+  ///
+  /// In ja, this message translates to:
+  /// **'16〜17 歳'**
+  String get backendAgeUpperTeen;
+
+  /// 年齢の申告の選択肢
+  ///
+  /// In ja, this message translates to:
+  /// **'18 歳以上'**
+  String get backendAgeAdult;
+
+  /// RASQ アカウントを作る / ログインするとき、サーバー(ORGATE = RASQ アカウントのサーバーの名前)がトークンを返さなかったときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'ORGATE がトークンを返しませんでした'**
+  String get backendNoToken;
+
+  /// RASQ アカウントのページの SNS アカウントのタイルを出すかの選択肢: 自動
+  ///
+  /// In ja, this message translates to:
+  /// **'自動'**
+  String get backendTileAuto;
+
+  /// RASQ アカウントのページの SNS アカウントのタイルを出すかの選択肢: 出す
+  ///
+  /// In ja, this message translates to:
+  /// **'表示'**
+  String get backendTileShow;
+
+  /// RASQ アカウントのページの SNS アカウントのタイルを出すかの選択肢: 出さない
+  ///
+  /// In ja, this message translates to:
+  /// **'非表示'**
+  String get backendTileHide;
+
+  /// SNS アカウントの持ち主の確認の方法: Keybase の証明。Keybase はサービス名
+  ///
+  /// In ja, this message translates to:
+  /// **'Keybase の証明で確認済み'**
+  String get backendVerifiedKeybase;
+
+  /// SNS アカウントの持ち主の確認の方法: SNS のプロフィールに載せた確認の文
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィールで確認済み'**
+  String get backendVerifiedProfile;
+
+  /// RASQ の投稿の音声の添付の、ファイル名の代わりに出す名前
+  ///
+  /// In ja, this message translates to:
+  /// **'音声'**
+  String get backendAudioFileName;
+
+  /// RASQ のサーバーの接続先が無いときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ サーバーの接続先が未設定です'**
+  String get backendServerNotConfigured;
+
+  /// サーバーが誤りを返したが理由の文が無いときの誤り。status は HTTP の状態コード
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーエラー ({status})'**
+  String backendServerError(int status);
+
+  /// RASQ リスト / クリップの種類: リスト
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get backendCollectionList;
+
+  /// RASQ リスト / クリップの種類: クリップ
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ'**
+  String get backendCollectionClip;
+
   /// ブックマークを外したときの知らせ
   ///
   /// In ja, this message translates to:
@@ -11048,6 +11324,48 @@ abstract class AppLocalizations {
   /// **'メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます'**
   String get notificationsRasqEmptyHint;
 
+  /// Android の通知のチャンネルの名前(端末の設定に出る)。RASQ からのプッシュ通知
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の通知'**
+  String get notifyPushChannelName;
+
+  /// 上のチャンネルの説明(端末の設定に出る)。Swing は機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'メンション / 返信 / Swing などの知らせ'**
+  String get notifyPushChannelDescription;
+
+  /// Linux の通知の既定の操作の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'開く'**
+  String get notifyOpenAction;
+
+  /// Android の通知のチャンネルの名前。いま見ている画面を読み取る入口の通知
+  ///
+  /// In ja, this message translates to:
+  /// **'画面の読み取り'**
+  String get notifyGlimpseChannelName;
+
+  /// 上のチャンネルの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'タップすると、いま見ている画面を少しだけ読み取ります'**
+  String get notifyGlimpseChannelDescription;
+
+  /// Android の通知のチャンネルの名前。ASTell(音声のルーム)が始まる知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell の開始'**
+  String get notifyAstellChannelName;
+
+  /// 上のチャンネルの説明。VC は ASTell の音声のルームのこと
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークした VC の開始通知'**
+  String get notifyAstellChannelDescription;
+
   /// No description provided for @onboardingBack.
   ///
   /// In ja, this message translates to:
@@ -12691,6 +13009,30 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'TL にリストを足したい'**
   String get onboardingTourRaiBubble;
+
+  /// Web 版: 端末の中でモデルを動かすための部品をブラウザに読み込めなかったときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'実行に要るファイルを読み込めませんでした(ネットワーク / CDN)'**
+  String get platformWebRuntimeLoadFailed;
+
+  /// Web 版: モデルを取りに行く RASQ のサーバーの接続先が無いときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ サーバーの接続先が未設定です'**
+  String get platformWebServerNotConfigured;
+
+  /// Web 版: モデルをダウンロードできなかったときの誤り。error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロードに失敗しました: {error}'**
+  String platformWebDownloadFailed(String error);
+
+  /// Web 版: モデルを読み込めなかったときの誤り。error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルを読み込めません: {error}'**
+  String platformWebModelLoadFailed(String error);
 
   /// No description provided for @pluginsCancel.
   ///
@@ -18781,6 +19123,288 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'{value}万'**
   String serversCountTenThousands(String value);
+
+  /// 端末の名前が無いときの呼び名(SNS のアクセストークンの共有の問いなどに出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'名前のない端末'**
+  String get sessionUnnamedDevice;
+
+  /// 初めて別の端末から RASQ アカウントにログインがあったときの問いの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'アクセストークンを共有して、SNS アカウントに一斉ログインしますか?'**
+  String get sessionShareAskFirstTitle;
+
+  /// 共有を始めたあとに別の端末からログインがあったときの問いの見出し。device は端末の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい端末({device})にも SNS のアクセストークンを共有しますか?'**
+  String sessionShareAskDeviceTitle(String device);
+
+  /// 初めての問いの本文(RASQ アカウントのハンドルが分からないとき)。devices は端末の名前の並び(sessionDeviceListSeparator でつなぐ)。「はい」は下のボタン、「アカウントのセキュリティ」は設定の画面の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい端末({devices})で、この RASQ アカウント にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。'**
+  String sessionShareAskFirstMessage(String devices);
+
+  /// 初めての問いの本文。devices は端末の名前の並び、handle は RASQ アカウントのハンドル(@ は付けない)
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい端末({devices})で、RASQ アカウント @{handle} にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。'**
+  String sessionShareAskFirstMessageHandle(String devices, String handle);
+
+  /// 共有を始めたあとの問いの本文(ハンドルが分からないとき)。「いいえ」は下のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'この RASQ アカウント に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。'**
+  String get sessionShareAskDeviceMessage;
+
+  /// 共有を始めたあとの問いの本文。handle は RASQ アカウントのハンドル(@ は付けない)
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウント @{handle} に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。'**
+  String sessionShareAskDeviceMessageHandle(String handle);
+
+  /// 端末の名前を並べるときの区切り
+  ///
+  /// In ja, this message translates to:
+  /// **'、'**
+  String get sessionDeviceListSeparator;
+
+  /// 共有の問いの、共有するボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'はい'**
+  String get sessionShareYes;
+
+  /// 共有の問いの、共有しないボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'いいえ'**
+  String get sessionShareNo;
+
+  /// メールのリンクで承認された端末にアクセストークンを共有したときの知らせ。device は端末の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'メールで承認された端末({device})に、SNS のアクセストークンを共有しました'**
+  String sessionShareEmailApproved(String device);
+
+  /// ほかの端末から共有されたアクセストークンでログインしたときの知らせ。count はログインした SNS アカウントの数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{共有されたアクセストークンで、SNS アカウントに一斉ログインしました({count} 件)}}'**
+  String sessionShareImported(int count);
+
+  /// SNS のプラグインがログインの失敗の理由を返さなかったときの文
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインに失敗しました'**
+  String get sessionLoginFailed;
+
+  /// アカウントの処置の段階: 軽い制限
+  ///
+  /// In ja, this message translates to:
+  /// **'軽度な制限'**
+  String get sessionSanctionLight;
+
+  /// アカウントの処置の段階: 中くらいの制限(投稿が確かめられるまで遅れて出る)
+  ///
+  /// In ja, this message translates to:
+  /// **'中レベルの制限(発言に検閲遅延)'**
+  String get sessionSanctionModerate;
+
+  /// アカウントの処置の段階: 重い制限(機能が止まる)
+  ///
+  /// In ja, this message translates to:
+  /// **'重度の制限(機能停止)'**
+  String get sessionSanctionSevere;
+
+  /// アカウントの処置の段階: 恒久的な凍結
+  ///
+  /// In ja, this message translates to:
+  /// **'恒久的な凍結'**
+  String get sessionSanctionPermanent;
+
+  /// アカウントの処置が無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'制限なし'**
+  String get sessionSanctionNone;
+
+  /// アカウントの処置で機能が止まっているときの案内。feature は機能の名前(sessionFeature… のどれか)
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントの処置により {feature} は利用できません。'**
+  String sessionSanctionBlocked(String feature);
+
+  /// アカウントの処置で機能が止まっているときの案内(期限があるとき)。feature は機能の名前、until は期限の日時(書式済み)
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントの処置により {feature} は利用できません({until} まで)。'**
+  String sessionSanctionBlockedUntil(String feature, String until);
+
+  /// アカウントの処置で止まる機能の名前。ASTell は製品名
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell への参加'**
+  String get sessionFeatureAstellJoin;
+
+  /// アカウントの処置で止まる機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell ルームの作成'**
+  String get sessionFeatureAstellCreate;
+
+  /// アカウントの処置で止まる機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell での共有・チャット'**
+  String get sessionFeatureAstellShare;
+
+  /// アカウントの処置で止まる機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell の画面共有・配信'**
+  String get sessionFeatureAstellStream;
+
+  /// アカウントの処置で止まる機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアのレビュー投稿'**
+  String get sessionFeatureStoreReview;
+
+  /// アカウントの処置で止まる機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントのフォロー'**
+  String get sessionFeatureAccountFollow;
+
+  /// アカウントの処置で止まる機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get sessionFeaturePost;
+
+  /// アカウントの処置で止まる機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'メディア付き投稿'**
+  String get sessionFeaturePostMedia;
+
+  /// アカウントの処置で止まる機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'DM'**
+  String get sessionFeatureDm;
+
+  /// アカウントの処置で止まる機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション'**
+  String get sessionFeatureReaction;
+
+  /// 処置の解除の申請を送れない(RASQ Central の接続先が無い)ときの誤り。RASQ Central はサーバーの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ Central の接続先が設定されていません'**
+  String get sessionCentralNotConfigured;
+
+  /// RASQ アカウントのログアウトの確かめの、SNS アカウントをどうするかの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'この RASQ アカウントの SNS アカウント'**
+  String get sessionLogoutSnsHeading;
+
+  /// 上の選択肢: SNS アカウントもログアウトする
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS アカウントもログアウトする'**
+  String get sessionLogoutSnsLogout;
+
+  /// 上の選択肢の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末から SNS のログインを消します'**
+  String get sessionLogoutSnsLogoutSubtitle;
+
+  /// 上の選択肢: SNS アカウントを「この端末のみ」(RASQ アカウントに属さない)へ移す
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末のみ に移す'**
+  String get sessionLogoutSnsMoveToLocal;
+
+  /// 上の選択肢の補足。「この端末のみ」は sessionAccountKindLocal と揃える
+  ///
+  /// In ja, this message translates to:
+  /// **'「この端末のみ」のアカウントで、そのまま使えます'**
+  String get sessionLogoutSnsMoveToLocalSubtitle;
+
+  /// 確かめのダイアログの、やめるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get sessionCancel;
+
+  /// チャイルドセーフ: 保護者が SNS アカウントを足せないようにしているときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が SNS アカウントの追加を止めています'**
+  String get sessionChildSafeAddBlocked;
+
+  /// RASQ アカウントの種類: RASQ アカウントに属さず、この端末だけで使う SNS アカウントのまとまり
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末のみ'**
+  String get sessionAccountKindLocal;
+
+  /// RASQ アカウントの種類: RASQ のサーバーにある RASQ アカウント。RASQ Central はサーバーの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ Central'**
+  String get sessionAccountKindCentral;
+
+  /// ログインしたときの問いで、RASQ アカウントのハンドルが分からないときの呼び名
+  ///
+  /// In ja, this message translates to:
+  /// **'この RASQ アカウント'**
+  String get sessionCarryThisAccount;
+
+  /// RASQ アカウントにログインしたときの問いの、読み上げの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末の SNS アカウントを加えますか?'**
+  String get sessionCarrySemantics;
+
+  /// RASQ アカウントにログインしたときの問いの見出し。count は SNS アカウントの数、account は「@ハンドル」か「この RASQ アカウント」
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{この端末で開いていた {count} 件のアカウントを、{account} に加えますか?}}'**
+  String sessionCarryTitle(int count, String account);
+
+  /// 上の問いの本文。account は「@ハンドル」か「この RASQ アカウント」
+  ///
+  /// In ja, this message translates to:
+  /// **'加えたアカウントは {account} の SNS アカウントになり、ほかの端末や Web コンソールにも並びます。加えなかったアカウントは「この端末のみ」に残ります(あとからでも、{account} で SNS にログインすれば加わります)。'**
+  String sessionCarryMessage(String account);
+
+  /// 上の問いの、アカウントの行の補足の後ろに付ける印
+  ///
+  /// In ja, this message translates to:
+  /// **'(前にこの RASQ アカウントでつないだもの)'**
+  String get sessionCarryInBundle;
+
+  /// 上の問いの、加えないボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'加えない'**
+  String get sessionCarryNone;
+
+  /// 上の問いの、選んだアカウントを加えるボタン。count は選んだ数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{選んだ {count} 件を加える}}'**
+  String sessionCarryAdd(int count);
 
   /// No description provided for @settingsActionBarTitle.
   ///

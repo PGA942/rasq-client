@@ -1,0 +1,16 @@
+{
+  "notifyPushChannelName": "RASQ の通知",
+  "@notifyPushChannelName": {"description": "Android の通知のチャンネルの名前(端末の設定に出る)。RASQ からのプッシュ通知"},
+  "notifyPushChannelDescription": "メンション / 返信 / Swing などの知らせ",
+  "@notifyPushChannelDescription": {"description": "上のチャンネルの説明(端末の設定に出る)。Swing は機能の名前"},
+  "notifyOpenAction": "開く",
+  "@notifyOpenAction": {"description": "Linux の通知の既定の操作の名前"},
+  "notifyGlimpseChannelName": "画面の読み取り",
+  "@notifyGlimpseChannelName": {"description": "Android の通知のチャンネルの名前。いま見ている画面を読み取る入口の通知"},
+  "notifyGlimpseChannelDescription": "タップすると、いま見ている画面を少しだけ読み取ります",
+  "@notifyGlimpseChannelDescription": {"description": "上のチャンネルの説明"},
+  "notifyAstellChannelName": "ASTell の開始",
+  "@notifyAstellChannelName": {"description": "Android の通知のチャンネルの名前。ASTell(音声のルーム)が始まる知らせ"},
+  "notifyAstellChannelDescription": "ブックマークした ASTell の開始通知",
+  "@notifyAstellChannelDescription": {"description": "上のチャンネルの説明。ASTell は音声のルーム"}
+}

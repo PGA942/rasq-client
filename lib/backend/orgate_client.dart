@@ -8,6 +8,7 @@ import 'package:rasq_models/rasq_models.dart';
 
 import '../features/settings/settings_dsl.dart' show settingsAreaProvider;
 import 'rasq_account.dart' show OrgateTokenHolder, orgateTokenHolderProvider;
+import '../l10n/l10n.dart';
 
 /// ORGATE-Server(`orgate-server`)への接続 — **本人だけが見る情報**の置き場 (D-398)。
 ///
@@ -149,7 +150,7 @@ class OrgateClient {
   }
 
   Never _fail(http.Response r) {
-    String message = 'サーバーエラー (${r.statusCode})';
+    String message = appL10n.backendServerError(r.statusCode);
     ErrorCode code = ErrorCode.http(r.statusCode);
     String? serverCode;
     var details = const <String, Object?>{};

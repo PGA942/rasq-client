@@ -16,6 +16,7 @@ import 'router.dart';
 import '../features/plugins/media_plugin_panel.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
 import 'dart:typed_data';
+import '../l10n/l10n.dart';
 
 /// Navigation helpers shared by rows/screens.
 extension RasqNavigation on BuildContext {
@@ -45,7 +46,7 @@ extension RasqNavigation on BuildContext {
     final base = _inTab ? _tabBase : '';
     final loc = '$base/post/${Uri.encodeComponent(post.id)}';
     // ペインモデル (D-057): タブレット幅では第3カラム(current)に開く。
-    if (_inTab && openPageInPanes(this, id: 'post:${post.key}', title: '投稿', location: loc, extra: post, builder: (_) => PostDetailScreen(postId: post.id, initial: post))) return;
+    if (_inTab && openPageInPanes(this, id: 'post:${post.key}', title: appL10n.appNavPostTitle, location: loc, extra: post, builder: (_) => PostDetailScreen(postId: post.id, initial: post))) return;
     push(loc, extra: post);
   }
 
@@ -60,7 +61,7 @@ extension RasqNavigation on BuildContext {
     final pane = PaneScope.maybeOf(this)?.entry;
     final base = pane?.location ?? GoRouterState.of(this).matchedLocation;
     final loc = '$base/reactions';
-    if ((pane != null || _inTab) && openPageInPanes(this, id: 'reactions:${post.key}', title: 'リアクション', location: loc, extra: post, builder: (_) => ReactionsScreen(postId: post.id, initial: post))) return;
+    if ((pane != null || _inTab) && openPageInPanes(this, id: 'reactions:${post.key}', title: appL10n.appNavReactionsTitle, location: loc, extra: post, builder: (_) => ReactionsScreen(postId: post.id, initial: post))) return;
     push(loc, extra: post);
   }
 
@@ -102,7 +103,7 @@ extension RasqNavigation on BuildContext {
   void pushRelationalEvent(ConversationEvent event) {
     final inTab = _inTab;
     final loc = inTab ? '$_tabBase${Routes.relationalEvent}' : Routes.relationalEvent;
-    if (inTab && openPageInPanes(this, id: 'relational:${event.id}', title: '投稿', location: loc, extra: event, builder: (_) => RelationalEventScreen(event: event))) return;
+    if (inTab && openPageInPanes(this, id: 'relational:${event.id}', title: appL10n.appNavPostTitle, location: loc, extra: event, builder: (_) => RelationalEventScreen(event: event))) return;
     push(loc, extra: event);
   }
 
@@ -110,7 +111,7 @@ extension RasqNavigation on BuildContext {
   void pushFollows(UserSummary user, {required bool followers, String? account}) {
     final query = [if (followers) 'tab=followers', if (account != null) 'account=${Uri.encodeQueryComponent(account)}'];
     final loc = '${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}/follows${query.isEmpty ? '' : '?${query.join('&')}'}';
-    if (_inTab && openPageInPanes(this, id: 'follows:${user.key}:$followers${account == null ? '' : '@$account'}', title: followers ? 'フォロワー' : 'フォロー中', location: loc, extra: user, builder: (_) => FollowsScreen(userId: user.id, initialFollowers: followers, user: user, account: account))) return;
+    if (_inTab && openPageInPanes(this, id: 'follows:${user.key}:$followers${account == null ? '' : '@$account'}', title: followers ? appL10n.appNavFollowersTitle : appL10n.appNavFollowingTitle, location: loc, extra: user, builder: (_) => FollowsScreen(userId: user.id, initialFollowers: followers, user: user, account: account))) return;
     push(loc, extra: user);
   }
   void pushFollowRequests() => push('${Routes.notifications}/requests');

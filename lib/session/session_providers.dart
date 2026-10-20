@@ -17,6 +17,7 @@ import 'bluesky_auth.dart';
 import 'mixi2_auth.dart';
 import '../features/plugins/fetch_shape_telemetry.dart';
 import '../features/child_safe/child_safe_providers.dart' show childSnsAllowProvider;
+import '../l10n/l10n.dart';
 
 /// wasm SNS サンプルの pluginId(dev「実登録」とレジストリ解決で共用)。
 const wasmSamplePluginId = 'misskey-wasm-sample';
@@ -68,7 +69,7 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
   mixi2 = WasmSnsPlugin(
     manifest: const PluginManifest(
       id: mixi2PluginId,
-      name: 'mixi2 (サンプル)',
+      name: 'mixi2 (サンプル)', // l10n-ignore
       version: '0.1.0',
       kind: PluginKind.sns,
       supportedSns: [SnsKind.mixi2],
@@ -204,7 +205,7 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
 
   Future<void> add(AuthResult result) async {
     final sns = ref.read(childSnsAllowProvider);
-    if (sns != null && !sns.addAccounts) throw StateError('保護者が SNS アカウントの追加を止めています');
+    if (sns != null && !sns.addAccounts) throw StateError(appL10n.sessionChildSafeAddBlocked);
     final cur = state.value ?? const SessionsState();
     // 新しいログインは現在の RASQ アカウントに所属させる (D-138)。
     await ref.read(rasqAccountsProvider.notifier).addSessionKey(result.session.account.key);

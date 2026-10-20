@@ -10,6 +10,156 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get appNavPostTitle => '投稿';
+
+  @override
+  String get appNavReactionsTitle => 'リアクション';
+
+  @override
+  String get appNavFollowersTitle => 'フォロワー';
+
+  @override
+  String get appNavFollowingTitle => 'フォロー中';
+
+  @override
+  String get appNavShortcutSearch => '検索';
+
+  @override
+  String get appNavShortcutNewPost => '新しいポスト';
+
+  @override
+  String get appNavShortcutNewMessage => 'メッセージを作成';
+
+  @override
+  String get appNavShortcutAskRai => 'RAiと探す';
+
+  @override
+  String get appNavShortcutGuardianPending => '保護者が設定を決めるまで使えません';
+
+  @override
+  String get appNavShortcutLoginHint => 'SNS アカウントにログインすると使えます';
+
+  @override
+  String get backendOauthNoToken => 'アクセストークンを取得できませんでした';
+
+  @override
+  String backendOauthServerRequired(String service) {
+    return '$service のログインには RASQ サーバーが必要です。設定 →「RASQ サーバー」で接続先を設定してください。';
+  }
+
+  @override
+  String get backendOauthNoUrl => '認証 URL を取得できませんでした';
+
+  @override
+  String get backendOauthHint => 'ブラウザで許可したら、アプリに戻って「認証を確認」を押してください。';
+
+  @override
+  String backendResponseTooLarge(int maxBytes) {
+    return '応答が大きすぎます($maxBytes bytes を超えています)';
+  }
+
+  @override
+  String get backendSecurityPasswordlessRemoved =>
+      'メールのコードだけのログインは終わりました。ハンドル(またはメール)とパスワードでログインしてください';
+
+  @override
+  String get backendSecuritySecondFactor => 'メールに届いた確認コードを入れてください';
+
+  @override
+  String get backendSecurityTooMany => '試行が多すぎます。しばらく待ってから、やり直してください';
+
+  @override
+  String get backendSecurityNoMail => 'このサーバーは、メールを送れる設定になっていません';
+
+  @override
+  String get backendSecurityEmailUsed => 'このメールアドレスは、ほかのアカウントで使われています';
+
+  @override
+  String get backendSecurityBadCredentials => 'ハンドル(メール)かパスワードが違います';
+
+  @override
+  String get backendSecurityBadCode => 'コードが違うか、期限が切れています';
+
+  @override
+  String get backendSecurityWeakPassword =>
+      'このパスワードは弱すぎます(よく使われるもの / 同じ字の繰り返し / ハンドルやメールと同じもの は使えません)';
+
+  @override
+  String get backendSecurityShortPassword => 'パスワードは 8 文字以上にしてください';
+
+  @override
+  String get backendSecurityBadEmail => 'メールアドレスの形が正しくありません';
+
+  @override
+  String get backendSecurityWrongPassword => 'いまのパスワードが違います';
+
+  @override
+  String get backendSecurityNoPassword =>
+      'このアカウントにはパスワードがありません。いまのメールに届く確認コードで確かめてください';
+
+  @override
+  String get backendSecurityConfirmRequired =>
+      'この操作には、いまのパスワードか、いまのメールに届く確認コードが要ります';
+
+  @override
+  String get backendRoomClosed => 'ルームに入れませんでした(ルームが閉じているか、見つかりません)';
+
+  @override
+  String get backendRoomForbidden => 'ルームに入れませんでした(このアカウントでは参加できません)';
+
+  @override
+  String backendRoomConnectFailed(String error) {
+    return 'ルームに接続できませんでした: $error';
+  }
+
+  @override
+  String get backendPaidFeaturesDisabled => '公開テストでは有料プラグインは使えません';
+
+  @override
+  String get backendAgeTeen => '13〜15 歳';
+
+  @override
+  String get backendAgeUpperTeen => '16〜17 歳';
+
+  @override
+  String get backendAgeAdult => '18 歳以上';
+
+  @override
+  String get backendNoToken => 'ORGATE がトークンを返しませんでした';
+
+  @override
+  String get backendTileAuto => '自動';
+
+  @override
+  String get backendTileShow => '表示';
+
+  @override
+  String get backendTileHide => '非表示';
+
+  @override
+  String get backendVerifiedKeybase => 'Keybase の証明で確認済み';
+
+  @override
+  String get backendVerifiedProfile => 'プロフィールで確認済み';
+
+  @override
+  String get backendAudioFileName => '音声';
+
+  @override
+  String get backendServerNotConfigured => 'RASQ サーバーの接続先が未設定です';
+
+  @override
+  String backendServerError(int status) {
+    return 'サーバーエラー ($status)';
+  }
+
+  @override
+  String get backendCollectionList => 'リスト';
+
+  @override
+  String get backendCollectionClip => 'クリップ';
+
+  @override
   String get bookmarksRemoved => 'ブックマークを外しました';
 
   @override
@@ -6646,6 +6796,27 @@ class AppLocalizationsJa extends AppLocalizations {
       'メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます';
 
   @override
+  String get notifyPushChannelName => 'RASQ の通知';
+
+  @override
+  String get notifyPushChannelDescription => 'メンション / 返信 / Swing などの知らせ';
+
+  @override
+  String get notifyOpenAction => '開く';
+
+  @override
+  String get notifyGlimpseChannelName => '画面の読み取り';
+
+  @override
+  String get notifyGlimpseChannelDescription => 'タップすると、いま見ている画面を少しだけ読み取ります';
+
+  @override
+  String get notifyAstellChannelName => 'ASTell の開始';
+
+  @override
+  String get notifyAstellChannelDescription => 'ブックマークした VC の開始通知';
+
+  @override
   String get onboardingBack => '戻る';
 
   @override
@@ -7665,6 +7836,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingTourRaiBubble => 'TL にリストを足したい';
+
+  @override
+  String get platformWebRuntimeLoadFailed =>
+      '実行に要るファイルを読み込めませんでした(ネットワーク / CDN)';
+
+  @override
+  String get platformWebServerNotConfigured => 'RASQ サーバーの接続先が未設定です';
+
+  @override
+  String platformWebDownloadFailed(String error) {
+    return 'ダウンロードに失敗しました: $error';
+  }
+
+  @override
+  String platformWebModelLoadFailed(String error) {
+    return 'モデルを読み込めません: $error';
+  }
 
   @override
   String get pluginsCancel => 'キャンセル';
@@ -11469,6 +11657,185 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String serversCountTenThousands(String value) {
     return '$value万';
+  }
+
+  @override
+  String get sessionUnnamedDevice => '名前のない端末';
+
+  @override
+  String get sessionShareAskFirstTitle => 'アクセストークンを共有して、SNS アカウントに一斉ログインしますか?';
+
+  @override
+  String sessionShareAskDeviceTitle(String device) {
+    return '新しい端末($device)にも SNS のアクセストークンを共有しますか?';
+  }
+
+  @override
+  String sessionShareAskFirstMessage(String devices) {
+    return '新しい端末($devices)で、この RASQ アカウント にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。';
+  }
+
+  @override
+  String sessionShareAskFirstMessageHandle(String devices, String handle) {
+    return '新しい端末($devices)で、RASQ アカウント @$handle にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。';
+  }
+
+  @override
+  String get sessionShareAskDeviceMessage =>
+      'この RASQ アカウント に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。';
+
+  @override
+  String sessionShareAskDeviceMessageHandle(String handle) {
+    return 'RASQ アカウント @$handle に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。';
+  }
+
+  @override
+  String get sessionDeviceListSeparator => '、';
+
+  @override
+  String get sessionShareYes => 'はい';
+
+  @override
+  String get sessionShareNo => 'いいえ';
+
+  @override
+  String sessionShareEmailApproved(String device) {
+    return 'メールで承認された端末($device)に、SNS のアクセストークンを共有しました';
+  }
+
+  @override
+  String sessionShareImported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '共有されたアクセストークンで、SNS アカウントに一斉ログインしました($count 件)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sessionLoginFailed => 'ログインに失敗しました';
+
+  @override
+  String get sessionSanctionLight => '軽度な制限';
+
+  @override
+  String get sessionSanctionModerate => '中レベルの制限(発言に検閲遅延)';
+
+  @override
+  String get sessionSanctionSevere => '重度の制限(機能停止)';
+
+  @override
+  String get sessionSanctionPermanent => '恒久的な凍結';
+
+  @override
+  String get sessionSanctionNone => '制限なし';
+
+  @override
+  String sessionSanctionBlocked(String feature) {
+    return 'アカウントの処置により $feature は利用できません。';
+  }
+
+  @override
+  String sessionSanctionBlockedUntil(String feature, String until) {
+    return 'アカウントの処置により $feature は利用できません($until まで)。';
+  }
+
+  @override
+  String get sessionFeatureAstellJoin => 'ASTell への参加';
+
+  @override
+  String get sessionFeatureAstellCreate => 'ASTell ルームの作成';
+
+  @override
+  String get sessionFeatureAstellShare => 'ASTell での共有・チャット';
+
+  @override
+  String get sessionFeatureAstellStream => 'ASTell の画面共有・配信';
+
+  @override
+  String get sessionFeatureStoreReview => 'ストアのレビュー投稿';
+
+  @override
+  String get sessionFeatureAccountFollow => 'RASQ アカウントのフォロー';
+
+  @override
+  String get sessionFeaturePost => '投稿';
+
+  @override
+  String get sessionFeaturePostMedia => 'メディア付き投稿';
+
+  @override
+  String get sessionFeatureDm => 'DM';
+
+  @override
+  String get sessionFeatureReaction => 'リアクション';
+
+  @override
+  String get sessionCentralNotConfigured => 'RASQ Central の接続先が設定されていません';
+
+  @override
+  String get sessionLogoutSnsHeading => 'この RASQ アカウントの SNS アカウント';
+
+  @override
+  String get sessionLogoutSnsLogout => 'SNS アカウントもログアウトする';
+
+  @override
+  String get sessionLogoutSnsLogoutSubtitle => 'この端末から SNS のログインを消します';
+
+  @override
+  String get sessionLogoutSnsMoveToLocal => 'この端末のみ に移す';
+
+  @override
+  String get sessionLogoutSnsMoveToLocalSubtitle => '「この端末のみ」のアカウントで、そのまま使えます';
+
+  @override
+  String get sessionCancel => 'キャンセル';
+
+  @override
+  String get sessionChildSafeAddBlocked => '保護者が SNS アカウントの追加を止めています';
+
+  @override
+  String get sessionAccountKindLocal => 'この端末のみ';
+
+  @override
+  String get sessionAccountKindCentral => 'RASQ Central';
+
+  @override
+  String get sessionCarryThisAccount => 'この RASQ アカウント';
+
+  @override
+  String get sessionCarrySemantics => 'この端末の SNS アカウントを加えますか?';
+
+  @override
+  String sessionCarryTitle(int count, String account) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'この端末で開いていた $count 件のアカウントを、$account に加えますか?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String sessionCarryMessage(String account) {
+    return '加えたアカウントは $account の SNS アカウントになり、ほかの端末や Web コンソールにも並びます。加えなかったアカウントは「この端末のみ」に残ります(あとからでも、$account で SNS にログインすれば加わります)。';
+  }
+
+  @override
+  String get sessionCarryInBundle => '(前にこの RASQ アカウントでつないだもの)';
+
+  @override
+  String get sessionCarryNone => '加えない';
+
+  @override
+  String sessionCarryAdd(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '選んだ $count 件を加える',
+    );
+    return '$_temp0';
   }
 
   @override

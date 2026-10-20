@@ -2,6 +2,7 @@ import 'package:rasq_models/rasq_models.dart';
 
 /// Mock data used by M0 screens and the component catalog.
 /// Names follow the wireframes (ダグラス / 動物Poll / 事故アピール / タロ・ヤマダ).
+/// 名前・本文・選択肢は見本の中身(サーバーや利用者の中身にあたる)なので訳さない(`// l10n-ignore`、D-530)。
 abstract final class MockData {
   static const accountBluesky = AccountId(kind: SnsKind.bluesky, instance: 'bluesky.social', handle: 'yamada_tar_gz');
   static const accountMisskey = AccountId(kind: SnsKind.misskey, instance: 'misskey.io', handle: 'yamada');
@@ -10,31 +11,31 @@ abstract final class MockData {
   static final me = UserSummary(
     id: 'did:plc:me',
     account: accountBluesky,
-    displayName: 'タロ・ヤマダ',
+    displayName: 'タロ・ヤマダ', // l10n-ignore
     avatarUrl: Uri.parse('https://picsum.photos/seed/yamada/200'),
-    bio: '航空宇宙とか工学とか\nISD 天文学科',
+    bio: '航空宇宙とか工学とか\nISD 天文学科', // l10n-ignore
   );
 
   static final douglas = UserSummary(
     id: 'did:plc:douglas',
     account: const AccountId(kind: SnsKind.bluesky, instance: 'BlueSky', handle: 'username'),
-    displayName: 'ダグラス',
+    displayName: 'ダグラス', // l10n-ignore
     avatarUrl: Uri.parse('https://picsum.photos/seed/douglas/200'),
     presence: UserPresence.inVc,
   );
 
   static final animalPoll = UserSummary(
     id: 'misskey:animalpoll',
-    account: const AccountId(kind: SnsKind.misskey, instance: 'いきものミスキー！', handle: 'username'),
-    displayName: '動物Poll',
+    account: const AccountId(kind: SnsKind.misskey, instance: 'いきものミスキー！', handle: 'username'), // l10n-ignore
+    displayName: '動物Poll', // l10n-ignore
   );
 
   static final jikoAppeal = UserSummary(
     id: 'misskey:jiko',
     account: const AccountId(kind: SnsKind.misskey, instance: 'BlueWind', handle: 'username'),
-    displayName: '事故アピール',
+    displayName: '事故アピール', // l10n-ignore
     avatarUrl: Uri.parse('https://picsum.photos/seed/jiko/200'),
-    bio: 'Begin Freedom at the World\'s End\n相方:@username●misskey.io',
+    bio: 'Begin Freedom at the World\'s End\n相方:@username●misskey.io', // l10n-ignore
   );
 
   static final tivard = UserSummary(
@@ -63,8 +64,8 @@ abstract final class MockData {
         visibility: 'public',
         author: animalPoll,
         createdAt: now.subtract(const Duration(hours: 2)),
-        body: '犬派？猫派？',
-        poll: const Poll(options: [PollOption(text: '猫派', votes: 3), PollOption(text: '犬派', votes: 2), PollOption(text: 'その他', votes: 2)]),
+        body: '犬派？猫派？', // l10n-ignore
+        poll: const Poll(options: [PollOption(text: '猫派', votes: 3), PollOption(text: '犬派', votes: 2), PollOption(text: 'その他', votes: 2)]), // l10n-ignore
         counts: const {'reply': 0, 'repost': 1, 'like': 5},
       ),
       Post(
@@ -73,7 +74,7 @@ abstract final class MockData {
         visibility: 'public',
         author: jikoAppeal,
         createdAt: now.subtract(const Duration(days: 1)),
-        body: '自虐的に誕生日を祝った人には永遠にプレゼントが贈られないという都市伝説があってだな…',
+        body: '自虐的に誕生日を祝った人には永遠にプレゼントが贈られないという都市伝説があってだな…', // l10n-ignore
         media: [
           MediaItem(id: 'm1', type: MediaType.image, url: Uri.parse('https://picsum.photos/seed/rocket/800/450'), sensitive: true, width: 16, height: 9),
         ],
@@ -92,7 +93,7 @@ abstract final class MockData {
             sensitive: sensitiveFirst && i == 0,
             duration: i == 1 ? const Duration(minutes: 12, seconds: 31) : null,
             fileName: i == 3 ? 'launch_log.csv' : null,
-            alt: i == 2 ? 'ロケットの写真' : null,
+            alt: i == 2 ? 'ロケットの写真' : null, // l10n-ignore
           ),
       ];
 }

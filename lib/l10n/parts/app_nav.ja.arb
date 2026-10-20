@@ -1,0 +1,22 @@
+{
+  "appNavPostTitle": "投稿",
+  "@appNavPostTitle": {"description": "幅の広い画面で第 3 カラムに開いた投稿 / 会話のページの見出し"},
+  "appNavReactionsTitle": "リアクション",
+  "@appNavReactionsTitle": {"description": "第 3 カラムに開いたリアクションの一覧のページの見出し"},
+  "appNavFollowersTitle": "フォロワー",
+  "@appNavFollowersTitle": {"description": "第 3 カラムに開いたフォロワーの一覧のページの見出し"},
+  "appNavFollowingTitle": "フォロー中",
+  "@appNavFollowingTitle": {"description": "第 3 カラムに開いたフォロー中の一覧のページの見出し"},
+  "appNavShortcutSearch": "検索",
+  "@appNavShortcutSearch": {"description": "ホーム画面のアプリのアイコンを長押ししたときのショートカット: 検索(Android。iOS は ios/Runner/<言語>.lproj/InfoPlist.strings にも同じ名前を書く)"},
+  "appNavShortcutNewPost": "新しいポスト",
+  "@appNavShortcutNewPost": {"description": "アプリのアイコンのショートカット: 投稿を書く(iOS は InfoPlist.strings にも)"},
+  "appNavShortcutNewMessage": "メッセージを作成",
+  "@appNavShortcutNewMessage": {"description": "アプリのアイコンのショートカット: DM を書く(iOS は InfoPlist.strings にも)"},
+  "appNavShortcutAskRai": "RAiと探す",
+  "@appNavShortcutAskRai": {"description": "アプリのアイコンのショートカット: RAi(アプリの AI)に聞く(iOS は InfoPlist.strings にも)"},
+  "appNavShortcutGuardianPending": "保護者が設定を決めるまで使えません",
+  "@appNavShortcutGuardianPending": {"description": "チャイルドセーフ: 保護者の設定が済むまでショートカットを使えないときの案内"},
+  "appNavShortcutLoginHint": "SNS アカウントにログインすると使えます",
+  "@appNavShortcutLoginHint": {"description": "ログインしていないときにショートカットを押した案内"}
+}

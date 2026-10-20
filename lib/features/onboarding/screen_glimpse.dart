@@ -325,7 +325,7 @@ class NativeScreenGlimpse implements ScreenGlimpse {
 
   @override
   Future<GlimpseFrames> capture({required Duration duration, ValueChanged<Duration>? onProgress}) =>
-      throw UnsupportedError('端末の読み取りは start から(Android は通知のボタン、iOS は配信を止めたとき)');
+      throw UnsupportedError('端末の読み取りは start から(Android は通知のボタン、iOS は配信を止めたとき)'); // l10n-ignore
 }
 
 /// 画面の読み取りの口(テストで差し替える)。Android / iOS は本物、ほか(デスクトップ / Web / テスト)はダミー。

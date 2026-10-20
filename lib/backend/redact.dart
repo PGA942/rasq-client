@@ -1,3 +1,4 @@
+import '../l10n/l10n.dart';
 /// エラー文から秘密を外す (REC-03、2026-09-28 録画): WebSocket の接続エラーは接続先の URL を丸ごと含み、
 /// その `?token=` に RASQ アカウントのトークンが載る。画面やログに出す前に通す。
 /// - URL のクエリ(`?…`)とフラグメントは丸ごと `?…` に置き換える(トークン以外の値も出さない)
@@ -13,8 +14,8 @@ String redactSecrets(String text) {
 String wsConnectErrorMessage(Object e) {
   final raw = '$e';
   if (raw.contains('was not upgraded to websocket') || raw.contains('404') || raw.contains('410')) {
-    return 'ルームに入れませんでした(ルームが閉じているか、見つかりません)';
+    return appL10n.backendRoomClosed;
   }
-  if (raw.contains('401') || raw.contains('403')) return 'ルームに入れませんでした(このアカウントでは参加できません)';
-  return 'ルームに接続できませんでした: ${redactSecrets(raw)}';
+  if (raw.contains('401') || raw.contains('403')) return appL10n.backendRoomForbidden;
+  return appL10n.backendRoomConnectFailed(redactSecrets(raw));
 }

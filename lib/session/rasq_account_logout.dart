@@ -8,6 +8,7 @@ import '../backend/rasq_account.dart' show centralSignedInAccountIdsProvider;
 import 'rasq_accounts.dart';
 import 'session_providers.dart';
 import 'sns_share.dart' show SnsShareStore;
+import '../l10n/l10n.dart';
 
 /// RASQ アカウントからのログアウト / 削除で、その SNS アカウントをどうするか (D-409)。
 enum RasqLogoutSns {
@@ -84,26 +85,26 @@ Future<RasqLogoutSns?> askRasqLogoutSns(
                 const SizedBox(height: 8),
                 Text(message, style: Theme.of(context).textTheme.bodyMedium),
                 const SizedBox(height: 8),
-                Text('この RASQ アカウントの SNS アカウント', style: Theme.of(context).textTheme.labelMedium),
+                Text(context.l10n.sessionLogoutSnsHeading, style: Theme.of(context).textTheme.labelMedium),
                 RasqRadioListTile<RasqLogoutSns>(
                   key: ValueKey('$id.sns.logout'),
-                  title: 'SNS アカウントもログアウトする',
-                  subtitle: 'この端末から SNS のログインを消します',
+                  title: context.l10n.sessionLogoutSnsLogout,
+                  subtitle: context.l10n.sessionLogoutSnsLogoutSubtitle,
                   value: RasqLogoutSns.logout,
                   groupValue: value,
                   onChanged: (v) => pick.value = v,
                 ),
                 RasqRadioListTile<RasqLogoutSns>(
                   key: ValueKey('$id.sns.moveToLocal'),
-                  title: 'この端末のみ に移す',
-                  subtitle: '「この端末のみ」のアカウントで、そのまま使えます',
+                  title: context.l10n.sessionLogoutSnsMoveToLocal,
+                  subtitle: context.l10n.sessionLogoutSnsMoveToLocalSubtitle,
                   value: RasqLogoutSns.moveToLocal,
                   groupValue: value,
                   onChanged: (v) => pick.value = v,
                 ),
                 const SizedBox(height: 4),
                 OverflowBar(alignment: MainAxisAlignment.end, overflowAlignment: OverflowBarAlignment.end, children: [
-                  TextButton(key: ValueKey('$id.cancel'), onPressed: handle.cancel, child: const Text('キャンセル')),
+                  TextButton(key: ValueKey('$id.cancel'), onPressed: handle.cancel, child: Text(context.l10n.sessionCancel)),
                   TextButton(
                     key: ValueKey('$id.confirm'),
                     onPressed: () => handle.close(result: value),

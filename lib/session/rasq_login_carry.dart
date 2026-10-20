@@ -4,6 +4,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
 import '../app/providers.dart' show overlayManagerProvider;
+import '../l10n/l10n.dart';
 
 /// 既存の RASQ アカウントへのログインで、**この端末で開いていた SNS アカウントを持ち込むか**を聞く (D-461)。
 ///
@@ -47,12 +48,12 @@ final rasqLoginCarryAskProvider = Provider<RasqLoginCarryAsk>((ref) => (q) => sh
 Future<Set<String>?> showRasqLoginCarry(OverlayManager overlays, RasqLoginCarryQuestion q) async {
   const id = 'rasqLogin.carry';
   final picked = ValueNotifier<Set<String>>(const {});
-  final handle = q.accountHandle.isEmpty ? 'この RASQ アカウント' : '@${q.accountHandle}';
+  final handle = q.accountHandle.isEmpty ? appL10n.sessionCarryThisAccount : '@${q.accountHandle}';
   final result = await overlays.show(RasqOverlayEntry(
     id: id,
     layer: OverlayLayer.modal,
     alignment: Alignment.center,
-    semanticsLabel: 'この端末の SNS アカウントを加えますか?',
+    semanticsLabel: appL10n.sessionCarrySemantics,
     builder: (context, h) {
       final scheme = Theme.of(context).colorScheme;
       final text = Theme.of(context).textTheme;
@@ -67,11 +68,10 @@ Future<Set<String>?> showRasqLoginCarry(OverlayManager overlays, RasqLoginCarryQ
             child: ValueListenableBuilder<Set<String>>(
               valueListenable: picked,
               builder: (context, value, _) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Text('この端末で開いていた ${q.candidates.length} 件のアカウントを、$handle に加えますか?',
+                Text(context.l10n.sessionCarryTitle(q.candidates.length, handle),
                     style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
                 const SizedBox(height: 8),
-                Text('加えたアカウントは $handle の SNS アカウントになり、ほかの端末や Web コンソールにも並びます。'
-                    '加えなかったアカウントは「この端末のみ」に残ります(あとからでも、$handle で SNS にログインすれば加わります)。',
+                Text(context.l10n.sessionCarryMessage(handle),
                     style: text.bodyMedium),
                 const SizedBox(height: 8),
                 ConstrainedBox(
@@ -87,7 +87,7 @@ Future<Set<String>?> showRasqLoginCarry(OverlayManager overlays, RasqLoginCarryQ
                         onChanged: (on) => picked.value = on == true ? {...value, c.key} : {for (final k in value) if (k != c.key) k},
                         title: Text(c.session.displayName?.isNotEmpty == true ? c.session.displayName! : '@${c.session.account.handle}', overflow: TextOverflow.ellipsis),
                         subtitle: Text(
-                          '@${c.session.account.handle}@${c.session.account.instance}${c.inBundle ? '(前にこの RASQ アカウントでつないだもの)' : ''}',
+                          '@${c.session.account.handle}@${c.session.account.instance}${c.inBundle ? context.l10n.sessionCarryInBundle : ''}',
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -95,11 +95,11 @@ Future<Set<String>?> showRasqLoginCarry(OverlayManager overlays, RasqLoginCarryQ
                 ),
                 const SizedBox(height: 4),
                 OverflowBar(alignment: MainAxisAlignment.end, overflowAlignment: OverflowBarAlignment.end, children: [
-                  TextButton(key: const ValueKey('$id.none'), onPressed: () => h.close(result: const <String>{}), child: const Text('加えない')),
+                  TextButton(key: const ValueKey('$id.none'), onPressed: () => h.close(result: const <String>{}), child: Text(context.l10n.sessionCarryNone)),
                   TextButton(
                     key: const ValueKey('$id.add'),
                     onPressed: value.isEmpty ? null : () => h.close(result: value),
-                    child: Text('選んだ ${value.length} 件を加える', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    child: Text(context.l10n.sessionCarryAdd(value.length), style: const TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ]),
               ]),

@@ -1,5 +1,209 @@
 {
   "@@locale": "ja",
+  "appNavPostTitle": "投稿",
+  "@appNavPostTitle": {
+    "description": "幅の広い画面で第 3 カラムに開いた投稿 / 会話のページの見出し"
+  },
+  "appNavReactionsTitle": "リアクション",
+  "@appNavReactionsTitle": {
+    "description": "第 3 カラムに開いたリアクションの一覧のページの見出し"
+  },
+  "appNavFollowersTitle": "フォロワー",
+  "@appNavFollowersTitle": {
+    "description": "第 3 カラムに開いたフォロワーの一覧のページの見出し"
+  },
+  "appNavFollowingTitle": "フォロー中",
+  "@appNavFollowingTitle": {
+    "description": "第 3 カラムに開いたフォロー中の一覧のページの見出し"
+  },
+  "appNavShortcutSearch": "検索",
+  "@appNavShortcutSearch": {
+    "description": "ホーム画面のアプリのアイコンを長押ししたときのショートカット: 検索(Android。iOS は ios/Runner/<言語>.lproj/InfoPlist.strings にも同じ名前を書く)"
+  },
+  "appNavShortcutNewPost": "新しいポスト",
+  "@appNavShortcutNewPost": {
+    "description": "アプリのアイコンのショートカット: 投稿を書く(iOS は InfoPlist.strings にも)"
+  },
+  "appNavShortcutNewMessage": "メッセージを作成",
+  "@appNavShortcutNewMessage": {
+    "description": "アプリのアイコンのショートカット: DM を書く(iOS は InfoPlist.strings にも)"
+  },
+  "appNavShortcutAskRai": "RAiと探す",
+  "@appNavShortcutAskRai": {
+    "description": "アプリのアイコンのショートカット: RAi(アプリの AI)に聞く(iOS は InfoPlist.strings にも)"
+  },
+  "appNavShortcutGuardianPending": "保護者が設定を決めるまで使えません",
+  "@appNavShortcutGuardianPending": {
+    "description": "チャイルドセーフ: 保護者の設定が済むまでショートカットを使えないときの案内"
+  },
+  "appNavShortcutLoginHint": "SNS アカウントにログインすると使えます",
+  "@appNavShortcutLoginHint": {
+    "description": "ログインしていないときにショートカットを押した案内"
+  },
+  "backendOauthNoToken": "アクセストークンを取得できませんでした",
+  "@backendOauthNoToken": {
+    "description": "SNS のブラウザでの認証のあと、アクセストークンが返らなかったときの誤り"
+  },
+  "backendOauthServerRequired": "{service} のログインには RASQ サーバーが必要です。設定 →「RASQ サーバー」で接続先を設定してください。",
+  "@backendOauthServerRequired": {
+    "description": "RASQ サーバーの接続先が無くて SNS にログインできないときの誤り。service はサービス名(Mastodon など)。「RASQ サーバー」は設定の画面の名前",
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "backendOauthNoUrl": "認証 URL を取得できませんでした",
+  "@backendOauthNoUrl": {
+    "description": "ブラウザで開く認証のページの URL を取れなかったときの誤り"
+  },
+  "backendOauthHint": "ブラウザで許可したら、アプリに戻って「認証を確認」を押してください。",
+  "@backendOauthHint": {
+    "description": "ブラウザでの認証を始めたときの案内(サーバーが案内を返さないとき)。「認証を確認」はボタンの名前(loginSnsAuthCheck)と揃える"
+  },
+  "backendResponseTooLarge": "応答が大きすぎます({maxBytes} bytes を超えています)",
+  "@backendResponseTooLarge": {
+    "description": "サーバーの応答が大きすぎて読むのをやめたときの誤り。maxBytes は上限のバイト数",
+    "placeholders": {
+      "maxBytes": {
+        "type": "int"
+      }
+    }
+  },
+  "backendSecurityPasswordlessRemoved": "メールのコードだけのログインは終わりました。ハンドル(またはメール)とパスワードでログインしてください",
+  "@backendSecurityPasswordlessRemoved": {
+    "description": "RASQ アカウントのログイン: メールのコードだけのログインが廃止されたとき"
+  },
+  "backendSecuritySecondFactor": "メールに届いた確認コードを入れてください",
+  "@backendSecuritySecondFactor": {
+    "description": "RASQ アカウントのログイン: 2 段階目の確認コードが要るとき"
+  },
+  "backendSecurityTooMany": "試行が多すぎます。しばらく待ってから、やり直してください",
+  "@backendSecurityTooMany": {
+    "description": "RASQ アカウントの操作: 試しすぎたとき"
+  },
+  "backendSecurityNoMail": "このサーバーは、メールを送れる設定になっていません",
+  "@backendSecurityNoMail": {
+    "description": "RASQ アカウントの操作: サーバーがメールを送れないとき"
+  },
+  "backendSecurityEmailUsed": "このメールアドレスは、ほかのアカウントで使われています",
+  "@backendSecurityEmailUsed": {
+    "description": "RASQ アカウントの操作: メールアドレスがほかで使われているとき"
+  },
+  "backendSecurityBadCredentials": "ハンドル(メール)かパスワードが違います",
+  "@backendSecurityBadCredentials": {
+    "description": "RASQ アカウントのログイン: ハンドルかパスワードが違うとき"
+  },
+  "backendSecurityBadCode": "コードが違うか、期限が切れています",
+  "@backendSecurityBadCode": {
+    "description": "RASQ アカウントの操作: 確認コードが違うか古いとき"
+  },
+  "backendSecurityWeakPassword": "このパスワードは弱すぎます(よく使われるもの / 同じ字の繰り返し / ハンドルやメールと同じもの は使えません)",
+  "@backendSecurityWeakPassword": {
+    "description": "RASQ アカウントの操作: パスワードが弱いとき"
+  },
+  "backendSecurityShortPassword": "パスワードは 8 文字以上にしてください",
+  "@backendSecurityShortPassword": {
+    "description": "RASQ アカウントの操作: パスワードが短いとき"
+  },
+  "backendSecurityBadEmail": "メールアドレスの形が正しくありません",
+  "@backendSecurityBadEmail": {
+    "description": "RASQ アカウントの操作: メールアドレスの形が違うとき"
+  },
+  "backendSecurityWrongPassword": "いまのパスワードが違います",
+  "@backendSecurityWrongPassword": {
+    "description": "RASQ アカウントの操作: いまのパスワードが違うとき"
+  },
+  "backendSecurityNoPassword": "このアカウントにはパスワードがありません。いまのメールに届く確認コードで確かめてください",
+  "@backendSecurityNoPassword": {
+    "description": "RASQ アカウントの操作: パスワードの無いアカウントで、パスワードでの確かめを求めたとき"
+  },
+  "backendSecurityConfirmRequired": "この操作には、いまのパスワードか、いまのメールに届く確認コードが要ります",
+  "@backendSecurityConfirmRequired": {
+    "description": "RASQ アカウントの操作: 本人の確かめが要るとき"
+  },
+  "backendRoomClosed": "ルームに入れませんでした(ルームが閉じているか、見つかりません)",
+  "@backendRoomClosed": {
+    "description": "ASTell のルームにつなげなかったとき(ルームが無い)"
+  },
+  "backendRoomForbidden": "ルームに入れませんでした(このアカウントでは参加できません)",
+  "@backendRoomForbidden": {
+    "description": "ASTell のルームにつなげなかったとき(参加できない)"
+  },
+  "backendRoomConnectFailed": "ルームに接続できませんでした: {error}",
+  "@backendRoomConnectFailed": {
+    "description": "ASTell のルームにつなげなかったとき。error は理由(秘密は伏せてある)",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backendPaidFeaturesDisabled": "公開テストでは有料プラグインは使えません",
+  "@backendPaidFeaturesDisabled": {
+    "description": "有料の機能が止まっているときの文(公開テストの間)"
+  },
+  "backendAgeTeen": "13〜15 歳",
+  "@backendAgeTeen": {
+    "description": "年齢の申告の選択肢"
+  },
+  "backendAgeUpperTeen": "16〜17 歳",
+  "@backendAgeUpperTeen": {
+    "description": "年齢の申告の選択肢"
+  },
+  "backendAgeAdult": "18 歳以上",
+  "@backendAgeAdult": {
+    "description": "年齢の申告の選択肢"
+  },
+  "backendNoToken": "ORGATE がトークンを返しませんでした",
+  "@backendNoToken": {
+    "description": "RASQ アカウントを作る / ログインするとき、サーバー(ORGATE = RASQ アカウントのサーバーの名前)がトークンを返さなかったときの誤り"
+  },
+  "backendTileAuto": "自動",
+  "@backendTileAuto": {
+    "description": "RASQ アカウントのページの SNS アカウントのタイルを出すかの選択肢: 自動"
+  },
+  "backendTileShow": "表示",
+  "@backendTileShow": {
+    "description": "RASQ アカウントのページの SNS アカウントのタイルを出すかの選択肢: 出す"
+  },
+  "backendTileHide": "非表示",
+  "@backendTileHide": {
+    "description": "RASQ アカウントのページの SNS アカウントのタイルを出すかの選択肢: 出さない"
+  },
+  "backendVerifiedKeybase": "Keybase の証明で確認済み",
+  "@backendVerifiedKeybase": {
+    "description": "SNS アカウントの持ち主の確認の方法: Keybase の証明。Keybase はサービス名"
+  },
+  "backendVerifiedProfile": "プロフィールで確認済み",
+  "@backendVerifiedProfile": {
+    "description": "SNS アカウントの持ち主の確認の方法: SNS のプロフィールに載せた確認の文"
+  },
+  "backendAudioFileName": "音声",
+  "@backendAudioFileName": {
+    "description": "RASQ の投稿の音声の添付の、ファイル名の代わりに出す名前"
+  },
+  "backendServerNotConfigured": "RASQ サーバーの接続先が未設定です",
+  "@backendServerNotConfigured": {
+    "description": "RASQ のサーバーの接続先が無いときの誤り"
+  },
+  "backendServerError": "サーバーエラー ({status})",
+  "@backendServerError": {
+    "description": "サーバーが誤りを返したが理由の文が無いときの誤り。status は HTTP の状態コード",
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "backendCollectionList": "リスト",
+  "@backendCollectionList": {
+    "description": "RASQ リスト / クリップの種類: リスト"
+  },
+  "backendCollectionClip": "クリップ",
+  "@backendCollectionClip": {
+    "description": "RASQ リスト / クリップの種類: クリップ"
+  },
   "bookmarksRemoved": "ブックマークを外しました",
   "@bookmarksRemoved": {
     "description": "ブックマークを外したときの知らせ"
@@ -7543,6 +7747,34 @@
   "@notificationsRasqEmptyHint": {
     "description": "RASQ のタブが空のときの補足。Swing は機能の名前で訳さない"
   },
+  "notifyPushChannelName": "RASQ の通知",
+  "@notifyPushChannelName": {
+    "description": "Android の通知のチャンネルの名前(端末の設定に出る)。RASQ からのプッシュ通知"
+  },
+  "notifyPushChannelDescription": "メンション / 返信 / Swing などの知らせ",
+  "@notifyPushChannelDescription": {
+    "description": "上のチャンネルの説明(端末の設定に出る)。Swing は機能の名前"
+  },
+  "notifyOpenAction": "開く",
+  "@notifyOpenAction": {
+    "description": "Linux の通知の既定の操作の名前"
+  },
+  "notifyGlimpseChannelName": "画面の読み取り",
+  "@notifyGlimpseChannelName": {
+    "description": "Android の通知のチャンネルの名前。いま見ている画面を読み取る入口の通知"
+  },
+  "notifyGlimpseChannelDescription": "タップすると、いま見ている画面を少しだけ読み取ります",
+  "@notifyGlimpseChannelDescription": {
+    "description": "上のチャンネルの説明"
+  },
+  "notifyAstellChannelName": "ASTell の開始",
+  "@notifyAstellChannelName": {
+    "description": "Android の通知のチャンネルの名前。ASTell(音声のルーム)が始まる知らせ"
+  },
+  "notifyAstellChannelDescription": "ブックマークした VC の開始通知",
+  "@notifyAstellChannelDescription": {
+    "description": "上のチャンネルの説明。VC は ASTell の音声のルームのこと"
+  },
   "onboardingBack": "戻る",
   "onboardingHandleTooShort": "3 文字以上にしてください",
   "onboardingHandleTooLong": "32 文字までです",
@@ -8213,6 +8445,32 @@
   "onboardingTourRaiBubble": "TL にリストを足したい",
   "@onboardingTourRaiBubble": {
     "description": "RAi のページの絵の吹き出し(利用者の質問の例)"
+  },
+  "platformWebRuntimeLoadFailed": "実行に要るファイルを読み込めませんでした(ネットワーク / CDN)",
+  "@platformWebRuntimeLoadFailed": {
+    "description": "Web 版: 端末の中でモデルを動かすための部品をブラウザに読み込めなかったときの誤り"
+  },
+  "platformWebServerNotConfigured": "RASQ サーバーの接続先が未設定です",
+  "@platformWebServerNotConfigured": {
+    "description": "Web 版: モデルを取りに行く RASQ のサーバーの接続先が無いときの誤り"
+  },
+  "platformWebDownloadFailed": "ダウンロードに失敗しました: {error}",
+  "@platformWebDownloadFailed": {
+    "description": "Web 版: モデルをダウンロードできなかったときの誤り。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "platformWebModelLoadFailed": "モデルを読み込めません: {error}",
+  "@platformWebModelLoadFailed": {
+    "description": "Web 版: モデルを読み込めなかったときの誤り。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "pluginsCancel": "キャンセル",
   "pluginsClose": "閉じる",
@@ -11847,6 +12105,258 @@
     "placeholders": {
       "value": {
         "type": "String"
+      }
+    }
+  },
+  "sessionUnnamedDevice": "名前のない端末",
+  "@sessionUnnamedDevice": {
+    "description": "端末の名前が無いときの呼び名(SNS のアクセストークンの共有の問いなどに出る)"
+  },
+  "sessionShareAskFirstTitle": "アクセストークンを共有して、SNS アカウントに一斉ログインしますか?",
+  "@sessionShareAskFirstTitle": {
+    "description": "初めて別の端末から RASQ アカウントにログインがあったときの問いの見出し"
+  },
+  "sessionShareAskDeviceTitle": "新しい端末({device})にも SNS のアクセストークンを共有しますか?",
+  "@sessionShareAskDeviceTitle": {
+    "description": "共有を始めたあとに別の端末からログインがあったときの問いの見出し。device は端末の名前",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionShareAskFirstMessage": "新しい端末({devices})で、この RASQ アカウント にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。",
+  "@sessionShareAskFirstMessage": {
+    "description": "初めての問いの本文(RASQ アカウントのハンドルが分からないとき)。devices は端末の名前の並び(sessionDeviceListSeparator でつなぐ)。「はい」は下のボタン、「アカウントのセキュリティ」は設定の画面の名前",
+    "placeholders": {
+      "devices": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionShareAskFirstMessageHandle": "新しい端末({devices})で、RASQ アカウント @{handle} にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。",
+  "@sessionShareAskFirstMessageHandle": {
+    "description": "初めての問いの本文。devices は端末の名前の並び、handle は RASQ アカウントのハンドル(@ は付けない)",
+    "placeholders": {
+      "devices": {
+        "type": "String"
+      },
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionShareAskDeviceMessage": "この RASQ アカウント に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。",
+  "@sessionShareAskDeviceMessage": {
+    "description": "共有を始めたあとの問いの本文(ハンドルが分からないとき)。「いいえ」は下のボタン"
+  },
+  "sessionShareAskDeviceMessageHandle": "RASQ アカウント @{handle} に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。",
+  "@sessionShareAskDeviceMessageHandle": {
+    "description": "共有を始めたあとの問いの本文。handle は RASQ アカウントのハンドル(@ は付けない)",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionDeviceListSeparator": "、",
+  "@sessionDeviceListSeparator": {
+    "description": "端末の名前を並べるときの区切り"
+  },
+  "sessionShareYes": "はい",
+  "@sessionShareYes": {
+    "description": "共有の問いの、共有するボタン"
+  },
+  "sessionShareNo": "いいえ",
+  "@sessionShareNo": {
+    "description": "共有の問いの、共有しないボタン"
+  },
+  "sessionShareEmailApproved": "メールで承認された端末({device})に、SNS のアクセストークンを共有しました",
+  "@sessionShareEmailApproved": {
+    "description": "メールのリンクで承認された端末にアクセストークンを共有したときの知らせ。device は端末の名前",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionShareImported": "{count, plural, other{共有されたアクセストークンで、SNS アカウントに一斉ログインしました({count} 件)}}",
+  "@sessionShareImported": {
+    "description": "ほかの端末から共有されたアクセストークンでログインしたときの知らせ。count はログインした SNS アカウントの数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionLoginFailed": "ログインに失敗しました",
+  "@sessionLoginFailed": {
+    "description": "SNS のプラグインがログインの失敗の理由を返さなかったときの文"
+  },
+  "sessionSanctionLight": "軽度な制限",
+  "@sessionSanctionLight": {
+    "description": "アカウントの処置の段階: 軽い制限"
+  },
+  "sessionSanctionModerate": "中レベルの制限(発言に検閲遅延)",
+  "@sessionSanctionModerate": {
+    "description": "アカウントの処置の段階: 中くらいの制限(投稿が確かめられるまで遅れて出る)"
+  },
+  "sessionSanctionSevere": "重度の制限(機能停止)",
+  "@sessionSanctionSevere": {
+    "description": "アカウントの処置の段階: 重い制限(機能が止まる)"
+  },
+  "sessionSanctionPermanent": "恒久的な凍結",
+  "@sessionSanctionPermanent": {
+    "description": "アカウントの処置の段階: 恒久的な凍結"
+  },
+  "sessionSanctionNone": "制限なし",
+  "@sessionSanctionNone": {
+    "description": "アカウントの処置が無いとき"
+  },
+  "sessionSanctionBlocked": "アカウントの処置により {feature} は利用できません。",
+  "@sessionSanctionBlocked": {
+    "description": "アカウントの処置で機能が止まっているときの案内。feature は機能の名前(sessionFeature… のどれか)",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionSanctionBlockedUntil": "アカウントの処置により {feature} は利用できません({until} まで)。",
+  "@sessionSanctionBlockedUntil": {
+    "description": "アカウントの処置で機能が止まっているときの案内(期限があるとき)。feature は機能の名前、until は期限の日時(書式済み)",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      },
+      "until": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionFeatureAstellJoin": "ASTell への参加",
+  "@sessionFeatureAstellJoin": {
+    "description": "アカウントの処置で止まる機能の名前。ASTell は製品名"
+  },
+  "sessionFeatureAstellCreate": "ASTell ルームの作成",
+  "@sessionFeatureAstellCreate": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureAstellShare": "ASTell での共有・チャット",
+  "@sessionFeatureAstellShare": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureAstellStream": "ASTell の画面共有・配信",
+  "@sessionFeatureAstellStream": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureStoreReview": "ストアのレビュー投稿",
+  "@sessionFeatureStoreReview": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureAccountFollow": "RASQ アカウントのフォロー",
+  "@sessionFeatureAccountFollow": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeaturePost": "投稿",
+  "@sessionFeaturePost": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeaturePostMedia": "メディア付き投稿",
+  "@sessionFeaturePostMedia": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureDm": "DM",
+  "@sessionFeatureDm": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureReaction": "リアクション",
+  "@sessionFeatureReaction": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionCentralNotConfigured": "RASQ Central の接続先が設定されていません",
+  "@sessionCentralNotConfigured": {
+    "description": "処置の解除の申請を送れない(RASQ Central の接続先が無い)ときの誤り。RASQ Central はサーバーの名前"
+  },
+  "sessionLogoutSnsHeading": "この RASQ アカウントの SNS アカウント",
+  "@sessionLogoutSnsHeading": {
+    "description": "RASQ アカウントのログアウトの確かめの、SNS アカウントをどうするかの見出し"
+  },
+  "sessionLogoutSnsLogout": "SNS アカウントもログアウトする",
+  "@sessionLogoutSnsLogout": {
+    "description": "上の選択肢: SNS アカウントもログアウトする"
+  },
+  "sessionLogoutSnsLogoutSubtitle": "この端末から SNS のログインを消します",
+  "@sessionLogoutSnsLogoutSubtitle": {
+    "description": "上の選択肢の補足"
+  },
+  "sessionLogoutSnsMoveToLocal": "この端末のみ に移す",
+  "@sessionLogoutSnsMoveToLocal": {
+    "description": "上の選択肢: SNS アカウントを「この端末のみ」(RASQ アカウントに属さない)へ移す"
+  },
+  "sessionLogoutSnsMoveToLocalSubtitle": "「この端末のみ」のアカウントで、そのまま使えます",
+  "@sessionLogoutSnsMoveToLocalSubtitle": {
+    "description": "上の選択肢の補足。「この端末のみ」は sessionAccountKindLocal と揃える"
+  },
+  "sessionCancel": "キャンセル",
+  "@sessionCancel": {
+    "description": "確かめのダイアログの、やめるボタン"
+  },
+  "sessionChildSafeAddBlocked": "保護者が SNS アカウントの追加を止めています",
+  "@sessionChildSafeAddBlocked": {
+    "description": "チャイルドセーフ: 保護者が SNS アカウントを足せないようにしているときの誤り"
+  },
+  "sessionAccountKindLocal": "この端末のみ",
+  "@sessionAccountKindLocal": {
+    "description": "RASQ アカウントの種類: RASQ アカウントに属さず、この端末だけで使う SNS アカウントのまとまり"
+  },
+  "sessionAccountKindCentral": "RASQ Central",
+  "@sessionAccountKindCentral": {
+    "description": "RASQ アカウントの種類: RASQ のサーバーにある RASQ アカウント。RASQ Central はサーバーの名前"
+  },
+  "sessionCarryThisAccount": "この RASQ アカウント",
+  "@sessionCarryThisAccount": {
+    "description": "ログインしたときの問いで、RASQ アカウントのハンドルが分からないときの呼び名"
+  },
+  "sessionCarrySemantics": "この端末の SNS アカウントを加えますか?",
+  "@sessionCarrySemantics": {
+    "description": "RASQ アカウントにログインしたときの問いの、読み上げの名前"
+  },
+  "sessionCarryTitle": "{count, plural, other{この端末で開いていた {count} 件のアカウントを、{account} に加えますか?}}",
+  "@sessionCarryTitle": {
+    "description": "RASQ アカウントにログインしたときの問いの見出し。count は SNS アカウントの数、account は「@ハンドル」か「この RASQ アカウント」",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionCarryMessage": "加えたアカウントは {account} の SNS アカウントになり、ほかの端末や Web コンソールにも並びます。加えなかったアカウントは「この端末のみ」に残ります(あとからでも、{account} で SNS にログインすれば加わります)。",
+  "@sessionCarryMessage": {
+    "description": "上の問いの本文。account は「@ハンドル」か「この RASQ アカウント」",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionCarryInBundle": "(前にこの RASQ アカウントでつないだもの)",
+  "@sessionCarryInBundle": {
+    "description": "上の問いの、アカウントの行の補足の後ろに付ける印"
+  },
+  "sessionCarryNone": "加えない",
+  "@sessionCarryNone": {
+    "description": "上の問いの、加えないボタン"
+  },
+  "sessionCarryAdd": "{count, plural, other{選んだ {count} 件を加える}}",
+  "@sessionCarryAdd": {
+    "description": "上の問いの、選んだアカウントを加えるボタン。count は選んだ数",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
     }
   },

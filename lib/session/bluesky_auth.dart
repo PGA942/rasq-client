@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import '../l10n/l10n.dart';
 
 /// Bluesky (AT Protocol) のログイン (D-175): ハンドル(またはメール)+ **アプリパスワード**で
 /// PDS の `com.atproto.server.createSession` を叩く。実処理は wasm プラグイン側の `sns.login`
@@ -23,7 +24,7 @@ class BlueskyCredentialFlow extends CredentialAuthFlow {
     final result = await plugin.callAnonymous('sns.login', {'host': host, 'identifier': identifier.trim(), 'password': secret});
     if (result['ok'] != true) {
       final error = (result['error'] as Map?)?.cast<String, Object?>() ?? const {};
-      final message = '${error['message'] ?? 'ログインに失敗しました'}';
+      final message = '${error['message'] ?? appL10n.sessionLoginFailed}';
       throw SnsApiException(ErrorCode.tryParse('${error['code'] ?? ''}', message: message) ?? ErrorCode.internalServerError.copyWith(message: message));
     }
     final value = (result['value'] as Map? ?? const {}).cast<String, Object?>();

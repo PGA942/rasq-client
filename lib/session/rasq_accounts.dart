@@ -6,6 +6,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
 import 'session_providers.dart';
 import 'session_storage.dart';
+import '../l10n/l10n.dart';
 
 /// RASQ アカウントの台帳 (D-138: RASQ アカウントの実体化)。
 ///
@@ -26,12 +27,14 @@ import 'session_storage.dart';
 /// 持つ。[SessionsNotifier] はこの台帳を見て、現在の RASQ アカウントに属する
 /// セッションだけを `sessions` として見せる。
 enum RasqAccountKind {
-  local('local', 'この端末のみ'),
-  central('central', 'RASQ Central');
+  local('local'),
+  central('central');
 
-  const RasqAccountKind(this.wire, this.label);
+  const RasqAccountKind(this.wire);
+
+  /// 表示の名前(表示の言語)。
+  String get label => switch (this) { local => appL10n.sessionAccountKindLocal, central => appL10n.sessionAccountKindCentral };
   final String wire;
-  final String label;
   static RasqAccountKind fromWire(String? w) => values.where((k) => k.wire == w).firstOrNull ?? local;
 }
 

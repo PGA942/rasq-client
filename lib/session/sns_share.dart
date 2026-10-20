@@ -20,6 +20,7 @@ import 'rasq_accounts.dart';
 import 'session_providers.dart';
 import 'session_storage.dart';
 import 'sns_share_crypto.dart';
+import '../l10n/l10n.dart';
 
 /// SNS のアクセストークンの端末間共有 (D-319、ORGATE `GET|PUT /me/sns-share*`。D-399 で Central から移った)。**E2E**。
 ///
@@ -80,7 +81,7 @@ class SnsShareDevice {
   /// メールのリンクでの決定(`share` / `device_only`)。`device_only` = 求めを下ろした(SNS はその端末でログインし直す)。
   final String? emailDecision;
 
-  String get name => (label == null || label!.isEmpty) ? '名前のない端末' : label!;
+  String get name => (label == null || label!.isEmpty) ? appL10n.sessionUnnamedDevice : label!;
 
   factory SnsShareDevice.fromJson(Map<String, Object?> j) => SnsShareDevice(
         deviceId: j['deviceId'] as String? ?? '',
@@ -279,15 +280,14 @@ class SnsShareQuestion {
   final List<SnsShareDevice> devices;
   final String? accountHandle;
 
-  String get title => first ? 'アクセストークンを共有して、SNS アカウントに一斉ログインしますか?' : '新しい端末(${devices.first.name})にも SNS のアクセストークンを共有しますか?';
+  String get title => first ? appL10n.sessionShareAskFirstTitle : appL10n.sessionShareAskDeviceTitle(devices.first.name);
 
   String get message {
-    final who = accountHandle == null ? 'この RASQ アカウント' : 'RASQ アカウント @$accountHandle';
-    final names = devices.map((d) => d.name).join('、');
-    return first
-        ? '新しい端末($names)で、$who にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、'
-            '新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。'
-        : '$who に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。';
+    final l = appL10n;
+    final handle = accountHandle;
+    final names = devices.map((d) => d.name).join(l.sessionDeviceListSeparator);
+    if (first) return handle == null ? l.sessionShareAskFirstMessage(names) : l.sessionShareAskFirstMessageHandle(names, handle);
+    return handle == null ? l.sessionShareAskDeviceMessage : l.sessionShareAskDeviceMessageHandle(handle);
   }
 }
 
@@ -298,7 +298,7 @@ final snsShareAskProvider = Provider<SnsShareAsk>((ref) => (q) => ref.read(overl
       id: 'snsShare.ask',
       title: q.title,
       message: q.message,
-      choices: const [RasqAlertChoice('はい', true, primary: true), RasqAlertChoice('いいえ', false)],
+      choices: [RasqAlertChoice(appL10n.sessionShareYes, true, primary: true), RasqAlertChoice(appL10n.sessionShareNo, false)],
       cancelText: null,
     ));
 
@@ -497,7 +497,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
             if (d.emailApproved) {
               s = await _wrapFor(c, d, key, s.keyId!);
               _publish(c, s);
-              ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text('メールで承認された端末(${d.name})に、SNS のアクセストークンを共有しました')));
+              ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(appL10n.sessionShareEmailApproved(d.name))));
               continue;
             }
             if (_dismissed.contains('${c.accountId}:${d.deviceId}')) continue;
@@ -626,7 +626,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
       await _store.update(c.accountId, (e) => {...e, 'keyId': keyId, 'known': nextKnown});
       final joined = _wasWaiting.remove(c.accountId) && imported > 0;
       if (imported > 0) {
-        ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text('共有されたアクセストークンで、SNS アカウントに一斉ログインしました($imported 件)')));
+        ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(appL10n.sessionShareImported(imported))));
       }
       // 承認を待っていた端末が取り込めた: SNS のログイン画面は TL へ (D-322)。
       if (joined && ref.mounted && state.accountId == c.accountId) {

@@ -4,6 +4,7 @@ import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
+import '../../l10n/l10n.dart';
 
 /// onnxruntime-web (D-302) の入口。端末の onnxruntime (FFI) の代わりに、ブラウザの WebAssembly で ONNX を回す。
 ///
@@ -94,7 +95,7 @@ Future<void> _ensureOrt() => _ortLoading ??= () async {
           ..src = '${_ortBase}ort.wasm.min.js'
           ..crossOrigin = 'anonymous';
         s.onload = ((web.Event _) => done.complete()).toJS;
-        s.onerror = ((web.Event _) => done.completeError(StateError('onnxruntime-web を読み込めませんでした(ネットワーク / CDN)'))).toJS;
+        s.onerror = ((web.Event _) => done.completeError(StateError(appL10n.platformWebRuntimeLoadFailed))).toJS;
         web.document.head!.append(s);
         try {
           await done.future;

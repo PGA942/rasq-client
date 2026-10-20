@@ -3,17 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import 'orgate_client.dart';
+import '../l10n/l10n.dart';
 
 /// RASQ リスト / RASQ クリップ (D-343/D-344、Central S-042)。SNS を跨いだ人のリスト(`list`)と投稿の束(`clip`)。
 /// 中身は Central が、資格のある人(作った人 / 条件に合うフォロワー)が見たときに、その人の AsTell のトークン
 /// (S-027 で預けた SNS のトークン)で取り直す。アプリはスナップショットを読むだけ。
 enum RasqCollectionKind {
-  list('list', 'リスト'),
-  clip('clip', 'クリップ');
+  list('list'),
+  clip('clip');
 
-  const RasqCollectionKind(this.wire, this.label);
+  const RasqCollectionKind(this.wire);
   final String wire;
-  final String label;
+
+  /// 表示の名前(表示の言語)。
+  String get label => switch (this) { list => appL10n.backendCollectionList, clip => appL10n.backendCollectionClip };
   static RasqCollectionKind fromWire(Object? w) => values.where((k) => k.wire == w).firstOrNull ?? list;
 }
 
