@@ -72,6 +72,21 @@ final astellHoldMusicProvider = Provider<bool>((ref) {
   return (area['holdMusic'] as bool?) ?? true;
 });
 
+/// 保留音の音源 (D-540)。KV `holdMusic.source`、既定は `We：Astronomies on the Blue Planet`。
+final astellHoldMusicSourceProvider = Provider<HoldMusicSource>((ref) {
+  final area = ref.watch(settingsAreaProvider(astellSettingsArea)).value ?? const <String, Object?>{};
+  return astellHoldMusicSourceOf(area);
+});
+
+/// 保留音の音量 (D-540)。KV `holdMusic.volume`(0〜1)、既定 40%。
+final astellHoldMusicVolumeProvider = Provider<double>((ref) {
+  final area = ref.watch(settingsAreaProvider(astellSettingsArea)).value ?? const <String, Object?>{};
+  return astellHoldMusicVolumeOf(area);
+});
+
+HoldMusicSource astellHoldMusicSourceOf(Map<String, Object?> area) => HoldMusicSource.fromId(area['holdMusic.source']);
+double astellHoldMusicVolumeOf(Map<String, Object?> area) => ((area['holdMusic.volume'] as num?)?.toDouble() ?? holdMusicDefaultVolume).clamp(0.0, 1.0);
+
 /// 自分の RASQ アカウント id (D-164): 参加中なら welcome の値、無ければクライアント
 /// (モックは 'me')か RASQ アカウントの id(`rasq:` 接頭辞を外す)。
 final astellMyAccountIdProvider = Provider<String?>((ref) {
@@ -883,8 +898,11 @@ class AstellSession extends Notifier<AstellSessionState?> {
     _waitingForStart = reason == astellHoldWaitingNotice;
     if (started) {
       unawaited(music.alarm());
-    } else if (play != music.playing) {
-      unawaited(play ? music.start() : music.stop());
+    } else if (play) {
+      // 音源 / 音量は端末の設定 (D-540)。鳴っている最中に変わればその場で切り替わる(同じなら何もしない)。
+      unawaited(music.start(source: astellHoldMusicSourceOf(area), volume: astellHoldMusicVolumeOf(area)));
+    } else if (music.playing) {
+      unawaited(music.stop());
     }
     final now = state;
     if (now == null) return;

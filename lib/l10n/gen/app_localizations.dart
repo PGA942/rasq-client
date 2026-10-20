@@ -27814,6 +27814,36 @@ abstract class AppLocalizations {
   /// **'保留音を鳴らす(この端末)'**
   String get vcRoomHoldMusicDevice;
 
+  /// 設定の小見出し(この端末で鳴らす保留音の曲を選ぶ)
+  ///
+  /// In ja, this message translates to:
+  /// **'保留音の音源'**
+  String get vcRoomHoldMusicSourceLabel;
+
+  /// 保留音の音源の選択肢(曲名。既定)。訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'We：Astronomies on the Blue Planet'**
+  String get vcRoomHoldMusicSourceAstronomies;
+
+  /// 保留音の音源の選択肢(昔からの保留音の曲)
+  ///
+  /// In ja, this message translates to:
+  /// **'保留音'**
+  String get vcRoomHoldMusicSourceClassic;
+
+  /// 設定のスライダー
+  ///
+  /// In ja, this message translates to:
+  /// **'保留音の音量'**
+  String get vcRoomHoldMusicVolume;
+
+  /// 保留音の音量の表示。percent は 0〜100
+  ///
+  /// In ja, this message translates to:
+  /// **'{percent}%'**
+  String vcRoomHoldMusicVolumeValue(int percent);
+
   /// 参加前の設定のシートの注記
   ///
   /// In ja, this message translates to:

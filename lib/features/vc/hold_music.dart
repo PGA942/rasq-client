@@ -4,7 +4,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// 保留音 (D-325 → D-327): `assets/audio/hold_music.wav`(ユーザー提供、12.8 秒、ループで鳴らす)。
+/// 保留音 (D-325 → D-327): `assets/audio/hold_music.wav`(ユーザー提供、12.8 秒、ループで鳴らす)。D-540 から既定の
+/// 音源は [alarmAsset](`We：Astronomies on the Blue Planet`)で、こちらは端末の設定で選べる「保留音」([HoldMusicSource.classic])。
 ///
 /// AsTell のルームで、**開催予約の開始を待っている間**と、**全員がマイクを下ろして(画面共有 / 配信も無く)チャットが
 /// 1 分以上流れていない間**に、参加者それぞれの端末で鳴る。鳴らす条件は `AstellSession._syncHoldMusic`(自分の端末の設定
@@ -16,6 +17,27 @@ const holdMusicAsset = 'audio/hold_music.wav';
 /// 開始通知(`alarm.wav` を Runner に同梱したとき)にも同じ音。
 const alarmAsset = 'audio/alarm.wav';
 
+/// 保留音の音源 (D-540)。端末の設定(KV `holdMusic.source` = [id])で選ぶ。既定は [astronomies]。
+enum HoldMusicSource {
+  /// `We：Astronomies on the Blue Planet`(開催のチャイムと同じ音源をループで)。既定。
+  astronomies('astronomies', alarmAsset),
+
+  /// 保留音.wav(D-325 からの保留音)。
+  classic('classic', holdMusicAsset);
+
+  const HoldMusicSource(this.id, this.asset);
+  final String id;
+  final String asset;
+
+  static const fallback = HoldMusicSource.astronomies;
+
+  /// KV の値から。知らない値 / 無ければ既定。
+  static HoldMusicSource fromId(Object? id) => values.firstWhere((s) => s.id == id, orElse: () => fallback);
+}
+
+/// 保留音の既定の音量 (D-540): 40%。端末の設定(KV `holdMusic.volume`、0〜1)で変えられる。チャイムは今までどおり 100%。
+const holdMusicDefaultVolume = 0.4;
+
 /// 保留音の口。テストは [MemoryHoldMusic](鳴らさず回数だけ数える)。
 abstract class HoldMusic {
   /// いま鳴らしている(始めた直後から true。読み込み中も含む)。
@@ -23,7 +45,9 @@ abstract class HoldMusic {
 
   /// 鳴らす口の音の設定を先に済ませる (D-455)。ルームに入るとき、通話の音のセッションより**前に**呼ぶ。何度呼んでもよい。
   Future<void> prepare();
-  Future<void> start();
+
+  /// 鳴らし始める。鳴っている最中に呼ぶと、音源 / 音量が違うときだけ切り替える(同じなら何もしない、D-540)。
+  Future<void> start({HoldMusicSource source = HoldMusicSource.fallback, double volume = holdMusicDefaultVolume});
   Future<void> stop();
 
   /// 開催のチャイムを 1 回鳴らす (D-331)。保留音が鳴っていれば止めてから。
@@ -37,14 +61,20 @@ class MemoryHoldMusic implements HoldMusic {
   int stops = 0;
   int alarms = 0;
   int prepares = 0;
+
+  /// 最後に鳴らした音源と音量 (D-540)。
+  HoldMusicSource? source;
+  double? volume;
   bool _playing = false;
   @override
   bool get playing => _playing;
   @override
   Future<void> prepare() async => prepares++;
   @override
-  Future<void> start() async {
-    if (_playing) return;
+  Future<void> start({HoldMusicSource source = HoldMusicSource.fallback, double volume = holdMusicDefaultVolume}) async {
+    this.source = source;
+    this.volume = volume;
+    if (_playing) return; // 鳴ったまま音源 / 音量だけ切り替える(回数は数えない)
     _playing = true;
     starts++;
   }
@@ -77,10 +107,13 @@ class MemoryHoldMusic implements HoldMusic {
 /// セッションを始める前)に** 2 つのプレイヤーの設定を一度だけ入れておく。書くのは通話の前の値と同じ(通常のモード、
 /// スピーカーの強制なし)なので、通話のセッションはそれを「入る前の状態」として覚えて、出るときに戻す。通話の最中の
 /// [start] / [alarm] は同じ設定を入れ直すだけなので、端末全体には何も書かない。
+///
+/// 音源と音量 (D-540) は [start] で受ける(端末の設定、既定は [HoldMusicSource.astronomies] / [holdMusicDefaultVolume])。
 class AudioHoldMusic implements HoldMusic {
-  AudioHoldMusic({this.volume = 0.5});
-  final double volume;
+  AudioHoldMusic();
   AudioPlayer? _player;
+  HoldMusicSource? _source;
+  double? _volume;
   bool _playing = false;
   @override
   bool get playing => _playing;
@@ -114,15 +147,23 @@ class AudioHoldMusic implements HoldMusic {
   }
 
   @override
-  Future<void> start() async {
-    if (_playing) return;
+  Future<void> start({HoldMusicSource source = HoldMusicSource.fallback, double volume = holdMusicDefaultVolume}) async {
+    if (_playing && _source == source && _volume == volume) return;
+    // 鳴っている最中に音量だけ変わった (D-540): 鳴らし直さずに音量だけ。
+    final onlyVolume = _playing && _source == source;
     _playing = true;
+    _source = source;
+    _volume = volume;
     try {
+      if (onlyVolume) {
+        await _player?.setVolume(volume);
+        return;
+      }
       await prepare();
       final p = _hold;
       await p.setAudioContext(context);
       await p.setReleaseMode(ReleaseMode.loop);
-      await p.play(AssetSource(holdMusicAsset), volume: volume);
+      await p.play(AssetSource(source.asset), volume: volume);
     } catch (e) {
       debugPrint('hold music: start: $e');
     }
@@ -132,6 +173,8 @@ class AudioHoldMusic implements HoldMusic {
   Future<void> stop() async {
     if (!_playing) return;
     _playing = false;
+    _source = null;
+    _volume = null;
     try {
       await _player?.stop();
     } catch (e) {
@@ -156,6 +199,8 @@ class AudioHoldMusic implements HoldMusic {
   @override
   Future<void> dispose() async {
     _playing = false;
+    _source = null;
+    _volume = null;
     final p = _player;
     final c = _chime;
     _player = null;

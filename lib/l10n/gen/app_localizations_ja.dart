@@ -16892,6 +16892,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vcRoomHoldMusicDevice => '保留音を鳴らす(この端末)';
 
   @override
+  String get vcRoomHoldMusicSourceLabel => '保留音の音源';
+
+  @override
+  String get vcRoomHoldMusicSourceAstronomies =>
+      'We：Astronomies on the Blue Planet';
+
+  @override
+  String get vcRoomHoldMusicSourceClassic => '保留音';
+
+  @override
+  String get vcRoomHoldMusicVolume => '保留音の音量';
+
+  @override
+  String vcRoomHoldMusicVolumeValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
   String get vcRoomDeviceSettingsCaption => 'ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。';
 
   @override

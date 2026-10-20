@@ -15666,6 +15666,31 @@
   "@vcRoomHoldMusicDevice": {
     "description": "設定のスイッチ"
   },
+  "vcRoomHoldMusicSourceLabel": "保留音の音源",
+  "@vcRoomHoldMusicSourceLabel": {
+    "description": "設定の小見出し(この端末で鳴らす保留音の曲を選ぶ)"
+  },
+  "vcRoomHoldMusicSourceAstronomies": "We：Astronomies on the Blue Planet",
+  "@vcRoomHoldMusicSourceAstronomies": {
+    "description": "保留音の音源の選択肢(曲名。既定)。訳さない"
+  },
+  "vcRoomHoldMusicSourceClassic": "保留音",
+  "@vcRoomHoldMusicSourceClassic": {
+    "description": "保留音の音源の選択肢(昔からの保留音の曲)"
+  },
+  "vcRoomHoldMusicVolume": "保留音の音量",
+  "@vcRoomHoldMusicVolume": {
+    "description": "設定のスライダー"
+  },
+  "vcRoomHoldMusicVolumeValue": "{percent}%",
+  "@vcRoomHoldMusicVolumeValue": {
+    "description": "保留音の音量の表示。percent は 0〜100",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "vcRoomDeviceSettingsCaption": "ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。",
   "@vcRoomDeviceSettingsCaption": {
     "description": "参加前の設定のシートの注記"
