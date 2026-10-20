@@ -9,6 +9,7 @@ import '../../backend/rasq_account.dart';
 import '../../backend/rasq_consent.dart';
 import '../../l10n/l10n.dart';
 import '../../session/rasq_account_logout.dart' show RasqProviderRead;
+import 'region/region_picker.dart' show showRegionUnavailable;
 
 /// RASQ アカウントの登録の手続き (D-241 → D-414 → D-419)。画面はオンボーディング v2 の ①② のページ(`onboarding_steps.dart`)。
 /// 前の登録ページ(`/rasq-register`、D-405)は D-419 で外した(その経路は ① のページへ回る)。
@@ -46,6 +47,15 @@ Future<RasqAccountRecord?> openRasqAccountCreation(GoRouter router, RasqProvider
   await WidgetsBinding.instance.endOfFrame;
   try {
     return await completeRasqRegistration(read, req.choice, handle: req.handle, another: true, keepOnHandleRejected: true, onMessage: onMessage);
+  } on RasqRegionNotServed catch (e) {
+    // 一覧を読めずに選べた地域を、作るときにサーバーが断った (D-542)。作成へは進めない画面を出す。
+    final navigator = router.routerDelegate.navigatorKey.currentState;
+    if (navigator != null) {
+      await showRegionUnavailable(navigator, e.region);
+    } else {
+      onMessage(appL10n.regionUnavailableTitle);
+    }
+    return null;
   } on OrgateException catch (e) {
     onMessage(appL10n.onboardingCreateFailed(e.message));
     return null;
@@ -69,6 +79,15 @@ class RasqHandleRejected implements Exception {
   String toString() => message;
 }
 
+/// 住んでいる地域で RASQ を提供していない(ORGATE `403 region_not_served`、D-542 / O-018)。アカウントは作られていない。
+/// 呼んだ画面は、作成へ進めない画面([showRegionUnavailable])を出す。
+class RasqRegionNotServed implements Exception {
+  const RasqRegionNotServed(this.region);
+  final String? region;
+  @override
+  String toString() => 'region_not_served: $region';
+}
+
 /// ハンドルの決まり (Central `PATCH /me`): 3〜32 文字の `[a-z0-9_]`。
 final rasqHandlePattern = RegExp(r'^[a-z0-9_]{3,32}$');
 
@@ -84,10 +103,16 @@ Future<RasqAccountRecord?> completeRasqRegistration(RasqProviderRead read, RasqR
   // (以前は作ったあとで同意を書き、失敗しても登録を続けていた)。
   RasqAccount? account;
   try {
-    account = await notifier.createAccount(displayName: displayName, consents: choice.toConsentsJson(), another: another, resume: attempt?.accountId);
+    account = await notifier.createAccount(displayName: displayName, consents: choice.toConsentsJson(), another: another, resume: attempt?.accountId, region: choice.region);
   } on OrgateException catch (e) {
     if (isTermsVersionError(e)) {
       onMessage(appL10n.onboardingTermsOutdated);
+      return null;
+    }
+    // 住んでいる地域 (D-542 / ORGATE O-018): 提供していない → 進めない画面へ。無い / 形が違う → 選び直してもらう。
+    if (e.isReason('region_not_served')) throw RasqRegionNotServed(choice.region);
+    if (e.isReason('region_required') || e.isReason('region_invalid')) {
+      onMessage(appL10n.regionRequiredError);
       return null;
     }
     rethrow;

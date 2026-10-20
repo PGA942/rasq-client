@@ -26,6 +26,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
+import 'support/region_steps.dart';
 
 /// D-138: RASQ アカウントの実体化 — 台帳(ローカル/Central)と SNS セッションの
 /// 所属、サイドバー … → RASQ アカウント FOW、初回オンボーディング。
@@ -247,6 +248,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(ValueKey('onb.age.$age')));
     await tester.pumpAndSettle();
+    await pickOnboardingRegion(tester);
   }
 
   /// サイドバーの RASQ アカウントの選択 →「アカウントを新規作成」(D-419 → D-425: 選択肢を挟まず、そのまま ① のページへ)。
@@ -720,6 +722,7 @@ void main() {
     await tester.ensureVisible(find.byKey(const ValueKey('onb.age.18+')));
     await tester.tap(find.byKey(const ValueKey('onb.age.18+')));
     await tester.pumpAndSettle();
+    await pickOnboardingRegion(tester);
     await tester.tap(find.byKey(const ValueKey('onb.next')));
     await tester.pumpAndSettle();
     expect(find.byType(OnboardingTermsScreen), findsOneWidget);

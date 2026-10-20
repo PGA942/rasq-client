@@ -28,6 +28,7 @@ import 'package:rasq_client/features/onboarding/discover_image_crop.dart';
 import 'package:rasq_client/features/onboarding/onboarding_feed.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
 import 'package:rasq_client/features/onboarding/onboarding_steps.dart';
+import 'package:rasq_client/features/onboarding/region/region_picker.dart';
 import 'package:rasq_client/features/onboarding/screen_glimpse.dart';
 import 'package:rasq_client/features/onboarding/rasq_account_nudge.dart';
 import 'package:rasq_client/features/onboarding/server_signup.dart';
@@ -39,17 +40,19 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
+import 'support/region_steps.dart';
 
 /// 初回オンボーディング v2 (D-414): ①②③ のページ、左カラムの公開 RASQ リストの投稿、探す画面(画像 / 人 / RAi)、結果からの登録、WebView の指差し。
 void main() {
   group('① ② ③ のページ', () {
-    Future<void> fillStep1(WidgetTester tester, {String handle = 'neko_taro', String age = '18+'}) async {
+    Future<void> fillStep1(WidgetTester tester, {String handle = 'neko_taro', String age = '18+', String? region = 'JP'}) async {
       await tester.enterText(find.byKey(const ValueKey('onb.handle')), handle);
       await tester.enterText(find.byKey(const ValueKey('onb.password')), 'correct horse');
       await tester.enterText(find.byKey(const ValueKey('onb.passwordConfirm')), 'correct horse');
       await tester.ensureVisible(find.byKey(ValueKey('onb.age.$age')));
       await tester.tap(find.byKey(ValueKey('onb.age.$age')));
       await tester.pumpAndSettle();
+      if (region != null) await pickOnboardingRegion(tester, region);
     }
 
     FilledButton next(WidgetTester tester) => tester.widget<FilledButton>(find.byKey(const ValueKey('onb.next')));
@@ -195,6 +198,121 @@ void main() {
       expect(central.consents?['age'], '16-17');
       expect(central.consents?['guardian'], true);
       expect(find.byType(OnboardingSnsScreen), findsOneWidget);
+    });
+
+    // D-542 / ORGATE O-018: 住んでいる地域(自己申告)。提供していない地域では作れない。
+    final served = <String, Object?>{
+      'countries': [
+        {'code': 'JP', 'available': true},
+        {'code': 'DE', 'available': false},
+        {'code': 'GB', 'available': false},
+        {
+          'code': 'US',
+          'available': true,
+          'subdivisions': [
+            {'code': 'US-CA', 'available': true},
+            {'code': 'US-UT', 'available': false},
+          ],
+        },
+      ],
+      'unavailable': ['DE', 'GB', 'US-UT'],
+    };
+
+    testWidgets('① 地域を選ぶまで「次へ」は押せない。一覧はサーバーから(提供していない地域に印)、アメリカは州まで → 作る要求に地域が載る', (tester) async {
+      final central = _FakeCentral(regions: served);
+      await _pump(tester, central);
+      await fillStep1(tester, region: null);
+      expect(next(tester).onPressed, isNull, reason: '地域がまだ');
+      expect(find.text('選んでください'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('onb.region')));
+      await tester.pumpAndSettle();
+      expect(find.byType(RegionPickerScreen), findsOneWidget);
+      expect(find.byKey(const ValueKey('region.country.KR')), findsNothing, reason: 'サーバーの一覧だけを出す');
+      expect(find.descendant(of: find.byKey(const ValueKey('region.country.DE')), matching: find.text('提供していません')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const ValueKey('region.country.JP')), matching: find.text('提供していません')), findsNothing);
+      // 名前(かなの読みも)で探せる。
+      await tester.enterText(find.byKey(const ValueKey('region.search')), 'にほん');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('region.country.JP')), findsOneWidget);
+      expect(find.byKey(const ValueKey('region.country.DE')), findsNothing);
+      await tester.enterText(find.byKey(const ValueKey('region.search')), 'アメリカ');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('region.country.US')));
+      await tester.pumpAndSettle();
+      expect(find.text('州を選ぶ'), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const ValueKey('region.state.US-UT')), matching: find.text('提供していません')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('region.state.US-CA')));
+      await tester.pumpAndSettle();
+      expect(find.byType(RegionPickerScreen), findsNothing);
+      expect(find.text('アメリカ合衆国・カリフォルニア州'), findsOneWidget);
+      expect(next(tester).onPressed, isNotNull);
+      await tester.tap(find.byKey(const ValueKey('onb.next')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('onb.agree')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('onb.register')));
+      await tester.pumpAndSettle();
+      expect(central.region, 'US-CA');
+      expect(find.byType(OnboardingSnsScreen), findsOneWidget);
+    });
+
+    testWidgets('① 提供していない国 / 州を選ぶと、進めない画面(戻るだけ)。地域は空のまま、アカウントは作らない', (tester) async {
+      final central = _FakeCentral(regions: served);
+      final c = await _pump(tester, central);
+      await fillStep1(tester, region: null);
+      for (final code in ['DE', 'US-UT']) {
+        await pickOnboardingRegion(tester, code);
+        expect(find.byType(RegionUnavailableScreen), findsOneWidget, reason: code);
+        expect(find.text('お住まいの地域では、いまは RASQ を提供していません'), findsOneWidget);
+        expect(find.byKey(const ValueKey('onb.next')), findsNothing, reason: '作成へ進む手段は出さない');
+        await tester.tap(find.byKey(const ValueKey('region.unavailable.back')));
+        await tester.pumpAndSettle();
+        expect(find.byType(RegionUnavailableScreen), findsNothing);
+        expect(find.text('選んでください'), findsOneWidget);
+        expect(next(tester).onPressed, isNull, reason: '$code は入らない');
+      }
+      expect(central.calls, isNot(contains('POST /auth/device')));
+      expect(c.read(rasqAccountsProvider).value!.current?.isCentral ?? false, isFalse);
+    });
+
+    testWidgets('一覧を読めないときは選ばせて、作るときにサーバーが断れば(403 region_not_served)進めない画面 → ① で地域は空に', (tester) async {
+      final central = _FakeCentral(refuseRegions: {'GB'});
+      final c = await _pump(tester, central);
+      await fillStep1(tester, region: 'GB');
+      expect(find.byType(RegionUnavailableScreen), findsNothing, reason: '一覧が無いので、サーバーに任せる');
+      expect(find.text('イギリス'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('onb.next')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('onb.agree')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('onb.register')));
+      await tester.pumpAndSettle();
+      expect(central.region, 'GB');
+      expect(find.byType(RegionUnavailableScreen), findsOneWidget);
+      expect(find.text('RASQ はいま、提供する地域を限っています。イギリス では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('region.unavailable.back')));
+      await tester.pumpAndSettle();
+      expect(find.byType(OnboardingTermsScreen), findsNothing);
+      expect(find.text('選んでください'), findsOneWidget);
+      expect(next(tester).onPressed, isNull);
+      expect(c.read(rasqAccountsProvider).value!.current?.isCentral ?? false, isFalse, reason: 'アカウントは作られていない');
+    });
+
+    testWidgets('作るときに 400 region_required なら、地域を選び直すよう知らせる(③ へは進まない)', (tester) async {
+      final central = _FakeCentral(regionRequired: true);
+      await _pump(tester, central);
+      await fillStep1(tester);
+      await tester.tap(find.byKey(const ValueKey('onb.next')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('onb.agree')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('onb.register')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('住んでいる地域を選んでから、もう一度お試しください'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(central.region, 'JP');
+      expect(find.byType(OnboardingSnsScreen), findsNothing);
     });
   });
 
@@ -1186,10 +1304,22 @@ const _serverHit = {'host': 'misskey.io', 'kind': 'misskey', 'name': 'Misskey.io
 
 /// Central / ORGATE のフェイク(契約 CONTRACT.md の形)。
 class _FakeCentral {
-  _FakeCentral({this.takenHandles = const {}});
+  _FakeCentral({this.takenHandles = const {}, this.regions, this.refuseRegions = const {}, this.regionRequired = false});
   final Set<String> takenHandles;
   final calls = <String>[];
   Map<String, Object?>? consents;
+
+  /// `GET /regions` の答え (D-542 / ORGATE O-018)。null = 読めない(古いサーバー)。
+  final Map<String, Object?>? regions;
+
+  /// 作るときに `403 region_not_served` で断る地域。
+  final Set<String> refuseRegions;
+
+  /// 作るときに `400 region_required` を返す。
+  final bool regionRequired;
+
+  /// 作る要求に載っていた地域(載っていなければ null)。
+  String? region;
   String handle = 'rasq_new';
   bool hasPassword = false;
   ({String contentType, String body})? lastContent;
@@ -1275,8 +1405,16 @@ class _FakeCentral {
       });
     }
     // 登録(ORGATE)。
+    if (req.method == 'GET' && path == '/regions') {
+      final r = regions;
+      return r == null ? json({'error': {'code': '404', 'message': 'not found'}}, 404) : json(r);
+    }
     if (req.method == 'POST' && path == '/auth/device') {
-      consents = ((jsonDecode(req.body) as Map)['consents'] as Map?)?.cast<String, Object?>();
+      final body = jsonDecode(req.body) as Map;
+      region = body['region'] as String?;
+      if (regionRequired) return json({'error': {'code': 'region_required', 'message': '住んでいる地域を選んでください'}}, 400);
+      if (refuseRegions.contains(region)) return json({'error': {'code': 'region_not_served', 'message': 'お住まいの地域では、いまは RASQ を提供していません'}}, 403);
+      consents = (body['consents'] as Map?)?.cast<String, Object?>();
       return json({'accountId': 'acc-1', 'handle': handle, 'displayName': 'テスター', 'accessToken': 'device-token', 'refreshToken': 'refresh'});
     }
     if (req.headers['authorization'] != 'Bearer device-token') return json({'error': {'code': '401', 'message': 'valid bearer token required'}}, 401);
