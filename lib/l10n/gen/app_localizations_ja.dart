@@ -11501,6 +11501,56 @@ class AppLocalizationsJa extends AppLocalizations {
   String get raiModelsNoteNotInstalled => '未DL';
 
   @override
+  String get regionHeading => '住んでいる地域';
+
+  @override
+  String get regionCaption => 'お住まいの国・地域を選んでください(自己申告です)。アメリカの場合は州も選びます。';
+
+  @override
+  String get regionChoose => '選んでください';
+
+  @override
+  String regionCountryAndState(String country, String state) {
+    return '$country・$state';
+  }
+
+  @override
+  String get regionPickerTitle => '住んでいる地域を選ぶ';
+
+  @override
+  String get regionStatePickerTitle => '州を選ぶ';
+
+  @override
+  String get regionSearchHint => '国・地域の名前で探す';
+
+  @override
+  String get regionStateSearchHint => '州の名前で探す';
+
+  @override
+  String get regionNoMatch => '見つかりませんでした';
+
+  @override
+  String get regionUnavailableBadge => '提供していません';
+
+  @override
+  String get regionUnavailableTitle => 'お住まいの地域では、いまは RASQ を提供していません';
+
+  @override
+  String get regionUnavailableBody =>
+      'RASQ はいま、提供する地域を限っています。お住まいの地域では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。';
+
+  @override
+  String regionUnavailableBodyWith(String region) {
+    return 'RASQ はいま、提供する地域を限っています。$region では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。';
+  }
+
+  @override
+  String get regionUnavailableBack => '戻る';
+
+  @override
+  String get regionRequiredError => '住んでいる地域を選んでから、もう一度お試しください';
+
+  @override
   String get relationalPostTitle => '投稿';
 
   @override

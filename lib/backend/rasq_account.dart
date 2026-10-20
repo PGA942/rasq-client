@@ -459,7 +459,8 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     return creds;
   }
 
-  Future<Map<String, Object?>> _postDevice(OrgateClient client, {String? displayName, bool restoreOnly = false, String? restoreSecret, Map<String, Object?>? consents}) {
+  /// [region] = 新しく作るときの住んでいる地域(D-542 / ORGATE O-018)。復帰では送らない(サーバーも見ない)。
+  Future<Map<String, Object?>> _postDevice(OrgateClient client, {String? displayName, bool restoreOnly = false, String? restoreSecret, Map<String, Object?>? consents, String? region}) {
     // 表示名の初期値は、指定が無ければ既にログインしている SNS アカウントから借りる。
     final first = ref.read(sessionsProvider).value?.sessions.firstOrNull;
     final name = displayName ?? first?.displayName;
@@ -469,6 +470,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
       if (restoreOnly) 'restoreOnly': true,
       'restoreSecret': ?restoreSecret,
       'consents': ?consents,
+      'region': ?region,
     });
   }
 
@@ -516,7 +518,10 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   /// [another] = **ほかのアカウントに入っていても新しく作る**(アカウントの選択の「新規作成」、D-419)。前は、いま使っている
   /// アカウントのトークンがあると、作らずにそのアカウントを返していた(2 つ目の RASQ アカウントを作れなかった原因の 1 つ)。
   /// [resume] = 同じ作成の流れで先に作ったアカウント(ユーザー名が使われていて ① へ戻ったとき)。トークンがあればそれで続ける。
-  Future<RasqAccount?> createAccount({String? displayName, Map<String, Object?>? consents, bool another = false, String? resume}) async {
+  ///
+  /// [region] = 住んでいる地域(D-542 / ORGATE O-018)。新しく作るときに送る。提供していない地域なら `403 region_not_served`、
+  /// 無ければ `400 region_required`(どちらもアカウントは作られない。[OrgateException.isReason] で見る)。
+  Future<RasqAccount?> createAccount({String? displayName, Map<String, Object?>? consents, bool another = false, String? resume, String? region}) async {
     final client = ref.read(centralClientProvider);
     final identity = _identity;
     if (client == null || identity == null) return null;
@@ -527,7 +532,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
       _publishToken();
     } else if (token == null || another) {
       // 発行は ORGATE。ORGATE が Central に公開プロフィールの行を作り、登録の承諾も Central が確かめて残す (D-398)。
-      final res = await _postDevice(identity, displayName: displayName, consents: consents);
+      final res = await _postDevice(identity, displayName: displayName, consents: consents, region: region);
       final t = _tokensOf(res);
       if (t == null) throw OrgateException(ErrorCode.http(502), appL10n.backendNoToken);
       final id = res['accountId'] as String? ?? '';

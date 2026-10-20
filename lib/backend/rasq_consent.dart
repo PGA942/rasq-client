@@ -38,8 +38,12 @@ bool isTermsRequiredError(Object e) => e is OrgateException && e.isReason('terms
 
 /// 登録の FOW で選んだ内容。
 class RasqRegisterChoice {
-  const RasqRegisterChoice({required this.age, required this.replaceBundle, this.password = ''});
+  const RasqRegisterChoice({required this.age, required this.replaceBundle, this.password = '', this.region});
   final RasqAgeBand age;
+
+  /// 住んでいる地域(D-542 / ORGATE O-018。ISO 3166-1 alpha-2、アメリカは `US-CA` のように州まで)。作るときに `POST /auth/device` へ送る。
+  /// 無ければ送らない(サーバーは `400 region_required`)。
+  final String? region;
 
   /// 登録と同時に設定するパスワード (D-299。必須: ほかの端末 / Web 版から入る手段になる)。
   final String password;

@@ -11965,6 +11965,46 @@
   "@raiModelsNoteNotInstalled": {
     "description": "RAi バーのモデルのチップの横の短い状態(未ダウンロード)"
   },
+  "regionHeading": "住んでいる地域",
+  "regionCaption": "お住まいの国・地域を選んでください(自己申告です)。アメリカの場合は州も選びます。",
+  "regionChoose": "選んでください",
+  "regionCountryAndState": "{country}・{state}",
+  "@regionCountryAndState": {
+    "description": "アメリカの州まで選んだときの地域の名前。{country} = 国の名前(アメリカ合衆国)、{state} = 州の名前(カリフォルニア州)。",
+    "placeholders": {
+      "country": {
+        "type": "String",
+        "example": "アメリカ合衆国"
+      },
+      "state": {
+        "type": "String",
+        "example": "カリフォルニア州"
+      }
+    }
+  },
+  "regionPickerTitle": "住んでいる地域を選ぶ",
+  "regionStatePickerTitle": "州を選ぶ",
+  "regionSearchHint": "国・地域の名前で探す",
+  "regionStateSearchHint": "州の名前で探す",
+  "regionNoMatch": "見つかりませんでした",
+  "regionUnavailableBadge": "提供していません",
+  "@regionUnavailableBadge": {
+    "description": "地域の一覧で、RASQ を提供していない地域の横に出す短い印。"
+  },
+  "regionUnavailableTitle": "お住まいの地域では、いまは RASQ を提供していません",
+  "regionUnavailableBody": "RASQ はいま、提供する地域を限っています。お住まいの地域では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。",
+  "regionUnavailableBodyWith": "RASQ はいま、提供する地域を限っています。{region} では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。",
+  "@regionUnavailableBodyWith": {
+    "description": "提供していない地域を選んだときの説明。理由(法律など)には触れない。{region} = 選んだ地域の名前。",
+    "placeholders": {
+      "region": {
+        "type": "String",
+        "example": "イギリス"
+      }
+    }
+  },
+  "regionUnavailableBack": "戻る",
+  "regionRequiredError": "住んでいる地域を選んでから、もう一度お試しください",
   "relationalPostTitle": "投稿",
   "@relationalPostTitle": {
     "description": "会話のまとまり(関連 TL のイベント)を開いた画面の見出し"

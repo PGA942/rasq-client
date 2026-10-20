@@ -16,9 +16,11 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../login/login_screen.dart' show SnsServiceButton, popOr;
 import 'onboarding_feed.dart';
 import 'rasq_register_screen.dart';
+import 'region/region.dart';
+import 'region/region_picker.dart';
 
 /// 初回オンボーディング v2 (D-414)。**ページごとに 1 つ**:
-/// ① ユーザー名・パスワード・年齢([OnboardingAccountStep]。初回は `/onboarding` そのもの、ほかからは `/onboarding/account`)
+/// ① ユーザー名・パスワード・年齢・住んでいる地域(D-542)([OnboardingAccountStep]。初回は `/onboarding` そのもの、ほかからは `/onboarding/account`)
 /// ② 利用規約・プライバシーポリシー・チャイルドセーフ(`/onboarding/terms`、18 歳未満は保護者の同意 / 保護者からのコードの案内。
 ///    この端末に SNS アカウントがあればバンドルも)→「同意して登録する」で RASQ アカウントを作る(ORGATE の登録 D-398、承諾は一緒に D-371)
 /// ③ 既存の SNS アカウントでログイン(`/onboarding/sns`、「SNS サービスを探す」→ 探す画面 `/sns-discover`)
@@ -30,10 +32,13 @@ import 'rasq_register_screen.dart';
 /// ① で入れた内容(② へ渡す。パスワードは画面の中だけ、保存しない)。
 @immutable
 class OnboardingDraft {
-  const OnboardingDraft({required this.handle, required this.password, required this.age, this.standalone = false, this.attempt});
+  const OnboardingDraft({required this.handle, required this.password, required this.age, this.standalone = false, this.attempt, this.region});
   final String handle;
   final String password;
   final RasqAgeBand age;
+
+  /// 住んでいる地域(D-542 / ORGATE O-018。`JP` / `US-CA`)。作るときに送る。
+  final String? region;
 
   /// オンボーディングの外から(作れたら ② は台帳の行を返して閉じる。ほかの RASQ アカウントに入っていても新しく作る)。
   final bool standalone;
@@ -129,6 +134,9 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
   RasqAgeBand? _age;
   bool _show = false;
 
+  /// 住んでいる地域 (D-542)。提供していない地域は入れない(選べば [RegionUnavailableScreen] を出して、空のまま)。
+  String? _region;
+
   /// ② から戻ってきた理由(ユーザー名が使われていた など)。
   String? _handleRejected;
 
@@ -159,14 +167,30 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
       _password.text.isNotEmpty &&
       rasqPasswordProblem(_password.text) == null &&
       _confirm.text == _password.text &&
-      _age != null;
+      _age != null &&
+      _region != null;
+
+  Future<void> _pickRegion() async {
+    final code = await pickRegion(context);
+    if (code == null || !mounted) return;
+    final regions = ref.read(rasqRegionsProvider).value;
+    if (regions != null && !regions.isAvailable(code)) {
+      // 提供していない地域 (D-542): 作成へは進めない。戻れば ① のまま(地域は空)。
+      setState(() => _region = null);
+      await showRegionUnavailable(Navigator.of(context), code);
+      return;
+    }
+    setState(() => _region = code);
+  }
 
   Future<void> _next() async {
-    final draft = OnboardingDraft(handle: _handle.text, password: _password.text, age: _age!, standalone: widget.standalone, attempt: _attempt);
+    final draft = OnboardingDraft(handle: _handle.text, password: _password.text, age: _age!, standalone: widget.standalone, attempt: _attempt, region: _region);
     final result = await context.push<Object>(Routes.onboardingTerms, extra: draft);
     if (!mounted) return;
     // 文字列 = ユーザー名を断られた(① でやり直す)。[RasqCreateRequest] = オンボーディングの外から (D-419): 閉じてから登録する。
     if (result is String) setState(() => _handleRejected = result);
+    // 作るときにサーバーが地域を断った (D-542): 進めない画面は ② で出した。地域を空に戻す。
+    if (result is RasqRegionNotServed) setState(() => _region = null);
     if (result is RasqCreateRequest) widget.onCreated?.call(result);
   }
 
@@ -175,6 +199,9 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
     final scheme = Theme.of(context).colorScheme;
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
     final centralOk = ref.watch(centralConfiguredProvider);
+    // 選べる地域を先に読んでおく(選ぶ画面と、提供していない地域の判定に使う。D-542)。
+    ref.watch(rasqRegionsProvider);
+    final region = _region;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       OnboardingStepHeader(
         step: 1,
@@ -225,6 +252,16 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
             Text(context.l10n.onboardingAgeCaption, style: caption),
             for (final a in RasqAgeBand.values)
               RasqRadioListTile<RasqAgeBand>(key: ValueKey('onb.age.${a.wire}'), title: a.label, value: a, groupValue: _age, onChanged: (v) => setState(() => _age = v)),
+            RasqSectionHeader(title: context.l10n.regionHeading, topMargin: RasqSpacing.md),
+            Text(context.l10n.regionCaption, style: caption),
+            ListTile(
+              key: const ValueKey('onb.region'),
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.public),
+              title: Text(region == null ? context.l10n.regionChoose : regionName(region)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _pickRegion,
+            ),
             const SizedBox(height: RasqSpacing.md),
           ]),
         ),
@@ -343,7 +380,7 @@ class _OnboardingTermsScreenState extends ConsumerState<OnboardingTermsScreen> {
     final d = widget.draft!;
     setState(() => _busy = true);
     try {
-      final choice = RasqRegisterChoice(age: d.age, replaceBundle: _keepsCurrentBundle ? false : (_snsCount > 0 ? _replace : true), password: d.password);
+      final choice = RasqRegisterChoice(age: d.age, replaceBundle: _keepsCurrentBundle ? false : (_snsCount > 0 ? _replace : true), password: d.password, region: d.region);
       // オンボーディングの外から (D-419): ここでは送らず、選んだ内容を ① へ返す(① も閉じ、元の画面へ戻ってから登録する)。
       if (d.standalone) return context.pop(RasqCreateRequest(handle: d.handle, choice: choice));
       final rec = await completeRasqRegistration(ref.read, choice, handle: d.handle, attempt: d.attempt, onMessage: _toast);
@@ -353,6 +390,11 @@ class _OnboardingTermsScreenState extends ConsumerState<OnboardingTermsScreen> {
     } on RasqHandleRejected catch (e) {
       // アカウントはできている。ユーザー名を変えて、もう一度(① へ戻る)。
       if (mounted) context.pop(e.message);
+    } on RasqRegionNotServed catch (e) {
+      // 提供していない地域 (D-542 / ORGATE O-018)。アカウントは作られていない。進めない画面を出し、戻ったら ① へ(地域は空に)。
+      if (!mounted) return;
+      await showRegionUnavailable(Navigator.of(context), e.region);
+      if (mounted) context.pop(e);
     } on OrgateException catch (e) {
       if (mounted) _toast(context.l10n.onboardingCreateFailed(e.message));
     } finally {
