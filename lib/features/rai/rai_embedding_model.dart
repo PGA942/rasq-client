@@ -33,7 +33,15 @@ enum RaiEmbeddingKind {
 
 @immutable
 class RaiEmbeddingSpec {
-  const RaiEmbeddingSpec({required this.id, required this.label, required this.fileName, required this.url, required this.sizeMb, required this.tokenizerAsset, required this.dims, this.kind = RaiEmbeddingKind.minilm, this.maxLen = 128, this.centralPath});
+  const RaiEmbeddingSpec({required this.id, required this.label, required this.fileName, required this.url, required this.sizeMb, required this.tokenizerAsset, required this.dims, this.kind = RaiEmbeddingKind.minilm, this.maxLen = 128, this.centralPath, this.bundledAsset, this.sha256});
+
+  /// アプリに同梱した ONNX のアセット (D-522)。端末(Web 以外)はまずこれを使い(onnxruntime はファイルの道を要るので
+  /// アプリの置き場へ写す)、アセットが無いビルドだけダウンロードする。null = 同梱しない。
+  final String? bundledAsset;
+
+  /// ONNX の sha256(16 進の小文字)。分かっていれば、同梱から写したもの / ダウンロードしたものをこれで確かめる。
+  /// null = 確かめない(同梱から写したものは長さだけ見る)。
+  final String? sha256;
 
   /// RASQ Central が配るモデル (D-390): `<Central>/api/v1/models/<centralPath>` から取る(このときは [url] を使わない)。
   final String? centralPath;
@@ -73,12 +81,17 @@ class RaiEmbeddingSpec {
 /// 配られた int8 版は畳み込みが ConvInteger(int8 の重み)で、端末の onnxruntime 1.15 に実装が無く読めないので、
 /// **重みを uint8 で量子化し直した版**(`*_uint8.onnx`、精度は同じ)を配る。
 /// 投稿の画像の塔([postVisionEmbeddingSpec])と同じ空間なので、投稿の本文と画像を比べられる。RASQ Central が配る。
+/// **アプリに同梱する** (D-522): LLM が無くても RAi の検索 / 投稿の埋め込み / ショーケースのジャンル / ノードの TL が使うので、
+/// `assets/rai_embedding/text_tower_uint8.onnx`(Web 以外、`tool/fetch_embedding_model.sh` で置く)を既定にする。
+/// アセットが無いビルドは従来どおり Central から取る。
 const raiEmbeddingSpec = RaiEmbeddingSpec(
   id: 'rasq-minilm-text-int8',
   label: 'RASQ MiniLM(文)', // l10n-ignore
   fileName: 'text_tower_uint8.onnx',
   url: '',
   centralPath: 'minilm-mobilenet/onnx/text_tower_uint8.onnx',
+  bundledAsset: '$raiBundledEmbeddingDir/text_tower_uint8.onnx',
+  // sha256: 置き場の正本(D-390 の uint8 版)から tool/fetch_embedding_model.sh が出す値を書く。未記入の間は長さだけ確かめる。
   sizeMb: 35,
   tokenizerAsset: 'assets/models/minilm_unigram.tsv',
   dims: 384,
@@ -127,21 +140,27 @@ const raiSiglip2EmbeddingSpec = RaiEmbeddingSpec(
   maxLen: 64,
 );
 
+/// 同梱の埋め込みモデルの置き場 (D-522)。pubspec の `platforms` で Web には入れない。
+const raiBundledEmbeddingDir = 'assets/rai_embedding';
+
 enum RaiEmbeddingPhase { notInstalled, downloading, ready, loading, error }
 
 @immutable
 class RaiEmbeddingStatus {
-  const RaiEmbeddingStatus(this.phase, {this.progress, this.message});
+  const RaiEmbeddingStatus(this.phase, {this.progress, this.message, this.bundled = false});
   final RaiEmbeddingPhase phase;
   final int? progress;
   final String? message;
+
+  /// アプリに同梱したモデルを使っている (D-522)。モデルの画面は「同梱」と出し、削除を出さない。
+  final bool bundled;
   bool get ready => phase == RaiEmbeddingPhase.ready;
   static const initial = RaiEmbeddingStatus(RaiEmbeddingPhase.notInstalled);
 
   String get label => switch (phase) {
         RaiEmbeddingPhase.notInstalled => appL10n.raiModelsPhaseNotInstalled,
         RaiEmbeddingPhase.downloading => appL10n.raiModelsPhaseDownloading(progress ?? 0),
-        RaiEmbeddingPhase.ready => appL10n.raiModelsPhaseReady,
+        RaiEmbeddingPhase.ready => bundled ? appL10n.raiModelsPhaseReadyBundled : appL10n.raiModelsPhaseReady,
         RaiEmbeddingPhase.loading => appL10n.raiModelsPhaseLoading,
         RaiEmbeddingPhase.error => appL10n.raiModelsEmbeddingFailed(message ?? ''),
       };

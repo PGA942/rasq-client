@@ -14336,6 +14336,12 @@ abstract class AppLocalizations {
   /// **'準備完了'**
   String get raiModelsPhaseReady;
 
+  /// アプリに同梱した埋め込みモデル(RASQ MiniLM)を使っているときの状態
+  ///
+  /// In ja, this message translates to:
+  /// **'準備完了(同梱)'**
+  String get raiModelsPhaseReadyBundled;
+
   /// No description provided for @raiModelsPhaseLoading.
   ///
   /// In ja, this message translates to:
@@ -14719,6 +14725,18 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'この環境では端末内の埋め込みモデルを使えません'**
   String get raiModelsEmbeddingUnavailableHere;
+
+  /// 同梱から写した / ダウンロードしたモデルの sha256 が期待と違うとき
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルのファイルが壊れています(sha256 が違います)'**
+  String get raiModelsChecksumMismatch;
+
+  /// 同梱から写したモデルの長さが元と違うとき
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルのファイルが途中で切れています'**
+  String get raiModelsSizeMismatch;
 
   /// No description provided for @raiModelsCentralNotConfigured.
   ///

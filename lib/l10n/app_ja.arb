@@ -8260,6 +8260,10 @@
     }
   },
   "raiModelsPhaseReady": "準備完了",
+  "raiModelsPhaseReadyBundled": "準備完了(同梱)",
+  "@raiModelsPhaseReadyBundled": {
+    "description": "アプリに同梱した埋め込みモデル(RASQ MiniLM)を使っているときの状態"
+  },
   "raiModelsPhaseLoading": "読み込み中",
   "raiModelsPhaseGenerating": "生成中",
   "raiModelsPhaseUnavailable": "使えません",
@@ -8482,6 +8486,14 @@
     }
   },
   "raiModelsEmbeddingUnavailableHere": "この環境では端末内の埋め込みモデルを使えません",
+  "raiModelsChecksumMismatch": "モデルのファイルが壊れています(sha256 が違います)",
+  "@raiModelsChecksumMismatch": {
+    "description": "同梱から写した / ダウンロードしたモデルの sha256 が期待と違うとき"
+  },
+  "raiModelsSizeMismatch": "モデルのファイルが途中で切れています",
+  "@raiModelsSizeMismatch": {
+    "description": "同梱から写したモデルの長さが元と違うとき"
+  },
   "raiModelsCentralNotConfigured": "RASQ サーバーの接続先が未設定です",
   "raiModelsLoadFailedOnnx": "モデルを読み込めません(onnxruntime): {error}",
   "@raiModelsLoadFailedOnnx": {
