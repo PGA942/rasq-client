@@ -53,6 +53,9 @@ abstract class RaiPrompts {
   /// 「これじゃない」と言われた操作 (D-222) の行。
   String excludedOperations(List<String> ids);
 
+  /// 関連 TL の会話のまとまりを 1 文に要約させる指示 (D-528)。[conversation] は「名前: 本文」の行を改行でつないだもの。
+  String eventSummary(String conversation);
+
   /// 推論サーバーへ添えるリファレンスの見出し (D-216)。
   String get referenceContextHeading;
 

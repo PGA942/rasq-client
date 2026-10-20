@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rasq_design/rasq_design.dart' show RasqDateFormat;
 
 import '../../session/session_providers.dart';
+import '../../l10n/l10n.dart';
 
 /// 最近の検索 (D-259): 検索ホームで決定した検索を端末に控える(新しい順、30 件まで、同じ言葉は 1 つ)。
 /// 「ノート画像の追加」FOW の「最近の検索」タブが、ここから探し直す。
@@ -69,9 +71,10 @@ final searchHistoryProvider = NotifierProvider<SearchHistory, List<SearchHistory
 /// 「1 時間前」「1 日前」。
 String searchHistoryAgo(DateTime at, {DateTime? now}) {
   final d = (now ?? DateTime.now()).difference(at);
-  if (d.inMinutes < 1) return 'たった今';
-  if (d.inHours < 1) return '${d.inMinutes} 分前';
-  if (d.inDays < 1) return '${d.inHours} 時間前';
-  if (d.inDays < 30) return '${d.inDays} 日前';
-  return '${at.year}/${at.month}/${at.day}';
+  final l = appL10n;
+  if (d.inMinutes < 1) return l.searchAgoJustNow;
+  if (d.inHours < 1) return l.searchAgoMinutes(d.inMinutes);
+  if (d.inDays < 1) return l.searchAgoHours(d.inHours);
+  if (d.inDays < 30) return l.searchAgoDays(d.inDays);
+  return RasqDateFormat.numericDate(at);
 }

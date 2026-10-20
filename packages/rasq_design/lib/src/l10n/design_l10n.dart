@@ -67,6 +67,9 @@ abstract final class RasqDateFormat {
   /// 年月日(`2017年2月3日`)。
   static String yearMonthDay(DateTime t, {String? locale}) => DateFormat.yMMMd(intlLocale(locale)).format(t);
 
+  /// 数字だけの年月日(`2017/2/3`)。
+  static String numericDate(DateTime t, {String? locale}) => DateFormat.yMd(intlLocale(locale)).format(t);
+
   /// 時刻(`14:30`)。
   static String time(DateTime t, {String? locale}) => DateFormat.Hm(intlLocale(locale)).format(t);
 }

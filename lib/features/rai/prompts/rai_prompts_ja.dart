@@ -44,6 +44,9 @@ class RaiPromptsJa extends RaiPrompts {
   String excludedOperations(List<String> ids) => '(違うと言われた操作: ${ids.join(', ')})';
 
   @override
+  String eventSummary(String conversation) => '次の会話を1文で要約:\n$conversation';
+
+  @override
   String get referenceContextHeading => '参考(操作リファレンス、近い順):';
 
   @override

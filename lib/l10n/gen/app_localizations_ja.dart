@@ -10814,6 +10814,311 @@ class AppLocalizationsJa extends AppLocalizations {
   String get raiModelsNoteNotInstalled => '未DL';
 
   @override
+  String get relationalPostTitle => '投稿';
+
+  @override
+  String relationalEventTitle(String name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$name+$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String relationalEventCaption(int posts, int members) {
+    String _temp0 = intl.Intl.pluralLogic(
+      posts,
+      locale: localeName,
+      other: '$posts件',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      members,
+      locale: localeName,
+      other: '$members人',
+    );
+    return '$_temp0 ・ $_temp1';
+  }
+
+  @override
+  String relationalEventPostCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String relationalDurationHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours時間',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String relationalDurationHoursMinutes(int hours, int minutes) {
+    return '$hours時間$minutes分';
+  }
+
+  @override
+  String relationalDurationMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes分',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String relationalLookback(String duration) {
+    return '$duration前の会話まで表示中';
+  }
+
+  @override
+  String get relationalLookbackReset => '戻す';
+
+  @override
+  String get relationalHeader => '会話ごとにまとめて表示しています';
+
+  @override
+  String relationalHeaderDetail(int bias, int maxMinutes) {
+    return '束ねやすさ $bias / 会話のテンポに応じて最長$maxMinutes分で沈む';
+  }
+
+  @override
+  String get relationalTuningTitle => 'リレーショナルTL調整';
+
+  @override
+  String get relationalRetry => '再読み込み';
+
+  @override
+  String get relationalEmptyTitle => 'いま進行中の会話はありません';
+
+  @override
+  String get relationalEmptyHint => 'フォロー中の人の会話が、ここにまとまって出ます。引っ張ると過去の会話も見られます';
+
+  @override
+  String get relationalTuningCancel => 'キャンセル';
+
+  @override
+  String get relationalTuningConfirm => '決定';
+
+  @override
+  String get relationalAdvanced => '詳細設定';
+
+  @override
+  String get relationalSectionLinking => '束ね判定';
+
+  @override
+  String get relationalCandidateWindow => '候補ウィンドウ';
+
+  @override
+  String get relationalCandidateWindowSubtitle => '親候補を探す直近の範囲';
+
+  @override
+  String relationalMinutesValue(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes分',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String relationalSecondsValue(int seconds) {
+    String _temp0 = intl.Intl.pluralLogic(
+      seconds,
+      locale: localeName,
+      other: '$seconds秒',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get relationalSectionWeightsPlain => '重み(通常投稿)';
+
+  @override
+  String get relationalWeightContent => '内容類似';
+
+  @override
+  String get relationalWeightEntity => 'エンティティ一致';
+
+  @override
+  String get relationalWeightTime => '時間減衰';
+
+  @override
+  String get relationalWeightAffinity => 'ペア親密度';
+
+  @override
+  String get relationalWeightTurn => '発話交替';
+
+  @override
+  String get relationalWeightAnchor => 'アンカー';
+
+  @override
+  String get relationalSectionFlatBonus => 'フラット加点';
+
+  @override
+  String get relationalWeightCommunityPrior => 'コミュニティ事前分布 ±';
+
+  @override
+  String get relationalSectionLifecycle => 'ライフサイクル';
+
+  @override
+  String get relationalTentativeHold => '仮 ROOT 保留';
+
+  @override
+  String get relationalTentativeHoldSubtitle => '新話題として確定するまでの保留時間';
+
+  @override
+  String get relationalResetDefaults => '既定に戻す';
+
+  @override
+  String get relationalLinkBias => '束ねやすさ';
+
+  @override
+  String get relationalLinkBiasSubtitle => '低いほど広く束ねる(しきい値はコミュニティ別に自動調整)';
+
+  @override
+  String get relationalTauSubtitle => '大きいほど時間が離れた投稿もリンクしやすい(τ)';
+
+  @override
+  String get relationalSectionWeights => '重み';
+
+  @override
+  String get relationalSimilarity => '類似性';
+
+  @override
+  String get relationalSimilaritySubtitle => '内容類似+エンティティ一致(内訳は詳細設定)';
+
+  @override
+  String get relationalCloseness => '親密度';
+
+  @override
+  String get relationalClosenessSubtitle => 'ペア親密度+発話交替(内訳は詳細設定)';
+
+  @override
+  String get relationalSectionExtra => '追加判定';
+
+  @override
+  String get relationalHardAnchor => 'ハードアンカー(URL/引用先)';
+
+  @override
+  String get relationalReactive => '反応表現(それな・わかる等)';
+
+  @override
+  String get relationalTtlSubtitle => '会話が沈むまでの時間。投稿間隔からこの範囲内で自動調整';
+
+  @override
+  String relationalTtlValue(int min, int max) {
+    return '$min〜$max分';
+  }
+
+  @override
+  String get searchChildSafePostsBlocked => '保護者が投稿の検索を止めています';
+
+  @override
+  String get searchChildSafeTrendBlocked => '保護者がトレンドを止めています';
+
+  @override
+  String get searchTrendSettings => 'トレンド設定';
+
+  @override
+  String get searchTrendCustomize => 'トレンドページをカスタマイズ';
+
+  @override
+  String get searchTrendPage => 'トレンドページ';
+
+  @override
+  String get searchTrendMenu => 'メニュー';
+
+  @override
+  String get searchHint => '検索';
+
+  @override
+  String get searchSettings => '検索の設定';
+
+  @override
+  String get searchSettingsTendency => '検索結果の指向性/刺激性';
+
+  @override
+  String get searchSettingsTrendPlugins => 'トレンドプラグインの設定';
+
+  @override
+  String get searchSettingsCacheNetwork => 'キャッシュネットワークの設定';
+
+  @override
+  String get searchSettingsComingSoon => 'この設定は準備中です。';
+
+  @override
+  String get searchSortRelevance => '関連順';
+
+  @override
+  String get searchSortNewest => '新しい順';
+
+  @override
+  String get searchSortOldest => '古い順';
+
+  @override
+  String get searchSortReactions => 'リアクション多い順';
+
+  @override
+  String get searchPeriodAll => 'すべて';
+
+  @override
+  String get searchPeriodDay => '24時間';
+
+  @override
+  String get searchPeriodWeek => '1週間';
+
+  @override
+  String get searchPeriodMonth => '1ヶ月';
+
+  @override
+  String get searchPeriodChip => '期間';
+
+  @override
+  String get searchAgoJustNow => 'たった今';
+
+  @override
+  String searchAgoMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 分前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String searchAgoHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 時間前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String searchAgoDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 日前',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get serversOpen => 'サーバーを開く';
 
   @override

@@ -26,6 +26,7 @@ import '../trend/trend_providers.dart';
 import 'search_filter.dart';
 import 'search_history.dart';
 import 'search_filter_bar_view.dart';
+import '../../l10n/l10n.dart';
 
 /// 検索欄へのフォーカスの頼み (D-483: ホーム画面のショートカット「検索」)。検索タブ(第2カラム / 狭い画面)の [SearchScreen] が受ける
 /// (第3カラムの検索は受けない)。まだ作られていなければ(起動直後)、作られたときに 1 度だけ受ける。
@@ -160,7 +161,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               Expanded(
                 // チャイルドセーフ (D-307): 保護者が投稿の検索を止めていれば、入力欄を薄くして理由を出す。
                 child: ChildSafeGreyed(
-                  reason: ref.watch(childGateProvider).searchAllowed('posts') ? null : '保護者が投稿の検索を止めています',
+                  reason: ref.watch(childGateProvider).searchAllowed('posts') ? null : context.l10n.searchChildSafePostsBlocked,
                   child: SearchFilterBox(
                   controller: _controller,
                   focusNode: _focus,
@@ -187,15 +188,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   Widget _home(BuildContext context, AsyncValue<List<TrendTag>> trends) {
     // チャイルドセーフ (D-307): トレンドを止めていれば、トレンドと Today を出さない。
-    if (!ref.watch(childGateProvider).searchAllowed('trend')) return const ChildSafeBlockedView(message: '保護者がトレンドを止めています');
+    if (!ref.watch(childGateProvider).searchAllowed('trend')) return ChildSafeBlockedView(message: context.l10n.searchChildSafeTrendBlocked);
     // トレンドページの並び (D-443): トレンドページのカスタマイズの「SNSタイムライン」の順。
     final page = trendPageConfig(ref.watch(tlViewConfigProvider(trendTilesScope)));
     final nodes = [for (final s in page.sources) if (s.enabled) s];
     // トレンドプロファイル設定 (D-153、傾向 FOW): ジャンル / 指向性・刺激性 / プラグイン / キャッシュ / ノード編集。
     // 歯車 = トレンドページのカスタマイズ (D-431 → D-443、TL のカスタマイズと同じ画面。傾向はトレンドのタイルの一番最後に固定で掛かる)。
     final settings = Row(mainAxisSize: MainAxisSize.min, children: [
-      RasqIconButton(key: const ValueKey('trend.tendency'), icon: Icons.tune, size: 20, onPressed: () => showTrendProfileSheet(context, ref), tooltip: 'トレンド設定'),
-      RasqIconButton(key: const ValueKey('trend.customize'), icon: Icons.settings, size: 20, onPressed: () => context.push(Routes.tlConfig(trendTilesScope)), tooltip: 'トレンドページをカスタマイズ'),
+      RasqIconButton(key: const ValueKey('trend.tendency'), icon: Icons.tune, size: 20, onPressed: () => showTrendProfileSheet(context, ref), tooltip: context.l10n.searchTrendSettings),
+      RasqIconButton(key: const ValueKey('trend.customize'), icon: Icons.settings, size: 20, onPressed: () => context.push(Routes.tlConfig(trendTilesScope)), tooltip: context.l10n.searchTrendCustomize),
     ]);
     return RefreshIndicator(
         onRefresh: () async {
@@ -208,7 +209,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           // 広告の枠 (検索ホームの固定の位置、D-433: 前は灰色の「広告」の箱だけだった)。AdMob のバナー(テストの ID)。設定「リソースと広告」(D-238)
           // で消せる。子のアカウントと、出せない端末(デスクトップ / AdSense の ID の無い Web)では何も出さない。
           if (settingValue(ref, 'resources', 'showAds', true) != false) const Center(key: ValueKey('search.ad'), child: ExportAdSlot()),
-          if (nodes.isEmpty) RasqSectionHeader(title: 'トレンドページ', trailing: settings),
+          if (nodes.isEmpty) RasqSectionHeader(title: context.l10n.searchTrendPage, trailing: settings),
           TlBlocks(key: const ValueKey('search.blocks'), nodes: nodes, trends: trends, headerTrailing: (i) => i == 0 ? settings : null),
           const SizedBox(height: 80),
         ]),
@@ -258,7 +259,7 @@ class TrendTile extends ConsumerWidget {
               key: ValueKey('trend.more.${trend.tag}'),
               icon: Icons.more_horiz,
               size: 18,
-              tooltip: 'メニュー',
+              tooltip: context.l10n.searchTrendMenu,
               onPressed: () {
                 final box = bctx.findRenderObject() as RenderBox;
                 showTrendMenu(context, ref, trend: trend, sources: sources, anchor: box.localToGlobal(Offset.zero) & box.size);

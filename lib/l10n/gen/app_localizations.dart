@@ -17810,6 +17810,450 @@ abstract class AppLocalizations {
   /// **'未DL'**
   String get raiModelsNoteNotInstalled;
 
+  /// 会話のまとまり(関連 TL のイベント)を開いた画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get relationalPostTitle;
+
+  /// 会話のまとまりの見出し。name は最初に投稿した人の表示名、count はほかに加わった人の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{name}+{count}人}}'**
+  String relationalEventTitle(String name, int count);
+
+  /// 会話のまとまりの画面の見出しの下の補足。posts は投稿の数、members は加わった人の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{posts, plural, other{{posts}件}} ・ {members, plural, other{{members}人}}'**
+  String relationalEventCaption(int posts, int members);
+
+  /// 関連 TL の会話のまとまりのタイルの右端。count は投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}件}}'**
+  String relationalEventPostCount(int count);
+
+  /// さかのぼった時間の長さ(ちょうど何時間)。下の relationalLookback の duration に入る
+  ///
+  /// In ja, this message translates to:
+  /// **'{hours, plural, other{{hours}時間}}'**
+  String relationalDurationHours(int hours);
+
+  /// さかのぼった時間の長さ(時間と分)。下の relationalLookback の duration に入る
+  ///
+  /// In ja, this message translates to:
+  /// **'{hours}時間{minutes}分'**
+  String relationalDurationHoursMinutes(int hours, int minutes);
+
+  /// さかのぼった時間の長さ(1 時間未満)。下の relationalLookback の duration に入る
+  ///
+  /// In ja, this message translates to:
+  /// **'{minutes, plural, other{{minutes}分}}'**
+  String relationalDurationMinutes(int minutes);
+
+  /// 関連 TL で引っ張って過去の会話を出しているときの帯。duration は「2時間」などの長さ
+  ///
+  /// In ja, this message translates to:
+  /// **'{duration}前の会話まで表示中'**
+  String relationalLookback(String duration);
+
+  /// 上の帯の、いまの会話だけに戻すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'戻す'**
+  String get relationalLookbackReset;
+
+  /// 関連 TL(フォロー中の人の会話をまとめて出す TL)の上の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'会話ごとにまとめて表示しています'**
+  String get relationalHeader;
+
+  /// 開発者モードの関連 TL の上の説明。bias は束ねやすさの値(50〜100)、maxMinutes は会話が沈むまでの最長の分
+  ///
+  /// In ja, this message translates to:
+  /// **'束ねやすさ {bias} / 会話のテンポに応じて最長{maxMinutes}分で沈む'**
+  String relationalHeaderDetail(int bias, int maxMinutes);
+
+  /// 関連 TL の調整のパネルの見出し、および開くボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'リレーショナルTL調整'**
+  String get relationalTuningTitle;
+
+  /// 関連 TL を読み込めなかったときの、やり直すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get relationalRetry;
+
+  /// 関連 TL が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'いま進行中の会話はありません'**
+  String get relationalEmptyTitle;
+
+  /// 関連 TL が空のときの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中の人の会話が、ここにまとまって出ます。引っ張ると過去の会話も見られます'**
+  String get relationalEmptyHint;
+
+  /// 調整のパネルの、変更を捨てて閉じるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get relationalTuningCancel;
+
+  /// 調整のパネルの、変更を残して閉じるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get relationalTuningConfirm;
+
+  /// 調整のパネルの、全部の値を出す画面へ進む行 / 戻る行
+  ///
+  /// In ja, this message translates to:
+  /// **'詳細設定'**
+  String get relationalAdvanced;
+
+  /// 調整のパネルの節の見出し。投稿を同じ会話に束ねるかの判定の値
+  ///
+  /// In ja, this message translates to:
+  /// **'束ね判定'**
+  String get relationalSectionLinking;
+
+  /// 詳細設定のスライダー。前の投稿を探す範囲の時間
+  ///
+  /// In ja, this message translates to:
+  /// **'候補ウィンドウ'**
+  String get relationalCandidateWindow;
+
+  /// 候補ウィンドウのスライダーの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'親候補を探す直近の範囲'**
+  String get relationalCandidateWindowSubtitle;
+
+  /// スライダーの値の表示(分)
+  ///
+  /// In ja, this message translates to:
+  /// **'{minutes, plural, other{{minutes}分}}'**
+  String relationalMinutesValue(int minutes);
+
+  /// スライダーの値の表示(秒)
+  ///
+  /// In ja, this message translates to:
+  /// **'{seconds, plural, other{{seconds}秒}}'**
+  String relationalSecondsValue(int seconds);
+
+  /// 詳細設定の節の見出し。通常の投稿のつながりの点数の重み
+  ///
+  /// In ja, this message translates to:
+  /// **'重み(通常投稿)'**
+  String get relationalSectionWeightsPlain;
+
+  /// 重みのスライダー。中身が似ているか
+  ///
+  /// In ja, this message translates to:
+  /// **'内容類似'**
+  String get relationalWeightContent;
+
+  /// 重みのスライダー。同じ固有名詞・タグなどが出るか
+  ///
+  /// In ja, this message translates to:
+  /// **'エンティティ一致'**
+  String get relationalWeightEntity;
+
+  /// 重みのスライダー。時間が近いか(時間とともに弱まる)
+  ///
+  /// In ja, this message translates to:
+  /// **'時間減衰'**
+  String get relationalWeightTime;
+
+  /// 重みのスライダー。2 人がふだんやり取りしているか
+  ///
+  /// In ja, this message translates to:
+  /// **'ペア親密度'**
+  String get relationalWeightAffinity;
+
+  /// 重みのスライダー。交互に話しているか
+  ///
+  /// In ja, this message translates to:
+  /// **'発話交替'**
+  String get relationalWeightTurn;
+
+  /// 重みのスライダー。同じハッシュタグなどの目印
+  ///
+  /// In ja, this message translates to:
+  /// **'アンカー'**
+  String get relationalWeightAnchor;
+
+  /// 詳細設定の節の見出し。決まった点を足す値
+  ///
+  /// In ja, this message translates to:
+  /// **'フラット加点'**
+  String get relationalSectionFlatBonus;
+
+  /// 詳細設定のスライダー。同じコミュニティかで足し引きする点
+  ///
+  /// In ja, this message translates to:
+  /// **'コミュニティ事前分布 ±'**
+  String get relationalWeightCommunityPrior;
+
+  /// 調整のパネルの節の見出し。会話が始まってから沈むまで
+  ///
+  /// In ja, this message translates to:
+  /// **'ライフサイクル'**
+  String get relationalSectionLifecycle;
+
+  /// 詳細設定のスライダー。新しい会話の始まり(ROOT)として決めるまで待つ時間。ROOT は訳さなくてよい
+  ///
+  /// In ja, this message translates to:
+  /// **'仮 ROOT 保留'**
+  String get relationalTentativeHold;
+
+  /// 上のスライダーの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'新話題として確定するまでの保留時間'**
+  String get relationalTentativeHoldSubtitle;
+
+  /// 詳細設定の、全部の値を既定に戻すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'既定に戻す'**
+  String get relationalResetDefaults;
+
+  /// 調整のパネルのスライダー。どれくらい広く同じ会話に束ねるか
+  ///
+  /// In ja, this message translates to:
+  /// **'束ねやすさ'**
+  String get relationalLinkBias;
+
+  /// 束ねやすさのスライダーの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'低いほど広く束ねる(しきい値はコミュニティ別に自動調整)'**
+  String get relationalLinkBiasSubtitle;
+
+  /// 時間減衰のスライダーの補足。τ は時定数の記号で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'大きいほど時間が離れた投稿もリンクしやすい(τ)'**
+  String get relationalTauSubtitle;
+
+  /// 調整のパネルの節の見出し。つながりの点数の重み
+  ///
+  /// In ja, this message translates to:
+  /// **'重み'**
+  String get relationalSectionWeights;
+
+  /// 調整のパネルのスライダー。内容類似とエンティティ一致をまとめたもの
+  ///
+  /// In ja, this message translates to:
+  /// **'類似性'**
+  String get relationalSimilarity;
+
+  /// 類似性のスライダーの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'内容類似+エンティティ一致(内訳は詳細設定)'**
+  String get relationalSimilaritySubtitle;
+
+  /// 調整のパネルのスライダー。ペア親密度と発話交替をまとめたもの
+  ///
+  /// In ja, this message translates to:
+  /// **'親密度'**
+  String get relationalCloseness;
+
+  /// 親密度のスライダーの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'ペア親密度+発話交替(内訳は詳細設定)'**
+  String get relationalClosenessSubtitle;
+
+  /// 調整のパネルの節の見出し。条件に合えば足す点
+  ///
+  /// In ja, this message translates to:
+  /// **'追加判定'**
+  String get relationalSectionExtra;
+
+  /// 追加判定のスライダー。同じ URL や同じ引用先を含むときに足す点
+  ///
+  /// In ja, this message translates to:
+  /// **'ハードアンカー(URL/引用先)'**
+  String get relationalHardAnchor;
+
+  /// 追加判定のスライダー。「それな」「わかる」のような短い反応の投稿に足す点。例はその言語のよくある相づちに置き換えてよい
+  ///
+  /// In ja, this message translates to:
+  /// **'反応表現(それな・わかる等)'**
+  String get relationalReactive;
+
+  /// TTL(会話が沈むまでの時間)の範囲のスライダーの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'会話が沈むまでの時間。投稿間隔からこの範囲内で自動調整'**
+  String get relationalTtlSubtitle;
+
+  /// TTL の範囲のスライダーの値。min / max は分
+  ///
+  /// In ja, this message translates to:
+  /// **'{min}〜{max}分'**
+  String relationalTtlValue(int min, int max);
+
+  /// チャイルドセーフ: 保護者が投稿の検索を止めているときに、検索欄に添える理由
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が投稿の検索を止めています'**
+  String get searchChildSafePostsBlocked;
+
+  /// チャイルドセーフ: 保護者がトレンドを止めているときの、検索ホームの文
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がトレンドを止めています'**
+  String get searchChildSafeTrendBlocked;
+
+  /// 検索ホームの、トレンドの傾向(ジャンル・指向性など)を選ぶボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンド設定'**
+  String get searchTrendSettings;
+
+  /// 検索ホームの、トレンドページの並びを変えるボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドページをカスタマイズ'**
+  String get searchTrendCustomize;
+
+  /// 検索ホームの節の見出し(並べるものが無いとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドページ'**
+  String get searchTrendPage;
+
+  /// トレンドの行の「…」のボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'メニュー'**
+  String get searchTrendMenu;
+
+  /// 検索欄の薄い文字(既定)
+  ///
+  /// In ja, this message translates to:
+  /// **'検索'**
+  String get searchHint;
+
+  /// 検索欄の歯車のボタンのツールチップ、および開くシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'検索の設定'**
+  String get searchSettings;
+
+  /// 検索の設定のシートの行(警告の色)。検索結果の傾向・刺激の強さの設定
+  ///
+  /// In ja, this message translates to:
+  /// **'検索結果の指向性/刺激性'**
+  String get searchSettingsTendency;
+
+  /// 検索の設定のシートの行
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプラグインの設定'**
+  String get searchSettingsTrendPlugins;
+
+  /// 検索の設定のシートの行
+  ///
+  /// In ja, this message translates to:
+  /// **'キャッシュネットワークの設定'**
+  String get searchSettingsCacheNetwork;
+
+  /// 検索の設定のシートの行を押したときの知らせ(まだ使えない)
+  ///
+  /// In ja, this message translates to:
+  /// **'この設定は準備中です。'**
+  String get searchSettingsComingSoon;
+
+  /// 検索の並び替え: 関連の強い順
+  ///
+  /// In ja, this message translates to:
+  /// **'関連順'**
+  String get searchSortRelevance;
+
+  /// 検索の並び替え: 新しい順
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい順'**
+  String get searchSortNewest;
+
+  /// 検索の並び替え: 古い順
+  ///
+  /// In ja, this message translates to:
+  /// **'古い順'**
+  String get searchSortOldest;
+
+  /// 検索の並び替え: リアクションの多い順
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション多い順'**
+  String get searchSortReactions;
+
+  /// 検索の期間: 全期間
+  ///
+  /// In ja, this message translates to:
+  /// **'すべて'**
+  String get searchPeriodAll;
+
+  /// 検索の期間: 直近 24 時間
+  ///
+  /// In ja, this message translates to:
+  /// **'24時間'**
+  String get searchPeriodDay;
+
+  /// 検索の期間: 直近 1 週間
+  ///
+  /// In ja, this message translates to:
+  /// **'1週間'**
+  String get searchPeriodWeek;
+
+  /// 検索の期間: 直近 1 か月
+  ///
+  /// In ja, this message translates to:
+  /// **'1ヶ月'**
+  String get searchPeriodMonth;
+
+  /// 検索の期間のチップ(期間を絞っていないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'期間'**
+  String get searchPeriodChip;
+
+  /// 最近の検索の時刻(1 分未満)
+  ///
+  /// In ja, this message translates to:
+  /// **'たった今'**
+  String get searchAgoJustNow;
+
+  /// 最近の検索の時刻。count は何分前か
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 分前}}'**
+  String searchAgoMinutes(int count);
+
+  /// 最近の検索の時刻。count は何時間前か
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 時間前}}'**
+  String searchAgoHours(int count);
+
+  /// 最近の検索の時刻。count は何日前か
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 日前}}'**
+  String searchAgoDays(int count);
+
   /// サーバー情報のタイルの右下のボタン(既定)。サーバーのページをブラウザで開く
   ///
   /// In ja, this message translates to:
