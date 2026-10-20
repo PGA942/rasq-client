@@ -11,6 +11,7 @@ import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account_page_api.dart' hide RasqNotice;
 import '../../backend/rasq_collections_api.dart';
+import '../../l10n/l10n.dart';
 import '../vc/astell_models.dart';
 
 /// リストに人を足す (D-366): AsTell の作成 FOW の「フォロワーを招待」と同じ形。
@@ -87,7 +88,7 @@ class MemberCandidate {
 
   String get displayName => user?.displayName ?? rasq!.displayName;
   Uri? get avatarUrl => user != null ? user!.avatarUrl : rasq!.avatarUrl;
-  String get subtitle => user != null ? '@${user!.account.handle} ・ ${user!.account.instance}' : 'RASQ @${rasq!.handle}';
+  String get subtitle => user != null ? appL10n.listsMemberCandidateSubtitle(user!.account.handle, user!.account.instance) : 'RASQ @${rasq!.handle}';
 }
 
 /// RASQ アカウント → そのセッションの SNS で見えるユーザー。同じ SNS のアカウントを公開していなければ null と理由。
@@ -101,26 +102,26 @@ Future<({UserSummary? user, String? reason})> resolveRasqMember(RasqAccountPageA
       final sb = b.instance == session.account.instance ? 0 : 1;
       return sa != sb ? sa - sb : (a.verified == b.verified ? 0 : (a.verified ? -1 : 1));
     });
-  if (links.isEmpty) return (user: null, reason: '${who.displayName} さんは、この SNS のアカウントを公開していません');
+  if (links.isEmpty) return (user: null, reason: appL10n.listsMemberNotPublished(who.displayName));
   for (final l in links) {
     try {
       final p = await session.userByHandle(l.handle, host: l.instance == session.account.instance ? null : l.instance);
       if (p != null) return (user: p.summary, reason: null);
     } catch (_) {}
   }
-  return (user: null, reason: '${who.displayName} さんの SNS アカウントが見つかりません');
+  return (user: null, reason: appL10n.listsMemberSnsNotFound(who.displayName));
 }
 
 /// 足す人を選ぶ FOW。足したら人数を返す(やめたら null)。
-Future<int?> showListMemberPicker(WidgetRef ref, {required SnsSession session, required ListMemberTarget target, String title = 'メンバーを追加'}) async {
+Future<int?> showListMemberPicker(WidgetRef ref, {required SnsSession session, required ListMemberTarget target, String? title}) async {
   final manager = ref.read(overlayManagerProvider);
   final picked = ValueNotifier<Map<String, UserSummary>>({});
   final canAdd = ValueNotifier(false);
   picked.addListener(() => canAdd.value = picked.value.isNotEmpty);
   final ok = await manager.showBottomSheet<bool>(
     id: 'lists.members.add',
-    title: title,
-    confirmText: '追加',
+    title: title ?? appL10n.listsAddMembers,
+    confirmText: appL10n.listsPickerConfirm,
     confirmEnabled: canAdd,
     builder: (_) => _PickerBody(session: session, target: target, picked: picked),
   );
@@ -238,11 +239,11 @@ class _PickerBodyState extends ConsumerState<_PickerBody> {
     }
     final api = _api;
     if (api == null || _unavailable.containsKey(who.id)) {
-      _explain(_unavailable[who.id] ?? 'RASQ サーバーに繋がっていません');
+      _explain(_unavailable[who.id] ?? context.l10n.listsPickerNoServer);
       return;
     }
     setState(() => _resolving.add(who.id));
-    final r = await resolveRasqMember(api, widget.session, who).catchError((Object e) => (user: null, reason: '調べられませんでした'));
+    final r = await resolveRasqMember(api, widget.session, who).catchError((Object e) => (user: null, reason: appL10n.listsPickerLookupFailed));
     if (!mounted) return;
     setState(() {
       _resolving.remove(who.id);
@@ -250,10 +251,10 @@ class _PickerBodyState extends ConsumerState<_PickerBody> {
         _resolved[who.id] = r.user!;
         widget.picked.value = {...widget.picked.value, c.key: r.user!};
       } else {
-        _unavailable[who.id] = r.reason ?? '選べません';
+        _unavailable[who.id] = r.reason ?? context.l10n.listsPickerUnavailable;
       }
     });
-    if (r.user == null) _explain(r.reason ?? '選べません');
+    if (r.user == null) _explain(r.reason ?? context.l10n.listsPickerUnavailable);
   }
 
   void _explain(String message) {
@@ -265,7 +266,7 @@ class _PickerBodyState extends ConsumerState<_PickerBody> {
     return Column(key: key, crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0), child: Text(label, style: RasqTypography.caption)),
       if (visible.isEmpty)
-        const RasqCaption('いません')
+        RasqCaption(context.l10n.listsPickerNone)
       else
         SizedBox(
           height: RasqSizes.avatarXl + 24,
@@ -294,30 +295,31 @@ class _PickerBodyState extends ConsumerState<_PickerBody> {
   Widget build(BuildContext context) {
     final searching = _query.text.trim().isNotEmpty;
     final count = widget.picked.value.length;
+    final l10n = context.l10n;
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: RasqSpacing.lg),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: RasqInput(key: const ValueKey('lists.members.search'), controller: _query, hintText: 'ユーザーを検索(SNS / RASQ)', onChanged: (v) {
+          child: RasqInput(key: const ValueKey('lists.members.search'), controller: _query, hintText: l10n.listsPickerSearchHint, onChanged: (v) {
             setState(() {});
             _search(v);
           }),
         ),
         if (_loading) const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: RasqLoading()),
         if (!_loading && searching) ...[
-          _row('SNS のユーザー', [for (final u in _snsHits) MemberCandidate.sns(u)], key: const ValueKey('lists.members.snsHits')),
-          _row('RASQ のユーザー', [for (final a in _rasqHits) MemberCandidate.rasq(a)], key: const ValueKey('lists.members.rasqHits')),
+          _row(l10n.listsPickerSnsUsers, [for (final u in _snsHits) MemberCandidate.sns(u)], key: const ValueKey('lists.members.snsHits')),
+          _row(l10n.listsPickerRasqUsers, [for (final a in _rasqHits) MemberCandidate.rasq(a)], key: const ValueKey('lists.members.rasqHits')),
         ],
         if (!_loading && !searching) ...[
-          _row('SNS のフォロー中', [for (final u in _snsFollowing) MemberCandidate.sns(u)], key: const ValueKey('lists.members.sns')),
-          _row('RASQ のフォロー中', [for (final a in _rasqFollowing) MemberCandidate.rasq(a)], key: const ValueKey('lists.members.rasq')),
+          _row(l10n.listsPickerSnsFollowing, [for (final u in _snsFollowing) MemberCandidate.sns(u)], key: const ValueKey('lists.members.sns')),
+          _row(l10n.listsPickerRasqFollowing, [for (final a in _rasqFollowing) MemberCandidate.rasq(a)], key: const ValueKey('lists.members.rasq')),
         ],
-        const RasqNotice(
-          text: 'RASQ のユーザーは、その人が公開している同じ SNS のアカウントで追加します。',
-          detail: 'Central の公開ページ(GET /accounts/{handle})の snsAccounts から、このセッションと同じ SNS(同じサーバーを優先、確認済みを優先)を選び、userByHandle で引いた id を足す。',
+        RasqNotice(
+          text: l10n.listsPickerRasqNotice,
+          detail: l10n.listsPickerRasqNoticeDetail('GET /accounts/{handle}'),
         ),
-        if (count > 0) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0), child: Text('$count 人を選んでいます', key: const ValueKey('lists.members.count'), style: RasqTypography.bodySmall)),
+        if (count > 0) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0), child: Text(l10n.listsPickerSelectedCount(count), key: const ValueKey('lists.members.count'), style: RasqTypography.bodySmall)),
       ]),
     );
   }
@@ -364,7 +366,7 @@ class _MemberChip extends StatelessWidget {
                   child: ClipOval(
                     child: c.user != null
                         ? RasqSnsPill(account: c.user!.account, showLabel: false, dotSize: 16)
-                        : const RasqBrandIcon(size: 16, semanticsLabel: 'RASQ のユーザー'),
+                        : RasqBrandIcon(size: 16, semanticsLabel: context.l10n.listsPickerRasqBadgeSemantics),
                   ),
                 ),
               ),

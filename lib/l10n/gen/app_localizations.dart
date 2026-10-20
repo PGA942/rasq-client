@@ -1732,6 +1732,510 @@ abstract class AppLocalizations {
   /// **'RASQ アカウントにログイン'**
   String get childSafeScreensPendingRasqLogin;
 
+  /// RASQ リストのページの右上のボタンの説明と、押したあとの知らせの見出し。このリストをホームのタイムラインの取り込み元に足す
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインに取り込む'**
+  String get collectionsImportToTimeline;
+
+  /// RASQ リスト / クリップのページを開いたが、無かったとき
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりません'**
+  String get collectionsNotFound;
+
+  /// RASQ リスト / クリップが見つからないときの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'消されたか、非公開になっています'**
+  String get collectionsNotFoundHint;
+
+  /// RASQ リスト / クリップのページを読めなかったときの、もう一度読むボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get collectionsReload;
+
+  /// 見守り(チャイルドセーフ)で、保護者が止めた内容に近い RASQ リストを開いたとき
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がこのリストを止めています'**
+  String get collectionsBlockedList;
+
+  /// 見守り(チャイルドセーフ)で、保護者が止めた内容に近い RASQ クリップを開いたとき
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がこのクリップを止めています'**
+  String get collectionsBlockedClip;
+
+  /// RASQ リスト / クリップのページの … のメニュー: 共有リンクをコピー
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピー'**
+  String get collectionsMenuCopyLink;
+
+  /// … のメニュー: 中身(投稿)を SNS からいま取り直す
+  ///
+  /// In ja, this message translates to:
+  /// **'いま取り直す'**
+  String get collectionsMenuRefresh;
+
+  /// … のメニュー: 公開している RASQ リストを非公開にする(作った人だけ)
+  ///
+  /// In ja, this message translates to:
+  /// **'非公開にする'**
+  String get collectionsMenuMakePrivate;
+
+  /// … のメニュー: 非公開の RASQ リストを公開する(作った人だけ)
+  ///
+  /// In ja, this message translates to:
+  /// **'公開する'**
+  String get collectionsMenuMakePublic;
+
+  /// … のメニュー: RASQ リストの名前と説明を変える(作った人だけ)
+  ///
+  /// In ja, this message translates to:
+  /// **'名前と説明を変更'**
+  String get collectionsMenuRename;
+
+  /// … のメニュー: RASQ リストを消す(作った人だけ)
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get collectionsMenuDelete;
+
+  /// … のメニュー: 公開した RASQ クリップの公開をやめる(クリップは端末に残る)
+  ///
+  /// In ja, this message translates to:
+  /// **'公開をやめる'**
+  String get collectionsMenuUnpublish;
+
+  /// 共有リンクをコピーしたときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピーしました'**
+  String get collectionsLinkCopied;
+
+  /// 「いま取り直す」で取り直せなかったときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'取り直せませんでした'**
+  String get collectionsRefreshFailed;
+
+  /// 「いま取り直す」で取り直したときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'取り直しました'**
+  String get collectionsRefreshed;
+
+  /// RASQ リストの名前と説明を変えるシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'名前と説明'**
+  String get collectionsRenameTitle;
+
+  /// 名前と説明を変えるシートの決定のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'保存'**
+  String get collectionsSave;
+
+  /// 名前と説明を変えるシートの、名前の欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'名前'**
+  String get collectionsNameHint;
+
+  /// RASQ リストの説明の欄の薄い文字(書かなくてよい)
+  ///
+  /// In ja, this message translates to:
+  /// **'説明(任意)'**
+  String get collectionsDescriptionHint;
+
+  /// RASQ リストを消す前の確かめの見出し。name はリストの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を削除しますか？'**
+  String collectionsDeleteConfirmTitle(String name);
+
+  /// RASQ リストを消す前の確かめの本文
+  ///
+  /// In ja, this message translates to:
+  /// **'フォローしている人の一覧からも消えます。'**
+  String get collectionsDeleteConfirmMessage;
+
+  /// RASQ リストを消す前の確かめの、消すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get collectionsDeleteButton;
+
+  /// RASQ リストを消す前の確かめの、やめるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get collectionsCancel;
+
+  /// メニューの操作やフォローができなかったときの知らせ。error はエラーの内容
+  ///
+  /// In ja, this message translates to:
+  /// **'できませんでした: {error}'**
+  String collectionsActionFailed(String error);
+
+  /// RASQ リスト / クリップのページのタブ: 投稿
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get collectionsTabPosts;
+
+  /// RASQ リストのページのタブ: 投稿を話題ごとに区切った目次
+  ///
+  /// In ja, this message translates to:
+  /// **'話題の目次'**
+  String get collectionsTabTopics;
+
+  /// RASQ リストのページのタブ: 入っている人
+  ///
+  /// In ja, this message translates to:
+  /// **'メンバー'**
+  String get collectionsTabMembers;
+
+  /// RASQ リスト / クリップのページのタブ: 入っている人 / 投稿のサーバーの情報
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバー'**
+  String get collectionsTabServers;
+
+  /// RASQ リスト / クリップのページの見出しの下: 開いたときに中身を取り直した
+  ///
+  /// In ja, this message translates to:
+  /// **'見たときに新しくしました'**
+  String get collectionsStatusRefreshedOnView;
+
+  /// 見出しの下: 開いたときに取り直せず、前に取った中身を出している
+  ///
+  /// In ja, this message translates to:
+  /// **'取り直せませんでした(前の内容です)'**
+  String get collectionsStatusRefreshFailed;
+
+  /// 見出しの下: フォローしているが、取り直しの資格が無い人への説明
+  ///
+  /// In ja, this message translates to:
+  /// **'同じサーバーに所属しているか、入っている人をフォローしていると、見たときに新しくなります'**
+  String get collectionsStatusFollowingHint;
+
+  /// ページ / タイルの上の種類の名前: RASQ リスト(複数の SNS の人をまとめたもの)
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト'**
+  String get collectionsKindList;
+
+  /// ページ / タイルの上の種類の名前: RASQ クリップ(複数の SNS の投稿をまとめたもの)
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ クリップ'**
+  String get collectionsKindClip;
+
+  /// RASQ リスト / クリップが非公開であることの印
+  ///
+  /// In ja, this message translates to:
+  /// **'非公開'**
+  String get collectionsPrivate;
+
+  /// RASQ リスト / クリップが公開であることの印
+  ///
+  /// In ja, this message translates to:
+  /// **'公開'**
+  String get collectionsPublic;
+
+  /// RASQ リストに入っている人の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}人}}'**
+  String collectionsMemberCount(int count);
+
+  /// RASQ クリップに入っている投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}件}}'**
+  String collectionsItemCount(int count);
+
+  /// RASQ リスト / クリップをフォローしている人の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{フォロワー {count}}}'**
+  String collectionsFollowerCount(int count);
+
+  /// RASQ リスト / クリップを最後に取り直した時。ago は「5分前」のような経った時間
+  ///
+  /// In ja, this message translates to:
+  /// **'更新 {ago}'**
+  String collectionsUpdatedAgo(String ago);
+
+  /// 補足の項目(人数・フォロワー・更新・公開かどうかなど)を並べるときの区切り
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get collectionsSeparator;
+
+  /// RASQ リストのページのフォローのボタン(フォローしているとき)と、リストの候補の行の印
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get collectionsFollowing;
+
+  /// RASQ リスト / クリップのページのフォローのボタン(フォローしていないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー'**
+  String get collectionsFollow;
+
+  /// RASQ リストの投稿のタブが空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ投稿がありません'**
+  String get collectionsNoPostsYet;
+
+  /// RASQ リストに誰も入っていないときの補足。「RASQ リストに追加」はユーザーページの … のメニューの項目
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザーページの … →「RASQ リストに追加」で人を入れられます'**
+  String get collectionsNoPostsHintEmpty;
+
+  /// RASQ リストに人はいるが、投稿をまだ取っていないときの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'見られる人が開いたときに集まります'**
+  String get collectionsNoPostsHintCollecting;
+
+  /// RASQ クリップに投稿が無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップは空です'**
+  String get collectionsClipEmpty;
+
+  /// RASQ クリップの投稿が見られなくなったときの行
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿は見られなくなりました(消されたか、公開範囲が変わりました)'**
+  String get collectionsItemGone;
+
+  /// RASQ クリップの投稿が見られるか確かめている途中の行
+  ///
+  /// In ja, this message translates to:
+  /// **'公開範囲を確かめています'**
+  String get collectionsItemChecking;
+
+  /// RASQ リストのメンバーのタブのボタン(作った人だけ)
+  ///
+  /// In ja, this message translates to:
+  /// **'メンバーを追加'**
+  String get collectionsAddMembers;
+
+  /// RASQ リストに人を足したときの知らせ。count は足した人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 人を追加しました}}'**
+  String collectionsMembersAdded(int count);
+
+  /// RASQ リストに人を足せなかったときの知らせ。error はエラーの内容
+  ///
+  /// In ja, this message translates to:
+  /// **'追加できませんでした: {error}'**
+  String collectionsAddFailed(String error);
+
+  /// RASQ リストに誰も入っていないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'メンバーはいません'**
+  String get collectionsNoMembers;
+
+  /// RASQ リストに誰もいないときの、作った人への補足。「メンバーを追加」はこのタブのボタン、「RASQ リストに追加」はユーザーページの … のメニューの項目
+  ///
+  /// In ja, this message translates to:
+  /// **'「メンバーを追加」か、ユーザーページの … →「RASQ リストに追加」'**
+  String get collectionsNoMembersHint;
+
+  /// RASQ リストのメンバーの行の補足。handle はユーザー名、kind は SNS の種類(misskey など)
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} ・ {kind}'**
+  String collectionsMemberSubtitle(String handle, String kind);
+
+  /// RASQ リストのメンバーの行の ✕ のボタンの説明(作った人だけ)
+  ///
+  /// In ja, this message translates to:
+  /// **'リストから外す'**
+  String get collectionsRemoveFromListTooltip;
+
+  /// RASQ リストから人を外せなかったときの知らせ。error はエラーの内容
+  ///
+  /// In ja, this message translates to:
+  /// **'外せませんでした: {error}'**
+  String collectionsRemoveFailed(String error);
+
+  /// RASQ リストをタイムラインに取り込めない理由
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト内の人の情報を取れるアカウントがありません(入っている人と同じサーバーのアカウントか、入っている人のフォローが要ります)'**
+  String get collectionsNotFetchableHint;
+
+  /// RASQ アカウントのサーバー(Central)が設定されていないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントのサーバーが設定されていません'**
+  String get collectionsNoServer;
+
+  /// RASQ リストを取り込めるか確かめられなかったとき。error はエラーの内容
+  ///
+  /// In ja, this message translates to:
+  /// **'確かめられませんでした: {error}'**
+  String collectionsCheckFailed(String error);
+
+  /// RASQ リストの候補の列が空のとき(検索語が空)
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストはまだありません'**
+  String get collectionsPickerEmpty;
+
+  /// RASQ リストの検索に当たるものが無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりません'**
+  String get collectionsPickerNoHits;
+
+  /// RASQ リストの候補の行の印: 自分が作ったリスト
+  ///
+  /// In ja, this message translates to:
+  /// **'自分のリスト'**
+  String get collectionsPickerMine;
+
+  /// RASQ リストの候補の行の印: リスト内の人の情報を取れない(取り込めない)
+  ///
+  /// In ja, this message translates to:
+  /// **'取れません'**
+  String get collectionsPickerNotFetchable;
+
+  /// RASQ リストを取り込もうとしたが、アカウントにログインしていないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインしていません'**
+  String get collectionsNotLoggedIn;
+
+  /// RASQ リストを取り込めないとき。name はリストの名前、reason は理由の文
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」は取り込めません({reason})'**
+  String collectionsImportRejected(String name, String reason);
+
+  /// 取り込もうとした RASQ リストが、もうホームのタイムラインの取り込み元にあるとき。name はリストの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」はもうホームのタイムラインに入っています'**
+  String collectionsAlreadyImported(String name);
+
+  /// RASQ リストをホームのタイムラインの取り込み元に足したとき。name はリストの名前。歯車はホームのタブの行の設定のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」をホームのタイムラインに取り込みました(タブ行の歯車で確認できます)'**
+  String collectionsImported(String name);
+
+  /// 投稿などに埋めた RASQ リスト / クリップのタイルの、開くボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'見てみる'**
+  String get collectionsTileOpen;
+
+  /// RASQ アカウントが無いのに RASQ リストを作ろうとしたとき
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストを作るには RASQ アカウントが必要です'**
+  String get collectionsCreateNeedsAccount;
+
+  /// RASQ リストを作るシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい RASQ リスト'**
+  String get collectionsCreateTitle;
+
+  /// RASQ リストを作るシートの、名前の欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト名'**
+  String get collectionsListNameHint;
+
+  /// RASQ リストを作るシートの、公開するかのスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'公開する'**
+  String get collectionsPublishSwitch;
+
+  /// 公開するかのスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントページと共有リンクから見られます。フォローした人が見たときにも新しくなります'**
+  String get collectionsPublishSwitchSubtitle;
+
+  /// RASQ リストを作るシートの決定のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'作成'**
+  String get collectionsCreateButton;
+
+  /// RASQ リストを作れなかったときの知らせ。error はエラーの内容
+  ///
+  /// In ja, this message translates to:
+  /// **'作成できませんでした: {error}'**
+  String collectionsCreateFailed(String error);
+
+  /// RASQ アカウントが無いのに RASQ リストに人を足そうとしたとき
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストを使うには RASQ アカウントが必要です'**
+  String get collectionsUseNeedsAccount;
+
+  /// 自分の RASQ リストの一覧を読めなかったときの知らせ。error はエラーの内容
+  ///
+  /// In ja, this message translates to:
+  /// **'リストを読めませんでした: {error}'**
+  String collectionsLoadListsFailed(String error);
+
+  /// ユーザーを RASQ リストに足すシートの見出し(ユーザーページの … のメニューから)
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストに追加'**
+  String get collectionsAddToListTitle;
+
+  /// RASQ リストに足すシートの、公開のリストの行の補足。count は入っている人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}人}} ・ 公開'**
+  String collectionsAddToListSubtitlePublic(int count);
+
+  /// RASQ リストに足すシートの、非公開のリストの行の補足。count は入っている人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}人}} ・ 非公開'**
+  String collectionsAddToListSubtitlePrivate(int count);
+
+  /// RASQ リストに足すシートの末尾の行。新しい RASQ リストを作ってそこに足す
+  ///
+  /// In ja, this message translates to:
+  /// **'新しいリストを作成'**
+  String get collectionsCreateNewList;
+
+  /// ユーザーを RASQ リストに足したときの知らせ。name はリストの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」に追加しました'**
+  String collectionsAddedTo(String name);
+
+  /// 足そうとしたユーザーが、もうその RASQ リストに入っているとき。name はリストの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'すでに「{name}」に入っています'**
+  String collectionsAlreadyIn(String name);
+
   /// コンポーザーの題(新しい投稿)
   ///
   /// In ja, this message translates to:
@@ -4941,6 +5445,576 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'表示の言語'**
   String get languageSettingsListHeader;
+
+  /// リストの画面の見出し。名前の分からない SNS のリストの見出し・タイムラインの名前にも使う
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get listsTitle;
+
+  /// リストの画面のタブ。全アカウントのリスト / クリップ / フィードと RASQ リストをまとめて出す
+  ///
+  /// In ja, this message translates to:
+  /// **'すべて'**
+  String get listsTabAllLabel;
+
+  /// リストの画面の検索欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト・クリップを検索'**
+  String get listsSearchHint;
+
+  /// リストの画面の検索欄を広げると出る絞り込みのチップ。非公開のクリップも一覧に出す
+  ///
+  /// In ja, this message translates to:
+  /// **'非公開クリップを表示'**
+  String get listsShowPrivateClips;
+
+  /// リストのインポートの画面の見出しと、リストの画面の右上のボタンの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'リストのインポート'**
+  String get listsImportTitle;
+
+  /// リストの画面の右下の ＋ のボタンの説明と、押すと出る作成先を選ぶメニューの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'リストを作成'**
+  String get listsCreateTitle;
+
+  /// 作成先を選ぶメニューの項目と、SNS のリストの名前を入れるシートの見出し。account はアカウント(@handle@サーバー)
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} のリスト'**
+  String listsCreateAccountList(String account);
+
+  /// 作成先を選ぶメニューの項目と、リストの画面の RASQ リストの欄の見出し。RASQ リストは複数の SNS の人を 1 つにまとめられる
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト(SNS 横断)'**
+  String get listsRasqCrossSns;
+
+  /// SNS のリストの名前を入れるシートの決定のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'作成'**
+  String get listsCreateConfirm;
+
+  /// SNS のリストの名前を入れる欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト名'**
+  String get listsNameHint;
+
+  /// SNS のリストを作ったときの知らせ。name はリストの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を作りました'**
+  String listsCreated(String name);
+
+  /// その SNS がリストの作成に対応していないときの知らせ。sns は SNS の名前(Misskey / Mastodon など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{sns} ではリストを作れません'**
+  String listsCreateUnsupported(String sns);
+
+  /// SNS のリストを作れなかったときの知らせ。error はエラーの内容
+  ///
+  /// In ja, this message translates to:
+  /// **'リストを作れませんでした: {error}'**
+  String listsCreateFailed(String error);
+
+  /// リストの画面のタブに何も無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'リストはありません'**
+  String get listsEmpty;
+
+  /// リストの画面 / インポートの画面で、検索に当たるものが無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりません'**
+  String get listsNoHits;
+
+  /// リストが無いときの補足。＋ は右下のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'＋でリストを作成できます'**
+  String get listsEmptyHint;
+
+  /// リストの画面の RASQ リストの欄の末尾の行(押すと作成のシート)
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい RASQ リスト'**
+  String get listsRasqCreateTitle;
+
+  /// 「新しい RASQ リスト」の行の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'Misskey / Mastodon / Bluesky の人を 1 つのリストに'**
+  String get listsRasqCreateSubtitle;
+
+  /// 別のアカウントのリストを開くために、そのアカウントに切り替えたときの知らせ。account はアカウント(@handle@サーバー)
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} に切り替えました'**
+  String listsSwitchedAccount(String account);
+
+  /// アカウントのタブの、クリップの欄の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ'**
+  String get listsSectionClips;
+
+  /// アカウントのタブの、SNS のリストの欄の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get listsSectionLists;
+
+  /// アカウントのタブの、保存したカスタムフィード(Bluesky)の欄の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムフィード'**
+  String get listsSectionFeeds;
+
+  /// SNS のリストの行の、入っている人の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} ユーザー}}'**
+  String listsMemberCount(int count);
+
+  /// クリップの行の、入っている投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}件}}'**
+  String listsClipNotesCount(int count);
+
+  /// クリップの行の種類: 端末の RASQ クリップ(複数の SNS の投稿を入れられる)
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ(SNS 横断)'**
+  String get listsClipKindHost;
+
+  /// クリップの行の種類: SNS の非公開のクリップ
+  ///
+  /// In ja, this message translates to:
+  /// **'非公開クリップ'**
+  String get listsClipKindPrivate;
+
+  /// クリップの行の種類: SNS の公開のクリップ
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ'**
+  String get listsClipKindPublic;
+
+  /// 行の補足の項目(件数・種類・作者・♥ の数など)を並べるときの区切り
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get listsSeparator;
+
+  /// 保存済みのカスタムフィードの、しおりのボタンの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'保存を外す'**
+  String get listsFeedUnsave;
+
+  /// 保存していないカスタムフィードの、しおりのボタンの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'フィードを保存'**
+  String get listsFeedSave;
+
+  /// フィードの保存を外せなかったときの知らせの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'保存を外せませんでした'**
+  String get listsFeedUnsaveFailed;
+
+  /// フィードを保存できなかったときの知らせの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'保存できませんでした'**
+  String get listsFeedSaveFailed;
+
+  /// フィードの保存に対応していない SNS で、しおりのボタンを押したとき
+  ///
+  /// In ja, this message translates to:
+  /// **'この SNS はフィードの保存に対応していません'**
+  String get listsFeedSaveUnsupported;
+
+  /// フィードをタイムラインに取り込もうとしたが、アカウントにログインしていないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインしていません'**
+  String get listsNotLoggedIn;
+
+  /// 取り込もうとしたフィードが、もうホームのタイムラインの取り込み元にあるとき。name はフィードの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」はもうホームのタイムラインに入っています'**
+  String listsFeedAlreadyImported(String name);
+
+  /// フィードをホームのタイムラインの取り込み元に足したとき。name はフィードの名前。歯車はホームのタブの行の設定のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」をホームのタイムラインに取り込みました(タブ行の歯車で確認できます)'**
+  String listsFeedImported(String name);
+
+  /// SNS のリストの画面のタブ: 入っている人
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザー'**
+  String get listsTabUsers;
+
+  /// SNS のリスト / フィードの画面のタブ: タイムライン
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get listsTabPosts;
+
+  /// SNS のリスト / フィードの画面のタブ: 投稿を話題ごとに区切った目次
+  ///
+  /// In ja, this message translates to:
+  /// **'話題の目次'**
+  String get listsTabTopics;
+
+  /// 見守り(チャイルドセーフ)で、保護者が止めた内容に近いリストを開いたとき
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がこのリストを止めています'**
+  String get listsBlockedByGuardian;
+
+  /// SNS のリストの画面の右上の歯車のボタンの説明(このリストのタイムラインの設定)
+  ///
+  /// In ja, this message translates to:
+  /// **'リストTL設定'**
+  String get listsTimelineSettingsTooltip;
+
+  /// SNS のリストのユーザーのタブのボタンと、人を選ぶシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'メンバーを追加'**
+  String get listsAddMembers;
+
+  /// リストに人を足したときの知らせ。count は足した人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 人を追加しました}}'**
+  String listsMembersAdded(int count);
+
+  /// SNS のリストに誰も入っていないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザーはいません'**
+  String get listsNoUsers;
+
+  /// SNS のリストのユーザーの行の右のボタン。その人をリストから外す
+  ///
+  /// In ja, this message translates to:
+  /// **'外す'**
+  String get listsRemoveMember;
+
+  /// タイムラインを読めなかったときの、もう一度読むボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get listsReload;
+
+  /// リスト / フィードのタイムラインに投稿が無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿はありません'**
+  String get listsNoPosts;
+
+  /// 名前の分からないカスタムフィードの画面の見出し・タイムラインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'フィード'**
+  String get listsFeedDefaultTitle;
+
+  /// フィードの画面の右上のボタンの説明と、押したあとの知らせの見出し。開いているフィードをホームのタイムラインの取り込み元に足す
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインに取り込む'**
+  String get listsImportToTimeline;
+
+  /// フィードの画面の右上の歯車のボタンの説明(このフィードのタイムラインの設定)
+  ///
+  /// In ja, this message translates to:
+  /// **'フィードTL設定'**
+  String get listsFeedTimelineSettingsTooltip;
+
+  /// リストのインポートの画面の検索欄の薄い文字(Bluesky のアカウントで、RASQ アカウントが無いとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムフィードを検索、または共有リンク / URL を入力'**
+  String get listsImportSearchHintFeeds;
+
+  /// リストのインポートの画面の検索欄の薄い文字(Bluesky 以外のアカウントで、RASQ アカウントがあるとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストを検索、または共有リンク / URL を入力'**
+  String get listsImportSearchHintRasq;
+
+  /// リストのインポートの画面の検索欄の薄い文字(Bluesky のアカウントで、RASQ アカウントもあるとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムフィード / RASQ リストを検索、または共有リンク / URL を入力'**
+  String get listsImportSearchHintBoth;
+
+  /// リストのインポートの画面の検索欄の薄い文字(フィードも RASQ リストも探せないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'検索'**
+  String get listsImportSearchPlain;
+
+  /// リストのインポートの画面の説明(Bluesky のカスタムフィード)
+  ///
+  /// In ja, this message translates to:
+  /// **'フィードを検索するか URL を貼ると、リストタイルで表示します。タップでそのフィードのタイムラインへ。'**
+  String get listsImportFeedsHelp;
+
+  /// リストのインポートの画面の説明(RASQ リスト)。「取り込む」は行の右のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストは「取り込む」でホームのタイムラインへ(リストをフォローします)。取り込めるのは、リスト内の人の情報を取れるリストだけです。'**
+  String get listsImportRasqHelp;
+
+  /// リストのインポートの画面の説明(フィードも RASQ リストも探せないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'リストを検索して一括操作を行うことができます。'**
+  String get listsImportGenericHelp;
+
+  /// リストのインポートの画面のリンクと、押すと出る知らせの見出し(ファイルから読み込む)
+  ///
+  /// In ja, this message translates to:
+  /// **'ローカルからインポート'**
+  String get listsImportLocal;
+
+  /// 「ローカルからインポート」を押したときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルからのインポートは準備中です。'**
+  String get listsImportLocalMessage;
+
+  /// 「ローカルからインポート」の知らせの、開発者モードの詳しい説明
+  ///
+  /// In ja, this message translates to:
+  /// **'CSV/JSON からのインポートはリスト機能(サーバー側)と合わせて実装します。'**
+  String get listsImportLocalDetail;
+
+  /// リストのインポートの画面で、検索語が空のときのフィードの欄の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'人気のフィード'**
+  String get listsImportPopularFeeds;
+
+  /// リストのインポートの画面で、検索したときのフィードの欄の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'フィードの検索結果'**
+  String get listsImportFeedResults;
+
+  /// リストのインポートの画面で、フィードの候補が無く、検索語も空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'検索語か URL を入れてください'**
+  String get listsImportEnterQuery;
+
+  /// リストのインポートの画面で、検索語が空のときの RASQ リストの欄の見出し(自分のリストとフォロー中のリスト)
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リスト(自分 / フォロー中)'**
+  String get listsImportRasqMine;
+
+  /// リストのインポートの画面で、検索したときの RASQ リストの欄の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストの検索結果'**
+  String get listsImportRasqResults;
+
+  /// リストのインポートの画面の RASQ リストの行の右のボタン。ホームのタイムラインの取り込み元に足す
+  ///
+  /// In ja, this message translates to:
+  /// **'取り込む'**
+  String get listsImportButton;
+
+  /// リストのインポートの画面の、インポートの履歴の欄の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'履歴'**
+  String get listsImportHistory;
+
+  /// インポートの履歴が無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'履歴はありません'**
+  String get listsImportHistoryEmpty;
+
+  /// 話題の目次のタブに話題が無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'話題はまだありません'**
+  String get listsTopicsEmpty;
+
+  /// 話題の目次が空のときの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿が集まると、話題ごとに区切ります'**
+  String get listsTopicsEmptyHint;
+
+  /// 話題の目次のタブの上の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'話題ごとの区切りです。タップすると、その話題の投稿だけを表示します。'**
+  String get listsTopicsCaption;
+
+  /// 話題の目次の説明の、開発者モードの詳しい説明。indexForListTimeline は関数の名前なので訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'会話イベント(2 投稿以上、リレーショナル TL と同じエンジン)を章にし、単発投稿は 1 つにまとめる(indexForListTimeline)。見出しは投稿の中にある語(タグ / 特徴語 / ドメイン)。'**
+  String get listsTopicsCaptionDetail;
+
+  /// 話題の目次の行の、話題の始まりと終わりの時刻。start / end は時刻(「12:34」か「8/31 12:34」)
+  ///
+  /// In ja, this message translates to:
+  /// **'{start}〜{end}'**
+  String listsTopicTimeRange(String start, String end);
+
+  /// 話題の目次の行の補足(話している人が 1 人のとき)。time は時刻か時刻の範囲、count は投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{time} ・ {count, plural, other{{count} 件}}'**
+  String listsTopicSubtitle(String time, int count);
+
+  /// 話題の目次の行の補足(話している人が 2 人以上のとき)。time は時刻か時刻の範囲、count は投稿の数、people は話している人の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{time} ・ {count, plural, other{{count} 件}} ・ {people, plural, other{{people} 人}}'**
+  String listsTopicSubtitleWithPeople(String time, int count, int people);
+
+  /// 話題の目次の行の、代表の投稿の抜き出し。name は投稿した人の表示名、body は本文の頭(40 文字まで)
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}「{body}」'**
+  String listsTopicSnippet(String name, String body);
+
+  /// 投稿のタブの上の、話題で絞っているときのチップ。label は話題の見出し、count はその話題の投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'話題: {label}({count, plural, other{{count} 件}})'**
+  String listsTopicFilterChip(String label, int count);
+
+  /// 話題で絞っているときのチップの ✕ のボタンの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'絞り込みをやめる'**
+  String get listsTopicFilterClear;
+
+  /// リストに足す人を選ぶシートの、SNS のユーザーの説明(長押しで出る)。handle はユーザー名、instance はサーバー
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} ・ {instance}'**
+  String listsMemberCandidateSubtitle(String handle, String instance);
+
+  /// RASQ のユーザーをリストに足そうとしたが、その人が同じ SNS のアカウントを公開ページに出していないとき。name は表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} さんは、この SNS のアカウントを公開していません'**
+  String listsMemberNotPublished(String name);
+
+  /// RASQ のユーザーが公開している SNS のアカウントを、いまのアカウントから引けなかったとき。name は表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} さんの SNS アカウントが見つかりません'**
+  String listsMemberSnsNotFound(String name);
+
+  /// リストに足す人を選ぶシートの決定のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'追加'**
+  String get listsPickerConfirm;
+
+  /// RASQ のユーザーを選ぼうとしたが、RASQ のサーバーに繋がっていないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ サーバーに繋がっていません'**
+  String get listsPickerNoServer;
+
+  /// RASQ のユーザーの SNS のアカウントを調べられなかったとき
+  ///
+  /// In ja, this message translates to:
+  /// **'調べられませんでした'**
+  String get listsPickerLookupFailed;
+
+  /// RASQ のユーザーを選べないとき(理由が分からないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'選べません'**
+  String get listsPickerUnavailable;
+
+  /// リストに足す人を選ぶシートの、候補の列に誰もいないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'いません'**
+  String get listsPickerNone;
+
+  /// リストに足す人を選ぶシートの検索欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザーを検索(SNS / RASQ)'**
+  String get listsPickerSearchHint;
+
+  /// リストに足す人を選ぶシートの列の見出し: SNS のユーザーの検索結果
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS のユーザー'**
+  String get listsPickerSnsUsers;
+
+  /// リストに足す人を選ぶシートの列の見出し: RASQ のユーザーの検索結果
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のユーザー'**
+  String get listsPickerRasqUsers;
+
+  /// リストに足す人を選ぶシートの列の見出し: いまの SNS のアカウントがフォローしている人
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS のフォロー中'**
+  String get listsPickerSnsFollowing;
+
+  /// リストに足す人を選ぶシートの列の見出し: RASQ アカウントでフォローしている人
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のフォロー中'**
+  String get listsPickerRasqFollowing;
+
+  /// リストに足す人を選ぶシートの下の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のユーザーは、その人が公開している同じ SNS のアカウントで追加します。'**
+  String get listsPickerRasqNotice;
+
+  /// 上の説明の、開発者モードの詳しい説明。path は API の道(GET /accounts/{handle})。Central / snsAccounts / userByHandle は名前なので訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'Central の公開ページ({path})の snsAccounts から、このセッションと同じ SNS(同じサーバーを優先、確認済みを優先)を選び、userByHandle で引いた id を足す。'**
+  String listsPickerRasqNoticeDetail(String path);
+
+  /// リストに足す人を選ぶシートの、選んでいる人数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 人を選んでいます}}'**
+  String listsPickerSelectedCount(int count);
+
+  /// 候補のアバターの左下の RASQ の印の読み上げ
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のユーザー'**
+  String get listsPickerRasqBadgeSemantics;
 
   /// ノードのジャンル(パレットの絞り込み・タイルの副題)。
   ///

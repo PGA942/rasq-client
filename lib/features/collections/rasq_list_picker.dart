@@ -5,6 +5,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show TimelineKind;
 
 import '../../app/providers.dart';
 import '../../backend/rasq_collections_api.dart';
+import '../../l10n/l10n.dart';
 import '../home/timeline_providers.dart';
 import '../nodeprog/tl_components.dart';
 import '../nodeprog/tl_config_store.dart';
@@ -33,14 +34,14 @@ final rasqListCandidatesProvider = FutureProvider.autoDispose.family<List<RasqCo
 });
 
 /// 取れないときの説明。
-const rasqListNotFetchableHint = 'リスト内の人の情報を取れるアカウントがありません(入っている人と同じサーバーのアカウントか、入っている人のフォローが要ります)';
+String get rasqListNotFetchableHint => appL10n.collectionsNotFetchableHint;
 
 /// 選べるか確かめる。一覧で確かめていない(`canFetchChecked: false`)なら詳細を引いて確かめる。
 /// 選べるなら、作った人でもフォロー中でもないリストは**フォローする**(見たときに新しくなる = 取り直しの資格、S-042)。
 /// 戻り値 = (選べたリスト, だめな理由)。RAi の関数 (D-348) からも使う。
 Future<(RasqCollection?, String?)> checkRasqListFetchable(ProviderContainer c, RasqCollection list) async {
   final api = c.read(rasqCollectionsApiProvider);
-  if (api == null) return (null, 'RASQ アカウントのサーバーが設定されていません');
+  if (api == null) return (null, appL10n.collectionsNoServer);
   try {
     var ok = list.isOwner || list.canFetch == true;
     var following = list.following;
@@ -59,7 +60,7 @@ Future<(RasqCollection?, String?)> checkRasqListFetchable(ProviderContainer c, R
     }
     return (list, null);
   } catch (e) {
-    return (null, '確かめられませんでした: $e');
+    return (null, appL10n.collectionsCheckFailed(e is StateError ? e.message : '$e'));
   }
 }
 
@@ -90,11 +91,12 @@ class RasqListCandidates extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final res = ref.watch(rasqListCandidatesProvider(query));
+    final l10n = context.l10n;
     return res.when(
       loading: () => const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)))),
       error: (_, _) => const SizedBox.shrink(),
       data: (items) => Column(mainAxisSize: MainAxisSize.min, children: [
-        if (items.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(emptyText ?? (query.trim().isEmpty ? 'RASQ リストはまだありません' : '見つかりません'), style: RasqTypography.caption)),
+        if (items.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(emptyText ?? (query.trim().isEmpty ? l10n.collectionsPickerEmpty : l10n.collectionsPickerNoHits), style: RasqTypography.caption)),
         for (final c in items)
           Opacity(
             opacity: c.canFetch == false && c.canFetchChecked ? 0.5 : 1,
@@ -102,11 +104,11 @@ class RasqListCandidates extends ConsumerWidget {
               key: ValueKey('rasqList.pick.${c.id}'),
               title: c.name,
               subtitle: [
-                '${c.itemCount}人',
+                l10n.collectionsMemberCount(c.itemCount),
                 if (!c.isOwner) '@${c.owner.handle}',
-                if (c.isOwner) '自分のリスト' else if (c.following) 'フォロー中',
-                if (c.canFetch == false && c.canFetchChecked) '取れません',
-              ].join(' ・ '),
+                if (c.isOwner) l10n.collectionsPickerMine else if (c.following) l10n.collectionsFollowing,
+                if (c.canFetch == false && c.canFetchChecked) l10n.collectionsPickerNotFetchable,
+              ].join(l10n.collectionsSeparator),
               leading: onPick == null ? const Icon(Icons.people_alt_outlined, size: 20) : Icon(selectedId == c.id ? Icons.radio_button_checked : Icons.radio_button_off, size: 20, color: selectedId == c.id ? scheme.primary : null),
               trailing: trailing?.call(c),
               chevron: false,
@@ -122,13 +124,13 @@ class RasqListCandidates extends ConsumerWidget {
 /// 取れないリストは足さない。作った人でもフォロー中でもなければ、フォローもする。戻り値 = 伝える文と、足したか。RAi の関数 (D-348) からも使う。
 Future<(String, bool)> importRasqListToHomeWith(ProviderContainer c, RasqCollection list) async {
   final acc = c.read(currentAccountProvider);
-  if (acc == null) return ('ログインしていません', false);
+  if (acc == null) return (appL10n.collectionsNotLoggedIn, false);
   final (ok, reason) = await checkRasqListFetchable(c, list);
-  if (ok == null) return ('「${list.name}」は取り込めません(${reason ?? rasqListNotFetchableHint})', false);
+  if (ok == null) return (appL10n.collectionsImportRejected(list.name, reason ?? rasqListNotFetchableHint), false);
   final added = await addTlSource(c, acc.key, 'tl.home', TlSourceComponent(tl: '$rasqListKindPrefix${list.id}', label: list.name));
-  if (!added) return ('「${list.name}」はもうホームのタイムラインに入っています', false);
+  if (!added) return (appL10n.collectionsAlreadyImported(list.name), false);
   c.invalidate(timelineProvider(TimelineKind.home));
-  return ('「${list.name}」をホームのタイムラインに取り込みました(タブ行の歯車で確認できます)', true);
+  return (appL10n.collectionsImported(list.name), true);
 }
 
 /// [importRasqListToHomeWith] の画面版。

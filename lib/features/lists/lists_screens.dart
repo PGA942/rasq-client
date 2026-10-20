@@ -12,6 +12,7 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/rasq_collections_api.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../../shell/scroll_memory.dart';
 import '../../shell/third_column.dart' show fowColumnOf;
@@ -176,7 +177,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
     final showPrivate = viewSettings['showPrivateClips'] == true;
     final tabIds = [listsTabAll, for (final s in sessions) s.account.key, if (hasRasq) listsTabRasq];
     final tabs = [
-      const RasqTabItem('すべて', id: listsTabAll, chevron: false),
+      RasqTabItem(context.l10n.listsTabAllLabel, id: listsTabAll, chevron: false),
       for (final s in sessions) RasqTabItem(_tabLabel(s, sessions), id: s.account.key, chevron: false),
       if (hasRasq) const RasqTabItem('RASQ', id: listsTabRasq, chevron: false),
     ];
@@ -188,11 +189,11 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
         expanded: _filterOpen || _focus.hasFocus || showPrivate,
         controller: _controller,
         focusNode: _focus,
-        hintText: 'リスト・クリップを検索',
+        hintText: context.l10n.listsSearchHint,
         onDropdownTap: () => setState(() => _filterOpen = !_filterOpen),
         filterChips: [
           RasqFilterChipItem(
-            label: '非公開クリップを表示',
+            label: context.l10n.listsShowPrivateClips,
             selected: showPrivate,
             onTap: () => ref.read(settingsAreaProvider(listsViewArea).notifier).set('showPrivateClips', !showPrivate),
           ),
@@ -206,8 +207,8 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
       initialIndex: initial,
       child: Scaffold(
         appBar: RasqPageHeader(
-          title: 'リスト',
-          actions: [RasqIconButton(icon: Icons.download_outlined, onPressed: () => context.push('/lists/import'), tooltip: 'リストのインポート')],
+          title: context.l10n.listsTitle,
+          actions: [RasqIconButton(icon: Icons.download_outlined, onPressed: () => context.push('/lists/import'), tooltip: context.l10n.listsImportTitle)],
           onMore: () {},
           bottom: RasqTabs(key: const ValueKey('lists.tabs'), items: tabs, showChevron: false),
         ),
@@ -232,7 +233,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
         heroTag: 'fab.lists',
           key: _fabKey,
           onPressed: () => _create(sessions, hasRasq),
-          tooltip: 'リストを作成',
+          tooltip: context.l10n.listsCreateTitle,
           shape: const CircleBorder(),
           child: const Icon(Icons.add),
         ),
@@ -248,7 +249,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
     final picked = await showBundleMenuFow<String>(
       manager,
       id: 'lists.create.target',
-      title: 'リストを作成',
+      title: context.l10n.listsCreateTitle,
       anchor: anchor,
       column: fowColumnOf(context),
       // ボタンにつながった形 (D-513)。右下の ＋ なので上に開く。
@@ -257,8 +258,8 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
       iconExtent: 24,
       keyOf: (v) => v,
       items: [
-        for (final s in sessions) BundleMenuItem(value: s.account.key, label: '${s.account} のリスト', icon: Icons.list_alt_outlined),
-        if (hasRasq) const BundleMenuItem(value: listsTabRasq, label: 'RASQ リスト(SNS 横断)', icon: Icons.people_alt_outlined),
+        for (final s in sessions) BundleMenuItem(value: s.account.key, label: context.l10n.listsCreateAccountList('${s.account}'), icon: Icons.list_alt_outlined),
+        if (hasRasq) BundleMenuItem(value: listsTabRasq, label: context.l10n.listsRasqCrossSns, icon: Icons.people_alt_outlined),
       ],
     );
     if (picked == null || !mounted) return;
@@ -269,12 +270,13 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
     }
     final account = sessions.where((s) => s.account.key == picked).firstOrNull;
     if (account == null) return;
+    final l10n = context.l10n;
     final ctrl = TextEditingController();
     final ok = await manager.showBottomSheet<bool>(
       id: 'lists.create',
-      title: '${account.account} のリスト',
-      confirmText: '作成',
-      builder: (_) => Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqInput(controller: ctrl, hintText: 'リスト名', autofocus: true)),
+      title: l10n.listsCreateAccountList('${account.account}'),
+      confirmText: l10n.listsCreateConfirm,
+      builder: (_) => Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqInput(controller: ctrl, hintText: l10n.listsNameHint, autofocus: true)),
     );
     if (ok != true || ctrl.text.trim().isEmpty) return;
     final messenger = ref.read(rootMessengerKeyProvider).currentState;
@@ -282,9 +284,9 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
       await ref.read(sessionForAccountProvider(account.account.key))?.createList(ctrl.text.trim());
       ref.invalidate(listsForAccountProvider(account.account.key));
       ref.invalidate(listsProvider);
-      messenger?.showSnackBar(SnackBar(content: Text('「${ctrl.text.trim()}」を作りました')));
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.listsCreated(ctrl.text.trim()))));
     } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text(e is UnsupportedError ? '${account.account.kind.name} ではリストを作れません' : 'リストを作れませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(e is UnsupportedError ? l10n.listsCreateUnsupported(account.account.kind.label) : l10n.listsCreateFailed(e is StateError ? e.message : '$e'))));
     }
   }
 }
@@ -314,7 +316,7 @@ class _ListsTabBody extends ConsumerWidget {
     ].any((x) => x);
     if (rows.isEmpty) {
       if (loading) return const RasqLoading();
-      return RasqEmptyView(title: query.isEmpty ? 'リストはありません' : '見つかりません', hint: query.isEmpty ? '＋でリストを作成できます' : null);
+      return RasqEmptyView(title: query.isEmpty ? context.l10n.listsEmpty : context.l10n.listsNoHits, hint: query.isEmpty ? context.l10n.listsEmptyHint : null);
     }
     return RefreshIndicator(
       onRefresh: () async {
@@ -334,13 +336,13 @@ class _ListsTabBody extends ConsumerWidget {
     final following = (ref.watch(followingRasqCollectionsProvider).value ?? const <RasqCollection>[]).where((c) => _hit(c.name)).toList();
     if (query.isNotEmpty && mine.isEmpty && following.isEmpty) return const [];
     return [
-      const RasqSectionHeader(title: 'RASQ リスト(SNS 横断)', topMargin: 0),
+      RasqSectionHeader(title: context.l10n.listsRasqCrossSns, topMargin: 0),
       for (final c in mine) ...[RasqCollectionRow(collection: c), const Divider(height: 1)],
       for (final c in following) ...[RasqCollectionRow(collection: c, showOwner: true), const Divider(height: 1)],
       RasqListTile(
         key: const ValueKey('lists.rasq.create'),
-        title: '新しい RASQ リスト',
-        subtitle: 'Misskey / Mastodon / Bluesky の人を 1 つのリストに',
+        title: context.l10n.listsRasqCreateTitle,
+        subtitle: context.l10n.listsRasqCreateSubtitle,
         leading: const Icon(Icons.add),
         onTap: () async {
           final c = await showCreateRasqListSheet(ref);
@@ -361,7 +363,7 @@ class _ListsTabBody extends ConsumerWidget {
     Future<void> open(VoidCallback go) async {
       if (ref.read(currentAccountProvider)?.key != key) {
         await ref.read(sessionsProvider.notifier).setCurrent(s.account);
-        ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text('${s.account} に切り替えました')));
+        ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(appL10n.listsSwitchedAccount('${s.account}'))));
       }
       if (context.mounted) go();
     }
@@ -369,15 +371,15 @@ class _ListsTabBody extends ConsumerWidget {
     return [
       if (header) RasqSectionHeader(title: labelOf(s), topMargin: RasqSpacing.md),
       if (clips.isNotEmpty) ...[
-        if (!header) const RasqSectionHeader(title: 'クリップ', topMargin: 0),
+        if (!header) RasqSectionHeader(title: context.l10n.listsSectionClips, topMargin: 0),
         for (final c in clips) ...[_ClipRow(clip: c, onTap: () => open(() => context.pushClip(c))), const Divider(height: 1)],
       ],
       if (lists.isNotEmpty) ...[
-        if (!header) RasqSectionHeader(title: 'リスト', topMargin: clips.isEmpty ? 0 : RasqSpacing.md),
+        if (!header) RasqSectionHeader(title: context.l10n.listsSectionLists, topMargin: clips.isEmpty ? 0 : RasqSpacing.md),
         for (final l in lists) ...[_ListRow(list: l, onTap: () => open(() => context.push('/lists/${Uri.encodeComponent(l.id)}', extra: l))), const Divider(height: 1)],
       ],
       if (feeds.isNotEmpty) ...[
-        if (!header) RasqSectionHeader(title: 'カスタムフィード', topMargin: clips.isEmpty && lists.isEmpty ? 0 : RasqSpacing.md),
+        if (!header) RasqSectionHeader(title: context.l10n.listsSectionFeeds, topMargin: clips.isEmpty && lists.isEmpty ? 0 : RasqSpacing.md),
         for (final f in feeds) ...[_feedRow(context, f), const Divider(height: 1)],
       ],
     ];
@@ -404,7 +406,7 @@ class _ListRow extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(l.name, style: RasqTypography.displayName),
               Text('#${l.id}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
-              Text('${l.memberIds.length} ユーザー', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              Text(context.l10n.listsMemberCount(l.memberIds.length), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ]),
           ),
           const Icon(Icons.chevron_right),
@@ -433,7 +435,7 @@ class _ClipRow extends StatelessWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(c.name, style: RasqTypography.displayName),
-              Text([if (c.notesCount != null) '${c.notesCount}件', if (c.isHost) 'RASQ(SNS 横断)' else if (!c.isPublic) '非公開クリップ' else 'クリップ'].join(' ・ '), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              Text([if (c.notesCount != null) context.l10n.listsClipNotesCount(c.notesCount!), if (c.isHost) context.l10n.listsClipKindHost else if (!c.isPublic) context.l10n.listsClipKindPrivate else context.l10n.listsClipKindPublic].join(context.l10n.listsSeparator), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ]),
           ),
           const Icon(Icons.chevron_right),
@@ -463,7 +465,7 @@ class _FeedRow extends ConsumerWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(f.name, style: RasqTypography.displayName),
-              Text([if (f.creator != null) '@${f.creator}', if (f.likeCount != null) '♥ ${f.likeCount}'].join(' ・ '), style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
+              Text([if (f.creator != null) '@${f.creator}', if (f.likeCount != null) '♥ ${f.likeCount}'].join(context.l10n.listsSeparator), style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
               if (f.description != null && f.description!.isNotEmpty) Text(f.description!, maxLines: 2, overflow: TextOverflow.ellipsis, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ]),
           ),
@@ -488,7 +490,7 @@ class FeedSaveButton extends ConsumerWidget {
       key: ValueKey('lists.feed.save.$uri'),
       icon: saved ? Icons.bookmark : Icons.bookmark_border,
       size: size,
-      tooltip: saved ? '保存を外す' : 'フィードを保存',
+      tooltip: saved ? context.l10n.listsFeedUnsave : context.l10n.listsFeedSave,
       color: saved ? RasqColors.link : null,
       onPressed: () async {
         final s = ref.read(currentSnsSessionProvider);
@@ -497,7 +499,7 @@ class FeedSaveButton extends ConsumerWidget {
           await s.saveFeed(uri, on: !saved);
           ref.invalidate(savedFeedsProvider);
         } catch (e) {
-          ref.read(overlayManagerProvider).showAlert(id: 'lists.feed.save', title: saved ? '保存を外せませんでした' : '保存できませんでした', message: e is UnsupportedError ? 'この SNS はフィードの保存に対応していません' : '$e', confirmText: 'OK');
+          ref.read(overlayManagerProvider).showAlert(id: 'lists.feed.save', title: saved ? appL10n.listsFeedUnsaveFailed : appL10n.listsFeedSaveFailed, message: e is UnsupportedError ? appL10n.listsFeedSaveUnsupported : '$e', confirmText: 'OK');
         }
       },
     );
@@ -508,11 +510,11 @@ class FeedSaveButton extends ConsumerWidget {
 /// 保存の作法は TL カスタマイズ画面と同じ([addTlSource])。足したらホームの TL を読み直す。
 Future<String> importFeedToHome(ProviderContainer c, {required String uri, required String name}) async {
   final acc = c.read(currentAccountProvider);
-  if (acc == null) return 'ログインしていません';
+  if (acc == null) return appL10n.listsNotLoggedIn;
   final added = await addTlSource(c, acc.key, 'tl.home', TlSourceComponent(tl: 'feed:$uri', account: '$acc', label: name));
-  if (!added) return '「$name」はもうホームのタイムラインに入っています';
+  if (!added) return appL10n.listsFeedAlreadyImported(name);
   c.invalidate(timelineProvider(TimelineKind.home));
-  return '「$name」をホームのタイムラインに取り込みました(タブ行の歯車で確認できます)';
+  return appL10n.listsFeedImported(name);
 }
 
 /// リストの中身: ヘッダータイル + tabs ∨ユーザー / 投稿.
@@ -524,7 +526,8 @@ class ListDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final members = ref.watch(listMembersProvider(listId));
-    final kind = TimelineKind.list(listId, info?.name ?? 'リスト');
+    final l10n = context.l10n;
+    final kind = TimelineKind.list(listId, info?.name ?? l10n.listsTitle);
     final tl = ref.watch(timelineProvider(kind));
     final notifier = ref.read(timelineProvider(kind).notifier);
     final actions = ref.watch(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[];
@@ -532,10 +535,10 @@ class ListDetailScreen extends ConsumerWidget {
     // 投稿タブの `↓` (D-338): もう一度押すと、このリスト TL の一時変更 FOW(探す + 一時的な構成)。
     final query = ref.watch(timelineSearchProvider.select((m) => m[kind.id]));
     final tabs = [
-      const RasqTabItem('ユーザー', chevron: false),
-      RasqTabItem('投稿', dot: query != null || ref.watch(tlTemporaryConfigsProvider.select((m) => m.containsKey('tl.${kind.id}')))),
+      RasqTabItem(l10n.listsTabUsers, chevron: false),
+      RasqTabItem(l10n.listsTabPosts, dot: query != null || ref.watch(tlTemporaryConfigsProvider.select((m) => m.containsKey('tl.${kind.id}')))),
       // 話題の目次 (D-368): AsTell の目次と同じ形。
-      const RasqTabItem('話題の目次', chevron: false),
+      RasqTabItem(l10n.listsTabTopics, chevron: false),
     ];
     final topicScope = 'list:$listId';
     final loaded = tl.value?.posts ?? const <Post>[];
@@ -544,23 +547,23 @@ class ListDetailScreen extends ConsumerWidget {
     final gate = ref.watch(childGateProvider);
     if (gate.hasDenyExamples) {
       final hidden = ref.watch(childSafeHiddenCollectionsProvider).value;
-      if (hidden == null) return Scaffold(appBar: RasqPageHeader(title: info?.name ?? 'リスト'), body: const RasqLoading());
+      if (hidden == null) return Scaffold(appBar: RasqPageHeader(title: info?.name ?? l10n.listsTitle), body: const RasqLoading());
       final loaded = tl.value?.posts ?? const <Post>[];
       if (childSafeCollectionHidden(gate, hidden, kind: 'list', id: listId, name: info?.name ?? '', description: info?.description) ||
           gate.collectionHidden(childSafeCollectionMeta(info?.name ?? '', info?.description), [for (final p in loaded) '${p.body} ${p.quote?.body ?? ''}'])) {
-        return Scaffold(appBar: RasqPageHeader(title: info?.name ?? 'リスト'), body: const ChildSafeBlockedView(message: '保護者がこのリストを止めています'));
+        return Scaffold(appBar: RasqPageHeader(title: info?.name ?? l10n.listsTitle), body: ChildSafeBlockedView(message: l10n.listsBlockedByGuardian));
       }
     }
     return DefaultTabController(
       length: tabs.length,
       child: Scaffold(
         appBar: RasqPageHeader(
-          title: info?.name ?? 'リスト',
+          title: info?.name ?? l10n.listsTitle,
           onMore: () {},
           // リスト TL のカスタマイズ (D-124): TL 系は全部同 UI。デフォルトは
           // このリストの取得ノード(tl.list)から始まる。
-          actions: [RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'リストTL設定', onPressed: () => context.push(Routes.tlConfig('tl.list:$listId')))],
-          bottom: RasqTabs(items: tabs, onSelectedTabTap: (i, _) => i == 1 ? showTimelineTempFow(ref, tabs: [('tl.${kind.id}', info?.name ?? 'リスト')], scope: 'tl.${kind.id}') : null),
+          actions: [RasqIconButton(icon: Icons.settings, size: 20, tooltip: l10n.listsTimelineSettingsTooltip, onPressed: () => context.push(Routes.tlConfig('tl.list:$listId')))],
+          bottom: RasqTabs(items: tabs, onSelectedTabTap: (i, _) => i == 1 ? showTimelineTempFow(ref, tabs: [('tl.${kind.id}', info?.name ?? l10n.listsTitle)], scope: 'tl.${kind.id}') : null),
         ),
         body: TabBarView(children: [
           members.when(
@@ -573,7 +576,7 @@ class ListDetailScreen extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   key: const ValueKey('lists.members.add'),
                   icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
-                  label: const Text('メンバーを追加'),
+                  label: Text(l10n.listsAddMembers),
                   onPressed: () async {
                     final session = ref.read(currentSnsSessionProvider);
                     if (session == null) return;
@@ -581,11 +584,11 @@ class ListDetailScreen extends ConsumerWidget {
                     if (n == null) return;
                     ref.invalidate(listMembersProvider(listId));
                     ref.invalidate(listsProvider);
-                    ref.read(rootMessengerKeyProvider).currentState?..clearSnackBars()..showSnackBar(SnackBar(content: Text('$n 人を追加しました')));
+                    ref.read(rootMessengerKeyProvider).currentState?..clearSnackBars()..showSnackBar(SnackBar(content: Text(l10n.listsMembersAdded(n))));
                   },
                 ),
               );
-              if (m.isEmpty) return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [add, const Expanded(child: RasqEmptyView(title: 'ユーザーはいません'))]);
+              if (m.isEmpty) return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [add, Expanded(child: RasqEmptyView(title: l10n.listsNoUsers))]);
               return ListView.separated(
                     itemCount: m.length + 1,
                     separatorBuilder: (_, i) => i == 0 ? const SizedBox.shrink() : const Divider(),
@@ -600,7 +603,7 @@ class ListDetailScreen extends ConsumerWidget {
                           await ref.read(currentSnsSessionProvider)?.removeFromList(listId, m[i].id);
                           ref.invalidate(listMembersProvider(listId));
                         },
-                        child: Text('外す', style: TextStyle(color: scheme.error)),
+                        child: Text(l10n.listsRemoveMember, style: TextStyle(color: scheme.error)),
                       ),
                       onMore: () {},
                     );
@@ -610,9 +613,9 @@ class ListDetailScreen extends ConsumerWidget {
           ),
           tl.when(
             loading: () => const RasqLoading(),
-            error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
+            error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: l10n.listsReload),
             data: (s) => s.posts.isEmpty
-                ? const RasqEmptyView(title: '投稿はありません')
+                ? RasqEmptyView(title: l10n.listsNoPosts)
                 : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier, timelineId: kind.id, scope: topicScope, entries: topics),
           ),
           ListTopicsTab(scope: topicScope, entries: topics, posts: {for (final p in loaded) p.key: p}, postsTabIndex: 1),
@@ -630,7 +633,8 @@ class FeedTimelineScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final kind = TimelineKind('feed:$uri', info?.name ?? 'フィード');
+    final l10n = context.l10n;
+    final kind = TimelineKind('feed:$uri', info?.name ?? l10n.listsFeedDefaultTitle);
     final tl = ref.watch(timelineProvider(kind));
     final notifier = ref.read(timelineProvider(kind).notifier);
     final actions = ref.watch(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[];
@@ -640,8 +644,8 @@ class FeedTimelineScreen extends ConsumerWidget {
     final topics = indexForListTimeline(loaded);
     return DefaultTabController(length: 2, child: Scaffold(
       appBar: RasqPageHeader(
-        title: info?.name ?? 'フィード',
-        bottom: RasqTabs(items: const [RasqTabItem('投稿', chevron: false), RasqTabItem('話題の目次', chevron: false)]),
+        title: info?.name ?? l10n.listsFeedDefaultTitle,
+        bottom: RasqTabs(items: [RasqTabItem(l10n.listsTabPosts, chevron: false), RasqTabItem(l10n.listsTabTopics, chevron: false)]),
         onMore: () {},
         actions: [
           FeedSaveButton(uri: uri, size: 20),
@@ -649,20 +653,20 @@ class FeedTimelineScreen extends ConsumerWidget {
             key: const ValueKey('feed.import'),
             icon: Icons.playlist_add,
             size: 20,
-            tooltip: 'タイムラインに取り込む',
+            tooltip: l10n.listsImportToTimeline,
             onPressed: () async {
               final msg = await importFeedToHome(ProviderScope.containerOf(context), uri: uri, name: info?.name ?? uri);
-              ref.read(overlayManagerProvider).showAlert(id: 'feed.import', title: 'タイムラインに取り込む', message: msg, confirmText: 'OK');
+              ref.read(overlayManagerProvider).showAlert(id: 'feed.import', title: l10n.listsImportToTimeline, message: msg, confirmText: 'OK');
             },
           ),
-          RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'フィードTL設定', onPressed: () => context.push(Routes.tlConfig('tl.feed:$uri'))),
+          RasqIconButton(icon: Icons.settings, size: 20, tooltip: l10n.listsFeedTimelineSettingsTooltip, onPressed: () => context.push(Routes.tlConfig('tl.feed:$uri'))),
         ],
       ),
       body: TabBarView(children: [
         tl.when(
           loading: () => const RasqLoading(),
-          error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
-          data: (s) => s.posts.isEmpty ? const RasqEmptyView(title: '投稿はありません') : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier, scope: topicScope, entries: topics),
+          error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: l10n.listsReload),
+          data: (s) => s.posts.isEmpty ? RasqEmptyView(title: l10n.listsNoPosts) : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier, scope: topicScope, entries: topics),
         ),
         ListTopicsTab(scope: topicScope, entries: topics, posts: {for (final p in loaded) p.key: p}, postsTabIndex: 0),
       ]),
@@ -780,9 +784,10 @@ class _ListImportScreenState extends ConsumerState<ListImportScreen> {
     final bluesky = ref.watch(currentSnsSessionProvider)?.account.kind == SnsKind.bluesky;
     final hasRasq = ref.watch(hasRasqAccountProvider);
     final results = bluesky ? ref.watch(feedSearchProvider(_query)) : const AsyncValue<List<FeedInfo>>.data([]);
-    final hint = [if (bluesky) 'カスタムフィード', if (hasRasq) 'RASQ リスト'].join(' / ');
+    final l10n = context.l10n;
+    final searchHint = bluesky && hasRasq ? l10n.listsImportSearchHintBoth : (bluesky ? l10n.listsImportSearchHintFeeds : l10n.listsImportSearchHintRasq);
     return Scaffold(
-      appBar: RasqPageHeader(title: 'リストのインポート', onMore: () {}),
+      appBar: RasqPageHeader(title: l10n.listsImportTitle, onMore: () {}),
       body: ListView(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 4),
@@ -791,40 +796,40 @@ class _ListImportScreenState extends ConsumerState<ListImportScreen> {
                   key: const ValueKey('lists.import.search'),
                   controller: _ctrl,
                   style: RasqTypography.bodySmall,
-                  decoration: InputDecoration(hintText: '$hintを検索、または共有リンク / URL を入力', isDense: true, prefixIcon: const Icon(Icons.search, size: 18)),
+                  decoration: InputDecoration(hintText: searchHint, isDense: true, prefixIcon: const Icon(Icons.search, size: 18)),
                   textInputAction: TextInputAction.search,
                   onSubmitted: (v) => setState(() => _query = v),
                   onChanged: (v) => setState(() => _query = v),
                 )
-              : const RasqSearchBar(hintText: '検索'),
+              : RasqSearchBar(hintText: l10n.listsImportSearchPlain),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(
               [
-                if (bluesky) 'フィードを検索するか URL を貼ると、リストタイルで表示します。タップでそのフィードのタイムラインへ。',
-                if (hasRasq) 'RASQ リストは「取り込む」でホームのタイムラインへ(リストをフォローします)。取り込めるのは、リスト内の人の情報を取れるリストだけです。',
-                if (!bluesky && !hasRasq) 'リストを検索して一括操作を行うことができます。',
+                if (bluesky) l10n.listsImportFeedsHelp,
+                if (hasRasq) l10n.listsImportRasqHelp,
+                if (!bluesky && !hasRasq) l10n.listsImportGenericHelp,
               ].join('\n'),
               style: RasqTypography.bodySmall,
             ),
-            if (!bluesky) TextButton(onPressed: () => manager.showAlert(id: 'lists.import', title: 'ローカルからインポート', message: rasqDetail(context, 'ファイルからのインポートは準備中です。', 'CSV/JSON からのインポートはリスト機能(サーバー側: 第二期)と合わせて実装します。'), confirmText: 'OK'), child: Text('ローカルからインポート', style: TextStyle(color: tokens.link))),
+            if (!bluesky) TextButton(onPressed: () => manager.showAlert(id: 'lists.import', title: l10n.listsImportLocal, message: rasqDetail(context, l10n.listsImportLocalMessage, l10n.listsImportLocalDetail), confirmText: 'OK'), child: Text(l10n.listsImportLocal, style: TextStyle(color: tokens.link))),
           ]),
         ),
         if (bluesky) ...[
-          RasqSectionHeader(title: _query.trim().isEmpty ? '人気のフィード' : 'フィードの検索結果', topMargin: RasqSpacing.sm),
+          RasqSectionHeader(title: _query.trim().isEmpty ? l10n.listsImportPopularFeeds : l10n.listsImportFeedResults, topMargin: RasqSpacing.sm),
           results.when(
             loading: () => const RasqLoading(),
-            error: (_, _) => const RasqEmptyView(title: '見つかりません'),
+            error: (_, _) => RasqEmptyView(title: l10n.listsNoHits),
             data: (items) => items.isEmpty
-                ? RasqEmptyView(title: _query.trim().isEmpty ? '検索語か URL を入れてください' : '見つかりません')
+                ? RasqEmptyView(title: _query.trim().isEmpty ? l10n.listsImportEnterQuery : l10n.listsNoHits)
                 : Column(children: [for (final f in items) ...[_feedRow(context, f), const Divider(height: 1)]]),
           ),
         ],
         // RASQ リスト (D-347): 語が空 = 自分のリスト + フォロー中、語があれば公開リストの検索。行のタップでリストのページ、右の「取り込む」でホームの TL へ。
         if (hasRasq) ...[
-          RasqSectionHeader(title: _query.trim().isEmpty ? 'RASQ リスト(自分 / フォロー中)' : 'RASQ リストの検索結果', topMargin: RasqSpacing.sm),
+          RasqSectionHeader(title: _query.trim().isEmpty ? l10n.listsImportRasqMine : l10n.listsImportRasqResults, topMargin: RasqSpacing.sm),
           RasqListCandidates(
             query: _query,
             onPick: null,
@@ -839,14 +844,14 @@ class _ListImportScreenState extends ConsumerState<ListImportScreen> {
                         ?..clearSnackBars()
                         ..showSnackBar(SnackBar(content: Text(msg)));
                     },
-              child: const Text('取り込む'),
+              child: Text(l10n.listsImportButton),
             ),
             onOpen: (c) => context.push(Routes.rasqCollection(c.code ?? c.id)),
           ),
         ],
         if (!bluesky && !hasRasq) ...[
-          const RasqSectionHeader(title: '履歴', topMargin: 0),
-          const RasqEmptyView(title: '履歴はありません'),
+          RasqSectionHeader(title: l10n.listsImportHistory, topMargin: 0),
+          RasqEmptyView(title: l10n.listsImportHistoryEmpty),
         ],
       ]),
     );

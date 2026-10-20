@@ -1031,6 +1031,332 @@ class AppLocalizationsJa extends AppLocalizations {
   String get childSafeScreensPendingRasqLogin => 'RASQ アカウントにログイン';
 
   @override
+  String get collectionsImportToTimeline => 'タイムラインに取り込む';
+
+  @override
+  String get collectionsNotFound => '見つかりません';
+
+  @override
+  String get collectionsNotFoundHint => '消されたか、非公開になっています';
+
+  @override
+  String get collectionsReload => '再読み込み';
+
+  @override
+  String get collectionsBlockedList => '保護者がこのリストを止めています';
+
+  @override
+  String get collectionsBlockedClip => '保護者がこのクリップを止めています';
+
+  @override
+  String get collectionsMenuCopyLink => 'リンクをコピー';
+
+  @override
+  String get collectionsMenuRefresh => 'いま取り直す';
+
+  @override
+  String get collectionsMenuMakePrivate => '非公開にする';
+
+  @override
+  String get collectionsMenuMakePublic => '公開する';
+
+  @override
+  String get collectionsMenuRename => '名前と説明を変更';
+
+  @override
+  String get collectionsMenuDelete => '削除';
+
+  @override
+  String get collectionsMenuUnpublish => '公開をやめる';
+
+  @override
+  String get collectionsLinkCopied => 'リンクをコピーしました';
+
+  @override
+  String get collectionsRefreshFailed => '取り直せませんでした';
+
+  @override
+  String get collectionsRefreshed => '取り直しました';
+
+  @override
+  String get collectionsRenameTitle => '名前と説明';
+
+  @override
+  String get collectionsSave => '保存';
+
+  @override
+  String get collectionsNameHint => '名前';
+
+  @override
+  String get collectionsDescriptionHint => '説明(任意)';
+
+  @override
+  String collectionsDeleteConfirmTitle(String name) {
+    return '「$name」を削除しますか？';
+  }
+
+  @override
+  String get collectionsDeleteConfirmMessage => 'フォローしている人の一覧からも消えます。';
+
+  @override
+  String get collectionsDeleteButton => '削除';
+
+  @override
+  String get collectionsCancel => 'キャンセル';
+
+  @override
+  String collectionsActionFailed(String error) {
+    return 'できませんでした: $error';
+  }
+
+  @override
+  String get collectionsTabPosts => '投稿';
+
+  @override
+  String get collectionsTabTopics => '話題の目次';
+
+  @override
+  String get collectionsTabMembers => 'メンバー';
+
+  @override
+  String get collectionsTabServers => 'サーバー';
+
+  @override
+  String get collectionsStatusRefreshedOnView => '見たときに新しくしました';
+
+  @override
+  String get collectionsStatusRefreshFailed => '取り直せませんでした(前の内容です)';
+
+  @override
+  String get collectionsStatusFollowingHint =>
+      '同じサーバーに所属しているか、入っている人をフォローしていると、見たときに新しくなります';
+
+  @override
+  String get collectionsKindList => 'RASQ リスト';
+
+  @override
+  String get collectionsKindClip => 'RASQ クリップ';
+
+  @override
+  String get collectionsPrivate => '非公開';
+
+  @override
+  String get collectionsPublic => '公開';
+
+  @override
+  String collectionsMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionsItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionsFollowerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'フォロワー $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionsUpdatedAgo(String ago) {
+    return '更新 $ago';
+  }
+
+  @override
+  String get collectionsSeparator => ' ・ ';
+
+  @override
+  String get collectionsFollowing => 'フォロー中';
+
+  @override
+  String get collectionsFollow => 'フォロー';
+
+  @override
+  String get collectionsNoPostsYet => 'まだ投稿がありません';
+
+  @override
+  String get collectionsNoPostsHintEmpty =>
+      'ユーザーページの … →「RASQ リストに追加」で人を入れられます';
+
+  @override
+  String get collectionsNoPostsHintCollecting => '見られる人が開いたときに集まります';
+
+  @override
+  String get collectionsClipEmpty => 'クリップは空です';
+
+  @override
+  String get collectionsItemGone => 'この投稿は見られなくなりました(消されたか、公開範囲が変わりました)';
+
+  @override
+  String get collectionsItemChecking => '公開範囲を確かめています';
+
+  @override
+  String get collectionsAddMembers => 'メンバーを追加';
+
+  @override
+  String collectionsMembersAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人を追加しました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionsAddFailed(String error) {
+    return '追加できませんでした: $error';
+  }
+
+  @override
+  String get collectionsNoMembers => 'メンバーはいません';
+
+  @override
+  String get collectionsNoMembersHint => '「メンバーを追加」か、ユーザーページの … →「RASQ リストに追加」';
+
+  @override
+  String collectionsMemberSubtitle(String handle, String kind) {
+    return '@$handle ・ $kind';
+  }
+
+  @override
+  String get collectionsRemoveFromListTooltip => 'リストから外す';
+
+  @override
+  String collectionsRemoveFailed(String error) {
+    return '外せませんでした: $error';
+  }
+
+  @override
+  String get collectionsNotFetchableHint =>
+      'リスト内の人の情報を取れるアカウントがありません(入っている人と同じサーバーのアカウントか、入っている人のフォローが要ります)';
+
+  @override
+  String get collectionsNoServer => 'RASQ アカウントのサーバーが設定されていません';
+
+  @override
+  String collectionsCheckFailed(String error) {
+    return '確かめられませんでした: $error';
+  }
+
+  @override
+  String get collectionsPickerEmpty => 'RASQ リストはまだありません';
+
+  @override
+  String get collectionsPickerNoHits => '見つかりません';
+
+  @override
+  String get collectionsPickerMine => '自分のリスト';
+
+  @override
+  String get collectionsPickerNotFetchable => '取れません';
+
+  @override
+  String get collectionsNotLoggedIn => 'ログインしていません';
+
+  @override
+  String collectionsImportRejected(String name, String reason) {
+    return '「$name」は取り込めません($reason)';
+  }
+
+  @override
+  String collectionsAlreadyImported(String name) {
+    return '「$name」はもうホームのタイムラインに入っています';
+  }
+
+  @override
+  String collectionsImported(String name) {
+    return '「$name」をホームのタイムラインに取り込みました(タブ行の歯車で確認できます)';
+  }
+
+  @override
+  String get collectionsTileOpen => '見てみる';
+
+  @override
+  String get collectionsCreateNeedsAccount => 'RASQ リストを作るには RASQ アカウントが必要です';
+
+  @override
+  String get collectionsCreateTitle => '新しい RASQ リスト';
+
+  @override
+  String get collectionsListNameHint => 'リスト名';
+
+  @override
+  String get collectionsPublishSwitch => '公開する';
+
+  @override
+  String get collectionsPublishSwitchSubtitle =>
+      'アカウントページと共有リンクから見られます。フォローした人が見たときにも新しくなります';
+
+  @override
+  String get collectionsCreateButton => '作成';
+
+  @override
+  String collectionsCreateFailed(String error) {
+    return '作成できませんでした: $error';
+  }
+
+  @override
+  String get collectionsUseNeedsAccount => 'RASQ リストを使うには RASQ アカウントが必要です';
+
+  @override
+  String collectionsLoadListsFailed(String error) {
+    return 'リストを読めませんでした: $error';
+  }
+
+  @override
+  String get collectionsAddToListTitle => 'RASQ リストに追加';
+
+  @override
+  String collectionsAddToListSubtitlePublic(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人',
+    );
+    return '$_temp0 ・ 公開';
+  }
+
+  @override
+  String collectionsAddToListSubtitlePrivate(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人',
+    );
+    return '$_temp0 ・ 非公開';
+  }
+
+  @override
+  String get collectionsCreateNewList => '新しいリストを作成';
+
+  @override
+  String collectionsAddedTo(String name) {
+    return '「$name」に追加しました';
+  }
+
+  @override
+  String collectionsAlreadyIn(String name) {
+    return 'すでに「$name」に入っています';
+  }
+
+  @override
   String get composeTargetNormalTitle => 'ノートの作成';
 
   @override
@@ -2919,6 +3245,378 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get languageSettingsListHeader => '表示の言語';
+
+  @override
+  String get listsTitle => 'リスト';
+
+  @override
+  String get listsTabAllLabel => 'すべて';
+
+  @override
+  String get listsSearchHint => 'リスト・クリップを検索';
+
+  @override
+  String get listsShowPrivateClips => '非公開クリップを表示';
+
+  @override
+  String get listsImportTitle => 'リストのインポート';
+
+  @override
+  String get listsCreateTitle => 'リストを作成';
+
+  @override
+  String listsCreateAccountList(String account) {
+    return '$account のリスト';
+  }
+
+  @override
+  String get listsRasqCrossSns => 'RASQ リスト(SNS 横断)';
+
+  @override
+  String get listsCreateConfirm => '作成';
+
+  @override
+  String get listsNameHint => 'リスト名';
+
+  @override
+  String listsCreated(String name) {
+    return '「$name」を作りました';
+  }
+
+  @override
+  String listsCreateUnsupported(String sns) {
+    return '$sns ではリストを作れません';
+  }
+
+  @override
+  String listsCreateFailed(String error) {
+    return 'リストを作れませんでした: $error';
+  }
+
+  @override
+  String get listsEmpty => 'リストはありません';
+
+  @override
+  String get listsNoHits => '見つかりません';
+
+  @override
+  String get listsEmptyHint => '＋でリストを作成できます';
+
+  @override
+  String get listsRasqCreateTitle => '新しい RASQ リスト';
+
+  @override
+  String get listsRasqCreateSubtitle =>
+      'Misskey / Mastodon / Bluesky の人を 1 つのリストに';
+
+  @override
+  String listsSwitchedAccount(String account) {
+    return '$account に切り替えました';
+  }
+
+  @override
+  String get listsSectionClips => 'クリップ';
+
+  @override
+  String get listsSectionLists => 'リスト';
+
+  @override
+  String get listsSectionFeeds => 'カスタムフィード';
+
+  @override
+  String listsMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ユーザー',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listsClipNotesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsClipKindHost => 'RASQ(SNS 横断)';
+
+  @override
+  String get listsClipKindPrivate => '非公開クリップ';
+
+  @override
+  String get listsClipKindPublic => 'クリップ';
+
+  @override
+  String get listsSeparator => ' ・ ';
+
+  @override
+  String get listsFeedUnsave => '保存を外す';
+
+  @override
+  String get listsFeedSave => 'フィードを保存';
+
+  @override
+  String get listsFeedUnsaveFailed => '保存を外せませんでした';
+
+  @override
+  String get listsFeedSaveFailed => '保存できませんでした';
+
+  @override
+  String get listsFeedSaveUnsupported => 'この SNS はフィードの保存に対応していません';
+
+  @override
+  String get listsNotLoggedIn => 'ログインしていません';
+
+  @override
+  String listsFeedAlreadyImported(String name) {
+    return '「$name」はもうホームのタイムラインに入っています';
+  }
+
+  @override
+  String listsFeedImported(String name) {
+    return '「$name」をホームのタイムラインに取り込みました(タブ行の歯車で確認できます)';
+  }
+
+  @override
+  String get listsTabUsers => 'ユーザー';
+
+  @override
+  String get listsTabPosts => '投稿';
+
+  @override
+  String get listsTabTopics => '話題の目次';
+
+  @override
+  String get listsBlockedByGuardian => '保護者がこのリストを止めています';
+
+  @override
+  String get listsTimelineSettingsTooltip => 'リストTL設定';
+
+  @override
+  String get listsAddMembers => 'メンバーを追加';
+
+  @override
+  String listsMembersAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人を追加しました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsNoUsers => 'ユーザーはいません';
+
+  @override
+  String get listsRemoveMember => '外す';
+
+  @override
+  String get listsReload => '再読み込み';
+
+  @override
+  String get listsNoPosts => '投稿はありません';
+
+  @override
+  String get listsFeedDefaultTitle => 'フィード';
+
+  @override
+  String get listsImportToTimeline => 'タイムラインに取り込む';
+
+  @override
+  String get listsFeedTimelineSettingsTooltip => 'フィードTL設定';
+
+  @override
+  String get listsImportSearchHintFeeds => 'カスタムフィードを検索、または共有リンク / URL を入力';
+
+  @override
+  String get listsImportSearchHintRasq => 'RASQ リストを検索、または共有リンク / URL を入力';
+
+  @override
+  String get listsImportSearchHintBoth =>
+      'カスタムフィード / RASQ リストを検索、または共有リンク / URL を入力';
+
+  @override
+  String get listsImportSearchPlain => '検索';
+
+  @override
+  String get listsImportFeedsHelp =>
+      'フィードを検索するか URL を貼ると、リストタイルで表示します。タップでそのフィードのタイムラインへ。';
+
+  @override
+  String get listsImportRasqHelp =>
+      'RASQ リストは「取り込む」でホームのタイムラインへ(リストをフォローします)。取り込めるのは、リスト内の人の情報を取れるリストだけです。';
+
+  @override
+  String get listsImportGenericHelp => 'リストを検索して一括操作を行うことができます。';
+
+  @override
+  String get listsImportLocal => 'ローカルからインポート';
+
+  @override
+  String get listsImportLocalMessage => 'ファイルからのインポートは準備中です。';
+
+  @override
+  String get listsImportLocalDetail =>
+      'CSV/JSON からのインポートはリスト機能(サーバー側)と合わせて実装します。';
+
+  @override
+  String get listsImportPopularFeeds => '人気のフィード';
+
+  @override
+  String get listsImportFeedResults => 'フィードの検索結果';
+
+  @override
+  String get listsImportEnterQuery => '検索語か URL を入れてください';
+
+  @override
+  String get listsImportRasqMine => 'RASQ リスト(自分 / フォロー中)';
+
+  @override
+  String get listsImportRasqResults => 'RASQ リストの検索結果';
+
+  @override
+  String get listsImportButton => '取り込む';
+
+  @override
+  String get listsImportHistory => '履歴';
+
+  @override
+  String get listsImportHistoryEmpty => '履歴はありません';
+
+  @override
+  String get listsTopicsEmpty => '話題はまだありません';
+
+  @override
+  String get listsTopicsEmptyHint => '投稿が集まると、話題ごとに区切ります';
+
+  @override
+  String get listsTopicsCaption => '話題ごとの区切りです。タップすると、その話題の投稿だけを表示します。';
+
+  @override
+  String get listsTopicsCaptionDetail =>
+      '会話イベント(2 投稿以上、リレーショナル TL と同じエンジン)を章にし、単発投稿は 1 つにまとめる(indexForListTimeline)。見出しは投稿の中にある語(タグ / 特徴語 / ドメイン)。';
+
+  @override
+  String listsTopicTimeRange(String start, String end) {
+    return '$start〜$end';
+  }
+
+  @override
+  String listsTopicSubtitle(String time, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '$time ・ $_temp0';
+  }
+
+  @override
+  String listsTopicSubtitleWithPeople(String time, int count, int people) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      people,
+      locale: localeName,
+      other: '$people 人',
+    );
+    return '$time ・ $_temp0 ・ $_temp1';
+  }
+
+  @override
+  String listsTopicSnippet(String name, String body) {
+    return '$name「$body」';
+  }
+
+  @override
+  String listsTopicFilterChip(String label, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '話題: $label($_temp0)';
+  }
+
+  @override
+  String get listsTopicFilterClear => '絞り込みをやめる';
+
+  @override
+  String listsMemberCandidateSubtitle(String handle, String instance) {
+    return '@$handle ・ $instance';
+  }
+
+  @override
+  String listsMemberNotPublished(String name) {
+    return '$name さんは、この SNS のアカウントを公開していません';
+  }
+
+  @override
+  String listsMemberSnsNotFound(String name) {
+    return '$name さんの SNS アカウントが見つかりません';
+  }
+
+  @override
+  String get listsPickerConfirm => '追加';
+
+  @override
+  String get listsPickerNoServer => 'RASQ サーバーに繋がっていません';
+
+  @override
+  String get listsPickerLookupFailed => '調べられませんでした';
+
+  @override
+  String get listsPickerUnavailable => '選べません';
+
+  @override
+  String get listsPickerNone => 'いません';
+
+  @override
+  String get listsPickerSearchHint => 'ユーザーを検索(SNS / RASQ)';
+
+  @override
+  String get listsPickerSnsUsers => 'SNS のユーザー';
+
+  @override
+  String get listsPickerRasqUsers => 'RASQ のユーザー';
+
+  @override
+  String get listsPickerSnsFollowing => 'SNS のフォロー中';
+
+  @override
+  String get listsPickerRasqFollowing => 'RASQ のフォロー中';
+
+  @override
+  String get listsPickerRasqNotice =>
+      'RASQ のユーザーは、その人が公開している同じ SNS のアカウントで追加します。';
+
+  @override
+  String listsPickerRasqNoticeDetail(String path) {
+    return 'Central の公開ページ($path)の snsAccounts から、このセッションと同じ SNS(同じサーバーを優先、確認済みを優先)を選び、userByHandle で引いた id を足す。';
+  }
+
+  @override
+  String listsPickerSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人を選んでいます',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsPickerRasqBadgeSemantics => 'RASQ のユーザー';
 
   @override
   String get nodeprogCatalogGenreGenerate => '生成';

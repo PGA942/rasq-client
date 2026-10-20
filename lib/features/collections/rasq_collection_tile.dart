@@ -5,28 +5,30 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/router.dart' show Routes;
 import '../../backend/rasq_collections_api.dart';
+import '../../l10n/l10n.dart';
 import 'rasq_collections.dart';
 
 /// RASQ リスト / RASQ クリップのタイル (D-345)。AsTell のタイルと同じ角丸 + グラデーションの面に、
 /// 種類のアイコン + 種類名 / 名前 / 作った人 / 説明(2 行)/ 人数(件数)・フォロワー / 入っているサーバー(3 つまで)/「見てみる」。
 class RasqCollectionTile extends StatelessWidget {
-  const RasqCollectionTile({super.key, required this.collection, this.onOpen, this.openLabel = '見てみる'});
+  const RasqCollectionTile({super.key, required this.collection, this.onOpen, this.openLabel});
   final RasqCollection collection;
   final VoidCallback? onOpen;
 
-  /// [onOpen] のボタンの文言(オンボーディングでは「登録する」、D-412)。
-  final String openLabel;
+  /// [onOpen] のボタンの文言(オンボーディングでは「登録する」、D-412)。null = 「見てみる」。
+  final String? openLabel;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final c = collection;
     final isList = c.kind == RasqCollectionKind.list;
+    final l10n = context.l10n;
     final caption = [
-      isList ? '${c.itemCount}人' : '${c.itemCount}件',
-      if (c.followerCount > 0) 'フォロワー ${c.followerCount}',
-      if (!c.isPublic) '非公開',
-    ].join(' ・ ');
+      isList ? l10n.collectionsMemberCount(c.itemCount) : l10n.collectionsItemCount(c.itemCount),
+      if (c.followerCount > 0) l10n.collectionsFollowerCount(c.followerCount),
+      if (!c.isPublic) l10n.collectionsPrivate,
+    ].join(l10n.collectionsSeparator);
     return Container(
       key: ValueKey('rasqCollection.tile.${c.id}'),
       decoration: BoxDecoration(
@@ -42,7 +44,7 @@ class RasqCollectionTile extends StatelessWidget {
         Row(children: [
           Icon(isList ? Icons.people_alt_outlined : Icons.workspaces_outlined, size: 16, color: RasqColors.sub),
           const SizedBox(width: RasqSpacing.xs),
-          Text(isList ? 'RASQ リスト' : 'RASQ クリップ', style: RasqTypography.caption.copyWith(color: RasqColors.sub, fontWeight: FontWeight.w700)),
+          Text(isList ? l10n.collectionsKindList : l10n.collectionsKindClip, style: RasqTypography.caption.copyWith(color: RasqColors.sub, fontWeight: FontWeight.w700)),
         ]),
         const SizedBox(height: RasqSpacing.xs),
         Text(c.name, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -60,13 +62,13 @@ class RasqCollectionTile extends StatelessWidget {
         Row(children: [
           Expanded(
             child: Text(
-              [caption, if (c.instances.isNotEmpty) c.instances.take(3).join(' / ')].join(' ・ '),
+              [caption, if (c.instances.isNotEmpty) c.instances.take(3).join(' / ')].join(l10n.collectionsSeparator),
               style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (onOpen != null) TextButton(key: ValueKey('rasqCollection.tile.open.${c.id}'), onPressed: onOpen, child: Text(openLabel)),
+          if (onOpen != null) TextButton(key: ValueKey('rasqCollection.tile.open.${c.id}'), onPressed: onOpen, child: Text(openLabel ?? l10n.collectionsTileOpen)),
         ]),
       ]),
     );
@@ -99,14 +101,15 @@ class RasqCollectionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = collection;
     final isList = c.kind == RasqCollectionKind.list;
+    final l10n = context.l10n;
     return RasqListTile(
       key: ValueKey('rasqCollection.row.${c.id}'),
       title: c.name,
       subtitle: [
-        isList ? '${c.itemCount}人' : '${c.itemCount}件',
+        isList ? l10n.collectionsMemberCount(c.itemCount) : l10n.collectionsItemCount(c.itemCount),
         if (showOwner) '@${c.owner.handle}',
-        c.isPublic ? '公開' : '非公開',
-      ].join(' ・ '),
+        c.isPublic ? l10n.collectionsPublic : l10n.collectionsPrivate,
+      ].join(l10n.collectionsSeparator),
       leading: Icon(isList ? Icons.people_alt_outlined : Icons.workspaces_outlined),
       onTap: () => context.push(Routes.rasqCollection(c.code ?? c.id)),
     );
