@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "resources",
-  "title": "リソースと広告",
+  "title": "@l10n:settingsPagesResourcesTitle",
   "defaults": {
     "showAds": true
   },
@@ -11,17 +11,17 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "広告"
+          "title": "@l10n:settingsPagesResourcesSection1Title"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "showAds",
         "p": {
-          "title": "広告を表示",
+          "title": "@l10n:settingsPagesResourcesShowAdsTitle",
           "value": "$.settings.showAds",
-          "subtitle": "タイムラインの投稿の間と、検索ホームの広告です",
-          "detail": "タイムラインの投稿の間(10 件ごと、注釈やセンシティブな投稿の隣には置きません)と検索ホームの広告枠(AdMob、いまはテスト用の広告)。個人に合わせた広告は出しません"
+          "subtitle": "@l10n:settingsPagesResourcesShowAdsSubtitle",
+          "detail": "@l10n:settingsPagesResourcesShowAdsDetail"
         },
         "on": {
           "change": "settings.set"
@@ -30,37 +30,37 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "リソース"
+          "title": "@l10n:settingsPagesResourcesSection2Title"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
-          "title": "プラグインの通信",
-          "value": "端末から直接"
+          "title": "@l10n:settingsPagesResourcesValueRow1Title",
+          "value": "@l10n:settingsPagesResourcesValueRow1Value"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
-          "title": "推論",
-          "value": "端末の中 + 選んだサーバー"
+          "title": "@l10n:settingsPagesResourcesValueRow2Title",
+          "value": "@l10n:settingsPagesResourcesValueRow2Value"
         }
       },
       {
         "t": "Text",
         "p": {
-          "text": "プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。",
+          "text": "@l10n:settingsPagesResourcesText1",
           "pad": 16,
           "size": 13,
-          "detail": "プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。 プラグインの通信: 端末から直接(プロキシ無し)。推論: 端末内モデル(RAi)+ 任意の推論サーバー。"
+          "detail": "@l10n:settingsPagesResourcesText1Detail"
         }
       },
       {
         "t": "ListTile",
         "k": "/store",
         "p": {
-          "title": "プラグインストア"
+          "title": "@l10n:settingsPagesResourcesStoreTitle"
         },
         "on": {
           "tap": "route.push"

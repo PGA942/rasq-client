@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "plugins.reaction",
-  "title": "リアクションの予測",
+  "title": "@l10n:settingsPagesPluginsReactionTitle",
   "defaults": {
     "predictWhenEmpty": false
   },
@@ -11,17 +11,17 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "リアクションのボタンの短押し"
+          "title": "@l10n:settingsPagesPluginsReactionSection1Title"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "predictWhenEmpty",
         "p": {
-          "title": "だれも付けていない投稿でも予測する",
+          "title": "@l10n:settingsPagesPluginsReactionPredictWhenEmptyTitle",
           "value": "$.settings.predictWhenEmpty",
-          "subtitle": "よく使う絵文字を予測して、短押しで付けます",
-          "detail": "切ってあると、まだリアクションが付いていない投稿では予測せず、押すと絵文字ピッカーが開きます。入れると、自分がよく使う絵文字を予測として出し、短押しでそれを付けます"
+          "subtitle": "@l10n:settingsPagesPluginsReactionPredictWhenEmptySubtitle",
+          "detail": "@l10n:settingsPagesPluginsReactionPredictWhenEmptyDetail"
         },
         "on": {
           "change": "settings.set"

@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "appearance.timeline",
-  "title": "タイムラインの表示",
+  "title": "@l10n:settingsPagesAppearanceTimelineTitle",
   "defaults": {
     "newPostsPill": true
   },
@@ -11,17 +11,17 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "更新"
+          "title": "@l10n:settingsPagesAppearanceTimelineSection1Title"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "edgeTiles",
         "p": {
-          "title": "TL の上下に「投稿を読み込む」を出す",
-          "subtitle": "スマホでは既定で出しません(引っ張って更新)",
+          "title": "@l10n:settingsPagesAppearanceTimelineEdgeTilesTitle",
+          "subtitle": "@l10n:settingsPagesAppearanceTimelineEdgeTilesSubtitle",
           "value": "$.settings.edgeTiles",
-          "detail": "見えると、新しい投稿 / 続きを読み込みます。既定は、電話のアプリでは出さず(下に引っ張って更新)、Web 版とパソコンでは出します"
+          "detail": "@l10n:settingsPagesAppearanceTimelineEdgeTilesDetail"
         },
         "on": {
           "change": "settings.set"
@@ -31,10 +31,10 @@
         "t": "SwitchListTile",
         "k": "newPostsPill",
         "p": {
-          "title": "新しい投稿のお知らせを出す",
-          "subtitle": "更新して新しい投稿が届いたら、ヘッダーのすぐ下に「新しい投稿」",
+          "title": "@l10n:settingsPagesAppearanceTimelineNewPostsPillTitle",
+          "subtitle": "@l10n:settingsPagesAppearanceTimelineNewPostsPillSubtitle",
           "value": "$.settings.newPostsPill",
-          "detail": "投稿した人の顔(3 人まで)と「新しい投稿」を出します。押すといちばん上へ。しばらくたつか、いちばん上まで送ると消えます。ヘッダーをしまっている間は出しません"
+          "detail": "@l10n:settingsPagesAppearanceTimelineNewPostsPillDetail"
         },
         "on": {
           "change": "settings.set"

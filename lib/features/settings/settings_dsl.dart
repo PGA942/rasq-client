@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart' show RasqUiLocale;
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession, SnsSession;
 import 'package:rrl_core/rrl_core.dart';
@@ -15,6 +16,7 @@ import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../../l10n/ui_locale.dart' show uiLocaleTagProvider;
+import '../../l10n/asset_strings.dart';
 import '../../l10n/l10n.dart';
 
 /// 設定第二階層の DSL 描画 (D-031 / D-044)。
@@ -123,14 +125,27 @@ final settingsPageSpecProvider = FutureProvider.family<SettingsPageSpec, String>
     if (spec == null) throw MissingSnsSettingsPage(short);
     return spec;
   }
-  final raw = await loadSettingsPageJson(area);
-  return SettingsPageSpec.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+  // 表示の言語 (D-535): 文書は言語ごとのファイル、画面のページの文言の参照は表示の言語の文言に。言語が変われば読み直す。
+  final tag = ref.watch(uiLocaleTagProvider);
+  final raw = await loadSettingsPageJson(area, localeTag: tag);
+  return SettingsPageSpec.fromJson((resolveAssetStrings(jsonDecode(raw), appL10nFor(rasqLocaleFromTag(tag))) as Map).cast<String, Object?>());
 });
 
 /// 設定ページの JSON を読む。`rootBundle.loadString` は 50KB を超えると別の isolate で解くので、
 /// 長い文書ページ(プライバシーポリシーなど)でも同じ道を通るよう、バイト列をこの場で UTF-8 として読む。
-Future<String> loadSettingsPageJson(String area) async =>
-    utf8.decode((await rootBundle.load('assets/settings/$area.rrl.json')).buffer.asUint8List());
+/// 文書のページは表示の言語のファイルがあればそれ([settingsPageAssetPaths]、D-535)。文言の参照(`@l10n:`)はそのまま返すので、
+/// 使う側で [resolveAssetStrings] を通す。
+Future<String> loadSettingsPageJson(String area, {String? localeTag}) async {
+  final paths = settingsPageAssetPaths(area, localeTag ?? RasqUiLocale.tag);
+  for (final (i, path) in paths.indexed) {
+    try {
+      return utf8.decode((await rootBundle.load(path)).buffer.asUint8List());
+    } catch (_) {
+      if (i == paths.length - 1) rethrow;
+    }
+  }
+  throw StateError('unreachable');
+}
 
 /// 1 ページ(area)分の設定値 KV。ホスト設定は `<area>.v1`(D-035)、
 /// プラグイン設定 (`sns.<短area>`) は `sns.<pluginId>.<短area>.v1`。

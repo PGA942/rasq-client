@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "appearance.fab",
-  "title": "＋ ボタンの割り当て",
+  "title": "@l10n:settingsPagesAppearanceFabTitle",
   "defaults": {
     "homeTap": "post",
     "trendTap": "post",
@@ -14,21 +14,21 @@
         "t": "Notice",
         "p": {
           "kind": "info",
-          "text": "＋ を押したときに始めるものを選べます。まわりのボタン(内側に 3 つ、外側に 4 つまで)は、＋ を長押し(マウスは乗せる)して歯車から並べ替えます。",
-          "detail": "D-383 / D-385。領域 appearance.fab(<scope>Tap / <scope>Slots = 置いた順、最大 7)。"
+          "text": "@l10n:settingsPagesAppearanceFabNotice1",
+          "detail": "@l10n:settingsPagesAppearanceFabNotice1Detail"
         }
       },
       {
         "t": "SectionHeader",
         "p": {
-          "title": "ホームの ＋ を押したとき"
+          "title": "@l10n:settingsPagesAppearanceFabSection1Title"
         }
       },
       {
         "t": "RadioListTile",
         "k": "homeTap",
         "p": {
-          "title": "投稿",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapPostTitle",
           "value": "post",
           "group": "$.settings.homeTap"
         },
@@ -40,7 +40,7 @@
         "t": "RadioListTile",
         "k": "homeTap",
         "p": {
-          "title": "RASQ に投稿",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapRasqTitle",
           "value": "rasq",
           "group": "$.settings.homeTap"
         },
@@ -52,7 +52,7 @@
         "t": "RadioListTile",
         "k": "homeTap",
         "p": {
-          "title": "Swing を作る",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapSwingTitle",
           "value": "swing",
           "group": "$.settings.homeTap"
         },
@@ -64,7 +64,7 @@
         "t": "RadioListTile",
         "k": "homeTap",
         "p": {
-          "title": "ASTell を作る",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapAstellTitle",
           "value": "astell",
           "group": "$.settings.homeTap"
         },
@@ -75,14 +75,14 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "トレンドの ＋ を押したとき"
+          "title": "@l10n:settingsPagesAppearanceFabSection2Title"
         }
       },
       {
         "t": "RadioListTile",
         "k": "trendTap",
         "p": {
-          "title": "投稿",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapPostTitle",
           "value": "post",
           "group": "$.settings.trendTap"
         },
@@ -94,7 +94,7 @@
         "t": "RadioListTile",
         "k": "trendTap",
         "p": {
-          "title": "RASQ に投稿",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapRasqTitle",
           "value": "rasq",
           "group": "$.settings.trendTap"
         },
@@ -106,7 +106,7 @@
         "t": "RadioListTile",
         "k": "trendTap",
         "p": {
-          "title": "Swing を作る",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapSwingTitle",
           "value": "swing",
           "group": "$.settings.trendTap"
         },
@@ -118,7 +118,7 @@
         "t": "RadioListTile",
         "k": "trendTap",
         "p": {
-          "title": "ASTell を作る",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapAstellTitle",
           "value": "astell",
           "group": "$.settings.trendTap"
         },
@@ -129,14 +129,14 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "ASTell の ＋ を押したとき"
+          "title": "@l10n:settingsPagesAppearanceFabSection3Title"
         }
       },
       {
         "t": "RadioListTile",
         "k": "astellTap",
         "p": {
-          "title": "投稿",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapPostTitle",
           "value": "post",
           "group": "$.settings.astellTap"
         },
@@ -148,7 +148,7 @@
         "t": "RadioListTile",
         "k": "astellTap",
         "p": {
-          "title": "RASQ に投稿",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapRasqTitle",
           "value": "rasq",
           "group": "$.settings.astellTap"
         },
@@ -160,7 +160,7 @@
         "t": "RadioListTile",
         "k": "astellTap",
         "p": {
-          "title": "Swing を作る",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapSwingTitle",
           "value": "swing",
           "group": "$.settings.astellTap"
         },
@@ -172,7 +172,7 @@
         "t": "RadioListTile",
         "k": "astellTap",
         "p": {
-          "title": "ASTell を作る",
+          "title": "@l10n:settingsPagesAppearanceFabHomeTapAstellTitle",
           "value": "astell",
           "group": "$.settings.astellTap"
         },

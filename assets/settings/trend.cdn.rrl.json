@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "trend.cdn",
-  "title": "キャッシュネットワークの設定",
+  "title": "@l10n:settingsPagesTrendCdnTitle",
   "defaults": {},
   "root": {
     "t": "Column",
@@ -9,23 +9,23 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "状態"
+          "title": "@l10n:settingsPagesTrendCdnSection1Title"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
-          "title": "キャッシュネットワーク",
-          "value": "準備中"
+          "title": "@l10n:settingsPagesTrendCdnValueRow1Title",
+          "value": "@l10n:settingsPagesTrendCdnValueRow1Value"
         }
       },
       {
         "t": "Text",
         "p": {
-          "text": "準備中です。いまは各 SNS から直接取得します。",
+          "text": "@l10n:settingsPagesTrendCdnText1",
           "pad": 16,
           "size": 13,
-          "detail": "トレンドの取得結果を CDN(キャッシュネットワーク)から読む仕組みは、RASQ サーバーの配信基盤と同時に入ります。第一期は各 SNS から直接取得します。 キャッシュネットワーク: 未提供(第二期)。"
+          "detail": "@l10n:settingsPagesTrendCdnText1Detail"
         }
       }
     ]

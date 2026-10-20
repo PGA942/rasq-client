@@ -124,6 +124,16 @@ List<String> mergeProject(File cfg, {required bool check}) {
       if (!check) f.deleteSync();
     }
   }
+  // 設定の静的なページ (D-535): assets/settings/*.rrl.json の `@l10n:<キー>` を引く表を、部品 settings_pages* から作る。
+  if (cfg.uri.pathSegments.last == 'l10n.yaml' && cfg.parent.path == '.') {
+    final assetParts = {for (final e in templateParts.entries) if (e.key.startsWith('settings_pages')) e.key: e.value};
+    final out = File('$arbDir/asset_strings.g.dart');
+    final text = generateAssetLookup(assetParts);
+    if (!out.existsSync() || out.readAsStringSync() != text) {
+      changed.add(out.path);
+      if (!check) out.writeAsStringSync(text);
+    }
+  }
   // Flutter に依らない部品 (D-533): 素の Dart の文言のクラスを作る。
   if (cfg.uri.pathSegments.last == 'l10n_dart.yaml') {
     final outDir = '$root/${yaml['output-dir'] ?? 'lib/l10n/gen'}';
@@ -373,5 +383,43 @@ String generatePureDart(String className, String templateLocale, Map<String, Map
     ..writeln('  }')
     ..writeln('  return const $className${_localeSuffix(templateLocale)}();')
     ..writeln('}');
+  return b.toString();
+}
+
+
+// ── 設定の静的なページの文言の参照 (D-535) ─────────────────────────────
+
+/// `appAssetString(l, key, args)`: アセットのキー → `AppLocalizations` の文言。プレースホルダは [args] から(String / 数)。
+String generateAssetLookup(Map<String, Map<String, Object?>> parts) {
+  final keys = <String>[
+    for (final part in parts.values)
+      for (final k in part.keys)
+        if (!k.startsWith('@')) k,
+  ]..sort();
+  final all = {for (final part in parts.values) ...part};
+  final b = StringBuffer()
+    ..writeln('// tool/l10n_merge.dart が lib/l10n/parts/settings_pages*.ja.arb から作る(手で直さない)。')
+    ..writeln('// 設定の静的なページ(assets/settings/*.rrl.json)の文言の参照 `@l10n:<キー>` を引く表 (D-535、docs/I18N.md)。')
+    ..writeln('// ignore_for_file: type=lint')
+    ..writeln()
+    ..writeln("import 'gen/app_localizations.dart';")
+    ..writeln()
+    ..writeln('/// アセットの文言のキー → 表示の言語の文言。知らないキーは null。プレースホルダは [args](`{"\$l10n": キー, "args": {…}}`)から。')
+    ..writeln('String? appAssetString(AppLocalizations l, String key, [Map<String, Object?> args = const {}]) => switch (key) {');
+  for (final k in keys) {
+    final ph = ((all['@$k'] as Map?)?['placeholders'] as Map?)?.cast<String, Object?>() ?? const {};
+    final argList = [
+      for (final e in ph.entries)
+        switch ('${(e.value as Map?)?['type'] ?? 'String'}') {
+          'int' => "(args['${e.key}'] as num?)?.toInt() ?? 0",
+          'num' || 'double' => "(args['${e.key}'] as num?) ?? 0",
+          _ => "'\${args['${e.key}'] ?? ''}'",
+        },
+    ];
+    b.writeln(ph.isEmpty ? "      '$k' => l.$k," : "      '$k' => l.$k(${argList.join(', ')}),");
+  }
+  b
+    ..writeln('      _ => null,')
+    ..writeln('    };');
   return b.toString();
 }

@@ -13405,6 +13405,951 @@
   "settingsNotifyTokenRevoked": "失効しました",
   "settingsNotifyTokenStorageCaption": "鍵はこの端末の中に安全に保存します。",
   "settingsNotifyTokenStorageCaptionDetail": "生のトークンは発行時にだけ受け取り、端末内の安全な領域に保存します。サーバーに残るのはハッシュだけです。親のトークンを失効すると配下のトークンも失効します。",
+  "settingsPagesAboutCookiesTitle": "クッキーについて",
+  "@settingsPagesAboutCookiesTitle": {
+    "description": "設定のページ「クッキーについて」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAboutCookiesSection1Title": "クッキー",
+  "@settingsPagesAboutCookiesSection1Title": {
+    "description": "設定のページ「クッキーについて」の節の見出しの名前"
+  },
+  "settingsPagesAboutCookiesText1": "iOS・Android・デスクトップのアプリは、RASQ サーバーとの通信にクッキーを使いません。RASQ サーバーとの通信は端末トークン(Authorization ヘッダー)で行い、各 SNS のアクセストークンは端末内の安全な領域に保存します。",
+  "@settingsPagesAboutCookiesText1": {
+    "description": "設定のページ「クッキーについて」の説明の文"
+  },
+  "settingsPagesAboutCookiesText2": "iOS・Android のアプリの広告(Google AdMob)は、クッキーの代わりに端末の広告 ID を使います。初回に表示する Google の同意画面で、パーソナライズ広告を使うかを選べます。",
+  "@settingsPagesAboutCookiesText2": {
+    "description": "設定のページ「クッキーについて」の説明の文"
+  },
+  "settingsPagesAboutCookiesText3": "Web 版と、RASQ のプロフィール・投稿の公開の Web ページでは、広告(Google AdSense)のために Google がクッキーを使います。広告のクッキーの扱いは Google のポリシーに従います。",
+  "@settingsPagesAboutCookiesText3": {
+    "description": "設定のページ「クッキーについて」の説明の文"
+  },
+  "settingsPagesAboutCookiesText4": "SNS の web 版や登録ページをアプリ内のブラウザで開いたときは、その SNS のクッキーの扱いに従います。",
+  "@settingsPagesAboutCookiesText4": {
+    "description": "設定のページ「クッキーについて」の説明の文"
+  },
+  "settingsPagesAboutDeveloperTitle": "開発者モード",
+  "@settingsPagesAboutDeveloperTitle": {
+    "description": "設定のページ「開発者モード」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAboutDeveloperEnabledSubtitle": "画面の説明を、仕組みや送るデータの形まで詳しく表示します",
+  "@settingsPagesAboutDeveloperEnabledSubtitle": {
+    "description": "設定のページ「開発者モード」のスイッチの補足"
+  },
+  "settingsPagesAboutDeveloperEnabledDetail": "オンのあいだ、設定や同意の画面で短くしている説明の代わりに、元の詳しい説明(保存先の KV、送る JSON の形など)を出します。表示が変わるだけで、動作は変わりません。",
+  "@settingsPagesAboutDeveloperEnabledDetail": {
+    "description": "設定のページ「開発者モード」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAboutDeveloperNotice1": "表示だけが変わります。設定や送るデータは変わりません。",
+  "@settingsPagesAboutDeveloperNotice1": {
+    "description": "設定のページ「開発者モード」のお知らせ"
+  },
+  "settingsPagesAboutDeveloperIosScreenGlimpseTitle": "画面の読み取りを試す(iOS)",
+  "@settingsPagesAboutDeveloperIosScreenGlimpseTitle": {
+    "description": "設定のページ「開発者モード」のスイッチの名前"
+  },
+  "settingsPagesAboutDeveloperIosScreenGlimpseSubtitle": "iPhone / iPad の「SNS サービスを探す」に「いつものブラウザで見て探す」を出します",
+  "@settingsPagesAboutDeveloperIosScreenGlimpseSubtitle": {
+    "description": "設定のページ「開発者モード」のスイッチの補足"
+  },
+  "settingsPagesAboutDeveloperIosScreenGlimpseDetail": "画面の読み取りの Broadcast Upload Extension(ScreenGlimpseBroadcast)が画面収録の選択に出ない端末があるため(未解決)、iOS では既定で隠しています。オンにすると入口を出します。Android は常に出します。",
+  "@settingsPagesAboutDeveloperIosScreenGlimpseDetail": {
+    "description": "設定のページ「開発者モード」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAboutDeveloperRaiAndroid3dTitle": "3D の RAi を試す(Android)",
+  "@settingsPagesAboutDeveloperRaiAndroid3dTitle": {
+    "description": "設定のページ「開発者モード」のスイッチの名前"
+  },
+  "settingsPagesAboutDeveloperRaiAndroid3dSubtitle": "Android でも RAi のマスコットを 3D で表示します",
+  "@settingsPagesAboutDeveloperRaiAndroid3dSubtitle": {
+    "description": "設定のページ「開発者モード」のスイッチの補足"
+  },
+  "settingsPagesAboutDeveloperRaiAndroid3dDetail": "Android で RAi が開かない報告があり、3D の土台(flutter_angle)の初期化が疑わしいため、既定は 2D です。オンにすると 3D を試します。20 秒たっても出ない / 失敗したときは自動で 2D に戻し、RAi のサイドバーの「診断」に理由を残します。iPhone / iPad / Mac は常に 3D です。",
+  "@settingsPagesAboutDeveloperRaiAndroid3dDetail": {
+    "description": "設定のページ「開発者モード」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAboutHelpTitle": "ヘルプ",
+  "@settingsPagesAboutHelpTitle": {
+    "description": "設定のページ「ヘルプ」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAboutHelpSection1Title": "使い方",
+  "@settingsPagesAboutHelpSection1Title": {
+    "description": "設定のページ「ヘルプ」の節の見出しの名前"
+  },
+  "settingsPagesAboutHelpText1": "操作に迷ったら、サイドメニューの RAi に聞いてください。",
+  "@settingsPagesAboutHelpText1": {
+    "description": "設定のページ「ヘルプ」の説明の文"
+  },
+  "settingsPagesAboutHelpText1Detail": "操作に迷ったら RAi に聞いてください。サイドメニューの RAi から、インストラクション(ボタンまで案内)とアシスタント(端末内モデルで回答、関数で代行)が使えます。",
+  "@settingsPagesAboutHelpText1Detail": {
+    "description": "設定のページ「ヘルプ」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAboutHelpRaiTitle": "RAi を開く",
+  "@settingsPagesAboutHelpRaiTitle": {
+    "description": "設定のページ「ヘルプ」の行の名前"
+  },
+  "settingsPagesAboutHelpTourAgain1Title": "RASQ の使い方をもう一度見る",
+  "@settingsPagesAboutHelpTourAgain1Title": {
+    "description": "設定のページ「ヘルプ」の行の名前"
+  },
+  "settingsPagesAboutHelpTourAgain1Subtitle": "機能の紹介(TL・トレンド・ASTell・RAi など)",
+  "@settingsPagesAboutHelpTourAgain1Subtitle": {
+    "description": "設定のページ「ヘルプ」の行の補足"
+  },
+  "settingsPagesAboutHelpSection2Title": "困ったとき",
+  "@settingsPagesAboutHelpSection2Title": {
+    "description": "設定のページ「ヘルプ」の節の見出しの名前"
+  },
+  "settingsPagesAboutHelpText2": "ログインや投稿がうまくいかないときは、権限を確かめて、入り直してください。",
+  "@settingsPagesAboutHelpText2": {
+    "description": "設定のページ「ヘルプ」の説明の文"
+  },
+  "settingsPagesAboutHelpText2Detail": "ログインできない / 投稿が届かないときは、まず「SNSプラグイン → セキュリティ」で権限を確認し、一度ログアウトして入り直してください。",
+  "@settingsPagesAboutHelpText2Detail": {
+    "description": "設定のページ「ヘルプ」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAboutHelpSettingsDslSnsSecurityTitle": "セキュリティ(権限とトークン)",
+  "@settingsPagesAboutHelpSettingsDslSnsSecurityTitle": {
+    "description": "設定のページ「ヘルプ」の行の名前"
+  },
+  "settingsPagesAboutHelpSettingsServerTitle": "RASQ サーバーの接続先",
+  "@settingsPagesAboutHelpSettingsServerTitle": {
+    "description": "設定のページ「ヘルプ」の行の名前"
+  },
+  "settingsPagesAboutSubscriptionTitle": "購読状況",
+  "@settingsPagesAboutSubscriptionTitle": {
+    "description": "設定のページ「購読状況」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAboutSubscriptionSection1Title": "RASQ の購読",
+  "@settingsPagesAboutSubscriptionSection1Title": {
+    "description": "設定のページ「購読状況」の節の見出しの名前"
+  },
+  "settingsPagesAboutSubscriptionValueRow1Title": "プラン",
+  "@settingsPagesAboutSubscriptionValueRow1Title": {
+    "description": "設定のページ「購読状況」の値の行の名前"
+  },
+  "settingsPagesAboutSubscriptionValueRow1Value": "無料",
+  "@settingsPagesAboutSubscriptionValueRow1Value": {
+    "description": "設定のページ「購読状況」の値の行の値"
+  },
+  "settingsPagesAboutSubscriptionValueRow2Title": "プラグインプロキシ",
+  "@settingsPagesAboutSubscriptionValueRow2Title": {
+    "description": "設定のページ「購読状況」の値の行の名前"
+  },
+  "settingsPagesAboutSubscriptionValueRow2Value": "未購読",
+  "@settingsPagesAboutSubscriptionValueRow2Value": {
+    "description": "設定のページ「購読状況」の値の行の値"
+  },
+  "settingsPagesAboutSubscriptionText1": "有料プランは準備中です。",
+  "@settingsPagesAboutSubscriptionText1": {
+    "description": "設定のページ「購読状況」の説明の文"
+  },
+  "settingsPagesAboutSubscriptionText1Detail": "プラン: 無料(いまは購読プラン無し)。有料プランは今後、RASQ アカウントに紐づけて提供します。",
+  "@settingsPagesAboutSubscriptionText1Detail": {
+    "description": "設定のページ「購読状況」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceDisplayTitle": "インターフェースの表示サイズ",
+  "@settingsPagesAppearanceDisplayTitle": {
+    "description": "設定のページ「インターフェースの表示サイズ」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceDisplaySection1Title": "表示サイズ",
+  "@settingsPagesAppearanceDisplaySection1Title": {
+    "description": "設定のページ「インターフェースの表示サイズ」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceDisplayTextScaleTitle": "文字とUIの大きさ",
+  "@settingsPagesAppearanceDisplayTextScaleTitle": {
+    "description": "設定のページ「インターフェースの表示サイズ」のスライダーの名前"
+  },
+  "settingsPagesAppearanceDisplayTextScaleSubtitle": "アプリ全体の文字サイズを変えます(即時反映)",
+  "@settingsPagesAppearanceDisplayTextScaleSubtitle": {
+    "description": "設定のページ「インターフェースの表示サイズ」のスライダーの補足"
+  },
+  "settingsPagesAppearanceFabTitle": "＋ ボタンの割り当て",
+  "@settingsPagesAppearanceFabTitle": {
+    "description": "設定のページ「＋ ボタンの割り当て」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceFabNotice1": "＋ を押したときに始めるものを選べます。まわりのボタン(内側に 3 つ、外側に 4 つまで)は、＋ を長押し(マウスは乗せる)して歯車から並べ替えます。",
+  "@settingsPagesAppearanceFabNotice1": {
+    "description": "設定のページ「＋ ボタンの割り当て」のお知らせ"
+  },
+  "settingsPagesAppearanceFabNotice1Detail": "領域 appearance.fab(<scope>Tap / <scope>Slots = 置いた順、最大 7)。",
+  "@settingsPagesAppearanceFabNotice1Detail": {
+    "description": "設定のページ「＋ ボタンの割り当て」のお知らせの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceFabSection1Title": "ホームの ＋ を押したとき",
+  "@settingsPagesAppearanceFabSection1Title": {
+    "description": "設定のページ「＋ ボタンの割り当て」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceFabHomeTapPostTitle": "投稿",
+  "@settingsPagesAppearanceFabHomeTapPostTitle": {
+    "description": "設定のページ「＋ ボタンの割り当て」の選択肢の名前"
+  },
+  "settingsPagesAppearanceFabHomeTapRasqTitle": "RASQ に投稿",
+  "@settingsPagesAppearanceFabHomeTapRasqTitle": {
+    "description": "設定のページ「＋ ボタンの割り当て」の選択肢の名前"
+  },
+  "settingsPagesAppearanceFabHomeTapSwingTitle": "Swing を作る",
+  "@settingsPagesAppearanceFabHomeTapSwingTitle": {
+    "description": "設定のページ「＋ ボタンの割り当て」の選択肢の名前"
+  },
+  "settingsPagesAppearanceFabHomeTapAstellTitle": "ASTell を作る",
+  "@settingsPagesAppearanceFabHomeTapAstellTitle": {
+    "description": "設定のページ「＋ ボタンの割り当て」の選択肢の名前"
+  },
+  "settingsPagesAppearanceFabSection2Title": "トレンドの ＋ を押したとき",
+  "@settingsPagesAppearanceFabSection2Title": {
+    "description": "設定のページ「＋ ボタンの割り当て」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceFabSection3Title": "ASTell の ＋ を押したとき",
+  "@settingsPagesAppearanceFabSection3Title": {
+    "description": "設定のページ「＋ ボタンの割り当て」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceMfmTitle": "カスタムモーションとアニメーション",
+  "@settingsPagesAppearanceMfmTitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceMfmSection1Title": "MFM のアニメーション",
+  "@settingsPagesAppearanceMfmSection1Title": {
+    "description": "設定のページ「カスタムモーションとアニメーション」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceMfmAnimationsTitle": "動く装飾を再生する",
+  "@settingsPagesAppearanceMfmAnimationsTitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」のスイッチの名前"
+  },
+  "settingsPagesAppearanceMfmAnimationsSubtitle": "回転や虹色などの動く装飾を再生します",
+  "@settingsPagesAppearanceMfmAnimationsSubtitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」のスイッチの補足"
+  },
+  "settingsPagesAppearanceMfmAnimationsDetail": "spin / jump / rainbow などの MFM を動かします。オフにすると静止画になります(「モーションの抑制」がオンのときは常に静止)",
+  "@settingsPagesAppearanceMfmAnimationsDetail": {
+    "description": "設定のページ「カスタムモーションとアニメーション」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceMfmSpeedTitle": "アニメーションの速さ",
+  "@settingsPagesAppearanceMfmSpeedTitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」のスライダーの名前"
+  },
+  "settingsPagesAppearanceMfmSpeedSubtitle": "100% が標準。大きいほど速く動きます",
+  "@settingsPagesAppearanceMfmSpeedSubtitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」のスライダーの補足"
+  },
+  "settingsPagesAppearanceMfmSettingsDslAppearanceMotionTitle": "モーションの抑制",
+  "@settingsPagesAppearanceMfmSettingsDslAppearanceMotionTitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」の行の名前"
+  },
+  "settingsPagesAppearanceMfmSettingsDslAppearanceMotionSubtitle": "画面遷移なども含めてまとめて減らす",
+  "@settingsPagesAppearanceMfmSettingsDslAppearanceMotionSubtitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」の行の補足"
+  },
+  "settingsPagesAppearanceMotionTitle": "モーションの抑制",
+  "@settingsPagesAppearanceMotionTitle": {
+    "description": "設定のページ「モーションの抑制」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceMotionSection1Title": "アニメーション",
+  "@settingsPagesAppearanceMotionSection1Title": {
+    "description": "設定のページ「モーションの抑制」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceMotionReduceMotionTitle": "モーションを抑制する",
+  "@settingsPagesAppearanceMotionReduceMotionTitle": {
+    "description": "設定のページ「モーションの抑制」のスイッチの名前"
+  },
+  "settingsPagesAppearanceMotionReduceMotionSubtitle": "動く装飾を止め、画面の動きを減らします",
+  "@settingsPagesAppearanceMotionReduceMotionSubtitle": {
+    "description": "設定のページ「モーションの抑制」のスイッチの補足"
+  },
+  "settingsPagesAppearanceMotionReduceMotionDetail": "MFM の spin / rainbow などのアニメーションを静止画にし、画面遷移の動きを減らします",
+  "@settingsPagesAppearanceMotionReduceMotionDetail": {
+    "description": "設定のページ「モーションの抑制」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceNotificationsTitle": "通知の表示形式",
+  "@settingsPagesAppearanceNotificationsTitle": {
+    "description": "設定のページ「通知の表示形式」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceNotificationsSection1Title": "通知ページ",
+  "@settingsPagesAppearanceNotificationsSection1Title": {
+    "description": "設定のページ「通知の表示形式」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceNotificationsDefaultTabAllTitle": "「すべて」から開く",
+  "@settingsPagesAppearanceNotificationsDefaultTabAllTitle": {
+    "description": "設定のページ「通知の表示形式」の選択肢の名前"
+  },
+  "settingsPagesAppearanceNotificationsDefaultTabFollowingTitle": "「フォロー中」から開く",
+  "@settingsPagesAppearanceNotificationsDefaultTabFollowingTitle": {
+    "description": "設定のページ「通知の表示形式」の選択肢の名前"
+  },
+  "settingsPagesAppearanceNotificationsDefaultTabFollowingSubtitle": "フォローしている人からの通知だけを先に見ます",
+  "@settingsPagesAppearanceNotificationsDefaultTabFollowingSubtitle": {
+    "description": "設定のページ「通知の表示形式」の選択肢の補足"
+  },
+  "settingsPagesAppearanceNotificationsShowRemindersTitle": "ASTell の開始通知の予定を上に出す",
+  "@settingsPagesAppearanceNotificationsShowRemindersTitle": {
+    "description": "設定のページ「通知の表示形式」のスイッチの名前"
+  },
+  "settingsPagesAppearanceNotificationsShowRemindersSubtitle": "登録した開始通知を、通知ページの上に出します",
+  "@settingsPagesAppearanceNotificationsShowRemindersSubtitle": {
+    "description": "設定のページ「通知の表示形式」のスイッチの補足"
+  },
+  "settingsPagesAppearanceNotificationsShowRemindersDetail": "登録した開始通知(端末のローカル通知)の一覧を通知ページの上に表示します",
+  "@settingsPagesAppearanceNotificationsShowRemindersDetail": {
+    "description": "設定のページ「通知の表示形式」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceNotificationsText1": "通知する種別は「通知 → プロファイル」で選びます(端末に保存されます)。",
+  "@settingsPagesAppearanceNotificationsText1": {
+    "description": "設定のページ「通知の表示形式」の説明の文"
+  },
+  "settingsPagesAppearanceTimelineTitle": "タイムラインの表示",
+  "@settingsPagesAppearanceTimelineTitle": {
+    "description": "設定のページ「タイムラインの表示」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceTimelineSection1Title": "更新",
+  "@settingsPagesAppearanceTimelineSection1Title": {
+    "description": "設定のページ「タイムラインの表示」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceTimelineEdgeTilesTitle": "TL の上下に「投稿を読み込む」を出す",
+  "@settingsPagesAppearanceTimelineEdgeTilesTitle": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの名前"
+  },
+  "settingsPagesAppearanceTimelineEdgeTilesSubtitle": "スマホでは既定で出しません(引っ張って更新)",
+  "@settingsPagesAppearanceTimelineEdgeTilesSubtitle": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの補足"
+  },
+  "settingsPagesAppearanceTimelineEdgeTilesDetail": "見えると、新しい投稿 / 続きを読み込みます。既定は、電話のアプリでは出さず(下に引っ張って更新)、Web 版とパソコンでは出します",
+  "@settingsPagesAppearanceTimelineEdgeTilesDetail": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceTimelineNewPostsPillTitle": "新しい投稿のお知らせを出す",
+  "@settingsPagesAppearanceTimelineNewPostsPillTitle": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの名前"
+  },
+  "settingsPagesAppearanceTimelineNewPostsPillSubtitle": "更新して新しい投稿が届いたら、ヘッダーのすぐ下に「新しい投稿」",
+  "@settingsPagesAppearanceTimelineNewPostsPillSubtitle": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの補足"
+  },
+  "settingsPagesAppearanceTimelineNewPostsPillDetail": "投稿した人の顔(3 人まで)と「新しい投稿」を出します。押すといちばん上へ。しばらくたつか、いちばん上まで送ると消えます。ヘッダーをしまっている間は出しません",
+  "@settingsPagesAppearanceTimelineNewPostsPillDetail": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceVideoTitle": "ピクチャインピクチャ",
+  "@settingsPagesAppearanceVideoTitle": {
+    "description": "設定のページ「ピクチャインピクチャ」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceVideoSection1Title": "動画",
+  "@settingsPagesAppearanceVideoSection1Title": {
+    "description": "設定のページ「ピクチャインピクチャ」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceVideoAutoplayTitle": "開いたら自動で再生",
+  "@settingsPagesAppearanceVideoAutoplayTitle": {
+    "description": "設定のページ「ピクチャインピクチャ」のスイッチの名前"
+  },
+  "settingsPagesAppearanceVideoAutoplaySubtitle": "全画面と小窓で、すぐに再生します",
+  "@settingsPagesAppearanceVideoAutoplaySubtitle": {
+    "description": "設定のページ「ピクチャインピクチャ」のスイッチの補足"
+  },
+  "settingsPagesAppearanceVideoAutoplayDetail": "全画面ビューワーと小窓(PiP)で、準備ができ次第再生します",
+  "@settingsPagesAppearanceVideoAutoplayDetail": {
+    "description": "設定のページ「ピクチャインピクチャ」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceVideoPipKeepPositionTitle": "小窓へ移るとき再生位置を引き継ぐ",
+  "@settingsPagesAppearanceVideoPipKeepPositionTitle": {
+    "description": "設定のページ「ピクチャインピクチャ」のスイッチの名前"
+  },
+  "settingsPagesAppearanceVideoPipKeepPositionSubtitle": "全画面の「小窓で再生」を押したときの続きから再生します",
+  "@settingsPagesAppearanceVideoPipKeepPositionSubtitle": {
+    "description": "設定のページ「ピクチャインピクチャ」のスイッチの補足"
+  },
+  "settingsPagesAppearanceVideoSection2Title": "既定の再生速度",
+  "@settingsPagesAppearanceVideoSection2Title": {
+    "description": "設定のページ「ピクチャインピクチャ」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceVideoDefaultSpeed10Title": "1.0×(標準)",
+  "@settingsPagesAppearanceVideoDefaultSpeed10Title": {
+    "description": "設定のページ「ピクチャインピクチャ」の選択肢の名前"
+  },
+  "settingsPagesAppearanceVideoText1": "小窓は、掴んで好きな場所へ動かせます。",
+  "@settingsPagesAppearanceVideoText1": {
+    "description": "設定のページ「ピクチャインピクチャ」の説明の文"
+  },
+  "settingsPagesAppearanceVideoText1Detail": "小窓は FOW なので、掴んでカラムや上下へ動かせます。",
+  "@settingsPagesAppearanceVideoText1Detail": {
+    "description": "設定のページ「ピクチャインピクチャ」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAstellBackgroundTitle": "画面オフ時の動作",
+  "@settingsPagesAstellBackgroundTitle": {
+    "description": "設定のページ「画面オフ時の動作」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAstellBackgroundSection1Title": "通話中に画面を消したとき",
+  "@settingsPagesAstellBackgroundSection1Title": {
+    "description": "設定のページ「画面オフ時の動作」の節の見出しの名前"
+  },
+  "settingsPagesAstellBackgroundOnScreenOffKeepTitle": "通話を続ける",
+  "@settingsPagesAstellBackgroundOnScreenOffKeepTitle": {
+    "description": "設定のページ「画面オフ時の動作」の選択肢の名前"
+  },
+  "settingsPagesAstellBackgroundOnScreenOffKeepSubtitle": "音声はそのまま、画面共有の受信だけ止めます",
+  "@settingsPagesAstellBackgroundOnScreenOffKeepSubtitle": {
+    "description": "設定のページ「画面オフ時の動作」の選択肢の補足"
+  },
+  "settingsPagesAstellBackgroundOnScreenOffMuteTitle": "マイクをミュートして続ける",
+  "@settingsPagesAstellBackgroundOnScreenOffMuteTitle": {
+    "description": "設定のページ「画面オフ時の動作」の選択肢の名前"
+  },
+  "settingsPagesAstellBackgroundOnScreenOffLeaveTitle": "ルームから出る",
+  "@settingsPagesAstellBackgroundOnScreenOffLeaveTitle": {
+    "description": "設定のページ「画面オフ時の動作」の選択肢の名前"
+  },
+  "settingsPagesAstellBackgroundNotice1": "この設定は準備中です。いまの ASTell は、画面が点いている間だけ動きます。",
+  "@settingsPagesAstellBackgroundNotice1": {
+    "description": "設定のページ「画面オフ時の動作」のお知らせ"
+  },
+  "settingsPagesAstellBackgroundNotice1Detail": "この設定は保存されますが、適用は通話の常駐化(バックグラウンド音声)の実装後です。いまの ASTell は画面が点いている間だけ動きます。",
+  "@settingsPagesAstellBackgroundNotice1Detail": {
+    "description": "設定のページ「画面オフ時の動作」のお知らせの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAstellSubscriptionTitle": "ASTell 4Uを購読",
+  "@settingsPagesAstellSubscriptionTitle": {
+    "description": "設定のページ「ASTell 4Uを購読」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAstellSubscriptionSection1Title": "状態",
+  "@settingsPagesAstellSubscriptionSection1Title": {
+    "description": "設定のページ「ASTell 4Uを購読」の節の見出しの名前"
+  },
+  "settingsPagesAstellSubscriptionValueRow1Title": "購読",
+  "@settingsPagesAstellSubscriptionValueRow1Title": {
+    "description": "設定のページ「ASTell 4Uを購読」の値の行の名前"
+  },
+  "settingsPagesAstellSubscriptionValueRow1Value": "未購読",
+  "@settingsPagesAstellSubscriptionValueRow1Value": {
+    "description": "設定のページ「ASTell 4Uを購読」の値の行の値"
+  },
+  "settingsPagesAstellSubscriptionValueRow2Title": "提供",
+  "@settingsPagesAstellSubscriptionValueRow2Title": {
+    "description": "設定のページ「ASTell 4Uを購読」の値の行の名前"
+  },
+  "settingsPagesAstellSubscriptionValueRow2Value": "準備中",
+  "@settingsPagesAstellSubscriptionValueRow2Value": {
+    "description": "設定のページ「ASTell 4Uを購読」の値の行の値"
+  },
+  "settingsPagesAstellSubscriptionText1": "ASTell 4U は準備中の有料プランです。おすすめ欄は無料で使えます。",
+  "@settingsPagesAstellSubscriptionText1": {
+    "description": "設定のページ「ASTell 4Uを購読」の説明の文"
+  },
+  "settingsPagesAstellSubscriptionText1Detail": "ASTell 4U は、ASTell のおすすめ(For You)配信とサーバー側の文字起こし / 要約の有料プランです。まだ提供していません。おすすめ欄は RASQ サーバーの無料の推薦で動きます。",
+  "@settingsPagesAstellSubscriptionText1Detail": {
+    "description": "設定のページ「ASTell 4Uを購読」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAstellTilesTitle": "Tellタイル",
+  "@settingsPagesAstellTilesTitle": {
+    "description": "設定のページ「Tellタイル」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAstellTilesSection1Title": "ホームのヘッダー",
+  "@settingsPagesAstellTilesSection1Title": {
+    "description": "設定のページ「Tellタイル」の節の見出しの名前"
+  },
+  "settingsPagesAstellTilesHeaderStripTitle": "フォロー中のホストの ASTell をヘッダーに出す",
+  "@settingsPagesAstellTilesHeaderStripTitle": {
+    "description": "設定のページ「Tellタイル」のスイッチの名前"
+  },
+  "settingsPagesAstellTilesHeaderStripSubtitle": "開催中のルームを、ホームの上に並べます",
+  "@settingsPagesAstellTilesHeaderStripSubtitle": {
+    "description": "設定のページ「Tellタイル」のスイッチの補足"
+  },
+  "settingsPagesAstellTilesHeaderStripDetail": "開催中のルームを、ホームのヘッダーの角丸の枠に並べます",
+  "@settingsPagesAstellTilesHeaderStripDetail": {
+    "description": "設定のページ「Tellタイル」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAstellTilesHeaderMaxTitle": "並べる数",
+  "@settingsPagesAstellTilesHeaderMaxTitle": {
+    "description": "設定のページ「Tellタイル」のスライダーの名前"
+  },
+  "settingsPagesAstellTilesHeaderMaxUnit": "件",
+  "@settingsPagesAstellTilesHeaderMaxUnit": {
+    "description": "設定のページ「Tellタイル」のスライダーの値の単位"
+  },
+  "settingsPagesAstellTrendTitle": "トレンドタイムラインへの配信",
+  "@settingsPagesAstellTrendTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAstellTrendSection1Title": "ASTell ホームの欄",
+  "@settingsPagesAstellTrendSection1Title": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の節の見出しの名前"
+  },
+  "settingsPagesAstellTrendShowRecommendedTitle": "「おすすめ」を表示",
+  "@settingsPagesAstellTrendShowRecommendedTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」のスイッチの名前"
+  },
+  "settingsPagesAstellTrendShowTrendingTitle": "「トレンド」を表示",
+  "@settingsPagesAstellTrendShowTrendingTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」のスイッチの名前"
+  },
+  "settingsPagesAstellTrendShowTrendingSubtitle": "トレンドのルームを ASTell ホームに並べます",
+  "@settingsPagesAstellTrendShowTrendingSubtitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」のスイッチの補足"
+  },
+  "settingsPagesAstellTrendText1": "検索ホームのトレンドにルームを出すには、「トレンドをカスタマイズ」で組みます。",
+  "@settingsPagesAstellTrendText1": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の説明の文"
+  },
+  "settingsPagesAstellTrendText1Detail": "トレンドのタイムライン(検索ホーム)へのルームの差し込みは、トレンドのノード(アルゴリズム)側で組みます。",
+  "@settingsPagesAstellTrendText1Detail": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAstellTrendTlconfigTrendTitle": "トレンドをカスタマイズ",
+  "@settingsPagesAstellTrendTlconfigTrendTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の行の名前"
+  },
+  "settingsPagesMediaSaveTitle": "画像・動画の保存先",
+  "@settingsPagesMediaSaveTitle": {
+    "description": "設定のページ「画像・動画の保存先」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesMediaSaveSection1Title": "「画像を保存」「動画を保存」の保存先",
+  "@settingsPagesMediaSaveSection1Title": {
+    "description": "設定のページ「画像・動画の保存先」の節の見出しの名前"
+  },
+  "settingsPagesMediaSaveDestinationAskTitle": "保存するたびに選ぶ",
+  "@settingsPagesMediaSaveDestinationAskTitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の名前"
+  },
+  "settingsPagesMediaSaveDestinationAskSubtitle": "写真とファイルのどちらにするか、毎回聞きます",
+  "@settingsPagesMediaSaveDestinationAskSubtitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の補足"
+  },
+  "settingsPagesMediaSaveDestinationAskDetail": "写真とファイルのどちらに保存するかを、そのたびに聞きます(選べる先が 1 つしかない端末では聞きません)",
+  "@settingsPagesMediaSaveDestinationAskDetail": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesMediaSaveDestinationPhotosTitle": "写真(カメラロール)",
+  "@settingsPagesMediaSaveDestinationPhotosTitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の名前"
+  },
+  "settingsPagesMediaSaveDestinationPhotosSubtitle": "アルバム「RASQ」に入ります",
+  "@settingsPagesMediaSaveDestinationPhotosSubtitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の補足"
+  },
+  "settingsPagesMediaSaveDestinationPhotosDetail": "iPhone / iPad / Mac の「写真」、Android のギャラリーの、アルバム「RASQ」に入ります",
+  "@settingsPagesMediaSaveDestinationPhotosDetail": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesMediaSaveDestinationFilesTitle": "ファイル",
+  "@settingsPagesMediaSaveDestinationFilesTitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の名前"
+  },
+  "settingsPagesMediaSaveDestinationFilesSubtitle": "「ファイル」App や、選んだ場所に保存します",
+  "@settingsPagesMediaSaveDestinationFilesSubtitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の補足"
+  },
+  "settingsPagesMediaSaveDestinationFilesDetail": "iPhone / iPad は「ファイル」App の このiPad(このiPhone)› RASQ › 保存。パソコンは保存する場所を選びます。Android はギャラリーに入ります",
+  "@settingsPagesMediaSaveDestinationFilesDetail": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsAccountPickTitle": "共有 / リノートに使うアカウント",
+  "@settingsPagesPluginsAccountPickTitle": {
+    "description": "設定のページ「共有 / リノートに使うアカウント」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsAccountPickSection1Title": "同じ投稿が、複数のアカウントに見えているとき",
+  "@settingsPagesPluginsAccountPickSection1Title": {
+    "description": "設定のページ「共有 / リノートに使うアカウント」の節の見出しの名前"
+  },
+  "settingsPagesPluginsAccountPickPreferCurrentTitle": "指定しているアカウントを優先",
+  "@settingsPagesPluginsAccountPickPreferCurrentTitle": {
+    "description": "設定のページ「共有 / リノートに使うアカウント」のスイッチの名前"
+  },
+  "settingsPagesPluginsAccountPickPreferCurrentSubtitle": "オフにすると、相手とよく話しているアカウントを選びます",
+  "@settingsPagesPluginsAccountPickPreferCurrentSubtitle": {
+    "description": "設定のページ「共有 / リノートに使うアカウント」のスイッチの補足"
+  },
+  "settingsPagesPluginsAccountPickPreferCurrentDetail": "SNS アカウントを選んで見ているときは、そのアカウントで共有 / リノートします。切ると、直近のやりとり(リアクション / リノート / 返信)から、その相手とよく話しているアカウントを予測して選びます。RASQ アカウントでまとめて見ているときは、いつも予測で選びます",
+  "@settingsPagesPluginsAccountPickPreferCurrentDetail": {
+    "description": "設定のページ「共有 / リノートに使うアカウント」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsComposerTitle": "投稿プラグイン",
+  "@settingsPagesPluginsComposerTitle": {
+    "description": "設定のページ「投稿プラグイン」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsComposerSection1Title": "コンポーザー",
+  "@settingsPagesPluginsComposerSection1Title": {
+    "description": "設定のページ「投稿プラグイン」の節の見出しの名前"
+  },
+  "settingsPagesPluginsComposerEnabledTitle": "投稿プラグインを使う",
+  "@settingsPagesPluginsComposerEnabledTitle": {
+    "description": "設定のページ「投稿プラグイン」のスイッチの名前"
+  },
+  "settingsPagesPluginsComposerEnabledSubtitle": "投稿の文字や画像を加工するプラグインを使います",
+  "@settingsPagesPluginsComposerEnabledSubtitle": {
+    "description": "設定のページ「投稿プラグイン」のスイッチの補足"
+  },
+  "settingsPagesPluginsComposerEnabledDetail": "コンポーザーのテキスト変換(composer.text)とメディア編集(composer.media)のプラグインを有効にします",
+  "@settingsPagesPluginsComposerEnabledDetail": {
+    "description": "設定のページ「投稿プラグイン」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsComposerText1": "オフにすると、コンポーザーとメディアエディターのプラグイン欄が空になります。",
+  "@settingsPagesPluginsComposerText1": {
+    "description": "設定のページ「投稿プラグイン」の説明の文"
+  },
+  "settingsPagesPluginsComposerSettingsComposerTitle": "投稿コンポーザーの設定",
+  "@settingsPagesPluginsComposerSettingsComposerTitle": {
+    "description": "設定のページ「投稿プラグイン」の行の名前"
+  },
+  "settingsPagesPluginsComposerStoreTitle": "プラグインストア",
+  "@settingsPagesPluginsComposerStoreTitle": {
+    "description": "設定のページ「投稿プラグイン」の行の名前"
+  },
+  "settingsPagesPluginsEmojiTitle": "絵文字の検索",
+  "@settingsPagesPluginsEmojiTitle": {
+    "description": "設定のページ「絵文字の検索」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsEmojiSection1Title": "絵文字ピッカーの検索",
+  "@settingsPagesPluginsEmojiSection1Title": {
+    "description": "設定のページ「絵文字の検索」の節の見出しの名前"
+  },
+  "settingsPagesPluginsEmojiSemanticTitle": "意味の近い絵文字も探す",
+  "@settingsPagesPluginsEmojiSemanticTitle": {
+    "description": "設定のページ「絵文字の検索」のスイッチの名前"
+  },
+  "settingsPagesPluginsEmojiSemanticSubtitle": "名前が合わなくても、意味の近い絵文字を出します。打った文字は外へ送りません",
+  "@settingsPagesPluginsEmojiSemanticSubtitle": {
+    "description": "設定のページ「絵文字の検索」のスイッチの補足"
+  },
+  "settingsPagesPluginsEmojiSemanticDetail": "名前や別名に打った文字が入っていなくても、意味の近い絵文字を後ろに並べます。端末内の検索用モデル(RAi →「モデル」→ 検索)を入れてあるときだけ効きます。計算は端末の中だけで行い、打った文字は外へ送りません。初めて開いたサーバーでは、裏で索引を作るあいだ「準備中」と出ます",
+  "@settingsPagesPluginsEmojiSemanticDetail": {
+    "description": "設定のページ「絵文字の検索」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsProxyTitle": "RASQプラグインプロキシの購読",
+  "@settingsPagesPluginsProxyTitle": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsProxySection1Title": "状態",
+  "@settingsPagesPluginsProxySection1Title": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の節の見出しの名前"
+  },
+  "settingsPagesPluginsProxyValueRow1Title": "購読",
+  "@settingsPagesPluginsProxyValueRow1Title": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の値の行の名前"
+  },
+  "settingsPagesPluginsProxyValueRow1Value": "未購読",
+  "@settingsPagesPluginsProxyValueRow1Value": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の値の行の値"
+  },
+  "settingsPagesPluginsProxyValueRow2Title": "提供",
+  "@settingsPagesPluginsProxyValueRow2Title": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の値の行の名前"
+  },
+  "settingsPagesPluginsProxyValueRow2Value": "準備中",
+  "@settingsPagesPluginsProxyValueRow2Value": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の値の行の値"
+  },
+  "settingsPagesPluginsProxyText1": "プラグインプロキシは準備中です。いまはプラグインが端末から直接通信します。",
+  "@settingsPagesPluginsProxyText1": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の説明の文"
+  },
+  "settingsPagesPluginsProxyText1Detail": "プラグインプロキシは、wasm プラグインの外部通信を RASQ サーバー経由に束ねる有料サービスです。まだ提供していないため、プラグインは端末から直接 SNS / 自前サーバーへ通信します。 提供: RASQ サーバーの課金基盤と同時。",
+  "@settingsPagesPluginsProxyText1Detail": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsProxySettingsServerTitle": "RASQ サーバーの接続先",
+  "@settingsPagesPluginsProxySettingsServerTitle": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の行の名前"
+  },
+  "settingsPagesPluginsProxySettingsServerSubtitle": "提供が始まったら、ここで選んだサーバーを使います",
+  "@settingsPagesPluginsProxySettingsServerSubtitle": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の行の補足"
+  },
+  "settingsPagesPluginsReactionTitle": "リアクションの予測",
+  "@settingsPagesPluginsReactionTitle": {
+    "description": "設定のページ「リアクションの予測」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsReactionSection1Title": "リアクションのボタンの短押し",
+  "@settingsPagesPluginsReactionSection1Title": {
+    "description": "設定のページ「リアクションの予測」の節の見出しの名前"
+  },
+  "settingsPagesPluginsReactionPredictWhenEmptyTitle": "だれも付けていない投稿でも予測する",
+  "@settingsPagesPluginsReactionPredictWhenEmptyTitle": {
+    "description": "設定のページ「リアクションの予測」のスイッチの名前"
+  },
+  "settingsPagesPluginsReactionPredictWhenEmptySubtitle": "よく使う絵文字を予測して、短押しで付けます",
+  "@settingsPagesPluginsReactionPredictWhenEmptySubtitle": {
+    "description": "設定のページ「リアクションの予測」のスイッチの補足"
+  },
+  "settingsPagesPluginsReactionPredictWhenEmptyDetail": "切ってあると、まだリアクションが付いていない投稿では予測せず、押すと絵文字ピッカーが開きます。入れると、自分がよく使う絵文字を予測として出し、短押しでそれを付けます",
+  "@settingsPagesPluginsReactionPredictWhenEmptyDetail": {
+    "description": "設定のページ「リアクションの予測」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsTelemetryTitle": "怪しい通信の通報",
+  "@settingsPagesPluginsTelemetryTitle": {
+    "description": "設定のページ「怪しい通信の通報」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsTelemetrySection1Title": "プラグインの怪しい通信をストアへ通報",
+  "@settingsPagesPluginsTelemetrySection1Title": {
+    "description": "設定のページ「怪しい通信の通報」の節の見出しの名前"
+  },
+  "settingsPagesPluginsTelemetryFetchShapesTitle": "怪しい通信を通報する",
+  "@settingsPagesPluginsTelemetryFetchShapesTitle": {
+    "description": "設定のページ「怪しい通信の通報」のスイッチの名前"
+  },
+  "settingsPagesPluginsTelemetryFetchShapesSubtitle": "通信の形だけを審査に送ります。本文やトークンなどの中身は送りません。既定はオフ",
+  "@settingsPagesPluginsTelemetryFetchShapesSubtitle": {
+    "description": "設定のページ「怪しい通信の通報」のスイッチの補足"
+  },
+  "settingsPagesPluginsTelemetryFetchShapesDetail": "プラグインが行う通信の「形」(接続先のホスト、メソッド、パスの型、ヘッダの名前、送る JSON のキーの構造)だけを、この端末で初めて見たときに 1 度だけ RASQ のストアへ送ります。トークン、本文、ユーザー名、URL の中の ID などの値は送りません。審査は、承認したあとで通信の形が変わったプラグインを読み直すためにこれを使います。既定はオフです。",
+  "@settingsPagesPluginsTelemetryFetchShapesDetail": {
+    "description": "設定のページ「怪しい通信の通報」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsTelemetryText1": "同じ形は 2 度と送りません。オフにすると、同意の取り消しとして記録されます。",
+  "@settingsPagesPluginsTelemetryText1": {
+    "description": "設定のページ「怪しい通信の通報」の説明の文"
+  },
+  "settingsPagesPluginsTelemetryText1Detail": "送るもの: 例 {example}。送らないもの: 値そのもの。同じ形は 2 度と送りません。同意はストアの同意記録にも残り、切ると撤回として記録されます。",
+  "@settingsPagesPluginsTelemetryText1Detail": {
+    "description": "設定のページ「怪しい通信の通報」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない。example は送る形の例(JSON に似た書き方で、訳さない)。アセットの側で渡す",
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsPagesPluginsTimelineTitle": "カスタムタイムラインを配置",
+  "@settingsPagesPluginsTimelineTitle": {
+    "description": "設定のページ「カスタムタイムラインを配置」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsTimelineSection1Title": "タイムラインのプラグイン",
+  "@settingsPagesPluginsTimelineSection1Title": {
+    "description": "設定のページ「カスタムタイムラインを配置」の節の見出しの名前"
+  },
+  "settingsPagesPluginsTimelineEnabledTitle": "カスタムタイムラインを使う",
+  "@settingsPagesPluginsTimelineEnabledTitle": {
+    "description": "設定のページ「カスタムタイムラインを配置」のスイッチの名前"
+  },
+  "settingsPagesPluginsTimelineEnabledSubtitle": "プラグインのタイムラインを、ホームのタブに出します",
+  "@settingsPagesPluginsTimelineEnabledSubtitle": {
+    "description": "設定のページ「カスタムタイムラインを配置」のスイッチの補足"
+  },
+  "settingsPagesPluginsTimelineEnabledDetail": "TL プラグイン(tl)が宣言したタイムラインをホームのタブと「タイムラインをカスタマイズ」のアルゴリズムに出します",
+  "@settingsPagesPluginsTimelineEnabledDetail": {
+    "description": "設定のページ「カスタムタイムラインを配置」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsTimelineText1": "並びや取り込みは、ホームのタブ行の歯車(タイムラインをカスタマイズ)から組みます。",
+  "@settingsPagesPluginsTimelineText1": {
+    "description": "設定のページ「カスタムタイムラインを配置」の説明の文"
+  },
+  "settingsPagesPluginsTimelineStoreTitle": "プラグインストア",
+  "@settingsPagesPluginsTimelineStoreTitle": {
+    "description": "設定のページ「カスタムタイムラインを配置」の行の名前"
+  },
+  "settingsPagesPluginsTrendTitle": "カスタムトレンドの配信",
+  "@settingsPagesPluginsTrendTitle": {
+    "description": "設定のページ「カスタムトレンドの配信」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsTrendSection1Title": "トレンドプラグイン",
+  "@settingsPagesPluginsTrendSection1Title": {
+    "description": "設定のページ「カスタムトレンドの配信」の節の見出しの名前"
+  },
+  "settingsPagesPluginsTrendEnabledTitle": "トレンドプラグインの候補を表示",
+  "@settingsPagesPluginsTrendEnabledTitle": {
+    "description": "設定のページ「カスタムトレンドの配信」のスイッチの名前"
+  },
+  "settingsPagesPluginsTrendEnabledSubtitle": "検索ホームのトレンド欄に、プラグインの候補を出します",
+  "@settingsPagesPluginsTrendEnabledSubtitle": {
+    "description": "設定のページ「カスタムトレンドの配信」のスイッチの補足"
+  },
+  "settingsPagesPluginsTrendEnabledDetail": "検索ホームのトレンド欄に、入れているトレンドプラグイン(trend.suggest)の候補チップを出します",
+  "@settingsPagesPluginsTrendEnabledDetail": {
+    "description": "設定のページ「カスタムトレンドの配信」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsTrendText1": "オフにすると、プラグインは呼び出されません(入れたままでも通信しません)。",
+  "@settingsPagesPluginsTrendText1": {
+    "description": "設定のページ「カスタムトレンドの配信」の説明の文"
+  },
+  "settingsPagesPluginsTrendStoreTitle": "プラグインストア",
+  "@settingsPagesPluginsTrendStoreTitle": {
+    "description": "設定のページ「カスタムトレンドの配信」の行の名前"
+  },
+  "settingsPagesPluginsTrendStoreSubtitle": "トレンドプラグインを探す / 管理する",
+  "@settingsPagesPluginsTrendStoreSubtitle": {
+    "description": "設定のページ「カスタムトレンドの配信」の行の補足"
+  },
+  "settingsPagesRaiTitle": "RAi(アシスタント)",
+  "@settingsPagesRaiTitle": {
+    "description": "設定のページ「RAi(アシスタント)」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesRaiSection1Title": "自動化",
+  "@settingsPagesRaiSection1Title": {
+    "description": "設定のページ「RAi(アシスタント)」の節の見出しの名前"
+  },
+  "settingsPagesRaiTraceGraphAutoTitle": "工程グラフを自動で表示",
+  "@settingsPagesRaiTraceGraphAutoTitle": {
+    "description": "設定のページ「RAi(アシスタント)」のスイッチの名前"
+  },
+  "settingsPagesRaiTraceGraphAutoSubtitle": "3 手順以上の自動化を、グラフで表示します",
+  "@settingsPagesRaiTraceGraphAutoSubtitle": {
+    "description": "設定のページ「RAi(アシスタント)」のスイッチの補足"
+  },
+  "settingsPagesRaiTraceGraphAutoDetail": "RAi に任せた自動化が 3 手順以上のとき、工程をノードのグラフで自動表示します。オフなら「グラフビューで表示」ボタンになります",
+  "@settingsPagesRaiTraceGraphAutoDetail": {
+    "description": "設定のページ「RAi(アシスタント)」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesRaiText1": "AI のモデルや web 検索は、RAi バーのモデルのボタンから設定します。",
+  "@settingsPagesRaiText1": {
+    "description": "設定のページ「RAi(アシスタント)」の説明の文"
+  },
+  "settingsPagesRaiText1Detail": "推論サーバーや web 検索の鍵は RAi バーのモデルチップから設定します。",
+  "@settingsPagesRaiText1Detail": {
+    "description": "設定のページ「RAi(アシスタント)」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesRelationalPluginsTitle": "プラグインの詳細設定",
+  "@settingsPagesRelationalPluginsTitle": {
+    "description": "設定のページ「プラグインの詳細設定」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesRelationalPluginsSection1Title": "状態",
+  "@settingsPagesRelationalPluginsSection1Title": {
+    "description": "設定のページ「プラグインの詳細設定」の節の見出しの名前"
+  },
+  "settingsPagesRelationalPluginsValueRow1Title": "プラグイン枠",
+  "@settingsPagesRelationalPluginsValueRow1Title": {
+    "description": "設定のページ「プラグインの詳細設定」の値の行の名前"
+  },
+  "settingsPagesRelationalPluginsValueRow1Value": "準備中",
+  "@settingsPagesRelationalPluginsValueRow1Value": {
+    "description": "設定のページ「プラグインの詳細設定」の値の行の値"
+  },
+  "settingsPagesRelationalPluginsText1": "この画面のプラグインは準備中です。",
+  "@settingsPagesRelationalPluginsText1": {
+    "description": "設定のページ「プラグインの詳細設定」の説明の文"
+  },
+  "settingsPagesRelationalPluginsText1Detail": "リレーショナルタイムライン用のプラグイン枠(束ね方の差し替え)は契約 v0.7 にはまだありません。ML の類似度は RASQ サーバーの ML ゲートウェイを使います。 プラグイン枠: 未定義。",
+  "@settingsPagesRelationalPluginsText1Detail": {
+    "description": "設定のページ「プラグインの詳細設定」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesRelationalPluginsSettingsServerTitle": "RASQ サーバーの接続先",
+  "@settingsPagesRelationalPluginsSettingsServerTitle": {
+    "description": "設定のページ「プラグインの詳細設定」の行の名前"
+  },
+  "settingsPagesRelationalRelayTitle": "Relayタイル",
+  "@settingsPagesRelationalRelayTitle": {
+    "description": "設定のページ「Relayタイル」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesRelationalRelaySection1Title": "状態",
+  "@settingsPagesRelationalRelaySection1Title": {
+    "description": "設定のページ「Relayタイル」の節の見出しの名前"
+  },
+  "settingsPagesRelationalRelayValueRow1Title": "提供",
+  "@settingsPagesRelationalRelayValueRow1Title": {
+    "description": "設定のページ「Relayタイル」の値の行の名前"
+  },
+  "settingsPagesRelationalRelayValueRow1Value": "準備中",
+  "@settingsPagesRelationalRelayValueRow1Value": {
+    "description": "設定のページ「Relayタイル」の値の行の値"
+  },
+  "settingsPagesRelationalRelayText1": "Relay タイルは準備中です。いまは「投稿クラスター」で会話のまとめ方を変えられます。",
+  "@settingsPagesRelationalRelayText1": {
+    "description": "設定のページ「Relayタイル」の説明の文"
+  },
+  "settingsPagesRelationalRelayText1Detail": "Relay タイルは、会話イベントをまたいで話題が受け渡された流れ(リレー)を 1 枚のタイルにまとめる表示です。束ね方が固まってから足します。いまは「投稿クラスター」の調整で会話イベントの束ね方を変えられます。 提供: アルゴリズム確定後。",
+  "@settingsPagesRelationalRelayText1Detail": {
+    "description": "設定のページ「Relayタイル」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesRelationalTrendTitle": "トレンドタイムラインへの配信",
+  "@settingsPagesRelationalTrendTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesRelationalTrendSection1Title": "状態",
+  "@settingsPagesRelationalTrendSection1Title": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の節の見出しの名前"
+  },
+  "settingsPagesRelationalTrendValueRow1Title": "提供",
+  "@settingsPagesRelationalTrendValueRow1Title": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の値の行の名前"
+  },
+  "settingsPagesRelationalTrendValueRow1Value": "準備中",
+  "@settingsPagesRelationalTrendValueRow1Value": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の値の行の値"
+  },
+  "settingsPagesRelationalTrendText1": "「トレンドをカスタマイズ」で、関連タイムラインをトレンドに流せます。",
+  "@settingsPagesRelationalTrendText1": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の説明の文"
+  },
+  "settingsPagesRelationalTrendText1Detail": "関連タブの会話イベントをトレンドのタイムラインへ流す配信は、トレンド側のノード(アルゴリズム)に「関連タイムライン」ノードを置く形で組めます。 提供: アルゴリズム確定後。",
+  "@settingsPagesRelationalTrendText1Detail": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesRelationalTrendTlconfigTrendTitle": "トレンドをカスタマイズ",
+  "@settingsPagesRelationalTrendTlconfigTrendTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の行の名前"
+  },
+  "settingsPagesResourcesTitle": "リソースと広告",
+  "@settingsPagesResourcesTitle": {
+    "description": "設定のページ「リソースと広告」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesResourcesSection1Title": "広告",
+  "@settingsPagesResourcesSection1Title": {
+    "description": "設定のページ「リソースと広告」の節の見出しの名前"
+  },
+  "settingsPagesResourcesShowAdsTitle": "広告を表示",
+  "@settingsPagesResourcesShowAdsTitle": {
+    "description": "設定のページ「リソースと広告」のスイッチの名前"
+  },
+  "settingsPagesResourcesShowAdsSubtitle": "タイムラインの投稿の間と、検索ホームの広告です",
+  "@settingsPagesResourcesShowAdsSubtitle": {
+    "description": "設定のページ「リソースと広告」のスイッチの補足"
+  },
+  "settingsPagesResourcesShowAdsDetail": "タイムラインの投稿の間(10 件ごと、注釈やセンシティブな投稿の隣には置きません)と検索ホームの広告枠(AdMob、いまはテスト用の広告)。個人に合わせた広告は出しません",
+  "@settingsPagesResourcesShowAdsDetail": {
+    "description": "設定のページ「リソースと広告」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesResourcesSection2Title": "リソース",
+  "@settingsPagesResourcesSection2Title": {
+    "description": "設定のページ「リソースと広告」の節の見出しの名前"
+  },
+  "settingsPagesResourcesValueRow1Title": "プラグインの通信",
+  "@settingsPagesResourcesValueRow1Title": {
+    "description": "設定のページ「リソースと広告」の値の行の名前"
+  },
+  "settingsPagesResourcesValueRow1Value": "端末から直接",
+  "@settingsPagesResourcesValueRow1Value": {
+    "description": "設定のページ「リソースと広告」の値の行の値"
+  },
+  "settingsPagesResourcesValueRow2Title": "推論",
+  "@settingsPagesResourcesValueRow2Title": {
+    "description": "設定のページ「リソースと広告」の値の行の名前"
+  },
+  "settingsPagesResourcesValueRow2Value": "端末の中 + 選んだサーバー",
+  "@settingsPagesResourcesValueRow2Value": {
+    "description": "設定のページ「リソースと広告」の値の行の値"
+  },
+  "settingsPagesResourcesText1": "プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。",
+  "@settingsPagesResourcesText1": {
+    "description": "設定のページ「リソースと広告」の説明の文"
+  },
+  "settingsPagesResourcesText1Detail": "プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。 プラグインの通信: 端末から直接(プロキシ無し)。推論: 端末内モデル(RAi)+ 任意の推論サーバー。",
+  "@settingsPagesResourcesText1Detail": {
+    "description": "設定のページ「リソースと広告」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesResourcesStoreTitle": "プラグインストア",
+  "@settingsPagesResourcesStoreTitle": {
+    "description": "設定のページ「リソースと広告」の行の名前"
+  },
+  "settingsPagesTrendCdnTitle": "キャッシュネットワークの設定",
+  "@settingsPagesTrendCdnTitle": {
+    "description": "設定のページ「キャッシュネットワークの設定」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesTrendCdnSection1Title": "状態",
+  "@settingsPagesTrendCdnSection1Title": {
+    "description": "設定のページ「キャッシュネットワークの設定」の節の見出しの名前"
+  },
+  "settingsPagesTrendCdnValueRow1Title": "キャッシュネットワーク",
+  "@settingsPagesTrendCdnValueRow1Title": {
+    "description": "設定のページ「キャッシュネットワークの設定」の値の行の名前"
+  },
+  "settingsPagesTrendCdnValueRow1Value": "準備中",
+  "@settingsPagesTrendCdnValueRow1Value": {
+    "description": "設定のページ「キャッシュネットワークの設定」の値の行の値"
+  },
+  "settingsPagesTrendCdnText1": "準備中です。いまは各 SNS から直接取得します。",
+  "@settingsPagesTrendCdnText1": {
+    "description": "設定のページ「キャッシュネットワークの設定」の説明の文"
+  },
+  "settingsPagesTrendCdnText1Detail": "トレンドの取得結果を CDN(キャッシュネットワーク)から読む仕組みは、RASQ サーバーの配信基盤と同時に入ります。いまは各 SNS から直接取得します。 キャッシュネットワーク: 未提供。",
+  "@settingsPagesTrendCdnText1Detail": {
+    "description": "設定のページ「キャッシュネットワークの設定」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
   "settingsSectionsPluginsTitle": "プラグインの構成",
   "settingsSectionsPluginsProxyTitle": "RASQプラグインプロキシの購読",
   "settingsSectionsPluginsProxySubtitle": "準備中",

@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "astell.trend",
-  "title": "トレンドタイムラインへの配信",
+  "title": "@l10n:settingsPagesAstellTrendTitle",
   "defaults": {
     "showTrending": true,
     "showRecommended": true
@@ -12,14 +12,14 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "ASTell ホームの欄"
+          "title": "@l10n:settingsPagesAstellTrendSection1Title"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "showRecommended",
         "p": {
-          "title": "「おすすめ」を表示",
+          "title": "@l10n:settingsPagesAstellTrendShowRecommendedTitle",
           "value": "$.settings.showRecommended"
         },
         "on": {
@@ -30,9 +30,9 @@
         "t": "SwitchListTile",
         "k": "showTrending",
         "p": {
-          "title": "「トレンド」を表示",
+          "title": "@l10n:settingsPagesAstellTrendShowTrendingTitle",
           "value": "$.settings.showTrending",
-          "subtitle": "トレンドのルームを ASTell ホームに並べます"
+          "subtitle": "@l10n:settingsPagesAstellTrendShowTrendingSubtitle"
         },
         "on": {
           "change": "settings.set"
@@ -41,17 +41,17 @@
       {
         "t": "Text",
         "p": {
-          "text": "検索ホームのトレンドにルームを出すには、「トレンドをカスタマイズ」で組みます。",
+          "text": "@l10n:settingsPagesAstellTrendText1",
           "pad": 16,
           "size": 13,
-          "detail": "トレンドのタイムライン(検索ホーム)へのルームの差し込みは、トレンドのノード(アルゴリズム)側で組みます。"
+          "detail": "@l10n:settingsPagesAstellTrendText1Detail"
         }
       },
       {
         "t": "ListTile",
         "k": "/tlconfig/trend",
         "p": {
-          "title": "トレンドをカスタマイズ"
+          "title": "@l10n:settingsPagesAstellTrendTlconfigTrendTitle"
         },
         "on": {
           "tap": "route.push"

@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "relational.trend",
-  "title": "トレンドタイムラインへの配信",
+  "title": "@l10n:settingsPagesRelationalTrendTitle",
   "defaults": {},
   "root": {
     "t": "Column",
@@ -9,30 +9,30 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "状態"
+          "title": "@l10n:settingsPagesRelationalTrendSection1Title"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
-          "title": "提供",
-          "value": "準備中"
+          "title": "@l10n:settingsPagesRelationalTrendValueRow1Title",
+          "value": "@l10n:settingsPagesRelationalTrendValueRow1Value"
         }
       },
       {
         "t": "Text",
         "p": {
-          "text": "「トレンドをカスタマイズ」で、関連タイムラインをトレンドに流せます。",
+          "text": "@l10n:settingsPagesRelationalTrendText1",
           "pad": 16,
           "size": 13,
-          "detail": "関連タブの会話イベントをトレンドのタイムラインへ流す配信は、トレンド側のノード(アルゴリズム)に「関連タイムライン」ノードを置く形で組めます。 提供: アルゴリズム確定後(D-011)。"
+          "detail": "@l10n:settingsPagesRelationalTrendText1Detail"
         }
       },
       {
         "t": "ListTile",
         "k": "/tlconfig/trend",
         "p": {
-          "title": "トレンドをカスタマイズ"
+          "title": "@l10n:settingsPagesRelationalTrendTlconfigTrendTitle"
         },
         "on": {
           "tap": "route.push"

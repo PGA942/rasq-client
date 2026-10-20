@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "appearance.mfm",
-  "title": "カスタムモーションとアニメーション",
+  "title": "@l10n:settingsPagesAppearanceMfmTitle",
   "defaults": {
     "animations": true,
     "speed": 100
@@ -12,17 +12,17 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "MFM のアニメーション"
+          "title": "@l10n:settingsPagesAppearanceMfmSection1Title"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "animations",
         "p": {
-          "title": "動く装飾を再生する",
+          "title": "@l10n:settingsPagesAppearanceMfmAnimationsTitle",
           "value": "$.settings.animations",
-          "subtitle": "回転や虹色などの動く装飾を再生します",
-          "detail": "spin / jump / rainbow などの MFM を動かします。オフにすると静止画になります(「モーションの抑制」がオンのときは常に静止)"
+          "subtitle": "@l10n:settingsPagesAppearanceMfmAnimationsSubtitle",
+          "detail": "@l10n:settingsPagesAppearanceMfmAnimationsDetail"
         },
         "on": {
           "change": "settings.set"
@@ -32,13 +32,13 @@
         "t": "SliderListTile",
         "k": "speed",
         "p": {
-          "title": "アニメーションの速さ",
+          "title": "@l10n:settingsPagesAppearanceMfmSpeedTitle",
           "value": "$.settings.speed",
           "min": 50,
           "max": 200,
           "divisions": 6,
           "unit": "%",
-          "subtitle": "100% が標準。大きいほど速く動きます"
+          "subtitle": "@l10n:settingsPagesAppearanceMfmSpeedSubtitle"
         },
         "on": {
           "change": "settings.set"
@@ -48,8 +48,8 @@
         "t": "ListTile",
         "k": "/settings/dsl/appearance.motion",
         "p": {
-          "title": "モーションの抑制",
-          "subtitle": "画面遷移なども含めてまとめて減らす"
+          "title": "@l10n:settingsPagesAppearanceMfmSettingsDslAppearanceMotionTitle",
+          "subtitle": "@l10n:settingsPagesAppearanceMfmSettingsDslAppearanceMotionSubtitle"
         },
         "on": {
           "tap": "route.push"

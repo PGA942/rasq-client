@@ -13226,6 +13226,812 @@ class AppLocalizationsJa extends AppLocalizations {
       '生のトークンは発行時にだけ受け取り、端末内の安全な領域に保存します。サーバーに残るのはハッシュだけです。親のトークンを失効すると配下のトークンも失効します。';
 
   @override
+  String get settingsPagesAboutCookiesTitle => 'クッキーについて';
+
+  @override
+  String get settingsPagesAboutCookiesSection1Title => 'クッキー';
+
+  @override
+  String get settingsPagesAboutCookiesText1 =>
+      'iOS・Android・デスクトップのアプリは、RASQ サーバーとの通信にクッキーを使いません。RASQ サーバーとの通信は端末トークン(Authorization ヘッダー)で行い、各 SNS のアクセストークンは端末内の安全な領域に保存します。';
+
+  @override
+  String get settingsPagesAboutCookiesText2 =>
+      'iOS・Android のアプリの広告(Google AdMob)は、クッキーの代わりに端末の広告 ID を使います。初回に表示する Google の同意画面で、パーソナライズ広告を使うかを選べます。';
+
+  @override
+  String get settingsPagesAboutCookiesText3 =>
+      'Web 版と、RASQ のプロフィール・投稿の公開の Web ページでは、広告(Google AdSense)のために Google がクッキーを使います。広告のクッキーの扱いは Google のポリシーに従います。';
+
+  @override
+  String get settingsPagesAboutCookiesText4 =>
+      'SNS の web 版や登録ページをアプリ内のブラウザで開いたときは、その SNS のクッキーの扱いに従います。';
+
+  @override
+  String get settingsPagesAboutDeveloperTitle => '開発者モード';
+
+  @override
+  String get settingsPagesAboutDeveloperEnabledSubtitle =>
+      '画面の説明を、仕組みや送るデータの形まで詳しく表示します';
+
+  @override
+  String get settingsPagesAboutDeveloperEnabledDetail =>
+      'オンのあいだ、設定や同意の画面で短くしている説明の代わりに、元の詳しい説明(保存先の KV、送る JSON の形など)を出します。表示が変わるだけで、動作は変わりません。';
+
+  @override
+  String get settingsPagesAboutDeveloperNotice1 =>
+      '表示だけが変わります。設定や送るデータは変わりません。';
+
+  @override
+  String get settingsPagesAboutDeveloperIosScreenGlimpseTitle =>
+      '画面の読み取りを試す(iOS)';
+
+  @override
+  String get settingsPagesAboutDeveloperIosScreenGlimpseSubtitle =>
+      'iPhone / iPad の「SNS サービスを探す」に「いつものブラウザで見て探す」を出します';
+
+  @override
+  String get settingsPagesAboutDeveloperIosScreenGlimpseDetail =>
+      '画面の読み取りの Broadcast Upload Extension(ScreenGlimpseBroadcast)が画面収録の選択に出ない端末があるため(未解決)、iOS では既定で隠しています。オンにすると入口を出します。Android は常に出します。';
+
+  @override
+  String get settingsPagesAboutDeveloperRaiAndroid3dTitle =>
+      '3D の RAi を試す(Android)';
+
+  @override
+  String get settingsPagesAboutDeveloperRaiAndroid3dSubtitle =>
+      'Android でも RAi のマスコットを 3D で表示します';
+
+  @override
+  String get settingsPagesAboutDeveloperRaiAndroid3dDetail =>
+      'Android で RAi が開かない報告があり、3D の土台(flutter_angle)の初期化が疑わしいため、既定は 2D です。オンにすると 3D を試します。20 秒たっても出ない / 失敗したときは自動で 2D に戻し、RAi のサイドバーの「診断」に理由を残します。iPhone / iPad / Mac は常に 3D です。';
+
+  @override
+  String get settingsPagesAboutHelpTitle => 'ヘルプ';
+
+  @override
+  String get settingsPagesAboutHelpSection1Title => '使い方';
+
+  @override
+  String get settingsPagesAboutHelpText1 => '操作に迷ったら、サイドメニューの RAi に聞いてください。';
+
+  @override
+  String get settingsPagesAboutHelpText1Detail =>
+      '操作に迷ったら RAi に聞いてください。サイドメニューの RAi から、インストラクション(ボタンまで案内)とアシスタント(端末内モデルで回答、関数で代行)が使えます。';
+
+  @override
+  String get settingsPagesAboutHelpRaiTitle => 'RAi を開く';
+
+  @override
+  String get settingsPagesAboutHelpTourAgain1Title => 'RASQ の使い方をもう一度見る';
+
+  @override
+  String get settingsPagesAboutHelpTourAgain1Subtitle =>
+      '機能の紹介(TL・トレンド・ASTell・RAi など)';
+
+  @override
+  String get settingsPagesAboutHelpSection2Title => '困ったとき';
+
+  @override
+  String get settingsPagesAboutHelpText2 =>
+      'ログインや投稿がうまくいかないときは、権限を確かめて、入り直してください。';
+
+  @override
+  String get settingsPagesAboutHelpText2Detail =>
+      'ログインできない / 投稿が届かないときは、まず「SNSプラグイン → セキュリティ」で権限を確認し、一度ログアウトして入り直してください。';
+
+  @override
+  String get settingsPagesAboutHelpSettingsDslSnsSecurityTitle =>
+      'セキュリティ(権限とトークン)';
+
+  @override
+  String get settingsPagesAboutHelpSettingsServerTitle => 'RASQ サーバーの接続先';
+
+  @override
+  String get settingsPagesAboutSubscriptionTitle => '購読状況';
+
+  @override
+  String get settingsPagesAboutSubscriptionSection1Title => 'RASQ の購読';
+
+  @override
+  String get settingsPagesAboutSubscriptionValueRow1Title => 'プラン';
+
+  @override
+  String get settingsPagesAboutSubscriptionValueRow1Value => '無料';
+
+  @override
+  String get settingsPagesAboutSubscriptionValueRow2Title => 'プラグインプロキシ';
+
+  @override
+  String get settingsPagesAboutSubscriptionValueRow2Value => '未購読';
+
+  @override
+  String get settingsPagesAboutSubscriptionText1 => '有料プランは準備中です。';
+
+  @override
+  String get settingsPagesAboutSubscriptionText1Detail =>
+      'プラン: 無料(いまは購読プラン無し)。有料プランは今後、RASQ アカウントに紐づけて提供します。';
+
+  @override
+  String get settingsPagesAppearanceDisplayTitle => 'インターフェースの表示サイズ';
+
+  @override
+  String get settingsPagesAppearanceDisplaySection1Title => '表示サイズ';
+
+  @override
+  String get settingsPagesAppearanceDisplayTextScaleTitle => '文字とUIの大きさ';
+
+  @override
+  String get settingsPagesAppearanceDisplayTextScaleSubtitle =>
+      'アプリ全体の文字サイズを変えます(即時反映)';
+
+  @override
+  String get settingsPagesAppearanceFabTitle => '＋ ボタンの割り当て';
+
+  @override
+  String get settingsPagesAppearanceFabNotice1 =>
+      '＋ を押したときに始めるものを選べます。まわりのボタン(内側に 3 つ、外側に 4 つまで)は、＋ を長押し(マウスは乗せる)して歯車から並べ替えます。';
+
+  @override
+  String get settingsPagesAppearanceFabNotice1Detail =>
+      '領域 appearance.fab(<scope>Tap / <scope>Slots = 置いた順、最大 7)。';
+
+  @override
+  String get settingsPagesAppearanceFabSection1Title => 'ホームの ＋ を押したとき';
+
+  @override
+  String get settingsPagesAppearanceFabHomeTapPostTitle => '投稿';
+
+  @override
+  String get settingsPagesAppearanceFabHomeTapRasqTitle => 'RASQ に投稿';
+
+  @override
+  String get settingsPagesAppearanceFabHomeTapSwingTitle => 'Swing を作る';
+
+  @override
+  String get settingsPagesAppearanceFabHomeTapAstellTitle => 'ASTell を作る';
+
+  @override
+  String get settingsPagesAppearanceFabSection2Title => 'トレンドの ＋ を押したとき';
+
+  @override
+  String get settingsPagesAppearanceFabSection3Title => 'ASTell の ＋ を押したとき';
+
+  @override
+  String get settingsPagesAppearanceMfmTitle => 'カスタムモーションとアニメーション';
+
+  @override
+  String get settingsPagesAppearanceMfmSection1Title => 'MFM のアニメーション';
+
+  @override
+  String get settingsPagesAppearanceMfmAnimationsTitle => '動く装飾を再生する';
+
+  @override
+  String get settingsPagesAppearanceMfmAnimationsSubtitle =>
+      '回転や虹色などの動く装飾を再生します';
+
+  @override
+  String get settingsPagesAppearanceMfmAnimationsDetail =>
+      'spin / jump / rainbow などの MFM を動かします。オフにすると静止画になります(「モーションの抑制」がオンのときは常に静止)';
+
+  @override
+  String get settingsPagesAppearanceMfmSpeedTitle => 'アニメーションの速さ';
+
+  @override
+  String get settingsPagesAppearanceMfmSpeedSubtitle => '100% が標準。大きいほど速く動きます';
+
+  @override
+  String get settingsPagesAppearanceMfmSettingsDslAppearanceMotionTitle =>
+      'モーションの抑制';
+
+  @override
+  String get settingsPagesAppearanceMfmSettingsDslAppearanceMotionSubtitle =>
+      '画面遷移なども含めてまとめて減らす';
+
+  @override
+  String get settingsPagesAppearanceMotionTitle => 'モーションの抑制';
+
+  @override
+  String get settingsPagesAppearanceMotionSection1Title => 'アニメーション';
+
+  @override
+  String get settingsPagesAppearanceMotionReduceMotionTitle => 'モーションを抑制する';
+
+  @override
+  String get settingsPagesAppearanceMotionReduceMotionSubtitle =>
+      '動く装飾を止め、画面の動きを減らします';
+
+  @override
+  String get settingsPagesAppearanceMotionReduceMotionDetail =>
+      'MFM の spin / rainbow などのアニメーションを静止画にし、画面遷移の動きを減らします';
+
+  @override
+  String get settingsPagesAppearanceNotificationsTitle => '通知の表示形式';
+
+  @override
+  String get settingsPagesAppearanceNotificationsSection1Title => '通知ページ';
+
+  @override
+  String get settingsPagesAppearanceNotificationsDefaultTabAllTitle =>
+      '「すべて」から開く';
+
+  @override
+  String get settingsPagesAppearanceNotificationsDefaultTabFollowingTitle =>
+      '「フォロー中」から開く';
+
+  @override
+  String get settingsPagesAppearanceNotificationsDefaultTabFollowingSubtitle =>
+      'フォローしている人からの通知だけを先に見ます';
+
+  @override
+  String get settingsPagesAppearanceNotificationsShowRemindersTitle =>
+      'ASTell の開始通知の予定を上に出す';
+
+  @override
+  String get settingsPagesAppearanceNotificationsShowRemindersSubtitle =>
+      '登録した開始通知を、通知ページの上に出します';
+
+  @override
+  String get settingsPagesAppearanceNotificationsShowRemindersDetail =>
+      '登録した開始通知(端末のローカル通知)の一覧を通知ページの上に表示します';
+
+  @override
+  String get settingsPagesAppearanceNotificationsText1 =>
+      '通知する種別は「通知 → プロファイル」で選びます(端末に保存されます)。';
+
+  @override
+  String get settingsPagesAppearanceTimelineTitle => 'タイムラインの表示';
+
+  @override
+  String get settingsPagesAppearanceTimelineSection1Title => '更新';
+
+  @override
+  String get settingsPagesAppearanceTimelineEdgeTilesTitle =>
+      'TL の上下に「投稿を読み込む」を出す';
+
+  @override
+  String get settingsPagesAppearanceTimelineEdgeTilesSubtitle =>
+      'スマホでは既定で出しません(引っ張って更新)';
+
+  @override
+  String get settingsPagesAppearanceTimelineEdgeTilesDetail =>
+      '見えると、新しい投稿 / 続きを読み込みます。既定は、電話のアプリでは出さず(下に引っ張って更新)、Web 版とパソコンでは出します';
+
+  @override
+  String get settingsPagesAppearanceTimelineNewPostsPillTitle =>
+      '新しい投稿のお知らせを出す';
+
+  @override
+  String get settingsPagesAppearanceTimelineNewPostsPillSubtitle =>
+      '更新して新しい投稿が届いたら、ヘッダーのすぐ下に「新しい投稿」';
+
+  @override
+  String get settingsPagesAppearanceTimelineNewPostsPillDetail =>
+      '投稿した人の顔(3 人まで)と「新しい投稿」を出します。押すといちばん上へ。しばらくたつか、いちばん上まで送ると消えます。ヘッダーをしまっている間は出しません';
+
+  @override
+  String get settingsPagesAppearanceVideoTitle => 'ピクチャインピクチャ';
+
+  @override
+  String get settingsPagesAppearanceVideoSection1Title => '動画';
+
+  @override
+  String get settingsPagesAppearanceVideoAutoplayTitle => '開いたら自動で再生';
+
+  @override
+  String get settingsPagesAppearanceVideoAutoplaySubtitle => '全画面と小窓で、すぐに再生します';
+
+  @override
+  String get settingsPagesAppearanceVideoAutoplayDetail =>
+      '全画面ビューワーと小窓(PiP)で、準備ができ次第再生します';
+
+  @override
+  String get settingsPagesAppearanceVideoPipKeepPositionTitle =>
+      '小窓へ移るとき再生位置を引き継ぐ';
+
+  @override
+  String get settingsPagesAppearanceVideoPipKeepPositionSubtitle =>
+      '全画面の「小窓で再生」を押したときの続きから再生します';
+
+  @override
+  String get settingsPagesAppearanceVideoSection2Title => '既定の再生速度';
+
+  @override
+  String get settingsPagesAppearanceVideoDefaultSpeed10Title => '1.0×(標準)';
+
+  @override
+  String get settingsPagesAppearanceVideoText1 => '小窓は、掴んで好きな場所へ動かせます。';
+
+  @override
+  String get settingsPagesAppearanceVideoText1Detail =>
+      '小窓は FOW なので、掴んでカラムや上下へ動かせます。';
+
+  @override
+  String get settingsPagesAstellBackgroundTitle => '画面オフ時の動作';
+
+  @override
+  String get settingsPagesAstellBackgroundSection1Title => '通話中に画面を消したとき';
+
+  @override
+  String get settingsPagesAstellBackgroundOnScreenOffKeepTitle => '通話を続ける';
+
+  @override
+  String get settingsPagesAstellBackgroundOnScreenOffKeepSubtitle =>
+      '音声はそのまま、画面共有の受信だけ止めます';
+
+  @override
+  String get settingsPagesAstellBackgroundOnScreenOffMuteTitle =>
+      'マイクをミュートして続ける';
+
+  @override
+  String get settingsPagesAstellBackgroundOnScreenOffLeaveTitle => 'ルームから出る';
+
+  @override
+  String get settingsPagesAstellBackgroundNotice1 =>
+      'この設定は準備中です。いまの ASTell は、画面が点いている間だけ動きます。';
+
+  @override
+  String get settingsPagesAstellBackgroundNotice1Detail =>
+      'この設定は保存されますが、適用は通話の常駐化(バックグラウンド音声)の実装後です。いまの ASTell は画面が点いている間だけ動きます。';
+
+  @override
+  String get settingsPagesAstellSubscriptionTitle => 'ASTell 4Uを購読';
+
+  @override
+  String get settingsPagesAstellSubscriptionSection1Title => '状態';
+
+  @override
+  String get settingsPagesAstellSubscriptionValueRow1Title => '購読';
+
+  @override
+  String get settingsPagesAstellSubscriptionValueRow1Value => '未購読';
+
+  @override
+  String get settingsPagesAstellSubscriptionValueRow2Title => '提供';
+
+  @override
+  String get settingsPagesAstellSubscriptionValueRow2Value => '準備中';
+
+  @override
+  String get settingsPagesAstellSubscriptionText1 =>
+      'ASTell 4U は準備中の有料プランです。おすすめ欄は無料で使えます。';
+
+  @override
+  String get settingsPagesAstellSubscriptionText1Detail =>
+      'ASTell 4U は、ASTell のおすすめ(For You)配信とサーバー側の文字起こし / 要約の有料プランです。まだ提供していません。おすすめ欄は RASQ サーバーの無料の推薦で動きます。';
+
+  @override
+  String get settingsPagesAstellTilesTitle => 'Tellタイル';
+
+  @override
+  String get settingsPagesAstellTilesSection1Title => 'ホームのヘッダー';
+
+  @override
+  String get settingsPagesAstellTilesHeaderStripTitle =>
+      'フォロー中のホストの ASTell をヘッダーに出す';
+
+  @override
+  String get settingsPagesAstellTilesHeaderStripSubtitle =>
+      '開催中のルームを、ホームの上に並べます';
+
+  @override
+  String get settingsPagesAstellTilesHeaderStripDetail =>
+      '開催中のルームを、ホームのヘッダーの角丸の枠に並べます';
+
+  @override
+  String get settingsPagesAstellTilesHeaderMaxTitle => '並べる数';
+
+  @override
+  String get settingsPagesAstellTilesHeaderMaxUnit => '件';
+
+  @override
+  String get settingsPagesAstellTrendTitle => 'トレンドタイムラインへの配信';
+
+  @override
+  String get settingsPagesAstellTrendSection1Title => 'ASTell ホームの欄';
+
+  @override
+  String get settingsPagesAstellTrendShowRecommendedTitle => '「おすすめ」を表示';
+
+  @override
+  String get settingsPagesAstellTrendShowTrendingTitle => '「トレンド」を表示';
+
+  @override
+  String get settingsPagesAstellTrendShowTrendingSubtitle =>
+      'トレンドのルームを ASTell ホームに並べます';
+
+  @override
+  String get settingsPagesAstellTrendText1 =>
+      '検索ホームのトレンドにルームを出すには、「トレンドをカスタマイズ」で組みます。';
+
+  @override
+  String get settingsPagesAstellTrendText1Detail =>
+      'トレンドのタイムライン(検索ホーム)へのルームの差し込みは、トレンドのノード(アルゴリズム)側で組みます。';
+
+  @override
+  String get settingsPagesAstellTrendTlconfigTrendTitle => 'トレンドをカスタマイズ';
+
+  @override
+  String get settingsPagesMediaSaveTitle => '画像・動画の保存先';
+
+  @override
+  String get settingsPagesMediaSaveSection1Title => '「画像を保存」「動画を保存」の保存先';
+
+  @override
+  String get settingsPagesMediaSaveDestinationAskTitle => '保存するたびに選ぶ';
+
+  @override
+  String get settingsPagesMediaSaveDestinationAskSubtitle =>
+      '写真とファイルのどちらにするか、毎回聞きます';
+
+  @override
+  String get settingsPagesMediaSaveDestinationAskDetail =>
+      '写真とファイルのどちらに保存するかを、そのたびに聞きます(選べる先が 1 つしかない端末では聞きません)';
+
+  @override
+  String get settingsPagesMediaSaveDestinationPhotosTitle => '写真(カメラロール)';
+
+  @override
+  String get settingsPagesMediaSaveDestinationPhotosSubtitle =>
+      'アルバム「RASQ」に入ります';
+
+  @override
+  String get settingsPagesMediaSaveDestinationPhotosDetail =>
+      'iPhone / iPad / Mac の「写真」、Android のギャラリーの、アルバム「RASQ」に入ります';
+
+  @override
+  String get settingsPagesMediaSaveDestinationFilesTitle => 'ファイル';
+
+  @override
+  String get settingsPagesMediaSaveDestinationFilesSubtitle =>
+      '「ファイル」App や、選んだ場所に保存します';
+
+  @override
+  String get settingsPagesMediaSaveDestinationFilesDetail =>
+      'iPhone / iPad は「ファイル」App の このiPad(このiPhone)› RASQ › 保存。パソコンは保存する場所を選びます。Android はギャラリーに入ります';
+
+  @override
+  String get settingsPagesPluginsAccountPickTitle => '共有 / リノートに使うアカウント';
+
+  @override
+  String get settingsPagesPluginsAccountPickSection1Title =>
+      '同じ投稿が、複数のアカウントに見えているとき';
+
+  @override
+  String get settingsPagesPluginsAccountPickPreferCurrentTitle =>
+      '指定しているアカウントを優先';
+
+  @override
+  String get settingsPagesPluginsAccountPickPreferCurrentSubtitle =>
+      'オフにすると、相手とよく話しているアカウントを選びます';
+
+  @override
+  String get settingsPagesPluginsAccountPickPreferCurrentDetail =>
+      'SNS アカウントを選んで見ているときは、そのアカウントで共有 / リノートします。切ると、直近のやりとり(リアクション / リノート / 返信)から、その相手とよく話しているアカウントを予測して選びます。RASQ アカウントでまとめて見ているときは、いつも予測で選びます';
+
+  @override
+  String get settingsPagesPluginsComposerTitle => '投稿プラグイン';
+
+  @override
+  String get settingsPagesPluginsComposerSection1Title => 'コンポーザー';
+
+  @override
+  String get settingsPagesPluginsComposerEnabledTitle => '投稿プラグインを使う';
+
+  @override
+  String get settingsPagesPluginsComposerEnabledSubtitle =>
+      '投稿の文字や画像を加工するプラグインを使います';
+
+  @override
+  String get settingsPagesPluginsComposerEnabledDetail =>
+      'コンポーザーのテキスト変換(composer.text)とメディア編集(composer.media)のプラグインを有効にします';
+
+  @override
+  String get settingsPagesPluginsComposerText1 =>
+      'オフにすると、コンポーザーとメディアエディターのプラグイン欄が空になります。';
+
+  @override
+  String get settingsPagesPluginsComposerSettingsComposerTitle => '投稿コンポーザーの設定';
+
+  @override
+  String get settingsPagesPluginsComposerStoreTitle => 'プラグインストア';
+
+  @override
+  String get settingsPagesPluginsEmojiTitle => '絵文字の検索';
+
+  @override
+  String get settingsPagesPluginsEmojiSection1Title => '絵文字ピッカーの検索';
+
+  @override
+  String get settingsPagesPluginsEmojiSemanticTitle => '意味の近い絵文字も探す';
+
+  @override
+  String get settingsPagesPluginsEmojiSemanticSubtitle =>
+      '名前が合わなくても、意味の近い絵文字を出します。打った文字は外へ送りません';
+
+  @override
+  String get settingsPagesPluginsEmojiSemanticDetail =>
+      '名前や別名に打った文字が入っていなくても、意味の近い絵文字を後ろに並べます。端末内の検索用モデル(RAi →「モデル」→ 検索)を入れてあるときだけ効きます。計算は端末の中だけで行い、打った文字は外へ送りません。初めて開いたサーバーでは、裏で索引を作るあいだ「準備中」と出ます';
+
+  @override
+  String get settingsPagesPluginsProxyTitle => 'RASQプラグインプロキシの購読';
+
+  @override
+  String get settingsPagesPluginsProxySection1Title => '状態';
+
+  @override
+  String get settingsPagesPluginsProxyValueRow1Title => '購読';
+
+  @override
+  String get settingsPagesPluginsProxyValueRow1Value => '未購読';
+
+  @override
+  String get settingsPagesPluginsProxyValueRow2Title => '提供';
+
+  @override
+  String get settingsPagesPluginsProxyValueRow2Value => '準備中';
+
+  @override
+  String get settingsPagesPluginsProxyText1 =>
+      'プラグインプロキシは準備中です。いまはプラグインが端末から直接通信します。';
+
+  @override
+  String get settingsPagesPluginsProxyText1Detail =>
+      'プラグインプロキシは、wasm プラグインの外部通信を RASQ サーバー経由に束ねる有料サービスです。まだ提供していないため、プラグインは端末から直接 SNS / 自前サーバーへ通信します。 提供: RASQ サーバーの課金基盤と同時。';
+
+  @override
+  String get settingsPagesPluginsProxySettingsServerTitle => 'RASQ サーバーの接続先';
+
+  @override
+  String get settingsPagesPluginsProxySettingsServerSubtitle =>
+      '提供が始まったら、ここで選んだサーバーを使います';
+
+  @override
+  String get settingsPagesPluginsReactionTitle => 'リアクションの予測';
+
+  @override
+  String get settingsPagesPluginsReactionSection1Title => 'リアクションのボタンの短押し';
+
+  @override
+  String get settingsPagesPluginsReactionPredictWhenEmptyTitle =>
+      'だれも付けていない投稿でも予測する';
+
+  @override
+  String get settingsPagesPluginsReactionPredictWhenEmptySubtitle =>
+      'よく使う絵文字を予測して、短押しで付けます';
+
+  @override
+  String get settingsPagesPluginsReactionPredictWhenEmptyDetail =>
+      '切ってあると、まだリアクションが付いていない投稿では予測せず、押すと絵文字ピッカーが開きます。入れると、自分がよく使う絵文字を予測として出し、短押しでそれを付けます';
+
+  @override
+  String get settingsPagesPluginsTelemetryTitle => '怪しい通信の通報';
+
+  @override
+  String get settingsPagesPluginsTelemetrySection1Title => 'プラグインの怪しい通信をストアへ通報';
+
+  @override
+  String get settingsPagesPluginsTelemetryFetchShapesTitle => '怪しい通信を通報する';
+
+  @override
+  String get settingsPagesPluginsTelemetryFetchShapesSubtitle =>
+      '通信の形だけを審査に送ります。本文やトークンなどの中身は送りません。既定はオフ';
+
+  @override
+  String get settingsPagesPluginsTelemetryFetchShapesDetail =>
+      'プラグインが行う通信の「形」(接続先のホスト、メソッド、パスの型、ヘッダの名前、送る JSON のキーの構造)だけを、この端末で初めて見たときに 1 度だけ RASQ のストアへ送ります。トークン、本文、ユーザー名、URL の中の ID などの値は送りません。審査は、承認したあとで通信の形が変わったプラグインを読み直すためにこれを使います。既定はオフです。';
+
+  @override
+  String get settingsPagesPluginsTelemetryText1 =>
+      '同じ形は 2 度と送りません。オフにすると、同意の取り消しとして記録されます。';
+
+  @override
+  String settingsPagesPluginsTelemetryText1Detail(String example) {
+    return '送るもの: 例 $example。送らないもの: 値そのもの。同じ形は 2 度と送りません。同意はストアの同意記録にも残り、切ると撤回として記録されます。';
+  }
+
+  @override
+  String get settingsPagesPluginsTimelineTitle => 'カスタムタイムラインを配置';
+
+  @override
+  String get settingsPagesPluginsTimelineSection1Title => 'タイムラインのプラグイン';
+
+  @override
+  String get settingsPagesPluginsTimelineEnabledTitle => 'カスタムタイムラインを使う';
+
+  @override
+  String get settingsPagesPluginsTimelineEnabledSubtitle =>
+      'プラグインのタイムラインを、ホームのタブに出します';
+
+  @override
+  String get settingsPagesPluginsTimelineEnabledDetail =>
+      'TL プラグイン(tl)が宣言したタイムラインをホームのタブと「タイムラインをカスタマイズ」のアルゴリズムに出します';
+
+  @override
+  String get settingsPagesPluginsTimelineText1 =>
+      '並びや取り込みは、ホームのタブ行の歯車(タイムラインをカスタマイズ)から組みます。';
+
+  @override
+  String get settingsPagesPluginsTimelineStoreTitle => 'プラグインストア';
+
+  @override
+  String get settingsPagesPluginsTrendTitle => 'カスタムトレンドの配信';
+
+  @override
+  String get settingsPagesPluginsTrendSection1Title => 'トレンドプラグイン';
+
+  @override
+  String get settingsPagesPluginsTrendEnabledTitle => 'トレンドプラグインの候補を表示';
+
+  @override
+  String get settingsPagesPluginsTrendEnabledSubtitle =>
+      '検索ホームのトレンド欄に、プラグインの候補を出します';
+
+  @override
+  String get settingsPagesPluginsTrendEnabledDetail =>
+      '検索ホームのトレンド欄に、入れているトレンドプラグイン(trend.suggest)の候補チップを出します';
+
+  @override
+  String get settingsPagesPluginsTrendText1 =>
+      'オフにすると、プラグインは呼び出されません(入れたままでも通信しません)。';
+
+  @override
+  String get settingsPagesPluginsTrendStoreTitle => 'プラグインストア';
+
+  @override
+  String get settingsPagesPluginsTrendStoreSubtitle => 'トレンドプラグインを探す / 管理する';
+
+  @override
+  String get settingsPagesRaiTitle => 'RAi(アシスタント)';
+
+  @override
+  String get settingsPagesRaiSection1Title => '自動化';
+
+  @override
+  String get settingsPagesRaiTraceGraphAutoTitle => '工程グラフを自動で表示';
+
+  @override
+  String get settingsPagesRaiTraceGraphAutoSubtitle => '3 手順以上の自動化を、グラフで表示します';
+
+  @override
+  String get settingsPagesRaiTraceGraphAutoDetail =>
+      'RAi に任せた自動化が 3 手順以上のとき、工程をノードのグラフで自動表示します。オフなら「グラフビューで表示」ボタンになります';
+
+  @override
+  String get settingsPagesRaiText1 => 'AI のモデルや web 検索は、RAi バーのモデルのボタンから設定します。';
+
+  @override
+  String get settingsPagesRaiText1Detail =>
+      '推論サーバーや web 検索の鍵は RAi バーのモデルチップから設定します。';
+
+  @override
+  String get settingsPagesRelationalPluginsTitle => 'プラグインの詳細設定';
+
+  @override
+  String get settingsPagesRelationalPluginsSection1Title => '状態';
+
+  @override
+  String get settingsPagesRelationalPluginsValueRow1Title => 'プラグイン枠';
+
+  @override
+  String get settingsPagesRelationalPluginsValueRow1Value => '準備中';
+
+  @override
+  String get settingsPagesRelationalPluginsText1 => 'この画面のプラグインは準備中です。';
+
+  @override
+  String get settingsPagesRelationalPluginsText1Detail =>
+      'リレーショナルタイムライン用のプラグイン枠(束ね方の差し替え)は契約 v0.7 にはまだありません。ML の類似度は RASQ サーバーの ML ゲートウェイを使います。 プラグイン枠: 未定義。';
+
+  @override
+  String get settingsPagesRelationalPluginsSettingsServerTitle =>
+      'RASQ サーバーの接続先';
+
+  @override
+  String get settingsPagesRelationalRelayTitle => 'Relayタイル';
+
+  @override
+  String get settingsPagesRelationalRelaySection1Title => '状態';
+
+  @override
+  String get settingsPagesRelationalRelayValueRow1Title => '提供';
+
+  @override
+  String get settingsPagesRelationalRelayValueRow1Value => '準備中';
+
+  @override
+  String get settingsPagesRelationalRelayText1 =>
+      'Relay タイルは準備中です。いまは「投稿クラスター」で会話のまとめ方を変えられます。';
+
+  @override
+  String get settingsPagesRelationalRelayText1Detail =>
+      'Relay タイルは、会話イベントをまたいで話題が受け渡された流れ(リレー)を 1 枚のタイルにまとめる表示です。束ね方が固まってから足します。いまは「投稿クラスター」の調整で会話イベントの束ね方を変えられます。 提供: アルゴリズム確定後。';
+
+  @override
+  String get settingsPagesRelationalTrendTitle => 'トレンドタイムラインへの配信';
+
+  @override
+  String get settingsPagesRelationalTrendSection1Title => '状態';
+
+  @override
+  String get settingsPagesRelationalTrendValueRow1Title => '提供';
+
+  @override
+  String get settingsPagesRelationalTrendValueRow1Value => '準備中';
+
+  @override
+  String get settingsPagesRelationalTrendText1 =>
+      '「トレンドをカスタマイズ」で、関連タイムラインをトレンドに流せます。';
+
+  @override
+  String get settingsPagesRelationalTrendText1Detail =>
+      '関連タブの会話イベントをトレンドのタイムラインへ流す配信は、トレンド側のノード(アルゴリズム)に「関連タイムライン」ノードを置く形で組めます。 提供: アルゴリズム確定後。';
+
+  @override
+  String get settingsPagesRelationalTrendTlconfigTrendTitle => 'トレンドをカスタマイズ';
+
+  @override
+  String get settingsPagesResourcesTitle => 'リソースと広告';
+
+  @override
+  String get settingsPagesResourcesSection1Title => '広告';
+
+  @override
+  String get settingsPagesResourcesShowAdsTitle => '広告を表示';
+
+  @override
+  String get settingsPagesResourcesShowAdsSubtitle => 'タイムラインの投稿の間と、検索ホームの広告です';
+
+  @override
+  String get settingsPagesResourcesShowAdsDetail =>
+      'タイムラインの投稿の間(10 件ごと、注釈やセンシティブな投稿の隣には置きません)と検索ホームの広告枠(AdMob、いまはテスト用の広告)。個人に合わせた広告は出しません';
+
+  @override
+  String get settingsPagesResourcesSection2Title => 'リソース';
+
+  @override
+  String get settingsPagesResourcesValueRow1Title => 'プラグインの通信';
+
+  @override
+  String get settingsPagesResourcesValueRow1Value => '端末から直接';
+
+  @override
+  String get settingsPagesResourcesValueRow2Title => '推論';
+
+  @override
+  String get settingsPagesResourcesValueRow2Value => '端末の中 + 選んだサーバー';
+
+  @override
+  String get settingsPagesResourcesText1 =>
+      'プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。';
+
+  @override
+  String get settingsPagesResourcesText1Detail =>
+      'プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。 プラグインの通信: 端末から直接(プロキシ無し)。推論: 端末内モデル(RAi)+ 任意の推論サーバー。';
+
+  @override
+  String get settingsPagesResourcesStoreTitle => 'プラグインストア';
+
+  @override
+  String get settingsPagesTrendCdnTitle => 'キャッシュネットワークの設定';
+
+  @override
+  String get settingsPagesTrendCdnSection1Title => '状態';
+
+  @override
+  String get settingsPagesTrendCdnValueRow1Title => 'キャッシュネットワーク';
+
+  @override
+  String get settingsPagesTrendCdnValueRow1Value => '準備中';
+
+  @override
+  String get settingsPagesTrendCdnText1 => '準備中です。いまは各 SNS から直接取得します。';
+
+  @override
+  String get settingsPagesTrendCdnText1Detail =>
+      'トレンドの取得結果を CDN(キャッシュネットワーク)から読む仕組みは、RASQ サーバーの配信基盤と同時に入ります。いまは各 SNS から直接取得します。 キャッシュネットワーク: 未提供。';
+
+  @override
   String get settingsSectionsPluginsTitle => 'プラグインの構成';
 
   @override

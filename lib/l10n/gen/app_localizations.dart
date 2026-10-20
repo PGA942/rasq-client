@@ -21694,6 +21694,1416 @@ abstract class AppLocalizations {
   /// **'生のトークンは発行時にだけ受け取り、端末内の安全な領域に保存します。サーバーに残るのはハッシュだけです。親のトークンを失効すると配下のトークンも失効します。'**
   String get settingsNotifyTokenStorageCaptionDetail;
 
+  /// 設定のページ「クッキーについて」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'クッキーについて'**
+  String get settingsPagesAboutCookiesTitle;
+
+  /// 設定のページ「クッキーについて」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'クッキー'**
+  String get settingsPagesAboutCookiesSection1Title;
+
+  /// 設定のページ「クッキーについて」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'iOS・Android・デスクトップのアプリは、RASQ サーバーとの通信にクッキーを使いません。RASQ サーバーとの通信は端末トークン(Authorization ヘッダー)で行い、各 SNS のアクセストークンは端末内の安全な領域に保存します。'**
+  String get settingsPagesAboutCookiesText1;
+
+  /// 設定のページ「クッキーについて」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'iOS・Android のアプリの広告(Google AdMob)は、クッキーの代わりに端末の広告 ID を使います。初回に表示する Google の同意画面で、パーソナライズ広告を使うかを選べます。'**
+  String get settingsPagesAboutCookiesText2;
+
+  /// 設定のページ「クッキーについて」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'Web 版と、RASQ のプロフィール・投稿の公開の Web ページでは、広告(Google AdSense)のために Google がクッキーを使います。広告のクッキーの扱いは Google のポリシーに従います。'**
+  String get settingsPagesAboutCookiesText3;
+
+  /// 設定のページ「クッキーについて」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS の web 版や登録ページをアプリ内のブラウザで開いたときは、その SNS のクッキーの扱いに従います。'**
+  String get settingsPagesAboutCookiesText4;
+
+  /// 設定のページ「開発者モード」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'開発者モード'**
+  String get settingsPagesAboutDeveloperTitle;
+
+  /// 設定のページ「開発者モード」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'画面の説明を、仕組みや送るデータの形まで詳しく表示します'**
+  String get settingsPagesAboutDeveloperEnabledSubtitle;
+
+  /// 設定のページ「開発者モード」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'オンのあいだ、設定や同意の画面で短くしている説明の代わりに、元の詳しい説明(保存先の KV、送る JSON の形など)を出します。表示が変わるだけで、動作は変わりません。'**
+  String get settingsPagesAboutDeveloperEnabledDetail;
+
+  /// 設定のページ「開発者モード」のお知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'表示だけが変わります。設定や送るデータは変わりません。'**
+  String get settingsPagesAboutDeveloperNotice1;
+
+  /// 設定のページ「開発者モード」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'画面の読み取りを試す(iOS)'**
+  String get settingsPagesAboutDeveloperIosScreenGlimpseTitle;
+
+  /// 設定のページ「開発者モード」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'iPhone / iPad の「SNS サービスを探す」に「いつものブラウザで見て探す」を出します'**
+  String get settingsPagesAboutDeveloperIosScreenGlimpseSubtitle;
+
+  /// 設定のページ「開発者モード」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'画面の読み取りの Broadcast Upload Extension(ScreenGlimpseBroadcast)が画面収録の選択に出ない端末があるため(未解決)、iOS では既定で隠しています。オンにすると入口を出します。Android は常に出します。'**
+  String get settingsPagesAboutDeveloperIosScreenGlimpseDetail;
+
+  /// 設定のページ「開発者モード」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'3D の RAi を試す(Android)'**
+  String get settingsPagesAboutDeveloperRaiAndroid3dTitle;
+
+  /// 設定のページ「開発者モード」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'Android でも RAi のマスコットを 3D で表示します'**
+  String get settingsPagesAboutDeveloperRaiAndroid3dSubtitle;
+
+  /// 設定のページ「開発者モード」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'Android で RAi が開かない報告があり、3D の土台(flutter_angle)の初期化が疑わしいため、既定は 2D です。オンにすると 3D を試します。20 秒たっても出ない / 失敗したときは自動で 2D に戻し、RAi のサイドバーの「診断」に理由を残します。iPhone / iPad / Mac は常に 3D です。'**
+  String get settingsPagesAboutDeveloperRaiAndroid3dDetail;
+
+  /// 設定のページ「ヘルプ」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'ヘルプ'**
+  String get settingsPagesAboutHelpTitle;
+
+  /// 設定のページ「ヘルプ」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'使い方'**
+  String get settingsPagesAboutHelpSection1Title;
+
+  /// 設定のページ「ヘルプ」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'操作に迷ったら、サイドメニューの RAi に聞いてください。'**
+  String get settingsPagesAboutHelpText1;
+
+  /// 設定のページ「ヘルプ」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'操作に迷ったら RAi に聞いてください。サイドメニューの RAi から、インストラクション(ボタンまで案内)とアシスタント(端末内モデルで回答、関数で代行)が使えます。'**
+  String get settingsPagesAboutHelpText1Detail;
+
+  /// 設定のページ「ヘルプ」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi を開く'**
+  String get settingsPagesAboutHelpRaiTitle;
+
+  /// 設定のページ「ヘルプ」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の使い方をもう一度見る'**
+  String get settingsPagesAboutHelpTourAgain1Title;
+
+  /// 設定のページ「ヘルプ」の行の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'機能の紹介(TL・トレンド・ASTell・RAi など)'**
+  String get settingsPagesAboutHelpTourAgain1Subtitle;
+
+  /// 設定のページ「ヘルプ」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'困ったとき'**
+  String get settingsPagesAboutHelpSection2Title;
+
+  /// 設定のページ「ヘルプ」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインや投稿がうまくいかないときは、権限を確かめて、入り直してください。'**
+  String get settingsPagesAboutHelpText2;
+
+  /// 設定のページ「ヘルプ」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインできない / 投稿が届かないときは、まず「SNSプラグイン → セキュリティ」で権限を確認し、一度ログアウトして入り直してください。'**
+  String get settingsPagesAboutHelpText2Detail;
+
+  /// 設定のページ「ヘルプ」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'セキュリティ(権限とトークン)'**
+  String get settingsPagesAboutHelpSettingsDslSnsSecurityTitle;
+
+  /// 設定のページ「ヘルプ」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ サーバーの接続先'**
+  String get settingsPagesAboutHelpSettingsServerTitle;
+
+  /// 設定のページ「購読状況」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'購読状況'**
+  String get settingsPagesAboutSubscriptionTitle;
+
+  /// 設定のページ「購読状況」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の購読'**
+  String get settingsPagesAboutSubscriptionSection1Title;
+
+  /// 設定のページ「購読状況」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'プラン'**
+  String get settingsPagesAboutSubscriptionValueRow1Title;
+
+  /// 設定のページ「購読状況」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'無料'**
+  String get settingsPagesAboutSubscriptionValueRow1Value;
+
+  /// 設定のページ「購読状況」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインプロキシ'**
+  String get settingsPagesAboutSubscriptionValueRow2Title;
+
+  /// 設定のページ「購読状況」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'未購読'**
+  String get settingsPagesAboutSubscriptionValueRow2Value;
+
+  /// 設定のページ「購読状況」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'有料プランは準備中です。'**
+  String get settingsPagesAboutSubscriptionText1;
+
+  /// 設定のページ「購読状況」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'プラン: 無料(いまは購読プラン無し)。有料プランは今後、RASQ アカウントに紐づけて提供します。'**
+  String get settingsPagesAboutSubscriptionText1Detail;
+
+  /// 設定のページ「インターフェースの表示サイズ」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'インターフェースの表示サイズ'**
+  String get settingsPagesAppearanceDisplayTitle;
+
+  /// 設定のページ「インターフェースの表示サイズ」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'表示サイズ'**
+  String get settingsPagesAppearanceDisplaySection1Title;
+
+  /// 設定のページ「インターフェースの表示サイズ」のスライダーの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'文字とUIの大きさ'**
+  String get settingsPagesAppearanceDisplayTextScaleTitle;
+
+  /// 設定のページ「インターフェースの表示サイズ」のスライダーの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリ全体の文字サイズを変えます(即時反映)'**
+  String get settingsPagesAppearanceDisplayTextScaleSubtitle;
+
+  /// 設定のページ「＋ ボタンの割り当て」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'＋ ボタンの割り当て'**
+  String get settingsPagesAppearanceFabTitle;
+
+  /// 設定のページ「＋ ボタンの割り当て」のお知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'＋ を押したときに始めるものを選べます。まわりのボタン(内側に 3 つ、外側に 4 つまで)は、＋ を長押し(マウスは乗せる)して歯車から並べ替えます。'**
+  String get settingsPagesAppearanceFabNotice1;
+
+  /// 設定のページ「＋ ボタンの割り当て」のお知らせの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'領域 appearance.fab(<scope>Tap / <scope>Slots = 置いた順、最大 7)。'**
+  String get settingsPagesAppearanceFabNotice1Detail;
+
+  /// 設定のページ「＋ ボタンの割り当て」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ホームの ＋ を押したとき'**
+  String get settingsPagesAppearanceFabSection1Title;
+
+  /// 設定のページ「＋ ボタンの割り当て」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get settingsPagesAppearanceFabHomeTapPostTitle;
+
+  /// 設定のページ「＋ ボタンの割り当て」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ に投稿'**
+  String get settingsPagesAppearanceFabHomeTapRasqTitle;
+
+  /// 設定のページ「＋ ボタンの割り当て」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'Swing を作る'**
+  String get settingsPagesAppearanceFabHomeTapSwingTitle;
+
+  /// 設定のページ「＋ ボタンの割り当て」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell を作る'**
+  String get settingsPagesAppearanceFabHomeTapAstellTitle;
+
+  /// 設定のページ「＋ ボタンの割り当て」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの ＋ を押したとき'**
+  String get settingsPagesAppearanceFabSection2Title;
+
+  /// 設定のページ「＋ ボタンの割り当て」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell の ＋ を押したとき'**
+  String get settingsPagesAppearanceFabSection3Title;
+
+  /// 設定のページ「カスタムモーションとアニメーション」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムモーションとアニメーション'**
+  String get settingsPagesAppearanceMfmTitle;
+
+  /// 設定のページ「カスタムモーションとアニメーション」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'MFM のアニメーション'**
+  String get settingsPagesAppearanceMfmSection1Title;
+
+  /// 設定のページ「カスタムモーションとアニメーション」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'動く装飾を再生する'**
+  String get settingsPagesAppearanceMfmAnimationsTitle;
+
+  /// 設定のページ「カスタムモーションとアニメーション」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'回転や虹色などの動く装飾を再生します'**
+  String get settingsPagesAppearanceMfmAnimationsSubtitle;
+
+  /// 設定のページ「カスタムモーションとアニメーション」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'spin / jump / rainbow などの MFM を動かします。オフにすると静止画になります(「モーションの抑制」がオンのときは常に静止)'**
+  String get settingsPagesAppearanceMfmAnimationsDetail;
+
+  /// 設定のページ「カスタムモーションとアニメーション」のスライダーの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'アニメーションの速さ'**
+  String get settingsPagesAppearanceMfmSpeedTitle;
+
+  /// 設定のページ「カスタムモーションとアニメーション」のスライダーの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'100% が標準。大きいほど速く動きます'**
+  String get settingsPagesAppearanceMfmSpeedSubtitle;
+
+  /// 設定のページ「カスタムモーションとアニメーション」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'モーションの抑制'**
+  String get settingsPagesAppearanceMfmSettingsDslAppearanceMotionTitle;
+
+  /// 設定のページ「カスタムモーションとアニメーション」の行の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'画面遷移なども含めてまとめて減らす'**
+  String get settingsPagesAppearanceMfmSettingsDslAppearanceMotionSubtitle;
+
+  /// 設定のページ「モーションの抑制」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'モーションの抑制'**
+  String get settingsPagesAppearanceMotionTitle;
+
+  /// 設定のページ「モーションの抑制」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'アニメーション'**
+  String get settingsPagesAppearanceMotionSection1Title;
+
+  /// 設定のページ「モーションの抑制」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'モーションを抑制する'**
+  String get settingsPagesAppearanceMotionReduceMotionTitle;
+
+  /// 設定のページ「モーションの抑制」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'動く装飾を止め、画面の動きを減らします'**
+  String get settingsPagesAppearanceMotionReduceMotionSubtitle;
+
+  /// 設定のページ「モーションの抑制」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'MFM の spin / rainbow などのアニメーションを静止画にし、画面遷移の動きを減らします'**
+  String get settingsPagesAppearanceMotionReduceMotionDetail;
+
+  /// 設定のページ「通知の表示形式」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'通知の表示形式'**
+  String get settingsPagesAppearanceNotificationsTitle;
+
+  /// 設定のページ「通知の表示形式」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'通知ページ'**
+  String get settingsPagesAppearanceNotificationsSection1Title;
+
+  /// 設定のページ「通知の表示形式」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「すべて」から開く'**
+  String get settingsPagesAppearanceNotificationsDefaultTabAllTitle;
+
+  /// 設定のページ「通知の表示形式」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「フォロー中」から開く'**
+  String get settingsPagesAppearanceNotificationsDefaultTabFollowingTitle;
+
+  /// 設定のページ「通知の表示形式」の選択肢の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'フォローしている人からの通知だけを先に見ます'**
+  String get settingsPagesAppearanceNotificationsDefaultTabFollowingSubtitle;
+
+  /// 設定のページ「通知の表示形式」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell の開始通知の予定を上に出す'**
+  String get settingsPagesAppearanceNotificationsShowRemindersTitle;
+
+  /// 設定のページ「通知の表示形式」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'登録した開始通知を、通知ページの上に出します'**
+  String get settingsPagesAppearanceNotificationsShowRemindersSubtitle;
+
+  /// 設定のページ「通知の表示形式」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'登録した開始通知(端末のローカル通知)の一覧を通知ページの上に表示します'**
+  String get settingsPagesAppearanceNotificationsShowRemindersDetail;
+
+  /// 設定のページ「通知の表示形式」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'通知する種別は「通知 → プロファイル」で選びます(端末に保存されます)。'**
+  String get settingsPagesAppearanceNotificationsText1;
+
+  /// 設定のページ「タイムラインの表示」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインの表示'**
+  String get settingsPagesAppearanceTimelineTitle;
+
+  /// 設定のページ「タイムラインの表示」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'更新'**
+  String get settingsPagesAppearanceTimelineSection1Title;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'TL の上下に「投稿を読み込む」を出す'**
+  String get settingsPagesAppearanceTimelineEdgeTilesTitle;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'スマホでは既定で出しません(引っ張って更新)'**
+  String get settingsPagesAppearanceTimelineEdgeTilesSubtitle;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'見えると、新しい投稿 / 続きを読み込みます。既定は、電話のアプリでは出さず(下に引っ張って更新)、Web 版とパソコンでは出します'**
+  String get settingsPagesAppearanceTimelineEdgeTilesDetail;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい投稿のお知らせを出す'**
+  String get settingsPagesAppearanceTimelineNewPostsPillTitle;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'更新して新しい投稿が届いたら、ヘッダーのすぐ下に「新しい投稿」'**
+  String get settingsPagesAppearanceTimelineNewPostsPillSubtitle;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿した人の顔(3 人まで)と「新しい投稿」を出します。押すといちばん上へ。しばらくたつか、いちばん上まで送ると消えます。ヘッダーをしまっている間は出しません'**
+  String get settingsPagesAppearanceTimelineNewPostsPillDetail;
+
+  /// 設定のページ「ピクチャインピクチャ」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'ピクチャインピクチャ'**
+  String get settingsPagesAppearanceVideoTitle;
+
+  /// 設定のページ「ピクチャインピクチャ」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'動画'**
+  String get settingsPagesAppearanceVideoSection1Title;
+
+  /// 設定のページ「ピクチャインピクチャ」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'開いたら自動で再生'**
+  String get settingsPagesAppearanceVideoAutoplayTitle;
+
+  /// 設定のページ「ピクチャインピクチャ」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面と小窓で、すぐに再生します'**
+  String get settingsPagesAppearanceVideoAutoplaySubtitle;
+
+  /// 設定のページ「ピクチャインピクチャ」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面ビューワーと小窓(PiP)で、準備ができ次第再生します'**
+  String get settingsPagesAppearanceVideoAutoplayDetail;
+
+  /// 設定のページ「ピクチャインピクチャ」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'小窓へ移るとき再生位置を引き継ぐ'**
+  String get settingsPagesAppearanceVideoPipKeepPositionTitle;
+
+  /// 設定のページ「ピクチャインピクチャ」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'全画面の「小窓で再生」を押したときの続きから再生します'**
+  String get settingsPagesAppearanceVideoPipKeepPositionSubtitle;
+
+  /// 設定のページ「ピクチャインピクチャ」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'既定の再生速度'**
+  String get settingsPagesAppearanceVideoSection2Title;
+
+  /// 設定のページ「ピクチャインピクチャ」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'1.0×(標準)'**
+  String get settingsPagesAppearanceVideoDefaultSpeed10Title;
+
+  /// 設定のページ「ピクチャインピクチャ」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'小窓は、掴んで好きな場所へ動かせます。'**
+  String get settingsPagesAppearanceVideoText1;
+
+  /// 設定のページ「ピクチャインピクチャ」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'小窓は FOW なので、掴んでカラムや上下へ動かせます。'**
+  String get settingsPagesAppearanceVideoText1Detail;
+
+  /// 設定のページ「画面オフ時の動作」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'画面オフ時の動作'**
+  String get settingsPagesAstellBackgroundTitle;
+
+  /// 設定のページ「画面オフ時の動作」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'通話中に画面を消したとき'**
+  String get settingsPagesAstellBackgroundSection1Title;
+
+  /// 設定のページ「画面オフ時の動作」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'通話を続ける'**
+  String get settingsPagesAstellBackgroundOnScreenOffKeepTitle;
+
+  /// 設定のページ「画面オフ時の動作」の選択肢の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'音声はそのまま、画面共有の受信だけ止めます'**
+  String get settingsPagesAstellBackgroundOnScreenOffKeepSubtitle;
+
+  /// 設定のページ「画面オフ時の動作」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'マイクをミュートして続ける'**
+  String get settingsPagesAstellBackgroundOnScreenOffMuteTitle;
+
+  /// 設定のページ「画面オフ時の動作」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームから出る'**
+  String get settingsPagesAstellBackgroundOnScreenOffLeaveTitle;
+
+  /// 設定のページ「画面オフ時の動作」のお知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'この設定は準備中です。いまの ASTell は、画面が点いている間だけ動きます。'**
+  String get settingsPagesAstellBackgroundNotice1;
+
+  /// 設定のページ「画面オフ時の動作」のお知らせの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'この設定は保存されますが、適用は通話の常駐化(バックグラウンド音声)の実装後です。いまの ASTell は画面が点いている間だけ動きます。'**
+  String get settingsPagesAstellBackgroundNotice1Detail;
+
+  /// 設定のページ「ASTell 4Uを購読」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell 4Uを購読'**
+  String get settingsPagesAstellSubscriptionTitle;
+
+  /// 設定のページ「ASTell 4Uを購読」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'状態'**
+  String get settingsPagesAstellSubscriptionSection1Title;
+
+  /// 設定のページ「ASTell 4Uを購読」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'購読'**
+  String get settingsPagesAstellSubscriptionValueRow1Title;
+
+  /// 設定のページ「ASTell 4Uを購読」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'未購読'**
+  String get settingsPagesAstellSubscriptionValueRow1Value;
+
+  /// 設定のページ「ASTell 4Uを購読」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'提供'**
+  String get settingsPagesAstellSubscriptionValueRow2Title;
+
+  /// 設定のページ「ASTell 4Uを購読」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中'**
+  String get settingsPagesAstellSubscriptionValueRow2Value;
+
+  /// 設定のページ「ASTell 4Uを購読」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell 4U は準備中の有料プランです。おすすめ欄は無料で使えます。'**
+  String get settingsPagesAstellSubscriptionText1;
+
+  /// 設定のページ「ASTell 4Uを購読」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell 4U は、ASTell のおすすめ(For You)配信とサーバー側の文字起こし / 要約の有料プランです。まだ提供していません。おすすめ欄は RASQ サーバーの無料の推薦で動きます。'**
+  String get settingsPagesAstellSubscriptionText1Detail;
+
+  /// 設定のページ「Tellタイル」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'Tellタイル'**
+  String get settingsPagesAstellTilesTitle;
+
+  /// 設定のページ「Tellタイル」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ホームのヘッダー'**
+  String get settingsPagesAstellTilesSection1Title;
+
+  /// 設定のページ「Tellタイル」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中のホストの ASTell をヘッダーに出す'**
+  String get settingsPagesAstellTilesHeaderStripTitle;
+
+  /// 設定のページ「Tellタイル」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'開催中のルームを、ホームの上に並べます'**
+  String get settingsPagesAstellTilesHeaderStripSubtitle;
+
+  /// 設定のページ「Tellタイル」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'開催中のルームを、ホームのヘッダーの角丸の枠に並べます'**
+  String get settingsPagesAstellTilesHeaderStripDetail;
+
+  /// 設定のページ「Tellタイル」のスライダーの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'並べる数'**
+  String get settingsPagesAstellTilesHeaderMaxTitle;
+
+  /// 設定のページ「Tellタイル」のスライダーの値の単位
+  ///
+  /// In ja, this message translates to:
+  /// **'件'**
+  String get settingsPagesAstellTilesHeaderMaxUnit;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドタイムラインへの配信'**
+  String get settingsPagesAstellTrendTitle;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell ホームの欄'**
+  String get settingsPagesAstellTrendSection1Title;
+
+  /// 設定のページ「トレンドタイムラインへの配信」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「おすすめ」を表示'**
+  String get settingsPagesAstellTrendShowRecommendedTitle;
+
+  /// 設定のページ「トレンドタイムラインへの配信」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「トレンド」を表示'**
+  String get settingsPagesAstellTrendShowTrendingTitle;
+
+  /// 設定のページ「トレンドタイムラインへの配信」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドのルームを ASTell ホームに並べます'**
+  String get settingsPagesAstellTrendShowTrendingSubtitle;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ホームのトレンドにルームを出すには、「トレンドをカスタマイズ」で組みます。'**
+  String get settingsPagesAstellTrendText1;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドのタイムライン(検索ホーム)へのルームの差し込みは、トレンドのノード(アルゴリズム)側で組みます。'**
+  String get settingsPagesAstellTrendText1Detail;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドをカスタマイズ'**
+  String get settingsPagesAstellTrendTlconfigTrendTitle;
+
+  /// 設定のページ「画像・動画の保存先」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'画像・動画の保存先'**
+  String get settingsPagesMediaSaveTitle;
+
+  /// 設定のページ「画像・動画の保存先」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「画像を保存」「動画を保存」の保存先'**
+  String get settingsPagesMediaSaveSection1Title;
+
+  /// 設定のページ「画像・動画の保存先」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'保存するたびに選ぶ'**
+  String get settingsPagesMediaSaveDestinationAskTitle;
+
+  /// 設定のページ「画像・動画の保存先」の選択肢の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'写真とファイルのどちらにするか、毎回聞きます'**
+  String get settingsPagesMediaSaveDestinationAskSubtitle;
+
+  /// 設定のページ「画像・動画の保存先」の選択肢の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'写真とファイルのどちらに保存するかを、そのたびに聞きます(選べる先が 1 つしかない端末では聞きません)'**
+  String get settingsPagesMediaSaveDestinationAskDetail;
+
+  /// 設定のページ「画像・動画の保存先」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'写真(カメラロール)'**
+  String get settingsPagesMediaSaveDestinationPhotosTitle;
+
+  /// 設定のページ「画像・動画の保存先」の選択肢の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'アルバム「RASQ」に入ります'**
+  String get settingsPagesMediaSaveDestinationPhotosSubtitle;
+
+  /// 設定のページ「画像・動画の保存先」の選択肢の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'iPhone / iPad / Mac の「写真」、Android のギャラリーの、アルバム「RASQ」に入ります'**
+  String get settingsPagesMediaSaveDestinationPhotosDetail;
+
+  /// 設定のページ「画像・動画の保存先」の選択肢の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイル'**
+  String get settingsPagesMediaSaveDestinationFilesTitle;
+
+  /// 設定のページ「画像・動画の保存先」の選択肢の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'「ファイル」App や、選んだ場所に保存します'**
+  String get settingsPagesMediaSaveDestinationFilesSubtitle;
+
+  /// 設定のページ「画像・動画の保存先」の選択肢の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'iPhone / iPad は「ファイル」App の このiPad(このiPhone)› RASQ › 保存。パソコンは保存する場所を選びます。Android はギャラリーに入ります'**
+  String get settingsPagesMediaSaveDestinationFilesDetail;
+
+  /// 設定のページ「共有 / リノートに使うアカウント」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'共有 / リノートに使うアカウント'**
+  String get settingsPagesPluginsAccountPickTitle;
+
+  /// 設定のページ「共有 / リノートに使うアカウント」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'同じ投稿が、複数のアカウントに見えているとき'**
+  String get settingsPagesPluginsAccountPickSection1Title;
+
+  /// 設定のページ「共有 / リノートに使うアカウント」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'指定しているアカウントを優先'**
+  String get settingsPagesPluginsAccountPickPreferCurrentTitle;
+
+  /// 設定のページ「共有 / リノートに使うアカウント」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'オフにすると、相手とよく話しているアカウントを選びます'**
+  String get settingsPagesPluginsAccountPickPreferCurrentSubtitle;
+
+  /// 設定のページ「共有 / リノートに使うアカウント」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS アカウントを選んで見ているときは、そのアカウントで共有 / リノートします。切ると、直近のやりとり(リアクション / リノート / 返信)から、その相手とよく話しているアカウントを予測して選びます。RASQ アカウントでまとめて見ているときは、いつも予測で選びます'**
+  String get settingsPagesPluginsAccountPickPreferCurrentDetail;
+
+  /// 設定のページ「投稿プラグイン」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿プラグイン'**
+  String get settingsPagesPluginsComposerTitle;
+
+  /// 設定のページ「投稿プラグイン」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'コンポーザー'**
+  String get settingsPagesPluginsComposerSection1Title;
+
+  /// 設定のページ「投稿プラグイン」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿プラグインを使う'**
+  String get settingsPagesPluginsComposerEnabledTitle;
+
+  /// 設定のページ「投稿プラグイン」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿の文字や画像を加工するプラグインを使います'**
+  String get settingsPagesPluginsComposerEnabledSubtitle;
+
+  /// 設定のページ「投稿プラグイン」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'コンポーザーのテキスト変換(composer.text)とメディア編集(composer.media)のプラグインを有効にします'**
+  String get settingsPagesPluginsComposerEnabledDetail;
+
+  /// 設定のページ「投稿プラグイン」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'オフにすると、コンポーザーとメディアエディターのプラグイン欄が空になります。'**
+  String get settingsPagesPluginsComposerText1;
+
+  /// 設定のページ「投稿プラグイン」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿コンポーザーの設定'**
+  String get settingsPagesPluginsComposerSettingsComposerTitle;
+
+  /// 設定のページ「投稿プラグイン」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインストア'**
+  String get settingsPagesPluginsComposerStoreTitle;
+
+  /// 設定のページ「絵文字の検索」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字の検索'**
+  String get settingsPagesPluginsEmojiTitle;
+
+  /// 設定のページ「絵文字の検索」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字ピッカーの検索'**
+  String get settingsPagesPluginsEmojiSection1Title;
+
+  /// 設定のページ「絵文字の検索」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'意味の近い絵文字も探す'**
+  String get settingsPagesPluginsEmojiSemanticTitle;
+
+  /// 設定のページ「絵文字の検索」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'名前が合わなくても、意味の近い絵文字を出します。打った文字は外へ送りません'**
+  String get settingsPagesPluginsEmojiSemanticSubtitle;
+
+  /// 設定のページ「絵文字の検索」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'名前や別名に打った文字が入っていなくても、意味の近い絵文字を後ろに並べます。端末内の検索用モデル(RAi →「モデル」→ 検索)を入れてあるときだけ効きます。計算は端末の中だけで行い、打った文字は外へ送りません。初めて開いたサーバーでは、裏で索引を作るあいだ「準備中」と出ます'**
+  String get settingsPagesPluginsEmojiSemanticDetail;
+
+  /// 設定のページ「RASQプラグインプロキシの購読」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQプラグインプロキシの購読'**
+  String get settingsPagesPluginsProxyTitle;
+
+  /// 設定のページ「RASQプラグインプロキシの購読」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'状態'**
+  String get settingsPagesPluginsProxySection1Title;
+
+  /// 設定のページ「RASQプラグインプロキシの購読」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'購読'**
+  String get settingsPagesPluginsProxyValueRow1Title;
+
+  /// 設定のページ「RASQプラグインプロキシの購読」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'未購読'**
+  String get settingsPagesPluginsProxyValueRow1Value;
+
+  /// 設定のページ「RASQプラグインプロキシの購読」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'提供'**
+  String get settingsPagesPluginsProxyValueRow2Title;
+
+  /// 設定のページ「RASQプラグインプロキシの購読」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中'**
+  String get settingsPagesPluginsProxyValueRow2Value;
+
+  /// 設定のページ「RASQプラグインプロキシの購読」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインプロキシは準備中です。いまはプラグインが端末から直接通信します。'**
+  String get settingsPagesPluginsProxyText1;
+
+  /// 設定のページ「RASQプラグインプロキシの購読」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインプロキシは、wasm プラグインの外部通信を RASQ サーバー経由に束ねる有料サービスです。まだ提供していないため、プラグインは端末から直接 SNS / 自前サーバーへ通信します。 提供: RASQ サーバーの課金基盤と同時。'**
+  String get settingsPagesPluginsProxyText1Detail;
+
+  /// 設定のページ「RASQプラグインプロキシの購読」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ サーバーの接続先'**
+  String get settingsPagesPluginsProxySettingsServerTitle;
+
+  /// 設定のページ「RASQプラグインプロキシの購読」の行の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'提供が始まったら、ここで選んだサーバーを使います'**
+  String get settingsPagesPluginsProxySettingsServerSubtitle;
+
+  /// 設定のページ「リアクションの予測」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションの予測'**
+  String get settingsPagesPluginsReactionTitle;
+
+  /// 設定のページ「リアクションの予測」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションのボタンの短押し'**
+  String get settingsPagesPluginsReactionSection1Title;
+
+  /// 設定のページ「リアクションの予測」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'だれも付けていない投稿でも予測する'**
+  String get settingsPagesPluginsReactionPredictWhenEmptyTitle;
+
+  /// 設定のページ「リアクションの予測」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'よく使う絵文字を予測して、短押しで付けます'**
+  String get settingsPagesPluginsReactionPredictWhenEmptySubtitle;
+
+  /// 設定のページ「リアクションの予測」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'切ってあると、まだリアクションが付いていない投稿では予測せず、押すと絵文字ピッカーが開きます。入れると、自分がよく使う絵文字を予測として出し、短押しでそれを付けます'**
+  String get settingsPagesPluginsReactionPredictWhenEmptyDetail;
+
+  /// 設定のページ「怪しい通信の通報」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'怪しい通信の通報'**
+  String get settingsPagesPluginsTelemetryTitle;
+
+  /// 設定のページ「怪しい通信の通報」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの怪しい通信をストアへ通報'**
+  String get settingsPagesPluginsTelemetrySection1Title;
+
+  /// 設定のページ「怪しい通信の通報」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'怪しい通信を通報する'**
+  String get settingsPagesPluginsTelemetryFetchShapesTitle;
+
+  /// 設定のページ「怪しい通信の通報」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'通信の形だけを審査に送ります。本文やトークンなどの中身は送りません。既定はオフ'**
+  String get settingsPagesPluginsTelemetryFetchShapesSubtitle;
+
+  /// 設定のページ「怪しい通信の通報」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインが行う通信の「形」(接続先のホスト、メソッド、パスの型、ヘッダの名前、送る JSON のキーの構造)だけを、この端末で初めて見たときに 1 度だけ RASQ のストアへ送ります。トークン、本文、ユーザー名、URL の中の ID などの値は送りません。審査は、承認したあとで通信の形が変わったプラグインを読み直すためにこれを使います。既定はオフです。'**
+  String get settingsPagesPluginsTelemetryFetchShapesDetail;
+
+  /// 設定のページ「怪しい通信の通報」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'同じ形は 2 度と送りません。オフにすると、同意の取り消しとして記録されます。'**
+  String get settingsPagesPluginsTelemetryText1;
+
+  /// 設定のページ「怪しい通信の通報」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない。example は送る形の例(JSON に似た書き方で、訳さない)。アセットの側で渡す
+  ///
+  /// In ja, this message translates to:
+  /// **'送るもの: 例 {example}。送らないもの: 値そのもの。同じ形は 2 度と送りません。同意はストアの同意記録にも残り、切ると撤回として記録されます。'**
+  String settingsPagesPluginsTelemetryText1Detail(String example);
+
+  /// 設定のページ「カスタムタイムラインを配置」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムタイムラインを配置'**
+  String get settingsPagesPluginsTimelineTitle;
+
+  /// 設定のページ「カスタムタイムラインを配置」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインのプラグイン'**
+  String get settingsPagesPluginsTimelineSection1Title;
+
+  /// 設定のページ「カスタムタイムラインを配置」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムタイムラインを使う'**
+  String get settingsPagesPluginsTimelineEnabledTitle;
+
+  /// 設定のページ「カスタムタイムラインを配置」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインのタイムラインを、ホームのタブに出します'**
+  String get settingsPagesPluginsTimelineEnabledSubtitle;
+
+  /// 設定のページ「カスタムタイムラインを配置」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'TL プラグイン(tl)が宣言したタイムラインをホームのタブと「タイムラインをカスタマイズ」のアルゴリズムに出します'**
+  String get settingsPagesPluginsTimelineEnabledDetail;
+
+  /// 設定のページ「カスタムタイムラインを配置」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'並びや取り込みは、ホームのタブ行の歯車(タイムラインをカスタマイズ)から組みます。'**
+  String get settingsPagesPluginsTimelineText1;
+
+  /// 設定のページ「カスタムタイムラインを配置」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインストア'**
+  String get settingsPagesPluginsTimelineStoreTitle;
+
+  /// 設定のページ「カスタムトレンドの配信」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'カスタムトレンドの配信'**
+  String get settingsPagesPluginsTrendTitle;
+
+  /// 設定のページ「カスタムトレンドの配信」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプラグイン'**
+  String get settingsPagesPluginsTrendSection1Title;
+
+  /// 設定のページ「カスタムトレンドの配信」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプラグインの候補を表示'**
+  String get settingsPagesPluginsTrendEnabledTitle;
+
+  /// 設定のページ「カスタムトレンドの配信」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ホームのトレンド欄に、プラグインの候補を出します'**
+  String get settingsPagesPluginsTrendEnabledSubtitle;
+
+  /// 設定のページ「カスタムトレンドの配信」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'検索ホームのトレンド欄に、入れているトレンドプラグイン(trend.suggest)の候補チップを出します'**
+  String get settingsPagesPluginsTrendEnabledDetail;
+
+  /// 設定のページ「カスタムトレンドの配信」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'オフにすると、プラグインは呼び出されません(入れたままでも通信しません)。'**
+  String get settingsPagesPluginsTrendText1;
+
+  /// 設定のページ「カスタムトレンドの配信」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインストア'**
+  String get settingsPagesPluginsTrendStoreTitle;
+
+  /// 設定のページ「カスタムトレンドの配信」の行の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドプラグインを探す / 管理する'**
+  String get settingsPagesPluginsTrendStoreSubtitle;
+
+  /// 設定のページ「RAi(アシスタント)」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi(アシスタント)'**
+  String get settingsPagesRaiTitle;
+
+  /// 設定のページ「RAi(アシスタント)」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'自動化'**
+  String get settingsPagesRaiSection1Title;
+
+  /// 設定のページ「RAi(アシスタント)」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'工程グラフを自動で表示'**
+  String get settingsPagesRaiTraceGraphAutoTitle;
+
+  /// 設定のページ「RAi(アシスタント)」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'3 手順以上の自動化を、グラフで表示します'**
+  String get settingsPagesRaiTraceGraphAutoSubtitle;
+
+  /// 設定のページ「RAi(アシスタント)」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi に任せた自動化が 3 手順以上のとき、工程をノードのグラフで自動表示します。オフなら「グラフビューで表示」ボタンになります'**
+  String get settingsPagesRaiTraceGraphAutoDetail;
+
+  /// 設定のページ「RAi(アシスタント)」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'AI のモデルや web 検索は、RAi バーのモデルのボタンから設定します。'**
+  String get settingsPagesRaiText1;
+
+  /// 設定のページ「RAi(アシスタント)」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'推論サーバーや web 検索の鍵は RAi バーのモデルチップから設定します。'**
+  String get settingsPagesRaiText1Detail;
+
+  /// 設定のページ「プラグインの詳細設定」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの詳細設定'**
+  String get settingsPagesRelationalPluginsTitle;
+
+  /// 設定のページ「プラグインの詳細設定」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'状態'**
+  String get settingsPagesRelationalPluginsSection1Title;
+
+  /// 設定のページ「プラグインの詳細設定」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグイン枠'**
+  String get settingsPagesRelationalPluginsValueRow1Title;
+
+  /// 設定のページ「プラグインの詳細設定」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中'**
+  String get settingsPagesRelationalPluginsValueRow1Value;
+
+  /// 設定のページ「プラグインの詳細設定」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'この画面のプラグインは準備中です。'**
+  String get settingsPagesRelationalPluginsText1;
+
+  /// 設定のページ「プラグインの詳細設定」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'リレーショナルタイムライン用のプラグイン枠(束ね方の差し替え)は契約 v0.7 にはまだありません。ML の類似度は RASQ サーバーの ML ゲートウェイを使います。 プラグイン枠: 未定義。'**
+  String get settingsPagesRelationalPluginsText1Detail;
+
+  /// 設定のページ「プラグインの詳細設定」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ サーバーの接続先'**
+  String get settingsPagesRelationalPluginsSettingsServerTitle;
+
+  /// 設定のページ「Relayタイル」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'Relayタイル'**
+  String get settingsPagesRelationalRelayTitle;
+
+  /// 設定のページ「Relayタイル」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'状態'**
+  String get settingsPagesRelationalRelaySection1Title;
+
+  /// 設定のページ「Relayタイル」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'提供'**
+  String get settingsPagesRelationalRelayValueRow1Title;
+
+  /// 設定のページ「Relayタイル」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中'**
+  String get settingsPagesRelationalRelayValueRow1Value;
+
+  /// 設定のページ「Relayタイル」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'Relay タイルは準備中です。いまは「投稿クラスター」で会話のまとめ方を変えられます。'**
+  String get settingsPagesRelationalRelayText1;
+
+  /// 設定のページ「Relayタイル」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'Relay タイルは、会話イベントをまたいで話題が受け渡された流れ(リレー)を 1 枚のタイルにまとめる表示です。束ね方が固まってから足します。いまは「投稿クラスター」の調整で会話イベントの束ね方を変えられます。 提供: アルゴリズム確定後。'**
+  String get settingsPagesRelationalRelayText1Detail;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドタイムラインへの配信'**
+  String get settingsPagesRelationalTrendTitle;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'状態'**
+  String get settingsPagesRelationalTrendSection1Title;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'提供'**
+  String get settingsPagesRelationalTrendValueRow1Title;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中'**
+  String get settingsPagesRelationalTrendValueRow1Value;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'「トレンドをカスタマイズ」で、関連タイムラインをトレンドに流せます。'**
+  String get settingsPagesRelationalTrendText1;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'関連タブの会話イベントをトレンドのタイムラインへ流す配信は、トレンド側のノード(アルゴリズム)に「関連タイムライン」ノードを置く形で組めます。 提供: アルゴリズム確定後。'**
+  String get settingsPagesRelationalTrendText1Detail;
+
+  /// 設定のページ「トレンドタイムラインへの配信」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドをカスタマイズ'**
+  String get settingsPagesRelationalTrendTlconfigTrendTitle;
+
+  /// 設定のページ「リソースと広告」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'リソースと広告'**
+  String get settingsPagesResourcesTitle;
+
+  /// 設定のページ「リソースと広告」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'広告'**
+  String get settingsPagesResourcesSection1Title;
+
+  /// 設定のページ「リソースと広告」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'広告を表示'**
+  String get settingsPagesResourcesShowAdsTitle;
+
+  /// 設定のページ「リソースと広告」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインの投稿の間と、検索ホームの広告です'**
+  String get settingsPagesResourcesShowAdsSubtitle;
+
+  /// 設定のページ「リソースと広告」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'タイムラインの投稿の間(10 件ごと、注釈やセンシティブな投稿の隣には置きません)と検索ホームの広告枠(AdMob、いまはテスト用の広告)。個人に合わせた広告は出しません'**
+  String get settingsPagesResourcesShowAdsDetail;
+
+  /// 設定のページ「リソースと広告」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'リソース'**
+  String get settingsPagesResourcesSection2Title;
+
+  /// 設定のページ「リソースと広告」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの通信'**
+  String get settingsPagesResourcesValueRow1Title;
+
+  /// 設定のページ「リソースと広告」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'端末から直接'**
+  String get settingsPagesResourcesValueRow1Value;
+
+  /// 設定のページ「リソースと広告」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'推論'**
+  String get settingsPagesResourcesValueRow2Title;
+
+  /// 設定のページ「リソースと広告」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'端末の中 + 選んだサーバー'**
+  String get settingsPagesResourcesValueRow2Value;
+
+  /// 設定のページ「リソースと広告」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。'**
+  String get settingsPagesResourcesText1;
+
+  /// 設定のページ「リソースと広告」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。 プラグインの通信: 端末から直接(プロキシ無し)。推論: 端末内モデル(RAi)+ 任意の推論サーバー。'**
+  String get settingsPagesResourcesText1Detail;
+
+  /// 設定のページ「リソースと広告」の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインストア'**
+  String get settingsPagesResourcesStoreTitle;
+
+  /// 設定のページ「キャッシュネットワークの設定」の見出し(設定の一覧の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'キャッシュネットワークの設定'**
+  String get settingsPagesTrendCdnTitle;
+
+  /// 設定のページ「キャッシュネットワークの設定」の節の見出しの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'状態'**
+  String get settingsPagesTrendCdnSection1Title;
+
+  /// 設定のページ「キャッシュネットワークの設定」の値の行の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'キャッシュネットワーク'**
+  String get settingsPagesTrendCdnValueRow1Title;
+
+  /// 設定のページ「キャッシュネットワークの設定」の値の行の値
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中'**
+  String get settingsPagesTrendCdnValueRow1Value;
+
+  /// 設定のページ「キャッシュネットワークの設定」の説明の文
+  ///
+  /// In ja, this message translates to:
+  /// **'準備中です。いまは各 SNS から直接取得します。'**
+  String get settingsPagesTrendCdnText1;
+
+  /// 設定のページ「キャッシュネットワークの設定」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'トレンドの取得結果を CDN(キャッシュネットワーク)から読む仕組みは、RASQ サーバーの配信基盤と同時に入ります。いまは各 SNS から直接取得します。 キャッシュネットワーク: 未提供。'**
+  String get settingsPagesTrendCdnText1Detail;
+
   /// No description provided for @settingsSectionsPluginsTitle.
   ///
   /// In ja, this message translates to:
