@@ -171,7 +171,7 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
     } on SnsApiException catch (e) {
       setState(() => _error = e.code.message ?? e.code.display);
     } catch (e) {
-      setState(() => _error = context.l10n.loginAuthCheckFailed('$e'));
+      setState(() => _error = context.l10n.loginAuthCheckFailed(e is StateError ? e.message : '$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

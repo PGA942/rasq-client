@@ -82,7 +82,7 @@ class _Mixi2LoginScreenState extends ConsumerState<Mixi2LoginScreen> {
     } on SnsApiException catch (e) {
       setState(() => _error = e.code.message ?? e.code.display);
     } catch (e) {
-      setState(() => _error = context.l10n.loginFailed('$e'));
+      setState(() => _error = context.l10n.loginFailed(e is StateError ? e.message : '$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
