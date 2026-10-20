@@ -91,7 +91,8 @@ const raiEmbeddingSpec = RaiEmbeddingSpec(
   url: '',
   centralPath: 'minilm-mobilenet/onnx/text_tower_uint8.onnx',
   bundledAsset: '$raiBundledEmbeddingDir/text_tower_uint8.onnx',
-  // sha256: 置き場の正本(D-390 の uint8 版)から tool/fetch_embedding_model.sh が出す値を書く。未記入の間は長さだけ確かめる。
+  // 正本 (D-522): ユーザーの Drive の minilm-mobilenet/onnx/text_tower_int8.onnx を tool/requantize_uint8.py で uint8 に直したもの。
+  sha256: 'f867c2b1c46c952c3a6dccdbf54e092e3230f54e0ca1d752586fe4a931e76a7c',
   sizeMb: 35,
   tokenizerAsset: 'assets/models/minilm_unigram.tsv',
   dims: 384,
@@ -120,6 +121,8 @@ const postVisionEmbeddingSpec = RaiEmbeddingSpec(
   fileName: 'image_tower_uint8.onnx',
   url: '',
   centralPath: 'minilm-mobilenet/onnx/image_tower_uint8.onnx',
+  // 正本 (D-522): 文の塔と同じ書き出しの image_tower_int8.onnx を tool/requantize_uint8.py で uint8 に直したもの(同梱しない)。
+  sha256: 'e7b2f08fea6e556290a03934cda8a1db8573a54aca3da999ad5cb5abd51659ca',
   sizeMb: 32,
   tokenizerAsset: '',
   dims: 384,
