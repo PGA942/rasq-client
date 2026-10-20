@@ -7266,10 +7266,10 @@ abstract class AppLocalizations {
   /// **'サービスを探してログイン'**
   String get loginDiscover;
 
-  /// ログインの画面の下のボタン。RAi(アプリの案内役の AI)に質問する入力欄を出す
+  /// ログインの画面の下のボタン。RAi(アプリの案内役の AI)をインストラクション(操作を教える)モードで開き、質問する入力欄を出す
   ///
   /// In ja, this message translates to:
-  /// **'Raiのインストラクチャ'**
+  /// **'RAi に聞く'**
   String get loginRaiInstruction;
 
   /// 承認のメールを送れなかった(送る口が無い)ときの知らせ
@@ -7533,14 +7533,8 @@ abstract class AppLocalizations {
   /// Misskey / Mastodon のログインの画面の見出し(サーバーを選ぶ)
   ///
   /// In ja, this message translates to:
-  /// **'PDSを変更'**
+  /// **'ログイン'**
   String get loginSnsTitle;
-
-  /// Misskey / Mastodon のログインの画面の補足
-  ///
-  /// In ja, this message translates to:
-  /// **'PDSを変更すると、アプリ外でのURL表示が変わります。'**
-  String get loginSnsNote;
 
   /// サーバーの入力欄の薄い文字。example は例のホスト(misskey.io など)
   ///

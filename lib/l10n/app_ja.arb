@@ -4585,9 +4585,9 @@
   "@loginDiscover": {
     "description": "合うサーバーや RASQ リストを探してからログインする画面へ進むボタン"
   },
-  "loginRaiInstruction": "Raiのインストラクチャ",
+  "loginRaiInstruction": "RAi に聞く",
   "@loginRaiInstruction": {
-    "description": "ログインの画面の下のボタン。RAi(アプリの案内役の AI)に質問する入力欄を出す"
+    "description": "ログインの画面の下のボタン。RAi(アプリの案内役の AI)をインストラクション(操作を教える)モードで開き、質問する入力欄を出す"
   },
   "loginShareMailUnavailable": "いまは送れません",
   "@loginShareMailUnavailable": {
@@ -4816,13 +4816,9 @@
       }
     }
   },
-  "loginSnsTitle": "PDSを変更",
+  "loginSnsTitle": "ログイン",
   "@loginSnsTitle": {
     "description": "Misskey / Mastodon のログインの画面の見出し(サーバーを選ぶ)"
-  },
-  "loginSnsNote": "PDSを変更すると、アプリ外でのURL表示が変わります。",
-  "@loginSnsNote": {
-    "description": "Misskey / Mastodon のログインの画面の補足"
   },
   "loginSnsHostHint": "移行先のURLを入力 (例: {example})",
   "@loginSnsHostHint": {

@@ -185,8 +185,7 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
       appBar: AppBar(title: Text(context.l10n.loginSnsTitle), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: context.l10n.loginBack, onPressed: () => popOr(context, Routes.login))),
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl, vertical: RasqSpacing.md), children: [
-          Text(context.l10n.loginSnsNote, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
-          const SizedBox(height: RasqSpacing.xl),
+          const SizedBox(height: RasqSpacing.md),
           Row(children: [
             Container(
               width: 32,

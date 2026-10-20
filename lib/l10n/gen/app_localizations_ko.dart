@@ -4391,7 +4391,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get loginDiscover => '서비스를 찾아 로그인';
 
   @override
-  String get loginRaiInstruction => 'RAi 안내';
+  String get loginRaiInstruction => 'RAi에게 묻기';
 
   @override
   String get loginShareMailUnavailable => '지금은 보낼 수 없습니다';
@@ -4553,10 +4553,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get loginSnsTitle => 'PDS 변경';
-
-  @override
-  String get loginSnsNote => 'PDS를 변경하면 앱 밖에서 표시되는 URL이 바뀝니다.';
+  String get loginSnsTitle => '로그인';
 
   @override
   String loginSnsHostHint(String example) {
