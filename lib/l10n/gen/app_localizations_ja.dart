@@ -3265,6 +3265,185 @@ class AppLocalizationsJa extends AppLocalizations {
   String get customAstellPropose => 'プラグインを提案';
 
   @override
+  String get devGrantDebugAll => 'デバッグビルド: 全権限';
+
+  @override
+  String get devUrlInvalid => 'http(s) の URL を入れてください';
+
+  @override
+  String devUrlLoadFailed(String error) {
+    return 'URL から読めませんでした: $error';
+  }
+
+  @override
+  String devBoundaryTimelineFailed(String error) {
+    return '境界TL: $error';
+  }
+
+  @override
+  String devAssetLoadFailed(String error) {
+    return 'アセットの読み込みに失敗: $error';
+  }
+
+  @override
+  String devPkgLoaded(
+    String rootId,
+    String version,
+    int children,
+    String target,
+  ) {
+    return '.rasqpkg: $rootId $version(子 $children)→ $target を読み込み。';
+  }
+
+  @override
+  String devPkgSigned(String fingerprint) {
+    return '開発者鍵の署名 OK(指紋 $fingerprint)。ストアの審査は通っていません。';
+  }
+
+  @override
+  String get devPkgUnsigned => '署名なし(.sig.json がありません)。出どころを確かめられません。';
+
+  @override
+  String get devPkgSlotFull => 'スロットに登録するとフル機能(自分の鍵の署名)';
+
+  @override
+  String get devPkgSlotRestricted =>
+      'スロットに登録すると制限モード(自分の鍵の署名ではないため、通信 / GPU / storage.unsafe / interstitial・system の FOW / 共有・コンポーザー・ミュート・URL を開く関数は閉)';
+
+  @override
+  String devPathLoadFailed(String path, String error) {
+    return '$path の読み込みに失敗(絶対パスか ~/ 始まりで指定してください): $error';
+  }
+
+  @override
+  String get devFowClose => '閉じる';
+
+  @override
+  String get devFowSemantics => 'プラグインFOW';
+
+  @override
+  String get devRegisterNeedsMisskey => '実登録には Misskey アカウントでのログインが必要です';
+
+  @override
+  String get devTitle => 'WASMプラグイン試験 (dev)';
+
+  @override
+  String get devHostHint => 'インスタンス (例: misskey.io)';
+
+  @override
+  String get devFetchTimeline => 'TL取得';
+
+  @override
+  String get devBoundaryTimeline => '境界TL';
+
+  @override
+  String get devPathHint => '.wasm のパスからインポート (空欄=同梱アセット)';
+
+  @override
+  String get devLoad => '読み込み';
+
+  @override
+  String get devRegisterReal => '実登録';
+
+  @override
+  String get devUrlHint => 'URL から読む(審査の仮インポート用のリンク)';
+
+  @override
+  String get devUrlLoad => 'URL から読む';
+
+  @override
+  String get devOpenedFromLink =>
+      'リンクから開きました。出どころを確かめてから「URL から読む」を押してください(審査中の版は制限モードで動きます)。';
+
+  @override
+  String devParentInstalled(String id, String version) {
+    return '親(土台)のプラグイン: $id $version(入っています)';
+  }
+
+  @override
+  String devParentMissing(String id, String version) {
+    return '親(土台)のプラグイン: $id $version— 先に入れてください';
+  }
+
+  @override
+  String get devOpenInStore => 'ストアで開く';
+
+  @override
+  String devGrantDebugNote(String grant, String hint) {
+    return '$grant(release ビルドでは段で絞ります: $hint)';
+  }
+
+  @override
+  String devGrantMode(String mode, String hint) {
+    return 'この画面: $mode — $hint';
+  }
+
+  @override
+  String get devModeFull => 'フル機能';
+
+  @override
+  String get devModeBundled => 'フル機能(アプリ同梱)';
+
+  @override
+  String get devModeRestricted => '制限モード';
+
+  @override
+  String get devModeSwing => '制限モード(Swing)';
+
+  @override
+  String get devSlotRegister => 'スロットに登録';
+
+  @override
+  String devSlotRegistered(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '登録済み: $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String devSlotModeHint(String hint) {
+    return 'スロットの段: フル / 制限 — $hint';
+  }
+
+  @override
+  String get devSlotReviewed => '審査済み';
+
+  @override
+  String get devSlotUnregister => '解除';
+
+  @override
+  String get devBoundaryHeader => '境界セッション: sns.timeline → Post ワイヤ → PostRow';
+
+  @override
+  String get devBoundaryClose => '閉じる';
+
+  @override
+  String devActionFailed(String action, String error) {
+    return 'performAction($action) 失敗: $error';
+  }
+
+  @override
+  String devReviewImportTooLarge(int maxBytes) {
+    return '大きさが不正です($maxBytes bytes を超えています)';
+  }
+
+  @override
+  String get devReviewImportExpired => 'リンクの期限が切れたか、違うリンクです。審査の画面で作り直してください';
+
+  @override
+  String devReviewImportHttpFailed(int status) {
+    return '取得に失敗しました(HTTP $status)';
+  }
+
+  @override
+  String devReviewImportBadSize(int bytes) {
+    return '大きさが不正です($bytes bytes)';
+  }
+
+  @override
   String get dmRoomSettings => 'このDMの設定';
 
   @override

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../../backend/limited_http.dart';
+import '../../l10n/l10n.dart';
 
 /// 審査中の版の仮インポート (D-436、rasq-judge J-017 の 4 段目 = 人の確認と対)。
 ///
@@ -58,12 +59,12 @@ Future<String> downloadReviewImport(String url, {required http.Client client, re
   try {
     res = await getLimited(Uri.parse(url.trim()), maxBytes: reviewImportMaxBytes, timeout: const Duration(seconds: 60), client: client);
   } on ResponseTooLargeException catch (e) {
-    throw ReviewImportException('大きさが不正です(${e.maxBytes} bytes を超えています)');
+    throw ReviewImportException(appL10n.devReviewImportTooLarge(e.maxBytes));
   }
-  if (res.statusCode == 404) throw const ReviewImportException('リンクの期限が切れたか、違うリンクです。審査の画面で作り直してください');
-  if (res.statusCode != 200) throw ReviewImportException('取得に失敗しました(HTTP ${res.statusCode})');
+  if (res.statusCode == 404) throw ReviewImportException(appL10n.devReviewImportExpired);
+  if (res.statusCode != 200) throw ReviewImportException(appL10n.devReviewImportHttpFailed(res.statusCode));
   final bytes = res.bodyBytes;
-  if (bytes.isEmpty) throw ReviewImportException('大きさが不正です(${bytes.length} bytes)');
+  if (bytes.isEmpty) throw ReviewImportException(appL10n.devReviewImportBadSize(bytes.length));
   final d = await dir();
   await d.create(recursive: true);
   final file = File('${d.path}/${reviewImportFileName(res.headers['content-disposition'], url)}');

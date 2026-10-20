@@ -25,6 +25,7 @@ import '../store/rasqpkg.dart';
 import '../store/store_providers.dart' show bundledSnsPluginIds, installedPluginsProvider;
 import '../trend/example_match.dart' show pluginExamplePieces;
 import 'review_import.dart';
+import '../../l10n/l10n.dart';
 
 /// WASM プラグイン試験画面 (dev)。misskey-wasm-sample(rasq-sdk-sample で
 /// ビルドした .wasm)をインポートし、plugin_runtime 経由で描画する:
@@ -85,7 +86,7 @@ class DevScreenGrant {
 ///   `fow.interstitial` / `fow.system` を外し、fuel は倍率を掛ける。
 DevScreenGrant devScreenGrantFor({required bool debug, required SideloadTrust trust}) {
   if (debug) {
-    return const DevScreenGrant(label: 'デバッグビルド: 全権限', permissions: RasqPermissions.all, fowPermissions: sideloadFowKinds, gpuCompute: true, fuelPerCall: null);
+    return DevScreenGrant(label: appL10n.devGrantDebugAll, permissions: RasqPermissions.all, fowPermissions: sideloadFowKinds, gpuCompute: true, fuelPerCall: null);
   }
   final caps = trust.capabilities;
   return DevScreenGrant(
@@ -119,7 +120,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
   Future<void> _loadFromUrl() async {
     final url = _urlField.text.trim();
     if (!isReviewImportUrl(url)) {
-      setState(() => _loadError = 'http(s) の URL を入れてください');
+      setState(() => _loadError = context.l10n.devUrlInvalid);
       return;
     }
     setState(() => _busy = true);
@@ -127,7 +128,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
       final path = await downloadReviewImport(url, client: ref.read(reviewImportHttpProvider), dir: ref.read(reviewImportDirProvider));
       await _loadFromPath(path);
     } catch (e) {
-      if (mounted) setState(() => _loadError = 'URL から読めませんでした: $e');
+      if (mounted) setState(() => _loadError = context.l10n.devUrlLoadFailed('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -176,7 +177,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _loadError = '境界TL: $e');
+      if (mounted) setState(() => _loadError = context.l10n.devBoundaryTimelineFailed('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -201,7 +202,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
       final trust = widget.wasmBytesOverride == null ? SideloadTrust.bundled : SideloadTrust.restricted;
       await _start(bytes, trust: trust, pluginId: null);
     } catch (e) {
-      setState(() => _loadError = 'アセットの読み込みに失敗: $e');
+      setState(() => _loadError = context.l10n.devAssetLoadFailed('$e'));
     }
   }
 
@@ -239,9 +240,10 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
         if (target.id != pkg.root.id) _lastSource = '${file.path}#${target.id}';
         final sigFile = File('${file.path}.sig.json');
         final signed = sigFile.existsSync() ? await verifyDevSignature(bytes, (jsonDecode(sigFile.readAsStringSync()) as Map).cast<String, Object?>()) : null;
-        note = '.rasqpkg: ${pkg.root.id} ${pkg.root.version}(子 ${pkg.children.length})→ ${target.id} を読み込み。'
-            '${signed != null ? '開発者鍵の署名 OK(指紋 $signed)。ストアの審査は通っていません' : '署名なし(.sig.json がありません)。出どころを確かめられません'}。'
-            'スロットに登録すると${trust.isFull ? 'フル機能(自分の鍵の署名)' : '制限モード(自分の鍵の署名ではないため、通信 / GPU / storage.unsafe / interstitial・system の FOW / 共有・コンポーザー・ミュート・URL を開く関数は閉)'}';
+        final l = appL10n;
+        note = l.devPkgLoaded(pkg.root.id, pkg.root.version, pkg.children.length, target.id) +
+            (signed != null ? l.devPkgSigned(signed) : l.devPkgUnsigned) +
+            (trust.isFull ? l.devPkgSlotFull : l.devPkgSlotRestricted);
         bytes = target.wasm;
         pluginId = target.id;
         final m = target.manifest;
@@ -254,7 +256,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
       await _start(bytes, trust: trust, pluginId: pluginId, text: text);
       if (mounted) setState(() => _pkgNote = note);
     } catch (e) {
-      setState(() => _loadError = '$raw の読み込みに失敗(絶対パスか ~/ 始まりで指定してください): $e');
+      setState(() => _loadError = appL10n.devPathLoadFailed(raw, '$e'));
     }
   }
 
@@ -315,7 +317,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
       type: type,
       initialHeightFactor: (spec['initialHeightFactor'] as num?)?.toDouble() ?? 0.45,
       title: spec['title'] as String?,
-      cancelText: spec['cancelText'] as String? ?? (req.onCancel != null ? '閉じる' : null),
+      cancelText: spec['cancelText'] as String? ?? (req.onCancel != null ? appL10n.devFowClose : null),
       confirmText: spec['confirmText'] as String?,
       dockAboveFooter: true,
       // 横ドッキング (D-062): 開いた画面のカラムに揃える。
@@ -346,7 +348,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
       // (付く方向の追従・親の伸縮・連動クローズ)。親が閉じれば子も
       // 連動して閉じるので、プラグイン一括クローズにも連なる。
       ownerId: req.parentId != null ? '$_fowPrefix${req.parentId}' : _fowOwner,
-      semanticsLabel: spec['title'] as String? ?? 'プラグインFOW',
+      semanticsLabel: spec['title'] as String? ?? appL10n.devFowSemantics,
       // ピッカー同手法 (D-051): 透明バリア、余白クリックで破棄。
       barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
       fow: fowSpec,
@@ -369,11 +371,11 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
     final cur = (await ref.read(sessionsProvider.future)).current;
     if (!mounted) return;
     if (cur == null || cur.account.kind != SnsKind.misskey || cur.pluginId == wasmSamplePluginId) {
-      setState(() => _loadError = '実登録には Misskey アカウントでのログインが必要です');
+      setState(() => _loadError = context.l10n.devRegisterNeedsMisskey);
       return;
     }
     final acc = AccountId(kind: cur.account.kind, instance: cur.account.instance, handle: '${cur.account.handle}~wasm');
-    final me = UserSummary(id: '-', account: acc, displayName: '${cur.displayName ?? cur.account.handle} (wasm境界)', avatarUrl: cur.avatarUrl);
+    final me = UserSummary(id: '-', account: acc, displayName: '${cur.displayName ?? cur.account.handle} (wasm境界)', avatarUrl: cur.avatarUrl); // l10n-ignore
     await ref.read(sessionsProvider.notifier).add(AuthResult(
           session: AccountSession(
             account: acc,
@@ -442,33 +444,33 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
     ref.listen(childGateProvider, (_, _) => _onChildGateChanged());
     final controller = _controller;
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'WASMプラグイン試験 (dev)'),
+      appBar: RasqPageHeader(title: context.l10n.devTitle),
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
-              Expanded(child: RasqInput(controller: _hostField, hintText: 'インスタンス (例: misskey.io)')),
+              Expanded(child: RasqInput(controller: _hostField, hintText: context.l10n.devHostHint)),
               const SizedBox(width: RasqSpacing.sm),
               FilledButton.icon(
                 onPressed: controller == null || _busy ? null : () => _invoke('timeline', {'host': _hostField.text.trim(), 'limit': 10}),
                 icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.download, size: 18),
-                label: const Text('TL取得'),
+                label: Text(context.l10n.devFetchTimeline),
               ),
               const SizedBox(width: RasqSpacing.sm),
               // 境界セッション (D-074): sns.timeline 抽象関数 → Post ワイヤ。
               OutlinedButton(
                 onPressed: controller == null || _busy ? null : _boundaryTimeline,
-                child: const Text('境界TL'),
+                child: Text(context.l10n.devBoundaryTimeline),
               ),
             ]),
             const SizedBox(height: RasqSpacing.xs),
             Row(children: [
-              Expanded(child: RasqInput(controller: _pathField, hintText: '.wasm のパスからインポート (空欄=同梱アセット)')),
+              Expanded(child: RasqInput(controller: _pathField, hintText: context.l10n.devPathHint)),
               const SizedBox(width: RasqSpacing.sm),
               OutlinedButton(
                 onPressed: _busy ? null : () => _pathField.text.trim().isEmpty ? _loadFromAsset() : _loadFromPath(_pathField.text.trim()),
-                child: const Text('読み込み'),
+                child: Text(context.l10n.devLoad),
               ),
               const SizedBox(width: RasqSpacing.sm),
               // SDK の最小サンプル (D-077) も同梱 — ボタン一発で試せる。
@@ -480,34 +482,34 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
               // 実登録 (D-079): 現在のトークンで wasm セッションを本登録。
               OutlinedButton(
                 onPressed: _busy ? null : _registerRealSession,
-                child: const Text('実登録'),
+                child: Text(context.l10n.devRegisterReal),
               ),
             ]),
             const SizedBox(height: RasqSpacing.xs),
             // 審査中の版の仮インポート (D-436): judge の期限つきのリンク(QR から開けば入っている)。
             Row(children: [
-              Expanded(child: RasqInput(key: const ValueKey('wasm.url.field'), controller: _urlField, hintText: 'URL から読む(審査の仮インポート用のリンク)')),
+              Expanded(child: RasqInput(key: const ValueKey('wasm.url.field'), controller: _urlField, hintText: context.l10n.devUrlHint)),
               const SizedBox(width: RasqSpacing.sm),
-              OutlinedButton(key: const ValueKey('wasm.url.load'), onPressed: _busy ? null : _loadFromUrl, child: const Text('URL から読む')),
+              OutlinedButton(key: const ValueKey('wasm.url.load'), onPressed: _busy ? null : _loadFromUrl, child: Text(context.l10n.devUrlLoad)),
             ]),
             if (widget.initialUrl != null)
-              Text('リンクから開きました。出どころを確かめてから「URL から読む」を押してください(審査中の版は制限モードで動きます)。',
+              Text(context.l10n.devOpenedFromLink,
                   key: const ValueKey('wasm.url.fromLink'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             for (final p in _parents)
               Row(key: ValueKey('wasm.parent.${p.id}'), children: [
                 Expanded(
-                  child: Text('親(土台)のプラグイン: ${p.id} ${p.version}${p.installed ? '(入っています)' : '— 先に入れてください'}',
+                  child: Text(p.installed ? context.l10n.devParentInstalled(p.id, p.version) : context.l10n.devParentMissing(p.id, p.version),
                       style: RasqTypography.caption.copyWith(color: p.installed ? scheme.onSurfaceVariant : RasqTokens.of(context).danger)),
                 ),
-                if (!p.installed) TextButton(key: ValueKey('wasm.parent.store.${p.id}'), onPressed: () => context.push(Routes.storePlugin(p.id)), child: const Text('ストアで開く')),
+                if (!p.installed) TextButton(key: ValueKey('wasm.parent.store.${p.id}'), onPressed: () => context.push(Routes.storePlugin(p.id)), child: Text(context.l10n.devOpenInStore)),
               ]),
             const SizedBox(height: RasqSpacing.xs),
             // 段 (D-308): この画面で読み込んだものの権限と、スロットに登録したときの段の説明。
             if (_grant != null)
               Text(
                 _grant!.isDebugAll
-                    ? '${_grant!.label}(release ビルドでは段で絞ります: $sideloadTrustHint)'
-                    : 'この画面: ${switch (_grant!.trust!) { SideloadTrust.full => 'フル機能', SideloadTrust.bundled => 'フル機能(アプリ同梱)', SideloadTrust.restricted => '制限モード', SideloadTrust.swing => '制限モード(Swing)' }} — $sideloadTrustHint',
+                    ? context.l10n.devGrantDebugNote(_grant!.label, sideloadTrustHint)
+                    : context.l10n.devGrantMode(switch (_grant!.trust!) { SideloadTrust.full => context.l10n.devModeFull, SideloadTrust.bundled => context.l10n.devModeBundled, SideloadTrust.restricted => context.l10n.devModeRestricted, SideloadTrust.swing => context.l10n.devModeSwing }, sideloadTrustHint),
                 key: const ValueKey('wasm.dev.mode'),
                 style: RasqTypography.caption.copyWith(color: _grant!.isDebugAll || _grant!.trust!.isFull ? scheme.onSurfaceVariant : RasqTokens.of(context).danger),
               ),
@@ -528,17 +530,17 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
                         }
                       },
                 icon: const Icon(Icons.extension, size: 18),
-                label: const Text('スロットに登録'),
+                label: Text(context.l10n.devSlotRegister),
               ),
               const SizedBox(width: RasqSpacing.sm),
-              Expanded(child: Text(ref.watch(slotPluginsNoticeProvider) ?? '登録済み: ${ref.watch(slotPluginsProvider).length}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text(ref.watch(slotPluginsNoticeProvider) ?? context.l10n.devSlotRegistered(ref.watch(slotPluginsProvider).length), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis)),
             ]),
-            Text('スロットの段: フル / 制限 — $sideloadTrustHint', key: const ValueKey('wasm.slot.modeHint'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(context.l10n.devSlotModeHint(sideloadTrustHint), key: const ValueKey('wasm.slot.modeHint'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             for (final p in ref.watch(slotPluginsProvider))
               Row(children: [
                 // 段 (D-308): ストアは審査済み、サイドロードは フル / 制限。
-                Expanded(child: Text('${p.manifest.name} ${p.manifest.version} [${p.isReviewed ? '審査済み' : p.sideloadTrust.label}] — ${p.manifest.slots.join(', ')}', style: RasqTypography.caption, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                TextButton(onPressed: () => ref.read(slotPluginsProvider.notifier).unregister(p.id), child: const Text('解除')),
+                Expanded(child: Text('${p.manifest.name} ${p.manifest.version} [${p.isReviewed ? context.l10n.devSlotReviewed : p.sideloadTrust.label}] — ${p.manifest.slots.join(', ')}', style: RasqTypography.caption, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                TextButton(onPressed: () => ref.read(slotPluginsProvider.notifier).unregister(p.id), child: Text(context.l10n.devSlotUnregister)),
               ]),
             if (_loadError != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_loadError!, style: RasqTypography.caption.copyWith(color: RasqTokens.of(context).danger))),
             if (_pkgNote != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_pkgNote!, style: RasqTypography.caption)),
@@ -559,8 +561,8 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: 4),
                     color: scheme.surfaceContainerHighest,
                     child: Row(children: [
-                      Expanded(child: Text('境界セッション: sns.timeline → Post ワイヤ → PostRow', style: RasqTypography.caption)),
-                      TextButton(onPressed: () => setState(() => _boundaryPosts = null), child: const Text('閉じる')),
+                      Expanded(child: Text(context.l10n.devBoundaryHeader, style: RasqTypography.caption)),
+                      TextButton(onPressed: () => setState(() => _boundaryPosts = null), child: Text(context.l10n.devBoundaryClose)),
                     ]),
                   ),
                   if (_boundaryNote != null)
@@ -579,7 +581,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
                           final r = await _boundarySession!.performAction(a.id, p.id, args: args);
                           if (mounted) setState(() => _boundaryNote = 'performAction(${a.id}, ${p.id}) → done=${r.done}');
                         } catch (e) {
-                          if (mounted) setState(() => _boundaryNote = 'performAction(${a.id}) 失敗: $e');
+                          if (mounted) setState(() => _boundaryNote = context.l10n.devActionFailed(a.id, '$e'));
                         }
                       },
                     ),

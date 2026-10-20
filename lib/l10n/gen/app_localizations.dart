@@ -5422,6 +5422,281 @@ abstract class AppLocalizations {
   /// **'プラグインを提案'**
   String get customAstellPropose;
 
+  /// 開発者用の WASM プラグインの試験の画面: デバッグビルドでは全部の権限を与えている、という表示
+  ///
+  /// In ja, this message translates to:
+  /// **'デバッグビルド: 全権限'**
+  String get devGrantDebugAll;
+
+  /// 試験の画面: URL の欄に http(s) の URL が無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'http(s) の URL を入れてください'**
+  String get devUrlInvalid;
+
+  /// 試験の画面: URL からプラグインを読めなかったとき。error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'URL から読めませんでした: {error}'**
+  String devUrlLoadFailed(String error);
+
+  /// 試験の画面: 境界 TL(プラグインの sns.timeline を通した TL)の取得に失敗したとき。error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'境界TL: {error}'**
+  String devBoundaryTimelineFailed(String error);
+
+  /// 試験の画面: 同梱のプラグインを読めなかったとき。error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'アセットの読み込みに失敗: {error}'**
+  String devAssetLoadFailed(String error);
+
+  /// 試験の画面: .rasqpkg(プラグインの配布物)を読んだときの説明の 1 文目。rootId / version は配布物の id と版、children は子のプラグインの数、target は読み込んだプラグインの id
+  ///
+  /// In ja, this message translates to:
+  /// **'.rasqpkg: {rootId} {version}(子 {children})→ {target} を読み込み。'**
+  String devPkgLoaded(
+    String rootId,
+    String version,
+    int children,
+    String target,
+  );
+
+  /// 上の説明の 2 文目(開発者鍵の署名があるとき)。fingerprint は鍵の指紋
+  ///
+  /// In ja, this message translates to:
+  /// **'開発者鍵の署名 OK(指紋 {fingerprint})。ストアの審査は通っていません。'**
+  String devPkgSigned(String fingerprint);
+
+  /// 上の説明の 2 文目(署名が無いとき)。.sig.json はファイル名
+  ///
+  /// In ja, this message translates to:
+  /// **'署名なし(.sig.json がありません)。出どころを確かめられません。'**
+  String get devPkgUnsigned;
+
+  /// 上の説明の 3 文目(スロットに登録したときの段がフル機能のとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'スロットに登録するとフル機能(自分の鍵の署名)'**
+  String get devPkgSlotFull;
+
+  /// 上の説明の 3 文目(制限モードのとき)。storage.unsafe / interstitial / system は権限の名前で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'スロットに登録すると制限モード(自分の鍵の署名ではないため、通信 / GPU / storage.unsafe / interstitial・system の FOW / 共有・コンポーザー・ミュート・URL を開く関数は閉)'**
+  String get devPkgSlotRestricted;
+
+  /// 試験の画面: パスからプラグインを読めなかったとき。path は入れたパス、error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'{path} の読み込みに失敗(絶対パスか ~/ 始まりで指定してください): {error}'**
+  String devPathLoadFailed(String path, String error);
+
+  /// 試験の画面でプラグインが開いた FOW の、閉じるボタン(プラグインが名前を決めていないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get devFowClose;
+
+  /// プラグインが開いた FOW の読み上げの名前(プラグインが見出しを決めていないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインFOW'**
+  String get devFowSemantics;
+
+  /// 試験の画面: 「実登録」には Misskey のアカウントが要るとき
+  ///
+  /// In ja, this message translates to:
+  /// **'実登録には Misskey アカウントでのログインが必要です'**
+  String get devRegisterNeedsMisskey;
+
+  /// 開発者用の WASM プラグインの試験の画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'WASMプラグイン試験 (dev)'**
+  String get devTitle;
+
+  /// 試験の画面のサーバーの入力欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'インスタンス (例: misskey.io)'**
+  String get devHostHint;
+
+  /// 試験の画面: プラグインで TL を取るボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'TL取得'**
+  String get devFetchTimeline;
+
+  /// 試験の画面: プラグインの sns.timeline を通して TL を取るボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'境界TL'**
+  String get devBoundaryTimeline;
+
+  /// 試験の画面のパスの入力欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'.wasm のパスからインポート (空欄=同梱アセット)'**
+  String get devPathHint;
+
+  /// 試験の画面: パスから読み込むボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込み'**
+  String get devLoad;
+
+  /// 試験の画面: いまのアカウントのトークンでプラグインのセッションを登録するボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'実登録'**
+  String get devRegisterReal;
+
+  /// 試験の画面の URL の入力欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'URL から読む(審査の仮インポート用のリンク)'**
+  String get devUrlHint;
+
+  /// 試験の画面: URL から読むボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'URL から読む'**
+  String get devUrlLoad;
+
+  /// 試験の画面: 審査のリンクから開いたときの案内。「URL から読む」はボタンの名前(devUrlLoad)と揃える
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクから開きました。出どころを確かめてから「URL から読む」を押してください(審査中の版は制限モードで動きます)。'**
+  String get devOpenedFromLink;
+
+  /// 試験の画面: 読み込んだ配布物が要る親のプラグインの行(入っているとき)。id / version は親のプラグイン
+  ///
+  /// In ja, this message translates to:
+  /// **'親(土台)のプラグイン: {id} {version}(入っています)'**
+  String devParentInstalled(String id, String version);
+
+  /// 試験の画面: 親のプラグインの行(入っていないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'親(土台)のプラグイン: {id} {version}— 先に入れてください'**
+  String devParentMissing(String id, String version);
+
+  /// 試験の画面: 親のプラグインをストアで開くボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアで開く'**
+  String get devOpenInStore;
+
+  /// 試験の画面: デバッグビルドの権限の表示。grant は devGrantDebugAll、hint は段の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'{grant}(release ビルドでは段で絞ります: {hint})'**
+  String devGrantDebugNote(String grant, String hint);
+
+  /// 試験の画面: いま読み込んだものの段の表示。mode は devMode… のどれか、hint は段の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'この画面: {mode} — {hint}'**
+  String devGrantMode(String mode, String hint);
+
+  /// 段の名前: フル機能
+  ///
+  /// In ja, this message translates to:
+  /// **'フル機能'**
+  String get devModeFull;
+
+  /// 段の名前: アプリに同梱のものとしてフル機能
+  ///
+  /// In ja, this message translates to:
+  /// **'フル機能(アプリ同梱)'**
+  String get devModeBundled;
+
+  /// 段の名前: 制限モード
+  ///
+  /// In ja, this message translates to:
+  /// **'制限モード'**
+  String get devModeRestricted;
+
+  /// 段の名前: Swing(機能の名前)の制限モード
+  ///
+  /// In ja, this message translates to:
+  /// **'制限モード(Swing)'**
+  String get devModeSwing;
+
+  /// 試験の画面: 読み込んだプラグインをアプリの各所から呼べるように登録するボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'スロットに登録'**
+  String get devSlotRegister;
+
+  /// 試験の画面: スロットに登録しているプラグインの数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{登録済み: {count}}}'**
+  String devSlotRegistered(int count);
+
+  /// 試験の画面: スロットの段の説明。hint は段の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'スロットの段: フル / 制限 — {hint}'**
+  String devSlotModeHint(String hint);
+
+  /// 試験の画面: 登録したプラグインの行の段の印(ストアの審査済み)
+  ///
+  /// In ja, this message translates to:
+  /// **'審査済み'**
+  String get devSlotReviewed;
+
+  /// 試験の画面: スロットの登録を外すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'解除'**
+  String get devSlotUnregister;
+
+  /// 試験の画面: 境界 TL の上の帯。sns.timeline / Post / PostRow は名前で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'境界セッション: sns.timeline → Post ワイヤ → PostRow'**
+  String get devBoundaryHeader;
+
+  /// 試験の画面: 境界 TL を閉じるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get devBoundaryClose;
+
+  /// 試験の画面: プラグインのアクションに失敗したとき。action はアクションの id、error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'performAction({action}) 失敗: {error}'**
+  String devActionFailed(String action, String error);
+
+  /// 審査の仮インポート: 落としたファイルが大きすぎるとき。maxBytes は上限
+  ///
+  /// In ja, this message translates to:
+  /// **'大きさが不正です({maxBytes} bytes を超えています)'**
+  String devReviewImportTooLarge(int maxBytes);
+
+  /// 審査の仮インポート: リンクが古い / 違うとき
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクの期限が切れたか、違うリンクです。審査の画面で作り直してください'**
+  String get devReviewImportExpired;
+
+  /// 審査の仮インポート: 取れなかったとき。status は HTTP の状態コード
+  ///
+  /// In ja, this message translates to:
+  /// **'取得に失敗しました(HTTP {status})'**
+  String devReviewImportHttpFailed(int status);
+
+  /// 審査の仮インポート: 落としたファイルの大きさがおかしいとき。bytes は大きさ
+  ///
+  /// In ja, this message translates to:
+  /// **'大きさが不正です({bytes} bytes)'**
+  String devReviewImportBadSize(int bytes);
+
   /// DM のルームの画面の歯車のボタンのツールチップ(このルームだけの表示の設定)
   ///
   /// In ja, this message translates to:
