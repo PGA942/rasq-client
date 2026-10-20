@@ -48,13 +48,16 @@ void main() {
       expect((pages[2]['defaults'] as Map).keys.toSet(), {'sensitiveMedia', 'openCw'});
       // 2 回目は読み直さない(同じ Future)。
       expect(identical(p.loadSettingsPages(), p.loadSettingsPages()), isTrue);
-      // 表示の言語が変わったら読み直す(言語もキー、D-484 / 契約 v0.24)。いまの同梱は ja の表だけなので中身は同じ。
+      // 表示の言語が変わったら読み直す(言語もキー、D-484 / 契約 v0.24)。同梱は訳の表を持つので en は別の文になる (D-543)。
       final before = p.loadSettingsPages();
       addTearDown(() => RasqUiLocale.tag = RasqUiLocale.defaultTag);
       RasqUiLocale.tag = 'en';
       final after = p.loadSettingsPages();
       expect(identical(before, after), isFalse);
-      expect(await after, await before);
+      final en = [for (final raw in await after) (jsonDecode(raw) as Map).cast<String, Object?>()];
+      expect([for (final j in en) j['area']], ['account', 'timeline', 'safety', 'security'], reason: '並びと area は言語に依らない');
+      expect([for (final j in en) j['defaults']], [for (final j in pages) j['defaults']], reason: '既定値は言語に依らない');
+      expect(await after, isNot(await before));
       expect(identical(after, p.loadSettingsPages()), isTrue);
     });
   }
