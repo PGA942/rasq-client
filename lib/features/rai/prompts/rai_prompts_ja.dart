@@ -44,6 +44,17 @@ class RaiPromptsJa extends RaiPrompts {
   String excludedOperations(List<String> ids) => '(違うと言われた操作: ${ids.join(', ')})';
 
   @override
+  String eventSummary(String conversation) => '次の会話を1文で要約:\n$conversation';
+
+  @override
+  String get learnabilitySystem => 'あなたは SNS の書き手が、自分の投稿を AI の学習に使われることを断っているかを判定します。'
+      '答えは JSON 1 行だけ: {"verdict":"allow|deny|unsure","reason":"20 文字以内"}。'
+      '断っている・未成年を示している → deny、特に何も無い → allow、分からない → unsure。';
+
+  @override
+  String learnabilityInput({required String bio, required String fields, required String posts}) => '自己紹介: $bio\n項目: $fields\n投稿: $posts';
+
+  @override
   String get referenceContextHeading => '参考(操作リファレンス、近い順):';
 
   @override

@@ -13,9 +13,14 @@ import '../../mock/mock_data.dart';
 import '../../shell/headers.dart';
 import '../../text/inline_spans.dart';
 import '../onboarding/onboarding_previews.dart' show postTileSampleRrl;
+import '../../l10n/l10n.dart';
 
 /// Component catalog (Widgetbook-lite). Dev-only; lists every L2 atomic
 /// component with its variants plus Overlay Manager presets.
+///
+/// 文言 (D-526): 見出し・説明・オーバーレイの見本の文は部品 catalog から引く。部品の中に入れる見本の中身(投稿の本文・
+/// 名前・投票の選択肢・タブ / ボタン / 行の見本のラベル)は、実際の画面ではサーバーや利用者の中身にあたるので
+/// 訳さずに `// l10n-ignore` で残す。
 class CatalogScreen extends ConsumerWidget {
   const CatalogScreen({super.key});
 
@@ -27,15 +32,15 @@ class CatalogScreen extends ConsumerWidget {
     final posts = MockData.timeline(MockData.accountMisskey);
     final postSpans = [for (final p in posts) InlineSpans.parse(p.body)];
     final demoActions = [
-      RasqActionBarItem(id: 'reply', label: '返信', icon: Icons.subdirectory_arrow_left, count: 2, onTap: () {}),
-      RasqActionBarItem(id: 'renote', label: 'リノート', icon: Icons.repeat, doneIcon: Icons.repeat_on, count: 12, onTap: () {}),
-      RasqActionBarItem(id: 'reaction', label: 'リアクション', icon: Icons.add_reaction_outlined, doneIcon: Icons.add_reaction, done: true, doneColor: tokens.live, count: 48, onTap: () {}),
-      RasqActionBarItem(id: 'favorite', label: 'お気に入り', icon: Icons.star_border, doneIcon: Icons.star, showCount: false, onTap: () {}),
+      RasqActionBarItem(id: 'reply', label: '返信', icon: Icons.subdirectory_arrow_left, count: 2, onTap: () {}), // l10n-ignore
+      RasqActionBarItem(id: 'renote', label: 'リノート', icon: Icons.repeat, doneIcon: Icons.repeat_on, count: 12, onTap: () {}), // l10n-ignore
+      RasqActionBarItem(id: 'reaction', label: 'リアクション', icon: Icons.add_reaction_outlined, doneIcon: Icons.add_reaction, done: true, doneColor: tokens.live, count: 48, onTap: () {}), // l10n-ignore
+      RasqActionBarItem(id: 'favorite', label: 'お気に入り', icon: Icons.star_border, doneIcon: Icons.star, showCount: false, onTap: () {}), // l10n-ignore
     ];
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'コンポーネントカタログ'),
+      appBar: RasqPageHeader(title: context.l10n.catalogTitle),
       body: ListView(padding: const EdgeInsets.only(bottom: 48), children: [
-        const RasqSectionHeader(title: 'Brand (特殊なコンポーネント置き場)', topMargin: 0),
+        RasqSectionHeader(title: context.l10n.catalogSectionBrand, topMargin: 0),
         _row([
           const RasqLogo(height: 36),
           const RasqBrandIcon(size: 32),
@@ -45,13 +50,13 @@ class CatalogScreen extends ConsumerWidget {
           const RasqAsTellIcon(size: 28),
           const RasqAsTellIcon(size: 28, selected: false),
         ]),
-        const RasqSectionHeader(title: 'PostTile — 通常 (アクションバー / 投票 / メディア)'),
+        RasqSectionHeader(title: context.l10n.catalogSectionPostTile),
         RasqPostTile(
           author: posts[0].author,
           createdAt: posts[0].createdAt,
           repostedBy: MockData.tivard,
           content: RasqRichText(postSpans[0], style: RasqTypography.body),
-          actionBar: RasqActionBar(items: demoActions, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]),
+          actionBar: RasqActionBar(items: demoActions, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]), // l10n-ignore
           onMore: (_) {},
           onTap: () {},
         ),
@@ -68,49 +73,49 @@ class CatalogScreen extends ConsumerWidget {
         RasqPostTile(
           author: posts[2].author,
           createdAt: posts[2].createdAt,
-          content: RasqContentWarning(cw: '誕生日の話', child: RasqRichText(postSpans[2], style: RasqTypography.body)),
+          content: RasqContentWarning(cw: '誕生日の話', child: RasqRichText(postSpans[2], style: RasqTypography.body)), // l10n-ignore
           media: RasqMediaGrid(items: posts[2].media),
-          linkBanner: RasqLinkBanner(url: Uri.parse('https://example.com/article'), title: 'リンク先バナー', description: 'OGP のタイトルと説明', onTap: () {}),
+          linkBanner: RasqLinkBanner(url: Uri.parse('https://example.com/article'), title: 'リンク先バナー', description: 'OGP のタイトルと説明', onTap: () {}), // l10n-ignore
           actionBar: RasqActionBar(items: demoActions),
           onTap: () {},
         ),
-        const RasqSectionHeader(title: 'PostTile — 埋め込み (引用 / リアクション表示 / タイマー通知) & スレッドまとめ'),
+        RasqSectionHeader(title: context.l10n.catalogSectionPostTileEmbedded),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: RasqPostTile(variant: RasqPostTileVariant.embedded, author: posts[0].author, createdAt: posts[0].createdAt, content: RasqRichText(postSpans[0], style: RasqTypography.bodySmall, maxLines: 4, overflow: TextOverflow.ellipsis), onTap: () {}),
         ),
         RasqPostTile(variant: RasqPostTileVariant.threadSummary, author: posts[2].author, createdAt: posts[2].createdAt, content: RasqRichText(postSpans[2], style: RasqTypography.body, maxLines: 2, overflow: TextOverflow.ellipsis), threadReplyCount: 3, onTap: () {}),
-        const RasqSectionHeader(title: 'CollapsedPost (省略表示: 既読 + 長文)'),
+        RasqSectionHeader(title: context.l10n.catalogSectionCollapsed),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-          child: RasqCollapsedPost(spans: InlineSpans.parse('既読の長い投稿は先頭数行だけ表示します。\n2行目\n3行目\n4行目は隠れます\n5行目'), onExpand: () {}),
+          child: RasqCollapsedPost(spans: InlineSpans.parse('既読の長い投稿は先頭数行だけ表示します。\n2行目\n3行目\n4行目は隠れます\n5行目'), onExpand: () {}), // l10n-ignore
         ),
-        const RasqSectionHeader(title: 'PollWidget (未投票 単一 / 複数, 投票済み, 期限切れ)'),
+        RasqSectionHeader(title: context.l10n.catalogSectionPoll),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: Column(children: [
-            RasqPollWidget(poll: const Poll(options: [PollOption(text: '猫派', votes: 3), PollOption(text: '犬派', votes: 2)]), onVote: (_) {}),
+            RasqPollWidget(poll: const Poll(options: [PollOption(text: '猫派', votes: 3), PollOption(text: '犬派', votes: 2)]), onVote: (_) {}), // l10n-ignore
             const SizedBox(height: RasqSpacing.md),
             RasqPollWidget(poll: Poll(options: const [PollOption(text: 'A', votes: 1), PollOption(text: 'B'), PollOption(text: 'C', votes: 4)], multiple: true, expiresAt: now.add(const Duration(hours: 3))), onVote: (_) {}),
             const SizedBox(height: RasqSpacing.md),
-            RasqPollWidget(poll: const Poll(options: [PollOption(text: '猫派', votes: 30), PollOption(text: '犬派', votes: 20), PollOption(text: 'その他', votes: 5)], votedIndices: {0})),
+            RasqPollWidget(poll: const Poll(options: [PollOption(text: '猫派', votes: 30), PollOption(text: '犬派', votes: 20), PollOption(text: 'その他', votes: 5)], votedIndices: {0})), // l10n-ignore
             const SizedBox(height: RasqSpacing.md),
-            RasqPollWidget(poll: Poll(options: const [PollOption(text: '賛成', votes: 7), PollOption(text: '反対', votes: 3)], expiresAt: now.subtract(const Duration(days: 1)))),
+            RasqPollWidget(poll: Poll(options: const [PollOption(text: '賛成', votes: 7), PollOption(text: '反対', votes: 3)], expiresAt: now.subtract(const Duration(days: 1)))), // l10n-ignore
           ]),
         ),
-        const RasqSectionHeader(title: 'ActionBar (spread / leading = コンポーザーツールバー)'),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: RasqActionBar(items: demoActions, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})])),
+        RasqSectionHeader(title: context.l10n.catalogSectionActionBar),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: RasqActionBar(items: demoActions, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})])), // l10n-ignore
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: RasqActionBar(layout: RasqActionBarLayout.leading, items: [
-            RasqActionBarItem(id: 'image', label: '画像', icon: Icons.image_outlined, showCount: false, onTap: () {}),
-            RasqActionBarItem(id: 'emoji', label: '絵文字', icon: Icons.emoji_emotions_outlined, showCount: false, onTap: () {}),
-            RasqActionBarItem(id: 'poll', label: '投票', icon: Icons.poll_outlined, showCount: false, onTap: () {}),
-            RasqActionBarItem(id: 'cw', label: '注釈', icon: Icons.visibility_off_outlined, showCount: false, onTap: () {}),
+            RasqActionBarItem(id: 'image', label: '画像', icon: Icons.image_outlined, showCount: false, onTap: () {}), // l10n-ignore
+            RasqActionBarItem(id: 'emoji', label: '絵文字', icon: Icons.emoji_emotions_outlined, showCount: false, onTap: () {}), // l10n-ignore
+            RasqActionBarItem(id: 'poll', label: '投票', icon: Icons.poll_outlined, showCount: false, onTap: () {}), // l10n-ignore
+            RasqActionBarItem(id: 'cw', label: '注釈', icon: Icons.visibility_off_outlined, showCount: false, onTap: () {}), // l10n-ignore
           ]),
         ),
         // post-tile.rrl.json = WASM の SNS プラグインが出す snapshot (PROTOCOL.md §3.1)。オンボーディングの見本 (D-405) と同じもの。
-        const RasqSectionHeader(title: 'RRL レンダラー (M3: post-tile.rrl.json → L1/L2/L3)'),
+        RasqSectionHeader(title: context.l10n.catalogSectionRrl),
         RrlRenderer(
           node: RrlDocument.fromSnapshot((jsonDecode(postTileSampleRrl) as Map).cast<String, Object?>()).root,
           host: RrlHost(
@@ -121,9 +126,9 @@ class CatalogScreen extends ConsumerWidget {
               'post': {
                 'id': 'p1',
                 'key': 'misskey:misskey.io:yamada:p1',
-                'author': {'displayName': 'ダグラス', 'handle': 'username', 'kind': 'misskey', 'instance': 'misskey.io', 'avatarUrl': 'https://picsum.photos/seed/douglas/200'},
+                'author': {'displayName': 'ダグラス', 'handle': 'username', 'kind': 'misskey', 'instance': 'misskey.io', 'avatarUrl': 'https://picsum.photos/seed/douglas/200'}, // l10n-ignore
                 'createdAt': now.subtract(const Duration(minutes: 3)).toIso8601String(),
-                'bodyRSL': 'WASM プラグインが出した snapshot を #RRL レンダラーが描画しています',
+                'bodyRSL': 'WASM プラグインが出した snapshot を #RRL レンダラーが描画しています', // l10n-ignore
                 'contentWarning': null,
                 'media': [
                   {'id': 'm1', 'type': 'image', 'url': 'https://picsum.photos/seed/rrl1/600/400'},
@@ -133,9 +138,9 @@ class CatalogScreen extends ConsumerWidget {
                 'quote': null,
               },
               'actions': [
-                {'id': 'reply', 'label': '返信', 'icon': 'subdirectory_arrow_left'},
-                {'id': 'renote', 'label': 'リノート', 'icon': 'repeat', 'doneIcon': 'repeat_on'},
-                {'id': 'reaction', 'label': 'リアクション', 'icon': 'add_reaction_outlined', 'doneIcon': 'add_reaction'},
+                {'id': 'reply', 'label': '返信', 'icon': 'subdirectory_arrow_left'}, // l10n-ignore
+                {'id': 'renote', 'label': 'リノート', 'icon': 'repeat', 'doneIcon': 'repeat_on'}, // l10n-ignore
+                {'id': 'reaction', 'label': 'リアクション', 'icon': 'add_reaction_outlined', 'doneIcon': 'add_reaction'}, // l10n-ignore
               ],
               'actionStates': {
                 'misskey:misskey.io:yamada:p1': {
@@ -158,16 +163,16 @@ class CatalogScreen extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.all(RasqSpacing.page),
           child: RasqRichText(
-            InlineSpans.parse(r'$[tada 🎉] $[spin.speed=1.5s $[x2 回る]] **太字** $[rainbow 虹色] $[jelly ぷるぷる] $[blur ぼかし] $[fg.color=ff5555 赤字] $[rotate.deg=15 傾き] $[unknown_fn 未知fnは中身のみ]'),
+            InlineSpans.parse(r'$[tada 🎉] $[spin.speed=1.5s $[x2 回る]] **太字** $[rainbow 虹色] $[jelly ぷるぷる] $[blur ぼかし] $[fg.color=ff5555 赤字] $[rotate.deg=15 傾き] $[unknown_fn 未知fnは中身のみ]'), // l10n-ignore
             style: RasqTypography.body,
           ),
         ),
         const RasqSectionHeader(title: 'Avatar / Badge'),
         _row([
-          RasqAvatar(imageUrl: MockData.me.avatarUrl, fallbackLabel: 'タ'),
+          RasqAvatar(imageUrl: MockData.me.avatarUrl, fallbackLabel: 'タ'), // l10n-ignore
           RasqAvatar(imageUrl: MockData.douglas.avatarUrl, presence: UserPresence.inVc),
           RasqAvatar(fallbackLabel: 'TiV', presence: UserPresence.live, size: 48),
-          RasqAvatar(fallbackLabel: 'アイコン', size: 48, badge: const RasqBadge(count: 3)),
+          RasqAvatar(fallbackLabel: 'アイコン', size: 48, badge: const RasqBadge(count: 3)), // l10n-ignore
           RasqGroupAvatar(users: [MockData.douglas, MockData.tivard, MockData.jikoAppeal], overflowCount: 2),
           const RasqBadged(badge: RasqBadge(count: 1), child: Icon(Icons.notifications_none, size: 28)),
           const RasqBadge(count: 120),
@@ -175,9 +180,9 @@ class CatalogScreen extends ConsumerWidget {
         ]),
         const RasqSectionHeader(title: 'Pills / SNS'),
         _row([
-          const RasqPill(label: 'フォローされています'),
-          const RasqPill(label: 'ブロック中', color: RasqColors.danger),
-          const RasqPill(label: 'フォロー中', outlined: true),
+          const RasqPill(label: 'フォローされています'), // l10n-ignore
+          const RasqPill(label: 'ブロック中', color: RasqColors.danger), // l10n-ignore
+          const RasqPill(label: 'フォロー中', outlined: true), // l10n-ignore
           RasqSnsPill(account: MockData.accountBluesky),
           RasqSnsPill(account: MockData.accountMisskey),
         ]),
@@ -190,7 +195,7 @@ class CatalogScreen extends ConsumerWidget {
             const RasqTextSpan(' '),
             RasqMentionSpan('username', onTap: () {}),
             const RasqTextSpan(' '),
-            RasqHashtagSpan('打上会', onTap: () {}),
+            RasqHashtagSpan('打上会', onTap: () {}), // l10n-ignore
             const RasqTextSpan(' '),
             RasqLinkSpan('amzn.jp/19f253fc', url: Uri.parse('https://amzn.jp/19f253fc'), onTap: () {}),
             const RasqTextSpan(' bold', bold: true),
@@ -202,20 +207,20 @@ class CatalogScreen extends ConsumerWidget {
           Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0), child: RasqMediaGrid(items: MockData.media(n, sensitiveFirst: n != 2))),
         const RasqSectionHeader(title: 'ActionButton (4 variants, done / disabled)'),
         _row([
-          RasqActionButton.icon(icon: Icons.reply, tooltip: '返信', onTap: () {}),
+          RasqActionButton.icon(icon: Icons.reply, tooltip: '返信', onTap: () {}), // l10n-ignore
           RasqActionButton.iconCount(icon: Icons.repeat, count: 1200, onTap: () {}),
           RasqActionButton.iconCount(icon: Icons.favorite_border, doneIcon: Icons.favorite, done: true, doneColor: tokens.live, count: 48, onTap: () {}),
           RasqActionButton.icon(icon: Icons.emoji_emotions_outlined, done: true, onTap: () {}), // done without doneIcon → disabled
-          RasqActionButton.text(label: 'フォロー中', done: true, onTap: () {}),
-          RasqActionButton.iconText(icon: Icons.settings_outlined, label: '設定', onTap: () {}),
+          RasqActionButton.text(label: 'フォロー中', done: true, onTap: () {}), // l10n-ignore
+          RasqActionButton.iconText(icon: Icons.settings_outlined, label: '設定', onTap: () {}), // l10n-ignore
         ]),
         const RasqSectionHeader(title: 'Buttons'),
         _row([
-          RasqTogglePillButton(label: 'フォロー', activeLabel: 'フォロー中', active: true, onPressed: () {}),
-          RasqTogglePillButton(label: 'フォロー', active: false, onPressed: () {}),
-          RasqTogglePillButton(label: 'ブロック中', active: true, activeColor: tokens.danger, onPressed: () {}),
-          SizedBox(width: 160, child: RasqGradientButton(label: '参加', onPressed: () {})),
-          const SizedBox(width: 120, child: RasqGradientButton(label: '参加', enabled: false)),
+          RasqTogglePillButton(label: 'フォロー', activeLabel: 'フォロー中', active: true, onPressed: () {}), // l10n-ignore
+          RasqTogglePillButton(label: 'フォロー', active: false, onPressed: () {}), // l10n-ignore
+          RasqTogglePillButton(label: 'ブロック中', active: true, activeColor: tokens.danger, onPressed: () {}), // l10n-ignore
+          SizedBox(width: 160, child: RasqGradientButton(label: '参加', onPressed: () {})), // l10n-ignore
+          const SizedBox(width: 120, child: RasqGradientButton(label: '参加', enabled: false)), // l10n-ignore
         ]),
         const RasqSectionHeader(title: 'Timestamp'),
         _row([
@@ -226,43 +231,43 @@ class CatalogScreen extends ConsumerWidget {
           RasqTimestamp(now, mode: RasqTimestampMode.absolute),
         ]),
         const RasqSectionHeader(title: 'ListTile family'),
-        RasqListTile(title: 'プラグインの構成', onTap: () {}),
+        RasqListTile(title: 'プラグインの構成', onTap: () {}), // l10n-ignore
         RasqListTile(title: 'BlueSky Plugin', subtitle: 'RASQ Official', leading: const Icon(Icons.extension_outlined), trailing: const RasqBrandIcon(size: 18, semanticsLabel: 'RASQ Official'), onTap: () {}),
         const _SwitchDemo(),
-        RasqValueListTile(title: 'インターフェースの表示サイズ', value: '標準', onTap: () {}),
-        RasqWarningListTile(title: 'トレンドの指向性/刺激性', onTap: () {}),
-        RasqDestructiveListTile(title: '@yamada_tar_gzからログアウト', onTap: () {}),
+        RasqValueListTile(title: 'インターフェースの表示サイズ', value: '標準', onTap: () {}), // l10n-ignore
+        RasqWarningListTile(title: 'トレンドの指向性/刺激性', onTap: () {}), // l10n-ignore
+        RasqDestructiveListTile(title: '@yamada_tar_gzからログアウト', onTap: () {}), // l10n-ignore
         const RasqSectionHeader(title: 'Tabs (≤4 fill / ≥5 scroll, max 10)'),
-        DefaultTabController(length: 3, child: RasqTabs(items: const [RasqTabItem('ノート'), RasqTabItem('引用'), RasqTabItem('メディア')])),
+        DefaultTabController(length: 3, child: RasqTabs(items: const [RasqTabItem('ノート'), RasqTabItem('引用'), RasqTabItem('メディア')])), // l10n-ignore
         DefaultTabController(
           length: 6,
-          child: RasqTabs(items: const [RasqTabItem('ノート'), RasqTabItem('引用'), RasqTabItem('メディア'), RasqTabItem('クリップ/Play'), RasqTabItem('VC'), RasqTabItem('プラグインA')]),
+          child: RasqTabs(items: const [RasqTabItem('ノート'), RasqTabItem('引用'), RasqTabItem('メディア'), RasqTabItem('クリップ/Play'), RasqTabItem('VC'), RasqTabItem('プラグインA')]), // l10n-ignore
         ),
         const RasqSectionHeader(title: 'Inputs'),
         const Padding(
           padding: EdgeInsets.all(RasqSpacing.page),
-          child: Column(children: [RasqInput(hintText: 'ユーザー名'), SizedBox(height: 8), RasqInput(hintText: 'パスワード', obscureText: true, suffix: Icon(Icons.visibility_outlined)), SizedBox(height: 12), RasqSearchBar(hintText: '検索')]),
+          child: Column(children: [RasqInput(hintText: 'ユーザー名'), SizedBox(height: 8), RasqInput(hintText: 'パスワード', obscureText: true, suffix: Icon(Icons.visibility_outlined)), SizedBox(height: 12), RasqSearchBar(hintText: '検索')]), // l10n-ignore
         ),
         const RasqSectionHeader(title: 'Feedback'),
         RasqErrorView(code: ErrorCode.noTrendRequirement, onRetry: () {}),
         RasqErrorView(code: ErrorCode.timeout),
         RasqErrorView(code: ErrorCode.relationalTimelineBroken, compact: true),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: RasqInlineErrorTile(code: ErrorCode.unauthorized.copyWith(message: 'misskey.socialでログインすると見れるかもしれません'))),
-        const RasqEmptyView(title: 'なんにもないようです', hint: 'ワードを変えると見つかるかもしれません'),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: RasqInlineErrorTile(code: ErrorCode.unauthorized.copyWith(message: 'misskey.socialでログインすると見れるかもしれません'))), // l10n-ignore
+        const RasqEmptyView(title: 'なんにもないようです', hint: 'ワードを変えると見つかるかもしれません'), // l10n-ignore
         const RasqLoading(),
         const RasqSectionHeader(title: 'Overlay Manager'),
         _row([
           FilledButton.tonal(
             onPressed: () => manager.showBottomSheet(
               id: 'catalog.sheet',
-              title: 'ボトムシート',
-              confirmText: '決定',
-              builder: (_) => const Padding(padding: EdgeInsets.all(24), child: Text('背面タップ or キャンセルで変更破棄。\nこの上にモーダルは割り込めます。')),
+              title: context.l10n.catalogSheetTitle,
+              confirmText: context.l10n.catalogSheetConfirm,
+              builder: (_) => Padding(padding: const EdgeInsets.all(24), child: Text(context.l10n.catalogSheetBody)),
             ),
             child: const Text('BottomSheet'),
           ),
           FilledButton.tonal(
-            onPressed: () => manager.showAlert(id: 'catalog.alert', title: 'ブロックしますか？', message: '背面タップは無効(明示的操作必須)', confirmText: 'ブロック', cancelText: 'キャンセル', destructive: true),
+            onPressed: () => manager.showAlert(id: 'catalog.alert', title: context.l10n.catalogAlertTitle, message: context.l10n.catalogAlertMessage, confirmText: context.l10n.catalogAlertConfirm, cancelText: context.l10n.catalogAlertCancel, destructive: true),
             child: const Text('Modal'),
           ),
           Builder(
@@ -273,11 +278,11 @@ class CatalogScreen extends ConsumerWidget {
                 manager.showDropdown<String>(
                   id: 'catalog.dropdown',
                   anchor: rect,
-                  items: const [
-                    RasqDropdownItem('昇順', 'asc', checked: true),
-                    RasqDropdownItem('降順', 'desc'),
-                    RasqDropdownItem('デフォルト', 'default'),
-                    RasqDropdownItem('通報', 'report', destructive: true),
+                  items: [
+                    RasqDropdownItem(context.l10n.catalogDropdownAsc, 'asc', checked: true),
+                    RasqDropdownItem(context.l10n.catalogDropdownDesc, 'desc'),
+                    RasqDropdownItem(context.l10n.catalogDropdownDefault, 'default'),
+                    RasqDropdownItem(context.l10n.catalogDropdownReport, 'report', destructive: true),
                   ],
                 );
               },
@@ -287,10 +292,10 @@ class CatalogScreen extends ConsumerWidget {
           FilledButton.tonal(
             onPressed: () => manager.showBottomSheet(
               id: 'catalog.sheet2',
-              title: 'シート→モーダル割り込み',
+              title: context.l10n.catalogSheetModalTitle,
               builder: (ctx) => Padding(
                 padding: const EdgeInsets.all(24),
-                child: FilledButton(onPressed: () => manager.showAlert(id: 'catalog.alert2', title: 'モーダル', message: 'シートは維持されます', confirmText: 'OK'), child: const Text('モーダルを出す')),
+                child: FilledButton(onPressed: () => manager.showAlert(id: 'catalog.alert2', title: context.l10n.catalogModalTitle, message: context.l10n.catalogModalMessage, confirmText: 'OK'), child: Text(context.l10n.catalogModalOpen)),
               ),
             ),
             child: const Text('Sheet + Modal'),
@@ -315,5 +320,5 @@ class _SwitchDemo extends StatefulWidget {
 class _SwitchDemoState extends State<_SwitchDemo> {
   bool _on = true;
   @override
-  Widget build(BuildContext context) => RasqSwitchListTile(title: 'リアクションを通知する', value: _on, onChanged: (v) => setState(() => _on = v));
+  Widget build(BuildContext context) => RasqSwitchListTile(title: 'リアクションを通知する', value: _on, onChanged: (v) => setState(() => _on = v)); // l10n-ignore
 }

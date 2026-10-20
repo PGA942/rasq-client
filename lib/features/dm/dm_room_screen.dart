@@ -15,6 +15,7 @@ import '../compose/composer_sheet.dart';
 import '../home/post_row.dart';
 import 'dm_providers.dart';
 import '../home/timeline_providers.dart';
+import '../../l10n/l10n.dart';
 
 /// DMルーム: ページヘッダー(相手名) + ルームタイムライン(通常投稿の使い回し).
 /// 送信は**常駐 stick コンポーザー** (D-050): ページを開くと縮小状態で置かれ、
@@ -70,15 +71,15 @@ class _DmRoomScreenState extends ConsumerState<DmRoomScreen> {
         title: title,
         onMore: () {},
         // このページだけの DM 設定 (D-127: 未設定なら tl.dm の共通設定が効く)。
-        actions: [RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'このDMの設定', onPressed: () => context.push(Routes.tlConfig('tl.${kind.id}')))],
+        actions: [RasqIconButton(icon: Icons.settings, size: 20, tooltip: context.l10n.dmRoomSettings, onPressed: () => context.push(Routes.tlConfig('tl.${kind.id}')))],
       ),
       body: tl.when(
         loading: () => const RasqLoading(),
-        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
+        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: context.l10n.dmRetry),
         data: (s) => RefreshIndicator(
           onRefresh: notifier.refresh,
           child: s.posts.isEmpty
-              ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 120), RasqEmptyView(title: 'まだメッセージはありません')])
+              ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 120), RasqEmptyView(title: context.l10n.dmRoomEmpty)])
               : ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
                   itemCount: s.posts.length,

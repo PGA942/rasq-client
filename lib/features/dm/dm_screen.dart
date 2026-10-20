@@ -16,6 +16,7 @@ import '../../shell/scroll_memory.dart';
 import '../../shell/rasq_shell.dart';
 import '../../text/inline_spans.dart';
 import 'dm_providers.dart';
+import '../../l10n/l10n.dart';
 
 /// DMホーム (全て / フォロー中): アイテム行コンポーネント(アイコン+右上テキスト+右下テキスト+`>`).
 class DmScreen extends ConsumerWidget {
@@ -25,7 +26,7 @@ class DmScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentUserProvider);
     final rooms = ref.watch(dmRoomsProvider);
-    final tabs = [const RasqTabItem('全て'), const RasqTabItem('フォロー中')];
+    final tabs = [RasqTabItem(context.l10n.dmTabAll), RasqTabItem(context.l10n.dmTabFollowing)];
     return DefaultTabController(
       length: tabs.length,
       child: Scaffold(
@@ -35,13 +36,13 @@ class DmScreen extends ConsumerWidget {
             Expanded(child: RasqTabs(items: tabs, showChevron: false)),
             // DM のカスタマイズ (D-127): メインページの設定 = カスタム未設定の
             // 全 DM ページに適用される共通設定(tl.dm)。
-            RasqIconButton(icon: Icons.settings, size: 20, onPressed: () => context.push(Routes.tlConfig('tl.dm')), tooltip: 'DM設定'),
+            RasqIconButton(icon: Icons.settings, size: 20, onPressed: () => context.push(Routes.tlConfig('tl.dm')), tooltip: context.l10n.dmSettings),
           ]),
           const Padding(padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm), child: RasqSearchBar()),
           Expanded(
             child: TabBarView(children: [
               _RoomList(rooms: rooms, onRefresh: () => ref.refresh(dmRoomsProvider.future)),
-              const RasqEmptyView(title: 'フォロー中のDMはありません', hint: 'フィルタは M2'),
+              RasqEmptyView(title: context.l10n.dmFollowingEmpty),
             ]),
           ),
         ]),
@@ -51,7 +52,7 @@ class DmScreen extends ConsumerWidget {
         // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
         heroTag: 'fab.dm',
           onPressed: () => _startNewDm(context, ref),
-          tooltip: '新規メッセージ',
+          tooltip: context.l10n.dmNewMessage,
           shape: const CircleBorder(),
           child: const Icon(Icons.add),
         ),
@@ -67,7 +68,7 @@ Future<void> _startNewDm(BuildContext context, WidgetRef ref) =>
 /// から。Widget の外からも開けるよう [OverlayManager] と [GoRouter] を直接受ける。[rooms] は相手を選んでから読む
 /// (起動直後のショートカットでは、シートを出した時点でまだ読み終えていないことがある)。
 Future<void> startNewDm({required OverlayManager manager, required GoRouter router, required List<DmRoom> Function() rooms}) async {
-  final picked = await manager.showBottomSheet<UserSummary>(id: dmNewSheetId, title: '新規メッセージ', builder: (_) => const _UserPickSheet());
+  final picked = await manager.showBottomSheet<UserSummary>(id: dmNewSheetId, title: appL10n.dmNewMessage, builder: (_) => const _UserPickSheet());
   if (picked == null) return;
   // 既存ルームがあればそれを開く(重複ルームを作らない)。
   final existing = rooms().where((r) => r.peer.id == picked.id).firstOrNull;
@@ -103,17 +104,17 @@ class _UserPickSheetState extends ConsumerState<_UserPickSheet> {
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
-        child: RasqSearchBar(hintText: 'ユーザー名で検索..', onChanged: _search),
+        child: RasqSearchBar(hintText: context.l10n.dmUserSearchHint, onChanged: _search),
       ),
       Flexible(
         child: _results == null
-            ? Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('DM を送る相手を検索します。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)))
+            ? Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(context.l10n.dmUserSearchIntro, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)))
             : FutureBuilder(
                 future: _results,
                 builder: (context, snap) {
                   if (!snap.hasData && snap.error == null) return const RasqLoading();
                   final users = snap.data ?? const <UserSummary>[];
-                  if (users.isEmpty) return const RasqEmptyView(title: '見つかりませんでした');
+                  if (users.isEmpty) return RasqEmptyView(title: context.l10n.dmUserNotFound);
                   return ListView(shrinkWrap: true, children: [
                     for (final u in users)
                       RasqListTile(
@@ -138,11 +139,11 @@ class _RoomList extends StatelessWidget {
   @override
   Widget build(BuildContext context) => rooms.when(
         loading: () => const RasqLoading(),
-        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: onRefresh, retryLabel: '再読み込み'),
+        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: onRefresh, retryLabel: context.l10n.dmRetry),
         data: (list) => RefreshIndicator(
           onRefresh: onRefresh,
           child: list.isEmpty
-              ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 120), RasqEmptyView(title: 'DMはありません', hint: 'ダイレクト投稿(限定公開)がここに並びます')])
+              ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 120), RasqEmptyView(title: context.l10n.dmEmptyTitle, hint: context.l10n.dmEmptyHint)])
               // 位置を覚える (D-504): タブを切り替えて戻っても前の位置から。
               : RememberScroll(
                   id: 'dm.rooms',
@@ -186,7 +187,7 @@ class _RoomRow extends StatelessWidget {
               const SizedBox(height: 2),
               if (last != null)
                 RasqRichText(
-                  [if (mine) const RasqTextSpan('あなた: ', bold: true), ...InlineSpans.parse(last.body.isEmpty ? (last.media.isNotEmpty ? '[メディア]' : '') : last.body)],
+                  [if (mine) RasqTextSpan(context.l10n.dmYouPrefix, bold: true), ...InlineSpans.parse(last.body.isEmpty ? (last.media.isNotEmpty ? context.l10n.dmMediaPlaceholder : '') : last.body)],
                   style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

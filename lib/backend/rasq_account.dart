@@ -13,6 +13,7 @@ import '../session/rasq_login_carry.dart';
 import '../session/sns_share.dart' show SnsShareStore;
 import 'orgate_client.dart';
 import 'rasq_account_page_api.dart';
+import '../l10n/l10n.dart';
 
 /// RASQ アカウント (D-087) — アカウントバンドルの顔。
 ///
@@ -528,7 +529,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
       // 発行は ORGATE。ORGATE が Central に公開プロフィールの行を作り、登録の承諾も Central が確かめて残す (D-398)。
       final res = await _postDevice(identity, displayName: displayName, consents: consents);
       final t = _tokensOf(res);
-      if (t == null) throw OrgateException(ErrorCode.http(502), 'ORGATE がトークンを返しませんでした');
+      if (t == null) throw OrgateException(ErrorCode.http(502), appL10n.backendNoToken);
       final id = res['accountId'] as String? ?? '';
       _creds = _creds!.withToken(id, t.access, refreshToken: t.refresh, restoreSecret: t.restore);
       _activeId = id;

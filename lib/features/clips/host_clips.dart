@@ -6,6 +6,7 @@ import 'package:rasq_models/rasq_models.dart';
 
 import '../../backend/rasq_collections_api.dart';
 import '../../session/session_providers.dart';
+import '../../l10n/l10n.dart';
 
 /// ホスト横断クリップ (D-032)。SNS を跨いで post key を束ねる端末ローカルの
 /// クリップ。**表示用スナップショット**も一緒に保存する — 元投稿が消えたり
@@ -215,8 +216,8 @@ class HostClipsStore extends AsyncNotifier<List<HostClip>> {
   Future<RasqCollectionDetail> publish(String clipId) async {
     final api = ref.read(rasqCollectionsApiProvider);
     final clip = byId(clipId);
-    if (api == null) throw StateError('RASQ アカウントのサーバーが設定されていません');
-    if (clip == null) throw StateError('クリップがありません');
+    if (api == null) throw StateError(appL10n.clipsNoServer);
+    if (clip == null) throw StateError(appL10n.clipsNotFound);
     final created = clip.remoteId == null ? await api.create(RasqCollectionKind.clip, clip.name, description: clip.description, isPublic: true) : null;
     final remoteId = clip.remoteId ?? created!.id;
     try {

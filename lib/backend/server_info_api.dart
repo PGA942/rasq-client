@@ -218,7 +218,7 @@ final serverRaiProvider = FutureProvider.family<RaiServerProfile?, String>((ref,
 });
 
 /// 本文の中の「サーバーそのもの」へのリンク(`https://misskey.io` / `https://misskey.io/` / `/about`)。投稿やユーザーへのリンクは拾わない。
-final _serverLink = RegExp(r'https://([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)(?:/|/about/?)?(?=$|[\s)\]」』、。,])');
+final _serverLink = RegExp(r'https://([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)(?:/|/about/?)?(?=$|[\s)\]」』、。,])'); // l10n-ignore
 
 /// 本文に含まれる最初のサーバーのホスト([exclude] に当たるもの = Central 自身など、は飛ばす)。
 String? serverHostLinkIn(String text, {Set<String> exclude = const {}}) {

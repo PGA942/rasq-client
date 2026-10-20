@@ -11,6 +11,7 @@ import '../../session/session_providers.dart';
 import '../home/post_row.dart' show PostRow;
 import '../settings/settings_dsl.dart';
 import '../store/rasqpkg.dart';
+import '../../l10n/l10n.dart';
 
 /// 着せ替えパック (D-335、契約 v0.16 §2.12 `kind: "theme"`)。
 ///
@@ -93,7 +94,7 @@ class ThemePacks extends Notifier<List<InstalledThemePack>> {
 
   /// 検証済みの着せ替えパックを保存する(同じ id は入れ替え)。[sideloaded] = ストアを通していない。
   Future<InstalledThemePack> install(RasqPackage package, {bool sideloaded = false}) async {
-    if (!package.root.isTheme) throw ArgumentError('着せ替えパックではありません: ${package.root.id}');
+    if (!package.root.isTheme) throw ArgumentError(appL10n.themeNotAThemePack(package.root.id));
     await ready;
     final base = await ref.read(themePackDirProvider)();
     final dir = Directory('${base.path}/${_dirName(package.root.id)}');

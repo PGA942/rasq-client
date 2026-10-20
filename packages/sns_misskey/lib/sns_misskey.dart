@@ -11,3 +11,4 @@ export 'src/misskey_session.dart';
 export 'src/miauth.dart';
 export 'src/mappers.dart';
 export 'src/settings_pages.dart' show MisskeyAccountSettings;
+export 'src/l10n.dart' show snsMisskeyL10n, SnsMisskeyLocalizations, lookupSnsMisskeyLocalizations;

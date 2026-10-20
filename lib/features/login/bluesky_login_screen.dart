@@ -11,6 +11,7 @@ import '../../session/bluesky_auth.dart';
 import 'login_screen.dart' show popOr;
 import 'sns_signup.dart';
 import 'terms_sheet.dart';
+import '../../l10n/l10n.dart';
 
 /// Bluesky のログイン (D-175): PDS / ハンドル(かメール)/ アプリパスワード。
 /// ブラウザ往復は無く、プラグインの `sns.login`(createSession)で完結する。
@@ -47,7 +48,7 @@ class _BlueskyLoginScreenState extends ConsumerState<BlueskyLoginScreen> {
   Future<void> _login() async {
     final plugin = ref.read(pluginRegistryProvider).plugin(blueskyPluginId);
     if (plugin == null) {
-      setState(() => _error = 'Bluesky プラグインが見つかりません');
+      setState(() => _error = context.l10n.loginPluginMissingBluesky);
       return;
     }
     final manager = ref.read(overlayManagerProvider);
@@ -69,7 +70,7 @@ class _BlueskyLoginScreenState extends ConsumerState<BlueskyLoginScreen> {
     } on SnsApiException catch (e) {
       setState(() => _error = e.code.message ?? e.code.display);
     } catch (e) {
-      setState(() => _error = 'ログインできませんでした: $e');
+      setState(() => _error = context.l10n.loginFailed(e is StateError ? e.message : '$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -83,7 +84,7 @@ class _BlueskyLoginScreenState extends ConsumerState<BlueskyLoginScreen> {
     if (!mounted) return;
     setState(() {
       _signupUrl = url;
-      _error = ok ? null : 'ブラウザを開けませんでした。URL: $url';
+      _error = ok ? null : context.l10n.loginBrowserOpenFailed('$url');
     });
   }
 
@@ -93,7 +94,7 @@ class _BlueskyLoginScreenState extends ConsumerState<BlueskyLoginScreen> {
     final tokens = RasqTokens.of(context);
     final canSubmit = !_busy && _id.text.trim().isNotEmpty && _password.text.isNotEmpty;
     return Scaffold(
-      appBar: AppBar(title: const Text('Blueskyでログイン'), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: () => popOr(context, Routes.login))),
+      appBar: AppBar(title: Text(context.l10n.loginWithBluesky), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: context.l10n.loginBack, onPressed: () => popOr(context, Routes.login))),
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl, vertical: RasqSpacing.md), children: [
           Row(children: [
@@ -105,24 +106,24 @@ class _BlueskyLoginScreenState extends ConsumerState<BlueskyLoginScreen> {
               child: const Text('B', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
             ),
             const SizedBox(width: RasqSpacing.md),
-            Expanded(child: RasqInput(key: blueskyLoginHostKey, controller: _host, hintText: 'PDS (例: bsky.social)', keyboardType: TextInputType.url)),
+            Expanded(child: RasqInput(key: blueskyLoginHostKey, controller: _host, hintText: context.l10n.loginBlueskyHostHint, keyboardType: TextInputType.url)),
           ]),
           const SizedBox(height: RasqSpacing.md),
-          RasqInput(key: blueskyLoginIdKey, controller: _id, hintText: 'ハンドル (例: you.bsky.social) またはメール', keyboardType: TextInputType.emailAddress, onChanged: (_) => setState(() {})),
+          RasqInput(key: blueskyLoginIdKey, controller: _id, hintText: context.l10n.loginBlueskyIdHint, keyboardType: TextInputType.emailAddress, onChanged: (_) => setState(() {})),
           const SizedBox(height: RasqSpacing.sm),
           Row(children: [
-            Expanded(child: RasqInput(key: blueskyLoginPasswordKey, controller: _password, hintText: 'アプリパスワード', obscureText: !_showPassword, onChanged: (_) => setState(() {}))),
-            RasqIconButton(icon: _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, tooltip: _showPassword ? '隠す' : '表示', onPressed: () => setState(() => _showPassword = !_showPassword)),
+            Expanded(child: RasqInput(key: blueskyLoginPasswordKey, controller: _password, hintText: context.l10n.loginBlueskyPasswordHint, obscureText: !_showPassword, onChanged: (_) => setState(() {}))),
+            RasqIconButton(icon: _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, tooltip: _showPassword ? context.l10n.loginPasswordHide : context.l10n.loginPasswordShow, onPressed: () => setState(() => _showPassword = !_showPassword)),
           ]),
           const SizedBox(height: RasqSpacing.sm),
-          Text('Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」で作ったパスワードを使ってください。本パスワードは入れないでください。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text(context.l10n.loginBlueskyPasswordNote, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: RasqSpacing.xl),
-          FilledButton(key: blueskyLoginButtonKey, onPressed: canSubmit ? _login : null, child: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('ログイン')),
+          FilledButton(key: blueskyLoginButtonKey, onPressed: canSubmit ? _login : null, child: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : Text(context.l10n.loginButton)),
           if (_error != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.md), child: Text(_error!, style: RasqTypography.bodySmall.copyWith(color: tokens.danger))),
           SnsSignupButton(kind: SnsKind.bluesky, onPressed: _busy ? null : _signup),
           if (_signupUrl != null)
             SnsSignupReturnHint(
-              text: 'ブラウザの Bluesky で「アカウントを作成」から登録してください。登録できたら、Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」でパスワードを作り、上のハンドルとアプリパスワードでログインします。',
+              text: context.l10n.loginBlueskySignupHint,
               url: _signupUrl!,
               onReopen: _signup,
             ),

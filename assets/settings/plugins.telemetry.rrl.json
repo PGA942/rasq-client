@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "plugins.telemetry",
-  "title": "怪しい通信の通報",
+  "title": "@l10n:settingsPagesPluginsTelemetryTitle",
   "defaults": {
     "fetchShapes": false
   },
@@ -11,17 +11,17 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "プラグインの怪しい通信をストアへ通報"
+          "title": "@l10n:settingsPagesPluginsTelemetrySection1Title"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "fetchShapes",
         "p": {
-          "title": "怪しい通信を通報する",
+          "title": "@l10n:settingsPagesPluginsTelemetryFetchShapesTitle",
           "value": "$.settings.fetchShapes",
-          "subtitle": "通信の形だけを審査に送ります。本文やトークンなどの中身は送りません。既定はオフ",
-          "detail": "プラグインが行う通信の「形」(接続先のホスト、メソッド、パスの型、ヘッダの名前、送る JSON のキーの構造)だけを、この端末で初めて見たときに 1 度だけ RASQ のストアへ送ります。トークン、本文、ユーザー名、URL の中の ID などの値は送りません。審査は、承認したあとで通信の形が変わったプラグインを読み直すためにこれを使います。既定はオフです。"
+          "subtitle": "@l10n:settingsPagesPluginsTelemetryFetchShapesSubtitle",
+          "detail": "@l10n:settingsPagesPluginsTelemetryFetchShapesDetail"
         },
         "on": {
           "change": "settings.set"
@@ -30,9 +30,9 @@
       {
         "t": "Text",
         "p": {
-          "text": "同じ形は 2 度と送りません。オフにすると、同意の取り消しとして記録されます。",
+          "text": "@l10n:settingsPagesPluginsTelemetryText1",
           "style": "caption",
-          "detail": "送るもの: 例 {host: misskey.example, method: POST, path: /api/users/{hex}/notes, headers: [content-type], body: {i: s, limit: n}}。送らないもの: 値そのもの。同じ形は 2 度と送りません。同意はストアの同意記録にも残り、切ると撤回として記録されます。"
+          "detail": {"$l10n": "settingsPagesPluginsTelemetryText1Detail", "args": {"example": "{host: misskey.example, method: POST, path: /api/users/{hex}/notes, headers: [content-type], body: {i: s, limit: n}}"}}
         }
       }
     ]

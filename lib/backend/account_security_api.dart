@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'orgate_client.dart';
 import 'rasq_account.dart';
+import '../l10n/l10n.dart';
 
 /// メール認証とアカウントの強化 (S-019) の口。メールで届くのはどれも確認コード(Base58 で 10 文字)(1 回きり、5 回まで。
 /// 15 分、ログインの 2 段階目とパスワードの再設定は 10 分)。
@@ -153,20 +154,23 @@ final accountSecurityApiProvider = Provider<AccountSecurityApi?>((ref) {
 });
 
 /// サーバーのエラーを、画面に出す 1 行へ。
-String accountSecurityMessage(OrgateException e) => switch (e.code.code) {
-      _ when e.serverCode == 'passwordless_login_removed' => 'メールのコードだけのログインは終わりました。ハンドル(またはメール)とパスワードでログインしてください',
-      _ when e.serverCode == 'second_factor_required' => 'メールに届いた確認コードを入れてください',
-      '429' => '試行が多すぎます。しばらく待ってから、やり直してください',
-      '501' => 'このサーバーは、メールを送れる設定になっていません',
-      '409' when e.message.contains('already used') => 'このメールアドレスは、ほかのアカウントで使われています',
-      '401' => 'ハンドル(メール)かパスワードが違います',
-      '400' when e.message.contains('code') => 'コードが違うか、期限が切れています',
-      '400' when e.message.contains('too weak') => 'このパスワードは弱すぎます(よく使われるもの / 同じ字の繰り返し / ハンドルやメールと同じもの は使えません)',
-      '400' when e.message.contains('8-256') => 'パスワードは 8 文字以上にしてください',
-      '400' when e.message.contains('email') => 'メールアドレスの形が正しくありません',
-      '403' when e.message.contains('current password') => 'いまのパスワードが違います',
-      // ORGATE O-009 から 403 の文面は日本語(そのまま出す)。上は前の版の英語の文面。
-      '403' when e.message.contains('has no password') => 'このアカウントにはパスワードがありません。いまのメールに届く確認コードで確かめてください',
-      '403' when e.message.contains('confirmation required') => 'この操作には、いまのパスワードか、いまのメールに届く確認コードが要ります',
-      _ => e.message,
-    };
+String accountSecurityMessage(OrgateException e) {
+  final l = appL10n;
+  return switch (e.code.code) {
+    _ when e.serverCode == 'passwordless_login_removed' => l.backendSecurityPasswordlessRemoved,
+    _ when e.serverCode == 'second_factor_required' => l.backendSecuritySecondFactor,
+    '429' => l.backendSecurityTooMany,
+    '501' => l.backendSecurityNoMail,
+    '409' when e.message.contains('already used') => l.backendSecurityEmailUsed,
+    '401' => l.backendSecurityBadCredentials,
+    '400' when e.message.contains('code') => l.backendSecurityBadCode,
+    '400' when e.message.contains('too weak') => l.backendSecurityWeakPassword,
+    '400' when e.message.contains('8-256') => l.backendSecurityShortPassword,
+    '400' when e.message.contains('email') => l.backendSecurityBadEmail,
+    '403' when e.message.contains('current password') => l.backendSecurityWrongPassword,
+    // ORGATE O-009 から 403 の文面は日本語(そのまま出す)。上は前の版の英語の文面。
+    '403' when e.message.contains('has no password') => l.backendSecurityNoPassword,
+    '403' when e.message.contains('confirmation required') => l.backendSecurityConfirmRequired,
+    _ => e.message,
+  };
+}

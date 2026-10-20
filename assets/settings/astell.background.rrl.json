@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "astell.background",
-  "title": "画面オフ時の動作",
+  "title": "@l10n:settingsPagesAstellBackgroundTitle",
   "defaults": {
     "onScreenOff": "keep"
   },
@@ -11,17 +11,17 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "通話中に画面を消したとき"
+          "title": "@l10n:settingsPagesAstellBackgroundSection1Title"
         }
       },
       {
         "t": "RadioListTile",
         "k": "onScreenOff",
         "p": {
-          "title": "通話を続ける",
+          "title": "@l10n:settingsPagesAstellBackgroundOnScreenOffKeepTitle",
           "value": "keep",
           "group": "$.settings.onScreenOff",
-          "subtitle": "音声はそのまま、画面共有の受信だけ止めます"
+          "subtitle": "@l10n:settingsPagesAstellBackgroundOnScreenOffKeepSubtitle"
         },
         "on": {
           "change": "settings.set"
@@ -31,7 +31,7 @@
         "t": "RadioListTile",
         "k": "onScreenOff",
         "p": {
-          "title": "マイクをミュートして続ける",
+          "title": "@l10n:settingsPagesAstellBackgroundOnScreenOffMuteTitle",
           "value": "mute",
           "group": "$.settings.onScreenOff"
         },
@@ -43,7 +43,7 @@
         "t": "RadioListTile",
         "k": "onScreenOff",
         "p": {
-          "title": "ルームから出る",
+          "title": "@l10n:settingsPagesAstellBackgroundOnScreenOffLeaveTitle",
           "value": "leave",
           "group": "$.settings.onScreenOff"
         },
@@ -55,8 +55,8 @@
         "t": "Notice",
         "p": {
           "kind": "info",
-          "text": "この設定は準備中です。いまの ASTell は、画面が点いている間だけ動きます。",
-          "detail": "この設定は保存されますが、適用は通話の常駐化(バックグラウンド音声)の実装後です。第一期の ASTell は画面が点いている間だけ動きます。"
+          "text": "@l10n:settingsPagesAstellBackgroundNotice1",
+          "detail": "@l10n:settingsPagesAstellBackgroundNotice1Detail"
         }
       }
     ]

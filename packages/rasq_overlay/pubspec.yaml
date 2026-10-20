@@ -11,6 +11,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # 文言 (D-534): 部品の決まり文句(キャンセル / 閉じる など)は rasq_design の部品 design_overlay から引く。
+  rasq_design:
+    path: ../rasq_design
 
 dev_dependencies:
   flutter_test:

@@ -226,16 +226,16 @@ Set<String> extractFeatures(Post p) => extractFeaturesText('${p.body} ${p.quote?
 /// 生テキスト版 (D-070: リノートした人のプロフィール文からのソートに使う)。
 Set<String> extractFeaturesText(String text) {
   final out = <String>{};
-  for (final m in RegExp(r'#([^\s#＃]+)').allMatches(text)) {
+  for (final m in RegExp(r'#([^\s#＃]+)').allMatches(text)) { // l10n-ignore
     out.add(m.group(1)!.toLowerCase());
   }
   for (final m in RegExp(r'@([A-Za-z0-9_.-]+)').allMatches(text)) {
     out.add(m.group(1)!.toLowerCase());
   }
-  for (final m in RegExp(r'([ァ-ヴー]{2,}|[A-Za-z0-9][A-Za-z0-9\-_.]{1,})').allMatches(text)) {
+  for (final m in RegExp(r'([ァ-ヴー]{2,}|[A-Za-z0-9][A-Za-z0-9\-_.]{1,})').allMatches(text)) { // l10n-ignore
     out.add(m.group(1)!.toLowerCase());
   }
-  for (final m in RegExp(r'([一-龠々]{2,})').allMatches(text)) {
+  for (final m in RegExp(r'([一-龠々]{2,})').allMatches(text)) { // l10n-ignore
     out.add(m.group(1)!);
   }
   return out;
@@ -246,7 +246,7 @@ Set<String> extractFeaturesText(String text) {
 Set<String> strongAnchors(Post p) {
   final out = <String>{};
   final text = '${p.body} ${p.quote?.body ?? ''}';
-  for (final m in RegExp(r'#([^\s#＃]+)').allMatches(text)) {
+  for (final m in RegExp(r'#([^\s#＃]+)').allMatches(text)) { // l10n-ignore
     out.add('#${m.group(1)!.toLowerCase()}');
   }
   return out;
@@ -266,7 +266,7 @@ Set<String> hardAnchors(Post p) {
 }
 
 final _reactionLexicon = RegExp(
-  r'(それな|それはそう|わか(る|り)|分か(る|り)|たしかに|確かに|ほん(と|ま)それ|ほんそれ|まじ|マジ|ﾏｼﾞ|え[っぇえー]+|うそ|ウソ|嘘でしょ|草|くさ|ｗ+|w{2,}|笑った|わろた|ワロタ|やば|ヤバ|つら|辛|無理|むり|尊い|最高|好き|すき|おめでと|お(つかれ|疲れ)|それ|これ|あれ|だよね|よね[ぇー]?)',
+  r'(それな|それはそう|わか(る|り)|分か(る|り)|たしかに|確かに|ほん(と|ま)それ|ほんそれ|まじ|マジ|ﾏｼﾞ|え[っぇえー]+|うそ|ウソ|嘘でしょ|草|くさ|ｗ+|w{2,}|笑った|わろた|ワロタ|やば|ヤバ|つら|辛|無理|むり|尊い|最高|好き|すき|おめでと|お(つかれ|疲れ)|それ|これ|あれ|だよね|よね[ぇー]?)', // l10n-ignore
 );
 
 /// 暗黙応答らしい短文か(「それな」「わかる」「えっ」など)。埋め込みや
@@ -280,7 +280,7 @@ bool isReactivePost(Post p) {
 /// 文字 2〜3-gram プロファイル(表記揺れ・略語・オタク語彙に強い。短文では
 /// 埋め込みより効くことがあるため必ず併用する)。
 Map<String, double> charNgramProfile(String text) {
-  final t = text.toLowerCase().replaceAll(RegExp(r'https?://[^\s]+'), ' ').replaceAll(RegExp(r'[\s#＃@]+'), '');
+  final t = text.toLowerCase().replaceAll(RegExp(r'https?://[^\s]+'), ' ').replaceAll(RegExp(r'[\s#＃@]+'), ''); // l10n-ignore
   final counts = <String, double>{};
   for (final n in const [2, 3]) {
     for (var i = 0; i + n <= t.length; i++) {

@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "about.developer",
-  "title": "開発者モード",
+  "title": "@l10n:settingsPagesAboutDeveloperTitle",
   "defaults": {
     "enabled": false,
     "iosScreenGlimpse": false,
@@ -14,10 +14,10 @@
         "t": "SwitchListTile",
         "k": "enabled",
         "p": {
-          "title": "開発者モード",
+          "title": "@l10n:settingsPagesAboutDeveloperTitle",
           "value": "$.settings.enabled",
-          "subtitle": "画面の説明を、仕組みや送るデータの形まで詳しく表示します",
-          "detail": "オンのあいだ、設定や同意の画面で短くしている説明の代わりに、元の詳しい説明(保存先の KV、送る JSON の形、決定番号など)を出します。表示が変わるだけで、動作は変わりません。"
+          "subtitle": "@l10n:settingsPagesAboutDeveloperEnabledSubtitle",
+          "detail": "@l10n:settingsPagesAboutDeveloperEnabledDetail"
         },
         "on": {
           "change": "settings.set"
@@ -27,17 +27,17 @@
         "t": "Notice",
         "p": {
           "kind": "info",
-          "text": "表示だけが変わります。設定や送るデータは変わりません。"
+          "text": "@l10n:settingsPagesAboutDeveloperNotice1"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "iosScreenGlimpse",
         "p": {
-          "title": "画面の読み取りを試す(iOS)",
+          "title": "@l10n:settingsPagesAboutDeveloperIosScreenGlimpseTitle",
           "value": "$.settings.iosScreenGlimpse",
-          "subtitle": "iPhone / iPad の「SNS サービスを探す」に「いつものブラウザで見て探す」を出します",
-          "detail": "D-417 の Broadcast Upload Extension(ScreenGlimpseBroadcast)が画面収録の選択に出ない端末があるため(未解決)、iOS では既定で隠しています(D-418)。オンにすると入口を出します。Android は常に出します。",
+          "subtitle": "@l10n:settingsPagesAboutDeveloperIosScreenGlimpseSubtitle",
+          "detail": "@l10n:settingsPagesAboutDeveloperIosScreenGlimpseDetail",
           "dev": true
         },
         "on": {
@@ -48,10 +48,10 @@
         "t": "SwitchListTile",
         "k": "raiAndroid3d",
         "p": {
-          "title": "3D の RAi を試す(Android)",
+          "title": "@l10n:settingsPagesAboutDeveloperRaiAndroid3dTitle",
           "value": "$.settings.raiAndroid3d",
-          "subtitle": "Android でも RAi のマスコットを 3D で表示します",
-          "detail": "Android で RAi が開かない報告があり、3D の土台(flutter_angle)の初期化が疑わしいため、既定は 2D です(D-516)。オンにすると 3D を試します。20 秒たっても出ない / 失敗したときは自動で 2D に戻し、RAi のサイドバーの「診断」に理由を残します。iPhone / iPad / Mac は常に 3D です。",
+          "subtitle": "@l10n:settingsPagesAboutDeveloperRaiAndroid3dSubtitle",
+          "detail": "@l10n:settingsPagesAboutDeveloperRaiAndroid3dDetail",
           "dev": true
         },
         "on": {

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import '../l10n/l10n.dart';
 
 /// 応答本文を上限つきで読む GET(セキュリティ確認 2026-10-09 の [18])。
 ///
@@ -75,5 +76,5 @@ class ResponseTooLargeException implements Exception {
   final int seen;
 
   @override
-  String toString() => '応答が大きすぎます($maxBytes bytes を超えています)';
+  String toString() => appL10n.backendResponseTooLarge(maxBytes);
 }

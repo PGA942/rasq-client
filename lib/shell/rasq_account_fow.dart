@@ -299,7 +299,7 @@ class RasqAccountPanel extends ConsumerWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(context.l10n.shellAccountSanctionActive(sanctions.levelLabel), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, color: tokens.danger)),
                 if (sanctions.restrictedFeatures.isNotEmpty)
-                  Text(context.l10n.shellAccountSanctionRestrictedFeatures(sanctions.restrictedFeatures.map((f) => RasqSanctions.featureLabels[f] ?? f).join(' / ')), style: RasqTypography.caption),
+                  Text(context.l10n.shellAccountSanctionRestrictedFeatures(sanctions.restrictedFeatures.map((f) => RasqSanctions.featureLabel(f) ?? f).join(' / ')), style: RasqTypography.caption),
                 if (sanctions.moderated) Text(context.l10n.shellAccountSanctionReviewDelay(sanctions.reviewDelaySeconds), style: RasqTypography.caption),
                 for (final n in sanctions.notes) Text(context.l10n.shellAccountSanctionStaffNote(n), style: RasqTypography.caption),
                 Text(sanctions.expiresAt == null ? context.l10n.shellAccountSanctionNoExpiry : context.l10n.shellAccountSanctionExpiry('${sanctions.expiresAt!.toLocal()}'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),

@@ -13,13 +13,15 @@ import 'rasq_account.dart';
 
 /// SNS アカウントのタイルを出すか。`auto` は、本人のアプリの判定([snsAutoVisible])に従う。
 enum SnsTileVisibility {
-  auto('auto', '自動'),
-  show('show', '表示'),
-  hide('hide', '非表示');
+  auto('auto'),
+  show('show'),
+  hide('hide');
 
-  const SnsTileVisibility(this.id, this.label);
+  const SnsTileVisibility(this.id);
   final String id;
-  final String label;
+
+  /// 表示の名前(表示の言語)。
+  String get label => switch (this) { auto => appL10n.backendTileAuto, show => appL10n.backendTileShow, hide => appL10n.backendTileHide };
   static SnsTileVisibility of(String? id) => values.firstWhere((v) => v.id == id, orElse: () => auto);
 }
 
@@ -53,7 +55,7 @@ class RasqSnsTile {
   final String? verifiedMethod;
 
   /// 確認の方法を、画面に出す言葉で。
-  String get verifiedLabel => switch (verifiedMethod) { 'keybase' => 'Keybase の証明で確認済み', _ => 'プロフィールで確認済み' };
+  String get verifiedLabel => switch (verifiedMethod) { 'keybase' => appL10n.backendVerifiedKeybase, _ => appL10n.backendVerifiedProfile };
 
   /// `kind:instance:handle`(大小文字は区別しない比較に使う)。
   String get key => '$kind:$instance:$handle';
@@ -180,7 +182,7 @@ class RasqPostImage {
         type: switch (type) { 'video' => MediaType.video, 'audio' => MediaType.file, _ => MediaType.image },
         url: url,
         sensitive: sensitive,
-        fileName: type == 'audio' ? '音声' : null,
+        fileName: type == 'audio' ? appL10n.backendAudioFileName : null,
         width: width == 0 ? null : width,
         height: height == 0 ? null : height,
       );
@@ -924,7 +926,7 @@ final currentBundleLinksProvider = FutureProvider.autoDispose<List<RasqSnsLink>>
 /// ページ 1 枚ぶん(プロフィール + 投稿)。
 final rasqAccountPageProvider = FutureProvider.autoDispose.family<({RasqPublicProfile profile, RasqPostList posts}), String>((ref, handle) async {
   final api = ref.watch(rasqAccountPageApiProvider);
-  if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
+  if (api == null) throw StateError(appL10n.backendServerNotConfigured);
   // チャイルドセーフ (D-454、[9]): ページの投稿 / 固定 / メディアにも、ホームと同じ保護者の表示制限を掛ける。
   final gate = ref.watch(childGateProvider);
   final (profile, posts) = await (api.profile(handle), api.posts(handle)).wait;
@@ -975,7 +977,7 @@ final rasqFeedPostsProvider = NotifierProvider<RasqFeedPosts, Map<String, RasqAc
 
 final rasqThreadProvider = FutureProvider.autoDispose.family<RasqThread, String>((ref, id) async {
   final api = ref.watch(rasqAccountPageApiProvider);
-  if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
+  if (api == null) throw StateError(appL10n.backendServerNotConfigured);
   // チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): 元の投稿 / 返信にも、ホームと同じ保護者の表示制限を掛ける
   // (RASQ の詳細 / リアクション画面 / Swing の返信の共有の口)。この投稿そのものは、開く側が postDetailBlockReason で決める。
   final gate = ref.watch(childGateProvider);
@@ -984,7 +986,7 @@ final rasqThreadProvider = FutureProvider.autoDispose.family<RasqThread, String>
 
 final rasqPostReactionsProvider = FutureProvider.autoDispose.family<RasqPostReactions, String>((ref, id) async {
   final api = ref.watch(rasqAccountPageApiProvider);
-  if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
+  if (api == null) throw StateError(appL10n.backendServerNotConfigured);
   // チャイルドセーフ (D-454、[9]): 引用した投稿にも同じ制限。
   final gate = ref.watch(childGateProvider);
   return childSafeRasqReactions(gate, await api.reactions(id));

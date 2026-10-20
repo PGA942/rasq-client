@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rasq_design/rasq_design.dart' show RasqDateFormat;
 
 import '../backend/orgate_client.dart';
 import '../backend/rasq_account.dart';
+import '../l10n/l10n.dart';
 
 /// 自分に掛かっているアカウント処置 (D-151 / Central S-009 `GET /me/sanctions`)。
 ///
@@ -59,33 +61,37 @@ class RasqSanctions {
   bool restricts(String feature) => restrictedFeatures.contains(feature);
 
   String get levelLabel => switch (level) {
-        'light' => '軽度な制限',
-        'moderate' => '中レベルの制限(発言に検閲遅延)',
-        'severe' => '重度の制限(機能停止)',
-        'permanent' => '恒久的な凍結',
-        _ => '制限なし',
+        'light' => appL10n.sessionSanctionLight,
+        'moderate' => appL10n.sessionSanctionModerate,
+        'severe' => appL10n.sessionSanctionSevere,
+        'permanent' => appL10n.sessionSanctionPermanent,
+        _ => appL10n.sessionSanctionNone,
       };
 
   /// 機能が止まっている時の案内文。止まっていなければ null。
   String? blockedMessage(String feature) {
     if (!restricts(feature)) return null;
-    final f = featureLabels[feature] ?? feature;
-    final until = expiresAt == null ? '' : '(${_fmt(expiresAt!)} まで)';
-    return 'アカウントの処置により $f は利用できません$until。';
+    final f = featureLabel(feature) ?? feature;
+    return expiresAt == null ? appL10n.sessionSanctionBlocked(f) : appL10n.sessionSanctionBlockedUntil(f, _fmt(expiresAt!));
   }
 
-  static const featureLabels = {
-    'astell.join': 'ASTell への参加',
-    'astell.create': 'ASTell ルームの作成',
-    'astell.share': 'ASTell での共有・チャット',
-    'astell.stream': 'ASTell の画面共有・配信',
-    'store.review': 'ストアのレビュー投稿',
-    'account.follow': 'RASQ アカウントのフォロー',
-    'post': '投稿',
-    'post.media': 'メディア付き投稿',
-    'dm': 'DM',
-    'reaction': 'リアクション',
-  };
+  /// 機能の id(サーバーの `restrictedFeatures` の値)→ 表示の名前(表示の言語)。知らない id は null。
+  static String? featureLabel(String feature) {
+    final l = appL10n;
+    return switch (feature) {
+      'astell.join' => l.sessionFeatureAstellJoin,
+      'astell.create' => l.sessionFeatureAstellCreate,
+      'astell.share' => l.sessionFeatureAstellShare,
+      'astell.stream' => l.sessionFeatureAstellStream,
+      'store.review' => l.sessionFeatureStoreReview,
+      'account.follow' => l.sessionFeatureAccountFollow,
+      'post' => l.sessionFeaturePost,
+      'post.media' => l.sessionFeaturePostMedia,
+      'dm' => l.sessionFeatureDm,
+      'reaction' => l.sessionFeatureReaction,
+      _ => null,
+    };
+  }
 
   factory RasqSanctions.fromJson(Map<String, Object?> j) => RasqSanctions(
         level: j['level'] as String?,
@@ -97,10 +103,7 @@ class RasqSanctions {
         entries: [for (final s in (j['sanctions'] as List? ?? const [])) if (s is Map) RasqSanctionEntry.fromJson(s.cast<String, Object?>())],
       );
 
-  static String _fmt(DateTime t) {
-    final l = t.toLocal();
-    return '${l.month}/${l.day} ${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}';
-  }
+  static String _fmt(DateTime t) => RasqDateFormat.numericMonthDayTime(t.toLocal());
 }
 
 /// 自分の処置。Central 未接続 / 未ログインなら [RasqSanctions.none]。取得に失敗しても
@@ -120,7 +123,7 @@ final rasqSanctionsProvider = FutureProvider<RasqSanctions>((ref) async {
 /// 解除申請 (D-152): `POST /me/sanctions/{id}/appeal`。judge の人が受理 / 却下する。
 Future<void> submitSanctionAppeal(WidgetRef ref, String sanctionId, String message) async {
   final client = ref.read(centralClientProvider);
-  if (client == null) throw StateError('RASQ Central の接続先が設定されていません');
+  if (client == null) throw StateError(appL10n.sessionCentralNotConfigured);
   await client.postJson('/me/sanctions/${Uri.encodeComponent(sanctionId)}/appeal', {'message': message});
   ref.invalidate(rasqSanctionsProvider);
 }

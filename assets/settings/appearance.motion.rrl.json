@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "appearance.motion",
-  "title": "モーションの抑制",
+  "title": "@l10n:settingsPagesAppearanceMotionTitle",
   "defaults": {
     "reduceMotion": false
   },
@@ -11,17 +11,17 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "アニメーション"
+          "title": "@l10n:settingsPagesAppearanceMotionSection1Title"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "reduceMotion",
         "p": {
-          "title": "モーションを抑制する",
-          "subtitle": "動く装飾を止め、画面の動きを減らします",
+          "title": "@l10n:settingsPagesAppearanceMotionReduceMotionTitle",
+          "subtitle": "@l10n:settingsPagesAppearanceMotionReduceMotionSubtitle",
           "value": "$.settings.reduceMotion",
-          "detail": "MFM の spin / rainbow などのアニメーションを静止画にし、画面遷移の動きを減らします"
+          "detail": "@l10n:settingsPagesAppearanceMotionReduceMotionDetail"
         },
         "on": {
           "change": "settings.set"

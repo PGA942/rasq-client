@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "astell.subscription",
-  "title": "ASTell 4Uを購読",
+  "title": "@l10n:settingsPagesAstellSubscriptionTitle",
   "defaults": {},
   "root": {
     "t": "Column",
@@ -9,30 +9,30 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "状態"
+          "title": "@l10n:settingsPagesAstellSubscriptionSection1Title"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
-          "title": "購読",
-          "value": "未購読"
+          "title": "@l10n:settingsPagesAstellSubscriptionValueRow1Title",
+          "value": "@l10n:settingsPagesAstellSubscriptionValueRow1Value"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
-          "title": "提供",
-          "value": "準備中"
+          "title": "@l10n:settingsPagesAstellSubscriptionValueRow2Title",
+          "value": "@l10n:settingsPagesAstellSubscriptionValueRow2Value"
         }
       },
       {
         "t": "Text",
         "p": {
-          "text": "ASTell 4U は準備中の有料プランです。おすすめ欄は無料で使えます。",
+          "text": "@l10n:settingsPagesAstellSubscriptionText1",
           "pad": 16,
           "size": 13,
-          "detail": "ASTell 4U は、ASTell のおすすめ(For You)配信とサーバー側の文字起こし / 要約の有料プランです。第一期では提供していません。おすすめ欄は RASQ サーバーの無料の推薦で動きます。 提供: 第二期。"
+          "detail": "@l10n:settingsPagesAstellSubscriptionText1Detail"
         }
       }
     ]

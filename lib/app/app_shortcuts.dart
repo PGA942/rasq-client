@@ -17,6 +17,7 @@ import '../features/search/search_screen.dart' show searchFocusRequestsProvider;
 import 'navigation.dart' show visibleLocationOf;
 import 'providers.dart';
 import 'router.dart';
+import '../l10n/l10n.dart';
 
 /// ホーム画面のアプリのショートカット (D-483): アプリのアイコンを長押しして出るクイックアクション(X の「検索 / 新しいポスト /
 /// メッセージを作成」と同じ形)に、RASQ の「RAiと探す」を足した 4 つ。
@@ -44,16 +45,14 @@ enum AppShortcut {
   static AppShortcut? fromType(String? type) => values.where((s) => s.type == type).firstOrNull;
 }
 
-/// ショートカットの名前(1 か所。i18n ではここを差し替える)。iOS の名前は `ios/Runner/{ja,en}.lproj/InfoPlist.strings`
+/// ショートカットの名前(表示の言語、部品 app_nav)。iOS の名前は `ios/Runner/{ja,en}.lproj/InfoPlist.strings`
 /// (静的な項目なので端末の言語で OS が選ぶ)。変えるときは両方を揃える。
-const appShortcutLabels = {
-  AppShortcut.search: '検索',
-  AppShortcut.newPost: '新しいポスト',
-  AppShortcut.newMessage: 'メッセージを作成',
-  AppShortcut.askRai: 'RAiと探す',
-};
-
-String appShortcutLabel(AppShortcut s) => appShortcutLabels[s]!;
+String appShortcutLabel(AppShortcut s) => switch (s) {
+      AppShortcut.search => appL10n.appNavShortcutSearch,
+      AppShortcut.newPost => appL10n.appNavShortcutNewPost,
+      AppShortcut.newMessage => appL10n.appNavShortcutNewMessage,
+      AppShortcut.askRai => appL10n.appNavShortcutAskRai,
+    };
 
 /// Android のアイコン(`res/drawable/ic_shortcut_*.xml`、API 26 からはアダプティブアイコン `drawable-anydpi-v26`)。
 String appShortcutAndroidIcon(AppShortcut s) => switch (s) {
@@ -124,7 +123,7 @@ typedef AppShortcutPlan = ({String? location, AppShortcutFollowUp followUp, Stri
 /// - 見守りで止めている機能 → どこへも移らず理由だけ(ルーターの [ChildGate.routeBlockReason] と同じ文)。
 @visibleForTesting
 AppShortcutPlan planAppShortcut(AppShortcut s, {required bool loggedIn, required ChildGate gate}) {
-  if (gate.locked) return (location: null, followUp: AppShortcutFollowUp.none, blocked: '保護者が設定を決めるまで使えません');
+  if (gate.locked) return (location: null, followUp: AppShortcutFollowUp.none, blocked: appL10n.appNavShortcutGuardianPending);
   if (!loggedIn) return (location: null, followUp: AppShortcutFollowUp.none, blocked: appShortcutLoginHint);
   AppShortcutPlan open(String? location, AppShortcutFollowUp f, String? blocked) =>
       blocked != null ? (location: null, followUp: AppShortcutFollowUp.none, blocked: blocked) : (location: location, followUp: f, blocked: null);
@@ -139,7 +138,7 @@ AppShortcutPlan planAppShortcut(AppShortcut s, {required bool loggedIn, required
 }
 
 /// ログインしていないときの案内。
-const appShortcutLoginHint = 'SNS アカウントにログインすると使えます';
+String get appShortcutLoginHint => appL10n.appNavShortcutLoginHint;
 
 /// 押されたショートカットを受けて開く。起動時に 1 回 watch する([RasqApp])。
 final appShortcutsProvider = Provider<AppShortcutRunner>((ref) {

@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'l10n.dart';
+
 /// Thin Misskey HTTP client. Every endpoint is `POST /api/{path}` with a JSON
 /// body; the token travels as the `i` field.
 class MisskeyApi {
@@ -28,7 +30,7 @@ class MisskeyApi {
           .post(endpoint(path), headers: const {'content-type': 'application/json'}, body: jsonEncode(payload))
           .timeout(timeout);
     } on TimeoutException catch (e) {
-      throw SnsApiException(ErrorCode.timeout.copyWith(message: '$host からの応答がありません(${timeout.inSeconds}秒)。インターネット接続を確認してください'), cause: e);
+      throw SnsApiException(ErrorCode.timeout.copyWith(message: snsMisskeyL10n.misskeyApiTimeout(host, timeout.inSeconds)), cause: e);
     } on http.ClientException catch (e) {
       // Web: CORS / fetch failures. VM: some connection errors.
       throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '03', title: 'HTTP Client Error', message: '$host: ${e.message}'), cause: e);
@@ -36,8 +38,8 @@ class MisskeyApi {
       // SocketException (DNS / refused / sandbox "Operation not permitted"),
       // HandshakeException (TLS) … kept platform-agnostic (no dart:io import).
       final msg = e.toString().replaceFirst(RegExp(r'^\w+Exception: '), '');
-      final hint = msg.contains('not permitted') ? ' (アプリのネットワーク権限/サンドボックス設定を確認してください)' : '';
-      throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable', message: '$host に接続できません: $msg$hint'), cause: e);
+      final hint = msg.contains('not permitted') ? snsMisskeyL10n.misskeyApiSandboxHint : '';
+      throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable', message: snsMisskeyL10n.misskeyApiUnreachable(host, msg, hint)), cause: e);
     }
     if (res.statusCode == 204) return null;
     Object? decoded;
@@ -65,9 +67,9 @@ class MisskeyApi {
     try {
       streamed = await _client.send(req).timeout(const Duration(minutes: 2));
     } on TimeoutException catch (e) {
-      throw SnsApiException(ErrorCode.timeout.copyWith(message: 'アップロードがタイムアウトしました'), cause: e);
+      throw SnsApiException(ErrorCode.timeout.copyWith(message: snsMisskeyL10n.misskeyUploadTimeout), cause: e);
     } on Exception catch (e) {
-      throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable', message: '$host に接続できません: $e'), cause: e);
+      throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable', message: snsMisskeyL10n.misskeyApiUnreachablePlain(host, '$e')), cause: e);
     }
     final res = await http.Response.fromStream(streamed);
     final decoded = res.body.isEmpty ? null : jsonDecode(utf8.decode(res.bodyBytes));

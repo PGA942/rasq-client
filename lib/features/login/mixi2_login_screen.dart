@@ -11,6 +11,7 @@ import '../../session/mixi2_auth.dart';
 import 'login_screen.dart' show popOr;
 import 'sns_signup.dart';
 import 'terms_sheet.dart';
+import '../../l10n/l10n.dart';
 
 /// mixi2 のログイン (D-206、サンプル): 公式 API は申請制 + OAuth(RASQ サーバーのブローカー)なので、
 /// 「ブラウザで認証」はサーバー設定後に動く。いまは「ダミーアカウントで試す」で流れを確かめる。
@@ -45,14 +46,14 @@ class _Mixi2LoginScreenState extends ConsumerState<Mixi2LoginScreen> {
     if (!mounted) return;
     setState(() {
       _signupUrl = url;
-      _error = ok ? null : 'ブラウザを開けませんでした。URL: $url';
+      _error = ok ? null : context.l10n.loginBrowserOpenFailed('$url');
     });
   }
 
   Future<void> _login({required bool dummy}) async {
     final plugin = ref.read(pluginRegistryProvider).plugin(mixi2PluginId);
     if (plugin == null) {
-      setState(() => _error = 'mixi2 プラグインが見つかりません');
+      setState(() => _error = context.l10n.loginPluginMissingMixi2);
       return;
     }
     final manager = ref.read(overlayManagerProvider);
@@ -70,7 +71,7 @@ class _Mixi2LoginScreenState extends ConsumerState<Mixi2LoginScreen> {
         result = await flow.login(identifier: 'me', secret: '');
       } else if (flow is BrowserAuthFlow) {
         // ブラウザ往復はサーバー側(ブローカー)が用意でき次第。ここでは開始 URL を出して止める。
-        setState(() => _error = 'ブラウザで許可してからアプリに戻ってください: ${flow.url}');
+        setState(() => _error = context.l10n.loginMixi2BrowserPending('${flow.url}'));
         return;
       } else {
         throw StateError('unexpected auth flow');
@@ -81,7 +82,7 @@ class _Mixi2LoginScreenState extends ConsumerState<Mixi2LoginScreen> {
     } on SnsApiException catch (e) {
       setState(() => _error = e.code.message ?? e.code.display);
     } catch (e) {
-      setState(() => _error = 'ログインできませんでした: $e');
+      setState(() => _error = context.l10n.loginFailed(e is StateError ? e.message : '$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -92,30 +93,30 @@ class _Mixi2LoginScreenState extends ConsumerState<Mixi2LoginScreen> {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('mixi2でログイン'), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: () => popOr(context, Routes.login))),
+      appBar: AppBar(title: Text(context.l10n.loginWithMixi2), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: context.l10n.loginBack, onPressed: () => popOr(context, Routes.login))),
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl, vertical: RasqSpacing.md), children: [
           Row(children: [
             Container(width: 32, height: 32, decoration: BoxDecoration(color: RasqSnsPill.colorOf(SnsKind.mixi2), shape: BoxShape.circle), alignment: Alignment.center, child: const Text('m', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
             const SizedBox(width: RasqSpacing.md),
-            Expanded(child: RasqInput(key: mixi2LoginHostKey, controller: _host, hintText: 'ホスト (例: mixi.social)', keyboardType: TextInputType.url)),
+            Expanded(child: RasqInput(key: mixi2LoginHostKey, controller: _host, hintText: context.l10n.loginMixi2HostHint, keyboardType: TextInputType.url)),
           ]),
           const SizedBox(height: RasqSpacing.sm),
-          Text('mixi2 の公式 API は申請制で、ログインは OAuth(RASQ サーバーのブローカー経由)です。申請とサーバーの設定が済むまで「ブラウザで認証」は使えません。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text(context.l10n.loginMixi2Note, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: RasqSpacing.xl),
-          FilledButton(key: mixi2LoginBrowserKey, onPressed: _busy ? null : () => _login(dummy: false), child: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('ブラウザで認証')),
+          FilledButton(key: mixi2LoginBrowserKey, onPressed: _busy ? null : () => _login(dummy: false), child: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : Text(context.l10n.loginMixi2Browser)),
           // ダミーアカウント(プラグインの中の投稿だけで動く)は、開発者モードのときだけ (D-393)。
           if (RasqDeveloperMode.of(context)) ...[
           const SizedBox(height: RasqSpacing.md),
-          OutlinedButton.icon(key: mixi2LoginDummyKey, onPressed: _busy ? null : () => _login(dummy: true), icon: const Icon(Icons.science_outlined), label: const Text('ダミーアカウントで試す')),
+          OutlinedButton.icon(key: mixi2LoginDummyKey, onPressed: _busy ? null : () => _login(dummy: true), icon: const Icon(Icons.science_outlined), label: Text(context.l10n.loginMixi2Dummy)),
           const SizedBox(height: RasqSpacing.sm),
-          Text('ダミーはネットワークを使わず、プラグインの中の投稿で TL / いいね / リポスト / 投稿 / 通知の流れを確かめられます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text(context.l10n.loginMixi2DummyNote, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ],
           if (_error != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.md), child: Text(_error!, key: const ValueKey('login.mixi2.error'), style: RasqTypography.bodySmall.copyWith(color: tokens.danger))),
           SnsSignupButton(kind: SnsKind.mixi2, onPressed: _busy ? null : _signup),
           if (_signupUrl != null)
             SnsSignupReturnHint(
-              text: 'mixi2 のアカウントは、ブラウザ(または mixi2 のアプリ)で作ります。作れたら、この画面に戻って「ブラウザで認証」でログインしてください。',
+              text: context.l10n.loginMixi2SignupHint,
               url: _signupUrl!,
               onReopen: _signup,
             ),

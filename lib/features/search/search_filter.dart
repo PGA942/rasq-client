@@ -5,27 +5,40 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import 'search_ranker.dart';
+import '../../l10n/l10n.dart';
 
 /// 検索の並び替えキー (D-021)。昇順/降順ではなく**キー名に方向を内包**する。
 enum SearchSort {
-  relevance('関連順'),
-  newest('新しい順'),
-  oldest('古い順'),
-  reactions('リアクション多い順');
+  relevance,
+  newest,
+  oldest,
+  reactions;
 
-  const SearchSort(this.label);
-  final String label;
+  /// 表示の名前(表示の言語、D-528)。
+  String get label => switch (this) {
+        relevance => appL10n.searchSortRelevance,
+        newest => appL10n.searchSortNewest,
+        oldest => appL10n.searchSortOldest,
+        reactions => appL10n.searchSortReactions,
+      };
 }
 
 enum SearchPeriod {
-  all('すべて', null),
-  day('24時間', Duration(days: 1)),
-  week('1週間', Duration(days: 7)),
-  month('1ヶ月', Duration(days: 30));
+  all(null),
+  day(Duration(days: 1)),
+  week(Duration(days: 7)),
+  month(Duration(days: 30));
 
-  const SearchPeriod(this.label, this.window);
-  final String label;
+  const SearchPeriod(this.window);
   final Duration? window;
+
+  /// 表示の名前(表示の言語、D-528)。
+  String get label => switch (this) {
+        all => appL10n.searchPeriodAll,
+        day => appL10n.searchPeriodDay,
+        week => appL10n.searchPeriodWeek,
+        month => appL10n.searchPeriodMonth,
+      };
 }
 
 /// 検索フィルタ状態。検索ホームで設定 → トレンドTL(結果)に引き継ぐ。
@@ -115,7 +128,7 @@ List<RasqFilterChipItem> buildSortPeriodChips({
 }) =>
     [
       RasqFilterChipItem(label: filter.sort.label, selected: filter.sort != SearchSort.relevance, dropdown: true, onAnchorTap: onSortTap),
-      RasqFilterChipItem(label: filter.period == SearchPeriod.all ? '期間' : filter.period.label, selected: filter.period != SearchPeriod.all, dropdown: true, onAnchorTap: onPeriodTap),
+      RasqFilterChipItem(label: filter.period == SearchPeriod.all ? appL10n.searchPeriodChip : filter.period.label, selected: filter.period != SearchPeriod.all, dropdown: true, onAnchorTap: onPeriodTap),
     ];
 
 /// ジャンルのトグルチップ(スタジアム形・入れ子)。選択済みを優先。

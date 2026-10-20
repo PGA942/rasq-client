@@ -138,7 +138,8 @@ class WasmPluginWorker {
 }
 
 /// Worker の中身(JS)。Blob から起こすので、配るファイルは増えない。
-const _workerSource = r'''
+// Worker の JS のソース。日本語はコメントと、JSPI の無いブラウザでプラグインに返す誤りの文(プラグインへ渡すデータ。端末版のランタイムの文と揃える)なので訳さない。
+const _workerSource = /* l10n-ignore */ r'''
 "use strict";
 let inst = null, ex = null, storage = {}, maxMemoryBytes = 256 * 1024 * 1024, cfg = {fowPermissions: [], appFns: [], knownAppFns: [], permissions: [], fetchHosts: [], instanceAllowed: false, instanceHost: null};
 // JSPI (D-407、指摘 #7): host_fn を非同期にでき、net.fetch を fetch(redirect: "manual") で出せる。

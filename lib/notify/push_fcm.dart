@@ -10,6 +10,7 @@ import '../app/router.dart';
 import '../backend/notify_api.dart';
 import '../backend/rasq_account.dart';
 import 'local_notifier.dart';
+import '../l10n/l10n.dart';
 
 /// Android のプッシュ通知 (D-449): Firebase Cloud Messaging で受ける。
 ///
@@ -58,7 +59,7 @@ class FcmPushMessaging implements PushMessaging {
           // 背景で届いた通知が使うチャンネルを先に作っておく。
           await FlutterLocalNotificationsPlugin()
               .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-              ?.createNotificationChannel(const AndroidNotificationChannel(pushChannelId, 'RASQ の通知', description: 'メンション / 返信 / Swing などの知らせ', importance: Importance.high));
+              ?.createNotificationChannel(AndroidNotificationChannel(pushChannelId, appL10n.notifyPushChannelName, description: appL10n.notifyPushChannelDescription, importance: Importance.high));
           return FirebaseMessaging.instance;
         } catch (e) {
           debugPrint('fcm: unavailable: $e');

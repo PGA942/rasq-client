@@ -13,6 +13,7 @@ import '../../session/sns_share.dart' show snsShareProvider, snsShareWaitingProv
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../rai/rai_overlay.dart';
 import '../rai/rai_providers.dart';
+import '../../l10n/l10n.dart';
 
 /// ログイン (マルチPDS). Wireframe: BlueSky / Misskey / mixi2 / Mastodon /
 /// サービスを探してログイン + Raiのインストラクチャ.
@@ -35,9 +36,9 @@ class LoginScreen extends ConsumerWidget {
       appBar: AppBar(
         // 戻る (D-422): SNS にまだ入っていなくても出す。戻る先が無ければ(RASQ アカウントのログインから `go` で来た)RASQ アカウントの入口へ
         // (別の RASQ アカウントで入り直す / 新しく作る / SNS アカウントだけで使う)。
-        leading: IconButton(key: const ValueKey('login.back'), icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: () => popOr(context, hasSessions ? Routes.home : Routes.onboarding)),
+        leading: IconButton(key: const ValueKey('login.back'), icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: context.l10n.loginBack, onPressed: () => popOr(context, hasSessions ? Routes.home : Routes.onboarding)),
         automaticallyImplyLeading: false,
-        title: const Text('SNSにログイン'),
+        title: Text(context.l10n.loginTitle),
         centerTitle: false,
       ),
       body: SafeArea(
@@ -47,12 +48,12 @@ class LoginScreen extends ConsumerWidget {
             const Padding(padding: EdgeInsets.only(top: RasqSpacing.xl, bottom: RasqSpacing.sm), child: Center(child: RasqLogo(height: 44))),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: RasqSpacing.md),
-              child: Text('初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。',
+              child: Text(context.l10n.loginPluginLoadNote,
                   style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
             ),
             // チャイルドセーフ (D-307): 保護者が SNS アカウントの追加を止めていれば、そう伝える(ルーターも先へ進ませない)。
             if (!ref.watch(childGateProvider).canAddAccounts)
-              Text('保護者が SNS アカウントの追加を止めています', key: const ValueKey('childSafe.login.blocked'), style: RasqTypography.bodySmall.copyWith(color: scheme.error), textAlign: TextAlign.center),
+              Text(context.l10n.loginChildSafeBlocked, key: const ValueKey('childSafe.login.blocked'), style: RasqTypography.bodySmall.copyWith(color: scheme.error), textAlign: TextAlign.center),
             // 既存の RASQ アカウントへログインした端末 (D-316): そのアカウントの SNS アカウントのうち、まだこの端末で入っていないもの。
             const _BundleAccounts(),
             // SNS のアクセストークンの端末間共有 (D-319): 元の端末の承認を待っている間の案内(ログインボタンはそのまま使える)。
@@ -67,28 +68,28 @@ class LoginScreen extends ConsumerWidget {
                 child: Row(children: [
                   Icon(Icons.verified_user_outlined, color: scheme.primary),
                   const SizedBox(width: RasqSpacing.sm),
-                  Expanded(child: Text('メールでこの端末を承認しました。SNS アカウントには、下のボタンからこの端末でログインしてください', style: RasqTypography.bodySmall)),
+                  Expanded(child: Text(context.l10n.loginShareDeviceOnly, style: RasqTypography.bodySmall)),
                 ]),
               ),
             const SizedBox(height: RasqSpacing.lg),
-            SnsServiceButton(kind: SnsKind.bluesky, label: 'Blueskyでログイン', onTap: () => context.push(Routes.loginBluesky)),
-            SnsServiceButton(kind: SnsKind.misskey, label: 'Misskeyでログイン', onTap: () => context.push(Routes.loginMisskey)),
+            SnsServiceButton(kind: SnsKind.bluesky, label: context.l10n.loginWithBluesky, onTap: () => context.push(Routes.loginBluesky)),
+            SnsServiceButton(kind: SnsKind.misskey, label: context.l10n.loginWithMisskey, onTap: () => context.push(Routes.loginMisskey)),
             // mixi2 (D-206): サンプルプラグイン(API 申請前はダミーモード)。
-            SnsServiceButton(kind: SnsKind.mixi2, label: 'mixi2でログイン', external: true, onTap: () => context.push(Routes.loginMixi2)),
-            SnsServiceButton(kind: SnsKind.mastodon, label: 'Mastodonでログイン', onTap: () => context.push(Routes.loginMastodon)),
+            SnsServiceButton(kind: SnsKind.mixi2, label: context.l10n.loginWithMixi2, external: true, onTap: () => context.push(Routes.loginMixi2)),
+            SnsServiceButton(kind: SnsKind.mastodon, label: context.l10n.loginWithMastodon, onTap: () => context.push(Routes.loginMastodon)),
             const SizedBox(height: RasqSpacing.sm),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: scheme.onSurface, foregroundColor: scheme.surface, minimumSize: const Size.fromHeight(44)),
               // 探す画面 (D-414): 画像 / 人 / RAi から、合うサーバーと RASQ リストを探す。
               onPressed: () => context.push(Routes.snsDiscover),
-              child: const Text('サービスを探してログイン'),
+              child: Text(context.l10n.loginDiscover),
             ),
             const Spacer(),
             OutlinedButton.icon(
               // RAi インストラクション (D-179): 入力欄付きのバーを出す(このページのまま)。
               onPressed: () => showRai(ref, mode: RaiMode.instruction, asking: true),
               icon: const Icon(Icons.smart_toy_outlined),
-              label: const Text('Raiのインストラクチャ'),
+              label: Text(context.l10n.loginRaiInstruction),
             ),
             const SizedBox(height: RasqSpacing.lg),
           ]),
@@ -124,13 +125,14 @@ class _ShareWaitingState extends ConsumerState<_ShareWaiting> {
     String note;
     try {
       final to = await ref.read(snsShareProvider.notifier).requestEmailApproval();
-      note = to == null ? 'いまは送れません' : '${to.isEmpty ? '確認済みのメールアドレス' : to} に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください';
+      final l = appL10n;
+      note = to == null ? l.loginShareMailUnavailable : (to.isEmpty ? l.loginShareMailSentVerified : l.loginShareMailSent(to));
     } on OrgateException catch (e) {
       note = switch (e.serverCode == 'no_verified_email' ? 'no_verified_email' : e.code.code) {
-        'no_verified_email' => '確認済みのメールアドレスがありません。元の端末で承認するか、SNS アカウントにこの端末でログインしてください',
-        '429' => '送りすぎです。しばらく待ってから、もう一度送ってください',
-        '501' => 'このサーバーでは、メールでの承認を使えません',
-        _ => '送れませんでした(${e.code.code})',
+        'no_verified_email' => appL10n.loginShareMailNoVerified,
+        '429' => appL10n.loginShareMailTooMany,
+        '501' => appL10n.loginShareMailNotSupported,
+        _ => appL10n.loginShareMailFailed(e.code.code),
       };
     }
     if (mounted) {
@@ -153,7 +155,7 @@ class _ShareWaitingState extends ConsumerState<_ShareWaiting> {
         Row(children: [
           Icon(Icons.devices_outlined, color: scheme.primary),
           const SizedBox(width: RasqSpacing.sm),
-          Expanded(child: Text('元の端末で共有を承認すると、SNS アカウントに一斉ログインします。確認済みのメールに届いたリンクからも承認できます', style: RasqTypography.bodySmall)),
+          Expanded(child: Text(context.l10n.loginShareWaiting, style: RasqTypography.bodySmall)),
         ]),
         Align(
           alignment: Alignment.centerRight,
@@ -161,7 +163,7 @@ class _ShareWaitingState extends ConsumerState<_ShareWaiting> {
             key: const ValueKey('login.shareEmail'),
             onPressed: _busy ? null : _sendMail,
             icon: const Icon(Icons.mail_outline, size: 18),
-            label: const Text('メールで承認する(リンクを送る)'),
+            label: Text(context.l10n.loginShareMailButton),
           ),
         ),
         if (_note != null) Text(_note!, key: const ValueKey('login.shareEmailNote'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
@@ -207,8 +209,8 @@ class _BundleAccounts extends ConsumerWidget {
       padding: const EdgeInsets.all(RasqSpacing.sm),
       decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(12)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('${handle == null || handle.isEmpty ? 'この RASQ アカウント' : '@$handle'} の SNS アカウント', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
-        Text('この端末では、まだログインしていません。押すとログインできます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        Text(handle == null || handle.isEmpty ? context.l10n.loginBundleTitleThis : context.l10n.loginBundleTitle(handle), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+        Text(context.l10n.loginBundleHint, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 168),
           child: ListView(shrinkWrap: true, children: [
@@ -220,7 +222,7 @@ class _BundleAccounts extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(children: [
                     Expanded(child: Text('${l.tile.label}  @${l.tile.handle}@${l.tile.instance}', style: RasqTypography.bodySmall, overflow: TextOverflow.ellipsis)),
-                    Text(onDevice.contains(l.accountKey) ? '使う' : 'ログイン', style: RasqTypography.bodySmall.copyWith(color: scheme.primary)),
+                    Text(onDevice.contains(l.accountKey) ? context.l10n.loginBundleUse : context.l10n.loginBundleLogin, style: RasqTypography.bodySmall.copyWith(color: scheme.primary)),
                   ]),
                 ),
               ),

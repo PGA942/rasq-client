@@ -414,6 +414,48 @@ abstract class RasqDesignLocalizations {
   /// In ja, this message translates to:
   /// **'見てみる'**
   String get designErrorRetry;
+
+  /// オーバーレイ(ボトムシート・確かめ・つながったパネル)の、やめるボタンの既定の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get designOverlayCancel;
+
+  /// オーバーレイの背景(押すと閉じる)の読み上げの名前、および FOW の切り替えの一覧の閉じるボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get designOverlayClose;
+
+  /// 開いている FOW(アプリの浮かぶパネル)を切り替える一覧の読み上げの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'FOW切り替え'**
+  String get designOverlaySwitcher;
+
+  /// FOW の上の、引っ張って大きさを変えるつまみの読み上げの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'サイズ変更ハンドル'**
+  String get designOverlayResizeHandle;
+
+  /// プラグインの画面(RRL)の範囲のスライダーの値。start / end は数、unit はプラグインが決めた単位(空のこともある)
+  ///
+  /// In ja, this message translates to:
+  /// **'{start}〜{end}{unit}'**
+  String designRrlRange(int start, int end, String unit);
+
+  /// プラグインの画面(RRL)の入力欄の、送るボタンのツールチップ(プラグインがボタンの名前を決めていないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'送信'**
+  String get designRrlSend;
+
+  /// WASM の SNS プラグインにログインの手順が用意されていないときの誤り。pluginId はプラグインの id
+  ///
+  /// In ja, this message translates to:
+  /// **'{pluginId}: 認証フローが構成されていません(既存トークンでの実登録のみ)'**
+  String designRrlNoAuthFlow(String pluginId);
 }
 
 class _RasqDesignLocalizationsDelegate

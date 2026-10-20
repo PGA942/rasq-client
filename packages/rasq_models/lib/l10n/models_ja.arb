@@ -1,0 +1,51 @@
+{
+  "@@locale": "ja",
+  "modelsErrorFamilyHttp": "HTTP",
+  "@modelsErrorFamilyHttp": {
+    "description": "誤りのコードの系統の名前: HTTP の誤り(000〜999)。HTTP は訳さない"
+  },
+  "modelsErrorFamilySettings": "設定",
+  "@modelsErrorFamilySettings": {
+    "description": "誤りのコードの系統の名前: A(設定の誤り)"
+  },
+  "modelsErrorFamilyAffectedSettings": "影響設定",
+  "@modelsErrorFamilyAffectedSettings": {
+    "description": "誤りのコードの系統の名前: B(認証など、ほかに影響する設定の誤り)"
+  },
+  "modelsErrorFamilyPluginTransfer": "プラグイン間受け渡し",
+  "@modelsErrorFamilyPluginTransfer": {
+    "description": "誤りのコードの系統の名前: C(プラグインのあいだのデータの受け渡しの誤り)"
+  },
+  "modelsErrorFamilyDataCorruption": "データ破損",
+  "@modelsErrorFamilyDataCorruption": {
+    "description": "誤りのコードの系統の名前: D(データが壊れている)"
+  },
+  "modelsErrorFamilyRegulation": "規制",
+  "@modelsErrorFamilyRegulation": {
+    "description": "誤りのコードの系統の名前: E(Ban・規制モード)"
+  },
+  "modelsErrorFamilyReserved": "予約",
+  "@modelsErrorFamilyReserved": {
+    "description": "誤りのコードの系統の名前: F(予約。まだ使っていない)"
+  },
+  "modelsErrorTimeoutHint": "インターネット接続を確認してください",
+  "@modelsErrorTimeoutHint": {
+    "description": "誤り 408(応答が無い)の、利用者への手がかり"
+  },
+  "modelsErrorMethodNotAcceptableHint": "プラグインの障害情報をチェックしてください",
+  "@modelsErrorMethodNotAcceptableHint": {
+    "description": "誤り 405 の、利用者への手がかり(プラグインの不具合のことが多い)"
+  },
+  "modelsErrorInternalServerErrorHint": "サーバーでエラーが発生しました",
+  "@modelsErrorInternalServerErrorHint": {
+    "description": "誤り 500 の、利用者への手がかり"
+  },
+  "modelsErrorNoTrendRequirementHint": "好きなジャンル/方向性の設定を変更してください",
+  "@modelsErrorNoTrendRequirementHint": {
+    "description": "誤り A25(トレンドの条件に合うものが無い)の、利用者への手がかり。「好きなジャンル/方向性」はトレンドの設定の名前"
+  },
+  "modelsErrorRelationalTimelineBrokenHint": "リロードすると解決することがあります",
+  "@modelsErrorRelationalTimelineBrokenHint": {
+    "description": "誤り D2F(関連 TL が壊れた)の、利用者への手がかり"
+  }
+}

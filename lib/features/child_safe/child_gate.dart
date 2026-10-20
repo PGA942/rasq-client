@@ -114,7 +114,7 @@ class ChildGate {
     if (s != null) return s;
     if (!supervised) return null;
     if (locked) return appL10n.childSafeLockedUntilSetup;
-    final label = RasqSanctions.featureLabels[feature] ?? feature;
+    final label = RasqSanctions.featureLabel(feature) ?? feature;
     if (!featureAllowed(feature)) return appL10n.childSafeBlockedWith(label);
     if (feature == 'dm' && inTimeWindow && policy!.time.hideDirectMessages) return appL10n.childSafeWindowNoDm(windowLabel);
     return null;

@@ -5,6 +5,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import 'search_filter.dart';
+import '../../l10n/l10n.dart';
 
 /// 検索ボックス(一体型展開タイル, D-021 改)の配線。
 ///
@@ -16,14 +17,15 @@ class SearchFilterBox extends ConsumerStatefulWidget {
     super.key,
     this.controller,
     this.focusNode,
-    this.hintText = '検索',
+    this.hintText,
     this.onSubmitted,
     this.genreCandidates = const [],
   });
 
   final TextEditingController? controller;
   final FocusNode? focusNode;
-  final String hintText;
+  /// null = 「検索」。
+  final String? hintText;
   final ValueChanged<String>? onSubmitted;
   final List<String> genreCandidates;
 
@@ -62,7 +64,7 @@ class _SearchFilterBoxState extends ConsumerState<SearchFilterBox> {
       expanded: _toggled || _focus.hasFocus || filter.dirty,
       controller: widget.controller,
       focusNode: _focus,
-      hintText: widget.hintText,
+      hintText: widget.hintText ?? context.l10n.searchHint,
       onSubmitted: widget.onSubmitted,
       onDropdownTap: () => setState(() => _toggled = !_toggled),
       filterChips: buildSortPeriodChips(
@@ -85,14 +87,14 @@ class _SearchFilterBoxState extends ConsumerState<SearchFilterBox> {
       trailing: RasqIconButton(
         icon: Icons.settings_outlined,
         size: 18,
-        tooltip: '検索の設定',
+        tooltip: context.l10n.searchSettings,
         onPressed: () => manager.showBottomSheet(
           id: 'search.settings',
-          title: '検索の設定',
-          builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
-            RasqWarningListTile(title: '検索結果の指向性/刺激性', onTap: () => _placeholder(manager, '検索結果の指向性/刺激性')),
-            RasqListTile(title: 'トレンドプラグインの設定', onTap: () => _placeholder(manager, 'トレンドプラグインの設定')),
-            RasqListTile(title: 'キャッシュネットワークの設定', onTap: () => _placeholder(manager, 'キャッシュネットワークの設定'), divider: false),
+          title: context.l10n.searchSettings,
+          builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
+            RasqWarningListTile(title: ctx.l10n.searchSettingsTendency, onTap: () => _placeholder(manager, ctx.l10n.searchSettingsTendency)),
+            RasqListTile(title: ctx.l10n.searchSettingsTrendPlugins, onTap: () => _placeholder(manager, ctx.l10n.searchSettingsTrendPlugins)),
+            RasqListTile(title: ctx.l10n.searchSettingsCacheNetwork, onTap: () => _placeholder(manager, ctx.l10n.searchSettingsCacheNetwork), divider: false),
           ]),
         ),
       ),
@@ -100,5 +102,5 @@ class _SearchFilterBoxState extends ConsumerState<SearchFilterBox> {
   }
 
   Future<void> _placeholder(OverlayManager manager, String title) =>
-      manager.showAlert(id: 'search.settings.placeholder', title: title, message: 'この設定は準備中です。', confirmText: 'OK');
+      manager.showAlert(id: 'search.settings.placeholder', title: title, message: appL10n.searchSettingsComingSoon, confirmText: 'OK');
 }

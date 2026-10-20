@@ -1,0 +1,10 @@
+{
+  "platformWebRuntimeLoadFailed": "実行に要るファイルを読み込めませんでした(ネットワーク / CDN)",
+  "@platformWebRuntimeLoadFailed": {"description": "Web 版: 端末の中でモデルを動かすための部品をブラウザに読み込めなかったときの誤り"},
+  "platformWebServerNotConfigured": "RASQ サーバーの接続先が未設定です",
+  "@platformWebServerNotConfigured": {"description": "Web 版: モデルを取りに行く RASQ のサーバーの接続先が無いときの誤り"},
+  "platformWebDownloadFailed": "ダウンロードに失敗しました: {error}",
+  "@platformWebDownloadFailed": {"description": "Web 版: モデルをダウンロードできなかったときの誤り。error は理由", "placeholders": {"error": {"type": "String"}}},
+  "platformWebModelLoadFailed": "モデルを読み込めません: {error}",
+  "@platformWebModelLoadFailed": {"description": "Web 版: モデルを読み込めなかったときの誤り。error は理由", "placeholders": {"error": {"type": "String"}}}
+}

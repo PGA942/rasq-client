@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "media.save",
-  "title": "画像・動画の保存先",
+  "title": "@l10n:settingsPagesMediaSaveTitle",
   "defaults": {
     "destination": "ask"
   },
@@ -11,18 +11,18 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "「画像を保存」「動画を保存」の保存先"
+          "title": "@l10n:settingsPagesMediaSaveSection1Title"
         }
       },
       {
         "t": "RadioListTile",
         "k": "destination",
         "p": {
-          "title": "保存するたびに選ぶ",
-          "subtitle": "写真とファイルのどちらにするか、毎回聞きます",
+          "title": "@l10n:settingsPagesMediaSaveDestinationAskTitle",
+          "subtitle": "@l10n:settingsPagesMediaSaveDestinationAskSubtitle",
           "value": "ask",
           "group": "$.settings.destination",
-          "detail": "写真とファイルのどちらに保存するかを、そのたびに聞きます(選べる先が 1 つしかない端末では聞きません)"
+          "detail": "@l10n:settingsPagesMediaSaveDestinationAskDetail"
         },
         "on": {
           "change": "settings.set"
@@ -32,11 +32,11 @@
         "t": "RadioListTile",
         "k": "destination",
         "p": {
-          "title": "写真(カメラロール)",
-          "subtitle": "アルバム「RASQ」に入ります",
+          "title": "@l10n:settingsPagesMediaSaveDestinationPhotosTitle",
+          "subtitle": "@l10n:settingsPagesMediaSaveDestinationPhotosSubtitle",
           "value": "photos",
           "group": "$.settings.destination",
-          "detail": "iPhone / iPad / Mac の「写真」、Android のギャラリーの、アルバム「RASQ」に入ります"
+          "detail": "@l10n:settingsPagesMediaSaveDestinationPhotosDetail"
         },
         "on": {
           "change": "settings.set"
@@ -46,11 +46,11 @@
         "t": "RadioListTile",
         "k": "destination",
         "p": {
-          "title": "ファイル",
-          "subtitle": "「ファイル」App や、選んだ場所に保存します",
+          "title": "@l10n:settingsPagesMediaSaveDestinationFilesTitle",
+          "subtitle": "@l10n:settingsPagesMediaSaveDestinationFilesSubtitle",
           "value": "files",
           "group": "$.settings.destination",
-          "detail": "iPhone / iPad は「ファイル」App の このiPad(このiPhone)› RASQ › 保存。パソコンは保存する場所を選びます。Android はギャラリーに入ります"
+          "detail": "@l10n:settingsPagesMediaSaveDestinationFilesDetail"
         },
         "on": {
           "change": "settings.set"

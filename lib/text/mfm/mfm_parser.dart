@@ -187,7 +187,7 @@ List<MfmNode> _mergeText(List nodes) {
 
 // ── language(parser.ts) ─────────────────────────────────────────────────
 
-final _space = _regexp(r'[ 　\t]');
+final _space = _regexp(r'[ 　\t]'); // l10n-ignore
 final _alphaAndNum = _regexp(r'[a-z0-9]', caseInsensitive: true);
 final _newLine = _alt([_crlf, _cr, _lf]);
 final _alnumEnd = RegExp(r'[a-z0-9]$', caseSensitive: false);
@@ -469,15 +469,15 @@ class _Language {
   late final _P hashtag = _lazy(() {
     final mark = _str('#');
     final hashTagChar = _seq([
-      _notMatch(_alt([_regexp(r'''[ 　\t.,!?'"#:/\[\]【】()「」（）<>]'''), _space, _newLine])),
+      _notMatch(_alt([_regexp(r'''[ 　\t.,!?'"#:/\[\]【】()「」（）<>]'''), _space, _newLine])), // l10n-ignore
       _char,
     ]).select(1);
     late final _P innerItem;
     innerItem = _lazy(() => _alt([
           _seq([_str('('), _nest(innerItem, hashTagChar).many(0), _str(')')]),
           _seq([_str('['), _nest(innerItem, hashTagChar).many(0), _str(']')]),
-          _seq([_str('「'), _nest(innerItem, hashTagChar).many(0), _str('」')]),
-          _seq([_str('（'), _nest(innerItem, hashTagChar).many(0), _str('）')]),
+          _seq([_str('「'), _nest(innerItem, hashTagChar).many(0), _str('」')]), // l10n-ignore
+          _seq([_str('（'), _nest(innerItem, hashTagChar).many(0), _str('）')]), // l10n-ignore
           hashTagChar,
         ]));
     final parser = _seq([_notLinkLabel, mark, innerItem.many(1).text()]).select(2);
@@ -589,8 +589,8 @@ class _Language {
 
   late final _P search = _lazy(() {
     final button = _alt([
-      _regexp(r'\[(検索|search)\]', caseInsensitive: true),
-      _regexp(r'(検索|search)', caseInsensitive: true),
+      _regexp(r'\[(検索|search)\]', caseInsensitive: true), // l10n-ignore
+      _regexp(r'(検索|search)', caseInsensitive: true), // l10n-ignore
     ]);
     return _seq([
       _newLine.option(),

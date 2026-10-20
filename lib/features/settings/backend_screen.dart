@@ -248,7 +248,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
         if (sessions.isEmpty)
           Text(l.settingsBackendNoSessions, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
         else
-          for (final s in sessions) Text('・${s.account}', style: RasqTypography.bodySmall),
+          for (final s in sessions) Text(context.l10n.settingsCommonBullet('${s.account}'), style: RasqTypography.bodySmall),
       ]),
     );
   }

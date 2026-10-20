@@ -1,0 +1,8 @@
+{
+  "designRrlRange": "{start}〜{end}{unit}",
+  "@designRrlRange": {"description": "プラグインの画面(RRL)の範囲のスライダーの値。start / end は数、unit はプラグインが決めた単位(空のこともある)", "placeholders": {"start": {"type": "int"}, "end": {"type": "int"}, "unit": {"type": "String"}}},
+  "designRrlSend": "送信",
+  "@designRrlSend": {"description": "プラグインの画面(RRL)の入力欄の、送るボタンのツールチップ(プラグインがボタンの名前を決めていないとき)"},
+  "designRrlNoAuthFlow": "{pluginId}: 認証フローが構成されていません(既存トークンでの実登録のみ)",
+  "@designRrlNoAuthFlow": {"description": "WASM の SNS プラグインにログインの手順が用意されていないときの誤り。pluginId はプラグインの id", "placeholders": {"pluginId": {"type": "String"}}}
+}

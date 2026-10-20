@@ -1,5 +1,7 @@
 import 'package:meta/meta.dart';
 
+import 'l10n.dart';
+
 /// Error code families.
 ///
 /// 原典: ワイヤーフレーム「検索エラー系」注釈 —
@@ -7,18 +9,31 @@ import 'package:meta/meta.dart';
 /// (A: 設定 / B: 影響設定(認証設定) / C: プラグイン間データ受け渡し /
 /// D: データ破損 / E: Ban・規制モード / F: 予約領域)。
 enum ErrorFamily {
-  http('', 'HTTP'),
-  settings('A', '設定'),
-  affectedSettings('B', '影響設定'),
-  pluginTransfer('C', 'プラグイン間受け渡し'),
-  dataCorruption('D', 'データ破損'),
-  regulation('E', '規制'),
-  reserved('F', '予約');
+  http(''),
+  settings('A'),
+  affectedSettings('B'),
+  pluginTransfer('C'),
+  dataCorruption('D'),
+  regulation('E'),
+  reserved('F');
 
-  const ErrorFamily(this.prefix, this.label);
+  const ErrorFamily(this.prefix);
 
   final String prefix;
-  final String label;
+
+  /// 系統の名前(表示の言語、D-533)。
+  String get label {
+    final l = rasqModelsL10n;
+    return switch (this) {
+      http => l.modelsErrorFamilyHttp,
+      settings => l.modelsErrorFamilySettings,
+      affectedSettings => l.modelsErrorFamilyAffectedSettings,
+      pluginTransfer => l.modelsErrorFamilyPluginTransfer,
+      dataCorruption => l.modelsErrorFamilyDataCorruption,
+      regulation => l.modelsErrorFamilyRegulation,
+      reserved => l.modelsErrorFamilyReserved,
+    };
+  }
 }
 
 /// A RASQ error code such as `404`, `A25`, `D2F`.
@@ -62,7 +77,7 @@ class ErrorCode {
   /// Short English title as shown in wireframes ("Not Found", "No Trend Requirement").
   final String? title;
 
-  /// Localised hint for the user ("好きなジャンル/方向性の設定を変更してください").
+  /// Localised hint for the user (`noTrendRequirement` なら「好きなジャンル/方向性の設定を変更してください」)。
   final String? message;
 
   /// Whether the wireframes call for the compact rendering (404 / 408 only).
@@ -83,12 +98,12 @@ class ErrorCode {
   @override
   String toString() => display;
 
-  // Well-known codes used across wireframes.
+  // Well-known codes used across wireframes. 手がかり([message])は表示の言語なので、呼ぶたびに作る (D-533)。
   static final notFound = ErrorCode.http(404, title: 'Not Found');
-  static final timeout = ErrorCode.http(408, title: 'Request Timeout', message: 'インターネット接続を確認してください');
-  static final methodNotAcceptable = ErrorCode.http(405, title: 'Method not Acceptable', message: 'プラグインの障害情報をチェックしてください');
-  static final internalServerError = ErrorCode.http(500, title: 'Internal Server Error', message: 'サーバーでエラーが発生しました');
+  static ErrorCode get timeout => ErrorCode.http(408, title: 'Request Timeout', message: rasqModelsL10n.modelsErrorTimeoutHint);
+  static ErrorCode get methodNotAcceptable => ErrorCode.http(405, title: 'Method not Acceptable', message: rasqModelsL10n.modelsErrorMethodNotAcceptableHint);
+  static ErrorCode get internalServerError => ErrorCode.http(500, title: 'Internal Server Error', message: rasqModelsL10n.modelsErrorInternalServerErrorHint);
   static final unauthorized = ErrorCode.http(401, title: 'Unauthorized');
-  static final noTrendRequirement = ErrorCode.app(ErrorFamily.settings, '25', title: 'No Trend Requirement', message: '好きなジャンル/方向性の設定を変更してください');
-  static final relationalTimelineBroken = ErrorCode.app(ErrorFamily.dataCorruption, '2F', title: 'Relational Timeline Broken', message: 'リロードすると解決することがあります');
+  static ErrorCode get noTrendRequirement => ErrorCode.app(ErrorFamily.settings, '25', title: 'No Trend Requirement', message: rasqModelsL10n.modelsErrorNoTrendRequirementHint);
+  static ErrorCode get relationalTimelineBroken => ErrorCode.app(ErrorFamily.dataCorruption, '2F', title: 'Relational Timeline Broken', message: rasqModelsL10n.modelsErrorRelationalTimelineBrokenHint);
 }

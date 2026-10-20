@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "about.cookies",
-  "title": "クッキーについて",
+  "title": "@l10n:settingsPagesAboutCookiesTitle",
   "defaults": {},
   "root": {
     "t": "Column",
@@ -9,13 +9,13 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "クッキー"
+          "title": "@l10n:settingsPagesAboutCookiesSection1Title"
         }
       },
       {
         "t": "Text",
         "p": {
-          "text": "iOS・Android・デスクトップのアプリは、RASQ サーバーとの通信にクッキーを使いません。RASQ サーバーとの通信は端末トークン(Authorization ヘッダー)で行い、各 SNS のアクセストークンは端末内の安全な領域に保存します。",
+          "text": "@l10n:settingsPagesAboutCookiesText1",
           "pad": 16,
           "size": 13
         }
@@ -23,7 +23,7 @@
       {
         "t": "Text",
         "p": {
-          "text": "iOS・Android のアプリの広告(Google AdMob)は、クッキーの代わりに端末の広告 ID を使います。初回に表示する Google の同意画面で、パーソナライズ広告を使うかを選べます。",
+          "text": "@l10n:settingsPagesAboutCookiesText2",
           "pad": 16,
           "size": 13
         }
@@ -31,7 +31,7 @@
       {
         "t": "Text",
         "p": {
-          "text": "Web 版と、RASQ のプロフィール・投稿の公開の Web ページでは、広告(Google AdSense)のために Google がクッキーを使います。広告のクッキーの扱いは Google のポリシーに従います。",
+          "text": "@l10n:settingsPagesAboutCookiesText3",
           "pad": 16,
           "size": 13
         }
@@ -39,7 +39,7 @@
       {
         "t": "Text",
         "p": {
-          "text": "SNS の web 版や登録ページをアプリ内のブラウザで開いたときは、その SNS のクッキーの扱いに従います。",
+          "text": "@l10n:settingsPagesAboutCookiesText4",
           "pad": 16,
           "size": 13
         }

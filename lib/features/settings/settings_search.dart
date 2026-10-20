@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/router.dart' show Routes;
 import '../rai/rai_reference.dart' show keywordScore;
+import 'settings_dsl.dart' show loadSettingsPageJson;
 import 'settings_sections.dart';
+import '../../l10n/asset_strings.dart';
 import '../../l10n/l10n.dart';
-import '../../l10n/ui_locale.dart' show uiLocaleProvider;
+import '../../l10n/ui_locale.dart' show uiLocaleProvider, uiLocaleTagProvider;
 
 /// 設定の検索 (D-385)。「全ての設定」の検索欄から、設定の行と、設定ページ(DSL)の中の項目を探す。
 ///
@@ -79,7 +80,8 @@ Future<List<SettingsSearchEntry>> buildSettingsSearchIndex(Future<String?> Funct
       if (raw == null) continue;
       Object? page;
       try {
-        page = jsonDecode(raw);
+        // 文言の参照(`@l10n:`)を表示の言語の文言に (D-535)。
+        page = resolveAssetStrings(jsonDecode(raw), l);
       } catch (_) {
         continue;
       }
@@ -114,10 +116,11 @@ Future<List<SettingsSearchEntry>> buildSettingsSearchIndex(Future<String?> Funct
 final settingsSearchIndexProvider = FutureProvider<List<SettingsSearchEntry>>((ref) {
   // 表示の言語が変わったら組み直す (D-484)。
   final l = appL10nFor(ref.watch(uiLocaleProvider));
+  final tag = ref.watch(uiLocaleTagProvider);
   return buildSettingsSearchIndex(l10n: l, (area) async {
     try {
-      // loadString は 50KB を超えると別の isolate で解く。長い文書ページも同じ道で読む(settings_dsl の loadSettingsPageJson と同じ)。
-      return utf8.decode((await rootBundle.load('assets/settings/$area.rrl.json')).buffer.asUint8List());
+      // 長い文書ページも同じ道で読む。表示の言語の文書があればそれ (D-535)。
+      return await loadSettingsPageJson(area, localeTag: tag);
     } catch (_) {
       return null;
     }

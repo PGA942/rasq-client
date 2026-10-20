@@ -1,5 +1,400 @@
 {
   "@@locale": "ja",
+  "adsShowLess": "表示頻度を下げる",
+  "@adsShowLess": {
+    "description": "サーバーの広告の「…」のメニューの項目。この広告を出す回数を減らす"
+  },
+  "adsShowLessDone": "この広告の表示頻度を下げました",
+  "@adsShowLessDone": {
+    "description": "上の項目を選んだときの知らせ"
+  },
+  "adsLabel": "広告",
+  "@adsLabel": {
+    "description": "広告の上に出す「広告」の印"
+  },
+  "adsLabelWithHost": "広告 · {host}",
+  "@adsLabelWithHost": {
+    "description": "サーバーの広告の上に出す印。host は広告を出したサーバー",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "adsMenu": "広告のメニュー",
+  "@adsMenu": {
+    "description": "広告の「…」のボタンのツールチップ"
+  },
+  "adsOpen": "広告を開く",
+  "@adsOpen": {
+    "description": "広告の画像の読み上げの名前(押すと広告の先を開く)"
+  },
+  "appNavPostTitle": "投稿",
+  "@appNavPostTitle": {
+    "description": "幅の広い画面で第 3 カラムに開いた投稿 / 会話のページの見出し"
+  },
+  "appNavReactionsTitle": "リアクション",
+  "@appNavReactionsTitle": {
+    "description": "第 3 カラムに開いたリアクションの一覧のページの見出し"
+  },
+  "appNavFollowersTitle": "フォロワー",
+  "@appNavFollowersTitle": {
+    "description": "第 3 カラムに開いたフォロワーの一覧のページの見出し"
+  },
+  "appNavFollowingTitle": "フォロー中",
+  "@appNavFollowingTitle": {
+    "description": "第 3 カラムに開いたフォロー中の一覧のページの見出し"
+  },
+  "appNavShortcutSearch": "検索",
+  "@appNavShortcutSearch": {
+    "description": "ホーム画面のアプリのアイコンを長押ししたときのショートカット: 検索(Android。iOS は ios/Runner/<言語>.lproj/InfoPlist.strings にも同じ名前を書く)"
+  },
+  "appNavShortcutNewPost": "新しいポスト",
+  "@appNavShortcutNewPost": {
+    "description": "アプリのアイコンのショートカット: 投稿を書く(iOS は InfoPlist.strings にも)"
+  },
+  "appNavShortcutNewMessage": "メッセージを作成",
+  "@appNavShortcutNewMessage": {
+    "description": "アプリのアイコンのショートカット: DM を書く(iOS は InfoPlist.strings にも)"
+  },
+  "appNavShortcutAskRai": "RAiと探す",
+  "@appNavShortcutAskRai": {
+    "description": "アプリのアイコンのショートカット: RAi(アプリの AI)に聞く(iOS は InfoPlist.strings にも)"
+  },
+  "appNavShortcutGuardianPending": "保護者が設定を決めるまで使えません",
+  "@appNavShortcutGuardianPending": {
+    "description": "チャイルドセーフ: 保護者の設定が済むまでショートカットを使えないときの案内"
+  },
+  "appNavShortcutLoginHint": "SNS アカウントにログインすると使えます",
+  "@appNavShortcutLoginHint": {
+    "description": "ログインしていないときにショートカットを押した案内"
+  },
+  "backendOauthNoToken": "アクセストークンを取得できませんでした",
+  "@backendOauthNoToken": {
+    "description": "SNS のブラウザでの認証のあと、アクセストークンが返らなかったときの誤り"
+  },
+  "backendOauthServerRequired": "{service} のログインには RASQ サーバーが必要です。設定 →「RASQ サーバー」で接続先を設定してください。",
+  "@backendOauthServerRequired": {
+    "description": "RASQ サーバーの接続先が無くて SNS にログインできないときの誤り。service はサービス名(Mastodon など)。「RASQ サーバー」は設定の画面の名前",
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "backendOauthNoUrl": "認証 URL を取得できませんでした",
+  "@backendOauthNoUrl": {
+    "description": "ブラウザで開く認証のページの URL を取れなかったときの誤り"
+  },
+  "backendOauthHint": "ブラウザで許可したら、アプリに戻って「認証を確認」を押してください。",
+  "@backendOauthHint": {
+    "description": "ブラウザでの認証を始めたときの案内(サーバーが案内を返さないとき)。「認証を確認」はボタンの名前(loginSnsAuthCheck)と揃える"
+  },
+  "backendResponseTooLarge": "応答が大きすぎます({maxBytes} bytes を超えています)",
+  "@backendResponseTooLarge": {
+    "description": "サーバーの応答が大きすぎて読むのをやめたときの誤り。maxBytes は上限のバイト数",
+    "placeholders": {
+      "maxBytes": {
+        "type": "int"
+      }
+    }
+  },
+  "backendSecurityPasswordlessRemoved": "メールのコードだけのログインは終わりました。ハンドル(またはメール)とパスワードでログインしてください",
+  "@backendSecurityPasswordlessRemoved": {
+    "description": "RASQ アカウントのログイン: メールのコードだけのログインが廃止されたとき"
+  },
+  "backendSecuritySecondFactor": "メールに届いた確認コードを入れてください",
+  "@backendSecuritySecondFactor": {
+    "description": "RASQ アカウントのログイン: 2 段階目の確認コードが要るとき"
+  },
+  "backendSecurityTooMany": "試行が多すぎます。しばらく待ってから、やり直してください",
+  "@backendSecurityTooMany": {
+    "description": "RASQ アカウントの操作: 試しすぎたとき"
+  },
+  "backendSecurityNoMail": "このサーバーは、メールを送れる設定になっていません",
+  "@backendSecurityNoMail": {
+    "description": "RASQ アカウントの操作: サーバーがメールを送れないとき"
+  },
+  "backendSecurityEmailUsed": "このメールアドレスは、ほかのアカウントで使われています",
+  "@backendSecurityEmailUsed": {
+    "description": "RASQ アカウントの操作: メールアドレスがほかで使われているとき"
+  },
+  "backendSecurityBadCredentials": "ハンドル(メール)かパスワードが違います",
+  "@backendSecurityBadCredentials": {
+    "description": "RASQ アカウントのログイン: ハンドルかパスワードが違うとき"
+  },
+  "backendSecurityBadCode": "コードが違うか、期限が切れています",
+  "@backendSecurityBadCode": {
+    "description": "RASQ アカウントの操作: 確認コードが違うか古いとき"
+  },
+  "backendSecurityWeakPassword": "このパスワードは弱すぎます(よく使われるもの / 同じ字の繰り返し / ハンドルやメールと同じもの は使えません)",
+  "@backendSecurityWeakPassword": {
+    "description": "RASQ アカウントの操作: パスワードが弱いとき"
+  },
+  "backendSecurityShortPassword": "パスワードは 8 文字以上にしてください",
+  "@backendSecurityShortPassword": {
+    "description": "RASQ アカウントの操作: パスワードが短いとき"
+  },
+  "backendSecurityBadEmail": "メールアドレスの形が正しくありません",
+  "@backendSecurityBadEmail": {
+    "description": "RASQ アカウントの操作: メールアドレスの形が違うとき"
+  },
+  "backendSecurityWrongPassword": "いまのパスワードが違います",
+  "@backendSecurityWrongPassword": {
+    "description": "RASQ アカウントの操作: いまのパスワードが違うとき"
+  },
+  "backendSecurityNoPassword": "このアカウントにはパスワードがありません。いまのメールに届く確認コードで確かめてください",
+  "@backendSecurityNoPassword": {
+    "description": "RASQ アカウントの操作: パスワードの無いアカウントで、パスワードでの確かめを求めたとき"
+  },
+  "backendSecurityConfirmRequired": "この操作には、いまのパスワードか、いまのメールに届く確認コードが要ります",
+  "@backendSecurityConfirmRequired": {
+    "description": "RASQ アカウントの操作: 本人の確かめが要るとき"
+  },
+  "backendRoomClosed": "ルームに入れませんでした(ルームが閉じているか、見つかりません)",
+  "@backendRoomClosed": {
+    "description": "ASTell のルームにつなげなかったとき(ルームが無い)"
+  },
+  "backendRoomForbidden": "ルームに入れませんでした(このアカウントでは参加できません)",
+  "@backendRoomForbidden": {
+    "description": "ASTell のルームにつなげなかったとき(参加できない)"
+  },
+  "backendRoomConnectFailed": "ルームに接続できませんでした: {error}",
+  "@backendRoomConnectFailed": {
+    "description": "ASTell のルームにつなげなかったとき。error は理由(秘密は伏せてある)",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backendPaidFeaturesDisabled": "公開テストでは有料プラグインは使えません",
+  "@backendPaidFeaturesDisabled": {
+    "description": "有料の機能が止まっているときの文(公開テストの間)"
+  },
+  "backendAgeTeen": "13〜15 歳",
+  "@backendAgeTeen": {
+    "description": "年齢の申告の選択肢"
+  },
+  "backendAgeUpperTeen": "16〜17 歳",
+  "@backendAgeUpperTeen": {
+    "description": "年齢の申告の選択肢"
+  },
+  "backendAgeAdult": "18 歳以上",
+  "@backendAgeAdult": {
+    "description": "年齢の申告の選択肢"
+  },
+  "backendNoToken": "ORGATE がトークンを返しませんでした",
+  "@backendNoToken": {
+    "description": "RASQ アカウントを作る / ログインするとき、サーバー(ORGATE = RASQ アカウントのサーバーの名前)がトークンを返さなかったときの誤り"
+  },
+  "backendTileAuto": "自動",
+  "@backendTileAuto": {
+    "description": "RASQ アカウントのページの SNS アカウントのタイルを出すかの選択肢: 自動"
+  },
+  "backendTileShow": "表示",
+  "@backendTileShow": {
+    "description": "RASQ アカウントのページの SNS アカウントのタイルを出すかの選択肢: 出す"
+  },
+  "backendTileHide": "非表示",
+  "@backendTileHide": {
+    "description": "RASQ アカウントのページの SNS アカウントのタイルを出すかの選択肢: 出さない"
+  },
+  "backendVerifiedKeybase": "Keybase の証明で確認済み",
+  "@backendVerifiedKeybase": {
+    "description": "SNS アカウントの持ち主の確認の方法: Keybase の証明。Keybase はサービス名"
+  },
+  "backendVerifiedProfile": "プロフィールで確認済み",
+  "@backendVerifiedProfile": {
+    "description": "SNS アカウントの持ち主の確認の方法: SNS のプロフィールに載せた確認の文"
+  },
+  "backendAudioFileName": "音声",
+  "@backendAudioFileName": {
+    "description": "RASQ の投稿の音声の添付の、ファイル名の代わりに出す名前"
+  },
+  "backendServerNotConfigured": "RASQ サーバーの接続先が未設定です",
+  "@backendServerNotConfigured": {
+    "description": "RASQ のサーバーの接続先が無いときの誤り"
+  },
+  "backendServerError": "サーバーエラー ({status})",
+  "@backendServerError": {
+    "description": "サーバーが誤りを返したが理由の文が無いときの誤り。status は HTTP の状態コード",
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "backendCollectionList": "リスト",
+  "@backendCollectionList": {
+    "description": "RASQ リスト / クリップの種類: リスト"
+  },
+  "backendCollectionClip": "クリップ",
+  "@backendCollectionClip": {
+    "description": "RASQ リスト / クリップの種類: クリップ"
+  },
+  "bookmarksRemoved": "ブックマークを外しました",
+  "@bookmarksRemoved": {
+    "description": "ブックマークを外したときの知らせ"
+  },
+  "bookmarksRemoveFailed": "外せませんでした: {error}",
+  "@bookmarksRemoveFailed": {
+    "description": "ブックマークを外せなかったときの知らせ。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "bookmarksTitle": "ブックマーク",
+  "@bookmarksTitle": {
+    "description": "ブックマークの画面の見出し"
+  },
+  "bookmarksRetry": "再読み込み",
+  "@bookmarksRetry": {
+    "description": "ブックマークを読み込めなかったときの、やり直すボタン"
+  },
+  "bookmarksEmptyTitle": "ブックマークはありません",
+  "@bookmarksEmptyTitle": {
+    "description": "ブックマークが空のとき"
+  },
+  "bookmarksEmptyHint": "投稿の 🔖、クリップに追加、ASTell のしおりで集められます",
+  "@bookmarksEmptyHint": {
+    "description": "ブックマークが空のときの補足。🔖 は投稿のブックマークのボタン"
+  },
+  "bookmarksEmptyNoSnsHint": "このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます",
+  "@bookmarksEmptyNoSnsHint": {
+    "description": "ブックマークが空で、いまの SNS にブックマークの機能が無いときの補足"
+  },
+  "bookmarksClips": "クリップ",
+  "@bookmarksClips": {
+    "description": "ブックマークの画面の節の見出し(自分のクリップ)"
+  },
+  "bookmarksClipCount": "{count, plural, other{{count}件}}",
+  "@bookmarksClipCount": {
+    "description": "クリップの行の、入っている投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookmarksClipHost": "RASQ(SNS 横断)",
+  "@bookmarksClipHost": {
+    "description": "クリップの行の種類: 複数の SNS の投稿を入れられる RASQ のクリップ"
+  },
+  "bookmarksClipPrivate": "非公開クリップ",
+  "@bookmarksClipPrivate": {
+    "description": "クリップの行の種類: SNS の非公開のクリップ"
+  },
+  "bookmarksSeparator": " ・ ",
+  "@bookmarksSeparator": {
+    "description": "クリップの行の補足(件数・種類)の区切り"
+  },
+  "bookmarksFavorites": "お気に入り",
+  "@bookmarksFavorites": {
+    "description": "ブックマークの画面の節の見出し(SNS のお気に入り)"
+  },
+  "bookmarksSwipeRemove": "外す",
+  "@bookmarksSwipeRemove": {
+    "description": "投稿を左へスワイプしたときに出る、ブックマークを外す印"
+  },
+  "bookmarksRemove": "ブックマークを外す",
+  "@bookmarksRemove": {
+    "description": "投稿の下の、ブックマークを外すボタン"
+  },
+  "catalogTitle": "コンポーネントカタログ",
+  "@catalogTitle": {
+    "description": "開発用のコンポーネントカタログ(部品の見本を並べた画面)の見出し"
+  },
+  "catalogSectionBrand": "Brand (特殊なコンポーネント置き場)",
+  "@catalogSectionBrand": {
+    "description": "カタログの節の見出し。ロゴ・認証バッジなどのブランドの部品。英字の部品名はそのまま"
+  },
+  "catalogSectionPostTile": "PostTile — 通常 (アクションバー / 投票 / メディア)",
+  "@catalogSectionPostTile": {
+    "description": "カタログの節の見出し。投稿のタイルの通常の形。PostTile は部品の名前で訳さない"
+  },
+  "catalogSectionPostTileEmbedded": "PostTile — 埋め込み (引用 / リアクション表示 / タイマー通知) & スレッドまとめ",
+  "@catalogSectionPostTileEmbedded": {
+    "description": "カタログの節の見出し。投稿のタイルの埋め込みの形とスレッドのまとめ。PostTile は部品の名前"
+  },
+  "catalogSectionCollapsed": "CollapsedPost (省略表示: 既読 + 長文)",
+  "@catalogSectionCollapsed": {
+    "description": "カタログの節の見出し。既読の長い投稿を省略して出す部品。CollapsedPost は部品の名前"
+  },
+  "catalogSectionPoll": "PollWidget (未投票 単一 / 複数, 投票済み, 期限切れ)",
+  "@catalogSectionPoll": {
+    "description": "カタログの節の見出し。投票の部品の状態の見本。PollWidget は部品の名前"
+  },
+  "catalogSectionActionBar": "ActionBar (spread / leading = コンポーザーツールバー)",
+  "@catalogSectionActionBar": {
+    "description": "カタログの節の見出し。アクションバーの 2 つの並べ方。spread / leading は値の名前で訳さない"
+  },
+  "catalogSectionRrl": "RRL レンダラー (post-tile.rrl.json → L1/L2/L3)",
+  "@catalogSectionRrl": {
+    "description": "カタログの節の見出し。プラグインの画面の木(RRL)を描く部品。ファイル名と L1/L2/L3(部品の層)は訳さない"
+  },
+  "catalogSheetTitle": "ボトムシート",
+  "@catalogSheetTitle": {
+    "description": "オーバーレイの見本のボトムシートの見出し"
+  },
+  "catalogSheetConfirm": "決定",
+  "@catalogSheetConfirm": {
+    "description": "オーバーレイの見本のボトムシートの確定のボタン"
+  },
+  "catalogSheetBody": "背面タップ or キャンセルで変更破棄。\nこの上にモーダルは割り込めます。",
+  "@catalogSheetBody": {
+    "description": "オーバーレイの見本のボトムシートの本文。シートの振る舞いの説明(2 行)"
+  },
+  "catalogAlertTitle": "ブロックしますか？",
+  "@catalogAlertTitle": {
+    "description": "オーバーレイの見本の確かめ(モーダル)の見出し"
+  },
+  "catalogAlertMessage": "背面タップは無効(明示的操作必須)",
+  "@catalogAlertMessage": {
+    "description": "オーバーレイの見本の確かめの本文。背景を押しても閉じないことの説明"
+  },
+  "catalogAlertConfirm": "ブロック",
+  "@catalogAlertConfirm": {
+    "description": "オーバーレイの見本の確かめの、確定(破壊的)のボタン"
+  },
+  "catalogAlertCancel": "キャンセル",
+  "@catalogAlertCancel": {
+    "description": "オーバーレイの見本の確かめの、やめるボタン"
+  },
+  "catalogDropdownAsc": "昇順",
+  "@catalogDropdownAsc": {
+    "description": "オーバーレイの見本のドロップダウンの項目(並べ替えの昇順)"
+  },
+  "catalogDropdownDesc": "降順",
+  "@catalogDropdownDesc": {
+    "description": "オーバーレイの見本のドロップダウンの項目(並べ替えの降順)"
+  },
+  "catalogDropdownDefault": "デフォルト",
+  "@catalogDropdownDefault": {
+    "description": "オーバーレイの見本のドロップダウンの項目(既定の並び)"
+  },
+  "catalogDropdownReport": "通報",
+  "@catalogDropdownReport": {
+    "description": "オーバーレイの見本のドロップダウンの項目(破壊的な項目の見本)"
+  },
+  "catalogSheetModalTitle": "シート→モーダル割り込み",
+  "@catalogSheetModalTitle": {
+    "description": "オーバーレイの見本。シートの上にモーダルを重ねる見本のシートの見出し"
+  },
+  "catalogModalTitle": "モーダル",
+  "@catalogModalTitle": {
+    "description": "オーバーレイの見本。シートの上に出すモーダルの見出し"
+  },
+  "catalogModalMessage": "シートは維持されます",
+  "@catalogModalMessage": {
+    "description": "オーバーレイの見本。シートの上に出すモーダルの本文"
+  },
+  "catalogModalOpen": "モーダルを出す",
+  "@catalogModalOpen": {
+    "description": "オーバーレイの見本。シートの中の、モーダルを出すボタン"
+  },
   "childSafeLevelStrict": "きびしめ",
   "@childSafeLevelStrict": {
     "description": "見守りの判定の強さ(プリセット / タイムライン / 投稿の強さの選択肢)"
@@ -910,6 +1305,245 @@
   "childSafeScreensPendingRefresh": "更新",
   "childSafeScreensPendingLogout": "ログアウト",
   "childSafeScreensPendingRasqLogin": "RASQ アカウントにログイン",
+  "clipsNoSession": "セッションがありません",
+  "@clipsNoSession": {
+    "description": "クリップを読み込もうとしたが、SNS にログインしていないときの誤り"
+  },
+  "clipsChildSafeBlocked": "保護者がこのクリップを止めています",
+  "@clipsChildSafeBlocked": {
+    "description": "チャイルドセーフ: 保護者が止めている中身のクリップを開いたとき"
+  },
+  "clipsRetry": "再読み込み",
+  "@clipsRetry": {
+    "description": "クリップを読み込めなかったときの、やり直すボタン"
+  },
+  "clipsEmptyTitle": "クリップは空です",
+  "@clipsEmptyTitle": {
+    "description": "クリップに投稿が無いとき"
+  },
+  "clipsEmptyHint": "投稿メニューの「クリップに追加」からここへ集められます",
+  "@clipsEmptyHint": {
+    "description": "クリップに投稿が無いときの補足。「クリップに追加」は投稿のメニューの項目の名前"
+  },
+  "clipsPostCount": "{count, plural, other{{count}件}}",
+  "@clipsPostCount": {
+    "description": "クリップの投稿の数(クリップの画面の見出しの下・クリップを選ぶシートの行)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsKindHost": "RASQ クリップ(SNS 横断)",
+  "@clipsKindHost": {
+    "description": "クリップの種類: 端末に保存する、複数の SNS の投稿を入れられるクリップ"
+  },
+  "clipsKindPrivate": "非公開クリップ",
+  "@clipsKindPrivate": {
+    "description": "クリップの種類: SNS の非公開のクリップ"
+  },
+  "clipsCaptionSeparator": " ・ ",
+  "@clipsCaptionSeparator": {
+    "description": "クリップの画面の見出しの下の補足(件数・種類・持ち主)の区切り"
+  },
+  "clipsLoading": "読み込み中…",
+  "@clipsLoading": {
+    "description": "クリップの続きを読み込んでいる間のボタンの文字"
+  },
+  "clipsLoadMore": "さらに読み込む",
+  "@clipsLoadMore": {
+    "description": "クリップの続きを読み込むボタン"
+  },
+  "clipsActionFailed": "できませんでした: {error}",
+  "@clipsActionFailed": {
+    "description": "クリップの公開 / 公開の取りやめに失敗したときの知らせ。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clipsPublishHint": "公開すると、アカウントページと共有リンクから見られます",
+  "@clipsPublishHint": {
+    "description": "RASQ クリップの公開の行の説明(載せられない投稿が無いとき)"
+  },
+  "clipsPublishHintSkipped": "{count, plural, other{公開すると、アカウントページと共有リンクから見られます(フォロワー限定などの {count} 件は載せません)}}",
+  "@clipsPublishHintSkipped": {
+    "description": "RASQ クリップの公開の行の説明(フォロワー限定などで公開に載せない投稿があるとき)。count はその数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsPublishNeedsAccount": "公開するには RASQ アカウントが必要です",
+  "@clipsPublishNeedsAccount": {
+    "description": "RASQ アカウントが無いときの公開の行の説明"
+  },
+  "clipsPublish": "公開する",
+  "@clipsPublish": {
+    "description": "RASQ クリップを公開するボタン"
+  },
+  "clipsPublishedPending": "{count, plural, other{公開しました(公開範囲を確かめている投稿が {count} 件あります)}}",
+  "@clipsPublishedPending": {
+    "description": "公開したときの知らせ(公開範囲を確かめ中の投稿があるとき)。count はその数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsPublished": "公開しました",
+  "@clipsPublished": {
+    "description": "公開したときの知らせ"
+  },
+  "clipsPublishedStatusSkipped": "{count, plural, other{公開中(フォロワー限定などの {count} 件は載せていません)}}",
+  "@clipsPublishedStatusSkipped": {
+    "description": "公開中のクリップの行の状態(載せていない投稿があるとき)。count はその数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsPublishedStatus": "公開中",
+  "@clipsPublishedStatus": {
+    "description": "公開中のクリップの行の状態"
+  },
+  "clipsLinkCopied": "リンクをコピーしました",
+  "@clipsLinkCopied": {
+    "description": "公開中のクリップのリンクをコピーしたときの知らせ"
+  },
+  "clipsCopyLink": "リンクをコピー",
+  "@clipsCopyLink": {
+    "description": "公開中のクリップのリンクをコピーするボタン"
+  },
+  "clipsUnpublished": "公開をやめました",
+  "@clipsUnpublished": {
+    "description": "公開をやめたときの知らせ"
+  },
+  "clipsUnpublish": "公開をやめる",
+  "@clipsUnpublish": {
+    "description": "公開をやめるボタン"
+  },
+  "clipsAddTitle": "クリップに追加",
+  "@clipsAddTitle": {
+    "description": "投稿をクリップに足すシートの見出し"
+  },
+  "clipsAddAddedHost": "追加済み ・ RASQ クリップ",
+  "@clipsAddAddedHost": {
+    "description": "クリップを選ぶシートの行の補足(この投稿がもう入っている RASQ クリップ)"
+  },
+  "clipsAddAddedHostPublished": "追加済み ・ RASQ クリップ(公開中)",
+  "@clipsAddAddedHostPublished": {
+    "description": "クリップを選ぶシートの行の補足(この投稿がもう入っている、公開中の RASQ クリップ)"
+  },
+  "clipsAddHostRow": "{count, plural, other{{count}件 ・ RASQ クリップ(SNS 横断)}}",
+  "@clipsAddHostRow": {
+    "description": "クリップを選ぶシートの RASQ クリップの行の補足。count は入っている投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsAddHostRowPublished": "{count, plural, other{{count}件 ・ RASQ クリップ(SNS 横断) ・ 公開中}}",
+  "@clipsAddHostRowPublished": {
+    "description": "クリップを選ぶシートの、公開中の RASQ クリップの行の補足。count は入っている投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsAddCreate": "新しいクリップを作成",
+  "@clipsAddCreate": {
+    "description": "クリップを選ぶシートの、新しく作る行"
+  },
+  "clipsAdded": "「{name}」に追加しました",
+  "@clipsAdded": {
+    "description": "投稿をクリップに足したときの知らせ。name はクリップの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "clipsAddFailed": "クリップに追加できませんでした: {error}",
+  "@clipsAddFailed": {
+    "description": "クリップに足せなかったときの知らせ。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clipsCreateTitle": "新しいクリップ",
+  "@clipsCreateTitle": {
+    "description": "新しいクリップを作るシートの見出し"
+  },
+  "clipsCreateNameHint": "クリップ名",
+  "@clipsCreateNameHint": {
+    "description": "新しいクリップの名前の入力欄の薄い文字"
+  },
+  "clipsCreateDescriptionHint": "説明(任意)",
+  "@clipsCreateDescriptionHint": {
+    "description": "新しいクリップの説明の入力欄の薄い文字"
+  },
+  "clipsCreateHost": "RASQ クリップ(SNS 横断)にする",
+  "@clipsCreateHost": {
+    "description": "新しいクリップを RASQ クリップにするスイッチ"
+  },
+  "clipsCreateHostSubtitle": "端末に保存され、別の SNS の投稿も同じクリップへ入れられます",
+  "@clipsCreateHostSubtitle": {
+    "description": "上のスイッチの補足"
+  },
+  "clipsCreateAndAdd": "作成して追加",
+  "@clipsCreateAndAdd": {
+    "description": "新しいクリップを作って投稿を足すボタン"
+  },
+  "clipsIndexFallback": "話題を特定できない投稿",
+  "@clipsIndexFallback": {
+    "description": "クリップの目次の章の名前。話題の語が見つからない投稿をまとめたもの"
+  },
+  "clipsIndexSingles": "単発投稿",
+  "@clipsIndexSingles": {
+    "description": "クリップの目次の章の名前。ほかとつながらない単発の投稿をまとめたもの"
+  },
+  "clipsIndexRelated": "{count, plural, other{関連投稿 {count}件}}",
+  "@clipsIndexRelated": {
+    "description": "クリップ / リストの目次の章の仮の名前(話題の語がまだ決まらないとき)。count は投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsTocTitle": "目次",
+  "@clipsTocTitle": {
+    "description": "クリップの画面の目次の見出し(既定)"
+  },
+  "clipsTocPeople": "{count, plural, other{{count}人}}",
+  "@clipsTocPeople": {
+    "description": "目次の章の行の、話している人の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsTocFiltering": "絞り込み中",
+  "@clipsTocFiltering": {
+    "description": "目次の章を選んで投稿を絞り込んでいるときの印"
+  },
+  "clipsNoServer": "RASQ アカウントのサーバーが設定されていません",
+  "@clipsNoServer": {
+    "description": "RASQ クリップを公開しようとしたが、RASQ アカウントのサーバーが無いときの誤り"
+  },
+  "clipsNotFound": "クリップがありません",
+  "@clipsNotFound": {
+    "description": "公開しようとした RASQ クリップが見つからないときの誤り"
+  },
   "collectionsImportToTimeline": "タイムラインに取り込む",
   "@collectionsImportToTimeline": {
     "description": "RASQ リストのページの右上のボタンの説明と、押したあとの知らせの見出し。このリストをホームのタイムラインの取り込み元に足す"
@@ -2764,6 +3398,353 @@
   "customAstellRemove": "ルームから外す",
   "customAstellAdd": "プラグインを追加",
   "customAstellPropose": "プラグインを提案",
+  "devGrantDebugAll": "デバッグビルド: 全権限",
+  "@devGrantDebugAll": {
+    "description": "開発者用の WASM プラグインの試験の画面: デバッグビルドでは全部の権限を与えている、という表示"
+  },
+  "devUrlInvalid": "http(s) の URL を入れてください",
+  "@devUrlInvalid": {
+    "description": "試験の画面: URL の欄に http(s) の URL が無いとき"
+  },
+  "devUrlLoadFailed": "URL から読めませんでした: {error}",
+  "@devUrlLoadFailed": {
+    "description": "試験の画面: URL からプラグインを読めなかったとき。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "devBoundaryTimelineFailed": "境界TL: {error}",
+  "@devBoundaryTimelineFailed": {
+    "description": "試験の画面: 境界 TL(プラグインの sns.timeline を通した TL)の取得に失敗したとき。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "devAssetLoadFailed": "アセットの読み込みに失敗: {error}",
+  "@devAssetLoadFailed": {
+    "description": "試験の画面: 同梱のプラグインを読めなかったとき。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "devPkgLoaded": ".rasqpkg: {rootId} {version}(子 {children})→ {target} を読み込み。",
+  "@devPkgLoaded": {
+    "description": "試験の画面: .rasqpkg(プラグインの配布物)を読んだときの説明の 1 文目。rootId / version は配布物の id と版、children は子のプラグインの数、target は読み込んだプラグインの id",
+    "placeholders": {
+      "rootId": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      },
+      "children": {
+        "type": "int"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "devPkgSigned": "開発者鍵の署名 OK(指紋 {fingerprint})。ストアの審査は通っていません。",
+  "@devPkgSigned": {
+    "description": "上の説明の 2 文目(開発者鍵の署名があるとき)。fingerprint は鍵の指紋",
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "devPkgUnsigned": "署名なし(.sig.json がありません)。出どころを確かめられません。",
+  "@devPkgUnsigned": {
+    "description": "上の説明の 2 文目(署名が無いとき)。.sig.json はファイル名"
+  },
+  "devPkgSlotFull": "スロットに登録するとフル機能(自分の鍵の署名)",
+  "@devPkgSlotFull": {
+    "description": "上の説明の 3 文目(スロットに登録したときの段がフル機能のとき)"
+  },
+  "devPkgSlotRestricted": "スロットに登録すると制限モード(自分の鍵の署名ではないため、通信 / GPU / storage.unsafe / interstitial・system の FOW / 共有・コンポーザー・ミュート・URL を開く関数は閉)",
+  "@devPkgSlotRestricted": {
+    "description": "上の説明の 3 文目(制限モードのとき)。storage.unsafe / interstitial / system は権限の名前で訳さない"
+  },
+  "devPathLoadFailed": "{path} の読み込みに失敗(絶対パスか ~/ 始まりで指定してください): {error}",
+  "@devPathLoadFailed": {
+    "description": "試験の画面: パスからプラグインを読めなかったとき。path は入れたパス、error は理由",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "devFowClose": "閉じる",
+  "@devFowClose": {
+    "description": "試験の画面でプラグインが開いた FOW の、閉じるボタン(プラグインが名前を決めていないとき)"
+  },
+  "devFowSemantics": "プラグインFOW",
+  "@devFowSemantics": {
+    "description": "プラグインが開いた FOW の読み上げの名前(プラグインが見出しを決めていないとき)"
+  },
+  "devRegisterNeedsMisskey": "実登録には Misskey アカウントでのログインが必要です",
+  "@devRegisterNeedsMisskey": {
+    "description": "試験の画面: 「実登録」には Misskey のアカウントが要るとき"
+  },
+  "devTitle": "WASMプラグイン試験 (dev)",
+  "@devTitle": {
+    "description": "開発者用の WASM プラグインの試験の画面の見出し"
+  },
+  "devHostHint": "インスタンス (例: misskey.io)",
+  "@devHostHint": {
+    "description": "試験の画面のサーバーの入力欄の薄い文字"
+  },
+  "devFetchTimeline": "TL取得",
+  "@devFetchTimeline": {
+    "description": "試験の画面: プラグインで TL を取るボタン"
+  },
+  "devBoundaryTimeline": "境界TL",
+  "@devBoundaryTimeline": {
+    "description": "試験の画面: プラグインの sns.timeline を通して TL を取るボタン"
+  },
+  "devPathHint": ".wasm のパスからインポート (空欄=同梱アセット)",
+  "@devPathHint": {
+    "description": "試験の画面のパスの入力欄の薄い文字"
+  },
+  "devLoad": "読み込み",
+  "@devLoad": {
+    "description": "試験の画面: パスから読み込むボタン"
+  },
+  "devRegisterReal": "実登録",
+  "@devRegisterReal": {
+    "description": "試験の画面: いまのアカウントのトークンでプラグインのセッションを登録するボタン"
+  },
+  "devUrlHint": "URL から読む(審査の仮インポート用のリンク)",
+  "@devUrlHint": {
+    "description": "試験の画面の URL の入力欄の薄い文字"
+  },
+  "devUrlLoad": "URL から読む",
+  "@devUrlLoad": {
+    "description": "試験の画面: URL から読むボタン"
+  },
+  "devOpenedFromLink": "リンクから開きました。出どころを確かめてから「URL から読む」を押してください(審査中の版は制限モードで動きます)。",
+  "@devOpenedFromLink": {
+    "description": "試験の画面: 審査のリンクから開いたときの案内。「URL から読む」はボタンの名前(devUrlLoad)と揃える"
+  },
+  "devParentInstalled": "親(土台)のプラグイン: {id} {version}(入っています)",
+  "@devParentInstalled": {
+    "description": "試験の画面: 読み込んだ配布物が要る親のプラグインの行(入っているとき)。id / version は親のプラグイン",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "devParentMissing": "親(土台)のプラグイン: {id} {version}— 先に入れてください",
+  "@devParentMissing": {
+    "description": "試験の画面: 親のプラグインの行(入っていないとき)",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "devOpenInStore": "ストアで開く",
+  "@devOpenInStore": {
+    "description": "試験の画面: 親のプラグインをストアで開くボタン"
+  },
+  "devGrantDebugNote": "{grant}(release ビルドでは段で絞ります: {hint})",
+  "@devGrantDebugNote": {
+    "description": "試験の画面: デバッグビルドの権限の表示。grant は devGrantDebugAll、hint は段の説明",
+    "placeholders": {
+      "grant": {
+        "type": "String"
+      },
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "devGrantMode": "この画面: {mode} — {hint}",
+  "@devGrantMode": {
+    "description": "試験の画面: いま読み込んだものの段の表示。mode は devMode… のどれか、hint は段の説明",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      },
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "devModeFull": "フル機能",
+  "@devModeFull": {
+    "description": "段の名前: フル機能"
+  },
+  "devModeBundled": "フル機能(アプリ同梱)",
+  "@devModeBundled": {
+    "description": "段の名前: アプリに同梱のものとしてフル機能"
+  },
+  "devModeRestricted": "制限モード",
+  "@devModeRestricted": {
+    "description": "段の名前: 制限モード"
+  },
+  "devModeSwing": "制限モード(Swing)",
+  "@devModeSwing": {
+    "description": "段の名前: Swing(機能の名前)の制限モード"
+  },
+  "devSlotRegister": "スロットに登録",
+  "@devSlotRegister": {
+    "description": "試験の画面: 読み込んだプラグインをアプリの各所から呼べるように登録するボタン"
+  },
+  "devSlotRegistered": "{count, plural, other{登録済み: {count}}}",
+  "@devSlotRegistered": {
+    "description": "試験の画面: スロットに登録しているプラグインの数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "devSlotModeHint": "スロットの段: フル / 制限 — {hint}",
+  "@devSlotModeHint": {
+    "description": "試験の画面: スロットの段の説明。hint は段の説明",
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "devSlotReviewed": "審査済み",
+  "@devSlotReviewed": {
+    "description": "試験の画面: 登録したプラグインの行の段の印(ストアの審査済み)"
+  },
+  "devSlotUnregister": "解除",
+  "@devSlotUnregister": {
+    "description": "試験の画面: スロットの登録を外すボタン"
+  },
+  "devBoundaryHeader": "境界セッション: sns.timeline → Post ワイヤ → PostRow",
+  "@devBoundaryHeader": {
+    "description": "試験の画面: 境界 TL の上の帯。sns.timeline / Post / PostRow は名前で訳さない"
+  },
+  "devBoundaryClose": "閉じる",
+  "@devBoundaryClose": {
+    "description": "試験の画面: 境界 TL を閉じるボタン"
+  },
+  "devActionFailed": "performAction({action}) 失敗: {error}",
+  "@devActionFailed": {
+    "description": "試験の画面: プラグインのアクションに失敗したとき。action はアクションの id、error は理由",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "devReviewImportTooLarge": "大きさが不正です({maxBytes} bytes を超えています)",
+  "@devReviewImportTooLarge": {
+    "description": "審査の仮インポート: 落としたファイルが大きすぎるとき。maxBytes は上限",
+    "placeholders": {
+      "maxBytes": {
+        "type": "int"
+      }
+    }
+  },
+  "devReviewImportExpired": "リンクの期限が切れたか、違うリンクです。審査の画面で作り直してください",
+  "@devReviewImportExpired": {
+    "description": "審査の仮インポート: リンクが古い / 違うとき"
+  },
+  "devReviewImportHttpFailed": "取得に失敗しました(HTTP {status})",
+  "@devReviewImportHttpFailed": {
+    "description": "審査の仮インポート: 取れなかったとき。status は HTTP の状態コード",
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "devReviewImportBadSize": "大きさが不正です({bytes} bytes)",
+  "@devReviewImportBadSize": {
+    "description": "審査の仮インポート: 落としたファイルの大きさがおかしいとき。bytes は大きさ",
+    "placeholders": {
+      "bytes": {
+        "type": "int"
+      }
+    }
+  },
+  "dmRoomSettings": "このDMの設定",
+  "@dmRoomSettings": {
+    "description": "DM のルームの画面の歯車のボタンのツールチップ(このルームだけの表示の設定)"
+  },
+  "dmRetry": "再読み込み",
+  "@dmRetry": {
+    "description": "DM を読み込めなかったときの、やり直すボタン"
+  },
+  "dmRoomEmpty": "まだメッセージはありません",
+  "@dmRoomEmpty": {
+    "description": "DM のルームにメッセージが無いとき"
+  },
+  "dmTabAll": "全て",
+  "@dmTabAll": {
+    "description": "DM の画面のタブ。全部の DM"
+  },
+  "dmTabFollowing": "フォロー中",
+  "@dmTabFollowing": {
+    "description": "DM の画面のタブ。フォローしている人との DM"
+  },
+  "dmSettings": "DM設定",
+  "@dmSettings": {
+    "description": "DM の画面の歯車のボタンのツールチップ(全部の DM に効く表示の設定)"
+  },
+  "dmFollowingEmpty": "フォロー中のDMはありません",
+  "@dmFollowingEmpty": {
+    "description": "DM の画面の「フォロー中」のタブが空のとき"
+  },
+  "dmNewMessage": "新規メッセージ",
+  "@dmNewMessage": {
+    "description": "新しい DM を始めるボタンのツールチップ、および相手を選ぶシートの見出し"
+  },
+  "dmUserSearchHint": "ユーザー名で検索..",
+  "@dmUserSearchHint": {
+    "description": "相手を選ぶシートの検索欄の薄い文字"
+  },
+  "dmUserSearchIntro": "DM を送る相手を検索します。",
+  "@dmUserSearchIntro": {
+    "description": "相手を選ぶシートの、まだ何も入れていないときの説明"
+  },
+  "dmUserNotFound": "見つかりませんでした",
+  "@dmUserNotFound": {
+    "description": "相手を選ぶシートで、合う人がいないとき"
+  },
+  "dmEmptyTitle": "DMはありません",
+  "@dmEmptyTitle": {
+    "description": "DM の一覧が空のとき"
+  },
+  "dmEmptyHint": "ダイレクト投稿(限定公開)がここに並びます",
+  "@dmEmptyHint": {
+    "description": "DM の一覧が空のときの補足"
+  },
+  "dmYouPrefix": "あなた: ",
+  "@dmYouPrefix": {
+    "description": "DM の一覧の行で、最後のメッセージが自分のものなら本文の前に太字で付ける印(後ろの空白も含む)"
+  },
+  "dmMediaPlaceholder": "[メディア]",
+  "@dmMediaPlaceholder": {
+    "description": "DM の一覧の行で、最後のメッセージが本文の無いメディアだけのときに出す文"
+  },
   "homeCreateMissingAccount": "(いないアカウント)",
   "@homeCreateMissingAccount": {
     "description": "＋ のボタンに置いた投稿のアカウントが、もうログインしていないとき"
@@ -3563,6 +4544,335 @@
   "listsPickerRasqBadgeSemantics": "RASQ のユーザー",
   "@listsPickerRasqBadgeSemantics": {
     "description": "候補のアバターの左下の RASQ の印の読み上げ"
+  },
+  "loginBack": "戻る",
+  "@loginBack": {
+    "description": "ログインの画面の左上の戻るボタンのツールチップ"
+  },
+  "loginTitle": "SNSにログイン",
+  "@loginTitle": {
+    "description": "SNS のアカウントでログインする画面の見出し"
+  },
+  "loginPluginLoadNote": "初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。",
+  "@loginPluginLoadNote": {
+    "description": "SNS にログインする画面の上の案内。初めてログインする前に、その SNS のプラグインを読み込む"
+  },
+  "loginChildSafeBlocked": "保護者が SNS アカウントの追加を止めています",
+  "@loginChildSafeBlocked": {
+    "description": "チャイルドセーフ: 保護者が SNS アカウントを足せないようにしているときの案内"
+  },
+  "loginShareDeviceOnly": "メールでこの端末を承認しました。SNS アカウントには、下のボタンからこの端末でログインしてください",
+  "@loginShareDeviceOnly": {
+    "description": "メールのリンクで端末を承認した(SNS のログインは共有しない)あとの案内"
+  },
+  "loginWithBluesky": "Blueskyでログイン",
+  "@loginWithBluesky": {
+    "description": "Bluesky でログインするボタン、およびその画面の見出し。Bluesky はサービス名"
+  },
+  "loginWithMisskey": "Misskeyでログイン",
+  "@loginWithMisskey": {
+    "description": "Misskey でログインするボタン。Misskey はサービス名"
+  },
+  "loginWithMixi2": "mixi2でログイン",
+  "@loginWithMixi2": {
+    "description": "mixi2 でログインするボタン、およびその画面の見出し。mixi2 はサービス名"
+  },
+  "loginWithMastodon": "Mastodonでログイン",
+  "@loginWithMastodon": {
+    "description": "Mastodon でログインするボタン。Mastodon はサービス名"
+  },
+  "loginDiscover": "サービスを探してログイン",
+  "@loginDiscover": {
+    "description": "合うサーバーや RASQ リストを探してからログインする画面へ進むボタン"
+  },
+  "loginRaiInstruction": "Raiのインストラクチャ",
+  "@loginRaiInstruction": {
+    "description": "ログインの画面の下のボタン。RAi(アプリの案内役の AI)に質問する入力欄を出す"
+  },
+  "loginShareMailUnavailable": "いまは送れません",
+  "@loginShareMailUnavailable": {
+    "description": "承認のメールを送れなかった(送る口が無い)ときの知らせ"
+  },
+  "loginShareMailSent": "{to} に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください",
+  "@loginShareMailSent": {
+    "description": "承認のリンクをメールで送ったときの知らせ。to は送り先のメールアドレス",
+    "placeholders": {
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "loginShareMailSentVerified": "確認済みのメールアドレス に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください",
+  "@loginShareMailSentVerified": {
+    "description": "承認のリンクをメールで送ったときの知らせ(送り先のアドレスが分からないとき。「確認済みのメールアドレス」に送った)"
+  },
+  "loginShareMailNoVerified": "確認済みのメールアドレスがありません。元の端末で承認するか、SNS アカウントにこの端末でログインしてください",
+  "@loginShareMailNoVerified": {
+    "description": "承認のメールを送れない(確認済みのメールアドレスが無い)とき"
+  },
+  "loginShareMailTooMany": "送りすぎです。しばらく待ってから、もう一度送ってください",
+  "@loginShareMailTooMany": {
+    "description": "承認のメールを送りすぎたとき"
+  },
+  "loginShareMailNotSupported": "このサーバーでは、メールでの承認を使えません",
+  "@loginShareMailNotSupported": {
+    "description": "サーバーがメールでの承認に対応していないとき"
+  },
+  "loginShareMailFailed": "送れませんでした({code})",
+  "@loginShareMailFailed": {
+    "description": "承認のメールを送れなかったとき。code は RASQ の誤りのコード(例: 500)",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "loginShareWaiting": "元の端末で共有を承認すると、SNS アカウントに一斉ログインします。確認済みのメールに届いたリンクからも承認できます",
+  "@loginShareWaiting": {
+    "description": "別の端末の承認を待っている間の案内"
+  },
+  "loginShareMailButton": "メールで承認する(リンクを送る)",
+  "@loginShareMailButton": {
+    "description": "承認のリンクをメールで送るボタン"
+  },
+  "loginBundleTitleThis": "この RASQ アカウント の SNS アカウント",
+  "@loginBundleTitleThis": {
+    "description": "RASQ アカウントに結び付いた SNS アカウントのうち、この端末でまだ入っていないものの欄の見出し(RASQ アカウントのハンドルが無いとき)"
+  },
+  "loginBundleTitle": "@{handle} の SNS アカウント",
+  "@loginBundleTitle": {
+    "description": "RASQ アカウントに結び付いた SNS アカウントのうち、この端末でまだ入っていないものの欄の見出し。handle は RASQ アカウントのハンドル(@ は付けない)",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "loginBundleHint": "この端末では、まだログインしていません。押すとログインできます。",
+  "@loginBundleHint": {
+    "description": "上の欄の補足"
+  },
+  "loginBundleUse": "使う",
+  "@loginBundleUse": {
+    "description": "上の欄の行の右端。この端末にログインがあるので、そのまま使う"
+  },
+  "loginBundleLogin": "ログイン",
+  "@loginBundleLogin": {
+    "description": "上の欄の行の右端。この端末で新しくログインする"
+  },
+  "loginTermsTitle": "プラグインの規約",
+  "@loginTermsTitle": {
+    "description": "ログインの前に出す、SNS のプラグインの規約のシートの見出し"
+  },
+  "loginTermsAgree": "同意",
+  "@loginTermsAgree": {
+    "description": "プラグインの規約のシートの、同意して進むボタン"
+  },
+  "loginTermsBullet": "・{text}",
+  "@loginTermsBullet": {
+    "description": "プラグインの規約の箇条書きの 1 行。text は規約の文(プラグインの中身)",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "loginSignupDivider": "{service} のアカウントを持っていない",
+  "@loginSignupDivider": {
+    "description": "ログインの画面の下の区切りの文。service はサービス名(Misskey など)",
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "loginSignupButton": "新規登録",
+  "@loginSignupButton": {
+    "description": "そのサービスでアカウントを新しく作るボタン"
+  },
+  "loginSignupReopen": "登録ページをもう一度開く",
+  "@loginSignupReopen": {
+    "description": "登録ページをブラウザで開いたあとの案内の、もう一度開くボタン"
+  },
+  "loginBrowserOpenFailed": "ブラウザを開けませんでした。URL: {url}",
+  "@loginBrowserOpenFailed": {
+    "description": "ブラウザを開けなかったときの誤り。url は開こうとした URL",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "loginPluginMissingMixi2": "mixi2 プラグインが見つかりません",
+  "@loginPluginMissingMixi2": {
+    "description": "mixi2 のプラグインが入っていないときの誤り"
+  },
+  "loginMixi2BrowserPending": "ブラウザで許可してからアプリに戻ってください: {url}",
+  "@loginMixi2BrowserPending": {
+    "description": "mixi2 のブラウザでの認証を始めたときの案内。url は認証のページ",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "loginFailed": "ログインできませんでした: {error}",
+  "@loginFailed": {
+    "description": "ログインに失敗したときの誤り。error は理由(英語のことがある)",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loginMixi2HostHint": "ホスト (例: mixi.social)",
+  "@loginMixi2HostHint": {
+    "description": "mixi2 のログインの画面の、ホストの入力欄の薄い文字"
+  },
+  "loginMixi2Note": "mixi2 の公式 API は申請制で、ログインは RASQ のサーバーを経由します。準備が整うまで「ブラウザで認証」は使えません。",
+  "@loginMixi2Note": {
+    "description": "mixi2 のログインの画面の補足。「ブラウザで認証」はボタンの名前(loginMixi2Browser)と揃える"
+  },
+  "loginMixi2Browser": "ブラウザで認証",
+  "@loginMixi2Browser": {
+    "description": "mixi2 のログインの画面の、ブラウザで認証するボタン"
+  },
+  "loginMixi2Dummy": "ダミーアカウントで試す",
+  "@loginMixi2Dummy": {
+    "description": "開発者モードだけ: ネットワークを使わないダミーのアカウントで試すボタン"
+  },
+  "loginMixi2DummyNote": "ダミーはネットワークを使わず、プラグインの中の投稿で TL / いいね / リポスト / 投稿 / 通知の流れを確かめられます。",
+  "@loginMixi2DummyNote": {
+    "description": "開発者モードだけ: ダミーのアカウントの説明"
+  },
+  "loginMixi2SignupHint": "mixi2 のアカウントは、ブラウザ(または mixi2 のアプリ)で作ります。作れたら、この画面に戻って「ブラウザで認証」でログインしてください。",
+  "@loginMixi2SignupHint": {
+    "description": "mixi2 の登録ページを開いたあとの案内。「ブラウザで認証」はボタンの名前と揃える"
+  },
+  "loginPluginMissingBluesky": "Bluesky プラグインが見つかりません",
+  "@loginPluginMissingBluesky": {
+    "description": "Bluesky のプラグインが入っていないときの誤り"
+  },
+  "loginBlueskyHostHint": "PDS (例: bsky.social)",
+  "@loginBlueskyHostHint": {
+    "description": "Bluesky のログインの画面の、PDS(データを置くサーバー)の入力欄の薄い文字。PDS は Bluesky の用語"
+  },
+  "loginBlueskyIdHint": "ハンドル (例: you.bsky.social) またはメール",
+  "@loginBlueskyIdHint": {
+    "description": "Bluesky のログインの画面の、ハンドルかメールアドレスの入力欄の薄い文字"
+  },
+  "loginBlueskyPasswordHint": "アプリパスワード",
+  "@loginBlueskyPasswordHint": {
+    "description": "Bluesky のログインの画面の、アプリパスワードの入力欄の薄い文字。アプリパスワードは Bluesky の機能の名前"
+  },
+  "loginPasswordHide": "隠す",
+  "@loginPasswordHide": {
+    "description": "パスワードを伏せるボタンのツールチップ"
+  },
+  "loginPasswordShow": "表示",
+  "@loginPasswordShow": {
+    "description": "パスワードを見せるボタンのツールチップ"
+  },
+  "loginBlueskyPasswordNote": "Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」で作ったパスワードを使ってください。本パスワードは入れないでください。",
+  "@loginBlueskyPasswordNote": {
+    "description": "Bluesky のアプリパスワードの説明。「」の中は Bluesky の画面の名前(Bluesky のその言語の表記に合わせる)"
+  },
+  "loginButton": "ログイン",
+  "@loginButton": {
+    "description": "ログインのボタン"
+  },
+  "loginBlueskySignupHint": "ブラウザの Bluesky で「アカウントを作成」から登録してください。登録できたら、Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」でパスワードを作り、上のハンドルとアプリパスワードでログインします。",
+  "@loginBlueskySignupHint": {
+    "description": "Bluesky の登録ページを開いたあとの案内。「」の中は Bluesky の画面の名前"
+  },
+  "loginServerUnreachable": "サーバーに接続できませんでした",
+  "@loginServerUnreachable": {
+    "description": "サーバーを確かめられなかったときの誤り(理由が無いとき)"
+  },
+  "loginServerUnreachableWithError": "サーバーに接続できませんでした: {error}",
+  "@loginServerUnreachableWithError": {
+    "description": "サーバーを確かめられなかったときの誤り。error は理由(英語のことがある)",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loginAuthStartFailed": "認証を開始できませんでした: {error}",
+  "@loginAuthStartFailed": {
+    "description": "ブラウザでの認証を始められなかったときの誤り。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loginAuthCheckFailed": "認証の確認に失敗しました: {error}",
+  "@loginAuthCheckFailed": {
+    "description": "ブラウザで許可したあとの確認に失敗したときの誤り。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loginSnsTitle": "PDSを変更",
+  "@loginSnsTitle": {
+    "description": "Misskey / Mastodon のログインの画面の見出し(サーバーを選ぶ)"
+  },
+  "loginSnsNote": "PDSを変更すると、アプリ外でのURL表示が変わります。",
+  "@loginSnsNote": {
+    "description": "Misskey / Mastodon のログインの画面の補足"
+  },
+  "loginSnsHostHint": "移行先のURLを入力 (例: {example})",
+  "@loginSnsHostHint": {
+    "description": "サーバーの入力欄の薄い文字。example は例のホスト(misskey.io など)",
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "loginSnsSearch": "サーバーを検索",
+  "@loginSnsSearch": {
+    "description": "サーバーの入力欄の右の、確かめるボタンのツールチップ"
+  },
+  "loginSnsServerSection": "サーバーの検索",
+  "@loginSnsServerSection": {
+    "description": "確かめたサーバーの情報の欄の見出し"
+  },
+  "loginSnsMaintainer": "管理人:{name}",
+  "@loginSnsMaintainer": {
+    "description": "サーバーの行の補足。name はサーバーの管理人の名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "loginSnsRegistrationClosed": "登録停止中",
+  "@loginSnsRegistrationClosed": {
+    "description": "サーバーが新規登録を受け付けていないときの印"
+  },
+  "loginSnsAuthCheck": "認証を確認",
+  "@loginSnsAuthCheck": {
+    "description": "ブラウザで許可したあとに押す、確認のボタン"
+  },
+  "loginSnsReopenBrowser": "ブラウザをもう一度開く",
+  "@loginSnsReopenBrowser": {
+    "description": "ブラウザでの認証のページをもう一度開くボタン"
+  },
+  "loginMisskeyAuthButton": "ブラウザで認証する (MiAuth)",
+  "@loginMisskeyAuthButton": {
+    "description": "Misskey のログインの、ブラウザで認証するボタン。MiAuth は Misskey の認証の方式の名前で訳さない"
+  },
+  "loginMastodonAuthButton": "ブラウザで認証する (OAuth)",
+  "@loginMastodonAuthButton": {
+    "description": "Mastodon のログインの、ブラウザで認証するボタン。OAuth は認証の方式の名前で訳さない"
+  },
+  "loginMastodonHostHint": "インスタンスのURLを入力 (例: mastodon.social)",
+  "@loginMastodonHostHint": {
+    "description": "Mastodon のログインの、サーバーの入力欄の薄い文字"
   },
   "mediaVizStyleMirror": "上下対称のバー",
   "@mediaVizStyleMirror": {
@@ -6753,6 +8063,34 @@
   "@notificationsRasqEmptyHint": {
     "description": "RASQ のタブが空のときの補足。Swing は機能の名前で訳さない"
   },
+  "notifyPushChannelName": "RASQ の通知",
+  "@notifyPushChannelName": {
+    "description": "Android の通知のチャンネルの名前(端末の設定に出る)。RASQ からのプッシュ通知"
+  },
+  "notifyPushChannelDescription": "メンション / 返信 / Swing などの知らせ",
+  "@notifyPushChannelDescription": {
+    "description": "上のチャンネルの説明(端末の設定に出る)。Swing は機能の名前"
+  },
+  "notifyOpenAction": "開く",
+  "@notifyOpenAction": {
+    "description": "Linux の通知の既定の操作の名前"
+  },
+  "notifyGlimpseChannelName": "画面の読み取り",
+  "@notifyGlimpseChannelName": {
+    "description": "Android の通知のチャンネルの名前。いま見ている画面を読み取る入口の通知"
+  },
+  "notifyGlimpseChannelDescription": "タップすると、いま見ている画面を少しだけ読み取ります",
+  "@notifyGlimpseChannelDescription": {
+    "description": "上のチャンネルの説明"
+  },
+  "notifyAstellChannelName": "ASTell の開始",
+  "@notifyAstellChannelName": {
+    "description": "Android の通知のチャンネルの名前。ASTell(音声のルーム)が始まる知らせ"
+  },
+  "notifyAstellChannelDescription": "ブックマークした ASTell の開始通知",
+  "@notifyAstellChannelDescription": {
+    "description": "上のチャンネルの説明。ASTell は音声のルーム"
+  },
   "onboardingBack": "戻る",
   "onboardingHandleTooShort": "3 文字以上にしてください",
   "onboardingHandleTooLong": "32 文字までです",
@@ -7423,6 +8761,32 @@
   "onboardingTourRaiBubble": "TL にリストを足したい",
   "@onboardingTourRaiBubble": {
     "description": "RAi のページの絵の吹き出し(利用者の質問の例)"
+  },
+  "platformWebRuntimeLoadFailed": "実行に要るファイルを読み込めませんでした(ネットワーク / CDN)",
+  "@platformWebRuntimeLoadFailed": {
+    "description": "Web 版: 端末の中でモデルを動かすための部品をブラウザに読み込めなかったときの誤り"
+  },
+  "platformWebServerNotConfigured": "RASQ サーバーの接続先が未設定です",
+  "@platformWebServerNotConfigured": {
+    "description": "Web 版: モデルを取りに行く RASQ のサーバーの接続先が無いときの誤り"
+  },
+  "platformWebDownloadFailed": "ダウンロードに失敗しました: {error}",
+  "@platformWebDownloadFailed": {
+    "description": "Web 版: モデルをダウンロードできなかったときの誤り。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "platformWebModelLoadFailed": "モデルを読み込めません: {error}",
+  "@platformWebModelLoadFailed": {
+    "description": "Web 版: モデルを読み込めなかったときの誤り。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "pluginsCancel": "キャンセル",
   "pluginsClose": "閉じる",
@@ -10601,6 +11965,717 @@
   "@raiModelsNoteNotInstalled": {
     "description": "RAi バーのモデルのチップの横の短い状態(未ダウンロード)"
   },
+  "relationalPostTitle": "投稿",
+  "@relationalPostTitle": {
+    "description": "会話のまとまり(関連 TL のイベント)を開いた画面の見出し"
+  },
+  "relationalEventTitle": "{count, plural, other{{name}+{count}人}}",
+  "@relationalEventTitle": {
+    "description": "会話のまとまりの見出し。name は最初に投稿した人の表示名、count はほかに加わった人の数",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relationalEventCaption": "{posts, plural, other{{posts}件}} ・ {members, plural, other{{members}人}}",
+  "@relationalEventCaption": {
+    "description": "会話のまとまりの画面の見出しの下の補足。posts は投稿の数、members は加わった人の数",
+    "placeholders": {
+      "posts": {
+        "type": "int"
+      },
+      "members": {
+        "type": "int"
+      }
+    }
+  },
+  "relationalEventPostCount": "{count, plural, other{{count}件}}",
+  "@relationalEventPostCount": {
+    "description": "関連 TL の会話のまとまりのタイルの右端。count は投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relationalDurationHours": "{hours, plural, other{{hours}時間}}",
+  "@relationalDurationHours": {
+    "description": "さかのぼった時間の長さ(ちょうど何時間)。下の relationalLookback の duration に入る",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "relationalDurationHoursMinutes": "{hours}時間{minutes}分",
+  "@relationalDurationHoursMinutes": {
+    "description": "さかのぼった時間の長さ(時間と分)。下の relationalLookback の duration に入る",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "relationalDurationMinutes": "{minutes, plural, other{{minutes}分}}",
+  "@relationalDurationMinutes": {
+    "description": "さかのぼった時間の長さ(1 時間未満)。下の relationalLookback の duration に入る",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "relationalLookback": "{duration}前の会話まで表示中",
+  "@relationalLookback": {
+    "description": "関連 TL で引っ張って過去の会話を出しているときの帯。duration は「2時間」などの長さ",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "relationalLookbackReset": "戻す",
+  "@relationalLookbackReset": {
+    "description": "上の帯の、いまの会話だけに戻すボタン"
+  },
+  "relationalHeader": "会話ごとにまとめて表示しています",
+  "@relationalHeader": {
+    "description": "関連 TL(フォロー中の人の会話をまとめて出す TL)の上の説明"
+  },
+  "relationalHeaderDetail": "束ねやすさ {bias} / 会話のテンポに応じて最長{maxMinutes}分で沈む",
+  "@relationalHeaderDetail": {
+    "description": "開発者モードの関連 TL の上の説明。bias は束ねやすさの値(50〜100)、maxMinutes は会話が沈むまでの最長の分",
+    "placeholders": {
+      "bias": {
+        "type": "int"
+      },
+      "maxMinutes": {
+        "type": "int"
+      }
+    }
+  },
+  "relationalTuningTitle": "リレーショナルTL調整",
+  "@relationalTuningTitle": {
+    "description": "関連 TL の調整のパネルの見出し、および開くボタンのツールチップ"
+  },
+  "relationalRetry": "再読み込み",
+  "@relationalRetry": {
+    "description": "関連 TL を読み込めなかったときの、やり直すボタン"
+  },
+  "relationalEmptyTitle": "いま進行中の会話はありません",
+  "@relationalEmptyTitle": {
+    "description": "関連 TL が空のとき"
+  },
+  "relationalEmptyHint": "フォロー中の人の会話が、ここにまとまって出ます。引っ張ると過去の会話も見られます",
+  "@relationalEmptyHint": {
+    "description": "関連 TL が空のときの補足"
+  },
+  "relationalTuningCancel": "キャンセル",
+  "@relationalTuningCancel": {
+    "description": "調整のパネルの、変更を捨てて閉じるボタン"
+  },
+  "relationalTuningConfirm": "決定",
+  "@relationalTuningConfirm": {
+    "description": "調整のパネルの、変更を残して閉じるボタン"
+  },
+  "relationalAdvanced": "詳細設定",
+  "@relationalAdvanced": {
+    "description": "調整のパネルの、全部の値を出す画面へ進む行 / 戻る行"
+  },
+  "relationalSectionLinking": "束ね判定",
+  "@relationalSectionLinking": {
+    "description": "調整のパネルの節の見出し。投稿を同じ会話に束ねるかの判定の値"
+  },
+  "relationalCandidateWindow": "候補ウィンドウ",
+  "@relationalCandidateWindow": {
+    "description": "詳細設定のスライダー。前の投稿を探す範囲の時間"
+  },
+  "relationalCandidateWindowSubtitle": "親候補を探す直近の範囲",
+  "@relationalCandidateWindowSubtitle": {
+    "description": "候補ウィンドウのスライダーの補足"
+  },
+  "relationalMinutesValue": "{minutes, plural, other{{minutes}分}}",
+  "@relationalMinutesValue": {
+    "description": "スライダーの値の表示(分)",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "relationalSecondsValue": "{seconds, plural, other{{seconds}秒}}",
+  "@relationalSecondsValue": {
+    "description": "スライダーの値の表示(秒)",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "relationalSectionWeightsPlain": "重み(通常投稿)",
+  "@relationalSectionWeightsPlain": {
+    "description": "詳細設定の節の見出し。通常の投稿のつながりの点数の重み"
+  },
+  "relationalWeightContent": "内容類似",
+  "@relationalWeightContent": {
+    "description": "重みのスライダー。中身が似ているか"
+  },
+  "relationalWeightEntity": "エンティティ一致",
+  "@relationalWeightEntity": {
+    "description": "重みのスライダー。同じ固有名詞・タグなどが出るか"
+  },
+  "relationalWeightTime": "時間減衰",
+  "@relationalWeightTime": {
+    "description": "重みのスライダー。時間が近いか(時間とともに弱まる)"
+  },
+  "relationalWeightAffinity": "ペア親密度",
+  "@relationalWeightAffinity": {
+    "description": "重みのスライダー。2 人がふだんやり取りしているか"
+  },
+  "relationalWeightTurn": "発話交替",
+  "@relationalWeightTurn": {
+    "description": "重みのスライダー。交互に話しているか"
+  },
+  "relationalWeightAnchor": "アンカー",
+  "@relationalWeightAnchor": {
+    "description": "重みのスライダー。同じハッシュタグなどの目印"
+  },
+  "relationalSectionFlatBonus": "フラット加点",
+  "@relationalSectionFlatBonus": {
+    "description": "詳細設定の節の見出し。決まった点を足す値"
+  },
+  "relationalWeightCommunityPrior": "コミュニティ事前分布 ±",
+  "@relationalWeightCommunityPrior": {
+    "description": "詳細設定のスライダー。同じコミュニティかで足し引きする点"
+  },
+  "relationalSectionLifecycle": "ライフサイクル",
+  "@relationalSectionLifecycle": {
+    "description": "調整のパネルの節の見出し。会話が始まってから沈むまで"
+  },
+  "relationalTentativeHold": "仮 ROOT 保留",
+  "@relationalTentativeHold": {
+    "description": "詳細設定のスライダー。新しい会話の始まり(ROOT)として決めるまで待つ時間。ROOT は訳さなくてよい"
+  },
+  "relationalTentativeHoldSubtitle": "新話題として確定するまでの保留時間",
+  "@relationalTentativeHoldSubtitle": {
+    "description": "上のスライダーの補足"
+  },
+  "relationalResetDefaults": "既定に戻す",
+  "@relationalResetDefaults": {
+    "description": "詳細設定の、全部の値を既定に戻すボタン"
+  },
+  "relationalLinkBias": "束ねやすさ",
+  "@relationalLinkBias": {
+    "description": "調整のパネルのスライダー。どれくらい広く同じ会話に束ねるか"
+  },
+  "relationalLinkBiasSubtitle": "低いほど広く束ねる(しきい値はコミュニティ別に自動調整)",
+  "@relationalLinkBiasSubtitle": {
+    "description": "束ねやすさのスライダーの補足"
+  },
+  "relationalTauSubtitle": "大きいほど時間が離れた投稿もリンクしやすい(τ)",
+  "@relationalTauSubtitle": {
+    "description": "時間減衰のスライダーの補足。τ は時定数の記号で訳さない"
+  },
+  "relationalSectionWeights": "重み",
+  "@relationalSectionWeights": {
+    "description": "調整のパネルの節の見出し。つながりの点数の重み"
+  },
+  "relationalSimilarity": "類似性",
+  "@relationalSimilarity": {
+    "description": "調整のパネルのスライダー。内容類似とエンティティ一致をまとめたもの"
+  },
+  "relationalSimilaritySubtitle": "内容類似+エンティティ一致(内訳は詳細設定)",
+  "@relationalSimilaritySubtitle": {
+    "description": "類似性のスライダーの補足"
+  },
+  "relationalCloseness": "親密度",
+  "@relationalCloseness": {
+    "description": "調整のパネルのスライダー。ペア親密度と発話交替をまとめたもの"
+  },
+  "relationalClosenessSubtitle": "ペア親密度+発話交替(内訳は詳細設定)",
+  "@relationalClosenessSubtitle": {
+    "description": "親密度のスライダーの補足"
+  },
+  "relationalSectionExtra": "追加判定",
+  "@relationalSectionExtra": {
+    "description": "調整のパネルの節の見出し。条件に合えば足す点"
+  },
+  "relationalHardAnchor": "ハードアンカー(URL/引用先)",
+  "@relationalHardAnchor": {
+    "description": "追加判定のスライダー。同じ URL や同じ引用先を含むときに足す点"
+  },
+  "relationalReactive": "反応表現(それな・わかる等)",
+  "@relationalReactive": {
+    "description": "追加判定のスライダー。「それな」「わかる」のような短い反応の投稿に足す点。例はその言語のよくある相づちに置き換えてよい"
+  },
+  "relationalTtlSubtitle": "会話が沈むまでの時間。投稿間隔からこの範囲内で自動調整",
+  "@relationalTtlSubtitle": {
+    "description": "TTL(会話が沈むまでの時間)の範囲のスライダーの補足"
+  },
+  "relationalTtlValue": "{min}〜{max}分",
+  "@relationalTtlValue": {
+    "description": "TTL の範囲のスライダーの値。min / max は分",
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "searchChildSafePostsBlocked": "保護者が投稿の検索を止めています",
+  "@searchChildSafePostsBlocked": {
+    "description": "チャイルドセーフ: 保護者が投稿の検索を止めているときに、検索欄に添える理由"
+  },
+  "searchChildSafeTrendBlocked": "保護者がトレンドを止めています",
+  "@searchChildSafeTrendBlocked": {
+    "description": "チャイルドセーフ: 保護者がトレンドを止めているときの、検索ホームの文"
+  },
+  "searchTrendSettings": "トレンド設定",
+  "@searchTrendSettings": {
+    "description": "検索ホームの、トレンドの傾向(ジャンル・指向性など)を選ぶボタンのツールチップ"
+  },
+  "searchTrendCustomize": "トレンドページをカスタマイズ",
+  "@searchTrendCustomize": {
+    "description": "検索ホームの、トレンドページの並びを変えるボタンのツールチップ"
+  },
+  "searchTrendPage": "トレンドページ",
+  "@searchTrendPage": {
+    "description": "検索ホームの節の見出し(並べるものが無いとき)"
+  },
+  "searchTrendMenu": "メニュー",
+  "@searchTrendMenu": {
+    "description": "トレンドの行の「…」のボタンのツールチップ"
+  },
+  "searchHint": "検索",
+  "@searchHint": {
+    "description": "検索欄の薄い文字(既定)"
+  },
+  "searchSettings": "検索の設定",
+  "@searchSettings": {
+    "description": "検索欄の歯車のボタンのツールチップ、および開くシートの見出し"
+  },
+  "searchSettingsTendency": "検索結果の指向性/刺激性",
+  "@searchSettingsTendency": {
+    "description": "検索の設定のシートの行(警告の色)。検索結果の傾向・刺激の強さの設定"
+  },
+  "searchSettingsTrendPlugins": "トレンドプラグインの設定",
+  "@searchSettingsTrendPlugins": {
+    "description": "検索の設定のシートの行"
+  },
+  "searchSettingsCacheNetwork": "キャッシュネットワークの設定",
+  "@searchSettingsCacheNetwork": {
+    "description": "検索の設定のシートの行"
+  },
+  "searchSettingsComingSoon": "この設定は準備中です。",
+  "@searchSettingsComingSoon": {
+    "description": "検索の設定のシートの行を押したときの知らせ(まだ使えない)"
+  },
+  "searchSortRelevance": "関連順",
+  "@searchSortRelevance": {
+    "description": "検索の並び替え: 関連の強い順"
+  },
+  "searchSortNewest": "新しい順",
+  "@searchSortNewest": {
+    "description": "検索の並び替え: 新しい順"
+  },
+  "searchSortOldest": "古い順",
+  "@searchSortOldest": {
+    "description": "検索の並び替え: 古い順"
+  },
+  "searchSortReactions": "リアクション多い順",
+  "@searchSortReactions": {
+    "description": "検索の並び替え: リアクションの多い順"
+  },
+  "searchPeriodAll": "すべて",
+  "@searchPeriodAll": {
+    "description": "検索の期間: 全期間"
+  },
+  "searchPeriodDay": "24時間",
+  "@searchPeriodDay": {
+    "description": "検索の期間: 直近 24 時間"
+  },
+  "searchPeriodWeek": "1週間",
+  "@searchPeriodWeek": {
+    "description": "検索の期間: 直近 1 週間"
+  },
+  "searchPeriodMonth": "1ヶ月",
+  "@searchPeriodMonth": {
+    "description": "検索の期間: 直近 1 か月"
+  },
+  "searchPeriodChip": "期間",
+  "@searchPeriodChip": {
+    "description": "検索の期間のチップ(期間を絞っていないとき)"
+  },
+  "searchAgoJustNow": "たった今",
+  "@searchAgoJustNow": {
+    "description": "最近の検索の時刻(1 分未満)"
+  },
+  "searchAgoMinutes": "{count, plural, other{{count} 分前}}",
+  "@searchAgoMinutes": {
+    "description": "最近の検索の時刻。count は何分前か",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchAgoHours": "{count, plural, other{{count} 時間前}}",
+  "@searchAgoHours": {
+    "description": "最近の検索の時刻。count は何時間前か",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchAgoDays": "{count, plural, other{{count} 日前}}",
+  "@searchAgoDays": {
+    "description": "最近の検索の時刻。count は何日前か",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serversOpen": "サーバーを開く",
+  "@serversOpen": {
+    "description": "サーバー情報のタイルの右下のボタン(既定)。サーバーのページをブラウザで開く"
+  },
+  "serversUsers": "{count} 人",
+  "@serversUsers": {
+    "description": "サーバー情報のタイルの数の並び。登録している人の数。count は書式済みの数(1.2万 など)",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "serversPosts": "{count} 投稿",
+  "@serversPosts": {
+    "description": "サーバー情報のタイルの数の並び。投稿の数。count は書式済みの数(1.2万 など)",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "serversRegistrationOpen": "登録受付中",
+  "@serversRegistrationOpen": {
+    "description": "サーバー情報のタイルの並び。新規登録を受け付けている"
+  },
+  "serversRegistrationClosed": "招待制 / 受付停止",
+  "@serversRegistrationClosed": {
+    "description": "サーバー情報のタイルの並び。新規登録が招待制か止まっている"
+  },
+  "serversStatsSeparator": " ・ ",
+  "@serversStatsSeparator": {
+    "description": "サーバー情報のタイルの並び(ソフト・人数・投稿数・登録)の区切り"
+  },
+  "serversRaiTitle": "RAi によるユーザーの傾向",
+  "@serversRaiTitle": {
+    "description": "サーバー情報のタイルの、RAi(アプリの AI)がまとめたそのサーバーの人の傾向の欄の見出し"
+  },
+  "serversRaiSource": "{count, plural, other{公開の投稿 {count} 件から、クラウド版 RAi がまとめました}}",
+  "@serversRaiSource": {
+    "description": "上の欄の出典の補足。count はもとにした公開の投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serversInfoTitle": "サーバー情報",
+  "@serversInfoTitle": {
+    "description": "ユーザーページの「…」から開くサーバー情報のシートの見出し"
+  },
+  "serversInfoUnavailable": "{host} はサーバー情報を出していません(インスタンスの無いサービスか、取れませんでした)",
+  "@serversInfoUnavailable": {
+    "description": "サーバー情報が無いときの文。host はサーバーのホスト名",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "serversCountHundredMillions": "{value}億",
+  "@serversCountHundredMillions": {
+    "description": "数の短い書き方(1 億以上)。value は 1 億(10^8)で割った数(小数 1 桁)",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "serversCountTenThousands": "{value}万",
+  "@serversCountTenThousands": {
+    "description": "数の短い書き方(1 万以上)。value は 1 万(10^4)で割った数(1 万〜10 万は小数 1 桁、10 万以上は整数)",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionUnnamedDevice": "名前のない端末",
+  "@sessionUnnamedDevice": {
+    "description": "端末の名前が無いときの呼び名(SNS のアクセストークンの共有の問いなどに出る)"
+  },
+  "sessionShareAskFirstTitle": "アクセストークンを共有して、SNS アカウントに一斉ログインしますか?",
+  "@sessionShareAskFirstTitle": {
+    "description": "初めて別の端末から RASQ アカウントにログインがあったときの問いの見出し"
+  },
+  "sessionShareAskDeviceTitle": "新しい端末({device})にも SNS のアクセストークンを共有しますか?",
+  "@sessionShareAskDeviceTitle": {
+    "description": "共有を始めたあとに別の端末からログインがあったときの問いの見出し。device は端末の名前",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionShareAskFirstMessage": "新しい端末({devices})で、この RASQ アカウント にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。",
+  "@sessionShareAskFirstMessage": {
+    "description": "初めての問いの本文(RASQ アカウントのハンドルが分からないとき)。devices は端末の名前の並び(sessionDeviceListSeparator でつなぐ)。「はい」は下のボタン、「アカウントのセキュリティ」は設定の画面の名前",
+    "placeholders": {
+      "devices": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionShareAskFirstMessageHandle": "新しい端末({devices})で、RASQ アカウント @{handle} にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。",
+  "@sessionShareAskFirstMessageHandle": {
+    "description": "初めての問いの本文。devices は端末の名前の並び、handle は RASQ アカウントのハンドル(@ は付けない)",
+    "placeholders": {
+      "devices": {
+        "type": "String"
+      },
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionShareAskDeviceMessage": "この RASQ アカウント に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。",
+  "@sessionShareAskDeviceMessage": {
+    "description": "共有を始めたあとの問いの本文(ハンドルが分からないとき)。「いいえ」は下のボタン"
+  },
+  "sessionShareAskDeviceMessageHandle": "RASQ アカウント @{handle} に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。",
+  "@sessionShareAskDeviceMessageHandle": {
+    "description": "共有を始めたあとの問いの本文。handle は RASQ アカウントのハンドル(@ は付けない)",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionDeviceListSeparator": "、",
+  "@sessionDeviceListSeparator": {
+    "description": "端末の名前を並べるときの区切り"
+  },
+  "sessionShareYes": "はい",
+  "@sessionShareYes": {
+    "description": "共有の問いの、共有するボタン"
+  },
+  "sessionShareNo": "いいえ",
+  "@sessionShareNo": {
+    "description": "共有の問いの、共有しないボタン"
+  },
+  "sessionShareEmailApproved": "メールで承認された端末({device})に、SNS のアクセストークンを共有しました",
+  "@sessionShareEmailApproved": {
+    "description": "メールのリンクで承認された端末にアクセストークンを共有したときの知らせ。device は端末の名前",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionShareImported": "{count, plural, other{共有されたアクセストークンで、SNS アカウントに一斉ログインしました({count} 件)}}",
+  "@sessionShareImported": {
+    "description": "ほかの端末から共有されたアクセストークンでログインしたときの知らせ。count はログインした SNS アカウントの数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionLoginFailed": "ログインに失敗しました",
+  "@sessionLoginFailed": {
+    "description": "SNS のプラグインがログインの失敗の理由を返さなかったときの文"
+  },
+  "sessionSanctionLight": "軽度な制限",
+  "@sessionSanctionLight": {
+    "description": "アカウントの処置の段階: 軽い制限"
+  },
+  "sessionSanctionModerate": "中レベルの制限(発言に検閲遅延)",
+  "@sessionSanctionModerate": {
+    "description": "アカウントの処置の段階: 中くらいの制限(投稿が確かめられるまで遅れて出る)"
+  },
+  "sessionSanctionSevere": "重度の制限(機能停止)",
+  "@sessionSanctionSevere": {
+    "description": "アカウントの処置の段階: 重い制限(機能が止まる)"
+  },
+  "sessionSanctionPermanent": "恒久的な凍結",
+  "@sessionSanctionPermanent": {
+    "description": "アカウントの処置の段階: 恒久的な凍結"
+  },
+  "sessionSanctionNone": "制限なし",
+  "@sessionSanctionNone": {
+    "description": "アカウントの処置が無いとき"
+  },
+  "sessionSanctionBlocked": "アカウントの処置により {feature} は利用できません。",
+  "@sessionSanctionBlocked": {
+    "description": "アカウントの処置で機能が止まっているときの案内。feature は機能の名前(sessionFeature… のどれか)",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionSanctionBlockedUntil": "アカウントの処置により {feature} は利用できません({until} まで)。",
+  "@sessionSanctionBlockedUntil": {
+    "description": "アカウントの処置で機能が止まっているときの案内(期限があるとき)。feature は機能の名前、until は期限の日時(書式済み)",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      },
+      "until": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionFeatureAstellJoin": "ASTell への参加",
+  "@sessionFeatureAstellJoin": {
+    "description": "アカウントの処置で止まる機能の名前。ASTell は製品名"
+  },
+  "sessionFeatureAstellCreate": "ASTell ルームの作成",
+  "@sessionFeatureAstellCreate": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureAstellShare": "ASTell での共有・チャット",
+  "@sessionFeatureAstellShare": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureAstellStream": "ASTell の画面共有・配信",
+  "@sessionFeatureAstellStream": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureStoreReview": "ストアのレビュー投稿",
+  "@sessionFeatureStoreReview": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureAccountFollow": "RASQ アカウントのフォロー",
+  "@sessionFeatureAccountFollow": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeaturePost": "投稿",
+  "@sessionFeaturePost": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeaturePostMedia": "メディア付き投稿",
+  "@sessionFeaturePostMedia": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureDm": "DM",
+  "@sessionFeatureDm": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionFeatureReaction": "リアクション",
+  "@sessionFeatureReaction": {
+    "description": "アカウントの処置で止まる機能の名前"
+  },
+  "sessionCentralNotConfigured": "RASQ Central の接続先が設定されていません",
+  "@sessionCentralNotConfigured": {
+    "description": "処置の解除の申請を送れない(RASQ Central の接続先が無い)ときの誤り。RASQ Central はサーバーの名前"
+  },
+  "sessionLogoutSnsHeading": "この RASQ アカウントの SNS アカウント",
+  "@sessionLogoutSnsHeading": {
+    "description": "RASQ アカウントのログアウトの確かめの、SNS アカウントをどうするかの見出し"
+  },
+  "sessionLogoutSnsLogout": "SNS アカウントもログアウトする",
+  "@sessionLogoutSnsLogout": {
+    "description": "上の選択肢: SNS アカウントもログアウトする"
+  },
+  "sessionLogoutSnsLogoutSubtitle": "この端末から SNS のログインを消します",
+  "@sessionLogoutSnsLogoutSubtitle": {
+    "description": "上の選択肢の補足"
+  },
+  "sessionLogoutSnsMoveToLocal": "この端末のみ に移す",
+  "@sessionLogoutSnsMoveToLocal": {
+    "description": "上の選択肢: SNS アカウントを「この端末のみ」(RASQ アカウントに属さない)へ移す"
+  },
+  "sessionLogoutSnsMoveToLocalSubtitle": "「この端末のみ」のアカウントで、そのまま使えます",
+  "@sessionLogoutSnsMoveToLocalSubtitle": {
+    "description": "上の選択肢の補足。「この端末のみ」は sessionAccountKindLocal と揃える"
+  },
+  "sessionCancel": "キャンセル",
+  "@sessionCancel": {
+    "description": "確かめのダイアログの、やめるボタン"
+  },
+  "sessionChildSafeAddBlocked": "保護者が SNS アカウントの追加を止めています",
+  "@sessionChildSafeAddBlocked": {
+    "description": "チャイルドセーフ: 保護者が SNS アカウントを足せないようにしているときの誤り"
+  },
+  "sessionAccountKindLocal": "この端末のみ",
+  "@sessionAccountKindLocal": {
+    "description": "RASQ アカウントの種類: RASQ アカウントに属さず、この端末だけで使う SNS アカウントのまとまり"
+  },
+  "sessionAccountKindCentral": "RASQ Central",
+  "@sessionAccountKindCentral": {
+    "description": "RASQ アカウントの種類: RASQ のサーバーにある RASQ アカウント。RASQ Central はサーバーの名前"
+  },
+  "sessionCarryThisAccount": "この RASQ アカウント",
+  "@sessionCarryThisAccount": {
+    "description": "ログインしたときの問いで、RASQ アカウントのハンドルが分からないときの呼び名"
+  },
+  "sessionCarrySemantics": "この端末の SNS アカウントを加えますか?",
+  "@sessionCarrySemantics": {
+    "description": "RASQ アカウントにログインしたときの問いの、読み上げの名前"
+  },
+  "sessionCarryTitle": "{count, plural, other{この端末で開いていた {count} 件のアカウントを、{account} に加えますか?}}",
+  "@sessionCarryTitle": {
+    "description": "RASQ アカウントにログインしたときの問いの見出し。count は SNS アカウントの数、account は「@ハンドル」か「この RASQ アカウント」",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionCarryMessage": "加えたアカウントは {account} の SNS アカウントになり、ほかの端末や Web コンソールにも並びます。加えなかったアカウントは「この端末のみ」に残ります(あとからでも、{account} で SNS にログインすれば加わります)。",
+  "@sessionCarryMessage": {
+    "description": "上の問いの本文。account は「@ハンドル」か「この RASQ アカウント」",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionCarryInBundle": "(前にこの RASQ アカウントでつないだもの)",
+  "@sessionCarryInBundle": {
+    "description": "上の問いの、アカウントの行の補足の後ろに付ける印"
+  },
+  "sessionCarryNone": "加えない",
+  "@sessionCarryNone": {
+    "description": "上の問いの、加えないボタン"
+  },
+  "sessionCarryAdd": "{count, plural, other{選んだ {count} 件を加える}}",
+  "@sessionCarryAdd": {
+    "description": "上の問いの、選んだアカウントを加えるボタン。count は選んだ数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "settingsActionBarTitle": "プラグインボタン",
   "settingsActionBarBackTooltip": "戻る",
   "settingsActionBarBundleManual": "手動配置(バーの (+) から足すまで出ない)",
@@ -10885,6 +12960,31 @@
   },
   "settingsColumnsPreviewSmall": "小型",
   "settingsColumnsPreviewLarge": "大型",
+  "settingsCommonSeparator": " ・ ",
+  "@settingsCommonSeparator": {
+    "description": "設定の画面で、行の補足に並べる項目の区切り(前後に空白)"
+  },
+  "settingsCommonBullet": "・{text}",
+  "@settingsCommonBullet": {
+    "description": "設定の画面の箇条書きの 1 行。text はその行の文",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsCommonRange": "{min}〜{max}",
+  "@settingsCommonRange": {
+    "description": "範囲の表示(入力欄の薄い文字など)。min / max は数",
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "settingsComposerTitle": "投稿コンポーザー",
   "settingsComposerAutoAccountTitle": "投稿アカウントの自動選択",
   "settingsComposerAutoAccountSubtitle": "下書きに合うアカウントへ、投稿先を自動で切り替えます",
@@ -11305,6 +13405,951 @@
   "settingsNotifyTokenRevoked": "失効しました",
   "settingsNotifyTokenStorageCaption": "鍵はこの端末の中に安全に保存します。",
   "settingsNotifyTokenStorageCaptionDetail": "生のトークンは発行時にだけ受け取り、端末内の安全な領域に保存します。サーバーに残るのはハッシュだけです。親のトークンを失効すると配下のトークンも失効します。",
+  "settingsPagesAboutCookiesTitle": "クッキーについて",
+  "@settingsPagesAboutCookiesTitle": {
+    "description": "設定のページ「クッキーについて」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAboutCookiesSection1Title": "クッキー",
+  "@settingsPagesAboutCookiesSection1Title": {
+    "description": "設定のページ「クッキーについて」の節の見出しの名前"
+  },
+  "settingsPagesAboutCookiesText1": "iOS・Android・デスクトップのアプリは、RASQ サーバーとの通信にクッキーを使いません。RASQ サーバーとの通信は端末トークン(Authorization ヘッダー)で行い、各 SNS のアクセストークンは端末内の安全な領域に保存します。",
+  "@settingsPagesAboutCookiesText1": {
+    "description": "設定のページ「クッキーについて」の説明の文"
+  },
+  "settingsPagesAboutCookiesText2": "iOS・Android のアプリの広告(Google AdMob)は、クッキーの代わりに端末の広告 ID を使います。初回に表示する Google の同意画面で、パーソナライズ広告を使うかを選べます。",
+  "@settingsPagesAboutCookiesText2": {
+    "description": "設定のページ「クッキーについて」の説明の文"
+  },
+  "settingsPagesAboutCookiesText3": "Web 版と、RASQ のプロフィール・投稿の公開の Web ページでは、広告(Google AdSense)のために Google がクッキーを使います。広告のクッキーの扱いは Google のポリシーに従います。",
+  "@settingsPagesAboutCookiesText3": {
+    "description": "設定のページ「クッキーについて」の説明の文"
+  },
+  "settingsPagesAboutCookiesText4": "SNS の web 版や登録ページをアプリ内のブラウザで開いたときは、その SNS のクッキーの扱いに従います。",
+  "@settingsPagesAboutCookiesText4": {
+    "description": "設定のページ「クッキーについて」の説明の文"
+  },
+  "settingsPagesAboutDeveloperTitle": "開発者モード",
+  "@settingsPagesAboutDeveloperTitle": {
+    "description": "設定のページ「開発者モード」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAboutDeveloperEnabledSubtitle": "画面の説明を、仕組みや送るデータの形まで詳しく表示します",
+  "@settingsPagesAboutDeveloperEnabledSubtitle": {
+    "description": "設定のページ「開発者モード」のスイッチの補足"
+  },
+  "settingsPagesAboutDeveloperEnabledDetail": "オンのあいだ、設定や同意の画面で短くしている説明の代わりに、元の詳しい説明(保存先の KV、送る JSON の形など)を出します。表示が変わるだけで、動作は変わりません。",
+  "@settingsPagesAboutDeveloperEnabledDetail": {
+    "description": "設定のページ「開発者モード」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAboutDeveloperNotice1": "表示だけが変わります。設定や送るデータは変わりません。",
+  "@settingsPagesAboutDeveloperNotice1": {
+    "description": "設定のページ「開発者モード」のお知らせ"
+  },
+  "settingsPagesAboutDeveloperIosScreenGlimpseTitle": "画面の読み取りを試す(iOS)",
+  "@settingsPagesAboutDeveloperIosScreenGlimpseTitle": {
+    "description": "設定のページ「開発者モード」のスイッチの名前"
+  },
+  "settingsPagesAboutDeveloperIosScreenGlimpseSubtitle": "iPhone / iPad の「SNS サービスを探す」に「いつものブラウザで見て探す」を出します",
+  "@settingsPagesAboutDeveloperIosScreenGlimpseSubtitle": {
+    "description": "設定のページ「開発者モード」のスイッチの補足"
+  },
+  "settingsPagesAboutDeveloperIosScreenGlimpseDetail": "画面の読み取りの Broadcast Upload Extension(ScreenGlimpseBroadcast)が画面収録の選択に出ない端末があるため(未解決)、iOS では既定で隠しています。オンにすると入口を出します。Android は常に出します。",
+  "@settingsPagesAboutDeveloperIosScreenGlimpseDetail": {
+    "description": "設定のページ「開発者モード」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAboutDeveloperRaiAndroid3dTitle": "3D の RAi を試す(Android)",
+  "@settingsPagesAboutDeveloperRaiAndroid3dTitle": {
+    "description": "設定のページ「開発者モード」のスイッチの名前"
+  },
+  "settingsPagesAboutDeveloperRaiAndroid3dSubtitle": "Android でも RAi のマスコットを 3D で表示します",
+  "@settingsPagesAboutDeveloperRaiAndroid3dSubtitle": {
+    "description": "設定のページ「開発者モード」のスイッチの補足"
+  },
+  "settingsPagesAboutDeveloperRaiAndroid3dDetail": "Android で RAi が開かない報告があり、3D の土台(flutter_angle)の初期化が疑わしいため、既定は 2D です。オンにすると 3D を試します。20 秒たっても出ない / 失敗したときは自動で 2D に戻し、RAi のサイドバーの「診断」に理由を残します。iPhone / iPad / Mac は常に 3D です。",
+  "@settingsPagesAboutDeveloperRaiAndroid3dDetail": {
+    "description": "設定のページ「開発者モード」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAboutHelpTitle": "ヘルプ",
+  "@settingsPagesAboutHelpTitle": {
+    "description": "設定のページ「ヘルプ」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAboutHelpSection1Title": "使い方",
+  "@settingsPagesAboutHelpSection1Title": {
+    "description": "設定のページ「ヘルプ」の節の見出しの名前"
+  },
+  "settingsPagesAboutHelpText1": "操作に迷ったら、サイドメニューの RAi に聞いてください。",
+  "@settingsPagesAboutHelpText1": {
+    "description": "設定のページ「ヘルプ」の説明の文"
+  },
+  "settingsPagesAboutHelpText1Detail": "操作に迷ったら RAi に聞いてください。サイドメニューの RAi から、インストラクション(ボタンまで案内)とアシスタント(端末内モデルで回答、関数で代行)が使えます。",
+  "@settingsPagesAboutHelpText1Detail": {
+    "description": "設定のページ「ヘルプ」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAboutHelpRaiTitle": "RAi を開く",
+  "@settingsPagesAboutHelpRaiTitle": {
+    "description": "設定のページ「ヘルプ」の行の名前"
+  },
+  "settingsPagesAboutHelpTourAgain1Title": "RASQ の使い方をもう一度見る",
+  "@settingsPagesAboutHelpTourAgain1Title": {
+    "description": "設定のページ「ヘルプ」の行の名前"
+  },
+  "settingsPagesAboutHelpTourAgain1Subtitle": "機能の紹介(TL・トレンド・ASTell・RAi など)",
+  "@settingsPagesAboutHelpTourAgain1Subtitle": {
+    "description": "設定のページ「ヘルプ」の行の補足"
+  },
+  "settingsPagesAboutHelpSection2Title": "困ったとき",
+  "@settingsPagesAboutHelpSection2Title": {
+    "description": "設定のページ「ヘルプ」の節の見出しの名前"
+  },
+  "settingsPagesAboutHelpText2": "ログインや投稿がうまくいかないときは、権限を確かめて、入り直してください。",
+  "@settingsPagesAboutHelpText2": {
+    "description": "設定のページ「ヘルプ」の説明の文"
+  },
+  "settingsPagesAboutHelpText2Detail": "ログインできない / 投稿が届かないときは、まず「SNSプラグイン → セキュリティ」で権限を確認し、一度ログアウトして入り直してください。",
+  "@settingsPagesAboutHelpText2Detail": {
+    "description": "設定のページ「ヘルプ」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAboutHelpSettingsDslSnsSecurityTitle": "セキュリティ(権限とトークン)",
+  "@settingsPagesAboutHelpSettingsDslSnsSecurityTitle": {
+    "description": "設定のページ「ヘルプ」の行の名前"
+  },
+  "settingsPagesAboutHelpSettingsServerTitle": "RASQ サーバーの接続先",
+  "@settingsPagesAboutHelpSettingsServerTitle": {
+    "description": "設定のページ「ヘルプ」の行の名前"
+  },
+  "settingsPagesAboutSubscriptionTitle": "購読状況",
+  "@settingsPagesAboutSubscriptionTitle": {
+    "description": "設定のページ「購読状況」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAboutSubscriptionSection1Title": "RASQ の購読",
+  "@settingsPagesAboutSubscriptionSection1Title": {
+    "description": "設定のページ「購読状況」の節の見出しの名前"
+  },
+  "settingsPagesAboutSubscriptionValueRow1Title": "プラン",
+  "@settingsPagesAboutSubscriptionValueRow1Title": {
+    "description": "設定のページ「購読状況」の値の行の名前"
+  },
+  "settingsPagesAboutSubscriptionValueRow1Value": "無料",
+  "@settingsPagesAboutSubscriptionValueRow1Value": {
+    "description": "設定のページ「購読状況」の値の行の値"
+  },
+  "settingsPagesAboutSubscriptionValueRow2Title": "プラグインプロキシ",
+  "@settingsPagesAboutSubscriptionValueRow2Title": {
+    "description": "設定のページ「購読状況」の値の行の名前"
+  },
+  "settingsPagesAboutSubscriptionValueRow2Value": "未購読",
+  "@settingsPagesAboutSubscriptionValueRow2Value": {
+    "description": "設定のページ「購読状況」の値の行の値"
+  },
+  "settingsPagesAboutSubscriptionText1": "有料プランは準備中です。",
+  "@settingsPagesAboutSubscriptionText1": {
+    "description": "設定のページ「購読状況」の説明の文"
+  },
+  "settingsPagesAboutSubscriptionText1Detail": "プラン: 無料(いまは購読プラン無し)。有料プランは今後、RASQ アカウントに紐づけて提供します。",
+  "@settingsPagesAboutSubscriptionText1Detail": {
+    "description": "設定のページ「購読状況」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceDisplayTitle": "インターフェースの表示サイズ",
+  "@settingsPagesAppearanceDisplayTitle": {
+    "description": "設定のページ「インターフェースの表示サイズ」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceDisplaySection1Title": "表示サイズ",
+  "@settingsPagesAppearanceDisplaySection1Title": {
+    "description": "設定のページ「インターフェースの表示サイズ」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceDisplayTextScaleTitle": "文字とUIの大きさ",
+  "@settingsPagesAppearanceDisplayTextScaleTitle": {
+    "description": "設定のページ「インターフェースの表示サイズ」のスライダーの名前"
+  },
+  "settingsPagesAppearanceDisplayTextScaleSubtitle": "アプリ全体の文字サイズを変えます(即時反映)",
+  "@settingsPagesAppearanceDisplayTextScaleSubtitle": {
+    "description": "設定のページ「インターフェースの表示サイズ」のスライダーの補足"
+  },
+  "settingsPagesAppearanceFabTitle": "＋ ボタンの割り当て",
+  "@settingsPagesAppearanceFabTitle": {
+    "description": "設定のページ「＋ ボタンの割り当て」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceFabNotice1": "＋ を押したときに始めるものを選べます。まわりのボタン(内側に 3 つ、外側に 4 つまで)は、＋ を長押し(マウスは乗せる)して歯車から並べ替えます。",
+  "@settingsPagesAppearanceFabNotice1": {
+    "description": "設定のページ「＋ ボタンの割り当て」のお知らせ"
+  },
+  "settingsPagesAppearanceFabNotice1Detail": "領域 appearance.fab(<scope>Tap / <scope>Slots = 置いた順、最大 7)。",
+  "@settingsPagesAppearanceFabNotice1Detail": {
+    "description": "設定のページ「＋ ボタンの割り当て」のお知らせの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceFabSection1Title": "ホームの ＋ を押したとき",
+  "@settingsPagesAppearanceFabSection1Title": {
+    "description": "設定のページ「＋ ボタンの割り当て」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceFabHomeTapPostTitle": "投稿",
+  "@settingsPagesAppearanceFabHomeTapPostTitle": {
+    "description": "設定のページ「＋ ボタンの割り当て」の選択肢の名前"
+  },
+  "settingsPagesAppearanceFabHomeTapRasqTitle": "RASQ に投稿",
+  "@settingsPagesAppearanceFabHomeTapRasqTitle": {
+    "description": "設定のページ「＋ ボタンの割り当て」の選択肢の名前"
+  },
+  "settingsPagesAppearanceFabHomeTapSwingTitle": "Swing を作る",
+  "@settingsPagesAppearanceFabHomeTapSwingTitle": {
+    "description": "設定のページ「＋ ボタンの割り当て」の選択肢の名前"
+  },
+  "settingsPagesAppearanceFabHomeTapAstellTitle": "ASTell を作る",
+  "@settingsPagesAppearanceFabHomeTapAstellTitle": {
+    "description": "設定のページ「＋ ボタンの割り当て」の選択肢の名前"
+  },
+  "settingsPagesAppearanceFabSection2Title": "トレンドの ＋ を押したとき",
+  "@settingsPagesAppearanceFabSection2Title": {
+    "description": "設定のページ「＋ ボタンの割り当て」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceFabSection3Title": "ASTell の ＋ を押したとき",
+  "@settingsPagesAppearanceFabSection3Title": {
+    "description": "設定のページ「＋ ボタンの割り当て」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceMfmTitle": "カスタムモーションとアニメーション",
+  "@settingsPagesAppearanceMfmTitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceMfmSection1Title": "MFM のアニメーション",
+  "@settingsPagesAppearanceMfmSection1Title": {
+    "description": "設定のページ「カスタムモーションとアニメーション」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceMfmAnimationsTitle": "動く装飾を再生する",
+  "@settingsPagesAppearanceMfmAnimationsTitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」のスイッチの名前"
+  },
+  "settingsPagesAppearanceMfmAnimationsSubtitle": "回転や虹色などの動く装飾を再生します",
+  "@settingsPagesAppearanceMfmAnimationsSubtitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」のスイッチの補足"
+  },
+  "settingsPagesAppearanceMfmAnimationsDetail": "spin / jump / rainbow などの MFM を動かします。オフにすると静止画になります(「モーションの抑制」がオンのときは常に静止)",
+  "@settingsPagesAppearanceMfmAnimationsDetail": {
+    "description": "設定のページ「カスタムモーションとアニメーション」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceMfmSpeedTitle": "アニメーションの速さ",
+  "@settingsPagesAppearanceMfmSpeedTitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」のスライダーの名前"
+  },
+  "settingsPagesAppearanceMfmSpeedSubtitle": "100% が標準。大きいほど速く動きます",
+  "@settingsPagesAppearanceMfmSpeedSubtitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」のスライダーの補足"
+  },
+  "settingsPagesAppearanceMfmSettingsDslAppearanceMotionTitle": "モーションの抑制",
+  "@settingsPagesAppearanceMfmSettingsDslAppearanceMotionTitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」の行の名前"
+  },
+  "settingsPagesAppearanceMfmSettingsDslAppearanceMotionSubtitle": "画面遷移なども含めてまとめて減らす",
+  "@settingsPagesAppearanceMfmSettingsDslAppearanceMotionSubtitle": {
+    "description": "設定のページ「カスタムモーションとアニメーション」の行の補足"
+  },
+  "settingsPagesAppearanceMotionTitle": "モーションの抑制",
+  "@settingsPagesAppearanceMotionTitle": {
+    "description": "設定のページ「モーションの抑制」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceMotionSection1Title": "アニメーション",
+  "@settingsPagesAppearanceMotionSection1Title": {
+    "description": "設定のページ「モーションの抑制」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceMotionReduceMotionTitle": "モーションを抑制する",
+  "@settingsPagesAppearanceMotionReduceMotionTitle": {
+    "description": "設定のページ「モーションの抑制」のスイッチの名前"
+  },
+  "settingsPagesAppearanceMotionReduceMotionSubtitle": "動く装飾を止め、画面の動きを減らします",
+  "@settingsPagesAppearanceMotionReduceMotionSubtitle": {
+    "description": "設定のページ「モーションの抑制」のスイッチの補足"
+  },
+  "settingsPagesAppearanceMotionReduceMotionDetail": "MFM の spin / rainbow などのアニメーションを静止画にし、画面遷移の動きを減らします",
+  "@settingsPagesAppearanceMotionReduceMotionDetail": {
+    "description": "設定のページ「モーションの抑制」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceNotificationsTitle": "通知の表示形式",
+  "@settingsPagesAppearanceNotificationsTitle": {
+    "description": "設定のページ「通知の表示形式」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceNotificationsSection1Title": "通知ページ",
+  "@settingsPagesAppearanceNotificationsSection1Title": {
+    "description": "設定のページ「通知の表示形式」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceNotificationsDefaultTabAllTitle": "「すべて」から開く",
+  "@settingsPagesAppearanceNotificationsDefaultTabAllTitle": {
+    "description": "設定のページ「通知の表示形式」の選択肢の名前"
+  },
+  "settingsPagesAppearanceNotificationsDefaultTabFollowingTitle": "「フォロー中」から開く",
+  "@settingsPagesAppearanceNotificationsDefaultTabFollowingTitle": {
+    "description": "設定のページ「通知の表示形式」の選択肢の名前"
+  },
+  "settingsPagesAppearanceNotificationsDefaultTabFollowingSubtitle": "フォローしている人からの通知だけを先に見ます",
+  "@settingsPagesAppearanceNotificationsDefaultTabFollowingSubtitle": {
+    "description": "設定のページ「通知の表示形式」の選択肢の補足"
+  },
+  "settingsPagesAppearanceNotificationsShowRemindersTitle": "ASTell の開始通知の予定を上に出す",
+  "@settingsPagesAppearanceNotificationsShowRemindersTitle": {
+    "description": "設定のページ「通知の表示形式」のスイッチの名前"
+  },
+  "settingsPagesAppearanceNotificationsShowRemindersSubtitle": "登録した開始通知を、通知ページの上に出します",
+  "@settingsPagesAppearanceNotificationsShowRemindersSubtitle": {
+    "description": "設定のページ「通知の表示形式」のスイッチの補足"
+  },
+  "settingsPagesAppearanceNotificationsShowRemindersDetail": "登録した開始通知(端末のローカル通知)の一覧を通知ページの上に表示します",
+  "@settingsPagesAppearanceNotificationsShowRemindersDetail": {
+    "description": "設定のページ「通知の表示形式」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceNotificationsText1": "通知する種別は「通知 → プロファイル」で選びます(端末に保存されます)。",
+  "@settingsPagesAppearanceNotificationsText1": {
+    "description": "設定のページ「通知の表示形式」の説明の文"
+  },
+  "settingsPagesAppearanceTimelineTitle": "タイムラインの表示",
+  "@settingsPagesAppearanceTimelineTitle": {
+    "description": "設定のページ「タイムラインの表示」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceTimelineSection1Title": "更新",
+  "@settingsPagesAppearanceTimelineSection1Title": {
+    "description": "設定のページ「タイムラインの表示」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceTimelineEdgeTilesTitle": "TL の上下に「投稿を読み込む」を出す",
+  "@settingsPagesAppearanceTimelineEdgeTilesTitle": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの名前"
+  },
+  "settingsPagesAppearanceTimelineEdgeTilesSubtitle": "スマホでは既定で出しません(引っ張って更新)",
+  "@settingsPagesAppearanceTimelineEdgeTilesSubtitle": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの補足"
+  },
+  "settingsPagesAppearanceTimelineEdgeTilesDetail": "見えると、新しい投稿 / 続きを読み込みます。既定は、電話のアプリでは出さず(下に引っ張って更新)、Web 版とパソコンでは出します",
+  "@settingsPagesAppearanceTimelineEdgeTilesDetail": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceTimelineNewPostsPillTitle": "新しい投稿のお知らせを出す",
+  "@settingsPagesAppearanceTimelineNewPostsPillTitle": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの名前"
+  },
+  "settingsPagesAppearanceTimelineNewPostsPillSubtitle": "更新して新しい投稿が届いたら、ヘッダーのすぐ下に「新しい投稿」",
+  "@settingsPagesAppearanceTimelineNewPostsPillSubtitle": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの補足"
+  },
+  "settingsPagesAppearanceTimelineNewPostsPillDetail": "投稿した人の顔(3 人まで)と「新しい投稿」を出します。押すといちばん上へ。しばらくたつか、いちばん上まで送ると消えます。ヘッダーをしまっている間は出しません",
+  "@settingsPagesAppearanceTimelineNewPostsPillDetail": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceVideoTitle": "ピクチャインピクチャ",
+  "@settingsPagesAppearanceVideoTitle": {
+    "description": "設定のページ「ピクチャインピクチャ」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAppearanceVideoSection1Title": "動画",
+  "@settingsPagesAppearanceVideoSection1Title": {
+    "description": "設定のページ「ピクチャインピクチャ」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceVideoAutoplayTitle": "開いたら自動で再生",
+  "@settingsPagesAppearanceVideoAutoplayTitle": {
+    "description": "設定のページ「ピクチャインピクチャ」のスイッチの名前"
+  },
+  "settingsPagesAppearanceVideoAutoplaySubtitle": "全画面と小窓で、すぐに再生します",
+  "@settingsPagesAppearanceVideoAutoplaySubtitle": {
+    "description": "設定のページ「ピクチャインピクチャ」のスイッチの補足"
+  },
+  "settingsPagesAppearanceVideoAutoplayDetail": "全画面ビューワーと小窓(PiP)で、準備ができ次第再生します",
+  "@settingsPagesAppearanceVideoAutoplayDetail": {
+    "description": "設定のページ「ピクチャインピクチャ」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceVideoPipKeepPositionTitle": "小窓へ移るとき再生位置を引き継ぐ",
+  "@settingsPagesAppearanceVideoPipKeepPositionTitle": {
+    "description": "設定のページ「ピクチャインピクチャ」のスイッチの名前"
+  },
+  "settingsPagesAppearanceVideoPipKeepPositionSubtitle": "全画面の「小窓で再生」を押したときの続きから再生します",
+  "@settingsPagesAppearanceVideoPipKeepPositionSubtitle": {
+    "description": "設定のページ「ピクチャインピクチャ」のスイッチの補足"
+  },
+  "settingsPagesAppearanceVideoSection2Title": "既定の再生速度",
+  "@settingsPagesAppearanceVideoSection2Title": {
+    "description": "設定のページ「ピクチャインピクチャ」の節の見出しの名前"
+  },
+  "settingsPagesAppearanceVideoDefaultSpeed10Title": "1.0×(標準)",
+  "@settingsPagesAppearanceVideoDefaultSpeed10Title": {
+    "description": "設定のページ「ピクチャインピクチャ」の選択肢の名前"
+  },
+  "settingsPagesAppearanceVideoText1": "小窓は、掴んで好きな場所へ動かせます。",
+  "@settingsPagesAppearanceVideoText1": {
+    "description": "設定のページ「ピクチャインピクチャ」の説明の文"
+  },
+  "settingsPagesAppearanceVideoText1Detail": "小窓は FOW なので、掴んでカラムや上下へ動かせます。",
+  "@settingsPagesAppearanceVideoText1Detail": {
+    "description": "設定のページ「ピクチャインピクチャ」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAstellBackgroundTitle": "画面オフ時の動作",
+  "@settingsPagesAstellBackgroundTitle": {
+    "description": "設定のページ「画面オフ時の動作」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAstellBackgroundSection1Title": "通話中に画面を消したとき",
+  "@settingsPagesAstellBackgroundSection1Title": {
+    "description": "設定のページ「画面オフ時の動作」の節の見出しの名前"
+  },
+  "settingsPagesAstellBackgroundOnScreenOffKeepTitle": "通話を続ける",
+  "@settingsPagesAstellBackgroundOnScreenOffKeepTitle": {
+    "description": "設定のページ「画面オフ時の動作」の選択肢の名前"
+  },
+  "settingsPagesAstellBackgroundOnScreenOffKeepSubtitle": "音声はそのまま、画面共有の受信だけ止めます",
+  "@settingsPagesAstellBackgroundOnScreenOffKeepSubtitle": {
+    "description": "設定のページ「画面オフ時の動作」の選択肢の補足"
+  },
+  "settingsPagesAstellBackgroundOnScreenOffMuteTitle": "マイクをミュートして続ける",
+  "@settingsPagesAstellBackgroundOnScreenOffMuteTitle": {
+    "description": "設定のページ「画面オフ時の動作」の選択肢の名前"
+  },
+  "settingsPagesAstellBackgroundOnScreenOffLeaveTitle": "ルームから出る",
+  "@settingsPagesAstellBackgroundOnScreenOffLeaveTitle": {
+    "description": "設定のページ「画面オフ時の動作」の選択肢の名前"
+  },
+  "settingsPagesAstellBackgroundNotice1": "この設定は準備中です。いまの ASTell は、画面が点いている間だけ動きます。",
+  "@settingsPagesAstellBackgroundNotice1": {
+    "description": "設定のページ「画面オフ時の動作」のお知らせ"
+  },
+  "settingsPagesAstellBackgroundNotice1Detail": "この設定は保存されますが、適用は通話の常駐化(バックグラウンド音声)の実装後です。いまの ASTell は画面が点いている間だけ動きます。",
+  "@settingsPagesAstellBackgroundNotice1Detail": {
+    "description": "設定のページ「画面オフ時の動作」のお知らせの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAstellSubscriptionTitle": "ASTell 4Uを購読",
+  "@settingsPagesAstellSubscriptionTitle": {
+    "description": "設定のページ「ASTell 4Uを購読」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAstellSubscriptionSection1Title": "状態",
+  "@settingsPagesAstellSubscriptionSection1Title": {
+    "description": "設定のページ「ASTell 4Uを購読」の節の見出しの名前"
+  },
+  "settingsPagesAstellSubscriptionValueRow1Title": "購読",
+  "@settingsPagesAstellSubscriptionValueRow1Title": {
+    "description": "設定のページ「ASTell 4Uを購読」の値の行の名前"
+  },
+  "settingsPagesAstellSubscriptionValueRow1Value": "未購読",
+  "@settingsPagesAstellSubscriptionValueRow1Value": {
+    "description": "設定のページ「ASTell 4Uを購読」の値の行の値"
+  },
+  "settingsPagesAstellSubscriptionValueRow2Title": "提供",
+  "@settingsPagesAstellSubscriptionValueRow2Title": {
+    "description": "設定のページ「ASTell 4Uを購読」の値の行の名前"
+  },
+  "settingsPagesAstellSubscriptionValueRow2Value": "準備中",
+  "@settingsPagesAstellSubscriptionValueRow2Value": {
+    "description": "設定のページ「ASTell 4Uを購読」の値の行の値"
+  },
+  "settingsPagesAstellSubscriptionText1": "ASTell 4U は準備中の有料プランです。おすすめ欄は無料で使えます。",
+  "@settingsPagesAstellSubscriptionText1": {
+    "description": "設定のページ「ASTell 4Uを購読」の説明の文"
+  },
+  "settingsPagesAstellSubscriptionText1Detail": "ASTell 4U は、ASTell のおすすめ(For You)配信とサーバー側の文字起こし / 要約の有料プランです。まだ提供していません。おすすめ欄は RASQ サーバーの無料の推薦で動きます。",
+  "@settingsPagesAstellSubscriptionText1Detail": {
+    "description": "設定のページ「ASTell 4Uを購読」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAstellTilesTitle": "Tellタイル",
+  "@settingsPagesAstellTilesTitle": {
+    "description": "設定のページ「Tellタイル」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAstellTilesSection1Title": "ホームのヘッダー",
+  "@settingsPagesAstellTilesSection1Title": {
+    "description": "設定のページ「Tellタイル」の節の見出しの名前"
+  },
+  "settingsPagesAstellTilesHeaderStripTitle": "フォロー中のホストの ASTell をヘッダーに出す",
+  "@settingsPagesAstellTilesHeaderStripTitle": {
+    "description": "設定のページ「Tellタイル」のスイッチの名前"
+  },
+  "settingsPagesAstellTilesHeaderStripSubtitle": "開催中のルームを、ホームの上に並べます",
+  "@settingsPagesAstellTilesHeaderStripSubtitle": {
+    "description": "設定のページ「Tellタイル」のスイッチの補足"
+  },
+  "settingsPagesAstellTilesHeaderStripDetail": "開催中のルームを、ホームのヘッダーの角丸の枠に並べます",
+  "@settingsPagesAstellTilesHeaderStripDetail": {
+    "description": "設定のページ「Tellタイル」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAstellTilesHeaderMaxTitle": "並べる数",
+  "@settingsPagesAstellTilesHeaderMaxTitle": {
+    "description": "設定のページ「Tellタイル」のスライダーの名前"
+  },
+  "settingsPagesAstellTilesHeaderMaxUnit": "件",
+  "@settingsPagesAstellTilesHeaderMaxUnit": {
+    "description": "設定のページ「Tellタイル」のスライダーの値の単位"
+  },
+  "settingsPagesAstellTrendTitle": "トレンドタイムラインへの配信",
+  "@settingsPagesAstellTrendTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesAstellTrendSection1Title": "ASTell ホームの欄",
+  "@settingsPagesAstellTrendSection1Title": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の節の見出しの名前"
+  },
+  "settingsPagesAstellTrendShowRecommendedTitle": "「おすすめ」を表示",
+  "@settingsPagesAstellTrendShowRecommendedTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」のスイッチの名前"
+  },
+  "settingsPagesAstellTrendShowTrendingTitle": "「トレンド」を表示",
+  "@settingsPagesAstellTrendShowTrendingTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」のスイッチの名前"
+  },
+  "settingsPagesAstellTrendShowTrendingSubtitle": "トレンドのルームを ASTell ホームに並べます",
+  "@settingsPagesAstellTrendShowTrendingSubtitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」のスイッチの補足"
+  },
+  "settingsPagesAstellTrendText1": "検索ホームのトレンドにルームを出すには、「トレンドをカスタマイズ」で組みます。",
+  "@settingsPagesAstellTrendText1": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の説明の文"
+  },
+  "settingsPagesAstellTrendText1Detail": "トレンドのタイムライン(検索ホーム)へのルームの差し込みは、トレンドのノード(アルゴリズム)側で組みます。",
+  "@settingsPagesAstellTrendText1Detail": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAstellTrendTlconfigTrendTitle": "トレンドをカスタマイズ",
+  "@settingsPagesAstellTrendTlconfigTrendTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の行の名前"
+  },
+  "settingsPagesMediaSaveTitle": "画像・動画の保存先",
+  "@settingsPagesMediaSaveTitle": {
+    "description": "設定のページ「画像・動画の保存先」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesMediaSaveSection1Title": "「画像を保存」「動画を保存」の保存先",
+  "@settingsPagesMediaSaveSection1Title": {
+    "description": "設定のページ「画像・動画の保存先」の節の見出しの名前"
+  },
+  "settingsPagesMediaSaveDestinationAskTitle": "保存するたびに選ぶ",
+  "@settingsPagesMediaSaveDestinationAskTitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の名前"
+  },
+  "settingsPagesMediaSaveDestinationAskSubtitle": "写真とファイルのどちらにするか、毎回聞きます",
+  "@settingsPagesMediaSaveDestinationAskSubtitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の補足"
+  },
+  "settingsPagesMediaSaveDestinationAskDetail": "写真とファイルのどちらに保存するかを、そのたびに聞きます(選べる先が 1 つしかない端末では聞きません)",
+  "@settingsPagesMediaSaveDestinationAskDetail": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesMediaSaveDestinationPhotosTitle": "写真(カメラロール)",
+  "@settingsPagesMediaSaveDestinationPhotosTitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の名前"
+  },
+  "settingsPagesMediaSaveDestinationPhotosSubtitle": "アルバム「RASQ」に入ります",
+  "@settingsPagesMediaSaveDestinationPhotosSubtitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の補足"
+  },
+  "settingsPagesMediaSaveDestinationPhotosDetail": "iPhone / iPad / Mac の「写真」、Android のギャラリーの、アルバム「RASQ」に入ります",
+  "@settingsPagesMediaSaveDestinationPhotosDetail": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesMediaSaveDestinationFilesTitle": "ファイル",
+  "@settingsPagesMediaSaveDestinationFilesTitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の名前"
+  },
+  "settingsPagesMediaSaveDestinationFilesSubtitle": "「ファイル」App や、選んだ場所に保存します",
+  "@settingsPagesMediaSaveDestinationFilesSubtitle": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の補足"
+  },
+  "settingsPagesMediaSaveDestinationFilesDetail": "iPhone / iPad は「ファイル」App の このiPad(このiPhone)› RASQ › 保存。パソコンは保存する場所を選びます。Android はギャラリーに入ります",
+  "@settingsPagesMediaSaveDestinationFilesDetail": {
+    "description": "設定のページ「画像・動画の保存先」の選択肢の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsAccountPickTitle": "共有 / リノートに使うアカウント",
+  "@settingsPagesPluginsAccountPickTitle": {
+    "description": "設定のページ「共有 / リノートに使うアカウント」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsAccountPickSection1Title": "同じ投稿が、複数のアカウントに見えているとき",
+  "@settingsPagesPluginsAccountPickSection1Title": {
+    "description": "設定のページ「共有 / リノートに使うアカウント」の節の見出しの名前"
+  },
+  "settingsPagesPluginsAccountPickPreferCurrentTitle": "指定しているアカウントを優先",
+  "@settingsPagesPluginsAccountPickPreferCurrentTitle": {
+    "description": "設定のページ「共有 / リノートに使うアカウント」のスイッチの名前"
+  },
+  "settingsPagesPluginsAccountPickPreferCurrentSubtitle": "オフにすると、相手とよく話しているアカウントを選びます",
+  "@settingsPagesPluginsAccountPickPreferCurrentSubtitle": {
+    "description": "設定のページ「共有 / リノートに使うアカウント」のスイッチの補足"
+  },
+  "settingsPagesPluginsAccountPickPreferCurrentDetail": "SNS アカウントを選んで見ているときは、そのアカウントで共有 / リノートします。切ると、直近のやりとり(リアクション / リノート / 返信)から、その相手とよく話しているアカウントを予測して選びます。RASQ アカウントでまとめて見ているときは、いつも予測で選びます",
+  "@settingsPagesPluginsAccountPickPreferCurrentDetail": {
+    "description": "設定のページ「共有 / リノートに使うアカウント」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsComposerTitle": "投稿プラグイン",
+  "@settingsPagesPluginsComposerTitle": {
+    "description": "設定のページ「投稿プラグイン」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsComposerSection1Title": "コンポーザー",
+  "@settingsPagesPluginsComposerSection1Title": {
+    "description": "設定のページ「投稿プラグイン」の節の見出しの名前"
+  },
+  "settingsPagesPluginsComposerEnabledTitle": "投稿プラグインを使う",
+  "@settingsPagesPluginsComposerEnabledTitle": {
+    "description": "設定のページ「投稿プラグイン」のスイッチの名前"
+  },
+  "settingsPagesPluginsComposerEnabledSubtitle": "投稿の文字や画像を加工するプラグインを使います",
+  "@settingsPagesPluginsComposerEnabledSubtitle": {
+    "description": "設定のページ「投稿プラグイン」のスイッチの補足"
+  },
+  "settingsPagesPluginsComposerEnabledDetail": "コンポーザーのテキスト変換(composer.text)とメディア編集(composer.media)のプラグインを有効にします",
+  "@settingsPagesPluginsComposerEnabledDetail": {
+    "description": "設定のページ「投稿プラグイン」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsComposerText1": "オフにすると、コンポーザーとメディアエディターのプラグイン欄が空になります。",
+  "@settingsPagesPluginsComposerText1": {
+    "description": "設定のページ「投稿プラグイン」の説明の文"
+  },
+  "settingsPagesPluginsComposerSettingsComposerTitle": "投稿コンポーザーの設定",
+  "@settingsPagesPluginsComposerSettingsComposerTitle": {
+    "description": "設定のページ「投稿プラグイン」の行の名前"
+  },
+  "settingsPagesPluginsComposerStoreTitle": "プラグインストア",
+  "@settingsPagesPluginsComposerStoreTitle": {
+    "description": "設定のページ「投稿プラグイン」の行の名前"
+  },
+  "settingsPagesPluginsEmojiTitle": "絵文字の検索",
+  "@settingsPagesPluginsEmojiTitle": {
+    "description": "設定のページ「絵文字の検索」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsEmojiSection1Title": "絵文字ピッカーの検索",
+  "@settingsPagesPluginsEmojiSection1Title": {
+    "description": "設定のページ「絵文字の検索」の節の見出しの名前"
+  },
+  "settingsPagesPluginsEmojiSemanticTitle": "意味の近い絵文字も探す",
+  "@settingsPagesPluginsEmojiSemanticTitle": {
+    "description": "設定のページ「絵文字の検索」のスイッチの名前"
+  },
+  "settingsPagesPluginsEmojiSemanticSubtitle": "名前が合わなくても、意味の近い絵文字を出します。打った文字は外へ送りません",
+  "@settingsPagesPluginsEmojiSemanticSubtitle": {
+    "description": "設定のページ「絵文字の検索」のスイッチの補足"
+  },
+  "settingsPagesPluginsEmojiSemanticDetail": "名前や別名に打った文字が入っていなくても、意味の近い絵文字を後ろに並べます。端末内の検索用モデル(RAi →「モデル」→ 検索)を入れてあるときだけ効きます。計算は端末の中だけで行い、打った文字は外へ送りません。初めて開いたサーバーでは、裏で索引を作るあいだ「準備中」と出ます",
+  "@settingsPagesPluginsEmojiSemanticDetail": {
+    "description": "設定のページ「絵文字の検索」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsProxyTitle": "RASQプラグインプロキシの購読",
+  "@settingsPagesPluginsProxyTitle": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsProxySection1Title": "状態",
+  "@settingsPagesPluginsProxySection1Title": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の節の見出しの名前"
+  },
+  "settingsPagesPluginsProxyValueRow1Title": "購読",
+  "@settingsPagesPluginsProxyValueRow1Title": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の値の行の名前"
+  },
+  "settingsPagesPluginsProxyValueRow1Value": "未購読",
+  "@settingsPagesPluginsProxyValueRow1Value": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の値の行の値"
+  },
+  "settingsPagesPluginsProxyValueRow2Title": "提供",
+  "@settingsPagesPluginsProxyValueRow2Title": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の値の行の名前"
+  },
+  "settingsPagesPluginsProxyValueRow2Value": "準備中",
+  "@settingsPagesPluginsProxyValueRow2Value": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の値の行の値"
+  },
+  "settingsPagesPluginsProxyText1": "プラグインプロキシは準備中です。いまはプラグインが端末から直接通信します。",
+  "@settingsPagesPluginsProxyText1": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の説明の文"
+  },
+  "settingsPagesPluginsProxyText1Detail": "プラグインプロキシは、wasm プラグインの外部通信を RASQ サーバー経由に束ねる有料サービスです。まだ提供していないため、プラグインは端末から直接 SNS / 自前サーバーへ通信します。 提供: RASQ サーバーの課金基盤と同時。",
+  "@settingsPagesPluginsProxyText1Detail": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsProxySettingsServerTitle": "RASQ サーバーの接続先",
+  "@settingsPagesPluginsProxySettingsServerTitle": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の行の名前"
+  },
+  "settingsPagesPluginsProxySettingsServerSubtitle": "提供が始まったら、ここで選んだサーバーを使います",
+  "@settingsPagesPluginsProxySettingsServerSubtitle": {
+    "description": "設定のページ「RASQプラグインプロキシの購読」の行の補足"
+  },
+  "settingsPagesPluginsReactionTitle": "リアクションの予測",
+  "@settingsPagesPluginsReactionTitle": {
+    "description": "設定のページ「リアクションの予測」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsReactionSection1Title": "リアクションのボタンの短押し",
+  "@settingsPagesPluginsReactionSection1Title": {
+    "description": "設定のページ「リアクションの予測」の節の見出しの名前"
+  },
+  "settingsPagesPluginsReactionPredictWhenEmptyTitle": "だれも付けていない投稿でも予測する",
+  "@settingsPagesPluginsReactionPredictWhenEmptyTitle": {
+    "description": "設定のページ「リアクションの予測」のスイッチの名前"
+  },
+  "settingsPagesPluginsReactionPredictWhenEmptySubtitle": "よく使う絵文字を予測して、短押しで付けます",
+  "@settingsPagesPluginsReactionPredictWhenEmptySubtitle": {
+    "description": "設定のページ「リアクションの予測」のスイッチの補足"
+  },
+  "settingsPagesPluginsReactionPredictWhenEmptyDetail": "切ってあると、まだリアクションが付いていない投稿では予測せず、押すと絵文字ピッカーが開きます。入れると、自分がよく使う絵文字を予測として出し、短押しでそれを付けます",
+  "@settingsPagesPluginsReactionPredictWhenEmptyDetail": {
+    "description": "設定のページ「リアクションの予測」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsTelemetryTitle": "怪しい通信の通報",
+  "@settingsPagesPluginsTelemetryTitle": {
+    "description": "設定のページ「怪しい通信の通報」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsTelemetrySection1Title": "プラグインの怪しい通信をストアへ通報",
+  "@settingsPagesPluginsTelemetrySection1Title": {
+    "description": "設定のページ「怪しい通信の通報」の節の見出しの名前"
+  },
+  "settingsPagesPluginsTelemetryFetchShapesTitle": "怪しい通信を通報する",
+  "@settingsPagesPluginsTelemetryFetchShapesTitle": {
+    "description": "設定のページ「怪しい通信の通報」のスイッチの名前"
+  },
+  "settingsPagesPluginsTelemetryFetchShapesSubtitle": "通信の形だけを審査に送ります。本文やトークンなどの中身は送りません。既定はオフ",
+  "@settingsPagesPluginsTelemetryFetchShapesSubtitle": {
+    "description": "設定のページ「怪しい通信の通報」のスイッチの補足"
+  },
+  "settingsPagesPluginsTelemetryFetchShapesDetail": "プラグインが行う通信の「形」(接続先のホスト、メソッド、パスの型、ヘッダの名前、送る JSON のキーの構造)だけを、この端末で初めて見たときに 1 度だけ RASQ のストアへ送ります。トークン、本文、ユーザー名、URL の中の ID などの値は送りません。審査は、承認したあとで通信の形が変わったプラグインを読み直すためにこれを使います。既定はオフです。",
+  "@settingsPagesPluginsTelemetryFetchShapesDetail": {
+    "description": "設定のページ「怪しい通信の通報」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsTelemetryText1": "同じ形は 2 度と送りません。オフにすると、同意の取り消しとして記録されます。",
+  "@settingsPagesPluginsTelemetryText1": {
+    "description": "設定のページ「怪しい通信の通報」の説明の文"
+  },
+  "settingsPagesPluginsTelemetryText1Detail": "送るもの: 例 {example}。送らないもの: 値そのもの。同じ形は 2 度と送りません。同意はストアの同意記録にも残り、切ると撤回として記録されます。",
+  "@settingsPagesPluginsTelemetryText1Detail": {
+    "description": "設定のページ「怪しい通信の通報」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない。example は送る形の例(JSON に似た書き方で、訳さない)。アセットの側で渡す",
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsPagesPluginsTimelineTitle": "カスタムタイムラインを配置",
+  "@settingsPagesPluginsTimelineTitle": {
+    "description": "設定のページ「カスタムタイムラインを配置」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsTimelineSection1Title": "タイムラインのプラグイン",
+  "@settingsPagesPluginsTimelineSection1Title": {
+    "description": "設定のページ「カスタムタイムラインを配置」の節の見出しの名前"
+  },
+  "settingsPagesPluginsTimelineEnabledTitle": "カスタムタイムラインを使う",
+  "@settingsPagesPluginsTimelineEnabledTitle": {
+    "description": "設定のページ「カスタムタイムラインを配置」のスイッチの名前"
+  },
+  "settingsPagesPluginsTimelineEnabledSubtitle": "プラグインのタイムラインを、ホームのタブに出します",
+  "@settingsPagesPluginsTimelineEnabledSubtitle": {
+    "description": "設定のページ「カスタムタイムラインを配置」のスイッチの補足"
+  },
+  "settingsPagesPluginsTimelineEnabledDetail": "TL プラグイン(tl)が宣言したタイムラインをホームのタブと「タイムラインをカスタマイズ」のアルゴリズムに出します",
+  "@settingsPagesPluginsTimelineEnabledDetail": {
+    "description": "設定のページ「カスタムタイムラインを配置」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsTimelineText1": "並びや取り込みは、ホームのタブ行の歯車(タイムラインをカスタマイズ)から組みます。",
+  "@settingsPagesPluginsTimelineText1": {
+    "description": "設定のページ「カスタムタイムラインを配置」の説明の文"
+  },
+  "settingsPagesPluginsTimelineStoreTitle": "プラグインストア",
+  "@settingsPagesPluginsTimelineStoreTitle": {
+    "description": "設定のページ「カスタムタイムラインを配置」の行の名前"
+  },
+  "settingsPagesPluginsTrendTitle": "カスタムトレンドの配信",
+  "@settingsPagesPluginsTrendTitle": {
+    "description": "設定のページ「カスタムトレンドの配信」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesPluginsTrendSection1Title": "トレンドプラグイン",
+  "@settingsPagesPluginsTrendSection1Title": {
+    "description": "設定のページ「カスタムトレンドの配信」の節の見出しの名前"
+  },
+  "settingsPagesPluginsTrendEnabledTitle": "トレンドプラグインの候補を表示",
+  "@settingsPagesPluginsTrendEnabledTitle": {
+    "description": "設定のページ「カスタムトレンドの配信」のスイッチの名前"
+  },
+  "settingsPagesPluginsTrendEnabledSubtitle": "検索ホームのトレンド欄に、プラグインの候補を出します",
+  "@settingsPagesPluginsTrendEnabledSubtitle": {
+    "description": "設定のページ「カスタムトレンドの配信」のスイッチの補足"
+  },
+  "settingsPagesPluginsTrendEnabledDetail": "検索ホームのトレンド欄に、入れているトレンドプラグイン(trend.suggest)の候補チップを出します",
+  "@settingsPagesPluginsTrendEnabledDetail": {
+    "description": "設定のページ「カスタムトレンドの配信」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesPluginsTrendText1": "オフにすると、プラグインは呼び出されません(入れたままでも通信しません)。",
+  "@settingsPagesPluginsTrendText1": {
+    "description": "設定のページ「カスタムトレンドの配信」の説明の文"
+  },
+  "settingsPagesPluginsTrendStoreTitle": "プラグインストア",
+  "@settingsPagesPluginsTrendStoreTitle": {
+    "description": "設定のページ「カスタムトレンドの配信」の行の名前"
+  },
+  "settingsPagesPluginsTrendStoreSubtitle": "トレンドプラグインを探す / 管理する",
+  "@settingsPagesPluginsTrendStoreSubtitle": {
+    "description": "設定のページ「カスタムトレンドの配信」の行の補足"
+  },
+  "settingsPagesRaiTitle": "RAi(アシスタント)",
+  "@settingsPagesRaiTitle": {
+    "description": "設定のページ「RAi(アシスタント)」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesRaiSection1Title": "自動化",
+  "@settingsPagesRaiSection1Title": {
+    "description": "設定のページ「RAi(アシスタント)」の節の見出しの名前"
+  },
+  "settingsPagesRaiTraceGraphAutoTitle": "工程グラフを自動で表示",
+  "@settingsPagesRaiTraceGraphAutoTitle": {
+    "description": "設定のページ「RAi(アシスタント)」のスイッチの名前"
+  },
+  "settingsPagesRaiTraceGraphAutoSubtitle": "3 手順以上の自動化を、グラフで表示します",
+  "@settingsPagesRaiTraceGraphAutoSubtitle": {
+    "description": "設定のページ「RAi(アシスタント)」のスイッチの補足"
+  },
+  "settingsPagesRaiTraceGraphAutoDetail": "RAi に任せた自動化が 3 手順以上のとき、工程をノードのグラフで自動表示します。オフなら「グラフビューで表示」ボタンになります",
+  "@settingsPagesRaiTraceGraphAutoDetail": {
+    "description": "設定のページ「RAi(アシスタント)」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesRaiText1": "AI のモデルや web 検索は、RAi バーのモデルのボタンから設定します。",
+  "@settingsPagesRaiText1": {
+    "description": "設定のページ「RAi(アシスタント)」の説明の文"
+  },
+  "settingsPagesRaiText1Detail": "推論サーバーや web 検索の鍵は RAi バーのモデルチップから設定します。",
+  "@settingsPagesRaiText1Detail": {
+    "description": "設定のページ「RAi(アシスタント)」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesRelationalPluginsTitle": "プラグインの詳細設定",
+  "@settingsPagesRelationalPluginsTitle": {
+    "description": "設定のページ「プラグインの詳細設定」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesRelationalPluginsSection1Title": "状態",
+  "@settingsPagesRelationalPluginsSection1Title": {
+    "description": "設定のページ「プラグインの詳細設定」の節の見出しの名前"
+  },
+  "settingsPagesRelationalPluginsValueRow1Title": "プラグイン枠",
+  "@settingsPagesRelationalPluginsValueRow1Title": {
+    "description": "設定のページ「プラグインの詳細設定」の値の行の名前"
+  },
+  "settingsPagesRelationalPluginsValueRow1Value": "準備中",
+  "@settingsPagesRelationalPluginsValueRow1Value": {
+    "description": "設定のページ「プラグインの詳細設定」の値の行の値"
+  },
+  "settingsPagesRelationalPluginsText1": "この画面のプラグインは準備中です。",
+  "@settingsPagesRelationalPluginsText1": {
+    "description": "設定のページ「プラグインの詳細設定」の説明の文"
+  },
+  "settingsPagesRelationalPluginsText1Detail": "リレーショナルタイムライン用のプラグイン枠(束ね方の差し替え)は契約 v0.7 にはまだありません。ML の類似度は RASQ サーバーの ML ゲートウェイを使います。 プラグイン枠: 未定義。",
+  "@settingsPagesRelationalPluginsText1Detail": {
+    "description": "設定のページ「プラグインの詳細設定」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesRelationalPluginsSettingsServerTitle": "RASQ サーバーの接続先",
+  "@settingsPagesRelationalPluginsSettingsServerTitle": {
+    "description": "設定のページ「プラグインの詳細設定」の行の名前"
+  },
+  "settingsPagesRelationalRelayTitle": "Relayタイル",
+  "@settingsPagesRelationalRelayTitle": {
+    "description": "設定のページ「Relayタイル」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesRelationalRelaySection1Title": "状態",
+  "@settingsPagesRelationalRelaySection1Title": {
+    "description": "設定のページ「Relayタイル」の節の見出しの名前"
+  },
+  "settingsPagesRelationalRelayValueRow1Title": "提供",
+  "@settingsPagesRelationalRelayValueRow1Title": {
+    "description": "設定のページ「Relayタイル」の値の行の名前"
+  },
+  "settingsPagesRelationalRelayValueRow1Value": "準備中",
+  "@settingsPagesRelationalRelayValueRow1Value": {
+    "description": "設定のページ「Relayタイル」の値の行の値"
+  },
+  "settingsPagesRelationalRelayText1": "Relay タイルは準備中です。いまは「投稿クラスター」で会話のまとめ方を変えられます。",
+  "@settingsPagesRelationalRelayText1": {
+    "description": "設定のページ「Relayタイル」の説明の文"
+  },
+  "settingsPagesRelationalRelayText1Detail": "Relay タイルは、会話イベントをまたいで話題が受け渡された流れ(リレー)を 1 枚のタイルにまとめる表示です。束ね方が固まってから足します。いまは「投稿クラスター」の調整で会話イベントの束ね方を変えられます。 提供: アルゴリズム確定後。",
+  "@settingsPagesRelationalRelayText1Detail": {
+    "description": "設定のページ「Relayタイル」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesRelationalTrendTitle": "トレンドタイムラインへの配信",
+  "@settingsPagesRelationalTrendTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesRelationalTrendSection1Title": "状態",
+  "@settingsPagesRelationalTrendSection1Title": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の節の見出しの名前"
+  },
+  "settingsPagesRelationalTrendValueRow1Title": "提供",
+  "@settingsPagesRelationalTrendValueRow1Title": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の値の行の名前"
+  },
+  "settingsPagesRelationalTrendValueRow1Value": "準備中",
+  "@settingsPagesRelationalTrendValueRow1Value": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の値の行の値"
+  },
+  "settingsPagesRelationalTrendText1": "「トレンドをカスタマイズ」で、関連タイムラインをトレンドに流せます。",
+  "@settingsPagesRelationalTrendText1": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の説明の文"
+  },
+  "settingsPagesRelationalTrendText1Detail": "関連タブの会話イベントをトレンドのタイムラインへ流す配信は、トレンド側のノード(アルゴリズム)に「関連タイムライン」ノードを置く形で組めます。 提供: アルゴリズム確定後。",
+  "@settingsPagesRelationalTrendText1Detail": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesRelationalTrendTlconfigTrendTitle": "トレンドをカスタマイズ",
+  "@settingsPagesRelationalTrendTlconfigTrendTitle": {
+    "description": "設定のページ「トレンドタイムラインへの配信」の行の名前"
+  },
+  "settingsPagesResourcesTitle": "リソースと広告",
+  "@settingsPagesResourcesTitle": {
+    "description": "設定のページ「リソースと広告」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesResourcesSection1Title": "広告",
+  "@settingsPagesResourcesSection1Title": {
+    "description": "設定のページ「リソースと広告」の節の見出しの名前"
+  },
+  "settingsPagesResourcesShowAdsTitle": "広告を表示",
+  "@settingsPagesResourcesShowAdsTitle": {
+    "description": "設定のページ「リソースと広告」のスイッチの名前"
+  },
+  "settingsPagesResourcesShowAdsSubtitle": "タイムラインの投稿の間と、検索ホームの広告です",
+  "@settingsPagesResourcesShowAdsSubtitle": {
+    "description": "設定のページ「リソースと広告」のスイッチの補足"
+  },
+  "settingsPagesResourcesShowAdsDetail": "タイムラインの投稿の間(10 件ごと、注釈やセンシティブな投稿の隣には置きません)と検索ホームの広告枠(AdMob、いまはテスト用の広告)。個人に合わせた広告は出しません",
+  "@settingsPagesResourcesShowAdsDetail": {
+    "description": "設定のページ「リソースと広告」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesResourcesSection2Title": "リソース",
+  "@settingsPagesResourcesSection2Title": {
+    "description": "設定のページ「リソースと広告」の節の見出しの名前"
+  },
+  "settingsPagesResourcesValueRow1Title": "プラグインの通信",
+  "@settingsPagesResourcesValueRow1Title": {
+    "description": "設定のページ「リソースと広告」の値の行の名前"
+  },
+  "settingsPagesResourcesValueRow1Value": "端末から直接",
+  "@settingsPagesResourcesValueRow1Value": {
+    "description": "設定のページ「リソースと広告」の値の行の値"
+  },
+  "settingsPagesResourcesValueRow2Title": "推論",
+  "@settingsPagesResourcesValueRow2Title": {
+    "description": "設定のページ「リソースと広告」の値の行の名前"
+  },
+  "settingsPagesResourcesValueRow2Value": "端末の中 + 選んだサーバー",
+  "@settingsPagesResourcesValueRow2Value": {
+    "description": "設定のページ「リソースと広告」の値の行の値"
+  },
+  "settingsPagesResourcesText1": "プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。",
+  "@settingsPagesResourcesText1": {
+    "description": "設定のページ「リソースと広告」の説明の文"
+  },
+  "settingsPagesResourcesText1Detail": "プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。 プラグインの通信: 端末から直接(プロキシ無し)。推論: 端末内モデル(RAi)+ 任意の推論サーバー。",
+  "@settingsPagesResourcesText1Detail": {
+    "description": "設定のページ「リソースと広告」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesResourcesStoreTitle": "プラグインストア",
+  "@settingsPagesResourcesStoreTitle": {
+    "description": "設定のページ「リソースと広告」の行の名前"
+  },
+  "settingsPagesTrendCdnTitle": "キャッシュネットワークの設定",
+  "@settingsPagesTrendCdnTitle": {
+    "description": "設定のページ「キャッシュネットワークの設定」の見出し(設定の一覧の行の名前と揃える)"
+  },
+  "settingsPagesTrendCdnSection1Title": "状態",
+  "@settingsPagesTrendCdnSection1Title": {
+    "description": "設定のページ「キャッシュネットワークの設定」の節の見出しの名前"
+  },
+  "settingsPagesTrendCdnValueRow1Title": "キャッシュネットワーク",
+  "@settingsPagesTrendCdnValueRow1Title": {
+    "description": "設定のページ「キャッシュネットワークの設定」の値の行の名前"
+  },
+  "settingsPagesTrendCdnValueRow1Value": "準備中",
+  "@settingsPagesTrendCdnValueRow1Value": {
+    "description": "設定のページ「キャッシュネットワークの設定」の値の行の値"
+  },
+  "settingsPagesTrendCdnText1": "準備中です。いまは各 SNS から直接取得します。",
+  "@settingsPagesTrendCdnText1": {
+    "description": "設定のページ「キャッシュネットワークの設定」の説明の文"
+  },
+  "settingsPagesTrendCdnText1Detail": "トレンドの取得結果を CDN(キャッシュネットワーク)から読む仕組みは、RASQ サーバーの配信基盤と同時に入ります。いまは各 SNS から直接取得します。 キャッシュネットワーク: 未提供。",
+  "@settingsPagesTrendCdnText1Detail": {
+    "description": "設定のページ「キャッシュネットワークの設定」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
   "settingsSectionsPluginsTitle": "プラグインの構成",
   "settingsSectionsPluginsProxyTitle": "RASQプラグインプロキシの購読",
   "settingsSectionsPluginsProxySubtitle": "準備中",
@@ -13989,6 +17034,142 @@
   },
   "swingNotLoggedIn": "RASQ アカウントにログインしていません",
   "swingUnreadable": "Swing を読めませんでした",
+  "themeNotAThemePack": "着せ替えパックではありません: {id}",
+  "@themeNotAThemePack": {
+    "description": "着せ替えとして入れようとしたパッケージが着せ替えではないときの誤り。id はパッケージの id",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "themePickerLabel": "着せ替え(.rspkg / .rasqpkg)",
+  "@themePickerLabel": {
+    "description": "ファイルを選ぶ画面の、ファイルの種類の名前。拡張子は訳さない"
+  },
+  "themeNotATheme": "着せ替え(kind: theme)ではありません: {id}({kind})",
+  "@themeNotATheme": {
+    "description": "ファイルから読んだパッケージが着せ替えではないときの誤り。id はパッケージの id、kind はその種類(英字)。kind: theme は訳さない",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "themeLoadFailed": "読み込めませんでした: {error}",
+  "@themeLoadFailed": {
+    "description": "着せ替えのファイルを読めなかったときの誤り。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "themeTitle": "フォントやカラースキーム",
+  "@themeTitle": {
+    "description": "着せ替えを選ぶ画面の見出し(設定 → アプリの外観 の行の名前と揃える)"
+  },
+  "themeCaption": "色やアイコン、背景を変えられます。使えるのは 1 つだけです",
+  "@themeCaption": {
+    "description": "着せ替えを選ぶ画面の上の説明"
+  },
+  "themeCaptionDetail": "着せ替え(テーマ)は、色・アイコン・画面 / 投稿タイル / FOW / ボタンの背景を変えるパックです。コードは動きません。同時に使えるのは 1 つです。",
+  "@themeCaptionDetail": {
+    "description": "開発者モードの上の説明。FOW はアプリの浮かぶパネルの呼び名"
+  },
+  "themeColorScheme": "カラースキーム",
+  "@themeColorScheme": {
+    "description": "節の見出し。ライト / ダークを選ぶ"
+  },
+  "themeModeSystem": "システムに合わせる",
+  "@themeModeSystem": {
+    "description": "カラースキームの選択肢: 端末の設定に合わせる"
+  },
+  "themeModeLight": "ライト",
+  "@themeModeLight": {
+    "description": "カラースキームの選択肢: 明るい"
+  },
+  "themeModeDark": "ダーク",
+  "@themeModeDark": {
+    "description": "カラースキームの選択肢: 暗い"
+  },
+  "themePacks": "着せ替え",
+  "@themePacks": {
+    "description": "節の見出し。入れた着せ替えのパック"
+  },
+  "themeNone": "着せ替えなし(既定)",
+  "@themeNone": {
+    "description": "着せ替えの選択肢: 使わない"
+  },
+  "themeDarkOnly": "暗いモードのときに効きます",
+  "@themeDarkOnly": {
+    "description": "着せ替えの行の補足: 暗いモードだけで効く"
+  },
+  "themeLightOnly": "明るいモードのときに効きます",
+  "@themeLightOnly": {
+    "description": "着せ替えの行の補足: 明るいモードだけで効く"
+  },
+  "themeSideloaded": "ファイルから読み込み(未審査)",
+  "@themeSideloaded": {
+    "description": "着せ替えの行の補足: ストアを通さずファイルから入れた"
+  },
+  "themeSeparator": " ・ ",
+  "@themeSeparator": {
+    "description": "着せ替えの行の補足(版・説明・明るさ・出どころ)の区切り"
+  },
+  "themeRemove": "削除",
+  "@themeRemove": {
+    "description": "着せ替えの行の、消すボタンのツールチップ"
+  },
+  "themeDarkOnlyNotice": "「{name}」は暗いモードのときに効きます。いまは明るいモードです。",
+  "@themeDarkOnlyNotice": {
+    "description": "選んだ着せ替えがいまの明るさでは効かないときの知らせ。name は着せ替えの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "themeLightOnlyNotice": "「{name}」は明るいモードのときに効きます。いまは暗いモードです。",
+  "@themeLightOnlyNotice": {
+    "description": "選んだ着せ替えがいまの明るさでは効かないときの知らせ。name は着せ替えの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "themeSwitchToDark": "暗いモードにする",
+  "@themeSwitchToDark": {
+    "description": "上の知らせのボタン"
+  },
+  "themeSwitchToLight": "明るいモードにする",
+  "@themeSwitchToLight": {
+    "description": "上の知らせのボタン"
+  },
+  "themeEmpty": "インストールした着せ替えはまだありません。",
+  "@themeEmpty": {
+    "description": "入れた着せ替えが無いとき"
+  },
+  "themeFindInStore": "ストアで着せ替えを探す",
+  "@themeFindInStore": {
+    "description": "ストアの着せ替えへ進む行"
+  },
+  "themeImport": "ファイルから読み込む(.rspkg / .rasqpkg)",
+  "@themeImport": {
+    "description": "ファイルから着せ替えを入れる行。拡張子は訳さない"
+  },
+  "themeImportSubtitle": "自分で作った着せ替えを読み込みます",
+  "@themeImportSubtitle": {
+    "description": "上の行の補足"
+  },
+  "themeImportDetail": "rasq build で作った着せ替えパック。コードを含まないので、未審査でもそのまま使えます",
+  "@themeImportDetail": {
+    "description": "開発者モードの上の行の補足。rasq build はコマンドの名前で訳さない"
+  },
   "trendTitle": "トレンド",
   "trendTabNotes": "ノート",
   "trendTabFollowing": "フォロー中",

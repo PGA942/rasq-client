@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "about.subscription",
-  "title": "購読状況",
+  "title": "@l10n:settingsPagesAboutSubscriptionTitle",
   "defaults": {},
   "root": {
     "t": "Column",
@@ -9,37 +9,37 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "RASQ の購読"
+          "title": "@l10n:settingsPagesAboutSubscriptionSection1Title"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
-          "title": "プラン",
-          "value": "無料"
+          "title": "@l10n:settingsPagesAboutSubscriptionValueRow1Title",
+          "value": "@l10n:settingsPagesAboutSubscriptionValueRow1Value"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
-          "title": "プラグインプロキシ",
-          "value": "未購読"
+          "title": "@l10n:settingsPagesAboutSubscriptionValueRow2Title",
+          "value": "@l10n:settingsPagesAboutSubscriptionValueRow2Value"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
           "title": "ASTell 4U",
-          "value": "未購読"
+          "value": "@l10n:settingsPagesAboutSubscriptionValueRow2Value"
         }
       },
       {
         "t": "Text",
         "p": {
-          "text": "有料プランは準備中です。",
+          "text": "@l10n:settingsPagesAboutSubscriptionText1",
           "pad": 16,
           "size": 13,
-          "detail": "プラン: 無料(第一期は購読プラン無し)。有料プランは第二期に RASQ アカウントに紐づけて提供します。"
+          "detail": "@l10n:settingsPagesAboutSubscriptionText1Detail"
         }
       }
     ]

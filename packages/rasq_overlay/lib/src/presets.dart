@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'fow.dart';
 import 'overlay_entry.dart';
 import 'overlay_layer.dart';
+import 'overlay_l10n.dart';
 import 'overlay_manager.dart';
 import 'tethered_panel.dart';
 
@@ -15,7 +16,7 @@ extension OverlayPresets on OverlayManager {
     required String id,
     required WidgetBuilder builder,
     String? title,
-    String? cancelText = 'キャンセル',
+    String? cancelText = kOverlayDefaultCancel,
     String? confirmText,
     VoidCallback? onConfirm,
     String? ownerId,
@@ -46,7 +47,7 @@ extension OverlayPresets on OverlayManager {
                   height: 44,
                   child: Row(children: [
                     if (cancelText != null)
-                      TextButton(onPressed: handle.cancel, child: Text(cancelText, style: TextStyle(color: scheme.onSurfaceVariant)))
+                      TextButton(onPressed: handle.cancel, child: Text(overlayCancelLabel(context, cancelText), style: TextStyle(color: scheme.onSurfaceVariant)))
                     else
                       const SizedBox(width: 80),
                     Expanded(child: Center(child: Text(title ?? '', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)))),
@@ -130,7 +131,7 @@ extension OverlayPresets on OverlayManager {
     required String title,
     required List<RasqAlertChoice<T>> choices,
     String? message,
-    String? cancelText = 'キャンセル',
+    String? cancelText = kOverlayDefaultCancel,
     String? ownerId,
   }) async {
     final result = await show(RasqOverlayEntry(
@@ -159,7 +160,7 @@ extension OverlayPresets on OverlayManager {
                     onPressed: () => handle.close(result: c.value),
                     child: Text(c.label, style: TextStyle(color: c.destructive ? scheme.error : scheme.primary, fontWeight: c.primary ? FontWeight.w700 : FontWeight.w400)),
                   ),
-                if (cancelText != null) TextButton(onPressed: handle.cancel, child: Text(cancelText, style: TextStyle(color: scheme.onSurfaceVariant))),
+                if (cancelText != null) TextButton(onPressed: handle.cancel, child: Text(overlayCancelLabel(context, cancelText), style: TextStyle(color: scheme.onSurfaceVariant))),
               ]),
             ),
           ),

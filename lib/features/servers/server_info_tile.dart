@@ -6,13 +6,14 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
 import '../../backend/server_info_api.dart';
+import '../../l10n/l10n.dart';
 
 /// サーバー情報タイル (D-345)。**インスタンスのあるサービスだけ**(Central S-043 が nodeinfo で見分ける。Bluesky など
 /// インスタンスの無いもの / 分からないものは何も出さない)。上から バナー → アイコン + サーバー名 + ホスト → ソフトとバージョン /
 /// 人数 / 投稿数 / 登録の受付 → 説明(3 行)→ **クラウド版 RAi によるユーザーの特性の解説**(コミュニティの話が出てきている
 /// サーバーだけ。それ以外は欄ごと出さない)→「サーバーを開く」。
 class ServerInfoTile extends ConsumerWidget {
-  const ServerInfoTile({super.key, required this.host, this.withRai = true, this.onOpen, this.openLabel = 'サーバーを開く'});
+  const ServerInfoTile({super.key, required this.host, this.withRai = true, this.onOpen, this.openLabel});
   final String host;
 
   /// RAi の解説を引くか(一覧に並べるときは切る)。
@@ -21,8 +22,8 @@ class ServerInfoTile extends ConsumerWidget {
   /// 「サーバーを開く」の差し替え(既定 = ブラウザ)。
   final VoidCallback? onOpen;
 
-  /// そのボタンの文言(オンボーディングでは「このサーバーに登録」、D-412)。
-  final String openLabel;
+  /// そのボタンの文言(オンボーディングでは「このサーバーに登録」、D-412)。null = 「サーバーを開く」。
+  final String? openLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,7 +31,7 @@ class ServerInfoTile extends ConsumerWidget {
     return info.when(
       loading: () => const SizedBox(height: 48, child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)))),
       error: (_, _) => const SizedBox.shrink(),
-      data: (i) => i == null ? const SizedBox.shrink() : _ServerInfoCard(info: i, withRai: withRai, onOpen: onOpen, openLabel: openLabel),
+      data: (i) => i == null ? const SizedBox.shrink() : _ServerInfoCard(info: i, withRai: withRai, onOpen: onOpen, openLabel: openLabel ?? context.l10n.serversOpen),
     );
   }
 }
@@ -49,9 +50,9 @@ class _ServerInfoCard extends ConsumerWidget {
     final theme = _color(info.themeColor) ?? RasqColors.sub;
     final stats = [
       if (info.software != null) '${info.software}${info.version == null ? '' : ' ${info.version}'}',
-      if (info.users != null) '${_count(info.users!)} 人',
-      if (info.posts != null) '${_count(info.posts!)} 投稿',
-      if (info.registrationOpen != null) info.registrationOpen! ? '登録受付中' : '招待制 / 受付停止',
+      if (info.users != null) context.l10n.serversUsers(_count(info.users!)),
+      if (info.posts != null) context.l10n.serversPosts(_count(info.posts!)),
+      if (info.registrationOpen != null) info.registrationOpen! ? context.l10n.serversRegistrationOpen : context.l10n.serversRegistrationClosed,
     ];
     return Container(
       key: ValueKey('server.tile.${info.host}'),
@@ -85,7 +86,7 @@ class _ServerInfoCard extends ConsumerWidget {
             ]),
             if (stats.isNotEmpty) ...[
               const SizedBox(height: RasqSpacing.xs),
-              Text(stats.join(' ・ '), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis),
+              Text(stats.join(context.l10n.serversStatsSeparator), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis),
             ],
             if (info.description?.trim().isNotEmpty ?? false) ...[
               const SizedBox(height: RasqSpacing.xs),
@@ -124,7 +125,7 @@ class _RaiSection extends StatelessWidget {
         Row(children: [
           const Icon(Icons.auto_awesome, size: 14, color: RasqColors.sub),
           const SizedBox(width: RasqSpacing.xs),
-          Expanded(child: Text('RAi によるユーザーの傾向', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
+          Expanded(child: Text(context.l10n.serversRaiTitle, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
         ]),
         const SizedBox(height: RasqSpacing.xs),
         Text(profile.summary!.trim(), style: RasqTypography.bodySmall),
@@ -136,7 +137,7 @@ class _RaiSection extends StatelessWidget {
           ]),
         ],
         const SizedBox(height: RasqSpacing.xs),
-        Text('公開の投稿 ${profile.sampleCount} 件から、クラウド版 RAi がまとめました', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        Text(context.l10n.serversRaiSource(profile.sampleCount), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
       ]),
     );
   }
@@ -168,17 +169,17 @@ Future<void> showServerInfoFow(WidgetRef ref, String host) async {
   final info = await ref.read(serverInfoProvider(host).future);
   await manager.showBottomSheet<void>(
     id: 'server.info',
-    title: 'サーバー情報',
+    title: appL10n.serversInfoTitle,
     builder: (_) => Padding(
       padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.md),
-      child: info == null ? Text('$host はサーバー情報を出していません(インスタンスの無いサービスか、取れませんでした)', style: RasqTypography.bodySmall) : ServerInfoTile(host: host),
+      child: info == null ? Text(appL10n.serversInfoUnavailable(host), style: RasqTypography.bodySmall) : ServerInfoTile(host: host),
     ),
   );
 }
 
 String _count(int n) {
-  if (n >= 100000000) return '${(n / 100000000).toStringAsFixed(1)}億';
-  if (n >= 10000) return '${(n / 10000).toStringAsFixed(n >= 100000 ? 0 : 1)}万';
+  if (n >= 100000000) return appL10n.serversCountHundredMillions((n / 100000000).toStringAsFixed(1));
+  if (n >= 10000) return appL10n.serversCountTenThousands((n / 10000).toStringAsFixed(n >= 100000 ? 0 : 1));
   return '$n';
 }
 

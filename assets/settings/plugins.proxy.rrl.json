@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "plugins.proxy",
-  "title": "RASQプラグインプロキシの購読",
+  "title": "@l10n:settingsPagesPluginsProxyTitle",
   "defaults": {},
   "root": {
     "t": "Column",
@@ -9,38 +9,38 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "状態"
+          "title": "@l10n:settingsPagesPluginsProxySection1Title"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
-          "title": "購読",
-          "value": "未購読"
+          "title": "@l10n:settingsPagesPluginsProxyValueRow1Title",
+          "value": "@l10n:settingsPagesPluginsProxyValueRow1Value"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
-          "title": "提供",
-          "value": "準備中"
+          "title": "@l10n:settingsPagesPluginsProxyValueRow2Title",
+          "value": "@l10n:settingsPagesPluginsProxyValueRow2Value"
         }
       },
       {
         "t": "Text",
         "p": {
-          "text": "プラグインプロキシは準備中です。いまはプラグインが端末から直接通信します。",
+          "text": "@l10n:settingsPagesPluginsProxyText1",
           "pad": 16,
           "size": 13,
-          "detail": "プラグインプロキシは、wasm プラグインの外部通信を RASQ サーバー経由に束ねる有料サービスです。第一期では提供していないため、プラグインは端末から直接 SNS / 自前サーバーへ通信します。 提供: 第二期(RASQ サーバーの課金基盤と同時)。"
+          "detail": "@l10n:settingsPagesPluginsProxyText1Detail"
         }
       },
       {
         "t": "ListTile",
         "k": "/settings/server",
         "p": {
-          "title": "RASQ サーバーの接続先",
-          "subtitle": "提供が始まったら、ここで選んだサーバーを使います"
+          "title": "@l10n:settingsPagesPluginsProxySettingsServerTitle",
+          "subtitle": "@l10n:settingsPagesPluginsProxySettingsServerSubtitle"
         },
         "on": {
           "tap": "route.push"

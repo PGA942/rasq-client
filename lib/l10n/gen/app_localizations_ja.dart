@@ -10,6 +10,302 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get adsShowLess => '表示頻度を下げる';
+
+  @override
+  String get adsShowLessDone => 'この広告の表示頻度を下げました';
+
+  @override
+  String get adsLabel => '広告';
+
+  @override
+  String adsLabelWithHost(String host) {
+    return '広告 · $host';
+  }
+
+  @override
+  String get adsMenu => '広告のメニュー';
+
+  @override
+  String get adsOpen => '広告を開く';
+
+  @override
+  String get appNavPostTitle => '投稿';
+
+  @override
+  String get appNavReactionsTitle => 'リアクション';
+
+  @override
+  String get appNavFollowersTitle => 'フォロワー';
+
+  @override
+  String get appNavFollowingTitle => 'フォロー中';
+
+  @override
+  String get appNavShortcutSearch => '検索';
+
+  @override
+  String get appNavShortcutNewPost => '新しいポスト';
+
+  @override
+  String get appNavShortcutNewMessage => 'メッセージを作成';
+
+  @override
+  String get appNavShortcutAskRai => 'RAiと探す';
+
+  @override
+  String get appNavShortcutGuardianPending => '保護者が設定を決めるまで使えません';
+
+  @override
+  String get appNavShortcutLoginHint => 'SNS アカウントにログインすると使えます';
+
+  @override
+  String get backendOauthNoToken => 'アクセストークンを取得できませんでした';
+
+  @override
+  String backendOauthServerRequired(String service) {
+    return '$service のログインには RASQ サーバーが必要です。設定 →「RASQ サーバー」で接続先を設定してください。';
+  }
+
+  @override
+  String get backendOauthNoUrl => '認証 URL を取得できませんでした';
+
+  @override
+  String get backendOauthHint => 'ブラウザで許可したら、アプリに戻って「認証を確認」を押してください。';
+
+  @override
+  String backendResponseTooLarge(int maxBytes) {
+    return '応答が大きすぎます($maxBytes bytes を超えています)';
+  }
+
+  @override
+  String get backendSecurityPasswordlessRemoved =>
+      'メールのコードだけのログインは終わりました。ハンドル(またはメール)とパスワードでログインしてください';
+
+  @override
+  String get backendSecuritySecondFactor => 'メールに届いた確認コードを入れてください';
+
+  @override
+  String get backendSecurityTooMany => '試行が多すぎます。しばらく待ってから、やり直してください';
+
+  @override
+  String get backendSecurityNoMail => 'このサーバーは、メールを送れる設定になっていません';
+
+  @override
+  String get backendSecurityEmailUsed => 'このメールアドレスは、ほかのアカウントで使われています';
+
+  @override
+  String get backendSecurityBadCredentials => 'ハンドル(メール)かパスワードが違います';
+
+  @override
+  String get backendSecurityBadCode => 'コードが違うか、期限が切れています';
+
+  @override
+  String get backendSecurityWeakPassword =>
+      'このパスワードは弱すぎます(よく使われるもの / 同じ字の繰り返し / ハンドルやメールと同じもの は使えません)';
+
+  @override
+  String get backendSecurityShortPassword => 'パスワードは 8 文字以上にしてください';
+
+  @override
+  String get backendSecurityBadEmail => 'メールアドレスの形が正しくありません';
+
+  @override
+  String get backendSecurityWrongPassword => 'いまのパスワードが違います';
+
+  @override
+  String get backendSecurityNoPassword =>
+      'このアカウントにはパスワードがありません。いまのメールに届く確認コードで確かめてください';
+
+  @override
+  String get backendSecurityConfirmRequired =>
+      'この操作には、いまのパスワードか、いまのメールに届く確認コードが要ります';
+
+  @override
+  String get backendRoomClosed => 'ルームに入れませんでした(ルームが閉じているか、見つかりません)';
+
+  @override
+  String get backendRoomForbidden => 'ルームに入れませんでした(このアカウントでは参加できません)';
+
+  @override
+  String backendRoomConnectFailed(String error) {
+    return 'ルームに接続できませんでした: $error';
+  }
+
+  @override
+  String get backendPaidFeaturesDisabled => '公開テストでは有料プラグインは使えません';
+
+  @override
+  String get backendAgeTeen => '13〜15 歳';
+
+  @override
+  String get backendAgeUpperTeen => '16〜17 歳';
+
+  @override
+  String get backendAgeAdult => '18 歳以上';
+
+  @override
+  String get backendNoToken => 'ORGATE がトークンを返しませんでした';
+
+  @override
+  String get backendTileAuto => '自動';
+
+  @override
+  String get backendTileShow => '表示';
+
+  @override
+  String get backendTileHide => '非表示';
+
+  @override
+  String get backendVerifiedKeybase => 'Keybase の証明で確認済み';
+
+  @override
+  String get backendVerifiedProfile => 'プロフィールで確認済み';
+
+  @override
+  String get backendAudioFileName => '音声';
+
+  @override
+  String get backendServerNotConfigured => 'RASQ サーバーの接続先が未設定です';
+
+  @override
+  String backendServerError(int status) {
+    return 'サーバーエラー ($status)';
+  }
+
+  @override
+  String get backendCollectionList => 'リスト';
+
+  @override
+  String get backendCollectionClip => 'クリップ';
+
+  @override
+  String get bookmarksRemoved => 'ブックマークを外しました';
+
+  @override
+  String bookmarksRemoveFailed(String error) {
+    return '外せませんでした: $error';
+  }
+
+  @override
+  String get bookmarksTitle => 'ブックマーク';
+
+  @override
+  String get bookmarksRetry => '再読み込み';
+
+  @override
+  String get bookmarksEmptyTitle => 'ブックマークはありません';
+
+  @override
+  String get bookmarksEmptyHint => '投稿の 🔖、クリップに追加、ASTell のしおりで集められます';
+
+  @override
+  String get bookmarksEmptyNoSnsHint =>
+      'このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます';
+
+  @override
+  String get bookmarksClips => 'クリップ';
+
+  @override
+  String bookmarksClipCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bookmarksClipHost => 'RASQ(SNS 横断)';
+
+  @override
+  String get bookmarksClipPrivate => '非公開クリップ';
+
+  @override
+  String get bookmarksSeparator => ' ・ ';
+
+  @override
+  String get bookmarksFavorites => 'お気に入り';
+
+  @override
+  String get bookmarksSwipeRemove => '外す';
+
+  @override
+  String get bookmarksRemove => 'ブックマークを外す';
+
+  @override
+  String get catalogTitle => 'コンポーネントカタログ';
+
+  @override
+  String get catalogSectionBrand => 'Brand (特殊なコンポーネント置き場)';
+
+  @override
+  String get catalogSectionPostTile => 'PostTile — 通常 (アクションバー / 投票 / メディア)';
+
+  @override
+  String get catalogSectionPostTileEmbedded =>
+      'PostTile — 埋め込み (引用 / リアクション表示 / タイマー通知) & スレッドまとめ';
+
+  @override
+  String get catalogSectionCollapsed => 'CollapsedPost (省略表示: 既読 + 長文)';
+
+  @override
+  String get catalogSectionPoll => 'PollWidget (未投票 単一 / 複数, 投票済み, 期限切れ)';
+
+  @override
+  String get catalogSectionActionBar =>
+      'ActionBar (spread / leading = コンポーザーツールバー)';
+
+  @override
+  String get catalogSectionRrl => 'RRL レンダラー (post-tile.rrl.json → L1/L2/L3)';
+
+  @override
+  String get catalogSheetTitle => 'ボトムシート';
+
+  @override
+  String get catalogSheetConfirm => '決定';
+
+  @override
+  String get catalogSheetBody => '背面タップ or キャンセルで変更破棄。\nこの上にモーダルは割り込めます。';
+
+  @override
+  String get catalogAlertTitle => 'ブロックしますか？';
+
+  @override
+  String get catalogAlertMessage => '背面タップは無効(明示的操作必須)';
+
+  @override
+  String get catalogAlertConfirm => 'ブロック';
+
+  @override
+  String get catalogAlertCancel => 'キャンセル';
+
+  @override
+  String get catalogDropdownAsc => '昇順';
+
+  @override
+  String get catalogDropdownDesc => '降順';
+
+  @override
+  String get catalogDropdownDefault => 'デフォルト';
+
+  @override
+  String get catalogDropdownReport => '通報';
+
+  @override
+  String get catalogSheetModalTitle => 'シート→モーダル割り込み';
+
+  @override
+  String get catalogModalTitle => 'モーダル';
+
+  @override
+  String get catalogModalMessage => 'シートは維持されます';
+
+  @override
+  String get catalogModalOpen => 'モーダルを出す';
+
+  @override
   String get childSafeLevelStrict => 'きびしめ';
 
   @override
@@ -1029,6 +1325,206 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeScreensPendingRasqLogin => 'RASQ アカウントにログイン';
+
+  @override
+  String get clipsNoSession => 'セッションがありません';
+
+  @override
+  String get clipsChildSafeBlocked => '保護者がこのクリップを止めています';
+
+  @override
+  String get clipsRetry => '再読み込み';
+
+  @override
+  String get clipsEmptyTitle => 'クリップは空です';
+
+  @override
+  String get clipsEmptyHint => '投稿メニューの「クリップに追加」からここへ集められます';
+
+  @override
+  String clipsPostCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsKindHost => 'RASQ クリップ(SNS 横断)';
+
+  @override
+  String get clipsKindPrivate => '非公開クリップ';
+
+  @override
+  String get clipsCaptionSeparator => ' ・ ';
+
+  @override
+  String get clipsLoading => '読み込み中…';
+
+  @override
+  String get clipsLoadMore => 'さらに読み込む';
+
+  @override
+  String clipsActionFailed(String error) {
+    return 'できませんでした: $error';
+  }
+
+  @override
+  String get clipsPublishHint => '公開すると、アカウントページと共有リンクから見られます';
+
+  @override
+  String clipsPublishHintSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '公開すると、アカウントページと共有リンクから見られます(フォロワー限定などの $count 件は載せません)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsPublishNeedsAccount => '公開するには RASQ アカウントが必要です';
+
+  @override
+  String get clipsPublish => '公開する';
+
+  @override
+  String clipsPublishedPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '公開しました(公開範囲を確かめている投稿が $count 件あります)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsPublished => '公開しました';
+
+  @override
+  String clipsPublishedStatusSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '公開中(フォロワー限定などの $count 件は載せていません)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsPublishedStatus => '公開中';
+
+  @override
+  String get clipsLinkCopied => 'リンクをコピーしました';
+
+  @override
+  String get clipsCopyLink => 'リンクをコピー';
+
+  @override
+  String get clipsUnpublished => '公開をやめました';
+
+  @override
+  String get clipsUnpublish => '公開をやめる';
+
+  @override
+  String get clipsAddTitle => 'クリップに追加';
+
+  @override
+  String get clipsAddAddedHost => '追加済み ・ RASQ クリップ';
+
+  @override
+  String get clipsAddAddedHostPublished => '追加済み ・ RASQ クリップ(公開中)';
+
+  @override
+  String clipsAddHostRow(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件 ・ RASQ クリップ(SNS 横断)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String clipsAddHostRowPublished(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件 ・ RASQ クリップ(SNS 横断) ・ 公開中',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsAddCreate => '新しいクリップを作成';
+
+  @override
+  String clipsAdded(String name) {
+    return '「$name」に追加しました';
+  }
+
+  @override
+  String clipsAddFailed(String error) {
+    return 'クリップに追加できませんでした: $error';
+  }
+
+  @override
+  String get clipsCreateTitle => '新しいクリップ';
+
+  @override
+  String get clipsCreateNameHint => 'クリップ名';
+
+  @override
+  String get clipsCreateDescriptionHint => '説明(任意)';
+
+  @override
+  String get clipsCreateHost => 'RASQ クリップ(SNS 横断)にする';
+
+  @override
+  String get clipsCreateHostSubtitle => '端末に保存され、別の SNS の投稿も同じクリップへ入れられます';
+
+  @override
+  String get clipsCreateAndAdd => '作成して追加';
+
+  @override
+  String get clipsIndexFallback => '話題を特定できない投稿';
+
+  @override
+  String get clipsIndexSingles => '単発投稿';
+
+  @override
+  String clipsIndexRelated(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '関連投稿 $count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsTocTitle => '目次';
+
+  @override
+  String clipsTocPeople(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsTocFiltering => '絞り込み中';
+
+  @override
+  String get clipsNoServer => 'RASQ アカウントのサーバーが設定されていません';
+
+  @override
+  String get clipsNotFound => 'クリップがありません';
 
   @override
   String get collectionsImportToTimeline => 'タイムラインに取り込む';
@@ -2789,6 +3285,230 @@ class AppLocalizationsJa extends AppLocalizations {
   String get customAstellPropose => 'プラグインを提案';
 
   @override
+  String get devGrantDebugAll => 'デバッグビルド: 全権限';
+
+  @override
+  String get devUrlInvalid => 'http(s) の URL を入れてください';
+
+  @override
+  String devUrlLoadFailed(String error) {
+    return 'URL から読めませんでした: $error';
+  }
+
+  @override
+  String devBoundaryTimelineFailed(String error) {
+    return '境界TL: $error';
+  }
+
+  @override
+  String devAssetLoadFailed(String error) {
+    return 'アセットの読み込みに失敗: $error';
+  }
+
+  @override
+  String devPkgLoaded(
+    String rootId,
+    String version,
+    int children,
+    String target,
+  ) {
+    return '.rasqpkg: $rootId $version(子 $children)→ $target を読み込み。';
+  }
+
+  @override
+  String devPkgSigned(String fingerprint) {
+    return '開発者鍵の署名 OK(指紋 $fingerprint)。ストアの審査は通っていません。';
+  }
+
+  @override
+  String get devPkgUnsigned => '署名なし(.sig.json がありません)。出どころを確かめられません。';
+
+  @override
+  String get devPkgSlotFull => 'スロットに登録するとフル機能(自分の鍵の署名)';
+
+  @override
+  String get devPkgSlotRestricted =>
+      'スロットに登録すると制限モード(自分の鍵の署名ではないため、通信 / GPU / storage.unsafe / interstitial・system の FOW / 共有・コンポーザー・ミュート・URL を開く関数は閉)';
+
+  @override
+  String devPathLoadFailed(String path, String error) {
+    return '$path の読み込みに失敗(絶対パスか ~/ 始まりで指定してください): $error';
+  }
+
+  @override
+  String get devFowClose => '閉じる';
+
+  @override
+  String get devFowSemantics => 'プラグインFOW';
+
+  @override
+  String get devRegisterNeedsMisskey => '実登録には Misskey アカウントでのログインが必要です';
+
+  @override
+  String get devTitle => 'WASMプラグイン試験 (dev)';
+
+  @override
+  String get devHostHint => 'インスタンス (例: misskey.io)';
+
+  @override
+  String get devFetchTimeline => 'TL取得';
+
+  @override
+  String get devBoundaryTimeline => '境界TL';
+
+  @override
+  String get devPathHint => '.wasm のパスからインポート (空欄=同梱アセット)';
+
+  @override
+  String get devLoad => '読み込み';
+
+  @override
+  String get devRegisterReal => '実登録';
+
+  @override
+  String get devUrlHint => 'URL から読む(審査の仮インポート用のリンク)';
+
+  @override
+  String get devUrlLoad => 'URL から読む';
+
+  @override
+  String get devOpenedFromLink =>
+      'リンクから開きました。出どころを確かめてから「URL から読む」を押してください(審査中の版は制限モードで動きます)。';
+
+  @override
+  String devParentInstalled(String id, String version) {
+    return '親(土台)のプラグイン: $id $version(入っています)';
+  }
+
+  @override
+  String devParentMissing(String id, String version) {
+    return '親(土台)のプラグイン: $id $version— 先に入れてください';
+  }
+
+  @override
+  String get devOpenInStore => 'ストアで開く';
+
+  @override
+  String devGrantDebugNote(String grant, String hint) {
+    return '$grant(release ビルドでは段で絞ります: $hint)';
+  }
+
+  @override
+  String devGrantMode(String mode, String hint) {
+    return 'この画面: $mode — $hint';
+  }
+
+  @override
+  String get devModeFull => 'フル機能';
+
+  @override
+  String get devModeBundled => 'フル機能(アプリ同梱)';
+
+  @override
+  String get devModeRestricted => '制限モード';
+
+  @override
+  String get devModeSwing => '制限モード(Swing)';
+
+  @override
+  String get devSlotRegister => 'スロットに登録';
+
+  @override
+  String devSlotRegistered(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '登録済み: $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String devSlotModeHint(String hint) {
+    return 'スロットの段: フル / 制限 — $hint';
+  }
+
+  @override
+  String get devSlotReviewed => '審査済み';
+
+  @override
+  String get devSlotUnregister => '解除';
+
+  @override
+  String get devBoundaryHeader => '境界セッション: sns.timeline → Post ワイヤ → PostRow';
+
+  @override
+  String get devBoundaryClose => '閉じる';
+
+  @override
+  String devActionFailed(String action, String error) {
+    return 'performAction($action) 失敗: $error';
+  }
+
+  @override
+  String devReviewImportTooLarge(int maxBytes) {
+    return '大きさが不正です($maxBytes bytes を超えています)';
+  }
+
+  @override
+  String get devReviewImportExpired => 'リンクの期限が切れたか、違うリンクです。審査の画面で作り直してください';
+
+  @override
+  String devReviewImportHttpFailed(int status) {
+    return '取得に失敗しました(HTTP $status)';
+  }
+
+  @override
+  String devReviewImportBadSize(int bytes) {
+    return '大きさが不正です($bytes bytes)';
+  }
+
+  @override
+  String get dmRoomSettings => 'このDMの設定';
+
+  @override
+  String get dmRetry => '再読み込み';
+
+  @override
+  String get dmRoomEmpty => 'まだメッセージはありません';
+
+  @override
+  String get dmTabAll => '全て';
+
+  @override
+  String get dmTabFollowing => 'フォロー中';
+
+  @override
+  String get dmSettings => 'DM設定';
+
+  @override
+  String get dmFollowingEmpty => 'フォロー中のDMはありません';
+
+  @override
+  String get dmNewMessage => '新規メッセージ';
+
+  @override
+  String get dmUserSearchHint => 'ユーザー名で検索..';
+
+  @override
+  String get dmUserSearchIntro => 'DM を送る相手を検索します。';
+
+  @override
+  String get dmUserNotFound => '見つかりませんでした';
+
+  @override
+  String get dmEmptyTitle => 'DMはありません';
+
+  @override
+  String get dmEmptyHint => 'ダイレクト投稿(限定公開)がここに並びます';
+
+  @override
+  String get dmYouPrefix => 'あなた: ';
+
+  @override
+  String get dmMediaPlaceholder => '[メディア]';
+
+  @override
   String get homeCreateMissingAccount => '(いないアカウント)';
 
   @override
@@ -3617,6 +4337,240 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listsPickerRasqBadgeSemantics => 'RASQ のユーザー';
+
+  @override
+  String get loginBack => '戻る';
+
+  @override
+  String get loginTitle => 'SNSにログイン';
+
+  @override
+  String get loginPluginLoadNote =>
+      '初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。';
+
+  @override
+  String get loginChildSafeBlocked => '保護者が SNS アカウントの追加を止めています';
+
+  @override
+  String get loginShareDeviceOnly =>
+      'メールでこの端末を承認しました。SNS アカウントには、下のボタンからこの端末でログインしてください';
+
+  @override
+  String get loginWithBluesky => 'Blueskyでログイン';
+
+  @override
+  String get loginWithMisskey => 'Misskeyでログイン';
+
+  @override
+  String get loginWithMixi2 => 'mixi2でログイン';
+
+  @override
+  String get loginWithMastodon => 'Mastodonでログイン';
+
+  @override
+  String get loginDiscover => 'サービスを探してログイン';
+
+  @override
+  String get loginRaiInstruction => 'Raiのインストラクチャ';
+
+  @override
+  String get loginShareMailUnavailable => 'いまは送れません';
+
+  @override
+  String loginShareMailSent(String to) {
+    return '$to に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください';
+  }
+
+  @override
+  String get loginShareMailSentVerified =>
+      '確認済みのメールアドレス に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください';
+
+  @override
+  String get loginShareMailNoVerified =>
+      '確認済みのメールアドレスがありません。元の端末で承認するか、SNS アカウントにこの端末でログインしてください';
+
+  @override
+  String get loginShareMailTooMany => '送りすぎです。しばらく待ってから、もう一度送ってください';
+
+  @override
+  String get loginShareMailNotSupported => 'このサーバーでは、メールでの承認を使えません';
+
+  @override
+  String loginShareMailFailed(String code) {
+    return '送れませんでした($code)';
+  }
+
+  @override
+  String get loginShareWaiting =>
+      '元の端末で共有を承認すると、SNS アカウントに一斉ログインします。確認済みのメールに届いたリンクからも承認できます';
+
+  @override
+  String get loginShareMailButton => 'メールで承認する(リンクを送る)';
+
+  @override
+  String get loginBundleTitleThis => 'この RASQ アカウント の SNS アカウント';
+
+  @override
+  String loginBundleTitle(String handle) {
+    return '@$handle の SNS アカウント';
+  }
+
+  @override
+  String get loginBundleHint => 'この端末では、まだログインしていません。押すとログインできます。';
+
+  @override
+  String get loginBundleUse => '使う';
+
+  @override
+  String get loginBundleLogin => 'ログイン';
+
+  @override
+  String get loginTermsTitle => 'プラグインの規約';
+
+  @override
+  String get loginTermsAgree => '同意';
+
+  @override
+  String loginTermsBullet(String text) {
+    return '・$text';
+  }
+
+  @override
+  String loginSignupDivider(String service) {
+    return '$service のアカウントを持っていない';
+  }
+
+  @override
+  String get loginSignupButton => '新規登録';
+
+  @override
+  String get loginSignupReopen => '登録ページをもう一度開く';
+
+  @override
+  String loginBrowserOpenFailed(String url) {
+    return 'ブラウザを開けませんでした。URL: $url';
+  }
+
+  @override
+  String get loginPluginMissingMixi2 => 'mixi2 プラグインが見つかりません';
+
+  @override
+  String loginMixi2BrowserPending(String url) {
+    return 'ブラウザで許可してからアプリに戻ってください: $url';
+  }
+
+  @override
+  String loginFailed(String error) {
+    return 'ログインできませんでした: $error';
+  }
+
+  @override
+  String get loginMixi2HostHint => 'ホスト (例: mixi.social)';
+
+  @override
+  String get loginMixi2Note =>
+      'mixi2 の公式 API は申請制で、ログインは RASQ のサーバーを経由します。準備が整うまで「ブラウザで認証」は使えません。';
+
+  @override
+  String get loginMixi2Browser => 'ブラウザで認証';
+
+  @override
+  String get loginMixi2Dummy => 'ダミーアカウントで試す';
+
+  @override
+  String get loginMixi2DummyNote =>
+      'ダミーはネットワークを使わず、プラグインの中の投稿で TL / いいね / リポスト / 投稿 / 通知の流れを確かめられます。';
+
+  @override
+  String get loginMixi2SignupHint =>
+      'mixi2 のアカウントは、ブラウザ(または mixi2 のアプリ)で作ります。作れたら、この画面に戻って「ブラウザで認証」でログインしてください。';
+
+  @override
+  String get loginPluginMissingBluesky => 'Bluesky プラグインが見つかりません';
+
+  @override
+  String get loginBlueskyHostHint => 'PDS (例: bsky.social)';
+
+  @override
+  String get loginBlueskyIdHint => 'ハンドル (例: you.bsky.social) またはメール';
+
+  @override
+  String get loginBlueskyPasswordHint => 'アプリパスワード';
+
+  @override
+  String get loginPasswordHide => '隠す';
+
+  @override
+  String get loginPasswordShow => '表示';
+
+  @override
+  String get loginBlueskyPasswordNote =>
+      'Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」で作ったパスワードを使ってください。本パスワードは入れないでください。';
+
+  @override
+  String get loginButton => 'ログイン';
+
+  @override
+  String get loginBlueskySignupHint =>
+      'ブラウザの Bluesky で「アカウントを作成」から登録してください。登録できたら、Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」でパスワードを作り、上のハンドルとアプリパスワードでログインします。';
+
+  @override
+  String get loginServerUnreachable => 'サーバーに接続できませんでした';
+
+  @override
+  String loginServerUnreachableWithError(String error) {
+    return 'サーバーに接続できませんでした: $error';
+  }
+
+  @override
+  String loginAuthStartFailed(String error) {
+    return '認証を開始できませんでした: $error';
+  }
+
+  @override
+  String loginAuthCheckFailed(String error) {
+    return '認証の確認に失敗しました: $error';
+  }
+
+  @override
+  String get loginSnsTitle => 'PDSを変更';
+
+  @override
+  String get loginSnsNote => 'PDSを変更すると、アプリ外でのURL表示が変わります。';
+
+  @override
+  String loginSnsHostHint(String example) {
+    return '移行先のURLを入力 (例: $example)';
+  }
+
+  @override
+  String get loginSnsSearch => 'サーバーを検索';
+
+  @override
+  String get loginSnsServerSection => 'サーバーの検索';
+
+  @override
+  String loginSnsMaintainer(String name) {
+    return '管理人:$name';
+  }
+
+  @override
+  String get loginSnsRegistrationClosed => '登録停止中';
+
+  @override
+  String get loginSnsAuthCheck => '認証を確認';
+
+  @override
+  String get loginSnsReopenBrowser => 'ブラウザをもう一度開く';
+
+  @override
+  String get loginMisskeyAuthButton => 'ブラウザで認証する (MiAuth)';
+
+  @override
+  String get loginMastodonAuthButton => 'ブラウザで認証する (OAuth)';
+
+  @override
+  String get loginMastodonHostHint => 'インスタンスのURLを入力 (例: mastodon.social)';
 
   @override
   String get mediaVizStyleMirror => '上下対称のバー';
@@ -6041,6 +6995,27 @@ class AppLocalizationsJa extends AppLocalizations {
       'メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます';
 
   @override
+  String get notifyPushChannelName => 'RASQ の通知';
+
+  @override
+  String get notifyPushChannelDescription => 'メンション / 返信 / Swing などの知らせ';
+
+  @override
+  String get notifyOpenAction => '開く';
+
+  @override
+  String get notifyGlimpseChannelName => '画面の読み取り';
+
+  @override
+  String get notifyGlimpseChannelDescription => 'タップすると、いま見ている画面を少しだけ読み取ります';
+
+  @override
+  String get notifyAstellChannelName => 'ASTell の開始';
+
+  @override
+  String get notifyAstellChannelDescription => 'ブックマークした ASTell の開始通知';
+
+  @override
   String get onboardingBack => '戻る';
 
   @override
@@ -7060,6 +8035,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingTourRaiBubble => 'TL にリストを足したい';
+
+  @override
+  String get platformWebRuntimeLoadFailed =>
+      '実行に要るファイルを読み込めませんでした(ネットワーク / CDN)';
+
+  @override
+  String get platformWebServerNotConfigured => 'RASQ サーバーの接続先が未設定です';
+
+  @override
+  String platformWebDownloadFailed(String error) {
+    return 'ダウンロードに失敗しました: $error';
+  }
+
+  @override
+  String platformWebModelLoadFailed(String error) {
+    return 'モデルを読み込めません: $error';
+  }
 
   @override
   String get pluginsCancel => 'キャンセル';
@@ -10509,6 +11501,543 @@ class AppLocalizationsJa extends AppLocalizations {
   String get raiModelsNoteNotInstalled => '未DL';
 
   @override
+  String get relationalPostTitle => '投稿';
+
+  @override
+  String relationalEventTitle(String name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$name+$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String relationalEventCaption(int posts, int members) {
+    String _temp0 = intl.Intl.pluralLogic(
+      posts,
+      locale: localeName,
+      other: '$posts件',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      members,
+      locale: localeName,
+      other: '$members人',
+    );
+    return '$_temp0 ・ $_temp1';
+  }
+
+  @override
+  String relationalEventPostCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String relationalDurationHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours時間',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String relationalDurationHoursMinutes(int hours, int minutes) {
+    return '$hours時間$minutes分';
+  }
+
+  @override
+  String relationalDurationMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes分',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String relationalLookback(String duration) {
+    return '$duration前の会話まで表示中';
+  }
+
+  @override
+  String get relationalLookbackReset => '戻す';
+
+  @override
+  String get relationalHeader => '会話ごとにまとめて表示しています';
+
+  @override
+  String relationalHeaderDetail(int bias, int maxMinutes) {
+    return '束ねやすさ $bias / 会話のテンポに応じて最長$maxMinutes分で沈む';
+  }
+
+  @override
+  String get relationalTuningTitle => 'リレーショナルTL調整';
+
+  @override
+  String get relationalRetry => '再読み込み';
+
+  @override
+  String get relationalEmptyTitle => 'いま進行中の会話はありません';
+
+  @override
+  String get relationalEmptyHint => 'フォロー中の人の会話が、ここにまとまって出ます。引っ張ると過去の会話も見られます';
+
+  @override
+  String get relationalTuningCancel => 'キャンセル';
+
+  @override
+  String get relationalTuningConfirm => '決定';
+
+  @override
+  String get relationalAdvanced => '詳細設定';
+
+  @override
+  String get relationalSectionLinking => '束ね判定';
+
+  @override
+  String get relationalCandidateWindow => '候補ウィンドウ';
+
+  @override
+  String get relationalCandidateWindowSubtitle => '親候補を探す直近の範囲';
+
+  @override
+  String relationalMinutesValue(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes分',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String relationalSecondsValue(int seconds) {
+    String _temp0 = intl.Intl.pluralLogic(
+      seconds,
+      locale: localeName,
+      other: '$seconds秒',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get relationalSectionWeightsPlain => '重み(通常投稿)';
+
+  @override
+  String get relationalWeightContent => '内容類似';
+
+  @override
+  String get relationalWeightEntity => 'エンティティ一致';
+
+  @override
+  String get relationalWeightTime => '時間減衰';
+
+  @override
+  String get relationalWeightAffinity => 'ペア親密度';
+
+  @override
+  String get relationalWeightTurn => '発話交替';
+
+  @override
+  String get relationalWeightAnchor => 'アンカー';
+
+  @override
+  String get relationalSectionFlatBonus => 'フラット加点';
+
+  @override
+  String get relationalWeightCommunityPrior => 'コミュニティ事前分布 ±';
+
+  @override
+  String get relationalSectionLifecycle => 'ライフサイクル';
+
+  @override
+  String get relationalTentativeHold => '仮 ROOT 保留';
+
+  @override
+  String get relationalTentativeHoldSubtitle => '新話題として確定するまでの保留時間';
+
+  @override
+  String get relationalResetDefaults => '既定に戻す';
+
+  @override
+  String get relationalLinkBias => '束ねやすさ';
+
+  @override
+  String get relationalLinkBiasSubtitle => '低いほど広く束ねる(しきい値はコミュニティ別に自動調整)';
+
+  @override
+  String get relationalTauSubtitle => '大きいほど時間が離れた投稿もリンクしやすい(τ)';
+
+  @override
+  String get relationalSectionWeights => '重み';
+
+  @override
+  String get relationalSimilarity => '類似性';
+
+  @override
+  String get relationalSimilaritySubtitle => '内容類似+エンティティ一致(内訳は詳細設定)';
+
+  @override
+  String get relationalCloseness => '親密度';
+
+  @override
+  String get relationalClosenessSubtitle => 'ペア親密度+発話交替(内訳は詳細設定)';
+
+  @override
+  String get relationalSectionExtra => '追加判定';
+
+  @override
+  String get relationalHardAnchor => 'ハードアンカー(URL/引用先)';
+
+  @override
+  String get relationalReactive => '反応表現(それな・わかる等)';
+
+  @override
+  String get relationalTtlSubtitle => '会話が沈むまでの時間。投稿間隔からこの範囲内で自動調整';
+
+  @override
+  String relationalTtlValue(int min, int max) {
+    return '$min〜$max分';
+  }
+
+  @override
+  String get searchChildSafePostsBlocked => '保護者が投稿の検索を止めています';
+
+  @override
+  String get searchChildSafeTrendBlocked => '保護者がトレンドを止めています';
+
+  @override
+  String get searchTrendSettings => 'トレンド設定';
+
+  @override
+  String get searchTrendCustomize => 'トレンドページをカスタマイズ';
+
+  @override
+  String get searchTrendPage => 'トレンドページ';
+
+  @override
+  String get searchTrendMenu => 'メニュー';
+
+  @override
+  String get searchHint => '検索';
+
+  @override
+  String get searchSettings => '検索の設定';
+
+  @override
+  String get searchSettingsTendency => '検索結果の指向性/刺激性';
+
+  @override
+  String get searchSettingsTrendPlugins => 'トレンドプラグインの設定';
+
+  @override
+  String get searchSettingsCacheNetwork => 'キャッシュネットワークの設定';
+
+  @override
+  String get searchSettingsComingSoon => 'この設定は準備中です。';
+
+  @override
+  String get searchSortRelevance => '関連順';
+
+  @override
+  String get searchSortNewest => '新しい順';
+
+  @override
+  String get searchSortOldest => '古い順';
+
+  @override
+  String get searchSortReactions => 'リアクション多い順';
+
+  @override
+  String get searchPeriodAll => 'すべて';
+
+  @override
+  String get searchPeriodDay => '24時間';
+
+  @override
+  String get searchPeriodWeek => '1週間';
+
+  @override
+  String get searchPeriodMonth => '1ヶ月';
+
+  @override
+  String get searchPeriodChip => '期間';
+
+  @override
+  String get searchAgoJustNow => 'たった今';
+
+  @override
+  String searchAgoMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 分前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String searchAgoHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 時間前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String searchAgoDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 日前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get serversOpen => 'サーバーを開く';
+
+  @override
+  String serversUsers(String count) {
+    return '$count 人';
+  }
+
+  @override
+  String serversPosts(String count) {
+    return '$count 投稿';
+  }
+
+  @override
+  String get serversRegistrationOpen => '登録受付中';
+
+  @override
+  String get serversRegistrationClosed => '招待制 / 受付停止';
+
+  @override
+  String get serversStatsSeparator => ' ・ ';
+
+  @override
+  String get serversRaiTitle => 'RAi によるユーザーの傾向';
+
+  @override
+  String serversRaiSource(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '公開の投稿 $count 件から、クラウド版 RAi がまとめました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get serversInfoTitle => 'サーバー情報';
+
+  @override
+  String serversInfoUnavailable(String host) {
+    return '$host はサーバー情報を出していません(インスタンスの無いサービスか、取れませんでした)';
+  }
+
+  @override
+  String serversCountHundredMillions(String value) {
+    return '$value億';
+  }
+
+  @override
+  String serversCountTenThousands(String value) {
+    return '$value万';
+  }
+
+  @override
+  String get sessionUnnamedDevice => '名前のない端末';
+
+  @override
+  String get sessionShareAskFirstTitle => 'アクセストークンを共有して、SNS アカウントに一斉ログインしますか?';
+
+  @override
+  String sessionShareAskDeviceTitle(String device) {
+    return '新しい端末($device)にも SNS のアクセストークンを共有しますか?';
+  }
+
+  @override
+  String sessionShareAskFirstMessage(String devices) {
+    return '新しい端末($devices)で、この RASQ アカウント にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。';
+  }
+
+  @override
+  String sessionShareAskFirstMessageHandle(String devices, String handle) {
+    return '新しい端末($devices)で、RASQ アカウント @$handle にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。';
+  }
+
+  @override
+  String get sessionShareAskDeviceMessage =>
+      'この RASQ アカウント に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。';
+
+  @override
+  String sessionShareAskDeviceMessageHandle(String handle) {
+    return 'RASQ アカウント @$handle に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。';
+  }
+
+  @override
+  String get sessionDeviceListSeparator => '、';
+
+  @override
+  String get sessionShareYes => 'はい';
+
+  @override
+  String get sessionShareNo => 'いいえ';
+
+  @override
+  String sessionShareEmailApproved(String device) {
+    return 'メールで承認された端末($device)に、SNS のアクセストークンを共有しました';
+  }
+
+  @override
+  String sessionShareImported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '共有されたアクセストークンで、SNS アカウントに一斉ログインしました($count 件)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sessionLoginFailed => 'ログインに失敗しました';
+
+  @override
+  String get sessionSanctionLight => '軽度な制限';
+
+  @override
+  String get sessionSanctionModerate => '中レベルの制限(発言に検閲遅延)';
+
+  @override
+  String get sessionSanctionSevere => '重度の制限(機能停止)';
+
+  @override
+  String get sessionSanctionPermanent => '恒久的な凍結';
+
+  @override
+  String get sessionSanctionNone => '制限なし';
+
+  @override
+  String sessionSanctionBlocked(String feature) {
+    return 'アカウントの処置により $feature は利用できません。';
+  }
+
+  @override
+  String sessionSanctionBlockedUntil(String feature, String until) {
+    return 'アカウントの処置により $feature は利用できません($until まで)。';
+  }
+
+  @override
+  String get sessionFeatureAstellJoin => 'ASTell への参加';
+
+  @override
+  String get sessionFeatureAstellCreate => 'ASTell ルームの作成';
+
+  @override
+  String get sessionFeatureAstellShare => 'ASTell での共有・チャット';
+
+  @override
+  String get sessionFeatureAstellStream => 'ASTell の画面共有・配信';
+
+  @override
+  String get sessionFeatureStoreReview => 'ストアのレビュー投稿';
+
+  @override
+  String get sessionFeatureAccountFollow => 'RASQ アカウントのフォロー';
+
+  @override
+  String get sessionFeaturePost => '投稿';
+
+  @override
+  String get sessionFeaturePostMedia => 'メディア付き投稿';
+
+  @override
+  String get sessionFeatureDm => 'DM';
+
+  @override
+  String get sessionFeatureReaction => 'リアクション';
+
+  @override
+  String get sessionCentralNotConfigured => 'RASQ Central の接続先が設定されていません';
+
+  @override
+  String get sessionLogoutSnsHeading => 'この RASQ アカウントの SNS アカウント';
+
+  @override
+  String get sessionLogoutSnsLogout => 'SNS アカウントもログアウトする';
+
+  @override
+  String get sessionLogoutSnsLogoutSubtitle => 'この端末から SNS のログインを消します';
+
+  @override
+  String get sessionLogoutSnsMoveToLocal => 'この端末のみ に移す';
+
+  @override
+  String get sessionLogoutSnsMoveToLocalSubtitle => '「この端末のみ」のアカウントで、そのまま使えます';
+
+  @override
+  String get sessionCancel => 'キャンセル';
+
+  @override
+  String get sessionChildSafeAddBlocked => '保護者が SNS アカウントの追加を止めています';
+
+  @override
+  String get sessionAccountKindLocal => 'この端末のみ';
+
+  @override
+  String get sessionAccountKindCentral => 'RASQ Central';
+
+  @override
+  String get sessionCarryThisAccount => 'この RASQ アカウント';
+
+  @override
+  String get sessionCarrySemantics => 'この端末の SNS アカウントを加えますか?';
+
+  @override
+  String sessionCarryTitle(int count, String account) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'この端末で開いていた $count 件のアカウントを、$account に加えますか?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String sessionCarryMessage(String account) {
+    return '加えたアカウントは $account の SNS アカウントになり、ほかの端末や Web コンソールにも並びます。加えなかったアカウントは「この端末のみ」に残ります(あとからでも、$account で SNS にログインすれば加わります)。';
+  }
+
+  @override
+  String get sessionCarryInBundle => '(前にこの RASQ アカウントでつないだもの)';
+
+  @override
+  String get sessionCarryNone => '加えない';
+
+  @override
+  String sessionCarryAdd(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '選んだ $count 件を加える',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get settingsActionBarTitle => 'プラグインボタン';
 
   @override
@@ -10870,6 +12399,19 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsColumnsPreviewLarge => '大型';
+
+  @override
+  String get settingsCommonSeparator => ' ・ ';
+
+  @override
+  String settingsCommonBullet(String text) {
+    return '・$text';
+  }
+
+  @override
+  String settingsCommonRange(int min, int max) {
+    return '$min〜$max';
+  }
 
   @override
   String get settingsComposerTitle => '投稿コンポーザー';
@@ -11682,6 +13224,812 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get settingsNotifyTokenStorageCaptionDetail =>
       '生のトークンは発行時にだけ受け取り、端末内の安全な領域に保存します。サーバーに残るのはハッシュだけです。親のトークンを失効すると配下のトークンも失効します。';
+
+  @override
+  String get settingsPagesAboutCookiesTitle => 'クッキーについて';
+
+  @override
+  String get settingsPagesAboutCookiesSection1Title => 'クッキー';
+
+  @override
+  String get settingsPagesAboutCookiesText1 =>
+      'iOS・Android・デスクトップのアプリは、RASQ サーバーとの通信にクッキーを使いません。RASQ サーバーとの通信は端末トークン(Authorization ヘッダー)で行い、各 SNS のアクセストークンは端末内の安全な領域に保存します。';
+
+  @override
+  String get settingsPagesAboutCookiesText2 =>
+      'iOS・Android のアプリの広告(Google AdMob)は、クッキーの代わりに端末の広告 ID を使います。初回に表示する Google の同意画面で、パーソナライズ広告を使うかを選べます。';
+
+  @override
+  String get settingsPagesAboutCookiesText3 =>
+      'Web 版と、RASQ のプロフィール・投稿の公開の Web ページでは、広告(Google AdSense)のために Google がクッキーを使います。広告のクッキーの扱いは Google のポリシーに従います。';
+
+  @override
+  String get settingsPagesAboutCookiesText4 =>
+      'SNS の web 版や登録ページをアプリ内のブラウザで開いたときは、その SNS のクッキーの扱いに従います。';
+
+  @override
+  String get settingsPagesAboutDeveloperTitle => '開発者モード';
+
+  @override
+  String get settingsPagesAboutDeveloperEnabledSubtitle =>
+      '画面の説明を、仕組みや送るデータの形まで詳しく表示します';
+
+  @override
+  String get settingsPagesAboutDeveloperEnabledDetail =>
+      'オンのあいだ、設定や同意の画面で短くしている説明の代わりに、元の詳しい説明(保存先の KV、送る JSON の形など)を出します。表示が変わるだけで、動作は変わりません。';
+
+  @override
+  String get settingsPagesAboutDeveloperNotice1 =>
+      '表示だけが変わります。設定や送るデータは変わりません。';
+
+  @override
+  String get settingsPagesAboutDeveloperIosScreenGlimpseTitle =>
+      '画面の読み取りを試す(iOS)';
+
+  @override
+  String get settingsPagesAboutDeveloperIosScreenGlimpseSubtitle =>
+      'iPhone / iPad の「SNS サービスを探す」に「いつものブラウザで見て探す」を出します';
+
+  @override
+  String get settingsPagesAboutDeveloperIosScreenGlimpseDetail =>
+      '画面の読み取りの Broadcast Upload Extension(ScreenGlimpseBroadcast)が画面収録の選択に出ない端末があるため(未解決)、iOS では既定で隠しています。オンにすると入口を出します。Android は常に出します。';
+
+  @override
+  String get settingsPagesAboutDeveloperRaiAndroid3dTitle =>
+      '3D の RAi を試す(Android)';
+
+  @override
+  String get settingsPagesAboutDeveloperRaiAndroid3dSubtitle =>
+      'Android でも RAi のマスコットを 3D で表示します';
+
+  @override
+  String get settingsPagesAboutDeveloperRaiAndroid3dDetail =>
+      'Android で RAi が開かない報告があり、3D の土台(flutter_angle)の初期化が疑わしいため、既定は 2D です。オンにすると 3D を試します。20 秒たっても出ない / 失敗したときは自動で 2D に戻し、RAi のサイドバーの「診断」に理由を残します。iPhone / iPad / Mac は常に 3D です。';
+
+  @override
+  String get settingsPagesAboutHelpTitle => 'ヘルプ';
+
+  @override
+  String get settingsPagesAboutHelpSection1Title => '使い方';
+
+  @override
+  String get settingsPagesAboutHelpText1 => '操作に迷ったら、サイドメニューの RAi に聞いてください。';
+
+  @override
+  String get settingsPagesAboutHelpText1Detail =>
+      '操作に迷ったら RAi に聞いてください。サイドメニューの RAi から、インストラクション(ボタンまで案内)とアシスタント(端末内モデルで回答、関数で代行)が使えます。';
+
+  @override
+  String get settingsPagesAboutHelpRaiTitle => 'RAi を開く';
+
+  @override
+  String get settingsPagesAboutHelpTourAgain1Title => 'RASQ の使い方をもう一度見る';
+
+  @override
+  String get settingsPagesAboutHelpTourAgain1Subtitle =>
+      '機能の紹介(TL・トレンド・ASTell・RAi など)';
+
+  @override
+  String get settingsPagesAboutHelpSection2Title => '困ったとき';
+
+  @override
+  String get settingsPagesAboutHelpText2 =>
+      'ログインや投稿がうまくいかないときは、権限を確かめて、入り直してください。';
+
+  @override
+  String get settingsPagesAboutHelpText2Detail =>
+      'ログインできない / 投稿が届かないときは、まず「SNSプラグイン → セキュリティ」で権限を確認し、一度ログアウトして入り直してください。';
+
+  @override
+  String get settingsPagesAboutHelpSettingsDslSnsSecurityTitle =>
+      'セキュリティ(権限とトークン)';
+
+  @override
+  String get settingsPagesAboutHelpSettingsServerTitle => 'RASQ サーバーの接続先';
+
+  @override
+  String get settingsPagesAboutSubscriptionTitle => '購読状況';
+
+  @override
+  String get settingsPagesAboutSubscriptionSection1Title => 'RASQ の購読';
+
+  @override
+  String get settingsPagesAboutSubscriptionValueRow1Title => 'プラン';
+
+  @override
+  String get settingsPagesAboutSubscriptionValueRow1Value => '無料';
+
+  @override
+  String get settingsPagesAboutSubscriptionValueRow2Title => 'プラグインプロキシ';
+
+  @override
+  String get settingsPagesAboutSubscriptionValueRow2Value => '未購読';
+
+  @override
+  String get settingsPagesAboutSubscriptionText1 => '有料プランは準備中です。';
+
+  @override
+  String get settingsPagesAboutSubscriptionText1Detail =>
+      'プラン: 無料(いまは購読プラン無し)。有料プランは今後、RASQ アカウントに紐づけて提供します。';
+
+  @override
+  String get settingsPagesAppearanceDisplayTitle => 'インターフェースの表示サイズ';
+
+  @override
+  String get settingsPagesAppearanceDisplaySection1Title => '表示サイズ';
+
+  @override
+  String get settingsPagesAppearanceDisplayTextScaleTitle => '文字とUIの大きさ';
+
+  @override
+  String get settingsPagesAppearanceDisplayTextScaleSubtitle =>
+      'アプリ全体の文字サイズを変えます(即時反映)';
+
+  @override
+  String get settingsPagesAppearanceFabTitle => '＋ ボタンの割り当て';
+
+  @override
+  String get settingsPagesAppearanceFabNotice1 =>
+      '＋ を押したときに始めるものを選べます。まわりのボタン(内側に 3 つ、外側に 4 つまで)は、＋ を長押し(マウスは乗せる)して歯車から並べ替えます。';
+
+  @override
+  String get settingsPagesAppearanceFabNotice1Detail =>
+      '領域 appearance.fab(<scope>Tap / <scope>Slots = 置いた順、最大 7)。';
+
+  @override
+  String get settingsPagesAppearanceFabSection1Title => 'ホームの ＋ を押したとき';
+
+  @override
+  String get settingsPagesAppearanceFabHomeTapPostTitle => '投稿';
+
+  @override
+  String get settingsPagesAppearanceFabHomeTapRasqTitle => 'RASQ に投稿';
+
+  @override
+  String get settingsPagesAppearanceFabHomeTapSwingTitle => 'Swing を作る';
+
+  @override
+  String get settingsPagesAppearanceFabHomeTapAstellTitle => 'ASTell を作る';
+
+  @override
+  String get settingsPagesAppearanceFabSection2Title => 'トレンドの ＋ を押したとき';
+
+  @override
+  String get settingsPagesAppearanceFabSection3Title => 'ASTell の ＋ を押したとき';
+
+  @override
+  String get settingsPagesAppearanceMfmTitle => 'カスタムモーションとアニメーション';
+
+  @override
+  String get settingsPagesAppearanceMfmSection1Title => 'MFM のアニメーション';
+
+  @override
+  String get settingsPagesAppearanceMfmAnimationsTitle => '動く装飾を再生する';
+
+  @override
+  String get settingsPagesAppearanceMfmAnimationsSubtitle =>
+      '回転や虹色などの動く装飾を再生します';
+
+  @override
+  String get settingsPagesAppearanceMfmAnimationsDetail =>
+      'spin / jump / rainbow などの MFM を動かします。オフにすると静止画になります(「モーションの抑制」がオンのときは常に静止)';
+
+  @override
+  String get settingsPagesAppearanceMfmSpeedTitle => 'アニメーションの速さ';
+
+  @override
+  String get settingsPagesAppearanceMfmSpeedSubtitle => '100% が標準。大きいほど速く動きます';
+
+  @override
+  String get settingsPagesAppearanceMfmSettingsDslAppearanceMotionTitle =>
+      'モーションの抑制';
+
+  @override
+  String get settingsPagesAppearanceMfmSettingsDslAppearanceMotionSubtitle =>
+      '画面遷移なども含めてまとめて減らす';
+
+  @override
+  String get settingsPagesAppearanceMotionTitle => 'モーションの抑制';
+
+  @override
+  String get settingsPagesAppearanceMotionSection1Title => 'アニメーション';
+
+  @override
+  String get settingsPagesAppearanceMotionReduceMotionTitle => 'モーションを抑制する';
+
+  @override
+  String get settingsPagesAppearanceMotionReduceMotionSubtitle =>
+      '動く装飾を止め、画面の動きを減らします';
+
+  @override
+  String get settingsPagesAppearanceMotionReduceMotionDetail =>
+      'MFM の spin / rainbow などのアニメーションを静止画にし、画面遷移の動きを減らします';
+
+  @override
+  String get settingsPagesAppearanceNotificationsTitle => '通知の表示形式';
+
+  @override
+  String get settingsPagesAppearanceNotificationsSection1Title => '通知ページ';
+
+  @override
+  String get settingsPagesAppearanceNotificationsDefaultTabAllTitle =>
+      '「すべて」から開く';
+
+  @override
+  String get settingsPagesAppearanceNotificationsDefaultTabFollowingTitle =>
+      '「フォロー中」から開く';
+
+  @override
+  String get settingsPagesAppearanceNotificationsDefaultTabFollowingSubtitle =>
+      'フォローしている人からの通知だけを先に見ます';
+
+  @override
+  String get settingsPagesAppearanceNotificationsShowRemindersTitle =>
+      'ASTell の開始通知の予定を上に出す';
+
+  @override
+  String get settingsPagesAppearanceNotificationsShowRemindersSubtitle =>
+      '登録した開始通知を、通知ページの上に出します';
+
+  @override
+  String get settingsPagesAppearanceNotificationsShowRemindersDetail =>
+      '登録した開始通知(端末のローカル通知)の一覧を通知ページの上に表示します';
+
+  @override
+  String get settingsPagesAppearanceNotificationsText1 =>
+      '通知する種別は「通知 → プロファイル」で選びます(端末に保存されます)。';
+
+  @override
+  String get settingsPagesAppearanceTimelineTitle => 'タイムラインの表示';
+
+  @override
+  String get settingsPagesAppearanceTimelineSection1Title => '更新';
+
+  @override
+  String get settingsPagesAppearanceTimelineEdgeTilesTitle =>
+      'TL の上下に「投稿を読み込む」を出す';
+
+  @override
+  String get settingsPagesAppearanceTimelineEdgeTilesSubtitle =>
+      'スマホでは既定で出しません(引っ張って更新)';
+
+  @override
+  String get settingsPagesAppearanceTimelineEdgeTilesDetail =>
+      '見えると、新しい投稿 / 続きを読み込みます。既定は、電話のアプリでは出さず(下に引っ張って更新)、Web 版とパソコンでは出します';
+
+  @override
+  String get settingsPagesAppearanceTimelineNewPostsPillTitle =>
+      '新しい投稿のお知らせを出す';
+
+  @override
+  String get settingsPagesAppearanceTimelineNewPostsPillSubtitle =>
+      '更新して新しい投稿が届いたら、ヘッダーのすぐ下に「新しい投稿」';
+
+  @override
+  String get settingsPagesAppearanceTimelineNewPostsPillDetail =>
+      '投稿した人の顔(3 人まで)と「新しい投稿」を出します。押すといちばん上へ。しばらくたつか、いちばん上まで送ると消えます。ヘッダーをしまっている間は出しません';
+
+  @override
+  String get settingsPagesAppearanceVideoTitle => 'ピクチャインピクチャ';
+
+  @override
+  String get settingsPagesAppearanceVideoSection1Title => '動画';
+
+  @override
+  String get settingsPagesAppearanceVideoAutoplayTitle => '開いたら自動で再生';
+
+  @override
+  String get settingsPagesAppearanceVideoAutoplaySubtitle => '全画面と小窓で、すぐに再生します';
+
+  @override
+  String get settingsPagesAppearanceVideoAutoplayDetail =>
+      '全画面ビューワーと小窓(PiP)で、準備ができ次第再生します';
+
+  @override
+  String get settingsPagesAppearanceVideoPipKeepPositionTitle =>
+      '小窓へ移るとき再生位置を引き継ぐ';
+
+  @override
+  String get settingsPagesAppearanceVideoPipKeepPositionSubtitle =>
+      '全画面の「小窓で再生」を押したときの続きから再生します';
+
+  @override
+  String get settingsPagesAppearanceVideoSection2Title => '既定の再生速度';
+
+  @override
+  String get settingsPagesAppearanceVideoDefaultSpeed10Title => '1.0×(標準)';
+
+  @override
+  String get settingsPagesAppearanceVideoText1 => '小窓は、掴んで好きな場所へ動かせます。';
+
+  @override
+  String get settingsPagesAppearanceVideoText1Detail =>
+      '小窓は FOW なので、掴んでカラムや上下へ動かせます。';
+
+  @override
+  String get settingsPagesAstellBackgroundTitle => '画面オフ時の動作';
+
+  @override
+  String get settingsPagesAstellBackgroundSection1Title => '通話中に画面を消したとき';
+
+  @override
+  String get settingsPagesAstellBackgroundOnScreenOffKeepTitle => '通話を続ける';
+
+  @override
+  String get settingsPagesAstellBackgroundOnScreenOffKeepSubtitle =>
+      '音声はそのまま、画面共有の受信だけ止めます';
+
+  @override
+  String get settingsPagesAstellBackgroundOnScreenOffMuteTitle =>
+      'マイクをミュートして続ける';
+
+  @override
+  String get settingsPagesAstellBackgroundOnScreenOffLeaveTitle => 'ルームから出る';
+
+  @override
+  String get settingsPagesAstellBackgroundNotice1 =>
+      'この設定は準備中です。いまの ASTell は、画面が点いている間だけ動きます。';
+
+  @override
+  String get settingsPagesAstellBackgroundNotice1Detail =>
+      'この設定は保存されますが、適用は通話の常駐化(バックグラウンド音声)の実装後です。いまの ASTell は画面が点いている間だけ動きます。';
+
+  @override
+  String get settingsPagesAstellSubscriptionTitle => 'ASTell 4Uを購読';
+
+  @override
+  String get settingsPagesAstellSubscriptionSection1Title => '状態';
+
+  @override
+  String get settingsPagesAstellSubscriptionValueRow1Title => '購読';
+
+  @override
+  String get settingsPagesAstellSubscriptionValueRow1Value => '未購読';
+
+  @override
+  String get settingsPagesAstellSubscriptionValueRow2Title => '提供';
+
+  @override
+  String get settingsPagesAstellSubscriptionValueRow2Value => '準備中';
+
+  @override
+  String get settingsPagesAstellSubscriptionText1 =>
+      'ASTell 4U は準備中の有料プランです。おすすめ欄は無料で使えます。';
+
+  @override
+  String get settingsPagesAstellSubscriptionText1Detail =>
+      'ASTell 4U は、ASTell のおすすめ(For You)配信とサーバー側の文字起こし / 要約の有料プランです。まだ提供していません。おすすめ欄は RASQ サーバーの無料の推薦で動きます。';
+
+  @override
+  String get settingsPagesAstellTilesTitle => 'Tellタイル';
+
+  @override
+  String get settingsPagesAstellTilesSection1Title => 'ホームのヘッダー';
+
+  @override
+  String get settingsPagesAstellTilesHeaderStripTitle =>
+      'フォロー中のホストの ASTell をヘッダーに出す';
+
+  @override
+  String get settingsPagesAstellTilesHeaderStripSubtitle =>
+      '開催中のルームを、ホームの上に並べます';
+
+  @override
+  String get settingsPagesAstellTilesHeaderStripDetail =>
+      '開催中のルームを、ホームのヘッダーの角丸の枠に並べます';
+
+  @override
+  String get settingsPagesAstellTilesHeaderMaxTitle => '並べる数';
+
+  @override
+  String get settingsPagesAstellTilesHeaderMaxUnit => '件';
+
+  @override
+  String get settingsPagesAstellTrendTitle => 'トレンドタイムラインへの配信';
+
+  @override
+  String get settingsPagesAstellTrendSection1Title => 'ASTell ホームの欄';
+
+  @override
+  String get settingsPagesAstellTrendShowRecommendedTitle => '「おすすめ」を表示';
+
+  @override
+  String get settingsPagesAstellTrendShowTrendingTitle => '「トレンド」を表示';
+
+  @override
+  String get settingsPagesAstellTrendShowTrendingSubtitle =>
+      'トレンドのルームを ASTell ホームに並べます';
+
+  @override
+  String get settingsPagesAstellTrendText1 =>
+      '検索ホームのトレンドにルームを出すには、「トレンドをカスタマイズ」で組みます。';
+
+  @override
+  String get settingsPagesAstellTrendText1Detail =>
+      'トレンドのタイムライン(検索ホーム)へのルームの差し込みは、トレンドのノード(アルゴリズム)側で組みます。';
+
+  @override
+  String get settingsPagesAstellTrendTlconfigTrendTitle => 'トレンドをカスタマイズ';
+
+  @override
+  String get settingsPagesMediaSaveTitle => '画像・動画の保存先';
+
+  @override
+  String get settingsPagesMediaSaveSection1Title => '「画像を保存」「動画を保存」の保存先';
+
+  @override
+  String get settingsPagesMediaSaveDestinationAskTitle => '保存するたびに選ぶ';
+
+  @override
+  String get settingsPagesMediaSaveDestinationAskSubtitle =>
+      '写真とファイルのどちらにするか、毎回聞きます';
+
+  @override
+  String get settingsPagesMediaSaveDestinationAskDetail =>
+      '写真とファイルのどちらに保存するかを、そのたびに聞きます(選べる先が 1 つしかない端末では聞きません)';
+
+  @override
+  String get settingsPagesMediaSaveDestinationPhotosTitle => '写真(カメラロール)';
+
+  @override
+  String get settingsPagesMediaSaveDestinationPhotosSubtitle =>
+      'アルバム「RASQ」に入ります';
+
+  @override
+  String get settingsPagesMediaSaveDestinationPhotosDetail =>
+      'iPhone / iPad / Mac の「写真」、Android のギャラリーの、アルバム「RASQ」に入ります';
+
+  @override
+  String get settingsPagesMediaSaveDestinationFilesTitle => 'ファイル';
+
+  @override
+  String get settingsPagesMediaSaveDestinationFilesSubtitle =>
+      '「ファイル」App や、選んだ場所に保存します';
+
+  @override
+  String get settingsPagesMediaSaveDestinationFilesDetail =>
+      'iPhone / iPad は「ファイル」App の このiPad(このiPhone)› RASQ › 保存。パソコンは保存する場所を選びます。Android はギャラリーに入ります';
+
+  @override
+  String get settingsPagesPluginsAccountPickTitle => '共有 / リノートに使うアカウント';
+
+  @override
+  String get settingsPagesPluginsAccountPickSection1Title =>
+      '同じ投稿が、複数のアカウントに見えているとき';
+
+  @override
+  String get settingsPagesPluginsAccountPickPreferCurrentTitle =>
+      '指定しているアカウントを優先';
+
+  @override
+  String get settingsPagesPluginsAccountPickPreferCurrentSubtitle =>
+      'オフにすると、相手とよく話しているアカウントを選びます';
+
+  @override
+  String get settingsPagesPluginsAccountPickPreferCurrentDetail =>
+      'SNS アカウントを選んで見ているときは、そのアカウントで共有 / リノートします。切ると、直近のやりとり(リアクション / リノート / 返信)から、その相手とよく話しているアカウントを予測して選びます。RASQ アカウントでまとめて見ているときは、いつも予測で選びます';
+
+  @override
+  String get settingsPagesPluginsComposerTitle => '投稿プラグイン';
+
+  @override
+  String get settingsPagesPluginsComposerSection1Title => 'コンポーザー';
+
+  @override
+  String get settingsPagesPluginsComposerEnabledTitle => '投稿プラグインを使う';
+
+  @override
+  String get settingsPagesPluginsComposerEnabledSubtitle =>
+      '投稿の文字や画像を加工するプラグインを使います';
+
+  @override
+  String get settingsPagesPluginsComposerEnabledDetail =>
+      'コンポーザーのテキスト変換(composer.text)とメディア編集(composer.media)のプラグインを有効にします';
+
+  @override
+  String get settingsPagesPluginsComposerText1 =>
+      'オフにすると、コンポーザーとメディアエディターのプラグイン欄が空になります。';
+
+  @override
+  String get settingsPagesPluginsComposerSettingsComposerTitle => '投稿コンポーザーの設定';
+
+  @override
+  String get settingsPagesPluginsComposerStoreTitle => 'プラグインストア';
+
+  @override
+  String get settingsPagesPluginsEmojiTitle => '絵文字の検索';
+
+  @override
+  String get settingsPagesPluginsEmojiSection1Title => '絵文字ピッカーの検索';
+
+  @override
+  String get settingsPagesPluginsEmojiSemanticTitle => '意味の近い絵文字も探す';
+
+  @override
+  String get settingsPagesPluginsEmojiSemanticSubtitle =>
+      '名前が合わなくても、意味の近い絵文字を出します。打った文字は外へ送りません';
+
+  @override
+  String get settingsPagesPluginsEmojiSemanticDetail =>
+      '名前や別名に打った文字が入っていなくても、意味の近い絵文字を後ろに並べます。端末内の検索用モデル(RAi →「モデル」→ 検索)を入れてあるときだけ効きます。計算は端末の中だけで行い、打った文字は外へ送りません。初めて開いたサーバーでは、裏で索引を作るあいだ「準備中」と出ます';
+
+  @override
+  String get settingsPagesPluginsProxyTitle => 'RASQプラグインプロキシの購読';
+
+  @override
+  String get settingsPagesPluginsProxySection1Title => '状態';
+
+  @override
+  String get settingsPagesPluginsProxyValueRow1Title => '購読';
+
+  @override
+  String get settingsPagesPluginsProxyValueRow1Value => '未購読';
+
+  @override
+  String get settingsPagesPluginsProxyValueRow2Title => '提供';
+
+  @override
+  String get settingsPagesPluginsProxyValueRow2Value => '準備中';
+
+  @override
+  String get settingsPagesPluginsProxyText1 =>
+      'プラグインプロキシは準備中です。いまはプラグインが端末から直接通信します。';
+
+  @override
+  String get settingsPagesPluginsProxyText1Detail =>
+      'プラグインプロキシは、wasm プラグインの外部通信を RASQ サーバー経由に束ねる有料サービスです。まだ提供していないため、プラグインは端末から直接 SNS / 自前サーバーへ通信します。 提供: RASQ サーバーの課金基盤と同時。';
+
+  @override
+  String get settingsPagesPluginsProxySettingsServerTitle => 'RASQ サーバーの接続先';
+
+  @override
+  String get settingsPagesPluginsProxySettingsServerSubtitle =>
+      '提供が始まったら、ここで選んだサーバーを使います';
+
+  @override
+  String get settingsPagesPluginsReactionTitle => 'リアクションの予測';
+
+  @override
+  String get settingsPagesPluginsReactionSection1Title => 'リアクションのボタンの短押し';
+
+  @override
+  String get settingsPagesPluginsReactionPredictWhenEmptyTitle =>
+      'だれも付けていない投稿でも予測する';
+
+  @override
+  String get settingsPagesPluginsReactionPredictWhenEmptySubtitle =>
+      'よく使う絵文字を予測して、短押しで付けます';
+
+  @override
+  String get settingsPagesPluginsReactionPredictWhenEmptyDetail =>
+      '切ってあると、まだリアクションが付いていない投稿では予測せず、押すと絵文字ピッカーが開きます。入れると、自分がよく使う絵文字を予測として出し、短押しでそれを付けます';
+
+  @override
+  String get settingsPagesPluginsTelemetryTitle => '怪しい通信の通報';
+
+  @override
+  String get settingsPagesPluginsTelemetrySection1Title => 'プラグインの怪しい通信をストアへ通報';
+
+  @override
+  String get settingsPagesPluginsTelemetryFetchShapesTitle => '怪しい通信を通報する';
+
+  @override
+  String get settingsPagesPluginsTelemetryFetchShapesSubtitle =>
+      '通信の形だけを審査に送ります。本文やトークンなどの中身は送りません。既定はオフ';
+
+  @override
+  String get settingsPagesPluginsTelemetryFetchShapesDetail =>
+      'プラグインが行う通信の「形」(接続先のホスト、メソッド、パスの型、ヘッダの名前、送る JSON のキーの構造)だけを、この端末で初めて見たときに 1 度だけ RASQ のストアへ送ります。トークン、本文、ユーザー名、URL の中の ID などの値は送りません。審査は、承認したあとで通信の形が変わったプラグインを読み直すためにこれを使います。既定はオフです。';
+
+  @override
+  String get settingsPagesPluginsTelemetryText1 =>
+      '同じ形は 2 度と送りません。オフにすると、同意の取り消しとして記録されます。';
+
+  @override
+  String settingsPagesPluginsTelemetryText1Detail(String example) {
+    return '送るもの: 例 $example。送らないもの: 値そのもの。同じ形は 2 度と送りません。同意はストアの同意記録にも残り、切ると撤回として記録されます。';
+  }
+
+  @override
+  String get settingsPagesPluginsTimelineTitle => 'カスタムタイムラインを配置';
+
+  @override
+  String get settingsPagesPluginsTimelineSection1Title => 'タイムラインのプラグイン';
+
+  @override
+  String get settingsPagesPluginsTimelineEnabledTitle => 'カスタムタイムラインを使う';
+
+  @override
+  String get settingsPagesPluginsTimelineEnabledSubtitle =>
+      'プラグインのタイムラインを、ホームのタブに出します';
+
+  @override
+  String get settingsPagesPluginsTimelineEnabledDetail =>
+      'TL プラグイン(tl)が宣言したタイムラインをホームのタブと「タイムラインをカスタマイズ」のアルゴリズムに出します';
+
+  @override
+  String get settingsPagesPluginsTimelineText1 =>
+      '並びや取り込みは、ホームのタブ行の歯車(タイムラインをカスタマイズ)から組みます。';
+
+  @override
+  String get settingsPagesPluginsTimelineStoreTitle => 'プラグインストア';
+
+  @override
+  String get settingsPagesPluginsTrendTitle => 'カスタムトレンドの配信';
+
+  @override
+  String get settingsPagesPluginsTrendSection1Title => 'トレンドプラグイン';
+
+  @override
+  String get settingsPagesPluginsTrendEnabledTitle => 'トレンドプラグインの候補を表示';
+
+  @override
+  String get settingsPagesPluginsTrendEnabledSubtitle =>
+      '検索ホームのトレンド欄に、プラグインの候補を出します';
+
+  @override
+  String get settingsPagesPluginsTrendEnabledDetail =>
+      '検索ホームのトレンド欄に、入れているトレンドプラグイン(trend.suggest)の候補チップを出します';
+
+  @override
+  String get settingsPagesPluginsTrendText1 =>
+      'オフにすると、プラグインは呼び出されません(入れたままでも通信しません)。';
+
+  @override
+  String get settingsPagesPluginsTrendStoreTitle => 'プラグインストア';
+
+  @override
+  String get settingsPagesPluginsTrendStoreSubtitle => 'トレンドプラグインを探す / 管理する';
+
+  @override
+  String get settingsPagesRaiTitle => 'RAi(アシスタント)';
+
+  @override
+  String get settingsPagesRaiSection1Title => '自動化';
+
+  @override
+  String get settingsPagesRaiTraceGraphAutoTitle => '工程グラフを自動で表示';
+
+  @override
+  String get settingsPagesRaiTraceGraphAutoSubtitle => '3 手順以上の自動化を、グラフで表示します';
+
+  @override
+  String get settingsPagesRaiTraceGraphAutoDetail =>
+      'RAi に任せた自動化が 3 手順以上のとき、工程をノードのグラフで自動表示します。オフなら「グラフビューで表示」ボタンになります';
+
+  @override
+  String get settingsPagesRaiText1 => 'AI のモデルや web 検索は、RAi バーのモデルのボタンから設定します。';
+
+  @override
+  String get settingsPagesRaiText1Detail =>
+      '推論サーバーや web 検索の鍵は RAi バーのモデルチップから設定します。';
+
+  @override
+  String get settingsPagesRelationalPluginsTitle => 'プラグインの詳細設定';
+
+  @override
+  String get settingsPagesRelationalPluginsSection1Title => '状態';
+
+  @override
+  String get settingsPagesRelationalPluginsValueRow1Title => 'プラグイン枠';
+
+  @override
+  String get settingsPagesRelationalPluginsValueRow1Value => '準備中';
+
+  @override
+  String get settingsPagesRelationalPluginsText1 => 'この画面のプラグインは準備中です。';
+
+  @override
+  String get settingsPagesRelationalPluginsText1Detail =>
+      'リレーショナルタイムライン用のプラグイン枠(束ね方の差し替え)は契約 v0.7 にはまだありません。ML の類似度は RASQ サーバーの ML ゲートウェイを使います。 プラグイン枠: 未定義。';
+
+  @override
+  String get settingsPagesRelationalPluginsSettingsServerTitle =>
+      'RASQ サーバーの接続先';
+
+  @override
+  String get settingsPagesRelationalRelayTitle => 'Relayタイル';
+
+  @override
+  String get settingsPagesRelationalRelaySection1Title => '状態';
+
+  @override
+  String get settingsPagesRelationalRelayValueRow1Title => '提供';
+
+  @override
+  String get settingsPagesRelationalRelayValueRow1Value => '準備中';
+
+  @override
+  String get settingsPagesRelationalRelayText1 =>
+      'Relay タイルは準備中です。いまは「投稿クラスター」で会話のまとめ方を変えられます。';
+
+  @override
+  String get settingsPagesRelationalRelayText1Detail =>
+      'Relay タイルは、会話イベントをまたいで話題が受け渡された流れ(リレー)を 1 枚のタイルにまとめる表示です。束ね方が固まってから足します。いまは「投稿クラスター」の調整で会話イベントの束ね方を変えられます。 提供: アルゴリズム確定後。';
+
+  @override
+  String get settingsPagesRelationalTrendTitle => 'トレンドタイムラインへの配信';
+
+  @override
+  String get settingsPagesRelationalTrendSection1Title => '状態';
+
+  @override
+  String get settingsPagesRelationalTrendValueRow1Title => '提供';
+
+  @override
+  String get settingsPagesRelationalTrendValueRow1Value => '準備中';
+
+  @override
+  String get settingsPagesRelationalTrendText1 =>
+      '「トレンドをカスタマイズ」で、関連タイムラインをトレンドに流せます。';
+
+  @override
+  String get settingsPagesRelationalTrendText1Detail =>
+      '関連タブの会話イベントをトレンドのタイムラインへ流す配信は、トレンド側のノード(アルゴリズム)に「関連タイムライン」ノードを置く形で組めます。 提供: アルゴリズム確定後。';
+
+  @override
+  String get settingsPagesRelationalTrendTlconfigTrendTitle => 'トレンドをカスタマイズ';
+
+  @override
+  String get settingsPagesResourcesTitle => 'リソースと広告';
+
+  @override
+  String get settingsPagesResourcesSection1Title => '広告';
+
+  @override
+  String get settingsPagesResourcesShowAdsTitle => '広告を表示';
+
+  @override
+  String get settingsPagesResourcesShowAdsSubtitle => 'タイムラインの投稿の間と、検索ホームの広告です';
+
+  @override
+  String get settingsPagesResourcesShowAdsDetail =>
+      'タイムラインの投稿の間(10 件ごと、注釈やセンシティブな投稿の隣には置きません)と検索ホームの広告枠(AdMob、いまはテスト用の広告)。個人に合わせた広告は出しません';
+
+  @override
+  String get settingsPagesResourcesSection2Title => 'リソース';
+
+  @override
+  String get settingsPagesResourcesValueRow1Title => 'プラグインの通信';
+
+  @override
+  String get settingsPagesResourcesValueRow1Value => '端末から直接';
+
+  @override
+  String get settingsPagesResourcesValueRow2Title => '推論';
+
+  @override
+  String get settingsPagesResourcesValueRow2Value => '端末の中 + 選んだサーバー';
+
+  @override
+  String get settingsPagesResourcesText1 =>
+      'プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。';
+
+  @override
+  String get settingsPagesResourcesText1Detail =>
+      'プラグインごとの広告の有無と価格は、プラグインストアの各ページに表示されます。 プラグインの通信: 端末から直接(プロキシ無し)。推論: 端末内モデル(RAi)+ 任意の推論サーバー。';
+
+  @override
+  String get settingsPagesResourcesStoreTitle => 'プラグインストア';
+
+  @override
+  String get settingsPagesTrendCdnTitle => 'キャッシュネットワークの設定';
+
+  @override
+  String get settingsPagesTrendCdnSection1Title => '状態';
+
+  @override
+  String get settingsPagesTrendCdnValueRow1Title => 'キャッシュネットワーク';
+
+  @override
+  String get settingsPagesTrendCdnValueRow1Value => '準備中';
+
+  @override
+  String get settingsPagesTrendCdnText1 => '準備中です。いまは各 SNS から直接取得します。';
+
+  @override
+  String get settingsPagesTrendCdnText1Detail =>
+      'トレンドの取得結果を CDN(キャッシュネットワーク)から読む仕組みは、RASQ サーバーの配信基盤と同時に入ります。いまは各 SNS から直接取得します。 キャッシュネットワーク: 未提供。';
 
   @override
   String get settingsSectionsPluginsTitle => 'プラグインの構成';
@@ -15455,6 +17803,99 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get swingUnreadable => 'Swing を読めませんでした';
+
+  @override
+  String themeNotAThemePack(String id) {
+    return '着せ替えパックではありません: $id';
+  }
+
+  @override
+  String get themePickerLabel => '着せ替え(.rspkg / .rasqpkg)';
+
+  @override
+  String themeNotATheme(String id, String kind) {
+    return '着せ替え(kind: theme)ではありません: $id($kind)';
+  }
+
+  @override
+  String themeLoadFailed(String error) {
+    return '読み込めませんでした: $error';
+  }
+
+  @override
+  String get themeTitle => 'フォントやカラースキーム';
+
+  @override
+  String get themeCaption => '色やアイコン、背景を変えられます。使えるのは 1 つだけです';
+
+  @override
+  String get themeCaptionDetail =>
+      '着せ替え(テーマ)は、色・アイコン・画面 / 投稿タイル / FOW / ボタンの背景を変えるパックです。コードは動きません。同時に使えるのは 1 つです。';
+
+  @override
+  String get themeColorScheme => 'カラースキーム';
+
+  @override
+  String get themeModeSystem => 'システムに合わせる';
+
+  @override
+  String get themeModeLight => 'ライト';
+
+  @override
+  String get themeModeDark => 'ダーク';
+
+  @override
+  String get themePacks => '着せ替え';
+
+  @override
+  String get themeNone => '着せ替えなし(既定)';
+
+  @override
+  String get themeDarkOnly => '暗いモードのときに効きます';
+
+  @override
+  String get themeLightOnly => '明るいモードのときに効きます';
+
+  @override
+  String get themeSideloaded => 'ファイルから読み込み(未審査)';
+
+  @override
+  String get themeSeparator => ' ・ ';
+
+  @override
+  String get themeRemove => '削除';
+
+  @override
+  String themeDarkOnlyNotice(String name) {
+    return '「$name」は暗いモードのときに効きます。いまは明るいモードです。';
+  }
+
+  @override
+  String themeLightOnlyNotice(String name) {
+    return '「$name」は明るいモードのときに効きます。いまは暗いモードです。';
+  }
+
+  @override
+  String get themeSwitchToDark => '暗いモードにする';
+
+  @override
+  String get themeSwitchToLight => '明るいモードにする';
+
+  @override
+  String get themeEmpty => 'インストールした着せ替えはまだありません。';
+
+  @override
+  String get themeFindInStore => 'ストアで着せ替えを探す';
+
+  @override
+  String get themeImport => 'ファイルから読み込む(.rspkg / .rasqpkg)';
+
+  @override
+  String get themeImportSubtitle => '自分で作った着せ替えを読み込みます';
+
+  @override
+  String get themeImportDetail =>
+      'rasq build で作った着せ替えパック。コードを含まないので、未審査でもそのまま使えます';
 
   @override
   String get trendTitle => 'トレンド';

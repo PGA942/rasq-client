@@ -4,6 +4,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../backend/sns_oauth.dart';
+import '../l10n/l10n.dart';
 
 /// mixi2 (D-206、サンプル): 公式 API は申請制で、認証は OAuth(RASQ サーバーのブローカー経由)。
 /// どちらも揃うまでは **ダミーモード**(ホスト `dummy`)で流れを確かめる。プラグイン
@@ -22,7 +23,7 @@ class Mixi2DummyFlow extends CredentialAuthFlow {
     final result = await plugin.callAnonymous('sns.login', {'host': mixi2DummyHost, 'identifier': identifier.trim().isEmpty ? 'me' : identifier.trim()});
     if (result['ok'] != true) {
       final error = (result['error'] as Map?)?.cast<String, Object?>() ?? const {};
-      final message = '${error['message'] ?? 'ログインに失敗しました'}';
+      final message = '${error['message'] ?? appL10n.sessionLoginFailed}';
       throw SnsApiException(ErrorCode.tryParse('${error['code'] ?? ''}', message: message) ?? ErrorCode.internalServerError.copyWith(message: message));
     }
     final value = (result['value'] as Map? ?? const {}).cast<String, Object?>();
@@ -57,5 +58,5 @@ AccountSession mixi2DummySession({String handle = 'me'}) => AccountSession(
       pluginId: mixi2PluginId,
       token: 'dummy:$handle',
       createdAt: DateTime(2026, 9, 13),
-      displayName: 'わたし(ダミー)',
+      displayName: 'わたし(ダミー)', // l10n-ignore
     );

@@ -4,6 +4,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'orgate_client.dart';
+import '../l10n/l10n.dart';
 
 /// サーバーの OAuth ブローカー経由の認証フロー (CONTRACT §3)。
 ///
@@ -63,7 +64,7 @@ class BrokeredOAuthFlow extends BrowserAuthFlow {
 
     final token = res['token'] as String? ?? '';
     if (token.isEmpty) {
-      throw SnsApiException(ErrorCode.unauthorized.copyWith(message: 'アクセストークンを取得できませんでした'));
+      throw SnsApiException(ErrorCode.unauthorized.copyWith(message: appL10n.backendOauthNoToken));
     }
     final me = (res['me'] as Map?)?.cast<String, Object?>() ?? const {};
     final account = AccountId(
@@ -110,7 +111,7 @@ Future<AuthFlow> Function(String host, {Uri? callback}) brokeredAuthFactory(
     if (client == null) {
       throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '10',
           title: 'Server Not Configured',
-          message: '${kind.label} のログインには RASQ サーバーが必要です。設定 →「RASQ サーバー」で接続先を設定してください。'));
+          message: appL10n.backendOauthServerRequired(kind.label)));
     }
     final Map<String, Object?> res;
     try {
@@ -124,7 +125,7 @@ Future<AuthFlow> Function(String host, {Uri? callback}) brokeredAuthFactory(
     }
     final url = Uri.tryParse(res['authorizeUrl'] as String? ?? '');
     if (url == null) {
-      throw SnsApiException(ErrorCode.internalServerError.copyWith(message: '認証 URL を取得できませんでした'));
+      throw SnsApiException(ErrorCode.internalServerError.copyWith(message: appL10n.backendOauthNoUrl));
     }
     debugPrint('oauth: $provider@$host → $url');
     return BrokeredOAuthFlow(
@@ -135,7 +136,7 @@ Future<AuthFlow> Function(String host, {Uri? callback}) brokeredAuthFactory(
       host: res['host'] as String? ?? host,
       state: res['state'] as String? ?? '',
       url: url,
-      hint: res['hint'] as String? ?? 'ブラウザで許可したら、アプリに戻って「認証を確認」を押してください。',
+      hint: res['hint'] as String? ?? appL10n.backendOauthHint,
     );
   };
 }

@@ -14,6 +14,7 @@ import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import 'relational_engine.dart';
 import 'relational_providers.dart';
+import '../../l10n/l10n.dart';
 
 /// リレーショナルページ / クリップページ共通のヘッダーブロック
 /// (リレーショナルページのデザイン.png 準拠):
@@ -85,9 +86,9 @@ class RelationalEventScreen extends ConsumerWidget {
     // ROOT が見せないものならページごと出さない。見せない投稿は見出し / チップ / メンバー / 要約にも使わない。
     final posts = childSafeEventPosts(ref.watch(childGateProvider), live);
     if (posts == null) {
-      return const Scaffold(
-        appBar: RasqPageHeader(title: '投稿'),
-        body: RasqEmptyView(key: ValueKey('childSafe.eventHidden'), title: 'この投稿は表示できません', hint: '見守りの設定は保護者が決めています'),
+      return Scaffold(
+        appBar: RasqPageHeader(title: context.l10n.relationalPostTitle),
+        body: RasqEmptyView(key: const ValueKey('childSafe.eventHidden'), title: context.l10n.childSafePostHidden, hint: context.l10n.childSafeScreensBlockedHint),
       );
     }
     final filtered = posts.length != live.posts.length;
@@ -100,12 +101,12 @@ class RelationalEventScreen extends ConsumerWidget {
     final others = members.length - 1;
 
     return Scaffold(
-      appBar: const RasqPageHeader(title: '投稿'),
+      appBar: RasqPageHeader(title: context.l10n.relationalPostTitle),
       body: ListView(children: [
         EventStyleHeader(
           members: avatars.isEmpty ? members : avatars,
-          title: others > 0 ? '${live.root.author.displayName}+$others人' : live.root.author.displayName,
-          caption: '${posts.length}件 ・ ${members.length}人',
+          title: others > 0 ? context.l10n.relationalEventTitle(live.root.author.displayName, others) : live.root.author.displayName,
+          caption: context.l10n.relationalEventCaption(posts.length, members.length),
           headline: sharedHeadline(posts) ?? live.root.body.split('\n').first,
           summary: summary,
           chips: topSharedLabels(posts),

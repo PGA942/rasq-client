@@ -1,0 +1,31 @@
+{
+  "@@locale": "ja",
+  "pluginApiTimelineHome": "フォロー中",
+  "@pluginApiTimelineHome": {
+    "description": "ホームのタブの名前: フォローしている人の TL"
+  },
+  "pluginApiTimelineLocal": "ローカル",
+  "@pluginApiTimelineLocal": {
+    "description": "ホームのタブの名前: そのサーバーの人の TL"
+  },
+  "pluginApiTimelineSocial": "ソーシャル",
+  "@pluginApiTimelineSocial": {
+    "description": "ホームのタブの名前: フォロー中とローカルを合わせた TL(Misskey の呼び名)"
+  },
+  "pluginApiTimelineGlobal": "グローバル",
+  "@pluginApiTimelineGlobal": {
+    "description": "ホームのタブの名前: つながっているサーバー全体の TL"
+  },
+  "pluginApiTimelineRecommended": "おすすめ",
+  "@pluginApiTimelineRecommended": {
+    "description": "ホームのタブの名前: おすすめの投稿の TL"
+  },
+  "pluginApiTimelineRelational": "関連",
+  "@pluginApiTimelineRelational": {
+    "description": "ホームのタブの名前: 会話ごとにまとめた RASQ の TL(関連 TL)"
+  },
+  "pluginApiTimelineBundle": "総合",
+  "@pluginApiTimelineBundle": {
+    "description": "ホームのタブの名前: ログインしている全部のアカウントのホームの TL を合わせたもの"
+  }
+}

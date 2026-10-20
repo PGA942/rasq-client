@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "rai",
-  "title": "RAi(アシスタント)",
+  "title": "@l10n:settingsPagesRaiTitle",
   "defaults": {
     "traceGraphAuto": true
   },
@@ -11,17 +11,17 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "自動化"
+          "title": "@l10n:settingsPagesRaiSection1Title"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "traceGraphAuto",
         "p": {
-          "title": "工程グラフを自動で表示",
-          "subtitle": "3 手順以上の自動化を、グラフで表示します",
+          "title": "@l10n:settingsPagesRaiTraceGraphAutoTitle",
+          "subtitle": "@l10n:settingsPagesRaiTraceGraphAutoSubtitle",
           "value": "$.settings.traceGraphAuto",
-          "detail": "RAi に任せた自動化が 3 手順以上のとき、工程をノードのグラフで自動表示します。オフなら「グラフビューで表示」ボタンになります"
+          "detail": "@l10n:settingsPagesRaiTraceGraphAutoDetail"
         },
         "on": {
           "change": "settings.set"
@@ -30,10 +30,10 @@
       {
         "t": "Text",
         "p": {
-          "text": "AI のモデルや web 検索は、RAi バーのモデルのボタンから設定します。",
+          "text": "@l10n:settingsPagesRaiText1",
           "pad": 16,
           "size": 13,
-          "detail": "推論サーバーや web 検索の鍵は RAi バーのモデルチップから設定します。"
+          "detail": "@l10n:settingsPagesRaiText1Detail"
         }
       }
     ]

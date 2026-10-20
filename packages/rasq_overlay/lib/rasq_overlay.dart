@@ -11,6 +11,7 @@ export 'src/overlay_layer.dart';
 export 'src/overlay_entry.dart';
 export 'src/overlay_manager.dart';
 export 'src/overlay_host.dart';
+export 'src/overlay_l10n.dart';
 export 'src/overlay_scope.dart';
 export 'src/presets.dart';
 export 'src/tethered_panel.dart';

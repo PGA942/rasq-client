@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'orgate_client.dart';
+import '../l10n/l10n.dart';
 
 /// お金まわりの設定 (D-401 / ORGATE O-004): ORGATE-Server の `GET /payments/config`(認証なし)。
 ///
@@ -82,7 +83,7 @@ class ReviewFeeConfig {
 const paidFeaturesDisabledCode = 'paid_features_disabled';
 
 /// 有料の機能が止まっているときにアプリが出す文(サーバーの `paid_features_disabled` も同じ文にそろえる)。
-const paidFeaturesDisabledMessage = '公開テストでは有料プラグインは使えません';
+String get paidFeaturesDisabledMessage => appL10n.backendPaidFeaturesDisabled;
 
 /// `paid_features_disabled` の断りか。
 bool isPaidFeaturesDisabled(Object e) => e is OrgateException && e.serverCode == paidFeaturesDisabledCode;

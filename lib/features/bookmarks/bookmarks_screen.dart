@@ -17,6 +17,7 @@ import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../post/post_bookmark_button.dart';
 import '../vc/astell_bookmarks.dart';
 import '../vc/astell_tile.dart';
+import '../../l10n/l10n.dart';
 
 final favoritesProvider = FutureProvider.autoDispose<List<Post>>((ref) async {
   final s = ref.watch(currentSnsSessionProvider);
@@ -60,10 +61,10 @@ Future<void> removeBookmark(WidgetRef ref, Post p) async {
   try {
     await ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, action, args: const {'forceUndo': true});
     messenger?.clearSnackBars();
-    messenger?.showSnackBar(const SnackBar(content: Text('ブックマークを外しました')));
+    messenger?.showSnackBar(SnackBar(content: Text(appL10n.bookmarksRemoved)));
   } catch (e) {
     ref.read(_removedBookmarksProvider.notifier).remove(p.key);
-    messenger?.showSnackBar(SnackBar(content: Text('外せませんでした: $e')));
+    messenger?.showSnackBar(SnackBar(content: Text(appL10n.bookmarksRemoveFailed(e is StateError ? e.message : '$e'))));
   }
 }
 
@@ -78,10 +79,10 @@ class BookmarksScreen extends ConsumerWidget {
     final removed = ref.watch(_removedBookmarksProvider);
     final canRemove = bookmarkActionOf(ref.watch(currentSnsSessionProvider)) != null;
     return Scaffold(
-      appBar: RasqPageHeader(title: 'ブックマーク', onMore: () {}),
+      appBar: RasqPageHeader(title: context.l10n.bookmarksTitle, onMore: () {}),
       body: favs.when(
         loading: () => const RasqLoading(),
-        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(favoritesProvider), retryLabel: '再読み込み'),
+        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: e is StateError ? e.message : '$e'), onRetry: () => ref.invalidate(favoritesProvider), retryLabel: context.l10n.bookmarksRetry),
         data: (all) {
           final posts = [for (final p in all) if (!removed.contains(p.key)) p];
           // 自分のための保存の置き場 (D-032 改): RASQ 横断クリップと非公開
@@ -92,8 +93,8 @@ class BookmarksScreen extends ConsumerWidget {
           final scheme = Theme.of(context).colorScheme;
           if (posts.isEmpty && clips.isEmpty && rooms.isEmpty) {
             return canRemove
-                ? const RasqEmptyView(title: 'ブックマークはありません', hint: '投稿の 🔖、クリップに追加、ASTell のしおりで集められます')
-                : const RasqEmptyView(key: ValueKey('bookmarks.noSns'), title: 'ブックマークはありません', hint: 'このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます');
+                ? RasqEmptyView(title: context.l10n.bookmarksEmptyTitle, hint: context.l10n.bookmarksEmptyHint)
+                : RasqEmptyView(key: const ValueKey('bookmarks.noSns'), title: context.l10n.bookmarksEmptyTitle, hint: context.l10n.bookmarksEmptyNoSnsHint);
           }
           return RefreshIndicator(
             onRefresh: () async {
@@ -107,17 +108,17 @@ class BookmarksScreen extends ConsumerWidget {
                 AstellTileStrip(rooms: rooms, tileBuilder: (r) => AstellRoomTile(room: r)),
               ],
               if (clips.isNotEmpty) ...[
-                RasqSectionHeader(title: 'クリップ', topMargin: rooms.isEmpty ? 0 : RasqSpacing.sectionMargin),
+                RasqSectionHeader(title: context.l10n.bookmarksClips, topMargin: rooms.isEmpty ? 0 : RasqSpacing.sectionMargin),
                 for (final c in clips) ...[
                   RasqListTile(
                     title: c.name,
-                    subtitle: [if (c.notesCount != null) '${c.notesCount}件', if (c.isHost) 'RASQ(SNS 横断)' else '非公開クリップ'].join(' ・ '),
+                    subtitle: [if (c.notesCount != null) context.l10n.bookmarksClipCount(c.notesCount!), if (c.isHost) context.l10n.bookmarksClipHost else context.l10n.bookmarksClipPrivate].join(context.l10n.bookmarksSeparator),
                     leading: Icon(c.isHost ? Icons.workspaces_outlined : Icons.lock_outline, color: scheme.onSurfaceVariant),
                     onTap: () => context.pushClip(c),
                   ),
                   const Divider(height: 1),
                 ],
-                if (posts.isNotEmpty) const RasqSectionHeader(title: 'お気に入り'),
+                if (posts.isNotEmpty) RasqSectionHeader(title: context.l10n.bookmarksFavorites),
               ],
               for (final p in posts) ...[
                 if (canRemove)
@@ -129,7 +130,7 @@ class BookmarksScreen extends ConsumerWidget {
                       color: RasqColors.danger,
                       alignment: Alignment.centerRight,
                       padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-                      child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.bookmark_remove_outlined, color: Colors.white), SizedBox(width: 4), Text('外す', style: TextStyle(color: Colors.white))]),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.bookmark_remove_outlined, color: Colors.white), const SizedBox(width: 4), Text(context.l10n.bookmarksSwipeRemove, style: const TextStyle(color: Colors.white))]),
                     ),
                     onDismissed: (_) => removeBookmark(ref, p),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -140,7 +141,7 @@ class BookmarksScreen extends ConsumerWidget {
                           key: ValueKey('bookmarks.remove.${p.id}'),
                           onPressed: () => removeBookmark(ref, p),
                           icon: const Icon(Icons.bookmark_remove_outlined, size: 18),
-                          label: const Text('ブックマークを外す'),
+                          label: Text(context.l10n.bookmarksRemove),
                         ),
                       ),
                     ]),

@@ -16,6 +16,7 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../learning/relational_cloud.dart';
 import '../../app/providers.dart';
 import '../plugins/slot_plugins.dart';
+import '../rai/prompts/rai_prompts.dart' show raiPrompts;
 import '../../session/session_providers.dart';
 import '../home/post_duplicates.dart';
 import '../home/timeline_providers.dart';
@@ -169,7 +170,7 @@ final eventSummaryProvider = FutureProvider.family<String?, String>((ref, eventI
   }
   if (event == null) return null;
   final text = [for (final p in event.posts.take(12)) '${p.author.displayName}: ${p.body}'].join('\n');
-  return gateway.summarize('次の会話を1文で要約:\n$text');
+  return gateway.summarize(raiPrompts.eventSummary(text));
 });
 
 /// リノート/引用で運ばれてきた**非フォロイー(ゲスト)**の自前投稿 (D-046)。

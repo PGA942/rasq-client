@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "astell.tiles",
-  "title": "Tellタイル",
+  "title": "@l10n:settingsPagesAstellTilesTitle",
   "defaults": {
     "headerStrip": true,
     "headerMax": 4
@@ -12,17 +12,17 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "ホームのヘッダー"
+          "title": "@l10n:settingsPagesAstellTilesSection1Title"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "headerStrip",
         "p": {
-          "title": "フォロー中のホストの ASTell をヘッダーに出す",
+          "title": "@l10n:settingsPagesAstellTilesHeaderStripTitle",
           "value": "$.settings.headerStrip",
-          "subtitle": "開催中のルームを、ホームの上に並べます",
-          "detail": "開催中のルームを、ホームのヘッダーの角丸の枠に並べます"
+          "subtitle": "@l10n:settingsPagesAstellTilesHeaderStripSubtitle",
+          "detail": "@l10n:settingsPagesAstellTilesHeaderStripDetail"
         },
         "on": {
           "change": "settings.set"
@@ -32,12 +32,12 @@
         "t": "SliderListTile",
         "k": "headerMax",
         "p": {
-          "title": "並べる数",
+          "title": "@l10n:settingsPagesAstellTilesHeaderMaxTitle",
           "value": "$.settings.headerMax",
           "min": 1,
           "max": 8,
           "divisions": 7,
-          "unit": "件"
+          "unit": "@l10n:settingsPagesAstellTilesHeaderMaxUnit"
         },
         "on": {
           "change": "settings.set"

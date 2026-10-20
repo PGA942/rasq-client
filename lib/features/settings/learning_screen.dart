@@ -75,7 +75,7 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
       builder: (ctx) {
         final scheme = Theme.of(ctx).colorScheme;
         final l = ctx.l10n;
-        Widget point(String t) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('・$t', style: RasqTypography.bodySmall));
+        Widget point(String t) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(l.settingsCommonBullet(t), style: RasqTypography.bodySmall));
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.lg),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -390,7 +390,7 @@ class _ContributionDebug extends ConsumerWidget {
               : l.settingsLearningDebugCloudOff,
         );
       }),
-      RasqValueListTile(title: l.settingsLearningDebugModelTitle, value: '${ref.read(raiLlmProvider).spec.codename} ・ ${llm.phase.name}'),
+      RasqValueListTile(title: l.settingsLearningDebugModelTitle, value: [ref.read(raiLlmProvider).spec.codename, llm.phase.name].join(l.settingsCommonSeparator)),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
         child: OutlinedButton(
@@ -404,7 +404,7 @@ class _ContributionDebug extends ConsumerWidget {
         for (final e in verdicts.take(30))
           RasqListTile(
             title: e.key.replaceAll('|', ' / '),
-            subtitle: '${e.value.verdict} ・ ${e.value.judgedBy} ・ ${e.value.reason}',
+            subtitle: [e.value.verdict, e.value.judgedBy, e.value.reason].join(l.settingsCommonSeparator),
             chevron: false,
           ),
       ],

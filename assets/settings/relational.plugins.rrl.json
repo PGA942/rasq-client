@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "relational.plugins",
-  "title": "プラグインの詳細設定",
+  "title": "@l10n:settingsPagesRelationalPluginsTitle",
   "defaults": {},
   "root": {
     "t": "Column",
@@ -9,30 +9,30 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "状態"
+          "title": "@l10n:settingsPagesRelationalPluginsSection1Title"
         }
       },
       {
         "t": "ValueListTile",
         "p": {
-          "title": "プラグイン枠",
-          "value": "準備中"
+          "title": "@l10n:settingsPagesRelationalPluginsValueRow1Title",
+          "value": "@l10n:settingsPagesRelationalPluginsValueRow1Value"
         }
       },
       {
         "t": "Text",
         "p": {
-          "text": "この画面のプラグインは準備中です。",
+          "text": "@l10n:settingsPagesRelationalPluginsText1",
           "pad": 16,
           "size": 13,
-          "detail": "リレーショナルタイムライン用のプラグイン枠(束ね方の差し替え)は契約 v0.7 にはまだありません。ML の類似度は RASQ サーバーの ML ゲートウェイを使います。 プラグイン枠: 未定義。"
+          "detail": "@l10n:settingsPagesRelationalPluginsText1Detail"
         }
       },
       {
         "t": "ListTile",
         "k": "/settings/server",
         "p": {
-          "title": "RASQ サーバーの接続先"
+          "title": "@l10n:settingsPagesRelationalPluginsSettingsServerTitle"
         },
         "on": {
           "tap": "route.push"

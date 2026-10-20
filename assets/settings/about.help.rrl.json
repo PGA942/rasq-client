@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "about.help",
-  "title": "ヘルプ",
+  "title": "@l10n:settingsPagesAboutHelpTitle",
   "defaults": {},
   "root": {
     "t": "Column",
@@ -9,23 +9,23 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "使い方"
+          "title": "@l10n:settingsPagesAboutHelpSection1Title"
         }
       },
       {
         "t": "Text",
         "p": {
-          "text": "操作に迷ったら、サイドメニューの RAi に聞いてください。",
+          "text": "@l10n:settingsPagesAboutHelpText1",
           "pad": 16,
           "size": 13,
-          "detail": "操作に迷ったら RAi に聞いてください。サイドメニューの RAi から、インストラクション(ボタンまで案内)とアシスタント(端末内モデルで回答、関数で代行)が使えます。"
+          "detail": "@l10n:settingsPagesAboutHelpText1Detail"
         }
       },
       {
         "t": "ListTile",
         "k": "/rai",
         "p": {
-          "title": "RAi を開く"
+          "title": "@l10n:settingsPagesAboutHelpRaiTitle"
         },
         "on": {
           "tap": "route.push"
@@ -35,8 +35,8 @@
         "t": "ListTile",
         "k": "/tour?again=1",
         "p": {
-          "title": "RASQ の使い方をもう一度見る",
-          "subtitle": "機能の紹介(TL・トレンド・ASTell・RAi など)"
+          "title": "@l10n:settingsPagesAboutHelpTourAgain1Title",
+          "subtitle": "@l10n:settingsPagesAboutHelpTourAgain1Subtitle"
         },
         "on": {
           "tap": "route.push"
@@ -45,23 +45,23 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "困ったとき"
+          "title": "@l10n:settingsPagesAboutHelpSection2Title"
         }
       },
       {
         "t": "Text",
         "p": {
-          "text": "ログインや投稿がうまくいかないときは、権限を確かめて、入り直してください。",
+          "text": "@l10n:settingsPagesAboutHelpText2",
           "pad": 16,
           "size": 13,
-          "detail": "ログインできない / 投稿が届かないときは、まず「SNSプラグイン → セキュリティ」で権限を確認し、一度ログアウトして入り直してください。"
+          "detail": "@l10n:settingsPagesAboutHelpText2Detail"
         }
       },
       {
         "t": "ListTile",
         "k": "/settings/dsl/sns.security",
         "p": {
-          "title": "セキュリティ(権限とトークン)"
+          "title": "@l10n:settingsPagesAboutHelpSettingsDslSnsSecurityTitle"
         },
         "on": {
           "tap": "route.push"
@@ -71,7 +71,7 @@
         "t": "ListTile",
         "k": "/settings/server",
         "p": {
-          "title": "RASQ サーバーの接続先"
+          "title": "@l10n:settingsPagesAboutHelpSettingsServerTitle"
         },
         "on": {
           "tap": "route.push"

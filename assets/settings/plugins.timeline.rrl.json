@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "plugins.timeline",
-  "title": "カスタムタイムラインを配置",
+  "title": "@l10n:settingsPagesPluginsTimelineTitle",
   "defaults": {
     "enabled": true
   },
@@ -11,17 +11,17 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "タイムラインのプラグイン"
+          "title": "@l10n:settingsPagesPluginsTimelineSection1Title"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "enabled",
         "p": {
-          "title": "カスタムタイムラインを使う",
+          "title": "@l10n:settingsPagesPluginsTimelineEnabledTitle",
           "value": "$.settings.enabled",
-          "subtitle": "プラグインのタイムラインを、ホームのタブに出します",
-          "detail": "TL プラグイン(tl)が宣言したタイムラインをホームのタブと「タイムラインをカスタマイズ」のアルゴリズムに出します"
+          "subtitle": "@l10n:settingsPagesPluginsTimelineEnabledSubtitle",
+          "detail": "@l10n:settingsPagesPluginsTimelineEnabledDetail"
         },
         "on": {
           "change": "settings.set"
@@ -30,7 +30,7 @@
       {
         "t": "Text",
         "p": {
-          "text": "並びや取り込みは、ホームのタブ行の歯車(タイムラインをカスタマイズ)から組みます。",
+          "text": "@l10n:settingsPagesPluginsTimelineText1",
           "pad": 16,
           "size": 13
         }
@@ -39,7 +39,7 @@
         "t": "ListTile",
         "k": "/store",
         "p": {
-          "title": "プラグインストア"
+          "title": "@l10n:settingsPagesPluginsTimelineStoreTitle"
         },
         "on": {
           "tap": "route.push"

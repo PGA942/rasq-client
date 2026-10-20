@@ -9,6 +9,8 @@ environment:
 
 dependencies:
   http: ^1.2.0
+  # 文言 (D-533): 生成した文言のクラスの plural(lib/l10n/gen)。
+  intl: ^0.20.2
   meta: ^1.16.0
   rasq_models:
     path: ../rasq_models

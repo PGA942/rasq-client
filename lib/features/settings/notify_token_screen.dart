@@ -120,8 +120,8 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
               for (final t in s.tokens)
                 RasqListTile(
                   key: ValueKey('notify.token.${t.id}'),
-                  title: '${t.isRoot ? l.settingsNotifyTokenKindRoot : l.settingsNotifyTokenKindChild}${t.label == null ? '' : l.settingsNotifyTokenLabelSuffix(t.label!)}${t.id == s.localTokenId ? ' ・ ${l.settingsNotifyTokenThisDevice}' : ''}',
-                  subtitle: '${t.scopes.join(' / ')} ・ ${l.settingsNotifyTokenIssuedAt(RasqTimestamp.format(t.createdAt))}${t.lastUsedAt == null ? ' ・ ${l.settingsNotifyTokenUnused}' : ' ・ ${l.settingsNotifyTokenLastUsedAt(RasqTimestamp.format(t.lastUsedAt!))}'}',
+                  title: '${t.isRoot ? l.settingsNotifyTokenKindRoot : l.settingsNotifyTokenKindChild}${t.label == null ? '' : l.settingsNotifyTokenLabelSuffix(t.label!)}${t.id == s.localTokenId ? '${l.settingsCommonSeparator}${l.settingsNotifyTokenThisDevice}' : ''}',
+                  subtitle: [t.scopes.join(' / '), l.settingsNotifyTokenIssuedAt(RasqTimestamp.format(t.createdAt)), t.lastUsedAt == null ? l.settingsNotifyTokenUnused : l.settingsNotifyTokenLastUsedAt(RasqTimestamp.format(t.lastUsedAt!))].join(l.settingsCommonSeparator),
                   chevron: false,
                   trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                     if (t.isRoot)

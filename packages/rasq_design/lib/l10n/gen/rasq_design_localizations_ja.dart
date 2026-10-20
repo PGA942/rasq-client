@@ -246,4 +246,29 @@ class RasqDesignLocalizationsJa extends RasqDesignLocalizations {
 
   @override
   String get designErrorRetry => '見てみる';
+
+  @override
+  String get designOverlayCancel => 'キャンセル';
+
+  @override
+  String get designOverlayClose => '閉じる';
+
+  @override
+  String get designOverlaySwitcher => 'FOW切り替え';
+
+  @override
+  String get designOverlayResizeHandle => 'サイズ変更ハンドル';
+
+  @override
+  String designRrlRange(int start, int end, String unit) {
+    return '$start〜$end$unit';
+  }
+
+  @override
+  String get designRrlSend => '送信';
+
+  @override
+  String designRrlNoAuthFlow(String pluginId) {
+    return '$pluginId: 認証フローが構成されていません(既存トークンでの実登録のみ)';
+  }
 }

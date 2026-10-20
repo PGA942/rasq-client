@@ -2,6 +2,8 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart' show snsUri;
 import 'package:rasq_store/rasq_store.dart' show FollowState;
 
+import 'l10n.dart';
+
 /// Misskey JSON → host models.
 abstract final class MisskeyMappers {
   static UserSummary user(Map<String, Object?> j, {required AccountId account, required String host}) {
@@ -259,14 +261,15 @@ abstract final class MisskeyMappers {
       _ => NotificationKind.system,
     };
     // システム通知の見出しと本文。
+    final l = snsMisskeyL10n;
     final (title, body) = switch (type) {
-      'app' => (j['header'] as String? ?? 'アプリからの通知', j['body'] as String?),
-      'roleAssigned' => ('ロールが付与されました', (j['role'] is Map ? (j['role'] as Map)['name'] : null) as String?),
-      'achievementEarned' => ('実績を獲得しました', j['achievement'] as String?),
-      'login' => ('新しいログインがありました', null),
-      'test' => ('テスト通知', null),
-      'exportCompleted' => ('エクスポートが完了しました', j['exportedEntity'] as String?),
-      _ => kind == NotificationKind.system ? ('通知 ($type)', null) : (null, null),
+      'app' => (j['header'] as String? ?? l.misskeyNoticeApp, j['body'] as String?),
+      'roleAssigned' => (l.misskeyNoticeRoleAssigned, (j['role'] is Map ? (j['role'] as Map)['name'] : null) as String?),
+      'achievementEarned' => (l.misskeyNoticeAchievement, j['achievement'] as String?),
+      'login' => (l.misskeyNoticeLogin, null),
+      'test' => (l.misskeyNoticeTest, null),
+      'exportCompleted' => (l.misskeyNoticeExportCompleted, j['exportedEntity'] as String?),
+      _ => kind == NotificationKind.system ? (l.misskeyNoticeUnknown(type), null) : (null, null),
     };
     final actors = <UserSummary>[];
     final byActor = <String, String>{};

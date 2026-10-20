@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
+import '../l10n/l10n.dart';
 
 /// 端末ローカル通知 (D-160): 開催予約した AsTell の開始などを OS の通知に登録する。
 /// 実装は `flutter_local_notifications`。テスト/未対応環境は [MemoryLocalNotifier]
@@ -75,11 +76,11 @@ class FlutterLocalNotifier implements LocalNotifier {
   Future<bool> _init() => _ready ??= () async {
         try {
           final ok = await _plugin.initialize(
-            settings: const InitializationSettings(
-              android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+            settings: InitializationSettings(
+              android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
               iOS: _darwinInit,
               macOS: _darwinInit,
-              linux: LinuxInitializationSettings(defaultActionName: '開く'),
+              linux: LinuxInitializationSettings(defaultActionName: appL10n.notifyOpenAction),
             ),
             onDidReceiveNotificationResponse: (r) {
               final p = r.payload;
@@ -109,7 +110,7 @@ class FlutterLocalNotifier implements LocalNotifier {
       }();
 
   /// 画面の読み取りの入口 (D-415): 音は鳴らさず、すぐ出す。
-  static const _glimpseChannel = AndroidNotificationDetails('rasq.discover.glimpse', '画面の読み取り', channelDescription: 'タップすると、いま見ている画面を少しだけ読み取ります', importance: Importance.high, priority: Priority.high, playSound: false);
+  static AndroidNotificationDetails get _glimpseChannel => AndroidNotificationDetails('rasq.discover.glimpse', appL10n.notifyGlimpseChannelName, channelDescription: appL10n.notifyGlimpseChannelDescription, importance: Importance.high, priority: Priority.high, playSound: false);
 
   @override
   Stream<String> get taps => _taps.stream;
@@ -139,7 +140,7 @@ class FlutterLocalNotifier implements LocalNotifier {
         id: id,
         title: title,
         body: body,
-        notificationDetails: const NotificationDetails(android: _glimpseChannel, iOS: DarwinNotificationDetails(presentSound: false), macOS: DarwinNotificationDetails(presentSound: false), linux: LinuxNotificationDetails()),
+        notificationDetails: NotificationDetails(android: _glimpseChannel, iOS: const DarwinNotificationDetails(presentSound: false), macOS: const DarwinNotificationDetails(presentSound: false), linux: const LinuxNotificationDetails()),
         payload: payload,
       );
       return true;
@@ -154,7 +155,7 @@ class FlutterLocalNotifier implements LocalNotifier {
   /// チャンネルの名前と説明は同じ id のまま変えられる(Android は作り直しの呼び出しで名前 / 説明だけ上書きする。変えられないのは
   /// 重要度と音。利用者が変えた設定も残る)ので、説明の「VC」→「ASTell」(D-541)は id を変えずに入れた。`channelAction: update`
   /// で予約のたびに名前 / 説明を入れ直すので、既存の端末にも次の予約で反映される。
-  static const _channel = AndroidNotificationDetails('rasq.astell.v2', 'ASTell の開始', channelDescription: 'ブックマークした ASTell の開始通知', importance: Importance.high, priority: Priority.high, sound: RawResourceAndroidNotificationSound('alarm'), channelAction: AndroidNotificationChannelAction.update);
+  static AndroidNotificationDetails get _channel => AndroidNotificationDetails('rasq.astell.v2', appL10n.notifyAstellChannelName, channelDescription: appL10n.notifyAstellChannelDescription, importance: Importance.high, priority: Priority.high, sound: RawResourceAndroidNotificationSound('alarm'), channelAction: AndroidNotificationChannelAction.update);
   static const _darwin = DarwinNotificationDetails(sound: 'alarm.wav');
 
   @override
@@ -175,7 +176,7 @@ class FlutterLocalNotifier implements LocalNotifier {
         title: title,
         body: body,
         scheduledDate: tz.TZDateTime.from(at.toUtc(), tz.UTC),
-        notificationDetails: const NotificationDetails(android: _channel, iOS: _darwin, macOS: _darwin, linux: LinuxNotificationDetails()),
+        notificationDetails: NotificationDetails(android: _channel, iOS: _darwin, macOS: _darwin, linux: const LinuxNotificationDetails()),
         // 正確なアラーム権限を要求しない(数分のずれは許容)。
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: payload,

@@ -1,5 +1,6 @@
 import 'legal_docs.g.dart';
 import 'orgate_client.dart';
+import '../l10n/l10n.dart';
 
 /// 同意の記録 (D-241 / S-015 `GET /me/consents`, `PUT /me/consents/{kind}`)。
 ///
@@ -14,13 +15,15 @@ const rasqPrivacyVersion = rasqLegalVersion;
 
 /// 年齢の申告。RASQ の利用は 13 歳以上。
 enum RasqAgeBand {
-  teen('13-15', '13〜15 歳'),
-  upperTeen('16-17', '16〜17 歳'),
-  adult('18+', '18 歳以上');
+  teen('13-15'),
+  upperTeen('16-17'),
+  adult('18+');
 
-  const RasqAgeBand(this.wire, this.label);
+  const RasqAgeBand(this.wire);
   final String wire;
-  final String label;
+
+  /// 表示の名前(表示の言語)。
+  String get label => switch (this) { teen => appL10n.backendAgeTeen, upperTeen => appL10n.backendAgeUpperTeen, adult => appL10n.backendAgeAdult };
 
   /// 保護者の同意が要る(18 歳未満)。
   bool get needsGuardian => this != adult;

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:rasq_design/rasq_design.dart' show RasqDesignL10nContext;
 
 import 'fow.dart';
 import 'overlay_entry.dart';
@@ -124,7 +125,7 @@ class OverlayHost extends StatelessWidget {
       widgets.add(Positioned.fill(
         key: ValueKey('ov.${e.id}.barrier'),
         child: Semantics(
-          label: behavior == OverlayBarrierBehavior.ignore ? null : '閉じる',
+          label: behavior == OverlayBarrierBehavior.ignore ? null : context.designL10n.designOverlayClose,
           button: behavior != OverlayBarrierBehavior.ignore,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -166,7 +167,7 @@ class OverlayHost extends StatelessWidget {
       final dim = dims(blocking);
       widgets.add(Positioned.fill(
         child: Semantics(
-          label: '閉じる',
+          label: context.designL10n.designOverlayClose,
           button: true,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -242,7 +243,7 @@ class _FowSwitcher extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     String labelOf(RasqOverlayEntry e) => e.fow?.title ?? e.semanticsLabel ?? e.id;
     return Semantics(
-      label: 'FOW切り替え',
+      label: context.designL10n.designOverlaySwitcher,
       container: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -282,7 +283,7 @@ class _FowSwitcher extends StatelessWidget {
                                 leading: const Icon(Icons.layers_outlined),
                                 title: Text(labelOf(e), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 trailing: IconButton(
-                                  tooltip: '閉じる',
+                                  tooltip: context.designL10n.designOverlayClose,
                                   icon: const Icon(Icons.close),
                                   onPressed: () => manager.close(e.id, reason: OverlayCloseReason.discard),
                                 ),
@@ -817,7 +818,7 @@ class _FowPanelState extends State<_FowPanel> {
           : null,
       onVerticalDragCancel: spec.resizable ? () => setState(() => _dragging = false) : null,
       child: Semantics(
-        label: 'サイズ変更ハンドル',
+        label: context.designL10n.designOverlayResizeHandle,
         button: true,
         child: SizedBox(
           height: kFowHandleHeight,

@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "appearance.notifications",
-  "title": "通知の表示形式",
+  "title": "@l10n:settingsPagesAppearanceNotificationsTitle",
   "defaults": {
     "defaultTab": "all",
     "showReminders": true
@@ -12,14 +12,14 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "通知ページ"
+          "title": "@l10n:settingsPagesAppearanceNotificationsSection1Title"
         }
       },
       {
         "t": "RadioListTile",
         "k": "defaultTab",
         "p": {
-          "title": "「すべて」から開く",
+          "title": "@l10n:settingsPagesAppearanceNotificationsDefaultTabAllTitle",
           "value": "all",
           "group": "$.settings.defaultTab"
         },
@@ -31,10 +31,10 @@
         "t": "RadioListTile",
         "k": "defaultTab",
         "p": {
-          "title": "「フォロー中」から開く",
+          "title": "@l10n:settingsPagesAppearanceNotificationsDefaultTabFollowingTitle",
           "value": "following",
           "group": "$.settings.defaultTab",
-          "subtitle": "フォローしている人からの通知だけを先に見ます"
+          "subtitle": "@l10n:settingsPagesAppearanceNotificationsDefaultTabFollowingSubtitle"
         },
         "on": {
           "change": "settings.set"
@@ -44,10 +44,10 @@
         "t": "SwitchListTile",
         "k": "showReminders",
         "p": {
-          "title": "ASTell の開始通知の予定を上に出す",
+          "title": "@l10n:settingsPagesAppearanceNotificationsShowRemindersTitle",
           "value": "$.settings.showReminders",
-          "subtitle": "登録した開始通知を、通知ページの上に出します",
-          "detail": "登録した開始通知(端末のローカル通知)の一覧を通知ページの上に表示します"
+          "subtitle": "@l10n:settingsPagesAppearanceNotificationsShowRemindersSubtitle",
+          "detail": "@l10n:settingsPagesAppearanceNotificationsShowRemindersDetail"
         },
         "on": {
           "change": "settings.set"
@@ -56,7 +56,7 @@
       {
         "t": "Text",
         "p": {
-          "text": "通知する種別は「通知 → プロファイル」で選びます(端末に保存されます)。",
+          "text": "@l10n:settingsPagesAppearanceNotificationsText1",
           "pad": 16,
           "size": 13
         }

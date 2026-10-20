@@ -17,6 +17,7 @@ import 'relational_engine.dart';
 import 'relational_providers.dart';
 import '../ads/timeline_ads.dart';
 import '../../shell/scroll_memory.dart';
+import '../../l10n/l10n.dart';
 
 /// 「関連」タブ = リレーショナルTL v1 (D-027、会話イベント方式)。
 /// フォロイーの投稿を「どの直前投稿への暗黙応答か」で会話イベントに束ね、
@@ -83,7 +84,10 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
     return ref.read(timelineProvider(TimelineKind.home).notifier).refresh();
   }
 
-  String _lookbackLabel(int minutes) => minutes >= 60 ? (minutes % 60 == 0 ? '${minutes ~/ 60}時間' : '${minutes ~/ 60}時間${minutes % 60}分') : '$minutes分';
+  String _lookbackLabel(int minutes) {
+    final l = context.l10n;
+    return minutes >= 60 ? (minutes % 60 == 0 ? l.relationalDurationHours(minutes ~/ 60) : l.relationalDurationHoursMinutes(minutes ~/ 60, minutes % 60)) : l.relationalDurationMinutes(minutes);
+  }
 
   /// 読み直しを済ませた自分の投稿 (D-507)。
   late int _ownSeq = ref.read(ownPostsProvider)?.seq ?? 0;
@@ -109,10 +113,10 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(left: RasqSpacing.sm),
-              child: Text(rasqDetail(context, '会話ごとにまとめて表示しています', '束ねやすさ ${settings.linkBias} / 会話のテンポに応じて最長${settings.maxTtlMinutes}分で沈む'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              child: Text(rasqDetail(context, context.l10n.relationalHeader, context.l10n.relationalHeaderDetail(settings.linkBias, settings.maxTtlMinutes)), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ),
           ),
-          RasqIconButton(icon: Icons.tune, size: 20, tooltip: 'リレーショナルTL調整', onPressed: _openTuning),
+          RasqIconButton(icon: Icons.tune, size: 20, tooltip: context.l10n.relationalTuningTitle, onPressed: _openTuning),
         ]),
       ),
       if (lookback > 0)
@@ -121,22 +125,22 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
           child: Row(children: [
             Icon(Icons.history, size: 16, color: scheme.onSurfaceVariant),
             const SizedBox(width: RasqSpacing.xs),
-            Expanded(child: Text('${_lookbackLabel(lookback)}前の会話まで表示中', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
-            TextButton(onPressed: () => ref.read(relationalLookbackProvider.notifier).reset(), child: const Text('戻す')),
+            Expanded(child: Text(context.l10n.relationalLookback(_lookbackLabel(lookback)), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+            TextButton(onPressed: () => ref.read(relationalLookbackProvider.notifier).reset(), child: Text(context.l10n.relationalLookbackReset)),
           ]),
         ),
       Expanded(
         child: events.when(
           loading: () => const RasqLoading(),
-          error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.relationalTimelineBroken, onRetry: () => ref.invalidate(timelineProvider(TimelineKind.home)), retryLabel: '再読み込み'),
+          error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.relationalTimelineBroken, onRetry: () => ref.invalidate(timelineProvider(TimelineKind.home)), retryLabel: context.l10n.relationalRetry),
           data: (list) => NotificationListener<ScrollNotification>(
             onNotification: _onScroll,
             child: list.isEmpty
                 ? RefreshIndicator(
                     onRefresh: _refresh,
-                    child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [
-                      SizedBox(height: 120),
-                      RasqEmptyView(title: 'いま進行中の会話はありません', hint: 'フォロー中の人の会話が、ここにまとまって出ます。引っ張ると過去の会話も見られます'),
+                    child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
+                      const SizedBox(height: 120),
+                      RasqEmptyView(title: context.l10n.relationalEmptyTitle, hint: context.l10n.relationalEmptyHint),
                     ]),
                   )
                 : RefreshIndicator(
@@ -182,9 +186,9 @@ Future<void> openRelationalTuning(WidgetRef ref) async {
         initialHeightFactor: 0.5,
         minHeightFactor: 0.25,
         maxHeightFactor: 0.9,
-        title: 'リレーショナルTL調整',
-        cancelText: 'キャンセル',
-        confirmText: '決定',
+        title: appL10n.relationalTuningTitle,
+        cancelText: appL10n.relationalTuningCancel,
+        confirmText: appL10n.relationalTuningConfirm,
       ),
       builder: (_, _) => const _TuningPanel(),
     );
@@ -231,48 +235,49 @@ class _TuningPanelState extends ConsumerState<_TuningPanel> {
           onChanged: (v) => store.set(s.copyWith(weights: apply(v))),
         );
 
+    final l = context.l10n;
     if (_advanced) {
       return ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
         ListTile(
           dense: true,
           leading: const Icon(Icons.arrow_back, size: 20),
-          title: const Text('詳細設定'),
+          title: Text(context.l10n.relationalAdvanced),
           onTap: () => setState(() => _advanced = false),
         ),
-        _section(context, '束ね判定'),
+        _section(context, l.relationalSectionLinking),
         RasqSliderListTile(
-          title: '候補ウィンドウ',
-          subtitle: '親候補を探す直近の範囲',
+          title: l.relationalCandidateWindow,
+          subtitle: l.relationalCandidateWindowSubtitle,
           value: s.candidateWindowMinutes.toDouble(),
           min: 5,
           max: 120,
           divisions: 23,
-          valueLabel: '${s.candidateWindowMinutes}分',
+          valueLabel: l.relationalMinutesValue(s.candidateWindowMinutes),
           onChanged: (v) => store.set(s.copyWith(candidateWindowMinutes: v.round())),
         ),
-        _section(context, '重み(通常投稿)'),
-        weight('内容類似', w.content, 0.8, (v) => w.copyWith(content: v)),
-        weight('エンティティ一致', w.entity, 0.5, (v) => w.copyWith(entity: v)),
-        weight('時間減衰', w.time, 0.5, (v) => w.copyWith(time: v)),
-        weight('ペア親密度', w.affinity, 0.3, (v) => w.copyWith(affinity: v)),
-        weight('発話交替', w.turn, 0.2, (v) => w.copyWith(turn: v)),
-        weight('アンカー', w.anchor, 0.3, (v) => w.copyWith(anchor: v)),
-        _section(context, 'フラット加点'),
-        weight('コミュニティ事前分布 ±', w.communityPrior, 0.15, (v) => w.copyWith(communityPrior: v)),
-        _section(context, 'ライフサイクル'),
+        _section(context, l.relationalSectionWeightsPlain),
+        weight(l.relationalWeightContent, w.content, 0.8, (v) => w.copyWith(content: v)),
+        weight(l.relationalWeightEntity, w.entity, 0.5, (v) => w.copyWith(entity: v)),
+        weight(l.relationalWeightTime, w.time, 0.5, (v) => w.copyWith(time: v)),
+        weight(l.relationalWeightAffinity, w.affinity, 0.3, (v) => w.copyWith(affinity: v)),
+        weight(l.relationalWeightTurn, w.turn, 0.2, (v) => w.copyWith(turn: v)),
+        weight(l.relationalWeightAnchor, w.anchor, 0.3, (v) => w.copyWith(anchor: v)),
+        _section(context, l.relationalSectionFlatBonus),
+        weight(l.relationalWeightCommunityPrior, w.communityPrior, 0.15, (v) => w.copyWith(communityPrior: v)),
+        _section(context, l.relationalSectionLifecycle),
         RasqSliderListTile(
-          title: '仮 ROOT 保留',
-          subtitle: '新話題として確定するまでの保留時間',
+          title: l.relationalTentativeHold,
+          subtitle: l.relationalTentativeHoldSubtitle,
           value: s.tentativeHoldSeconds.toDouble(),
           min: 30,
           max: 300,
           divisions: 27,
-          valueLabel: '${s.tentativeHoldSeconds}秒',
+          valueLabel: l.relationalSecondsValue(s.tentativeHoldSeconds),
           onChanged: (v) => store.set(s.copyWith(tentativeHoldSeconds: v.round())),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
-          child: OutlinedButton.icon(icon: const Icon(Icons.restart_alt, size: 18), label: const Text('既定に戻す'), onPressed: store.reset),
+          child: OutlinedButton.icon(icon: const Icon(Icons.restart_alt, size: 18), label: Text(l.relationalResetDefaults), onPressed: store.reset),
         ),
       ]);
     }
@@ -285,10 +290,10 @@ class _TuningPanelState extends ConsumerState<_TuningPanel> {
     const closeBase = 0.10 + 0.05;
 
     return ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
-      _section(context, '束ね判定'),
+      _section(context, l.relationalSectionLinking),
       RasqSliderListTile(
-        title: '束ねやすさ',
-        subtitle: '低いほど広く束ねる(しきい値はコミュニティ別に自動調整)',
+        title: l.relationalLinkBias,
+        subtitle: l.relationalLinkBiasSubtitle,
         value: s.linkBias.toDouble(),
         min: 50,
         max: 100,
@@ -296,19 +301,19 @@ class _TuningPanelState extends ConsumerState<_TuningPanel> {
         onChanged: (v) => store.set(s.copyWith(linkBias: v.round())),
       ),
       RasqSliderListTile(
-        title: '時間減衰',
-        subtitle: '大きいほど時間が離れた投稿もリンクしやすい(τ)',
+        title: l.relationalWeightTime,
+        subtitle: l.relationalTauSubtitle,
         value: s.tauSeconds.toDouble(),
         min: 60,
         max: 1800,
         divisions: 29,
-        valueLabel: '${s.tauSeconds}秒',
+        valueLabel: l.relationalSecondsValue(s.tauSeconds),
         onChanged: (v) => store.set(s.copyWith(tauSeconds: v.round())),
       ),
-      _section(context, '重み'),
+      _section(context, l.relationalSectionWeights),
       RasqSliderListTile(
-        title: '類似性',
-        subtitle: '内容類似+エンティティ一致(内訳は詳細設定)',
+        title: l.relationalSimilarity,
+        subtitle: l.relationalSimilaritySubtitle,
         value: similarity,
         min: 0,
         max: 1.0,
@@ -317,8 +322,8 @@ class _TuningPanelState extends ConsumerState<_TuningPanel> {
         onChanged: (v) => store.set(s.copyWith(weights: w.copyWith(content: v * _defaults.content / simBase, entity: v * _defaults.entity / simBase))),
       ),
       RasqSliderListTile(
-        title: '親密度',
-        subtitle: 'ペア親密度+発話交替(内訳は詳細設定)',
+        title: l.relationalCloseness,
+        subtitle: l.relationalClosenessSubtitle,
         value: closeness,
         min: 0,
         max: 0.45,
@@ -326,18 +331,18 @@ class _TuningPanelState extends ConsumerState<_TuningPanel> {
         valueLabel: closeness.toStringAsFixed(2),
         onChanged: (v) => store.set(s.copyWith(weights: w.copyWith(affinity: v * _defaults.affinity / closeBase, turn: v * _defaults.turn / closeBase))),
       ),
-      _section(context, '追加判定'),
-      weight('ハードアンカー(URL/引用先)', w.hardAnchorBonus, 0.4, (v) => w.copyWith(hardAnchorBonus: v)),
-      weight('反応表現(それな・わかる等)', w.reactiveBonus, 0.3, (v) => w.copyWith(reactiveBonus: v)),
-      _section(context, 'ライフサイクル'),
+      _section(context, l.relationalSectionExtra),
+      weight(l.relationalHardAnchor, w.hardAnchorBonus, 0.4, (v) => w.copyWith(hardAnchorBonus: v)),
+      weight(l.relationalReactive, w.reactiveBonus, 0.3, (v) => w.copyWith(reactiveBonus: v)),
+      _section(context, l.relationalSectionLifecycle),
       RasqRangeSliderListTile(
         title: 'TTL',
-        subtitle: '会話が沈むまでの時間。投稿間隔からこの範囲内で自動調整',
+        subtitle: l.relationalTtlSubtitle,
         values: RangeValues(s.minTtlMinutes.toDouble(), s.maxTtlMinutes.toDouble()),
         min: 1,
         max: 60,
         divisions: 59,
-        valueLabel: '${s.minTtlMinutes}〜${s.maxTtlMinutes}分',
+        valueLabel: l.relationalTtlValue(s.minTtlMinutes, s.maxTtlMinutes),
         onChanged: (v) {
           final lo = v.start.round().clamp(1, 60);
           final hi = v.end.round().clamp(lo, 60);
@@ -347,7 +352,7 @@ class _TuningPanelState extends ConsumerState<_TuningPanel> {
       ListTile(
         dense: true,
         leading: const Icon(Icons.tune, size: 20),
-        title: const Text('詳細設定'),
+        title: Text(l.relationalAdvanced),
         trailing: const Icon(Icons.chevron_right, size: 20),
         onTap: () => setState(() => _advanced = true),
       ),
@@ -392,7 +397,7 @@ class RelationalEventCard extends ConsumerWidget {
           const SizedBox(width: RasqSpacing.md),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(others > 0 ? '${e.root.author.displayName}+$others人' : e.root.author.displayName, style: RasqTypography.displayName),
+              Text(others > 0 ? context.l10n.relationalEventTitle(e.root.author.displayName, others) : e.root.author.displayName, style: RasqTypography.displayName),
               if (headline != null) Text(headline, style: RasqTypography.displayName.copyWith(fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
               if (summary != null)
                 Text(summary, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant, fontStyle: FontStyle.italic), maxLines: 1, overflow: TextOverflow.ellipsis)
@@ -407,7 +412,7 @@ class RelationalEventCard extends ConsumerWidget {
           ),
           Column(children: [
             Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-            Text('${shown.length}件', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(context.l10n.relationalEventPostCount(shown.length), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ]),
         ]),
       ),

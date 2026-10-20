@@ -1,0 +1,7 @@
+# 部品(sns_misskey)の文言 (D-533)。Flutter に依らない部品なので flutter gen-l10n ではなく tool/l10n_merge.dart が
+# lib/l10n/parts/*.<言語>.arb から lib/l10n/misskey_<言語>.arb と lib/l10n/gen(素の Dart のクラス)を作る。手順はアプリの docs/I18N.md。
+arb-dir: lib/l10n
+template-arb-file: misskey_ja.arb
+output-dir: lib/l10n/gen
+output-localization-file: sns_misskey_localizations.dart
+output-class: SnsMisskeyLocalizations

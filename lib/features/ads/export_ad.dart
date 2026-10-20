@@ -8,6 +8,7 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../child_safe/child_safe_providers.dart' show childSafeProvider;
 import 'export_ad_sdk.dart';
+import '../../l10n/l10n.dart';
 
 /// メディアの書き出し中の広告枠 (D-327)。
 ///
@@ -158,7 +159,7 @@ class _ExportAdSlotState extends ConsumerState<ExportAdSlot> {
         padding: const EdgeInsets.only(top: RasqSpacing.sm),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           // 広告だと分かるように(読み込めてから出す)。
-          if (_loaded) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('広告', style: RasqTypography.caption.copyWith(color: muted))),
+          if (_loaded) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text(context.l10n.adsLabel, style: RasqTypography.caption.copyWith(color: muted))),
           sdk.buildAd(
             network: network,
             config: config,

@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/providers.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import 'host_clips.dart';
+import '../../l10n/l10n.dart';
 
 /// 「クリップに追加」(D-032): 追加先の選択シート。ネイティブクリップ
 /// (SNS 対応時のみ)とホスト横断クリップ(常時)を一つのシートに並べ、
@@ -36,12 +37,12 @@ Future<void> showAddToClipSheet(WidgetRef ref, Post post, {SnsSession? session})
 
   final picked = await manager.showBottomSheet<Object>(
     id: 'clip.add',
-    title: 'クリップに追加',
-    builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
+    title: appL10n.clipsAddTitle,
+    builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
       for (final c in native)
         RasqListTile(
           title: c.name,
-          subtitle: c.notesCount == null ? null : '${c.notesCount}件',
+          subtitle: c.notesCount == null ? null : ctx.l10n.clipsPostCount(c.notesCount!),
           leading: const Icon(Icons.collections_bookmark_outlined),
           onTap: () => manager.close('clip.add', result: c),
         ),
@@ -50,7 +51,7 @@ Future<void> showAddToClipSheet(WidgetRef ref, Post post, {SnsSession? session})
           RasqListTile(
             key: ValueKey('clip.add.host.${c.id}'),
             title: c.name,
-            subtitle: '追加済み ・ RASQ クリップ${c.isPublished ? '(公開中)' : ''}',
+            subtitle: c.isPublished ? ctx.l10n.clipsAddAddedHostPublished : ctx.l10n.clipsAddAddedHost,
             leading: const Icon(Icons.workspaces_outlined),
             trailing: const Icon(Icons.check, size: 18),
           )
@@ -58,11 +59,11 @@ Future<void> showAddToClipSheet(WidgetRef ref, Post post, {SnsSession? session})
           RasqListTile(
             key: ValueKey('clip.add.host.${c.id}'),
             title: c.name,
-            subtitle: '${c.entries.length}件 ・ RASQ クリップ(SNS 横断)${c.isPublished ? ' ・ 公開中' : ''}',
+            subtitle: c.isPublished ? ctx.l10n.clipsAddHostRowPublished(c.entries.length) : ctx.l10n.clipsAddHostRow(c.entries.length),
             leading: const Icon(Icons.workspaces_outlined),
             onTap: () => manager.close('clip.add', result: c),
           ),
-      RasqListTile(title: '新しいクリップを作成', leading: const Icon(Icons.add), onTap: () => manager.close('clip.add', result: #create)),
+      RasqListTile(title: ctx.l10n.clipsAddCreate, leading: const Icon(Icons.add), onTap: () => manager.close('clip.add', result: #create)),
       const SizedBox(height: RasqSpacing.md),
     ]),
   );
@@ -71,16 +72,16 @@ Future<void> showAddToClipSheet(WidgetRef ref, Post post, {SnsSession? session})
   try {
     if (picked == #create) {
       final name = await _createAndAdd(manager, session, hostStore, post);
-      if (name != null) messenger?.showSnackBar(SnackBar(content: Text('「$name」に追加しました')));
+      if (name != null) messenger?.showSnackBar(SnackBar(content: Text(appL10n.clipsAdded(name))));
     } else if (picked is ClipInfo) {
       await session?.addToClip(picked.id, post.id);
-      messenger?.showSnackBar(SnackBar(content: Text('「${picked.name}」に追加しました')));
+      messenger?.showSnackBar(SnackBar(content: Text(appL10n.clipsAdded(picked.name))));
     } else if (picked is HostClip) {
       await hostStore.addPost(picked.id, post);
-      messenger?.showSnackBar(SnackBar(content: Text('「${picked.name}」に追加しました')));
+      messenger?.showSnackBar(SnackBar(content: Text(appL10n.clipsAdded(picked.name))));
     }
   } catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text('クリップに追加できませんでした: $e')));
+    messenger?.showSnackBar(SnackBar(content: Text(appL10n.clipsAddFailed(e is StateError ? e.message : '$e'))));
   }
 }
 
@@ -92,27 +93,27 @@ Future<String?> _createAndAdd(OverlayManager manager, SnsSession? session, HostC
   var toHost = session == null;
   final ok = await manager.showBottomSheet<bool>(
     id: 'clip.create',
-    title: '新しいクリップ',
+    title: appL10n.clipsCreateTitle,
     builder: (_) => StatefulBuilder(
       builder: (context, setState) => Column(mainAxisSize: MainAxisSize.min, children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-          child: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(hintText: 'クリップ名')),
+          child: TextField(controller: controller, autofocus: true, decoration: InputDecoration(hintText: context.l10n.clipsCreateNameHint)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-          child: TextField(controller: descController, maxLines: 2, minLines: 1, decoration: const InputDecoration(hintText: '説明(任意)')),
+          child: TextField(controller: descController, maxLines: 2, minLines: 1, decoration: InputDecoration(hintText: context.l10n.clipsCreateDescriptionHint)),
         ),
         if (session != null)
           RasqSwitchListTile(
-            title: 'RASQ クリップ(SNS 横断)にする',
-            subtitle: '端末に保存され、別の SNS の投稿も同じクリップへ入れられます',
+            title: context.l10n.clipsCreateHost,
+            subtitle: context.l10n.clipsCreateHostSubtitle,
             value: toHost,
             onChanged: (v) => setState(() => toHost = v),
           ),
         Padding(
           padding: const EdgeInsets.all(RasqSpacing.page),
-          child: SizedBox(width: double.infinity, child: FilledButton(onPressed: () => manager.close('clip.create', result: true), child: const Text('作成して追加'))),
+          child: SizedBox(width: double.infinity, child: FilledButton(onPressed: () => manager.close('clip.create', result: true), child: Text(context.l10n.clipsCreateAndAdd))),
         ),
       ]),
     ),

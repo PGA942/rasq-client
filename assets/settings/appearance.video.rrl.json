@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "appearance.video",
-  "title": "ピクチャインピクチャ",
+  "title": "@l10n:settingsPagesAppearanceVideoTitle",
   "defaults": {
     "autoplay": true,
     "defaultSpeed": "1.0",
@@ -13,17 +13,17 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "動画"
+          "title": "@l10n:settingsPagesAppearanceVideoSection1Title"
         }
       },
       {
         "t": "SwitchListTile",
         "k": "autoplay",
         "p": {
-          "title": "開いたら自動で再生",
+          "title": "@l10n:settingsPagesAppearanceVideoAutoplayTitle",
           "value": "$.settings.autoplay",
-          "subtitle": "全画面と小窓で、すぐに再生します",
-          "detail": "全画面ビューワーと小窓(PiP)で、準備ができ次第再生します"
+          "subtitle": "@l10n:settingsPagesAppearanceVideoAutoplaySubtitle",
+          "detail": "@l10n:settingsPagesAppearanceVideoAutoplayDetail"
         },
         "on": {
           "change": "settings.set"
@@ -33,9 +33,9 @@
         "t": "SwitchListTile",
         "k": "pipKeepPosition",
         "p": {
-          "title": "小窓へ移るとき再生位置を引き継ぐ",
+          "title": "@l10n:settingsPagesAppearanceVideoPipKeepPositionTitle",
           "value": "$.settings.pipKeepPosition",
-          "subtitle": "全画面の「小窓で再生」を押したときの続きから再生します"
+          "subtitle": "@l10n:settingsPagesAppearanceVideoPipKeepPositionSubtitle"
         },
         "on": {
           "change": "settings.set"
@@ -44,7 +44,7 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "既定の再生速度"
+          "title": "@l10n:settingsPagesAppearanceVideoSection2Title"
         }
       },
       {
@@ -63,7 +63,7 @@
         "t": "RadioListTile",
         "k": "defaultSpeed",
         "p": {
-          "title": "1.0×(標準)",
+          "title": "@l10n:settingsPagesAppearanceVideoDefaultSpeed10Title",
           "value": "1.0",
           "group": "$.settings.defaultSpeed"
         },
@@ -110,10 +110,10 @@
       {
         "t": "Text",
         "p": {
-          "text": "小窓は、掴んで好きな場所へ動かせます。",
+          "text": "@l10n:settingsPagesAppearanceVideoText1",
           "pad": 16,
           "size": 13,
-          "detail": "小窓は FOW なので、掴んでカラムや上下へ動かせます。"
+          "detail": "@l10n:settingsPagesAppearanceVideoText1Detail"
         }
       }
     ]

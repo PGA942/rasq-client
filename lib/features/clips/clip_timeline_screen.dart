@@ -22,6 +22,7 @@ import 'host_clips.dart';
 import 'index_toc.dart';
 import 'virtual_index.dart';
 import '../ads/timeline_ads.dart';
+import '../../l10n/l10n.dart';
 
 /// クリップTL (D-032/D-036)。ネイティブクリップとホスト横断クリップの
 /// 詳細画面 — 中身の投稿列の**最上位に仮想目次**を重ねる。目次の項目を
@@ -65,7 +66,7 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
         _posts = [for (final e in entries) postFromSnapshot(e.snapshot)];
       } else {
         final s = ref.read(currentSnsSessionProvider);
-        if (s == null) throw StateError('セッションがありません');
+        if (s == null) throw StateError(appL10n.clipsNoSession);
         final page = await s.clipNotes(widget.clip.id, cursor: more ? _cursor : null);
         _posts = more ? [...?_posts, ...page.items] : page.items;
         _cursor = page.nextCursor;
@@ -94,7 +95,7 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
       if (hidden == null || (_posts == null && _error == null)) return Scaffold(appBar: RasqPageHeader(title: widget.clip.name), body: const RasqLoading());
       if (childSafeCollectionHidden(gate, hidden, kind: 'clip', id: widget.clip.id, name: widget.clip.name, description: widget.clip.description) ||
           gate.collectionHidden(childSafeCollectionMeta(widget.clip.name, widget.clip.description), [for (final p in read) '${p.body} ${p.quote?.body ?? ''}'])) {
-        return Scaffold(appBar: RasqPageHeader(title: widget.clip.name), body: const ChildSafeBlockedView(message: '保護者がこのクリップを止めています'));
+        return Scaffold(appBar: RasqPageHeader(title: widget.clip.name), body: ChildSafeBlockedView(message: context.l10n.clipsChildSafeBlocked));
       }
     }
     // チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): 開けるクリップでも、見せない投稿は外す(一覧にも、
@@ -111,11 +112,11 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
     return Scaffold(
       appBar: RasqPageHeader(title: widget.clip.name),
       body: _error != null
-          ? RasqErrorView(code: _error is SnsApiException ? (_error as SnsApiException).code : ErrorCode.internalServerError.copyWith(message: '$_error'), onRetry: _load, retryLabel: '再読み込み')
+          ? RasqErrorView(code: _error is SnsApiException ? (_error as SnsApiException).code : ErrorCode.internalServerError.copyWith(message: _error is StateError ? (_error as StateError).message : '$_error'), onRetry: _load, retryLabel: context.l10n.clipsRetry)
           : posts.isEmpty && _loading
               ? const RasqLoading()
               : posts.isEmpty
-                  ? const RasqEmptyView(title: 'クリップは空です', hint: '投稿メニューの「クリップに追加」からここへ集められます')
+                  ? RasqEmptyView(title: context.l10n.clipsEmptyTitle, hint: context.l10n.clipsEmptyHint)
                   : RefreshIndicator(
                       onRefresh: () => _load(),
                       child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
@@ -123,9 +124,9 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
                           members: avatars.isEmpty ? members : avatars,
                           title: widget.clip.name,
                           caption: [
-                            '${posts.length != read.length ? posts.length : widget.clip.notesCount ?? posts.length}件',
-                            if (_isHost) 'RASQ クリップ(SNS 横断)' else if (!widget.clip.isPublic) '非公開クリップ' else if (widget.clip.owner != null) widget.clip.owner!.displayName,
-                          ].join(' ・ '),
+                            context.l10n.clipsPostCount(posts.length != read.length ? posts.length : widget.clip.notesCount ?? posts.length),
+                            if (_isHost) context.l10n.clipsKindHost else if (!widget.clip.isPublic) context.l10n.clipsKindPrivate else if (widget.clip.owner != null) widget.clip.owner!.displayName,
+                          ].join(context.l10n.clipsCaptionSeparator),
                           headline: sharedHeadline(posts),
                           description: widget.clip.description,
                           chips: topSharedLabels(posts),
@@ -147,7 +148,7 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
                         ]),
                         if (!_isHost && _cursor != null)
                           Center(
-                            child: TextButton(onPressed: _loading ? null : () => _load(more: true), child: Text(_loading ? '読み込み中…' : 'さらに読み込む')),
+                            child: TextButton(onPressed: _loading ? null : () => _load(more: true), child: Text(_loading ? context.l10n.clipsLoading : context.l10n.clipsLoadMore)),
                           ),
                       ]),
                     ),
@@ -178,7 +179,7 @@ class _HostClipPublishRowState extends ConsumerState<HostClipPublishRow> {
       messenger?.showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
       messenger?.clearSnackBars();
-      messenger?.showSnackBar(SnackBar(content: Text('できませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(appL10n.clipsActionFailed(e is StateError ? e.message : '$e'))));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -196,7 +197,7 @@ class _HostClipPublishRowState extends ConsumerState<HostClipPublishRow> {
       body = Row(children: [
         Expanded(
           child: Text(
-            hasAccount ? '公開すると、アカウントページと共有リンクから見られます${skipped > 0 ? '(フォロワー限定などの $skipped 件は載せません)' : ''}' : '公開するには RASQ アカウントが必要です',
+            hasAccount ? (skipped > 0 ? context.l10n.clipsPublishHintSkipped(skipped) : context.l10n.clipsPublishHint) : context.l10n.clipsPublishNeedsAccount,
             style: RasqTypography.caption,
           ),
         ),
@@ -204,13 +205,13 @@ class _HostClipPublishRowState extends ConsumerState<HostClipPublishRow> {
         OutlinedButton.icon(
           key: const ValueKey('clip.publish'),
           icon: const Icon(Icons.public, size: 18),
-          label: const Text('公開する'),
+          label: Text(context.l10n.clipsPublish),
           onPressed: !hasAccount || _busy
               ? null
               : () => _run(() async {
                     final d = await store.publish(clip.id);
                     final pending = d.items.where((i) => i.state == RasqItemState.pending).length;
-                    return pending > 0 ? '公開しました(公開範囲を確かめている投稿が $pending 件あります)' : '公開しました';
+                    return pending > 0 ? appL10n.clipsPublishedPending(pending) : appL10n.clipsPublished;
                   }),
         ),
       ]);
@@ -218,15 +219,15 @@ class _HostClipPublishRowState extends ConsumerState<HostClipPublishRow> {
       body = Row(children: [
         const Icon(Icons.public, size: 18, color: RasqColors.accent),
         const SizedBox(width: RasqSpacing.xs),
-        Expanded(child: Text(skipped > 0 ? '公開中(フォロワー限定などの $skipped 件は載せていません)' : '公開中', style: RasqTypography.caption)),
+        Expanded(child: Text(skipped > 0 ? context.l10n.clipsPublishedStatusSkipped(skipped) : context.l10n.clipsPublishedStatus, style: RasqTypography.caption)),
         if (clip.remoteUrl != null)
           TextButton(
             key: const ValueKey('clip.publish.copy'),
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: clip.remoteUrl!));
-              ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(const SnackBar(content: Text('リンクをコピーしました')));
+              ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(appL10n.clipsLinkCopied)));
             },
-            child: const Text('リンクをコピー'),
+            child: Text(context.l10n.clipsCopyLink),
           ),
         TextButton(
           key: const ValueKey('clip.unpublish'),
@@ -234,9 +235,9 @@ class _HostClipPublishRowState extends ConsumerState<HostClipPublishRow> {
               ? null
               : () => _run(() async {
                     await store.unpublish(clip.id);
-                    return '公開をやめました';
+                    return appL10n.clipsUnpublished;
                   }),
-          child: const Text('公開をやめる'),
+          child: Text(context.l10n.clipsUnpublish),
         ),
       ]);
     }
