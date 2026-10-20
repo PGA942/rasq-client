@@ -1,0 +1,8 @@
+{
+  "settingsCommonSeparator": " ・ ",
+  "@settingsCommonSeparator": {"description": "設定の画面で、行の補足に並べる項目の区切り(前後に空白)"},
+  "settingsCommonBullet": "・{text}",
+  "@settingsCommonBullet": {"description": "設定の画面の箇条書きの 1 行。text はその行の文", "placeholders": {"text": {"type": "String"}}},
+  "settingsCommonRange": "{min}〜{max}",
+  "@settingsCommonRange": {"description": "範囲の表示(入力欄の薄い文字など)。min / max は数", "placeholders": {"min": {"type": "int"}, "max": {"type": "int"}}}
+}

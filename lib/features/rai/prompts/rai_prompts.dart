@@ -56,6 +56,14 @@ abstract class RaiPrompts {
   /// 関連 TL の会話のまとまりを 1 文に要約させる指示 (D-528)。[conversation] は「名前: 本文」の行を改行でつないだもの。
   String eventSummary(String conversation);
 
+  /// 学習への提供の端末の下見 (D-363) の system: 書き手が AI の学習への利用を断っているかを JSON 1 行で答えさせる。
+  /// 答えの形(`{"verdict":"allow|deny|unsure","reason":"…"}`)と verdict の値は全言語で同じ。
+  String get learnabilitySystem;
+
+  /// 学習への提供の端末の下見に渡す書き手の情報。[bio] は自己紹介(切り詰め済み)、[fields] は項目を並べたもの、
+  /// [posts] は投稿の見本を並べたもの。
+  String learnabilityInput({required String bio, required String fields, required String posts});
+
   /// 推論サーバーへ添えるリファレンスの見出し (D-216)。
   String get referenceContextHeading;
 

@@ -86,7 +86,7 @@ class _ColumnLayoutScreenState extends ConsumerState<ColumnLayoutScreen> {
                 key: const ValueKey('columns.px'),
                 controller: _px,
                 focusNode: _focus,
-                hintText: '$kMinColumnWidth〜$kMaxColumnWidth',
+                hintText: context.l10n.settingsCommonRange(kMinColumnWidth, kMaxColumnWidth),
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
                 suffix: const Center(widthFactor: 1, child: Text('px')),

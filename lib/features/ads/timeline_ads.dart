@@ -10,6 +10,7 @@ import '../../app/providers.dart';
 import '../settings/settings_dsl.dart';
 import 'ad_placement.dart';
 import 'export_ad.dart';
+import '../../l10n/l10n.dart';
 
 /// TL 系の広告枠 (D-438、D-433 をホーム以外へ)。
 ///
@@ -123,12 +124,12 @@ class ServerAdBanner extends ConsumerWidget {
 
   Future<void> _menu(BuildContext context, WidgetRef ref, Rect anchor) async {
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'serverAd.menu', anchor: anchor, dense: true, items: [
-      RasqDropdownItem('表示頻度を下げる', 'less', checked: ref.read(mutedServerAdsProvider).contains(mutedServerAdKey(host, ad))),
+      RasqDropdownItem(context.l10n.adsShowLess, 'less', checked: ref.read(mutedServerAdsProvider).contains(mutedServerAdKey(host, ad))),
     ]);
     if (pick != 'less' || !context.mounted) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
     await muteServerAd(ref, host, ad);
-    messenger?.showSnackBar(const SnackBar(content: Text('この広告の表示頻度を下げました')));
+    messenger?.showSnackBar(SnackBar(content: Text(appL10n.adsShowLessDone)));
   }
 
   @override
@@ -139,13 +140,13 @@ class ServerAdBanner extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
         Row(children: [
-          Expanded(child: Text(host == null ? '広告' : '広告 · $host', style: RasqTypography.caption.copyWith(color: muted))),
+          Expanded(child: Text(host == null ? context.l10n.adsLabel : context.l10n.adsLabelWithHost(host!), style: RasqTypography.caption.copyWith(color: muted))),
           Builder(
             builder: (bctx) => RasqIconButton(
               key: ValueKey('serverAd.${ad.id}.more'),
               icon: Icons.more_horiz,
               size: 16,
-              tooltip: '広告のメニュー',
+              tooltip: context.l10n.adsMenu,
               onPressed: () {
                 final box = bctx.findRenderObject() as RenderBox;
                 _menu(context, ref, box.localToGlobal(Offset.zero) & box.size);
@@ -156,7 +157,7 @@ class ServerAdBanner extends ConsumerWidget {
         const SizedBox(height: 2),
         Semantics(
           link: true,
-          label: '広告を開く',
+          label: context.l10n.adsOpen,
           child: InkWell(
             onTap: () => launchUrl(ad.url, mode: LaunchMode.externalApplication),
             borderRadius: BorderRadius.circular(8),

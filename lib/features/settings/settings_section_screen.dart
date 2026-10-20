@@ -46,7 +46,7 @@ class SettingsSectionScreen extends ConsumerWidget {
               value: [
                 switch (mode) { ThemeModeSetting.system => l.settingsHomeThemeModeSystem, ThemeModeSetting.light => l.settingsHomeThemeModeLight, ThemeModeSetting.dark => l.settingsHomeThemeModeDark },
                 ?ref.watch(themePacksProvider).where((p) => p.id == ref.watch(activeThemeIdProvider)).firstOrNull?.name,
-              ].join(' ・ '),
+              ].join(context.l10n.settingsCommonSeparator),
               onTap: () => context.push(Routes.settingsTheme),
             )
           else if (r.warning)

@@ -10,6 +10,26 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get adsShowLess => '表示頻度を下げる';
+
+  @override
+  String get adsShowLessDone => 'この広告の表示頻度を下げました';
+
+  @override
+  String get adsLabel => '広告';
+
+  @override
+  String adsLabelWithHost(String host) {
+    return '広告 · $host';
+  }
+
+  @override
+  String get adsMenu => '広告のメニュー';
+
+  @override
+  String get adsOpen => '広告を開く';
+
+  @override
   String get appNavPostTitle => '投稿';
 
   @override
@@ -12381,6 +12401,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsColumnsPreviewLarge => '大型';
 
   @override
+  String get settingsCommonSeparator => ' ・ ';
+
+  @override
+  String settingsCommonBullet(String text) {
+    return '・$text';
+  }
+
+  @override
+  String settingsCommonRange(int min, int max) {
+    return '$min〜$max';
+  }
+
+  @override
   String get settingsComposerTitle => '投稿コンポーザー';
 
   @override
@@ -16964,6 +16997,99 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get swingUnreadable => 'Swing を読めませんでした';
+
+  @override
+  String themeNotAThemePack(String id) {
+    return '着せ替えパックではありません: $id';
+  }
+
+  @override
+  String get themePickerLabel => '着せ替え(.rspkg / .rasqpkg)';
+
+  @override
+  String themeNotATheme(String id, String kind) {
+    return '着せ替え(kind: theme)ではありません: $id($kind)';
+  }
+
+  @override
+  String themeLoadFailed(String error) {
+    return '読み込めませんでした: $error';
+  }
+
+  @override
+  String get themeTitle => 'フォントやカラースキーム';
+
+  @override
+  String get themeCaption => '色やアイコン、背景を変えられます。使えるのは 1 つだけです';
+
+  @override
+  String get themeCaptionDetail =>
+      '着せ替え(テーマ)は、色・アイコン・画面 / 投稿タイル / FOW / ボタンの背景を変えるパックです。コードは動きません。同時に使えるのは 1 つです。';
+
+  @override
+  String get themeColorScheme => 'カラースキーム';
+
+  @override
+  String get themeModeSystem => 'システムに合わせる';
+
+  @override
+  String get themeModeLight => 'ライト';
+
+  @override
+  String get themeModeDark => 'ダーク';
+
+  @override
+  String get themePacks => '着せ替え';
+
+  @override
+  String get themeNone => '着せ替えなし(既定)';
+
+  @override
+  String get themeDarkOnly => '暗いモードのときに効きます';
+
+  @override
+  String get themeLightOnly => '明るいモードのときに効きます';
+
+  @override
+  String get themeSideloaded => 'ファイルから読み込み(未審査)';
+
+  @override
+  String get themeSeparator => ' ・ ';
+
+  @override
+  String get themeRemove => '削除';
+
+  @override
+  String themeDarkOnlyNotice(String name) {
+    return '「$name」は暗いモードのときに効きます。いまは明るいモードです。';
+  }
+
+  @override
+  String themeLightOnlyNotice(String name) {
+    return '「$name」は明るいモードのときに効きます。いまは暗いモードです。';
+  }
+
+  @override
+  String get themeSwitchToDark => '暗いモードにする';
+
+  @override
+  String get themeSwitchToLight => '明るいモードにする';
+
+  @override
+  String get themeEmpty => 'インストールした着せ替えはまだありません。';
+
+  @override
+  String get themeFindInStore => 'ストアで着せ替えを探す';
+
+  @override
+  String get themeImport => 'ファイルから読み込む(.rspkg / .rasqpkg)';
+
+  @override
+  String get themeImportSubtitle => '自分で作った着せ替えを読み込みます';
+
+  @override
+  String get themeImportDetail =>
+      'rasq build で作った着せ替えパック。コードを含まないので、未審査でもそのまま使えます';
 
   @override
   String get trendTitle => 'トレンド';

@@ -94,6 +94,42 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('ja')];
 
+  /// サーバーの広告の「…」のメニューの項目。この広告を出す回数を減らす
+  ///
+  /// In ja, this message translates to:
+  /// **'表示頻度を下げる'**
+  String get adsShowLess;
+
+  /// 上の項目を選んだときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'この広告の表示頻度を下げました'**
+  String get adsShowLessDone;
+
+  /// 広告の上に出す「広告」の印
+  ///
+  /// In ja, this message translates to:
+  /// **'広告'**
+  String get adsLabel;
+
+  /// サーバーの広告の上に出す印。host は広告を出したサーバー
+  ///
+  /// In ja, this message translates to:
+  /// **'広告 · {host}'**
+  String adsLabelWithHost(String host);
+
+  /// 広告の「…」のボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'広告のメニュー'**
+  String get adsMenu;
+
+  /// 広告の画像の読み上げの名前(押すと広告の先を開く)
+  ///
+  /// In ja, this message translates to:
+  /// **'広告を開く'**
+  String get adsOpen;
+
   /// 幅の広い画面で第 3 カラムに開いた投稿 / 会話のページの見出し
   ///
   /// In ja, this message translates to:
@@ -20255,6 +20291,24 @@ abstract class AppLocalizations {
   /// **'大型'**
   String get settingsColumnsPreviewLarge;
 
+  /// 設定の画面で、行の補足に並べる項目の区切り(前後に空白)
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get settingsCommonSeparator;
+
+  /// 設定の画面の箇条書きの 1 行。text はその行の文
+  ///
+  /// In ja, this message translates to:
+  /// **'・{text}'**
+  String settingsCommonBullet(String text);
+
+  /// 範囲の表示(入力欄の薄い文字など)。min / max は数
+  ///
+  /// In ja, this message translates to:
+  /// **'{min}〜{max}'**
+  String settingsCommonRange(int min, int max);
+
   /// No description provided for @settingsComposerTitle.
   ///
   /// In ja, this message translates to:
@@ -27794,6 +27848,168 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'Swing を読めませんでした'**
   String get swingUnreadable;
+
+  /// 着せ替えとして入れようとしたパッケージが着せ替えではないときの誤り。id はパッケージの id
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替えパックではありません: {id}'**
+  String themeNotAThemePack(String id);
+
+  /// ファイルを選ぶ画面の、ファイルの種類の名前。拡張子は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え(.rspkg / .rasqpkg)'**
+  String get themePickerLabel;
+
+  /// ファイルから読んだパッケージが着せ替えではないときの誤り。id はパッケージの id、kind はその種類(英字)。kind: theme は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え(kind: theme)ではありません: {id}({kind})'**
+  String themeNotATheme(String id, String kind);
+
+  /// 着せ替えのファイルを読めなかったときの誤り。error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした: {error}'**
+  String themeLoadFailed(String error);
+
+  /// 着せ替えを選ぶ画面の見出し(設定 → アプリの外観 の行の名前と揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'フォントやカラースキーム'**
+  String get themeTitle;
+
+  /// 着せ替えを選ぶ画面の上の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'色やアイコン、背景を変えられます。使えるのは 1 つだけです'**
+  String get themeCaption;
+
+  /// 開発者モードの上の説明。FOW はアプリの浮かぶパネルの呼び名
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え(テーマ)は、色・アイコン・画面 / 投稿タイル / FOW / ボタンの背景を変えるパックです。コードは動きません。同時に使えるのは 1 つです。'**
+  String get themeCaptionDetail;
+
+  /// 節の見出し。ライト / ダークを選ぶ
+  ///
+  /// In ja, this message translates to:
+  /// **'カラースキーム'**
+  String get themeColorScheme;
+
+  /// カラースキームの選択肢: 端末の設定に合わせる
+  ///
+  /// In ja, this message translates to:
+  /// **'システムに合わせる'**
+  String get themeModeSystem;
+
+  /// カラースキームの選択肢: 明るい
+  ///
+  /// In ja, this message translates to:
+  /// **'ライト'**
+  String get themeModeLight;
+
+  /// カラースキームの選択肢: 暗い
+  ///
+  /// In ja, this message translates to:
+  /// **'ダーク'**
+  String get themeModeDark;
+
+  /// 節の見出し。入れた着せ替えのパック
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替え'**
+  String get themePacks;
+
+  /// 着せ替えの選択肢: 使わない
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替えなし(既定)'**
+  String get themeNone;
+
+  /// 着せ替えの行の補足: 暗いモードだけで効く
+  ///
+  /// In ja, this message translates to:
+  /// **'暗いモードのときに効きます'**
+  String get themeDarkOnly;
+
+  /// 着せ替えの行の補足: 明るいモードだけで効く
+  ///
+  /// In ja, this message translates to:
+  /// **'明るいモードのときに効きます'**
+  String get themeLightOnly;
+
+  /// 着せ替えの行の補足: ストアを通さずファイルから入れた
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルから読み込み(未審査)'**
+  String get themeSideloaded;
+
+  /// 着せ替えの行の補足(版・説明・明るさ・出どころ)の区切り
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get themeSeparator;
+
+  /// 着せ替えの行の、消すボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get themeRemove;
+
+  /// 選んだ着せ替えがいまの明るさでは効かないときの知らせ。name は着せ替えの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」は暗いモードのときに効きます。いまは明るいモードです。'**
+  String themeDarkOnlyNotice(String name);
+
+  /// 選んだ着せ替えがいまの明るさでは効かないときの知らせ。name は着せ替えの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」は明るいモードのときに効きます。いまは暗いモードです。'**
+  String themeLightOnlyNotice(String name);
+
+  /// 上の知らせのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'暗いモードにする'**
+  String get themeSwitchToDark;
+
+  /// 上の知らせのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'明るいモードにする'**
+  String get themeSwitchToLight;
+
+  /// 入れた着せ替えが無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'インストールした着せ替えはまだありません。'**
+  String get themeEmpty;
+
+  /// ストアの着せ替えへ進む行
+  ///
+  /// In ja, this message translates to:
+  /// **'ストアで着せ替えを探す'**
+  String get themeFindInStore;
+
+  /// ファイルから着せ替えを入れる行。拡張子は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルから読み込む(.rspkg / .rasqpkg)'**
+  String get themeImport;
+
+  /// 上の行の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'自分で作った着せ替えを読み込みます'**
+  String get themeImportSubtitle;
+
+  /// 開発者モードの上の行の補足。rasq build はコマンドの名前で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'rasq build で作った着せ替えパック。コードを含まないので、未審査でもそのまま使えます'**
+  String get themeImportDetail;
 
   /// No description provided for @trendTitle.
   ///

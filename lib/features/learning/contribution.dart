@@ -10,6 +10,7 @@ import '../../backend/learning_api.dart';
 import '../../backend/orgate_client.dart';
 import '../../session/session_providers.dart';
 import '../child_safe/child_safe_providers.dart';
+import '../rai/prompts/rai_prompts.dart' show raiPrompts;
 import '../rai/rai_llm.dart';
 import '../relational/relational_engine.dart';
 import '../relational/relational_providers.dart';
@@ -36,6 +37,8 @@ class DeviceHint {
 
   /// `allow` / `deny` / `unsure`。
   final String verdict;
+
+  /// 理由。Central の判定に添えて送るデータ(審査で読む)なので、端末で決める固定の理由は言語で変えない(`// l10n-ignore`)。
   final String reason;
   final String model;
 
@@ -90,9 +93,9 @@ class AuthorVerdict {
 
 /// 自己紹介・項目に書かれた「AI の学習に使わないで」の言い回し(Central の規則と同じ。片方を変えたらもう片方も)。
 const _optOutPhrases = [
-  '#noai', 'no ai', 'noai', 'no-ai', 'ai学習禁止', 'ai学習お断り', 'ai学習ng', 'ai学習不可', 'ai学習への利用', '学習禁止', '無断学習', //
-  '機械学習禁止', '機械学習への利用を禁', '生成aiへの利用', '生成ai学習', 'do not train', "don't train", 'not for ai', 'no ai training', //
-  'no machine learning', 'ai利用禁止', 'ai使用禁止',
+  '#noai', 'no ai', 'noai', 'no-ai', 'ai学習禁止', 'ai学習お断り', 'ai学習ng', 'ai学習不可', 'ai学習への利用', '学習禁止', '無断学習', // // l10n-ignore
+  '機械学習禁止', '機械学習への利用を禁', '生成aiへの利用', '生成ai学習', 'do not train', "don't train", 'not for ai', 'no ai training', // // l10n-ignore
+  'no machine learning', 'ai利用禁止', 'ai使用禁止', // l10n-ignore
 ];
 
 /// 全角英数記号を半角に、全角空白を空白にして小文字へ。
@@ -111,27 +114,28 @@ class LearnabilityPrescreen {
     final text = _fold('${a.bio} ${a.fields.join(' ')}');
     final compact = text.replaceAll(RegExp(r'\s+'), '');
     for (final p in _optOutPhrases) {
-      if (text.contains(p) || compact.contains(p.replaceAll(' ', ''))) return const DeviceHint('deny', '自己紹介で AI の学習への利用を断っています', model: 'rule');
+      if (text.contains(p) || compact.contains(p.replaceAll(' ', ''))) return const DeviceHint('deny', '自己紹介で AI の学習への利用を断っています', model: 'rule'); // l10n-ignore
     }
     return null;
   }
 
-  static const _system = 'あなたは SNS の書き手が、自分の投稿を AI の学習に使われることを断っているかを判定します。'
-      '答えは JSON 1 行だけ: {"verdict":"allow|deny|unsure","reason":"20 文字以内"}。'
-      '断っている・未成年を示している → deny、特に何も無い → allow、分からない → unsure。';
 
   Future<DeviceHint> judge(ContributionAuthor a) async {
     final r = rule(a);
     if (r != null) return r;
-    if (!llm.current.ready) return DeviceHint('unsure', '端末のモデルが準備できていません', model: llm.spec.id);
+    if (!llm.current.ready) return DeviceHint('unsure', '端末のモデルが準備できていません', model: llm.spec.id); // l10n-ignore
     final bio = a.bio.replaceAll('\n', ' ');
-    final prompt = '自己紹介: ${bio.length > 300 ? bio.substring(0, 300) : bio}\n項目: ${a.fields.join(' / ')}\n'
-        '投稿: ${a.samples.take(2).map((s) => s.length > 100 ? s.substring(0, 100) : s).join(' | ')}';
+    // 指示の文は表示の言語の表から (D-492 / D-532)。
+    final prompt = raiPrompts.learnabilityInput(
+      bio: bio.length > 300 ? bio.substring(0, 300) : bio,
+      fields: a.fields.join(' / '),
+      posts: a.samples.take(2).map((s) => s.length > 100 ? s.substring(0, 100) : s).join(' | '),
+    );
     try {
-      final out = await llm.chat(prompt, system: _system, maxTokens: 64).join().timeout(const Duration(seconds: 40));
+      final out = await llm.chat(prompt, system: raiPrompts.learnabilitySystem, maxTokens: 64).join().timeout(const Duration(seconds: 40));
       return parseHint(out, llm.spec.id);
     } catch (e) {
-      return DeviceHint('unsure', '端末のモデルが答えませんでした', model: llm.spec.id);
+      return DeviceHint('unsure', '端末のモデルが答えませんでした', model: llm.spec.id); // l10n-ignore
     }
   }
 
@@ -152,7 +156,7 @@ class LearnabilityPrescreen {
         }
       } catch (_) {}
     }
-    return DeviceHint('unsure', '答えを読めませんでした', model: model);
+    return DeviceHint('unsure', '答えを読めませんでした', model: model); // l10n-ignore
   }
 }
 
@@ -597,7 +601,7 @@ class ContributionController extends Notifier<ContributionState> {
     final res = await api.contribute('relational', items);
     final unverified = res.rejected.where((r) => r == 'self-unverified').length;
     state = state.copyWith(sentRelational: state.sentRelational + res.accepted, unverified: state.unverified + unverified, lastSentAt: DateTime.now());
-    _log('自分の公開投稿: ${items.length} 件を送信(受付 ${res.accepted} / 重複 ${res.duplicate} / 不可 ${res.rejected.length}${unverified > 0 ? '、うち持ち主の確認が未完了 $unverified' : ''})');
+    _log('自分の公開投稿: ${items.length} 件を送信(受付 ${res.accepted} / 重複 ${res.duplicate} / 不可 ${res.rejected.length}${unverified > 0 ? '、うち持ち主の確認が未完了 $unverified' : ''})'); // l10n-ignore
   }
 
   Future<ContributionAuthor> _enrich(ContributionAuthor a) async {

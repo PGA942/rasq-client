@@ -343,7 +343,7 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
             RasqListTile(
               key: ValueKey('security.session.${s.sessionId}'),
               title: '${s.label ?? s.deviceId ?? l.settingsSecuritySessionUnnamed}${s.current ? l.settingsSecurityThisDeviceSuffix : ''}',
-              subtitle: '${l.settingsSecuritySessionLastUsed(_ago(s.lastUsedAt ?? s.createdAt))}${s.lastIp == null ? '' : ' ・ ${s.lastIp}'}${s.expiresAt == null ? '' : ' ・ ${l.settingsSecuritySessionExpires(s.expiresAt!.toLocal().toString().substring(0, 10))}'}',
+              subtitle: '${l.settingsSecuritySessionLastUsed(_ago(s.lastUsedAt ?? s.createdAt))}${s.lastIp == null ? '' : '${l.settingsCommonSeparator}${s.lastIp}'}${s.expiresAt == null ? '' : '${l.settingsCommonSeparator}${l.settingsSecuritySessionExpires(s.expiresAt!.toLocal().toString().substring(0, 10))}'}',
               chevron: false,
               trailing: s.current
                   ? null

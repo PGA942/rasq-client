@@ -1,0 +1,14 @@
+{
+  "adsShowLess": "表示頻度を下げる",
+  "@adsShowLess": {"description": "サーバーの広告の「…」のメニューの項目。この広告を出す回数を減らす"},
+  "adsShowLessDone": "この広告の表示頻度を下げました",
+  "@adsShowLessDone": {"description": "上の項目を選んだときの知らせ"},
+  "adsLabel": "広告",
+  "@adsLabel": {"description": "広告の上に出す「広告」の印"},
+  "adsLabelWithHost": "広告 · {host}",
+  "@adsLabelWithHost": {"description": "サーバーの広告の上に出す印。host は広告を出したサーバー", "placeholders": {"host": {"type": "String"}}},
+  "adsMenu": "広告のメニュー",
+  "@adsMenu": {"description": "広告の「…」のボタンのツールチップ"},
+  "adsOpen": "広告を開く",
+  "@adsOpen": {"description": "広告の画像の読み上げの名前(押すと広告の先を開く)"}
+}
