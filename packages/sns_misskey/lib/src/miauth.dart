@@ -6,6 +6,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'mappers.dart';
 import 'misskey_api.dart';
+import 'l10n.dart';
 
 /// MiAuth flow: open `https://{host}/miauth/{session}?…` in a browser, then
 /// `POST /api/miauth/{session}/check` to exchange for a token.
@@ -72,14 +73,14 @@ class MiAuthFlow extends BrowserAuthFlow {
       });
 
   @override
-  String get hint => 'ブラウザで「許可する」を押したら、このアプリに戻って「認証を確認」を押してください。';
+  String get hint => snsMisskeyL10n.misskeyAuthHint;
 
   @override
   Future<AuthResult> complete() async {
     final api = MisskeyApi(host, client: client);
     final res = await api.callMap('miauth/$sessionId/check');
     if (res['ok'] != true || res['token'] == null) {
-      throw SnsApiException(ErrorCode.unauthorized.copyWith(message: 'まだ許可されていません。ブラウザで許可してから再度お試しください。'));
+      throw SnsApiException(ErrorCode.unauthorized.copyWith(message: snsMisskeyL10n.misskeyAuthNotYet));
     }
     final token = res['token'] as String;
     final user = (res['user'] as Map).cast<String, Object?>();

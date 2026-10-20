@@ -8,16 +8,17 @@ import 'package:rasq_store/rasq_store.dart' show FollowState;
 import 'mappers.dart';
 import 'misskey_api.dart';
 import 'settings_pages.dart' show MisskeyAccountSettings;
+import 'l10n.dart';
 
 /// Authenticated Misskey session.
 class MisskeySession extends SnsSessionBase {
   MisskeySession(this.session, {http.Client? client, List<ActionDescriptor>? actions})
       : api = MisskeyApi(session.account.instance, token: session.token, client: client),
-        _actions = actions ?? defaultActions;
+        _customActions = actions;
 
   final AccountSession session;
   final MisskeyApi api;
-  final List<ActionDescriptor> _actions;
+  final List<ActionDescriptor>? _customActions;
   Map<String, Uri>? _emojis;
 
   String get host => session.account.instance;
@@ -25,12 +26,13 @@ class MisskeySession extends SnsSessionBase {
   /// Default reaction used by the single-tap "reaction" button.
   static const defaultReaction = '👍';
 
-  static const defaultActions = [
-    ActionDescriptor(id: 'reply', genreTag: 'Reply', label: '返信', icon: 'subdirectory_arrow_left', fow: FowType.interstitial, confirmMode: ConfirmMode.confirm),
-    ActionDescriptor(id: 'renote', genreTag: 'Repost', label: 'リノート', icon: 'repeat', doneIcon: 'repeat_on'),
+  /// 既定のアクション(名前は表示の言語。D-533: 言語を変えたら次に読んだときから)。
+  static List<ActionDescriptor> get defaultActions => [
+    ActionDescriptor(id: 'reply', genreTag: 'Reply', label: snsMisskeyL10n.misskeyActionReply, icon: 'subdirectory_arrow_left', fow: FowType.interstitial, confirmMode: ConfirmMode.confirm),
+    ActionDescriptor(id: 'renote', genreTag: 'Repost', label: snsMisskeyL10n.misskeyActionRenote, icon: 'repeat', doneIcon: 'repeat_on'),
     // 本番: 短押し=予測モデルで最有力の絵文字をリアクション。操作前は投稿ごとに予測絵文字(エッジ抽出)を表示 → iconPerPost.
-    ActionDescriptor(id: 'reaction', genreTag: 'Reaction', label: 'リアクション', icon: 'add_reaction_outlined', doneIcon: 'add_reaction', iconPerPost: true),
-    ActionDescriptor(id: 'favorite', genreTag: 'Bookmark', label: 'お気に入り', icon: 'star_border', doneIcon: 'star', countSource: CountSource.none),
+    ActionDescriptor(id: 'reaction', genreTag: 'Reaction', label: snsMisskeyL10n.misskeyActionReaction, icon: 'add_reaction_outlined', doneIcon: 'add_reaction', iconPerPost: true),
+    ActionDescriptor(id: 'favorite', genreTag: 'Bookmark', label: snsMisskeyL10n.misskeyActionFavorite, icon: 'star_border', doneIcon: 'star', countSource: CountSource.none),
   ];
 
   @override
@@ -40,7 +42,7 @@ class MisskeySession extends SnsSessionBase {
   @override
   List<TimelineKind> get timelines => const [TimelineKind.home, TimelineKind.social, TimelineKind.local, TimelineKind.global];
   @override
-  List<ActionDescriptor> get actions => _actions;
+  List<ActionDescriptor> get actions => _customActions ?? defaultActions;
 
   @override
   /// サーバーの広告 (D-438): `meta` の `ads`。1 つのセッションで 1 回だけ読む(読めなければ空)。

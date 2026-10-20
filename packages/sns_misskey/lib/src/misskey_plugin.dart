@@ -21,13 +21,13 @@ class MisskeyPlugin extends SnsPlugin {
   SnsKind get kind => SnsKind.misskey;
 
   @override
-  PluginManifest get manifest => const PluginManifest(
+  PluginManifest get manifest => PluginManifest(
         id: pluginId,
         name: 'Misskey Plugin',
         version: '0.1.0',
         kind: PluginKind.sns,
         author: 'RASQ Official',
-        description: 'Misskeyに接続するためのプラグイン。',
+        description: 'Misskeyに接続するためのプラグイン。', // l10n-ignore
         supportedSns: [SnsKind.misskey],
         permissions: ['network', 'storage.safe', 'register_action'],
         actions: MisskeySession.defaultActions,

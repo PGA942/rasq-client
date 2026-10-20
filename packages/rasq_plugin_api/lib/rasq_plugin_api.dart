@@ -18,3 +18,4 @@ export 'src/server_info.dart';
 export 'src/sns_plugin.dart';
 export 'src/sns_session.dart';
 export 'src/timeline.dart';
+export 'src/l10n.dart' show rasqPluginApiL10n, RasqPluginApiLocalizations, lookupRasqPluginApiLocalizations;

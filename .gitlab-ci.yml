@@ -73,10 +73,11 @@ flutter:
     - flutter --version
     - flutter pub get
     # 文言 (D-484, docs/I18N.md): 部品(lib/l10n/parts)とまとめた ARB、gen-l10n の生成物がコミット済みと同じか。
+    # Flutter に依らない部品(packages/*/l10n_dart.yaml、D-533)の文言のクラスは l10n_merge.dart が作り、--check で見る。
     # 生成物のコンパイルは下の analyze / test で見る。残りの日本語のリテラルの数は記録だけ(落とさない)。
     - dart run tool/l10n_merge.dart --check
     - flutter gen-l10n && (cd packages/rasq_design && flutter gen-l10n)
-    - git status --porcelain -- lib/l10n packages/rasq_design/lib/l10n | tee /tmp/l10n-diff && test ! -s /tmp/l10n-diff
+    - git status --porcelain -- lib/l10n 'packages/*/lib/l10n' | tee /tmp/l10n-diff && test ! -s /tmp/l10n-diff
     - dart run tool/l10n_audit.dart || true
     - flutter analyze
     - flutter test
