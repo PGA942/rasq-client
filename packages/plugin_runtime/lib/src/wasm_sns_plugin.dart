@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_design/rasq_design.dart' show rasqDesignL10n;
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'async_wasm_plugin_controller.dart';
@@ -228,7 +229,7 @@ class WasmSnsPlugin extends SnsPlugin {
   Future<AuthFlow> beginAuth(String host, {Uri? callback}) {
     final factory = authFlowFactory;
     if (factory == null) {
-      throw UnsupportedError('${manifest.id}: 認証フローが構成されていません(既存トークンでの実登録のみ)');
+      throw UnsupportedError(rasqDesignL10n.designRrlNoAuthFlow(manifest.id));
     }
     return factory(normalizeHost(host), callback: callback);
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'fow.dart';
 import 'overlay_entry.dart';
+import 'overlay_l10n.dart';
 import 'overlay_layer.dart';
 import 'overlay_manager.dart';
 
@@ -460,7 +461,7 @@ extension TetheredPanelPresets on OverlayManager {
     required Rect anchor,
     required WidgetBuilder builder,
     String? title,
-    String? cancelText = 'キャンセル',
+    String? cancelText = kOverlayDefaultCancel,
     String? confirmText = 'OK',
     T? Function()? onConfirm,
     Widget? anchorChild,
@@ -482,7 +483,7 @@ extension TetheredPanelPresets on OverlayManager {
           height: 40,
           child: Row(children: [
             if (cancelText != null)
-              TextButton(key: ValueKey('$id.cancel'), onPressed: handle.cancel, child: Text(cancelText, style: TextStyle(color: scheme.onSurfaceVariant)))
+              TextButton(key: ValueKey('$id.cancel'), onPressed: handle.cancel, child: Text(overlayCancelLabel(context, cancelText), style: TextStyle(color: scheme.onSurfaceVariant)))
             else
               const SizedBox(width: 64),
             Expanded(child: Center(child: Text(title ?? '', style: titleStyle ?? Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis))),

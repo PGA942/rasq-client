@@ -252,7 +252,7 @@ abstract final class RrlComponentRegistry {
         min: (ctx.props['min'] as num?)?.toDouble() ?? 0,
         max: (ctx.props['max'] as num?)?.toDouble() ?? 100,
         divisions: (ctx.props['divisions'] as num?)?.toInt(),
-        valueLabel: '${start.round()}〜${end.round()}$unit',
+        valueLabel: rasqDesignL10n.designRrlRange(start.round(), end.round(), unit),
         onChanged: ctx.node.on.containsKey('change') ? (v) => ctx.emit('change', {'value': {'start': v.start, 'end': v.end}}) : null,
       );
     },
@@ -395,7 +395,7 @@ class _RrlInputState extends State<_RrlInput> {
           suffixIcon: widget.onSubmit == null
               ? null
               : (widget.submitLabel == null
-                  ? IconButton(icon: const Icon(Icons.send), tooltip: '送信', onPressed: _submit)
+                  ? IconButton(icon: const Icon(Icons.send), tooltip: context.designL10n.designRrlSend, onPressed: _submit)
                   : TextButton(onPressed: _submit, child: Text(widget.submitLabel!))),
         ),
         onChanged: widget.onChanged,

@@ -1,0 +1,10 @@
+{
+  "designOverlayCancel": "キャンセル",
+  "@designOverlayCancel": {"description": "オーバーレイ(ボトムシート・確かめ・つながったパネル)の、やめるボタンの既定の名前"},
+  "designOverlayClose": "閉じる",
+  "@designOverlayClose": {"description": "オーバーレイの背景(押すと閉じる)の読み上げの名前、および FOW の切り替えの一覧の閉じるボタンのツールチップ"},
+  "designOverlaySwitcher": "FOW切り替え",
+  "@designOverlaySwitcher": {"description": "開いている FOW(アプリの浮かぶパネル)を切り替える一覧の読み上げの名前"},
+  "designOverlayResizeHandle": "サイズ変更ハンドル",
+  "@designOverlayResizeHandle": {"description": "FOW の上の、引っ張って大きさを変えるつまみの読み上げの名前"}
+}
