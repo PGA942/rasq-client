@@ -1,0 +1,571 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "about.astell",
+  "title": "ASTell Terms of Use",
+  "doc": {
+    "id": "rasq.astell",
+    "version": "1.0.0-draft.20261007",
+    "bodySha256": "aa2c45e503aea41696c9db33b0219869c58c024ab986cf6edba19dc0527d5f03"
+  },
+  "translation": {
+    "locale": "en",
+    "bodySha256": "26a64a490d9538f78c17248d6354f9d428ea0da5245b31a950b92a45e0a34ac5",
+    "governing": "ja"
+  },
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "Notice",
+        "p": {
+          "kind": "warning",
+          "text": "This is a pre-release draft. Items marked 【TBD】 or ［　］ will be decided before the official version is published.",
+          "detail": "rasq.astell / version 1.0.0-draft.20261007. Reference translation of the user-facing text of the Japanese draft (tool/legal/build_legal.py)."
+        }
+      },
+      {
+        "t": "Notice",
+        "p": {
+          "kind": "info",
+          "text": "Reference translation. This is a reference translation provided for convenience. The Japanese version is the official text, and if there is any difference between them, the Japanese version governs."
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "Article 1. Application and Features"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "ASTell is a feature for voice conversations, video and screen streaming, and sharing of text, posts, and files within a room. These conditions apply together with the common Terms of Service and the Privacy Policy."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "During the public test period",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": ", paid ASTell features are not provided. After the public test ends, paid ASTell features will be provided by subscription. The features covered, the number of points required, the period of use, the renewal date, and the cancellation method are displayed at the time of purchase. Purchase of points, payment using Stripe, automatic renewal, and handling of insufficient balance are governed by the common paid service provisions and the purchase screen. Agreeing to these conditions alone does not form a subscription purchase or an automatic purchase of points."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "Article 2. Joining Rooms and Visibility"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "There are rooms listed in the directory and rooms not listed in the directory. Even with the setting not to list a room, people who know the URL can learn that the room exists. Who can enter is determined by the entry conditions set by the host, invitations, blocks, and usage restrictions. Please check the listing scope and entry conditions on the screen before joining."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Conversations and shared content in a room are conveyed to the participants who are permitted to access that room. Participants may change over time. The scope of the title, description, and other items displayed on the room's public page is displayed when the room is created and before its Visibility is changed."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Where \"Invited people only\" can be selected, entry and retrieval of content by accounts other than those invited are restricted. Removing a room from the directory alone does not enable this restriction."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "Article 3. Transmission of Audio, Video, and Screen"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Voice calls use communication between participants' devices and, where necessary, relay servers. Streaming and screen sharing use streaming servers. RASQ servers mediate connections, manage participation status, and deliver text and shared content. Depending on the connection destination and communication route, the other party's device or the relay or streaming provider handles IP addresses and other information necessary for the communication."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Voice calls",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nRoute: "
+            },
+            {
+              "s": "text",
+              "text": "Participants' devices are connected directly to each other. When a direct connection is not possible, it goes through a relay server (TURN). Google's STUN servers are used to prepare the connection"
+            },
+            {
+              "s": "text",
+              "text": "\nInformation conveyed to the other party: "
+            },
+            {
+              "s": "text",
+              "text": "IP address to participants' devices and to the STUN and TURN providers"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Streaming and screen sharing",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nRoute: "
+            },
+            {
+              "s": "text",
+              "text": "Goes through a streaming server (LiveKit) set up by the Operator"
+            },
+            {
+              "s": "text",
+              "text": "\nInformation conveyed to the other party: "
+            },
+            {
+              "s": "text",
+              "text": "Account identifier and display name to the streaming server"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Text, shares, and characters being typed",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nRoute: "
+            },
+            {
+              "s": "text",
+              "text": "Goes through the RASQ public server"
+            },
+            {
+              "s": "text",
+              "text": "\nInformation conveyed to the other party: "
+            },
+            {
+              "s": "text",
+              "text": "Room participants"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Characters you are in the middle of typing in the chat input field are displayed to room participants approximately every second. Even if you decide not to send, participants may have seen what was displayed up to that point."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "When you start the microphone, camera, or screen sharing, the selected audio, video, or screen is sent to the room participants. Please check the scope of screen sharing and the notification that it is being displayed before starting. Each feature can be stopped by an operation within the room."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "RASQ does not store recording files of calls or streams. Audio used for transcription is handled for the processing described in the next article. Even with communication encryption, recording or capturing by participants who receive it cannot be completely prevented."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "Article 4. Transcription and Captions"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "When transcription is enabled, the audio of speakers who have consented is sent to the RASQ servers and to the speech recognition processor displayed on the screen, and the recognized text is displayed and stored in the room. Audio is not retained after transcription processing is finished. The speech recognition processor and how it handles data can be checked in the explanation before use and in the Privacy Policy."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "\"Hide captions\" is an operation that changes the display on your own screen. To stop sending your audio for transcription, select \"Stop my transcription.\" Even after stopping, text stored up to that point is handled in accordance with the retention period."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "When text-to-speech is enabled, chat text is sent to the RASQ text-to-speech server, converted to audio, and played in the room. The audio read aloud is not stored. The Operator plans to move text-to-speech and transcription to a method performed on the device in the future. When this happens, changes to the recipients and the handling of storage will be notified in advance."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Transcription and automatic summaries may contain mishearings, omissions, and misattribution of speakers. Do not treat them as accurate proof of what was said, and report problematic displays through reports or correction requests."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "Article 5. Storage of Shares, Transcriptions, and Files"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Shared content, transcriptions, and uploaded files are displayed to room participants with access rights for 10 days from creation. After the display period ends, retrieval for participants stops, and the data is retained as internal data until 30 days from creation as necessary for checking reports, handling disputes, and responding to requests from the person concerned or based on law. Deletion is carried out after the retention period expires. Records of closed rooms are retained for 30 days from closure."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Internal viewing by the Operator is limited to authorized persons responsible for handling the purposes above, and access is logged. Content whose display period has ended is not used for ordinary recommendations or routine classification of posting tendencies. The license for this feature does not include using conversations or shared content for individually targeted advertising or for training AI models."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The processing upon account deletion, data being deleted, backups, and the scope and time limits of retention required by law are set out in the \"Retention and Deletion\" section of the Privacy Policy. RASQ cannot delete copies saved by participants or posts on the SNS from which content was shared."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "Article 6. Sharing Posts and Materials"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Users should check that they have the necessary rights or permissions for the text, images, music, videos, and other content they share. Please follow the original service's Visibility and conditions regarding reposting."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The body of a post can be shared to a room only when the Visibility of that post can be confirmed and viewing is not limited to specific logged-in people. Followers-only, direct, local-only posts, and posts whose Visibility is unknown are not eligible for body sharing. When a link is shared, the permissions of each person who opens the link apply."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Content warnings attached to posts and Sensitive designations of images and videos carry over after sharing. Sensitive text and materials are hidden until the viewer chooses to display them. If the displayed content differs from the original post, please use reporting or deletion of the share."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "Article 7. Recording and External Publication by Participants"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "When recording other participants' conversations, video, or screens, or publishing them outside the room, tell them in advance the purpose, the scope of recording, where it will be saved, and where it will be published, and obtain the consent of those being recorded. Inform people who join partway through of the same. For materials requiring the rights holder's permission, obtain that permission separately."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The mere fact that the host has written \"Recorded\" in the room description is not treated as consent by all participants to any and all reuse. If consent cannot be obtained, change to a method that does not record those persons, or stop recording."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "Article 8. Safety Measures and Appeals"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Users can use blocking and reporting. Hosts and moderators who have been granted authority can grant permission to speak, mute, remove participants, restrict entry, and so on. The Operator checks content and restricts features as a response to violations set out in the common Terms of Service."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "When the Operator restricts use, it informs the person concerned of the features affected, the main reason, the period or conditions for lifting, and the method of appeal. In an emergency, notification may follow the restriction. Appeals are checked by a person, and the decision is notified. Even where there is information that cannot be disclosed for safety or to protect third-party rights, the reason is explained to the extent possible."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Automated assessment can be wrong. When providing a feature that uses automated assessment to restrict entry or speaking, the Operator displays in advance the data used, the content of the restriction, and where to request re-review."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The following automated assessments are currently provided."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・"
+            },
+            {
+              "s": "text",
+              "text": "Refuse entry to trolls (experimental):",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " In rooms where the host has enabled it, the Operator's assessment system may analyze, for a person trying to enter, their self-introduction on RASQ, Store reviews, shares and transcriptions in ASTell (up to 200 items), and reduced versions of images (up to 50 items), and may refuse entry. When the assessment system is unavailable, it switches to a check using a word list and the display name. If entry is refused, you can request re-review through the Operator's contact."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・"
+            },
+            {
+              "s": "text",
+              "text": "Checking shares during usage restrictions:",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " Content shared in ASTell by a person under a usage restriction imposed by the Operator is checked by the assessment system before display, and problematic content may not be displayed."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・"
+            },
+            {
+              "s": "text",
+              "text": "Checking messages on entry:",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " Messages on entry are checked against the word list of the RASQ public server. The results of automated assessment alone are not displayed as a definitive evaluation of a person's character or personality."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "Document ID: rasq.astell · Version: 1.0.0-draft.20261007 (the Japanese version governs)",
+          "pad": 16,
+          "size": 11
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "SHA-256 of the Japanese original: aa2c45e503aea41696c9db33b0219869c58c024ab986cf6edba19dc0527d5f03 · SHA-256 of this translation: 26a64a490d9538f78c17248d6354f9d428ea0da5245b31a950b92a45e0a34ac5",
+          "pad": 16,
+          "size": 11,
+          "dev": true
+        }
+      }
+    ]
+  }
+}

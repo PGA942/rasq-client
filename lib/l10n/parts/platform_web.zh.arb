@@ -1,0 +1,7 @@
+{
+  "@@locale": "zh",
+  "platformWebRuntimeLoadFailed": "无法加载运行所需的文件（网络 / CDN）",
+  "platformWebServerNotConfigured": "尚未设置 RASQ 服务器的连接地址",
+  "platformWebDownloadFailed": "下载失败：{error}",
+  "platformWebModelLoadFailed": "无法加载模型：{error}"
+}

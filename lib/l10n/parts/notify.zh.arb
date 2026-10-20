@@ -1,0 +1,10 @@
+{
+  "@@locale": "zh",
+  "notifyPushChannelName": "RASQ 通知",
+  "notifyPushChannelDescription": "提及、回复、Swing 等通知",
+  "notifyOpenAction": "打开",
+  "notifyGlimpseChannelName": "读取屏幕",
+  "notifyGlimpseChannelDescription": "点按后，将简单读取当前显示的屏幕内容",
+  "notifyAstellChannelName": "ASTell 开始",
+  "notifyAstellChannelDescription": "已加入书签的 ASTell 开始时通知"
+}

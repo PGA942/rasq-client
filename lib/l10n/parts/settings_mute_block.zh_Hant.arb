@@ -1,0 +1,18 @@
+{
+  "@@locale": "zh_Hant",
+  "settingsMuteBlockTitle": "靜音/封鎖",
+  "settingsMuteBlockBlockTab": "封鎖",
+  "settingsMuteBlockMuteTab": "靜音",
+  "settingsMuteBlockBlockedUsers": "已封鎖的使用者",
+  "settingsMuteBlockBlockedWords": "已封鎖的字詞",
+  "settingsMuteBlockBlockedLists": "已封鎖的清單",
+  "settingsMuteBlockComingSoonHint": "準備中",
+  "settingsMuteBlockComingSoonDetail": "字詞/清單封鎖預計於 M2 後半期推出",
+  "settingsMuteBlockRetryButton": "重新載入",
+  "settingsMuteBlockNoBlockedUsers": "沒有已封鎖的使用者",
+  "settingsMuteBlockNoMutedUsers": "沒有已靜音的使用者",
+  "settingsMuteBlockBlockButton": "封鎖",
+  "settingsMuteBlockMuteButton": "靜音",
+  "settingsMuteBlockBlockingButton": "已封鎖",
+  "settingsMuteBlockMutingButton": "已靜音"
+}

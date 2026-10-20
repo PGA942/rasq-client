@@ -5,7 +5,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'rasq_design_localizations_en.dart';
 import 'rasq_design_localizations_ja.dart';
+import 'rasq_design_localizations_ko.dart';
+import 'rasq_design_localizations_zh.dart';
 
 // ignore_for_file: type=lint
 
@@ -95,7 +98,13 @@ abstract class RasqDesignLocalizations {
       ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('ja')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('ja'),
+    Locale('en'),
+    Locale('ko'),
+    Locale('zh'),
+    Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+  ];
 
   /// No description provided for @designSearchHint.
   ///
@@ -471,17 +480,35 @@ class _RasqDesignLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['ja'].contains(locale.languageCode);
+      <String>['en', 'ja', 'ko', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_RasqDesignLocalizationsDelegate old) => false;
 }
 
 RasqDesignLocalizations lookupRasqDesignLocalizations(Locale locale) {
+  // Lookup logic when language+script codes are specified.
+  switch (locale.languageCode) {
+    case 'zh':
+      {
+        switch (locale.scriptCode) {
+          case 'Hant':
+            return RasqDesignLocalizationsZhHant();
+        }
+        break;
+      }
+  }
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'en':
+      return RasqDesignLocalizationsEn();
     case 'ja':
       return RasqDesignLocalizationsJa();
+    case 'ko':
+      return RasqDesignLocalizationsKo();
+    case 'zh':
+      return RasqDesignLocalizationsZh();
   }
 
   throw FlutterError(

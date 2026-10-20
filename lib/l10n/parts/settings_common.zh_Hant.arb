@@ -1,0 +1,6 @@
+{
+  "@@locale": "zh_Hant",
+  "settingsCommonSeparator": " · ",
+  "settingsCommonBullet": "• {text}",
+  "settingsCommonRange": "{min}–{max}"
+}

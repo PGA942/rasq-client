@@ -1,0 +1,18 @@
+{
+  "@@locale": "ko",
+  "shellTermsSheetTitle": "이용약관 동의",
+  "shellTermsAgreeButton": "동의",
+  "shellTermsNotice": "RASQ 계정을 계속 사용하려면 현재 이용약관과 개인정보 처리방침에 동의해야 합니다. 동의하기 전까지 ASTell, 구매, 데이터 보관은 사용할 수 없습니다.",
+  "shellTermsNoticeDetail": "D-371 / S-053. 서버의 CENTRAL_TERMS_VERSION / CENTRAL_PRIVACY_VERSION과 같은 버전의 동의가 모두 기록될 때까지 '동의 대기' 상태입니다. PUT /me/consents/{endpoints}.",
+  "shellTermsReadTermsButton": "이용약관 읽기",
+  "shellTermsReadPrivacyButton": "개인정보 처리방침 읽기",
+  "shellTermsAgeHeader": "나이",
+  "shellTermsGuardianConsentCheck": "보호자의 동의를 받았습니다",
+  "shellTermsAgreeCheck": "이용약관과 개인정보 처리방침을 읽었으며 동의합니다",
+  "shellTermsVersionCaption": "버전: 이용약관 {termsVersion} · 개인정보 처리방침 {privacyVersion}",
+  "shellTermsAcceptedSnack": "이용약관에 동의했습니다",
+  "shellTermsOutdatedError": "이용약관이 새로워졌습니다. 앱을 업데이트한 뒤 동의하세요",
+  "shellTermsRecordFailedError": "동의를 기록할 수 없습니다: {error}",
+  "shellTermsBannerText": "이용약관 동의가 필요합니다. 동의하기 전까지 ASTell, 구매 등은 사용할 수 없습니다.",
+  "shellTermsBannerOpenButton": "확인하기"
+}

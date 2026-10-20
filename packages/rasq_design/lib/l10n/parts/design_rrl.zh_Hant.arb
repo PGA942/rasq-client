@@ -1,0 +1,6 @@
+{
+  "@@locale": "zh_Hant",
+  "designRrlRange": "{start}~{end}{unit}",
+  "designRrlSend": "傳送",
+  "designRrlNoAuthFlow": "{pluginId}:未設定登入流程（僅支援使用現有權杖註冊）"
+}

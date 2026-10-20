@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "settingsMuteBlockTitle": "Mute/block",
+  "settingsMuteBlockBlockTab": "Block",
+  "settingsMuteBlockMuteTab": "Mute",
+  "settingsMuteBlockBlockedUsers": "Blocked users",
+  "settingsMuteBlockBlockedWords": "Blocked words",
+  "settingsMuteBlockBlockedLists": "Blocked lists",
+  "settingsMuteBlockComingSoonHint": "Coming soon",
+  "settingsMuteBlockComingSoonDetail": "Blocking words/lists is planned for the second half of M2",
+  "settingsMuteBlockRetryButton": "Reload",
+  "settingsMuteBlockNoBlockedUsers": "No blocked users",
+  "settingsMuteBlockNoMutedUsers": "No muted users",
+  "settingsMuteBlockBlockButton": "Block",
+  "settingsMuteBlockMuteButton": "Mute",
+  "settingsMuteBlockBlockingButton": "Blocked",
+  "settingsMuteBlockMutingButton": "Muted"
+}

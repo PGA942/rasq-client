@@ -1,0 +1,10 @@
+{
+  "@@locale": "en",
+  "settingsComposerTitle": "Post composer",
+  "settingsComposerAutoAccountTitle": "Auto-select posting account",
+  "settingsComposerAutoAccountSubtitle": "Automatically switch the destination to an account that fits the draft",
+  "settingsComposerAutoAccountDetail": "Automatically switches the destination to an account whose post-target filters match the draft's content (manual selection always takes priority)",
+  "settingsComposerRasqLinkedTitle": "Also post to your RASQ account",
+  "settingsComposerRasqLinkedSubtitle": "Lets you choose your RASQ account when posting to multiple accounts",
+  "settingsComposerRasqLinkedDetail": "In multi-select mode, the RASQ account row also becomes selectable (normal post / Node-linked). Delivery and filters are set on the RASQ tab of \"Customize post targets\". Posts exceeding RASQ's limits (1000 characters / 6 attachments / 6 poll options / 3 posts) aren't sent to RASQ"
+}

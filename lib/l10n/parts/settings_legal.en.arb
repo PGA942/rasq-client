@@ -1,0 +1,13 @@
+{
+  "@@locale": "en",
+  "settingsLegalTitle": "Help and legal",
+  "settingsLegalVersionTitle": "Version",
+  "settingsLegalHelpTitle": "Help",
+  "settingsLegalTourTitle": "Take the RASQ tour again",
+  "settingsLegalCookiesTitle": "About cookies",
+  "settingsLegalPluginTermsHeader": "SNS plugin terms",
+  "settingsLegalPluginNoTerms": "No terms provided",
+  "settingsLegalLicensesHeader": "Licenses",
+  "settingsLegalLicensesTitle": "Open source licenses",
+  "settingsLegalLicensesSubtitle": "Flutter and bundled libraries"
+}

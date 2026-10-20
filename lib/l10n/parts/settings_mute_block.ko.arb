@@ -1,0 +1,18 @@
+{
+  "@@locale": "ko",
+  "settingsMuteBlockTitle": "뮤트/차단",
+  "settingsMuteBlockBlockTab": "차단",
+  "settingsMuteBlockMuteTab": "뮤트",
+  "settingsMuteBlockBlockedUsers": "차단한 사용자",
+  "settingsMuteBlockBlockedWords": "차단한 단어",
+  "settingsMuteBlockBlockedLists": "차단한 리스트",
+  "settingsMuteBlockComingSoonHint": "준비 중입니다",
+  "settingsMuteBlockComingSoonDetail": "단어/리스트 차단은 M2 후반에 제공 예정",
+  "settingsMuteBlockRetryButton": "새로고침",
+  "settingsMuteBlockNoBlockedUsers": "차단한 사용자가 없습니다",
+  "settingsMuteBlockNoMutedUsers": "뮤트한 사용자가 없습니다",
+  "settingsMuteBlockBlockButton": "차단",
+  "settingsMuteBlockMuteButton": "뮤트",
+  "settingsMuteBlockBlockingButton": "차단 중",
+  "settingsMuteBlockMutingButton": "뮤트 중"
+}

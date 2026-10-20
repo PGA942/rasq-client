@@ -93,6 +93,15 @@ void main() {
     expect(raiPromptsFor('ja').tag, 'ja');
     expect(raiPromptsFor('ja-JP').tag, 'ja');
     expect(raiPromptsFor('xx-YY').tag, 'ja', reason: '無い言語は日本語に倒す');
+    expect(raiPromptsFor('en-US').tag, 'en');
+    // 中国語は字体で分ける(zh = 簡体字、zh-Hant = 繁体字)。
+    for (final t in ['zh', 'zh-Hans', 'zh_Hans', 'zh-CN', 'zh-Hans-CN', 'zh-SG']) {
+      expect(raiPromptsFor(t).tag, 'zh', reason: t);
+    }
+    for (final t in ['zh-Hant', 'zh_Hant', 'zh-hant', 'zh-Hant-TW', 'zh-TW', 'zh-HK', 'zh-MO']) {
+      expect(raiPromptsFor(t).tag, 'zh-Hant', reason: t);
+    }
+    expect(raiPromptsFor('ko-KR').tag, 'ko');
     RasqUiLocale.tag = 'xx';
     expect(raiPrompts.tag, 'ja');
     for (final e in raiPromptCatalogs.entries) {

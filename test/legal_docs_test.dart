@@ -31,6 +31,28 @@ void main() {
     }
   });
 
+  test('参考訳 (D-535): 承諾の値は日本語の正本のまま、訳の本文とハッシュがそろい、先頭に「日本語版が優先」の注記がある', () {
+    for (final e in rasqLegalTranslations.entries) {
+      final ja = rasqLegalDocs[e.key]!;
+      for (final t in e.value.entries) {
+        final md = File('assets/legal/${t.key}/${e.key}.md').readAsStringSync();
+        expect(md, startsWith('> **'), reason: '${t.key}/${e.key}: 先頭は参考訳の注記');
+        expect(sha256.convert(utf8.encode(md)).toString(), t.value.sha256, reason: '${t.key}/${e.key}: 訳を変えたら tool/legal/build_legal.py を回す');
+        final page = jsonDecode(File('assets/settings/${t.key}/${ja.area}.rrl.json').readAsStringSync()) as Map<String, Object?>;
+        final doc = page['doc']! as Map;
+        expect(doc['id'], e.key);
+        expect(doc['version'], rasqLegalVersion);
+        expect(doc['bodySha256'], ja.sha256, reason: '承諾は日本語の文書に対して記録する');
+        expect((page['translation']! as Map)['bodySha256'], t.value.sha256);
+        expect(page['title'], t.value.title);
+        expect(SettingsPageSpec.fromJson(page).area, ja.area);
+        for (final bad in ['/Users/', 'src/', '.rs:', '.dart:']) {
+          expect(md.contains(bad), isFalse, reason: '${t.key}/${e.key} に $bad');
+        }
+      }
+    }
+  });
+
   test('利用者向けの本文に内部メモ・コードの参照が混ざっていない', () {
     for (final e in rasqLegalDocs.entries) {
       final text = File('assets/legal/${e.key}.md').readAsStringSync() + File('assets/settings/${e.value.area}.rrl.json').readAsStringSync();

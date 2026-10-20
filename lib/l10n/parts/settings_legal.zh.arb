@@ -1,0 +1,13 @@
+{
+  "@@locale": "zh",
+  "settingsLegalTitle": "帮助与法律声明",
+  "settingsLegalVersionTitle": "版本",
+  "settingsLegalHelpTitle": "帮助",
+  "settingsLegalTourTitle": "再次查看 RASQ 使用指南",
+  "settingsLegalCookiesTitle": "关于 Cookie",
+  "settingsLegalPluginTermsHeader": "SNS 插件条款",
+  "settingsLegalPluginNoTerms": "未提供条款",
+  "settingsLegalLicensesHeader": "许可证",
+  "settingsLegalLicensesTitle": "开源许可证",
+  "settingsLegalLicensesSubtitle": "Flutter 及内置库"
+}

@@ -1,0 +1,10 @@
+{
+  "@@locale": "ko",
+  "pluginApiTimelineHome": "팔로잉",
+  "pluginApiTimelineLocal": "로컬",
+  "pluginApiTimelineSocial": "소셜",
+  "pluginApiTimelineGlobal": "글로벌",
+  "pluginApiTimelineRecommended": "추천",
+  "pluginApiTimelineRelational": "관련",
+  "pluginApiTimelineBundle": "종합"
+}

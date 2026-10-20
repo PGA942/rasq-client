@@ -1,0 +1,13 @@
+{
+  "@@locale": "en",
+  "appNavPostTitle": "Post",
+  "appNavReactionsTitle": "Reactions",
+  "appNavFollowersTitle": "Followers",
+  "appNavFollowingTitle": "Following",
+  "appNavShortcutSearch": "Search",
+  "appNavShortcutNewPost": "New post",
+  "appNavShortcutNewMessage": "New message",
+  "appNavShortcutAskRai": "Search with RAi",
+  "appNavShortcutGuardianPending": "Unavailable until your guardian finishes the settings",
+  "appNavShortcutLoginHint": "Log in to an SNS account to use this"
+}

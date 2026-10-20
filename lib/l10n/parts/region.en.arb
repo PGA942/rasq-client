@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "regionHeading": "Where you live",
+  "regionCaption": "Choose the country or region where you live (self-declared). In the United States, also choose your state.",
+  "regionChoose": "Choose",
+  "regionCountryAndState": "{country}, {state}",
+  "regionPickerTitle": "Choose where you live",
+  "regionStatePickerTitle": "Choose a state",
+  "regionSearchHint": "Search countries and regions",
+  "regionStateSearchHint": "Search states",
+  "regionNoMatch": "No matches",
+  "regionUnavailableBadge": "Not available",
+  "regionUnavailableTitle": "RASQ isn't available in your region yet",
+  "regionUnavailableBody": "RASQ is currently available only in some regions. You can't create a RASQ account in your region. The regions we serve may change in the future.",
+  "regionUnavailableBodyWith": "RASQ is currently available only in some regions. You can't create a RASQ account in {region}. The regions we serve may change in the future.",
+  "regionUnavailableBack": "Back",
+  "regionRequiredError": "Choose where you live, then try again."
+}

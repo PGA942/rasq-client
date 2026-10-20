@@ -1,0 +1,15 @@
+{
+  "@@locale": "zh",
+  "modelsErrorFamilyHttp": "HTTP",
+  "modelsErrorFamilySettings": "设置",
+  "modelsErrorFamilyAffectedSettings": "受影响的设置",
+  "modelsErrorFamilyPluginTransfer": "插件间数据传递",
+  "modelsErrorFamilyDataCorruption": "数据损坏",
+  "modelsErrorFamilyRegulation": "限制",
+  "modelsErrorFamilyReserved": "预留",
+  "modelsErrorTimeoutHint": "请检查网络连接",
+  "modelsErrorMethodNotAcceptableHint": "请查看插件的故障信息",
+  "modelsErrorInternalServerErrorHint": "服务器发生错误",
+  "modelsErrorNoTrendRequirementHint": "请更改“喜欢的类型/方向”设置",
+  "modelsErrorRelationalTimelineBrokenHint": "重新加载可能会解决此问题"
+}

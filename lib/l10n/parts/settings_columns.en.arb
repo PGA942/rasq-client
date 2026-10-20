@@ -1,0 +1,20 @@
+{
+  "@@locale": "en",
+  "settingsColumnsTitle": "Column width",
+  "settingsColumnsIntroCaption": "Set the widths of the left and right columns on wide screens such as tablets and PCs.",
+  "settingsColumnsIntroDetail": "On wide screens (tablet / desktop / web), sets the width ratio between the small column (search, or the side a page was opened from) and the large column (the opened page).",
+  "settingsColumnsSplitHeader": "Small / large column ratio",
+  "settingsColumnsSplitDefault": "{hint} (default)",
+  "settingsColumnsLargeWidthLabel": "Large column width",
+  "settingsColumnsSmallWidthLabel": "Small column width",
+  "settingsColumnsShrinkCaption": "Shrinks automatically when it doesn't fit on screen.",
+  "settingsColumnsShrinkDetail": "When the screen is too narrow, columns shrink so the other column keeps at least {minWidth} px and the small column never gets wider than the large column.",
+  "settingsColumnsSwingInColumnTitle": "Open Swing in the right column",
+  "settingsColumnsSwingInColumnSubtitle": "When off, opens in full screen (on by default; Swing for plugins that request full screen always opens full screen)",
+  "settingsColumnsCurrentHeader": "Widths on the current screen",
+  "settingsColumnsPreviewWidths": "Small {small} px / Large {large} px",
+  "settingsColumnsNarrowCaption": "The current screen is narrow, so there is one column.",
+  "settingsColumnsNarrowDetail": "The current screen is narrow, so only one column is shown (it splits into small / large columns at {breakpoint} px or wider).",
+  "settingsColumnsPreviewSmall": "Small",
+  "settingsColumnsPreviewLarge": "Large"
+}

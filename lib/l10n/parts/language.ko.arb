@@ -1,0 +1,11 @@
+{
+  "@@locale": "ko",
+  "languageSelfName": "한국어",
+  "languageSettingsTitle": "언어",
+  "languageSettingsRowSubtitle": "앱 표시 언어",
+  "languageSettingsCaption": "앱 문자의 언어를 선택합니다. 기기 언어를 지원하지 않으면 일본어로 표시합니다.",
+  "languageSettingsCaptionDetail": "앱 문자의 언어를 선택합니다. '시스템 설정 따르기'는 기기의 언어 설정을 따르며, 지원하지 않는 언어이면 일본어로 표시합니다. 선택한 언어는 이 기기에 저장되며, RASQ 계정에 로그인해 있으면 ORGATE에도 전달합니다(이메일과 알림의 언어, D-484).",
+  "languageSettingsSystem": "시스템 설정 따르기",
+  "languageSettingsSystemCurrent": "현재 {language}",
+  "languageSettingsListHeader": "표시 언어"
+}

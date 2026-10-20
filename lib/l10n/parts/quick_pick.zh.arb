@@ -1,0 +1,10 @@
+{
+  "@@locale": "zh",
+  "quickPickEmojiTitle": "快捷表情",
+  "quickPickEmojiMore": "更多表情",
+  "quickPickSettingsCaption": "长按回应按钮或编辑器的表情按钮，会在按钮旁弹出面板，显示这里的表情和最近使用的表情。手指不离开屏幕滑动，松开时所在的表情会被添加（插入）。若不滑动直接松开，面板会保持打开，可点按选择。",
+  "quickPickSettingsAdd": "添加表情",
+  "quickPickSettingsReset": "恢复默认",
+  "quickPickSettingsRemove": "移除 {name}",
+  "quickPickSettingsEmpty": "没有表情。面板中只会显示最近使用的表情"
+}

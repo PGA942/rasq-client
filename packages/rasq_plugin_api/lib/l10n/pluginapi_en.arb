@@ -1,0 +1,10 @@
+{
+  "@@locale": "en",
+  "pluginApiTimelineHome": "Following",
+  "pluginApiTimelineLocal": "Local",
+  "pluginApiTimelineSocial": "Social",
+  "pluginApiTimelineGlobal": "Global",
+  "pluginApiTimelineRecommended": "Recommended",
+  "pluginApiTimelineRelational": "Related",
+  "pluginApiTimelineBundle": "All accounts"
+}

@@ -1,0 +1,499 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "about.commerce",
+  "title": "基于《特定商业交易法》的标示",
+  "doc": {
+    "id": "rasq.commerce",
+    "version": "1.0.0-draft.20261007",
+    "bodySha256": "2378016eb2eeb06a84d1c0740710509438c65c624823e3d9643252ba292e5c7f"
+  },
+  "translation": {
+    "locale": "zh",
+    "bodySha256": "7040f5fa6673e1b6e576e24373e31b618779d9b8657a4979955093d6cbb7583a",
+    "governing": "ja"
+  },
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "Notice",
+        "p": {
+          "kind": "warning",
+          "text": "这是公开前的草案。标有【待定】或［　］的部分将在正式版公开前确定。",
+          "detail": "rasq.commerce / 版本 1.0.0-draft.20261007。日文草案中面向用户的正文的参考译文(tool/legal/build_legal.py)。"
+        }
+      },
+      {
+        "t": "Notice",
+        "p": {
+          "kind": "info",
+          "text": "参考译文。 本文是为方便阅读而提供的参考译文。正式文本为日文版，如两者内容有任何出入，以日文版为准。"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "销售经营者",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "五寳幹久"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "运营负责人",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "五寳幹久"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "所在地",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "〒530-0001 大阪府大阪市北区梅田1丁目2番2号 大阪駅前第2ビル12-12"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "电话号码",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "【电话号码、受理时间】",
+              "bold": true,
+              "code": true
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "咨询",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "【电子邮件地址、咨询URL、受理时间】",
+              "bold": true,
+              "code": true
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "销售价格",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "公开测试期间，仅有面向插件开发者的审查费（根据以公开的计量方法计算的分发物内容的件数而有所不同，在申请画面中显示含税金额及其计算明细）。正式版中，各积分包显示以日元计的支付总额和已确定的税务处理，各功能显示所需积分数和含税日元等值金额。无偿部分予以区分"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "额外费用",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "通信费、用户另行签约的外部SNS、推理服务器等的费用。商品不可或缺的代理合同也显示名称和费用"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "支付方式",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "审查费、积分购买：通过Stripe提供的"
+            },
+            {
+              "s": "text",
+              "text": "【实际采用的支付方式】",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": "。功能购买、续订（正式版）：RASQ 积分"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "支付时间",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "审查费为申请时（支付确定时）。积分购买为支付确定时。功能购买与授予使用权同时，定期合同为所显示的各期间开始时"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "提供时间",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "审查费：自受理申请起"
+            },
+            {
+              "s": "text",
+              "text": "【待定：30日】",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": "内着手审查，自着手起"
+            },
+            {
+              "s": "text",
+              "text": "【待定：30日】",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": "内通知结果（参考时间。各日期显示在申请画面中，预计延迟时在参考日期之前告知）。积分：支付、授予确认后"
+            },
+            {
+              "s": "text",
+              "text": "【通常所需时间】",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": "。同时显示延迟时的确认、咨询方法"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "合同期限、续订",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "每件商品的开始日期时间、结束日期时间、周期、所需积分数、是否自动续订、停止续订的期限、操作步骤"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "销售数量、期间",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "申请期间，以及使用数、设备数、容量等有限制时的具体数值"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "运行环境",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "操作系统、RASQ最低版本、网络连接、支持的SNS、所需的额外合同。可在购买前确认的一览"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "退货、解约、退款",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "审查费依照插件商店、开发者条件第4条之二（仅因退回修改、不批准不予退款。着手前取消、超过着手参考时间仍未着手、超过结果通知参考时间仍未通知结果时取消、错误收费、因运营者的错误导致不批准、退回修改的，全额退款）。积分和功能依照上述第5条、第6条。区分因个人原因／故障／未提供的处理方式和操作窗口"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "积分",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n内容: "
+            },
+            {
+              "s": "text",
+              "text": "有偿、无偿、换算、期限、使用顺序、失效、退会时、制度废止时的处理"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "使用省略地址或电话号码的制度时，应在确认可使用的条件、请求时无迟延地披露、Stripe的要求事项后，再决定显示方式。本方案不自动省略。"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "文档 ID: rasq.commerce · 版本: 1.0.0-draft.20261007(以日文版为准)",
+          "pad": 16,
+          "size": 11
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "日文原文的 SHA-256: 2378016eb2eeb06a84d1c0740710509438c65c624823e3d9643252ba292e5c7f · 本译文的 SHA-256: 7040f5fa6673e1b6e576e24373e31b618779d9b8657a4979955093d6cbb7583a",
+          "pad": 16,
+          "size": 11,
+          "dev": true
+        }
+      }
+    ]
+  }
+}

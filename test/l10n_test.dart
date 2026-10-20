@@ -27,9 +27,11 @@ void main() {
 
   group('言語の決め方', () {
     const jaEn = [Locale('ja'), Locale('en')];
-    test('いまの対応は日本語だけ: 端末が何語でも日本語', () {
-      expect(supportedUiLocales, [const Locale('ja')]);
-      expect(resolveUiLocale(null, const [Locale('en', 'US'), Locale('fr')]), const Locale('ja'));
+    test('対応は日本語・英語・中国語(簡体 / 繁体)・韓国語。対応していない言語は日本語', () {
+      expect(supportedUiLocales.toSet(), {const Locale('ja'), const Locale('en'), const Locale('ko'), const Locale('zh'), const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant')});
+      expect(supportedUiLocales.first, const Locale('ja'));
+      expect(resolveUiLocale(null, const [Locale('en', 'US'), Locale('fr')]), const Locale('en'));
+      expect(resolveUiLocale(null, const [Locale('fr'), Locale('de')]), const Locale('ja'));
       expect(resolveUiLocale(null, const [Locale('ja', 'JP')]), const Locale('ja'));
       expect(resolveUiLocale('fr', const []), const Locale('ja'));
     });
@@ -40,6 +42,18 @@ void main() {
       expect(resolveUiLocale('en', const [Locale('ja')], supported: jaEn), const Locale('en'));
       expect(resolveUiLocale('system', const [Locale('en')], supported: jaEn), const Locale('en'));
       expect(resolveUiLocale('ko', const [Locale('en')], supported: jaEn), const Locale('en'));
+    });
+    test('中国語は文字で分ける: 台湾・香港・マカオは繁体、それ以外は簡体', () {
+      const hant = Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant');
+      const jaZh = [Locale('ja'), Locale('zh'), hant];
+      expect(resolveUiLocale(null, const [Locale('zh', 'TW')], supported: jaZh), hant);
+      expect(resolveUiLocale(null, const [Locale('zh', 'HK')], supported: jaZh), hant);
+      expect(resolveUiLocale(null, const [Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant', countryCode: 'TW')], supported: jaZh), hant);
+      expect(resolveUiLocale(null, const [Locale('zh', 'CN')], supported: jaZh), const Locale('zh'));
+      expect(resolveUiLocale(null, const [Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans', countryCode: 'SG')], supported: jaZh), const Locale('zh'));
+      expect(resolveUiLocale(null, const [Locale('zh')], supported: jaZh), const Locale('zh'));
+      expect(resolveUiLocale('zh-Hant', const [Locale('ja')], supported: jaZh), hant);
+      expect(resolveUiLocale('zh', const [Locale('ja')], supported: jaZh), const Locale('zh'));
     });
     test('BCP-47 の読み取り', () {
       expect(rasqLocaleFromTag('en-US'), const Locale('en', 'US'));

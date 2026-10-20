@@ -1,0 +1,20 @@
+{
+  "@@locale": "zh",
+  "settingsColumnsTitle": "栏宽",
+  "settingsColumnsIntroCaption": "在平板电脑或电脑等宽屏上，设置左右栏的宽度。",
+  "settingsColumnsIntroDetail": "在宽屏（平板 / 桌面 / Web）上，设置小栏（搜索或打开页面的一侧）与大栏（打开的页面）的宽度比例。",
+  "settingsColumnsSplitHeader": "小栏 / 大栏比例",
+  "settingsColumnsSplitDefault": "{hint}（默认）",
+  "settingsColumnsLargeWidthLabel": "大栏宽度",
+  "settingsColumnsSmallWidthLabel": "小栏宽度",
+  "settingsColumnsShrinkCaption": "屏幕放不下时会自动缩小。",
+  "settingsColumnsShrinkDetail": "屏幕太窄放不下时，会保留另一栏至少 {minWidth} px，并缩小到使小栏不宽于大栏。",
+  "settingsColumnsSwingInColumnTitle": "在右栏中打开 Swing",
+  "settingsColumnsSwingInColumnSubtitle": "关闭时以全屏打开（默认开启。指定全屏的插件的 Swing 始终全屏）",
+  "settingsColumnsCurrentHeader": "当前屏幕上的宽度",
+  "settingsColumnsPreviewWidths": "小 {small} px / 大 {large} px",
+  "settingsColumnsNarrowCaption": "当前屏幕较窄，因此只有一栏。",
+  "settingsColumnsNarrowDetail": "当前屏幕较窄，因此只显示一栏（宽度达到 {breakpoint} px 以上时分为小栏 / 大栏）。",
+  "settingsColumnsPreviewSmall": "小",
+  "settingsColumnsPreviewLarge": "大"
+}

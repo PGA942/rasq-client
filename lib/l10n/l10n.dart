@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:intl/intl.dart' show NumberFormat;
 import 'package:rasq_design/rasq_design.dart' show rasqLocaleFromTag;
 import 'package:rasq_models/rasq_models.dart' show RasqUiLocale;
 
@@ -21,6 +22,14 @@ AppLocalizations appL10nFor(Locale locale) {
 
 /// いまの表示の言語([RasqUiLocale])のアプリの文言 — `BuildContext` が無いところ用。
 AppLocalizations get appL10n => appL10nFor(rasqLocaleFromTag(RasqUiLocale.tag));
+
+/// 大きな数の短い表記。日本語・中国語・韓国語は万 / 億の単位の文言([AppLocalizations] の `…TenThousands` など)で組み立てる
+/// ので null、それ以外の言語は intl の短い表記(`15K` / `1.2M`)を返す。
+String? compactCountOrNull(int n) {
+  final lang = appL10n.localeName.split('_').first;
+  if (const {'ja', 'zh', 'ko'}.contains(lang)) return null;
+  return NumberFormat.compact(locale: lang).format(n);
+}
 
 extension AppL10nContext on BuildContext {
   /// アプリの文言。[AppLocalizations.delegate] の無い画面(部品だけを置くテスト)でも、いまの表示の言語の文言を返す。

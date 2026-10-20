@@ -1,0 +1,10 @@
+{
+  "@@locale": "zh_Hant",
+  "quickPickEmojiTitle": "快速表情符號",
+  "quickPickEmojiMore": "更多表情符號",
+  "quickPickSettingsCaption": "長按回應按鈕或編輯器的表情符號按鈕，會在按鈕旁彈出面板，顯示這裡的表情符號和最近使用的表情符號。手指不離開螢幕滑動，放開時所在的表情符號會被加入（插入）。若不滑動直接放開，面板會保持開啟，可點按選擇。",
+  "quickPickSettingsAdd": "新增表情符號",
+  "quickPickSettingsReset": "恢復預設",
+  "quickPickSettingsRemove": "移除 {name}",
+  "quickPickSettingsEmpty": "沒有表情符號。面板中只會顯示最近使用的表情符號"
+}

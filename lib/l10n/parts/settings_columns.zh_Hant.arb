@@ -1,0 +1,20 @@
+{
+  "@@locale": "zh_Hant",
+  "settingsColumnsTitle": "欄寬",
+  "settingsColumnsIntroCaption": "在平板或電腦等寬螢幕上，設定左右欄的寬度。",
+  "settingsColumnsIntroDetail": "在寬螢幕（平板 / 桌面 / Web）上，設定小欄（搜尋或開啟頁面的一側）與大欄（開啟的頁面）的寬度比例。",
+  "settingsColumnsSplitHeader": "小欄 / 大欄比例",
+  "settingsColumnsSplitDefault": "{hint}（預設）",
+  "settingsColumnsLargeWidthLabel": "大欄寬度",
+  "settingsColumnsSmallWidthLabel": "小欄寬度",
+  "settingsColumnsShrinkCaption": "螢幕放不下時會自動縮小。",
+  "settingsColumnsShrinkDetail": "螢幕太窄放不下時，會保留另一欄至少 {minWidth} px，並縮小到使小欄不寬於大欄。",
+  "settingsColumnsSwingInColumnTitle": "在右欄中開啟 Swing",
+  "settingsColumnsSwingInColumnSubtitle": "關閉時以全螢幕開啟（預設開啟。指定全螢幕的外掛的 Swing 一律全螢幕）",
+  "settingsColumnsCurrentHeader": "目前螢幕上的寬度",
+  "settingsColumnsPreviewWidths": "小 {small} px / 大 {large} px",
+  "settingsColumnsNarrowCaption": "目前螢幕較窄，因此只有一欄。",
+  "settingsColumnsNarrowDetail": "目前螢幕較窄，因此只顯示一欄（寬度達到 {breakpoint} px 以上時分為小欄 / 大欄）。",
+  "settingsColumnsPreviewSmall": "小",
+  "settingsColumnsPreviewLarge": "大"
+}

@@ -1,0 +1,13 @@
+{
+  "@@locale": "ko",
+  "settingsLegalTitle": "도움말, 법적 고지",
+  "settingsLegalVersionTitle": "버전",
+  "settingsLegalHelpTitle": "도움말",
+  "settingsLegalTourTitle": "RASQ 사용법 다시 보기",
+  "settingsLegalCookiesTitle": "쿠키 안내",
+  "settingsLegalPluginTermsHeader": "SNS 플러그인 약관",
+  "settingsLegalPluginNoTerms": "약관 없음",
+  "settingsLegalLicensesHeader": "라이선스",
+  "settingsLegalLicensesTitle": "오픈 소스 라이선스",
+  "settingsLegalLicensesSubtitle": "Flutter 및 포함된 라이브러리"
+}

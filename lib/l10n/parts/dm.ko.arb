@@ -1,0 +1,18 @@
+{
+  "@@locale": "ko",
+  "dmRoomSettings": "이 DM 설정",
+  "dmRetry": "새로고침",
+  "dmRoomEmpty": "아직 메시지가 없습니다",
+  "dmTabAll": "전체",
+  "dmTabFollowing": "팔로잉",
+  "dmSettings": "DM 설정",
+  "dmFollowingEmpty": "팔로우 중인 사람과의 DM이 없습니다",
+  "dmNewMessage": "새 메시지",
+  "dmUserSearchHint": "사용자 이름으로 검색..",
+  "dmUserSearchIntro": "DM을 보낼 상대를 검색합니다.",
+  "dmUserNotFound": "찾을 수 없습니다",
+  "dmEmptyTitle": "DM이 없습니다",
+  "dmEmptyHint": "다이렉트 게시물(한정 공개)이 여기에 표시됩니다",
+  "dmYouPrefix": "나: ",
+  "dmMediaPlaceholder": "[미디어]"
+}

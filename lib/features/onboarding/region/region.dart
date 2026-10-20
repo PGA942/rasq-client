@@ -4,7 +4,11 @@ import 'package:rasq_models/rasq_models.dart' show RasqUiLocale;
 
 import '../../../backend/orgate_client.dart';
 import '../../../l10n/l10n.dart';
+import 'region_names_en.dart';
 import 'region_names_ja.dart';
+import 'region_names_ko.dart';
+import 'region_names_zh.dart';
+import 'region_names_zh_hant.dart';
 
 /// 住んでいる地域の申告 (D-542 / ORGATE O-018、ユーザー決定 2026-10-20)。
 ///
@@ -115,6 +119,10 @@ final rasqRegionsProvider = FutureProvider.autoDispose<RasqRegions>((ref) async 
 /// 言語ごとの名前の表(国, 州, 読み)。無い言語は日本語。
 const _regionNameTables = <String, (Map<String, String>, Map<String, String>, Map<String, String>)>{
   'ja': (regionNamesJa, usStateNamesJa, regionReadingsJa),
+  'en': (regionNamesEn, usStateNamesEn, <String, String>{}),
+  'zh': (regionNamesZh, usStateNamesZh, <String, String>{}),
+  'zh-Hant': (regionNamesZhHant, usStateNamesZhHant, <String, String>{}),
+  'ko': (regionNamesKo, usStateNamesKo, <String, String>{}),
 };
 
 (Map<String, String>, Map<String, String>, Map<String, String>) get _tables {

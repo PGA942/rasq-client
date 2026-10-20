@@ -1,0 +1,10 @@
+{
+  "@@locale": "en",
+  "notifyPushChannelName": "RASQ notifications",
+  "notifyPushChannelDescription": "Mentions, replies, Swing and more",
+  "notifyOpenAction": "Open",
+  "notifyGlimpseChannelName": "Screen reading",
+  "notifyGlimpseChannelDescription": "Tap to briefly read the screen you're viewing",
+  "notifyAstellChannelName": "ASTell starts",
+  "notifyAstellChannelDescription": "Notifications when bookmarked ASTell rooms start"
+}

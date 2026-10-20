@@ -32,8 +32,8 @@ class LegalScreen extends ConsumerWidget {
         // RASQ の機能の紹介 (D-471) をもう一度。
         RasqListTile(key: const ValueKey('legal.tour'), title: l.settingsLegalTourTitle, onTap: () => context.push(featureTourLocation(again: true))),
         // 規約・ポリシー (D-372): 草案の利用者向け本文から作った文書ページ(tool/legal/build_legal.py)。
-        for (final d in rasqLegalDocs.values)
-          RasqListTile(key: ValueKey('legal.doc.${d.area}'), title: d.title, onTap: () => context.push('/settings/dsl/${d.area}')),
+        for (final MapEntry(key: id, value: d) in rasqLegalDocs.entries)
+          RasqListTile(key: ValueKey('legal.doc.${d.area}'), title: legalDocTitle(id, d.title, l.localeName), onTap: () => context.push('/settings/dsl/${d.area}')),
         RasqListTile(title: l.settingsLegalCookiesTitle, onTap: () => context.push('/settings/dsl/about.cookies')),
         RasqSectionHeader(title: l.settingsLegalPluginTermsHeader),
         for (final p in plugins)
@@ -54,4 +54,13 @@ class LegalScreen extends ConsumerWidget {
       ]),
     );
   }
+}
+
+/// 文書の題を表示の言語で。参考訳([rasqLegalTranslations])が無い言語は日本語の題 [fallback]。
+/// [localeName] は gen-l10n の `zh_Hant` の形。
+String legalDocTitle(String docId, String fallback, String localeName) {
+  final tr = rasqLegalTranslations[docId];
+  if (tr == null) return fallback;
+  final tag = localeName.replaceAll('_', '-');
+  return (tr[tag] ?? tr[tag.split('-').first])?.title ?? fallback;
 }

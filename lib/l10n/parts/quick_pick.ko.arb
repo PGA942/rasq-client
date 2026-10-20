@@ -1,0 +1,10 @@
+{
+  "@@locale": "ko",
+  "quickPickEmojiTitle": "빠른 이모지",
+  "quickPickEmojiMore": "다른 이모지",
+  "quickPickSettingsCaption": "리액션 버튼이나 작성 화면의 이모지 버튼을 길게 누르면 버튼에 붙은 패널에 여기의 이모지와 최근 사용한 이모지가 표시됩니다. 손가락을 떼지 않고 밀어서 뗀 위치의 이모지를 추가(입력)합니다. 밀지 않고 떼면 패널이 열린 채로 남아 탭해서 고를 수 있습니다.",
+  "quickPickSettingsAdd": "이모지 추가",
+  "quickPickSettingsReset": "기본값으로 되돌리기",
+  "quickPickSettingsRemove": "{name} 제거",
+  "quickPickSettingsEmpty": "이모지가 없습니다. 패널에는 최근 사용한 이모지만 표시됩니다"
+}

@@ -97,6 +97,9 @@
 		F8EBCDFB4B06B8955A553EB7 /* ScreenGlimpseBroadcast.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScreenGlimpseBroadcast.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D483A1000000000000000003 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		D483A1000000000000000004 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		D483A1000000000000000005 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = zh-Hans; path = zh-Hans.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		D483A1000000000000000006 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = zh-Hant; path = zh-Hant.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		D483A1000000000000000007 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -301,6 +304,9 @@
 				en,
 				Base,
 				ja,
+				"zh-Hans",
+				"zh-Hant",
+				ko,
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
 			packageReferences = (
@@ -448,6 +454,9 @@
 			children = (
 				D483A1000000000000000003 /* ja */,
 				D483A1000000000000000004 /* en */,
+				D483A1000000000000000005 /* zh-Hans */,
+				D483A1000000000000000006 /* zh-Hant */,
+				D483A1000000000000000007 /* ko */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";

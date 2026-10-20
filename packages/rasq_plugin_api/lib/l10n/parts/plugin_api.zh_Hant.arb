@@ -1,0 +1,10 @@
+{
+  "@@locale": "zh_Hant",
+  "pluginApiTimelineHome": "追蹤中",
+  "pluginApiTimelineLocal": "本站",
+  "pluginApiTimelineSocial": "社群",
+  "pluginApiTimelineGlobal": "全域",
+  "pluginApiTimelineRecommended": "推薦",
+  "pluginApiTimelineRelational": "關聯",
+  "pluginApiTimelineBundle": "綜合"
+}

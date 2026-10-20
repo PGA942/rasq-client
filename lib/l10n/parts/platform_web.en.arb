@@ -1,0 +1,7 @@
+{
+  "@@locale": "en",
+  "platformWebRuntimeLoadFailed": "Couldn't load files needed to run (network / CDN)",
+  "platformWebServerNotConfigured": "RASQ server address is not set",
+  "platformWebDownloadFailed": "Download failed: {error}",
+  "platformWebModelLoadFailed": "Couldn't load the model: {error}"
+}

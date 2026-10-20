@@ -1,0 +1,9 @@
+{
+  "@@locale": "en",
+  "adsShowLess": "Show less often",
+  "adsShowLessDone": "You'll see this ad less often",
+  "adsLabel": "Ad",
+  "adsLabelWithHost": "Ad · {host}",
+  "adsMenu": "Ad menu",
+  "adsOpen": "Open ad"
+}

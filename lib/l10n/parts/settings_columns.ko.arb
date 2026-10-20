@@ -1,0 +1,20 @@
+{
+  "@@locale": "ko",
+  "settingsColumnsTitle": "칼럼 너비",
+  "settingsColumnsIntroCaption": "태블릿이나 PC 등 넓은 화면에서 좌우 칼럼의 너비를 정합니다.",
+  "settingsColumnsIntroDetail": "넓은 화면(태블릿 / 데스크톱 / 웹)에서 소형 칼럼(검색이나 페이지를 연 쪽)과 대형 칼럼(연 페이지)의 너비 비율을 정합니다.",
+  "settingsColumnsSplitHeader": "소형 / 대형 칼럼 비율",
+  "settingsColumnsSplitDefault": "{hint}(기본값)",
+  "settingsColumnsLargeWidthLabel": "대형 칼럼 너비",
+  "settingsColumnsSmallWidthLabel": "소형 칼럼 너비",
+  "settingsColumnsShrinkCaption": "화면에 들어가지 않으면 자동으로 줄입니다.",
+  "settingsColumnsShrinkDetail": "화면이 좁아 들어가지 않으면 다른 쪽 칼럼을 {minWidth} px 이상 남기고, 소형 칼럼이 대형 칼럼보다 넓어지지 않도록 줄입니다.",
+  "settingsColumnsSwingInColumnTitle": "Swing을 오른쪽 칼럼에서 열기",
+  "settingsColumnsSwingInColumnSubtitle": "끄면 전체 화면으로 엽니다(처음에는 켜짐. 전체 화면을 지정한 플러그인의 Swing은 항상 전체 화면)",
+  "settingsColumnsCurrentHeader": "현재 화면에서의 너비",
+  "settingsColumnsPreviewWidths": "소형 {small} px / 대형 {large} px",
+  "settingsColumnsNarrowCaption": "현재 화면이 좁아서 칼럼이 하나입니다.",
+  "settingsColumnsNarrowDetail": "현재 화면이 좁아서 칼럼을 하나만 표시합니다({breakpoint} px 이상이면 소형 / 대형 칼럼으로 나뉩니다).",
+  "settingsColumnsPreviewSmall": "소형",
+  "settingsColumnsPreviewLarge": "대형"
+}

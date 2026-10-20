@@ -1,0 +1,9 @@
+{
+  "@@locale": "zh_Hant",
+  "adsShowLess": "降低顯示頻率",
+  "adsShowLessDone": "已降低此廣告的顯示頻率",
+  "adsLabel": "廣告",
+  "adsLabelWithHost": "廣告 · {host}",
+  "adsMenu": "廣告選單",
+  "adsOpen": "開啟廣告"
+}

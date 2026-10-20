@@ -1,0 +1,18 @@
+{
+  "@@locale": "zh_Hant",
+  "composePolicyTypeSexual": "色情內容",
+  "composePolicyTypeViolence": "暴力 / 威脅",
+  "composePolicyTypeSelfHarm": "自傷 / 自殺",
+  "composePolicyTypeHarassment": "辱罵 / 騷擾",
+  "composePolicyTypePersonalInfo": "個人資料（電話號碼、電子郵件地址、住址等）",
+  "composePolicyTypeLink": "外部連結",
+  "composePolicyTypeMedia": "圖片 / 影片",
+  "composePolicyTypeStimulus": "過激言詞",
+  "composePolicyTypeTopic": "指定話題",
+  "composePolicyWhoGuardian": "監護人設定",
+  "composePolicyWhoSanction": "帳號限制",
+  "composePolicyBlockedMediaUnmeasured": "由於{who}，無法傳送圖片 / 影片（此裝置無法檢查附件）。請移除附件",
+  "composePolicyBlockedUnmeasured": "由於{who}，目前無法傳送（此裝置無法檢查「{label}」）",
+  "composePolicyBlocked": "由於{who}，無法傳送涉及「{label}」的內容。請修改",
+  "composePolicyWarn": "可能涉及「{label}」（{who}）。仍要傳送嗎？"
+}

@@ -1,0 +1,10 @@
+{
+  "@@locale": "zh_Hant",
+  "notifyPushChannelName": "RASQ 通知",
+  "notifyPushChannelDescription": "提及、回覆、Swing 等通知",
+  "notifyOpenAction": "開啟",
+  "notifyGlimpseChannelName": "讀取螢幕",
+  "notifyGlimpseChannelDescription": "點按後，將簡單讀取目前顯示的螢幕內容",
+  "notifyAstellChannelName": "ASTell 開始",
+  "notifyAstellChannelDescription": "已加入書籤的 ASTell 開始時通知"
+}

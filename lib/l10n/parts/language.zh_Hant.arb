@@ -1,0 +1,11 @@
+{
+  "@@locale": "zh_Hant",
+  "languageSelfName": "繁體中文",
+  "languageSettingsTitle": "語言",
+  "languageSettingsRowSubtitle": "App 的顯示語言",
+  "languageSettingsCaption": "選擇 App 文字的語言。若不支援裝置的語言，將以日文顯示。",
+  "languageSettingsCaptionDetail": "選擇 App 文字的語言。「跟隨系統」會依照裝置的語言設定，不支援的語言將使用日文。所選語言會儲存在此裝置上，若已登入 RASQ 帳號，也會告知 ORGATE（電子郵件與通知的語言，D-484）。",
+  "languageSettingsSystem": "跟隨系統",
+  "languageSettingsSystemCurrent": "目前為 {language}",
+  "languageSettingsListHeader": "顯示語言"
+}
