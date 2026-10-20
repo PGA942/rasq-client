@@ -139,7 +139,7 @@
   "@vcRoomPeerScreenTitled": {"description": "参加者の画面共有の見出し。name は表示名、title は画面の題", "placeholders": {"name": {"type": "String"}, "title": {"type": "String"}}},
   "vcRoomAllShares": "すべての共有",
   "@vcRoomAllShares": {"description": "すべての共有のシートの見出し"},
-  "vcRoomSettingsTitle": "VC の設定",
+  "vcRoomSettingsTitle": "ASTell の設定",
   "@vcRoomSettingsTitle": {"description": "ルームの歯車のシートの見出し"},
   "vcRoomModerationLabel": "モデレーション(オーナー)",
   "@vcRoomModerationLabel": {"description": "ルームの設定の節の見出し"},
