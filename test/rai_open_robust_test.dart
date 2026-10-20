@@ -47,6 +47,44 @@ class _StuckThree extends three.ThreeJS {
   void dispose() {}
 }
 
+/// 段階を知らせる three_js の土台 (D-520): GL の初期化の段階を [Rai3dHooks] で知らせ、[failAt] で投げる / 準備を終える /
+/// 最初の 1 枚を描く。
+class _StagedThree extends three.ThreeJS {
+  _StagedThree({required super.onSetupComplete, required this.hooks, this.failAt, this.complete = false, this.drawFrame = false}) : super(setup: null, loadingWidget: const SizedBox.shrink());
+  final Rai3dHooks? hooks;
+  final String? failAt;
+  final bool complete;
+  final bool drawFrame;
+  bool _started = false;
+
+  @override
+  Widget build() {
+    if (!_started) {
+      _started = true;
+      Future(() {
+        for (final stage in const ['angle init start', 'angle init done', 'texture start', 'texture done', 'renderer start']) {
+          hooks?.stage(stage);
+          if (stage == failAt) {
+            hooks?.error(stage, StateError('glGetString returned null (fake)'), null);
+            return;
+          }
+        }
+        hooks?.stage('renderer done');
+        if (!complete) return;
+        onSetupComplete();
+        if (drawFrame) {
+          hooks?.stage('first render done');
+          hooks?.firstFrame();
+        }
+      });
+    }
+    return const SizedBox.shrink(key: ValueKey('test.stagedThree'));
+  }
+
+  @override
+  void dispose() {}
+}
+
 /// RAi が開かない(Android、D-516)の再発防止: 3D のマスコット / 端末内モデルの準備が失敗しても RAi ホームとバーは出る。
 void main() {
   group('3D を使うか (raiMascot3dAllowed)', () {
@@ -141,7 +179,7 @@ void main() {
   testWidgets('3D の土台を作るときに投げたら、2D の RAi に切り替えて開く', (tester) async {
     final c = await pump(tester, extra: [
       raiMascot3dSupportedProvider.overrideWithValue(true),
-      raiThreeFactoryProvider.overrideWithValue(({required onSetupComplete, required setup, loadingWidget, size, settings}) => throw StateError('initOpenGLAngle: eglInitialize failed (fake)')),
+      raiThreeFactoryProvider.overrideWithValue(({required onSetupComplete, required setup, loadingWidget, size, settings, hooks}) => throw StateError('initOpenGLAngle: eglInitialize failed (fake)')),
     ]);
     expectRaiOpen();
     expect(tester.takeException(), isNull);
@@ -156,7 +194,7 @@ void main() {
   testWidgets('3D の準備が終わらない(GL の初期化が止まる)ときは、待ち時間を過ぎたら 2D に切り替える。待つ間も画面を覆わない', (tester) async {
     final c = await pump(tester, location: Routes.raiAsk, extra: [
       raiMascot3dSupportedProvider.overrideWithValue(true),
-      raiThreeFactoryProvider.overrideWithValue(({required onSetupComplete, required setup, loadingWidget, size, settings}) => _StuckThree(loadingWidget)),
+      raiThreeFactoryProvider.overrideWithValue(({required onSetupComplete, required setup, loadingWidget, size, settings, hooks}) => _StuckThree(loadingWidget)),
     ]);
     // 待っている間: RAi ホームとバーは出ている。3D の層は何も描かない(読み込み中の面で覆わない)。
     expectRaiOpen();
@@ -172,6 +210,69 @@ void main() {
     expectRaiOpen();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('3D の準備の段階が診断に残り、段階の中の例外は段階の名前付きで 2D に切り替える (D-520)', (tester) async {
+    final c = await pump(tester, extra: [
+      raiMascot3dSupportedProvider.overrideWithValue(true),
+      raiThreeFactoryProvider.overrideWithValue(({required onSetupComplete, required setup, loadingWidget, size, settings, hooks}) => _StagedThree(onSetupComplete: onSetupComplete, hooks: hooks, failAt: 'renderer start')),
+    ]);
+    await tester.pumpAndSettle();
+    expectRaiOpen();
+    expect(tester.takeException(), isNull);
+    final reason = c.read(raiMascot3dFallbackProvider);
+    expect(reason, startsWith('renderer start: '));
+    expect(reason, contains('glGetString returned null'));
+    expect(reason, contains('last stage: renderer start'));
+    final log = c.read(raiDiagnosticsProvider).where((d) => d.area == '3d').map((d) => d.message).toList();
+    expect(log.where((m) => m.startsWith('stage ')).map((m) => m.split(' +').first), containsAllInOrder(['stage widget created', 'stage angle init start', 'stage texture done', 'stage renderer start']));
+    expect(find.byType(RaiMascot3d), findsNothing);
+  });
+
+  testWidgets('Android: 準備が終わっても最初の 1 枚が描けなければ、待ち時間で 2D に切り替え、理由に最後の段階を付ける (D-520)', (tester) async {
+    final c = await pump(tester, extra: [
+      raiMascot3dSupportedProvider.overrideWithValue(true),
+      raiThreeFactoryProvider.overrideWithValue(({required onSetupComplete, required setup, loadingWidget, size, settings, hooks}) {
+        // Android はテクスチャの解像度を抑える(テストの画面の DPR は 3)。
+        expect(settings?.screenResolution, raiAndroidMaxTextureDpr);
+        return _StagedThree(onSetupComplete: onSetupComplete, hooks: hooks, complete: true);
+      }),
+    ]);
+    expect(c.read(raiMascot3dFallbackProvider), isNull);
+    await tester.pump(raiMascot3dTimeout + const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    final reason = c.read(raiMascot3dFallbackProvider);
+    expect(reason, contains('setup finished but no frame was drawn'));
+    expect(reason, contains('last stage: setup complete'));
+    expect(find.byType(RaiMascot3d), findsNothing);
+    expectRaiOpen();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('Android: 最初の 1 枚が描けたら準備ができた(待ち時間を過ぎても 3D のまま) (D-520)', (tester) async {
+    final c = await pump(tester, extra: [
+      raiMascot3dSupportedProvider.overrideWithValue(true),
+      raiThreeFactoryProvider.overrideWithValue(({required onSetupComplete, required setup, loadingWidget, size, settings, hooks}) => _StagedThree(onSetupComplete: onSetupComplete, hooks: hooks, complete: true, drawFrame: true)),
+    ]);
+    await tester.pump(raiMascot3dTimeout + const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(c.read(raiMascot3dFallbackProvider), isNull);
+    expect(find.byType(RaiMascot3d), findsOneWidget);
+    expect(c.read(raiDiagnosticsProvider).map((d) => d.message), contains(startsWith('stage first render done')));
+    expectRaiOpen();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('iOS / macOS は今までどおり準備の終わりで準備ができた(最初の 1 枚を待たない) (D-520)', (tester) async {
+    final c = await pump(tester, extra: [
+      raiMascot3dSupportedProvider.overrideWithValue(true),
+      raiThreeFactoryProvider.overrideWithValue(({required onSetupComplete, required setup, loadingWidget, size, settings, hooks}) {
+        expect(settings?.screenResolution, isNull);
+        return _StagedThree(onSetupComplete: onSetupComplete, hooks: hooks, complete: true);
+      }),
+    ]);
+    await tester.pump(raiMascot3dTimeout + const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(c.read(raiMascot3dFallbackProvider), isNull);
+    expect(find.byType(RaiMascot3d), findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets('開発者モードのサイドバーに診断が出る', (tester) async {
     final c = await pump(tester, extra: [developerModeProvider.overrideWithValue(true)]);

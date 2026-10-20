@@ -6,6 +6,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_angle/flutter_angle.dart' show AngleOptions, FlutterAngleTexture;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:three_js/three_js.dart' as three;
 
@@ -30,6 +32,15 @@ import 'rai_space.dart';
 // 実機で RAi が開かなくなった(初期化が失敗 / 止まると、three_js の読み込み中の表示 = 画面いっぱいの不透明な面が
 // RAi のバーとホームの上に残る)。Android は既定で 2D。開発者モードの「3D の RAi を試す(Android)」でだけ 3D を試す。
 // どの端末でも、3D が失敗したら [raiMascot3dFallbackProvider] に理由を残して 2D に切り替える。
+//
+// Android の 3D (D-520): 実機(Adreno 730)で ANGLE の初期化とテクスチャ(画面いっぱい 1078x2354)は通ったのに、20 秒たっても
+// 準備が終わらなかった(Dart の例外のログも無し)。three_js の準備の流れを [RaiThreeJS] で段階ごとに記録し(`RAi diag [3d]: stage …`)、
+// 例外はゾーンで拾って段階の名前付きで 2D に切り替える。直したこと: ①Android は ANGLE ではなく端末の GLES で描く
+// (flutter_angle 0.4.2 の `EGL.eglMakeCurrent` は 1000 未満の EGLSurface を「壊れた値」とみなして 4x4 の pbuffer に差し替える。
+// ANGLE の EGLSurface は小さな番号(実機のログで 0x2)なので、描画は pbuffer に行き、`eglSwapBuffers(0x2)` は current でない面で
+// 失敗する = 一枚も出ない)。②Android のテクスチャの解像度を 1.5 倍までに(画面いっぱいなので DPR 2.75 だと 1078x2354)。
+// ③glb の読み込み / 表情シートに段階ごとの待ち時間。表情シートは Android では準備を待たせない(後から貼る)。
+// ④Android の「準備ができた」は最初の 1 枚を描けたとき(準備が終わっても描けなければ見張りで 2D)。
 final raiMascot3dProvider = Provider<bool>((ref) => ref.watch(raiMascot3dSupportedProvider) && ref.watch(raiMascot3dFallbackProvider) == null);
 
 /// この端末で 3D を使ってよいか(失敗の切り替えは含まない)。
@@ -73,12 +84,151 @@ final raiMascot3dFallbackProvider = NotifierProvider<RaiMascot3dFallback, String
 /// 握られず、こちらには届かないため)。
 const raiMascot3dTimeout = Duration(seconds: 20);
 
+/// glb を読んで組み立てるまでの待ち時間 (D-520)。過ぎたら `glb … did not finish` で 2D に切り替える。
+const raiMascot3dGlbTimeout = Duration(seconds: 15);
+
+/// 表情シートを作るまでの待ち時間 (D-520)。過ぎたら表情なし(黒い面のまま)で続ける。
+const raiMascot3dFaceTimeout = Duration(seconds: 10);
+
+/// Android のテクスチャの解像度の上限 (D-520): 空間モードは画面いっぱいのテクスチャなので、端末の DPR(2.75 など)のままだと
+/// 1078x2354 になる。RAi は画面の一部(〜300px)にしか描かないので 1.5 倍で足りる。
+const raiAndroidMaxTextureDpr = 1.5;
+
+/// Android のテクスチャの解像度 (D-520)。端末の DPR が上限より小さければそのまま。
+double raiAndroidTextureDpr(double deviceDpr) => math.min(deviceDpr, raiAndroidMaxTextureDpr);
+
+/// 「準備ができた」を最初の 1 枚が描けたときにするか (D-520)。Android だけ(iOS / macOS は今までどおり準備の終わり)。
+bool raiMascot3dReadyOnFirstFrame(TargetPlatform platform) => platform == TargetPlatform.android;
+
+/// three_js の準備の段階を [RaiMascot3d] に知らせる口 (D-520)。
+class Rai3dHooks {
+  const Rai3dHooks({required this.stage, required this.error, required this.firstFrame});
+
+  /// 段階に着いた(`angle init start` / `texture done` / `renderer done` / `first render done` …)。
+  final void Function(String stage, [String? detail]) stage;
+
+  /// 例外(どの段階か、three_js の Future の中で投げられたものも含む)。
+  final void Function(String stage, Object error, StackTrace? stack) error;
+
+  /// 最初の 1 枚をテクスチャに出せた。
+  final void Function() firstFrame;
+}
+
 /// three_js の描画の土台を作る関数 (D-516)。テストは作るときの失敗 / 準備の終わらない土台に差し替える。
-typedef RaiThreeFactory = three.ThreeJS Function({required void Function() onSetupComplete, required Future<void> Function() setup, Widget? loadingWidget, Size? size, three.Settings? settings});
+typedef RaiThreeFactory = three.ThreeJS Function({required void Function() onSetupComplete, required Future<void> Function() setup, Widget? loadingWidget, Size? size, three.Settings? settings, Rai3dHooks? hooks});
 
 final raiThreeFactoryProvider = Provider<RaiThreeFactory>(
-  (_) => ({required onSetupComplete, required setup, loadingWidget, size, settings}) => three.ThreeJS(onSetupComplete: onSetupComplete, setup: setup, loadingWidget: loadingWidget, size: size, settings: settings),
+  (_) => ({required onSetupComplete, required setup, loadingWidget, size, settings, hooks}) =>
+      RaiThreeJS(onSetupComplete: onSetupComplete, setup: setup, loadingWidget: loadingWidget, size: size, settings: settings, hooks: hooks, deviceGles: !kIsWeb && Platform.isAndroid),
 );
+
+/// three_js の `ThreeJS` に段階の記録と例外の受け口を足したもの (D-520)。
+///
+/// three_js_angle_renderer 0.0.1 の `ThreeJS.initSize` は `Future.delayed(() => initPlatformState())` を待たずに捨てるので、
+/// その中(flutter_angle の初期化 → テクスチャ → `getContext` → `initRenderer` → `setup` → Ticker → `onSetupComplete`)の
+/// 例外は誰にも届かない。ここでは同じ流れを段階ごとに記録し、ゾーン([runZonedGuarded])で包んで例外を [Rai3dHooks.error] へ渡す。
+/// 描画ループ(`animate`)の例外も拾う(three_js は投げると `_updating` が戻らず、二度と描かない)。
+class RaiThreeJS extends three.ThreeJS {
+  RaiThreeJS({required super.onSetupComplete, required super.setup, super.loadingWidget, super.size, super.settings, this.hooks, this.deviceGles = false});
+
+  final Rai3dHooks? hooks;
+
+  /// Android: ANGLE ではなく端末の GLES で描く(flutter_angle の `init(useAngle: false)` → `initOpenGL` / `createTexture`)。
+  /// ANGLE の EGLSurface は小さな番号(0x2 など)で、flutter_angle 0.4.2 の `eglMakeCurrent` が 1000 未満の値を壊れた値と
+  /// みなして 4x4 の pbuffer に差し替えるため、ANGLE では一枚も出ない(lib/desktop/lib_egl.dart の `isInvalidSurface`)。
+  final bool deviceGles;
+
+  bool _firstFrame = false;
+  bool _errored = false;
+
+  /// 準備の今の段階(例外の報告に付ける)。
+  String _stage = 'init';
+
+  void _mark(String stage, [String? detail]) {
+    _stage = stage;
+    hooks?.stage(stage, detail);
+  }
+
+  void _error(Object e, StackTrace? st) {
+    debugPrint('RAi 3D: error at $_stage: $e');
+    if (_errored) return;
+    _errored = true;
+    hooks?.error(_stage, e, st);
+  }
+
+  @override
+  Future<void> initPlatformState() {
+    final done = Completer<void>();
+    // three_js / flutter_angle の中で待たれずに投げられた Future の例外も、このゾーンで受ける。
+    runZonedGuarded(() async {
+      await _initPlatformState();
+      if (!done.isCompleted) done.complete();
+    }, (e, st) {
+      _error(e, st);
+      if (!done.isCompleted) done.complete();
+    });
+    return done.future;
+  }
+
+  /// `ThreeJS.initPlatformState` と同じ流れ(段階の記録と、Android の端末の GLES を足した)。
+  Future<void> _initPlatformState() async {
+    if (texture == null) {
+      final a = angle;
+      if (a == null) throw StateError('flutter_angle is not available');
+      _mark('angle init start', deviceGles ? 'device GLES' : 'default');
+      if (deviceGles) {
+        await a.init(false, false);
+      } else {
+        await a.init();
+      }
+      _mark('angle init done');
+      final w = width.toInt(), h = height.toInt();
+      _mark('texture start', '${w}x$h @${dpr.toStringAsFixed(2)} = ${(w * dpr).toInt()}x${(h * dpr).toInt()}px');
+      texture = await a.createTexture(
+        AngleOptions(width: w, height: h, dpr: dpr, alpha: settings.alpha, antialias: settings.antialias, customRenderer: !settings.useSourceTexture, useSurfaceProducer: settings.useSurfaceProducer),
+      );
+      _mark('texture done', 'id=${texture?.textureId}');
+    }
+    _mark('gl context start');
+    gl ??= texture!.getContext();
+    _mark('gl context done');
+    await initScene();
+  }
+
+  @override
+  void initRenderer() {
+    _mark('renderer start');
+    super.initRenderer();
+    _mark('renderer done');
+  }
+
+  @override
+  Future<void> initScene() async {
+    await super.initScene();
+    _mark('render loop started');
+  }
+
+  @override
+  Future<void> render([three.Scene? scene, three.Camera? camera, FlutterAngleTexture? texture, double? dt]) async {
+    if (_firstFrame) return super.render(scene, camera, texture, dt);
+    _mark('first render start');
+    await super.render(scene, camera, texture, dt);
+    _firstFrame = true;
+    _mark('first render done');
+    _stage = 'render loop';
+    hooks?.firstFrame();
+  }
+
+  @override
+  Future<void> animate(Duration duration) async {
+    if (_errored) return;
+    try {
+      await super.animate(duration);
+    } catch (e, st) {
+      _error(e, st);
+    }
+  }
+}
 
 /// RAi のマスコット(3D / 2D の代わりの絵)を画面に描かない (D-466)。位置・大きさ・腕・向きの計算
 /// ([RaiMascot3dController])と、指す部品の枠はそのまま。rasq-central のホームページのシーン(tool/preview/homescenes_test.dart)は
@@ -231,6 +381,22 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
   /// 出るまでの見張り (D-516)。[raiMascot3dTimeout] までに準備が終わらなければ失敗にする。
   Timer? _watchdog;
 
+  /// 準備の段階の記録 (D-520): `RAi diag [3d]: stage …`。見張りの理由に最後の段階を付ける。
+  /// initState / build の中からも呼ばれる(プロバイダーは組み立て中に変えられない)ので、記録は microtask で。
+  late final Rai3dStages _stages = Rai3dStages((m) {
+    scheduleMicrotask(() {
+      if (mounted) {
+        ref.read(raiDiagnosticsProvider.notifier).add('3d', m);
+      } else {
+        debugPrint('RAi diag [3d]: $m (unmounted)');
+      }
+    });
+  });
+
+  /// 「準備ができた」を最初の 1 枚が描けたときにする (D-520、Android)。
+  final bool _readyOnFirstFrame = !kIsWeb && raiMascot3dReadyOnFirstFrame(defaultTargetPlatform);
+  bool _setupComplete = false;
+
   /// 3D を諦めて 2D に切り替える (D-516)。理由は [raiMascot3dFallbackProvider] と診断に残す。
   /// build の中からも呼ばれるので、状態の変更は次のフレームで。
   void _fail(String reason) {
@@ -243,6 +409,9 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
       setState(() {});
       ref.read(raiMascot3dFallbackProvider.notifier).fail(reason);
     });
+    // 次のフレームを必ず起こす (D-520): 見張り / 準備の例外は描画の外(タイマー / Future)で起き、画面が止まっていると
+    // 切り替えがフレームを待ったままになる。
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   /// 描画ループ 1 周ごとに増える (D-215): Flutter 側に再合成させるためのカウンター。実機(macOS)では
@@ -276,16 +445,36 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
       debugPrint('RAi 3D: $liveInstances three_js instances alive — the shared ANGLE context distorts the scene (D-202). scene=${widget.isScene} under: ${chain.join(' < ')}');
     }
     final proj = widget.projector;
+    _stages.mark('widget created', '${widget.isScene ? 'scene' : 'icon'} platform=${defaultTargetPlatform.name}');
     // 準備が終わらない(GL の初期化の例外は three_js の中の Future.delayed で捨てられる)ときの見張り (D-516)。
+    // 理由には最後に着いた段階を付ける (D-520)。
     _watchdog = Timer(raiMascot3dTimeout, () {
-      if (mounted && !_ready && !_failed) _fail('not ready after ${raiMascot3dTimeout.inSeconds}s (GL / glb init did not finish; see FlutterAnglePlugin / flutter logs)');
+      if (mounted && !_ready && !_failed) {
+        final what = _setupComplete ? 'setup finished but no frame was drawn' : 'GL / glb init did not finish';
+        _fail('not ready after ${raiMascot3dTimeout.inSeconds}s ($what; ${_stages.summary})');
+      }
     });
     try {
       _three = ref.read(raiThreeFactoryProvider)(
         onSetupComplete: () {
+          _setupComplete = true;
+          _stages.mark('setup complete');
+          if (_readyOnFirstFrame) return; // Android は最初の 1 枚を待つ (D-520)
           _watchdog?.cancel();
           if (mounted && !_failed) setState(() => _ready = true);
         },
+        hooks: Rai3dHooks(
+          stage: _stages.mark,
+          error: (stage, e, st) {
+            if (st != null) debugPrint('RAi 3D: $stage failed: $e\n$st');
+            if (mounted) _fail('$stage: $e (${_stages.summary})');
+          },
+          firstFrame: () {
+            if (!_readyOnFirstFrame) return;
+            _watchdog?.cancel();
+            if (mounted && !_failed && !_ready) setState(() => _ready = true);
+          },
+        ),
         setup: _setup,
         // 読み込み中は何も出さない (D-516): 既定は画面いっぱいの不透明な面(canvasColor)+ くるくるで、空間モードでは
         // RAi のバーとホームの上に被さる。初期化が失敗すると、それが残り続けて RAi が開かないように見えた(Android)。
@@ -294,7 +483,8 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
         // アスペクト比が変わったときにテクスチャが引き伸ばされ、位置も向きもずれる)。リサイズ時は
         // three_js がテクスチャとカメラの aspect を更新する。
         size: proj == null ? const Size(RaiMascot3d.renderWidth, RaiMascot3d.renderHeight) : null,
-        settings: three.Settings(alpha: true, clearAlpha: 0, clearColor: 0x000000, animate: true, antialias: true, enableShadowMap: false),
+        // Android はテクスチャの解像度を抑える (D-520、[raiAndroidTextureDpr])。iOS / macOS は端末の DPR のまま(null)。
+        settings: three.Settings(alpha: true, clearAlpha: 0, clearColor: 0x000000, animate: true, antialias: true, enableShadowMap: false, screenResolution: _androidDpr()),
       );
       _created = true;
     } catch (e) {
@@ -336,10 +526,36 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
     super.dispose();
   }
 
+  /// Android のテクスチャの解像度 (D-520)。Android 以外(Web を含む)は null(three_js が端末の DPR を使う)。
+  double? _androidDpr() {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+    final view = WidgetsBinding.instance.platformDispatcher.implicitView;
+    return raiAndroidTextureDpr(view?.devicePixelRatio ?? raiAndroidMaxTextureDpr);
+  }
+
+  /// 表情シートを作る (D-211)。待ち時間付き (D-520): 止まったら表情なしで続ける。
+  Future<void> _loadFaceSheet() async {
+    try {
+      final sheet = await raiStage(_stages, 'face sheet', RaiFaceSheet.load, timeout: raiMascot3dFaceTimeout, detail: (s) => '${s.frames.length} frames');
+      if (!mounted || _failed) return;
+      _sheet = sheet;
+      if (sheet.frames.isNotEmpty && _screen != null) {
+        // 貼るときは白を掛ける(黒い baseColor のままだと真っ黒)。
+        _screen!.color.setRGB(1, 1, 1);
+        _screen!.needsUpdate = true;
+      }
+      _shownFace = null;
+      _applyFace(_ctrl.face);
+    } catch (e) {
+      _stages.mark('face sheet failed', '$e');
+    }
+  }
+
   Future<void> _setup() async {
     // 見張りで諦めたあとに準備が追いついたときは何もしない (D-516)。
     if (!mounted || _failed) return;
     try {
+      _stages.mark('setup start', '${_three.width.toStringAsFixed(0)}x${_three.height.toStringAsFixed(0)} @${_three.dpr.toStringAsFixed(2)}');
       _three.scene = three.Scene();
       final proj = widget.projector;
       _three.camera = three.PerspectiveCamera(proj?.fovDeg ?? 28, _three.width / _three.height, 0.05, 200);
@@ -354,7 +570,11 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
       final rim = three.DirectionalLight(0xffffff, 1.0);
       rim.position.setValues(0, 2, -3);
       _three.scene.add(rim);
-      final gltf = await three.GLTFLoader().fromAsset(widget.asset);
+      _stages.mark('scene / camera done');
+      // glb は rootBundle からバイト列で読み、three_js の GLTFLoader に渡す (D-520: 読み込みと組み立てを別の段階として記録する)。
+      final bytes = await raiStage(_stages, 'glb bytes', () async => (await rootBundle.load(widget.asset)).buffer.asUint8List(), timeout: raiMascot3dGlbTimeout, detail: (b) => '${b.length} bytes');
+      final gltf = await raiStage(_stages, 'glb parse', () => three.GLTFLoader().fromBytes(bytes), timeout: raiMascot3dGlbTimeout, detail: (g) => g == null ? 'null' : '${g.animations?.length ?? 0} clips');
+      if (!mounted || _failed) return;
       if (gltf == null) throw StateError('glb を読めません'); // l10n-ignore
       final model = gltf.scene;
       // 環境マップ無しの metalness=1 は真っ黒に見えるので、金属材質は少し下げて粗さを上げる。
@@ -373,12 +593,12 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
           }
         }
       });
-      // 表情シート (D-211): 読めなければ表情は変えない(黒い面のまま)。
-      _sheet = await RaiFaceSheet.load();
-      if (_sheet!.frames.isNotEmpty && _screen != null) {
-        // 貼るときは白を掛ける(黒い baseColor のままだと真っ黒)。
-        _screen!.color.setRGB(1, 1, 1);
-        _screen!.needsUpdate = true;
+      // 表情シート (D-211): 読めなければ表情は変えない(黒い面のまま)。Android は準備を待たせない (D-520: 画像の切り出し
+      // (toImage / toByteData)が止まる端末でも 3D を出す)。iOS / macOS は今までどおり待つ(待ち時間付き)。
+      if (_readyOnFirstFrame) {
+        unawaited(_loadFaceSheet());
+      } else {
+        await _loadFaceSheet();
       }
       // 高さ 1 に正規化して足元を原点へ(モデルの寸法に依らずカメラに収める)。
       final box = three.BoundingBox().setFromObject(model);
@@ -409,6 +629,7 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
         if (a != null) _actions[c.name] = a;
       }
       _mixer = mixer;
+      _stages.mark('model / mixer done', '${_actions.length} actions');
       _three.addAnimationEvent((dt) {
         // three_js は event が例外を投げると描画ループが止まる(`_updating` が戻らない、D-201)。
         // ミキサーが壊れても位置だけは動かし続ける。
@@ -436,9 +657,10 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
         if (widget.isScene && _ready && _ctrl.opacity > 0) _frame.value++;
       });
       _sync();
+      _stages.mark('setup done');
     } catch (e) {
       debugPrint('RAi 3D: $e');
-      if (mounted) _fail('setup: $e');
+      if (mounted) _fail('setup: $e (${_stages.summary})');
     }
   }
 

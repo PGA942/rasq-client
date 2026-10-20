@@ -83,6 +83,9 @@ dependencies:
   # Unicode NFKC (D-193: MiniLM の XLM-R トークナイザーの正規化)。
   unorm_dart: ^0.3.2
   three_js: ^0.3.0
+  # three_js の描画の土台 (D-520): Android で端末の GLES を選ぶ(`FlutterAngle.init(useAngle: false)`)/ テクスチャの段階を記録する
+  # ために直接使う。three_js 0.3.0 が引く版に固定(EGLSurface の扱いなど中の挙動に頼っているので、上げるときは Android の 3D を確かめる)。
+  flutter_angle: 0.4.2
   llama_cpp_dart: 0.9.0-dev.12
   device_info_plus: ^13.2.0
   archive: ^4.2.0
