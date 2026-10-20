@@ -94,6 +94,144 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('ja')];
 
+  /// 開発用のコンポーネントカタログ(部品の見本を並べた画面)の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'コンポーネントカタログ'**
+  String get catalogTitle;
+
+  /// カタログの節の見出し。ロゴ・認証バッジなどのブランドの部品。英字の部品名はそのまま
+  ///
+  /// In ja, this message translates to:
+  /// **'Brand (特殊なコンポーネント置き場)'**
+  String get catalogSectionBrand;
+
+  /// カタログの節の見出し。投稿のタイルの通常の形。PostTile は部品の名前で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'PostTile — 通常 (アクションバー / 投票 / メディア)'**
+  String get catalogSectionPostTile;
+
+  /// カタログの節の見出し。投稿のタイルの埋め込みの形とスレッドのまとめ。PostTile は部品の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'PostTile — 埋め込み (引用 / リアクション表示 / タイマー通知) & スレッドまとめ'**
+  String get catalogSectionPostTileEmbedded;
+
+  /// カタログの節の見出し。既読の長い投稿を省略して出す部品。CollapsedPost は部品の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'CollapsedPost (省略表示: 既読 + 長文)'**
+  String get catalogSectionCollapsed;
+
+  /// カタログの節の見出し。投票の部品の状態の見本。PollWidget は部品の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'PollWidget (未投票 単一 / 複数, 投票済み, 期限切れ)'**
+  String get catalogSectionPoll;
+
+  /// カタログの節の見出し。アクションバーの 2 つの並べ方。spread / leading は値の名前で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'ActionBar (spread / leading = コンポーザーツールバー)'**
+  String get catalogSectionActionBar;
+
+  /// カタログの節の見出し。プラグインの画面の木(RRL)を描く部品。ファイル名と L1/L2/L3(部品の層)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'RRL レンダラー (post-tile.rrl.json → L1/L2/L3)'**
+  String get catalogSectionRrl;
+
+  /// オーバーレイの見本のボトムシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ボトムシート'**
+  String get catalogSheetTitle;
+
+  /// オーバーレイの見本のボトムシートの確定のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get catalogSheetConfirm;
+
+  /// オーバーレイの見本のボトムシートの本文。シートの振る舞いの説明(2 行)
+  ///
+  /// In ja, this message translates to:
+  /// **'背面タップ or キャンセルで変更破棄。\nこの上にモーダルは割り込めます。'**
+  String get catalogSheetBody;
+
+  /// オーバーレイの見本の確かめ(モーダル)の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ブロックしますか？'**
+  String get catalogAlertTitle;
+
+  /// オーバーレイの見本の確かめの本文。背景を押しても閉じないことの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'背面タップは無効(明示的操作必須)'**
+  String get catalogAlertMessage;
+
+  /// オーバーレイの見本の確かめの、確定(破壊的)のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ブロック'**
+  String get catalogAlertConfirm;
+
+  /// オーバーレイの見本の確かめの、やめるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get catalogAlertCancel;
+
+  /// オーバーレイの見本のドロップダウンの項目(並べ替えの昇順)
+  ///
+  /// In ja, this message translates to:
+  /// **'昇順'**
+  String get catalogDropdownAsc;
+
+  /// オーバーレイの見本のドロップダウンの項目(並べ替えの降順)
+  ///
+  /// In ja, this message translates to:
+  /// **'降順'**
+  String get catalogDropdownDesc;
+
+  /// オーバーレイの見本のドロップダウンの項目(既定の並び)
+  ///
+  /// In ja, this message translates to:
+  /// **'デフォルト'**
+  String get catalogDropdownDefault;
+
+  /// オーバーレイの見本のドロップダウンの項目(破壊的な項目の見本)
+  ///
+  /// In ja, this message translates to:
+  /// **'通報'**
+  String get catalogDropdownReport;
+
+  /// オーバーレイの見本。シートの上にモーダルを重ねる見本のシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'シート→モーダル割り込み'**
+  String get catalogSheetModalTitle;
+
+  /// オーバーレイの見本。シートの上に出すモーダルの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'モーダル'**
+  String get catalogModalTitle;
+
+  /// オーバーレイの見本。シートの上に出すモーダルの本文
+  ///
+  /// In ja, this message translates to:
+  /// **'シートは維持されます'**
+  String get catalogModalMessage;
+
+  /// オーバーレイの見本。シートの中の、モーダルを出すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'モーダルを出す'**
+  String get catalogModalOpen;
+
   /// 見守りの判定の強さ(プリセット / タイムライン / 投稿の強さの選択肢)
   ///
   /// In ja, this message translates to:

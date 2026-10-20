@@ -1,5 +1,97 @@
 {
   "@@locale": "ja",
+  "catalogTitle": "コンポーネントカタログ",
+  "@catalogTitle": {
+    "description": "開発用のコンポーネントカタログ(部品の見本を並べた画面)の見出し"
+  },
+  "catalogSectionBrand": "Brand (特殊なコンポーネント置き場)",
+  "@catalogSectionBrand": {
+    "description": "カタログの節の見出し。ロゴ・認証バッジなどのブランドの部品。英字の部品名はそのまま"
+  },
+  "catalogSectionPostTile": "PostTile — 通常 (アクションバー / 投票 / メディア)",
+  "@catalogSectionPostTile": {
+    "description": "カタログの節の見出し。投稿のタイルの通常の形。PostTile は部品の名前で訳さない"
+  },
+  "catalogSectionPostTileEmbedded": "PostTile — 埋め込み (引用 / リアクション表示 / タイマー通知) & スレッドまとめ",
+  "@catalogSectionPostTileEmbedded": {
+    "description": "カタログの節の見出し。投稿のタイルの埋め込みの形とスレッドのまとめ。PostTile は部品の名前"
+  },
+  "catalogSectionCollapsed": "CollapsedPost (省略表示: 既読 + 長文)",
+  "@catalogSectionCollapsed": {
+    "description": "カタログの節の見出し。既読の長い投稿を省略して出す部品。CollapsedPost は部品の名前"
+  },
+  "catalogSectionPoll": "PollWidget (未投票 単一 / 複数, 投票済み, 期限切れ)",
+  "@catalogSectionPoll": {
+    "description": "カタログの節の見出し。投票の部品の状態の見本。PollWidget は部品の名前"
+  },
+  "catalogSectionActionBar": "ActionBar (spread / leading = コンポーザーツールバー)",
+  "@catalogSectionActionBar": {
+    "description": "カタログの節の見出し。アクションバーの 2 つの並べ方。spread / leading は値の名前で訳さない"
+  },
+  "catalogSectionRrl": "RRL レンダラー (post-tile.rrl.json → L1/L2/L3)",
+  "@catalogSectionRrl": {
+    "description": "カタログの節の見出し。プラグインの画面の木(RRL)を描く部品。ファイル名と L1/L2/L3(部品の層)は訳さない"
+  },
+  "catalogSheetTitle": "ボトムシート",
+  "@catalogSheetTitle": {
+    "description": "オーバーレイの見本のボトムシートの見出し"
+  },
+  "catalogSheetConfirm": "決定",
+  "@catalogSheetConfirm": {
+    "description": "オーバーレイの見本のボトムシートの確定のボタン"
+  },
+  "catalogSheetBody": "背面タップ or キャンセルで変更破棄。\nこの上にモーダルは割り込めます。",
+  "@catalogSheetBody": {
+    "description": "オーバーレイの見本のボトムシートの本文。シートの振る舞いの説明(2 行)"
+  },
+  "catalogAlertTitle": "ブロックしますか？",
+  "@catalogAlertTitle": {
+    "description": "オーバーレイの見本の確かめ(モーダル)の見出し"
+  },
+  "catalogAlertMessage": "背面タップは無効(明示的操作必須)",
+  "@catalogAlertMessage": {
+    "description": "オーバーレイの見本の確かめの本文。背景を押しても閉じないことの説明"
+  },
+  "catalogAlertConfirm": "ブロック",
+  "@catalogAlertConfirm": {
+    "description": "オーバーレイの見本の確かめの、確定(破壊的)のボタン"
+  },
+  "catalogAlertCancel": "キャンセル",
+  "@catalogAlertCancel": {
+    "description": "オーバーレイの見本の確かめの、やめるボタン"
+  },
+  "catalogDropdownAsc": "昇順",
+  "@catalogDropdownAsc": {
+    "description": "オーバーレイの見本のドロップダウンの項目(並べ替えの昇順)"
+  },
+  "catalogDropdownDesc": "降順",
+  "@catalogDropdownDesc": {
+    "description": "オーバーレイの見本のドロップダウンの項目(並べ替えの降順)"
+  },
+  "catalogDropdownDefault": "デフォルト",
+  "@catalogDropdownDefault": {
+    "description": "オーバーレイの見本のドロップダウンの項目(既定の並び)"
+  },
+  "catalogDropdownReport": "通報",
+  "@catalogDropdownReport": {
+    "description": "オーバーレイの見本のドロップダウンの項目(破壊的な項目の見本)"
+  },
+  "catalogSheetModalTitle": "シート→モーダル割り込み",
+  "@catalogSheetModalTitle": {
+    "description": "オーバーレイの見本。シートの上にモーダルを重ねる見本のシートの見出し"
+  },
+  "catalogModalTitle": "モーダル",
+  "@catalogModalTitle": {
+    "description": "オーバーレイの見本。シートの上に出すモーダルの見出し"
+  },
+  "catalogModalMessage": "シートは維持されます",
+  "@catalogModalMessage": {
+    "description": "オーバーレイの見本。シートの上に出すモーダルの本文"
+  },
+  "catalogModalOpen": "モーダルを出す",
+  "@catalogModalOpen": {
+    "description": "オーバーレイの見本。シートの中の、モーダルを出すボタン"
+  },
   "childSafeLevelStrict": "きびしめ",
   "@childSafeLevelStrict": {
     "description": "見守りの判定の強さ(プリセット / タイムライン / 投稿の強さの選択肢)"

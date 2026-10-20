@@ -10,6 +10,77 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get catalogTitle => 'コンポーネントカタログ';
+
+  @override
+  String get catalogSectionBrand => 'Brand (特殊なコンポーネント置き場)';
+
+  @override
+  String get catalogSectionPostTile => 'PostTile — 通常 (アクションバー / 投票 / メディア)';
+
+  @override
+  String get catalogSectionPostTileEmbedded =>
+      'PostTile — 埋め込み (引用 / リアクション表示 / タイマー通知) & スレッドまとめ';
+
+  @override
+  String get catalogSectionCollapsed => 'CollapsedPost (省略表示: 既読 + 長文)';
+
+  @override
+  String get catalogSectionPoll => 'PollWidget (未投票 単一 / 複数, 投票済み, 期限切れ)';
+
+  @override
+  String get catalogSectionActionBar =>
+      'ActionBar (spread / leading = コンポーザーツールバー)';
+
+  @override
+  String get catalogSectionRrl => 'RRL レンダラー (post-tile.rrl.json → L1/L2/L3)';
+
+  @override
+  String get catalogSheetTitle => 'ボトムシート';
+
+  @override
+  String get catalogSheetConfirm => '決定';
+
+  @override
+  String get catalogSheetBody => '背面タップ or キャンセルで変更破棄。\nこの上にモーダルは割り込めます。';
+
+  @override
+  String get catalogAlertTitle => 'ブロックしますか？';
+
+  @override
+  String get catalogAlertMessage => '背面タップは無効(明示的操作必須)';
+
+  @override
+  String get catalogAlertConfirm => 'ブロック';
+
+  @override
+  String get catalogAlertCancel => 'キャンセル';
+
+  @override
+  String get catalogDropdownAsc => '昇順';
+
+  @override
+  String get catalogDropdownDesc => '降順';
+
+  @override
+  String get catalogDropdownDefault => 'デフォルト';
+
+  @override
+  String get catalogDropdownReport => '通報';
+
+  @override
+  String get catalogSheetModalTitle => 'シート→モーダル割り込み';
+
+  @override
+  String get catalogModalTitle => 'モーダル';
+
+  @override
+  String get catalogModalMessage => 'シートは維持されます';
+
+  @override
+  String get catalogModalOpen => 'モーダルを出す';
+
+  @override
   String get childSafeLevelStrict => 'きびしめ';
 
   @override
