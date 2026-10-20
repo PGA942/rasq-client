@@ -34,6 +34,7 @@ import 'astell_share_cards.dart';
 import '../custom/custom_astell.dart';
 import 'astell_stream.dart';
 import 'astell_stream_livekit.dart' show astellNeedsScreenPicker, pickAstellScreenSource;
+import 'hold_music.dart' show HoldMusicSource;
 
 /// AsTell の 3 つの FOW (D-139、ワイヤーフレーム p.3):
 ///
@@ -329,6 +330,7 @@ Future<void> showAstellDevicePreferences(BuildContext context) async {
             const Divider(height: RasqSpacing.md),
             _label(ctx, ctx.l10n.vcRoomHoldMusicLabel),
             RasqSwitchListTile(title: ctx.l10n.vcRoomHoldMusicDevice, value: ref.watch(astellHoldMusicProvider), onChanged: (v) => store.set('holdMusic', v)),
+            ..._holdMusicDeviceTiles(ctx, ref),
             RasqCaption(
               ctx.l10n.vcRoomDeviceSettingsCaption,
               detail: ctx.l10n.vcRoomDeviceSettingsCaptionDetail,
@@ -337,6 +339,38 @@ Future<void> showAstellDevicePreferences(BuildContext context) async {
           ]);
         }),
       );
+}
+
+/// 保留音の音源と音量 (D-540)。端末の設定(KV `holdMusic.source` / `holdMusic.volume`)。保留音のスイッチのすぐ下に出す。
+/// 開催のチャイム (D-331) はこの設定に関わらず `We：Astronomies on the Blue Planet` を 100% で。
+List<Widget> _holdMusicDeviceTiles(BuildContext ctx, WidgetRef ref) {
+  final store = ref.read(settingsAreaProvider(astellSettingsArea).notifier);
+  final source = ref.watch(astellHoldMusicSourceProvider);
+  final volume = ref.watch(astellHoldMusicVolumeProvider);
+  return [
+    _label(ctx, ctx.l10n.vcRoomHoldMusicSourceLabel),
+    for (final src in HoldMusicSource.values)
+      RasqRadioListTile<HoldMusicSource>(
+        key: ValueKey('astell.holdMusic.source.${src.id}'),
+        title: switch (src) {
+          HoldMusicSource.astronomies => ctx.l10n.vcRoomHoldMusicSourceAstronomies,
+          HoldMusicSource.classic => ctx.l10n.vcRoomHoldMusicSourceClassic,
+        },
+        value: src,
+        groupValue: source,
+        onChanged: (v) => store.set('holdMusic.source', v.id),
+      ),
+    RasqSliderListTile(
+      key: const ValueKey('astell.holdMusic.volume'),
+      title: ctx.l10n.vcRoomHoldMusicVolume,
+      value: volume,
+      min: 0,
+      max: 1,
+      divisions: 20,
+      valueLabel: ctx.l10n.vcRoomHoldMusicVolumeValue((volume * 100).round()),
+      onChanged: (v) => store.set('holdMusic.volume', v),
+    ),
+  ];
 }
 
 Future<void> openAstellPreviewFow(BuildContext context, WidgetRef ref, AstellRoom room) async {
@@ -1147,6 +1181,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
             value: ref.watch(astellHoldMusicProvider),
             onChanged: (v) => ref.read(settingsAreaProvider(astellSettingsArea).notifier).set('holdMusic', v),
           ),
+          ..._holdMusicDeviceTiles(ctx, ref),
           if (isOwner) RasqSwitchListTile(key: const ValueKey('astell.holdMusic.room'), title: ctx.l10n.vcRoomHoldMusicRoom, value: room.holdMusic, onChanged: (v) => _patch({'holdMusic': v})),
           RasqCaption(
             ctx.l10n.vcRoomHoldMusicCaption,

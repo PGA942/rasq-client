@@ -327,6 +327,63 @@ void main() {
       expect(music.playing, isFalse);
     });
 
+    test('保留音の音源と音量 (D-540): 既定は We：Astronomies on the Blue Planet を 40%、端末の設定で変えると鳴ったまま切り替わり、保存される', () async {
+      final client = MockAstellClient();
+      final storage = MemorySessionStorage({});
+      final container = ProviderContainer(overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        astellClientProvider.overrideWithValue(client),
+        astellHoldMusicTickProvider.overrideWithValue(null),
+      ]);
+      addTearDown(container.dispose);
+      final music = container.read(holdMusicProvider) as MemoryHoldMusic;
+      final session = container.read(astellSessionProvider.notifier);
+      final room = MockAstellClient.seededRooms().first;
+
+      expect(holdMusicDefaultVolume, 0.4);
+      expect(HoldMusicSource.astronomies.asset, alarmAsset, reason: '既定の音源は開催のチャイムと同じ曲');
+      await container.read(settingsAreaProvider(astellSettingsArea).future);
+      expect(container.read(astellHoldMusicSourceProvider), HoldMusicSource.astronomies);
+      expect(container.read(astellHoldMusicVolumeProvider), 0.4);
+
+      await session.join(room.copyWith(scheduledAt: DateTime.now().add(const Duration(hours: 1))));
+      await Future<void>.delayed(Duration.zero);
+      expect(music.playing, isTrue);
+      expect(music.source, HoldMusicSource.astronomies);
+      expect(music.volume, 0.4);
+      expect(music.starts, 1);
+
+      // 音源を「保留音」に → 鳴ったまま切り替わる。
+      final store = container.read(settingsAreaProvider(astellSettingsArea).notifier);
+      await store.set('holdMusic.source', HoldMusicSource.classic.id);
+      await Future<void>.delayed(Duration.zero);
+      expect(container.read(astellHoldMusicSourceProvider), HoldMusicSource.classic);
+      expect(music.playing, isTrue);
+      expect(music.source, HoldMusicSource.classic);
+      expect(music.source!.asset, holdMusicAsset);
+      // 音量を 70% に。
+      await store.set('holdMusic.volume', 0.7);
+      await Future<void>.delayed(Duration.zero);
+      expect(container.read(astellHoldMusicVolumeProvider), 0.7);
+      expect(music.volume, 0.7);
+      expect(music.starts, 1, reason: '切り替えは鳴らし直しに数えない');
+      // チャイムは設定に関わらず鳴る(開催が始まる)。
+      client.emit(room.id, {'type': 'room', 'room': room.toJson()});
+      await Future<void>.delayed(Duration.zero);
+      expect(music.alarms, 1);
+      await session.leave();
+
+      // 保存される: 同じ端末の KV から読み直す。
+      final again = ProviderContainer(overrides: [sessionStorageProvider.overrideWithValue(storage)]);
+      addTearDown(again.dispose);
+      await again.read(settingsAreaProvider(astellSettingsArea).future);
+      expect(again.read(astellHoldMusicSourceProvider), HoldMusicSource.classic);
+      expect(again.read(astellHoldMusicVolumeProvider), 0.7);
+      // 知らない値 / 範囲の外は既定 / 端に寄せる。
+      expect(astellHoldMusicSourceOf({'holdMusic.source': 'nope'}), HoldMusicSource.astronomies);
+      expect(astellHoldMusicVolumeOf({'holdMusic.volume': 3}), 1.0);
+    });
+
     test('入力中の下書き (D-311): 1 秒ごとに送る / 強い言葉の回は送らない / 送ったら取り消す / 相手の下書きを受ける', () async {
       final client = MockAstellClient();
       final container = ProviderContainer(overrides: [
@@ -490,9 +547,9 @@ void main() {
     // 要約なしのタイルは空表示、LIVE のタイルにはバッジ。
     expect(find.text('説明はありません。'), findsWidgets);
     expect(find.text('LIVE'), findsWidgets);
-    await tester.scrollUntilVisible(find.text('フォロー中のユーザーの VC はありません'), 200, scrollable: find.descendant(of: find.byKey(const ValueKey('astell.home.list')), matching: find.byType(Scrollable)).first);
+    await tester.scrollUntilVisible(find.text('フォロー中のユーザーの ASTell はありません'), 200, scrollable: find.descendant(of: find.byKey(const ValueKey('astell.home.list')), matching: find.byType(Scrollable)).first);
     await tester.pumpAndSettle();
-    expect(find.text('フォロー中のユーザーの VC はありません'), findsOneWidget);
+    expect(find.text('フォロー中のユーザーの ASTell はありません'), findsOneWidget);
     // タイルの「…」→ 報告 → 通報シート → 送信 (D-150)。
     await tester.drag(find.text('フォロー中'), const Offset(0, 600));
     await tester.pumpAndSettle();
@@ -763,7 +820,7 @@ void main() {
     // 歯車 → 設定: 自動表示の種類と読み上げ音声(CosyVoice2-0.5B)。
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
-    expect(find.text('VC の設定'), findsOneWidget);
+    expect(find.text('ASTell の設定'), findsOneWidget);
     // 先頭は「下段のボタンの並びを編集」(入りきらないボタンは下段でスライド、D-428)。自動再生の設定 (D-147) はその下。
     expect(find.byKey(const ValueKey('astell.bar.edit')), findsOneWidget);
     await tester.scrollUntilVisible(find.widgetWithText(RasqSwitchListTile, '画面共有が始まったら共有枠に出す'), 80, scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)));
@@ -946,7 +1003,7 @@ void main() {
     final container = await pump(tester);
     await openVc(tester);
 
-    await tester.tap(find.byTooltip('VC を作成'));
+    await tester.tap(find.byTooltip('ASTell を作成'));
     await tester.pumpAndSettle();
     expect(find.text('フォロワーを招待'), findsOneWidget);
     expect(find.text('参加時にウェルカムメッセージを表示する'), findsOneWidget);
@@ -1085,7 +1142,7 @@ void main() {
   testWidgets('作成 FOW (D-159): 開催を予約 + ジャンルを選定 + 共有 → 予約(参加しない)→ 近日開催に載り、コンポーザーへリンク転送', (tester) async {
     final container = await pump(tester);
     await openVc(tester);
-    await tester.tap(find.byTooltip('VC を作成'));
+    await tester.tap(find.byTooltip('ASTell を作成'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'タイトル'), '反省会');
     // ジャンル選定: 自動選択をオフ → 入力欄とチップ。
@@ -1162,17 +1219,17 @@ void main() {
     await tester.pump(const Duration(seconds: 5)); // 前のスナックバーが消えてから次
     await tester.pumpAndSettle();
     expect(find.textContaining('に通知します'), findsOneWidget);
-    expect(notifier.scheduled.values.single.title, 'ブックマークしたVCが始まります！');
+    expect(notifier.scheduled.values.single.title, 'ブックマークした ASTell が始まります！');
     expect(container.read(astellRemindedProvider('r-planned')), isTrue);
     // 通知画面に「開始通知を登録した VC」→ 解除で消える。
     await tester.tap(find.byTooltip('通知'));
     await tester.pumpAndSettle();
-    expect(find.text('開始通知を登録した VC'), findsOneWidget);
+    expect(find.text('開始通知を登録した ASTell'), findsOneWidget);
     expect(find.text('打ち上げ反省会'), findsOneWidget);
     await tester.tap(find.text('解除'));
     await tester.pumpAndSettle();
     expect(notifier.scheduled, isEmpty);
-    expect(find.text('開始通知を登録した VC'), findsNothing);
+    expect(find.text('開始通知を登録した ASTell'), findsNothing);
     // ブックマーク画面: AsTell の帯にタイル → 削除で消える。
     await tester.tap(find.byTooltip('ホーム'));
     await tester.pumpAndSettle();

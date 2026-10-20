@@ -9905,7 +9905,7 @@ abstract class AppLocalizations {
   /// 通知の画面の上の欄の見出し。開始の通知を登録した、これから始まる音声のルーム(VC)の一覧
   ///
   /// In ja, this message translates to:
-  /// **'開始通知を登録した VC'**
+  /// **'開始通知を登録した ASTell'**
   String get notificationsRemindersHeader;
 
   /// 開始通知を登録したルームの行の補足。when は開催の日時(書式済みの文字列)
@@ -10028,10 +10028,10 @@ abstract class AppLocalizations {
   /// **'メンション'**
   String get notificationsPostMention;
 
-  /// ブックマークした音声のルーム(VC)が始まる時刻になった通知の文
+  /// ブックマークした音声のルーム(ASTell)が始まる時刻になった通知の文
   ///
   /// In ja, this message translates to:
-  /// **'ブックマークしたVCが始まります！'**
+  /// **'ブックマークした ASTell が始まります！'**
   String get notificationsTimerAstell;
 
   /// タイマーを付けたブックマークの時刻が来た通知の文
@@ -26629,13 +26629,13 @@ abstract class AppLocalizations {
   /// VC ホームの + ボタンのツールチップ / 作成 FOW の見出し
   ///
   /// In ja, this message translates to:
-  /// **'VC を作成'**
+  /// **'ASTell を作成'**
   String get vcCreateTooltip;
 
   /// VC ホームを読めなかったときの見出し
   ///
   /// In ja, this message translates to:
-  /// **'VC を取得できませんでした'**
+  /// **'ASTell を取得できませんでした'**
   String get vcHomeLoadError;
 
   /// 参加中のルームへの戻り口の行。title はルームの名前
@@ -26671,19 +26671,19 @@ abstract class AppLocalizations {
   /// おすすめの節が空のとき
   ///
   /// In ja, this message translates to:
-  /// **'おすすめの VC はまだありません'**
+  /// **'おすすめの ASTell はまだありません'**
   String get vcRecommendedEmpty;
 
   /// トレンドの節が空のとき
   ///
   /// In ja, this message translates to:
-  /// **'トレンドの VC はまだありません'**
+  /// **'トレンドの ASTell はまだありません'**
   String get vcTrendingEmpty;
 
   /// フォロー中の節が空のとき
   ///
   /// In ja, this message translates to:
-  /// **'フォロー中のユーザーの VC はありません'**
+  /// **'フォロー中のユーザーの ASTell はありません'**
   String get vcFollowingEmpty;
 
   /// 検索の結果が無いときの見出し
@@ -26755,7 +26755,7 @@ abstract class AppLocalizations {
   /// タイルの並びが空のとき
   ///
   /// In ja, this message translates to:
-  /// **'VC はまだありません'**
+  /// **'ASTell はまだありません'**
   String get vcTileStripEmpty;
 
   /// ルームのリンクをコピーしたときのスナックバー
@@ -26929,7 +26929,7 @@ abstract class AppLocalizations {
   /// 開始通知(端末の通知)の見出し
   ///
   /// In ja, this message translates to:
-  /// **'ブックマークしたVCが始まります！'**
+  /// **'ブックマークした ASTell が始まります！'**
   String get vcReminderNotificationTitle;
 
   /// 開始通知(端末の通知)の本文。host はホストの表示名、title はルームの名前
@@ -27814,6 +27814,36 @@ abstract class AppLocalizations {
   /// **'保留音を鳴らす(この端末)'**
   String get vcRoomHoldMusicDevice;
 
+  /// 設定の小見出し(この端末で鳴らす保留音の曲を選ぶ)
+  ///
+  /// In ja, this message translates to:
+  /// **'保留音の音源'**
+  String get vcRoomHoldMusicSourceLabel;
+
+  /// 保留音の音源の選択肢(曲名。既定)。訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'We：Astronomies on the Blue Planet'**
+  String get vcRoomHoldMusicSourceAstronomies;
+
+  /// 保留音の音源の選択肢(昔からの保留音の曲)
+  ///
+  /// In ja, this message translates to:
+  /// **'保留音'**
+  String get vcRoomHoldMusicSourceClassic;
+
+  /// 設定のスライダー
+  ///
+  /// In ja, this message translates to:
+  /// **'保留音の音量'**
+  String get vcRoomHoldMusicVolume;
+
+  /// 保留音の音量の表示。percent は 0〜100
+  ///
+  /// In ja, this message translates to:
+  /// **'{percent}%'**
+  String vcRoomHoldMusicVolumeValue(int percent);
+
   /// 参加前の設定のシートの注記
   ///
   /// In ja, this message translates to:
@@ -28093,7 +28123,7 @@ abstract class AppLocalizations {
   /// ルームの歯車のシートの見出し
   ///
   /// In ja, this message translates to:
-  /// **'VC の設定'**
+  /// **'ASTell の設定'**
   String get vcRoomSettingsTitle;
 
   /// ルームの設定の節の見出し

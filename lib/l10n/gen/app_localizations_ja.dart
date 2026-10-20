@@ -5933,7 +5933,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get notificationsRetry => '再読み込み';
 
   @override
-  String get notificationsRemindersHeader => '開始通知を登録した VC';
+  String get notificationsRemindersHeader => '開始通知を登録した ASTell';
 
   @override
   String notificationsReminderSchedule(String when) {
@@ -6025,7 +6025,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get notificationsPostMention => 'メンション';
 
   @override
-  String get notificationsTimerAstell => 'ブックマークしたVCが始まります！';
+  String get notificationsTimerAstell => 'ブックマークした ASTell が始まります！';
 
   @override
   String get notificationsTimerBookmark => 'タイマー付きブックマーク';
@@ -16172,10 +16172,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vcSearchClear => '消す';
 
   @override
-  String get vcCreateTooltip => 'VC を作成';
+  String get vcCreateTooltip => 'ASTell を作成';
 
   @override
-  String get vcHomeLoadError => 'VC を取得できませんでした';
+  String get vcHomeLoadError => 'ASTell を取得できませんでした';
 
   @override
   String vcJoinedRoom(String title) {
@@ -16204,13 +16204,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vcInviteDecline => '辞退';
 
   @override
-  String get vcRecommendedEmpty => 'おすすめの VC はまだありません';
+  String get vcRecommendedEmpty => 'おすすめの ASTell はまだありません';
 
   @override
-  String get vcTrendingEmpty => 'トレンドの VC はまだありません';
+  String get vcTrendingEmpty => 'トレンドの ASTell はまだありません';
 
   @override
-  String get vcFollowingEmpty => 'フォロー中のユーザーの VC はありません';
+  String get vcFollowingEmpty => 'フォロー中のユーザーの ASTell はありません';
 
   @override
   String get vcSearchNoResults => '見つかりませんでした';
@@ -16250,7 +16250,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vcSummaryPrivate => 'ざっくり要約は非公開です。';
 
   @override
-  String get vcTileStripEmpty => 'VC はまだありません';
+  String get vcTileStripEmpty => 'ASTell はまだありません';
 
   @override
   String get vcLinkCopied => 'リンクをコピーしました';
@@ -16357,7 +16357,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vcTileBack => '戻る';
 
   @override
-  String get vcReminderNotificationTitle => 'ブックマークしたVCが始まります！';
+  String get vcReminderNotificationTitle => 'ブックマークした ASTell が始まります！';
 
   @override
   String vcReminderNotificationBody(String host, String title) {
@@ -16892,6 +16892,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vcRoomHoldMusicDevice => '保留音を鳴らす(この端末)';
 
   @override
+  String get vcRoomHoldMusicSourceLabel => '保留音の音源';
+
+  @override
+  String get vcRoomHoldMusicSourceAstronomies =>
+      'We：Astronomies on the Blue Planet';
+
+  @override
+  String get vcRoomHoldMusicSourceClassic => '保留音';
+
+  @override
+  String get vcRoomHoldMusicVolume => '保留音の音量';
+
+  @override
+  String vcRoomHoldMusicVolumeValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
   String get vcRoomDeviceSettingsCaption => 'ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。';
 
   @override
@@ -17043,7 +17061,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vcRoomAllShares => 'すべての共有';
 
   @override
-  String get vcRoomSettingsTitle => 'VC の設定';
+  String get vcRoomSettingsTitle => 'ASTell の設定';
 
   @override
   String get vcRoomModerationLabel => 'モデレーション(オーナー)';

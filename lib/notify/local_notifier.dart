@@ -151,7 +151,10 @@ class FlutterLocalNotifier implements LocalNotifier {
 
   /// 開始通知の音 (D-331) = ユーザー提供の目覚まし用の音源。Android は `res/raw/alarm.wav`(チャンネルの音は作った後に変えられない
   /// ので id を v2 に)、iOS / macOS は Runner に同梱した `alarm.wav`(Xcode で Runner に足す。無ければ既定の音)。
-  static const _channel = AndroidNotificationDetails('rasq.astell.v2', 'ASTell の開始', channelDescription: 'ブックマークした VC の開始通知', importance: Importance.high, priority: Priority.high, sound: RawResourceAndroidNotificationSound('alarm'));
+  /// チャンネルの名前と説明は同じ id のまま変えられる(Android は作り直しの呼び出しで名前 / 説明だけ上書きする。変えられないのは
+  /// 重要度と音。利用者が変えた設定も残る)ので、説明の「VC」→「ASTell」(D-541)は id を変えずに入れた。`channelAction: update`
+  /// で予約のたびに名前 / 説明を入れ直すので、既存の端末にも次の予約で反映される。
+  static const _channel = AndroidNotificationDetails('rasq.astell.v2', 'ASTell の開始', channelDescription: 'ブックマークした ASTell の開始通知', importance: Importance.high, priority: Priority.high, sound: RawResourceAndroidNotificationSound('alarm'), channelAction: AndroidNotificationChannelAction.update);
   static const _darwin = DarwinNotificationDetails(sound: 'alarm.wav');
 
   @override

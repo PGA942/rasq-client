@@ -6580,7 +6580,7 @@
   "@notificationsRetry": {
     "description": "通知を読み込めなかったときの、やり直すボタン"
   },
-  "notificationsRemindersHeader": "開始通知を登録した VC",
+  "notificationsRemindersHeader": "開始通知を登録した ASTell",
   "@notificationsRemindersHeader": {
     "description": "通知の画面の上の欄の見出し。開始の通知を登録した、これから始まる音声のルーム(VC)の一覧"
   },
@@ -6733,9 +6733,9 @@
   "@notificationsPostMention": {
     "description": "投稿付きの通知の上の小さなラベル。メンションされた"
   },
-  "notificationsTimerAstell": "ブックマークしたVCが始まります！",
+  "notificationsTimerAstell": "ブックマークした ASTell が始まります！",
   "@notificationsTimerAstell": {
-    "description": "ブックマークした音声のルーム(VC)が始まる時刻になった通知の文"
+    "description": "ブックマークした音声のルーム(ASTell)が始まる時刻になった通知の文"
   },
   "notificationsTimerBookmark": "タイマー付きブックマーク",
   "@notificationsTimerBookmark": {
@@ -14634,11 +14634,11 @@
   "@vcSearchClear": {
     "description": "検索欄の入力を消すボタンのツールチップ"
   },
-  "vcCreateTooltip": "VC を作成",
+  "vcCreateTooltip": "ASTell を作成",
   "@vcCreateTooltip": {
     "description": "VC ホームの + ボタンのツールチップ / 作成 FOW の見出し"
   },
-  "vcHomeLoadError": "VC を取得できませんでした",
+  "vcHomeLoadError": "ASTell を取得できませんでした",
   "@vcHomeLoadError": {
     "description": "VC ホームを読めなかったときの見出し"
   },
@@ -14677,15 +14677,15 @@
   "@vcInviteDecline": {
     "description": "招待を辞退するボタン"
   },
-  "vcRecommendedEmpty": "おすすめの VC はまだありません",
+  "vcRecommendedEmpty": "おすすめの ASTell はまだありません",
   "@vcRecommendedEmpty": {
     "description": "おすすめの節が空のとき"
   },
-  "vcTrendingEmpty": "トレンドの VC はまだありません",
+  "vcTrendingEmpty": "トレンドの ASTell はまだありません",
   "@vcTrendingEmpty": {
     "description": "トレンドの節が空のとき"
   },
-  "vcFollowingEmpty": "フォロー中のユーザーの VC はありません",
+  "vcFollowingEmpty": "フォロー中のユーザーの ASTell はありません",
   "@vcFollowingEmpty": {
     "description": "フォロー中の節が空のとき"
   },
@@ -14743,7 +14743,7 @@
   "@vcSummaryPrivate": {
     "description": "ざっくり要約を公開していないルームのタイル"
   },
-  "vcTileStripEmpty": "VC はまだありません",
+  "vcTileStripEmpty": "ASTell はまだありません",
   "@vcTileStripEmpty": {
     "description": "タイルの並びが空のとき"
   },
@@ -14912,7 +14912,7 @@
   "@vcTileBack": {
     "description": "VC タイルの下のボタン(参加中のルームへ戻る)"
   },
-  "vcReminderNotificationTitle": "ブックマークしたVCが始まります！",
+  "vcReminderNotificationTitle": "ブックマークした ASTell が始まります！",
   "@vcReminderNotificationTitle": {
     "description": "開始通知(端末の通知)の見出し"
   },
@@ -15666,6 +15666,31 @@
   "@vcRoomHoldMusicDevice": {
     "description": "設定のスイッチ"
   },
+  "vcRoomHoldMusicSourceLabel": "保留音の音源",
+  "@vcRoomHoldMusicSourceLabel": {
+    "description": "設定の小見出し(この端末で鳴らす保留音の曲を選ぶ)"
+  },
+  "vcRoomHoldMusicSourceAstronomies": "We：Astronomies on the Blue Planet",
+  "@vcRoomHoldMusicSourceAstronomies": {
+    "description": "保留音の音源の選択肢(曲名。既定)。訳さない"
+  },
+  "vcRoomHoldMusicSourceClassic": "保留音",
+  "@vcRoomHoldMusicSourceClassic": {
+    "description": "保留音の音源の選択肢(昔からの保留音の曲)"
+  },
+  "vcRoomHoldMusicVolume": "保留音の音量",
+  "@vcRoomHoldMusicVolume": {
+    "description": "設定のスライダー"
+  },
+  "vcRoomHoldMusicVolumeValue": "{percent}%",
+  "@vcRoomHoldMusicVolumeValue": {
+    "description": "保留音の音量の表示。percent は 0〜100",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "vcRoomDeviceSettingsCaption": "ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。",
   "@vcRoomDeviceSettingsCaption": {
     "description": "参加前の設定のシートの注記"
@@ -15886,7 +15911,7 @@
   "@vcRoomAllShares": {
     "description": "すべての共有のシートの見出し"
   },
-  "vcRoomSettingsTitle": "VC の設定",
+  "vcRoomSettingsTitle": "ASTell の設定",
   "@vcRoomSettingsTitle": {
     "description": "ルームの歯車のシートの見出し"
   },
