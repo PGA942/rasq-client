@@ -4371,7 +4371,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loginDiscover => 'サービスを探してログイン';
 
   @override
-  String get loginRaiInstruction => 'Raiのインストラクチャ';
+  String get loginRaiInstruction => 'RAi に聞く';
 
   @override
   String get loginShareMailUnavailable => 'いまは送れません';
@@ -4533,10 +4533,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get loginSnsTitle => 'PDSを変更';
-
-  @override
-  String get loginSnsNote => 'PDSを変更すると、アプリ外でのURL表示が変わります。';
+  String get loginSnsTitle => 'ログイン';
 
   @override
   String loginSnsHostHint(String example) {

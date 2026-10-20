@@ -96,7 +96,7 @@ void main() {
     // Misskey → server screen → terms sheet appears through the Overlay Manager.
     await tester.tap(find.text('Misskeyでログイン'));
     await tester.pumpAndSettle();
-    expect(find.text('PDSを変更'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'ログイン'), findsOneWidget);
   });
 
   testWidgets('session → home timeline from plugin; action updates store; sidebar opens/closes', (tester) async {

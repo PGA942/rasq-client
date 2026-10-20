@@ -4333,7 +4333,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get loginDiscover => '查找服务并登录';
 
   @override
-  String get loginRaiInstruction => 'RAi 指引';
+  String get loginRaiInstruction => '问 RAi';
 
   @override
   String get loginShareMailUnavailable => '暂时无法发送';
@@ -4494,10 +4494,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get loginSnsTitle => '更改 PDS';
-
-  @override
-  String get loginSnsNote => '更改 PDS 后，应用外显示的 URL 会改变。';
+  String get loginSnsTitle => '登录';
 
   @override
   String loginSnsHostHint(String example) {
@@ -24056,7 +24053,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get loginDiscover => '尋找服務並登入';
 
   @override
-  String get loginRaiInstruction => 'RAi 指引';
+  String get loginRaiInstruction => '詢問 RAi';
 
   @override
   String get loginShareMailUnavailable => '目前無法傳送';
@@ -24218,10 +24215,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get loginSnsTitle => '變更 PDS';
-
-  @override
-  String get loginSnsNote => '變更 PDS 後，App 外顯示的 URL 會改變。';
+  String get loginSnsTitle => '登入';
 
   @override
   String loginSnsHostHint(String example) {

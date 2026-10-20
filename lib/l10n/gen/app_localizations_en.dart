@@ -4722,11 +4722,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get loginSnsTitle => 'Change PDS';
-
-  @override
-  String get loginSnsNote =>
-      'Changing the PDS changes how URLs are shown outside the app.';
+  String get loginSnsTitle => 'Log in';
 
   @override
   String loginSnsHostHint(String example) {

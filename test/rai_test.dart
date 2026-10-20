@@ -550,7 +550,7 @@ void main() {
     expect(find.byType(RaiHomeScreen), findsOneWidget);
   });
 
-  testWidgets('ログイン画面の「Raiのインストラクチャ」→ 入力欄付きのバー(インストラクション)', (tester) async {
+  testWidgets('ログイン画面の「RAi に聞く」→ 入力欄付きのバー(インストラクション)', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -565,7 +565,7 @@ void main() {
       c.read(routerProvider).go('/login');
       await tester.pumpAndSettle();
     }
-    await tester.tap(find.text('Raiのインストラクチャ'));
+    await tester.tap(find.text('RAi に聞く'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rai.input')), findsOneWidget);
     expect(tester.widget<TextField>(find.byKey(const ValueKey('rai.input'))).focusNode?.hasFocus, isTrue); // 入力欄にフォーカス
