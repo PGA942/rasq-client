@@ -11671,10 +11671,10 @@ abstract class AppLocalizations {
   /// **'ASTell の開始'**
   String get notifyAstellChannelName;
 
-  /// 上のチャンネルの説明。VC は ASTell の音声のルームのこと
+  /// 上のチャンネルの説明。ASTell は音声のルーム
   ///
   /// In ja, this message translates to:
-  /// **'ブックマークした VC の開始通知'**
+  /// **'ブックマークした ASTell の開始通知'**
   String get notifyAstellChannelDescription;
 
   /// No description provided for @onboardingBack.

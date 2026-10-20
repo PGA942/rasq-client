@@ -7013,7 +7013,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get notifyAstellChannelName => 'ASTell の開始';
 
   @override
-  String get notifyAstellChannelDescription => 'ブックマークした VC の開始通知';
+  String get notifyAstellChannelDescription => 'ブックマークした ASTell の開始通知';
 
   @override
   String get onboardingBack => '戻る';

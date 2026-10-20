@@ -8087,9 +8087,9 @@
   "@notifyAstellChannelName": {
     "description": "Android の通知のチャンネルの名前。ASTell(音声のルーム)が始まる知らせ"
   },
-  "notifyAstellChannelDescription": "ブックマークした VC の開始通知",
+  "notifyAstellChannelDescription": "ブックマークした ASTell の開始通知",
   "@notifyAstellChannelDescription": {
-    "description": "上のチャンネルの説明。VC は ASTell の音声のルームのこと"
+    "description": "上のチャンネルの説明。ASTell は音声のルーム"
   },
   "onboardingBack": "戻る",
   "onboardingHandleTooShort": "3 文字以上にしてください",
