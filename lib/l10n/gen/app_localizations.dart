@@ -18919,6 +18919,96 @@ abstract class AppLocalizations {
   /// **'未DL'**
   String get raiModelsNoteNotInstalled;
 
+  /// No description provided for @regionHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'住んでいる地域'**
+  String get regionHeading;
+
+  /// No description provided for @regionCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'お住まいの国・地域を選んでください(自己申告です)。アメリカの場合は州も選びます。'**
+  String get regionCaption;
+
+  /// No description provided for @regionChoose.
+  ///
+  /// In ja, this message translates to:
+  /// **'選んでください'**
+  String get regionChoose;
+
+  /// アメリカの州まで選んだときの地域の名前。{country} = 国の名前(アメリカ合衆国)、{state} = 州の名前(カリフォルニア州)。
+  ///
+  /// In ja, this message translates to:
+  /// **'{country}・{state}'**
+  String regionCountryAndState(String country, String state);
+
+  /// No description provided for @regionPickerTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'住んでいる地域を選ぶ'**
+  String get regionPickerTitle;
+
+  /// No description provided for @regionStatePickerTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'州を選ぶ'**
+  String get regionStatePickerTitle;
+
+  /// No description provided for @regionSearchHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'国・地域の名前で探す'**
+  String get regionSearchHint;
+
+  /// No description provided for @regionStateSearchHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'州の名前で探す'**
+  String get regionStateSearchHint;
+
+  /// No description provided for @regionNoMatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりませんでした'**
+  String get regionNoMatch;
+
+  /// 地域の一覧で、RASQ を提供していない地域の横に出す短い印。
+  ///
+  /// In ja, this message translates to:
+  /// **'提供していません'**
+  String get regionUnavailableBadge;
+
+  /// No description provided for @regionUnavailableTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'お住まいの地域では、いまは RASQ を提供していません'**
+  String get regionUnavailableTitle;
+
+  /// No description provided for @regionUnavailableBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ はいま、提供する地域を限っています。お住まいの地域では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。'**
+  String get regionUnavailableBody;
+
+  /// 提供していない地域を選んだときの説明。理由(法律など)には触れない。{region} = 選んだ地域の名前。
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ はいま、提供する地域を限っています。{region} では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。'**
+  String regionUnavailableBodyWith(String region);
+
+  /// No description provided for @regionUnavailableBack.
+  ///
+  /// In ja, this message translates to:
+  /// **'戻る'**
+  String get regionUnavailableBack;
+
+  /// No description provided for @regionRequiredError.
+  ///
+  /// In ja, this message translates to:
+  /// **'住んでいる地域を選んでから、もう一度お試しください'**
+  String get regionRequiredError;
+
   /// 会話のまとまり(関連 TL のイベント)を開いた画面の見出し
   ///
   /// In ja, this message translates to:
