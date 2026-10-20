@@ -149,7 +149,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
         error: (e, _) {
           final code = e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e');
           if (code.code == '404' || code.code == '400') return const _NoHit();
-          return RasqErrorView(code: code, onRetry: () => ref.invalidate(userProfileProvider((id: widget.userId, account: acct))), retryLabel: '再読み込み');
+          return RasqErrorView(code: code, onRetry: () => ref.invalidate(userProfileProvider((id: widget.userId, account: acct))), retryLabel: context.l10n.usersReload);
         },
         data: (p) {
           final isSelf = isViewerSelf(p.summary, viewer, me: me, viewerId: ref.watch(viewerUserIdProvider(acct)));
@@ -158,7 +158,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
           final restricted = (p.isSuspended || st.blocked || st.blockedBy) && !_showRestricted;
           // 返信TL / 引用TL (D-069): 返信と引用はそれぞれのタブに振り分ける
           // (ノートには両方とも流さない。純リノートはノートに残る)。
-          final labels = ['ノート', '返信', '引用', 'メディア', 'クリップ/Play'];
+          final labels = [context.l10n.usersPageTabNotes, context.l10n.usersPageTabReplies, context.l10n.usersPageTabQuotes, context.l10n.usersPageTabMedia, context.l10n.usersPageTabClips];
           final views = ref.watch(settingsAreaProvider(userPageTabsKvArea)).value ?? const <String, Object?>{};
           // 選んでいるタブの ∨ = 並べ替え・絞り込み (D-514)。クリップ/Play には無い。変えているタブは名前の右肩に点。
           return ListenableBuilder(
@@ -200,7 +200,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
             ]),
             tabs: RasqTabs(items: tabs, onSelectedTabTap: restricted ? null : (i, _) => _onSelectedTabTap(i, p, labels[i])),
             tabViews: restricted
-                ? [for (final _ in tabs) const RasqEmptyView(title: '制限されたユーザーです', hint: '「表示」を押すと内容を表示します')]
+                ? [for (final _ in tabs) RasqEmptyView(title: context.l10n.usersRestrictedTitle, hint: context.l10n.usersRestrictedHint)]
                 : [
                     _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.posts, pinned: p.pinnedPosts, query: _queries[UserPostsFilter.posts]!),
                     _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.replies, query: _queries[UserPostsFilter.replies]!),
@@ -219,6 +219,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
 
   Future<void> _userMenu(BuildContext context, OverlayManager manager, UserSummary? u, UserProfile? p) async {
     if (u == null) return;
+    final l10n = context.l10n;
     final box = context.findRenderObject() as RenderBox?;
     final anchor = box == null ? const Rect.fromLTWH(0, 80, 1, 1) : Rect.fromLTWH(box.size.width - 48, 56, 40, 40);
     final acct = widget.accountKey;
@@ -227,12 +228,12 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
     final st = viewer == null ? const FollowState() : ref.read(followStateProvider.notifier).of(viewer.key, followUserKey(viewer, u.id));
     final via = viewer;
     final pick = await manager.showDropdown<String>(id: 'user.menu', anchor: anchor, items: [
-      const RasqDropdownItem('リンクをコピー', 'copy'),
-      if (via != null && ref.read(hasRasqAccountProvider)) const RasqDropdownItem('RASQ リストに追加', 'rasqList'),
-      if (u.account.kind != SnsKind.bluesky) const RasqDropdownItem('サーバー情報', 'server'),
-      RasqDropdownItem(st.muted ? 'ミュート解除' : 'ミュート', 'mute', accent: true),
-      RasqDropdownItem(st.blocked ? 'ブロック解除' : 'ブロック', 'block', destructive: true),
-      const RasqDropdownItem('報告', 'report', destructive: true),
+      RasqDropdownItem(l10n.usersMenuCopyLink, 'copy'),
+      if (via != null && ref.read(hasRasqAccountProvider)) RasqDropdownItem(l10n.usersMenuAddToRasqList, 'rasqList'),
+      if (u.account.kind != SnsKind.bluesky) RasqDropdownItem(l10n.usersMenuServerInfo, 'server'),
+      RasqDropdownItem(st.muted ? l10n.usersMenuUnmute : l10n.usersMenuMute, 'mute', accent: true),
+      RasqDropdownItem(st.blocked ? l10n.usersMenuUnblock : l10n.usersMenuBlock, 'block', destructive: true),
+      RasqDropdownItem(l10n.usersMenuReport, 'report', destructive: true),
     ]);
     // SNS の操作ではないもの (D-343 / D-345)。
     if (pick == 'rasqList' && via != null) return showAddToRasqListSheet(ref, u, via: via);
@@ -247,10 +248,10 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
       case 'mute':
         store.apply(viewer.key, key, await s.setMuted(u.id, !st.muted));
       case 'block':
-        final ok = st.blocked || await manager.showAlert(id: 'user.block', title: '${u.displayName} をブロックしますか？', message: '相手からのフォロー・リアクション・返信が届かなくなります。', confirmText: 'ブロック', cancelText: 'キャンセル', destructive: true);
+        final ok = st.blocked || await manager.showAlert(id: 'user.block', title: l10n.usersBlockConfirmTitle(u.displayName), message: l10n.usersBlockConfirmMessage, confirmText: l10n.usersMenuBlock, cancelText: l10n.usersCancel, destructive: true);
         if (ok) store.apply(viewer.key, key, await s.setBlocked(u.id, !st.blocked));
       case 'report':
-        final ok = await manager.showAlert(id: 'user.report', title: '${u.displayName} を報告しますか？', message: 'サーバー管理者に報告します(コメントは次バッチで入力可能)。', confirmText: '報告', cancelText: 'キャンセル', destructive: true);
+        final ok = await manager.showAlert(id: 'user.report', title: l10n.usersReportConfirmTitle(u.displayName), message: l10n.usersReportConfirmMessage, confirmText: l10n.usersMenuReport, cancelText: l10n.usersCancel, destructive: true);
         if (ok) await s.reportUser(u.id, 'Reported from RASQ');
     }
   }
@@ -279,11 +280,11 @@ class _UserPosts extends ConsumerWidget {
     final base = view.limitsDirection || view.limitsStimulus || view.sort == UserTabSort.tendency ? ref.watch(tendencyProfileProvider).value : null;
     return page.when(
       loading: () => const RasqLoading(),
-      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userPostsProvider((id: userId, filter: filter, account: account))), retryLabel: '再読み込み'),
+      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userPostsProvider((id: userId, filter: filter, account: account))), retryLabel: context.l10n.usersReload),
       data: (p) => ValueListenableBuilder<String>(valueListenable: query, builder: (context, q, _) {
         // 並べ替え・絞り込み (D-514): ピン留めは絞るだけで上に(並べ替えない)、残りに並べ替えも掛ける。
         final rest = p.items.where((x) => !pinned.any((pin) => pin.id == x.id)).toList();
-        if (pinned.isEmpty && rest.isEmpty) return const RasqEmptyView(title: '投稿はありません');
+        if (pinned.isEmpty && rest.isEmpty) return RasqEmptyView(title: context.l10n.usersPostsEmpty);
         final shownPinned = view.pinned ? applyUserTabView(pinned, view, query: q, base: base, sorted: false) : const <Post>[];
         final items = [...shownPinned, ...applyUserTabView(rest, view, query: q, base: base)];
         if (items.isEmpty) return RasqEmptyView(key: const ValueKey('user.tabView.empty'), title: context.l10n.userPageViewEmptyTitle, hint: context.l10n.userPageViewEmptyHint);
@@ -300,7 +301,7 @@ class _UserPosts extends ConsumerWidget {
             final isPinned = i < pinnedCount;
             return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (ads.contains(i)) ...[TimelineAdSlot(key: ValueKey('user.ad.$i'), ordinal: adOrdinal[i]!), const Divider()],
-              if (isPinned) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page + RasqSizes.avatarLg + RasqSpacing.md, 6, 0, 0), child: Row(children: [Icon(Icons.push_pin, size: 14, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text('ピン留め', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))])),
+              if (isPinned) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page + RasqSizes.avatarLg + RasqSpacing.md, 6, 0, 0), child: Row(children: [Icon(Icons.push_pin, size: 14, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text(context.l10n.usersPinnedBadge, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))])),
               // ダイジェスト (D-514) = 小表示(D-156 のインラインフレーム)。
               if (view.digest)
                 Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs), child: InlinePostFrame(key: ValueKey('user.digest.${post.id}'), post: post, onTap: () => context.pushPost(post)))
@@ -328,17 +329,17 @@ class _UserClips extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     return clips.when(
       loading: () => const RasqLoading(),
-      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userClipsProvider(userId)), retryLabel: '再読み込み'),
+      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userClipsProvider(userId)), retryLabel: context.l10n.usersReload),
       data: (list) {
-        if (list == null && plays == null) return const RasqEmptyView(title: 'クリップ / Play', hint: 'この SNS はクリップ・Play に対応していません(プラグインタイルは M4)');
-        if ((list ?? const []).isEmpty && (plays ?? const []).isEmpty) return const RasqEmptyView(title: '公開クリップ・Play はありません');
+        if (list == null && plays == null) return RasqEmptyView(title: context.l10n.usersClipsUnsupportedTitle, hint: context.l10n.usersClipsUnsupportedHint);
+        if ((list ?? const []).isEmpty && (plays ?? const []).isEmpty) return RasqEmptyView(title: context.l10n.usersClipsEmpty);
         return ListView(children: [
           if ((list ?? const []).isNotEmpty) ...[
-            const RasqSectionHeader(title: 'クリップ', topMargin: 0),
+            RasqSectionHeader(title: context.l10n.usersClipsHeader, topMargin: 0),
             for (final c in list!) ...[
               RasqListTile(
                 title: c.name,
-                subtitle: [if (c.notesCount != null) '${c.notesCount}件', if (c.description?.isNotEmpty == true) c.description!].join(' ・ '),
+                subtitle: [if (c.notesCount != null) context.l10n.usersClipNoteCount(c.notesCount!), if (c.description?.isNotEmpty == true) c.description!].join(context.l10n.usersClipSubtitleSeparator),
                 leading: Icon(Icons.collections_bookmark_outlined, color: scheme.onSurfaceVariant),
                 onTap: () => context.pushClip(c),
               ),
@@ -381,7 +382,7 @@ class _NoHit extends StatelessWidget {
         ]),
       ),
       const SizedBox(height: 24),
-      const Text('このユーザーは存在しないようです。', style: RasqTypography.bodySmall),
+      Text(context.l10n.usersNotFound, style: RasqTypography.bodySmall),
     ]);
   }
 }

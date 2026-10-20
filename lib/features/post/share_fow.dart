@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import 'post_menu.dart';
 import '../compose/account_select.dart';
 import '../compose/compose_target.dart';
@@ -87,7 +88,7 @@ Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0, MediaIt
               account: s.account,
               displayName: s.displayName,
               avatarUrl: s.avatarUrl,
-              tooltip: candidates.length > 1 ? '共有に使うアカウント' : '受け取ったアカウントだけで共有できます',
+              tooltip: candidates.length > 1 ? ctx.l10n.postShareAccountTooltip : ctx.l10n.postShareAccountFixedTooltip,
               onTap: candidates.length <= 1
                   ? null
                   : () async {
@@ -106,7 +107,7 @@ Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0, MediaIt
     await manager.showFow<void>(
       id: postShareFowId,
       spec: spec,
-      semanticsLabel: '共有',
+      semanticsLabel: appL10n.postShareSemantics,
       builder: (ctx, handle) => _ShareBody(post: post, link: link, selected: selected, column: column, onComposer: openComposer, onDm: openDm, media: media),
     );
   } finally {
@@ -151,9 +152,10 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
     m?.showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _copy(String text, String label) async {
+  /// [copied] = コピーしたあとに出す文(「内容をコピーしました」など)。
+  Future<void> _copy(String text, String copied) async {
     await Clipboard.setData(ClipboardData(text: text));
-    _snack('$labelをコピーしました');
+    _snack(copied);
   }
 
   Future<void> _plugin(SlotPlugin p) async {
@@ -180,13 +182,13 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
     final room = await _manager.showFow<DmRoom>(
       id: postShareDmFowId,
       ownerId: postShareFowId,
-      spec: FowSpec(type: FowPanelType.widget, title: 'DM へ共有', cancelText: '閉じる', initialHeightFactor: 0.5, dockAboveFooter: true, columnIndex: widget.column),
+      spec: FowSpec(type: FowPanelType.widget, title: context.l10n.postShareDmTitle, cancelText: context.l10n.postShareClose, initialHeightFactor: 0.5, dockAboveFooter: true, columnIndex: widget.column),
       builder: (ctx, handle) => FutureBuilder<List<DmRoom>>(
         future: session.dmRooms(),
         builder: (ctx, snap) {
           if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
           final rooms = snap.data ?? const <DmRoom>[];
-          if (rooms.isEmpty) return Center(child: Text('DM の相手がいません', style: RasqTypography.bodySmall));
+          if (rooms.isEmpty) return Center(child: Text(ctx.l10n.postShareDmNoRooms, style: RasqTypography.bodySmall));
           return ListView(padding: EdgeInsets.zero, children: [
             for (final r in rooms)
               RasqListTile(
@@ -214,7 +216,7 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
       return;
     }
     ref.read(astellSessionProvider.notifier).share('post', astellPostPayloadOf(widget.post));
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('「${room.title}」に共有しました')));
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(context.l10n.postShareAstellShared(room.title))));
     ref.read(overlayManagerProvider).close(postShareFowId);
   }
 
@@ -227,29 +229,29 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
     return ListView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.page), children: [
       Row(children: [
         if (widget.media == null)
-          _ShareChip(key: const ValueKey('post.share.copyContent'), icon: Icons.notes, label: '内容をコピー', onTap: () => _copy(postShareContent(post), '内容'))
+          _ShareChip(key: const ValueKey('post.share.copyContent'), icon: Icons.notes, label: context.l10n.postShareCopyContent, onTap: () => _copy(postShareContent(post), context.l10n.postShareContentCopied))
         else
           _ShareChip(key: const ValueKey('post.share.saveImage'), icon: Icons.download_outlined, label: saveMediaLabel(widget.media!), onTap: () => saveMediaImage(ref, widget.media!)),
         const SizedBox(width: RasqSpacing.sm),
-        _ShareChip(key: const ValueKey('post.share.copyLink'), icon: Icons.link, label: 'リンクをコピー', onTap: () => _copy(widget.link, 'リンク')),
+        _ShareChip(key: const ValueKey('post.share.copyLink'), icon: Icons.link, label: context.l10n.postShareCopyLink, onTap: () => _copy(widget.link, context.l10n.postShareLinkCopied)),
         const SizedBox(width: RasqSpacing.sm),
-        _ShareChip(key: const ValueKey('post.share.otherAccount'), icon: Icons.switch_account_outlined, label: '他のアカウントで共有', onTap: () => widget.onComposer(widget.link)),
+        _ShareChip(key: const ValueKey('post.share.otherAccount'), icon: Icons.switch_account_outlined, label: context.l10n.postShareOtherAccount, onTap: () => widget.onComposer(widget.link)),
       ]),
       // 「プラグインに共有」(D-178): 参加中の AsTell(ホスト内蔵)+ post.share を宣言したプラグイン。
       // 投稿メニューの「AsTell で共有」はここへ統合。
-      const RasqSectionHeader(title: 'プラグインに共有', topMargin: RasqSpacing.md),
+      RasqSectionHeader(title: context.l10n.postSharePluginsHeader, topMargin: RasqSpacing.md),
       if (astell != null)
         RasqListTile(
           key: const ValueKey('post.share.astell'),
           leading: Icon(Icons.record_voice_over_outlined, size: 20, color: scheme.onSurfaceVariant),
-          title: 'ASTell に共有',
-          subtitle: '参加中のルーム「${astell.room.title}」へ投稿を流す',
+          title: context.l10n.postShareAstellTitle,
+          subtitle: context.l10n.postShareAstellSubtitle(astell.room.title),
           onTap: _astell,
         ),
       if (plugins.isEmpty && astell == null)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: RasqSpacing.sm),
-          child: Text(rasqDetail(context, '共有に対応したプラグインがここに並びます', 'post.share を宣言したプラグイン(と参加中の ASTell)がここに並びます'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text(rasqDetail(context, context.l10n.postSharePluginsEmpty, context.l10n.postSharePluginsEmptyDetail), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ),
       for (final p in plugins)
         RasqListTile(
@@ -259,8 +261,8 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
           subtitle: p.manifest.description.isEmpty ? null : p.manifest.description,
           onTap: () => _plugin(p),
         ),
-      const RasqSectionHeader(title: 'その他', topMargin: RasqSpacing.md),
-      RasqListTile(key: const ValueKey('post.share.dm'), leading: Icon(Icons.mail_outline, size: 20, color: scheme.onSurfaceVariant), title: 'DM へ共有', subtitle: '選んだアカウントの DM にリンクを送る', onTap: _dm),
+      RasqSectionHeader(title: context.l10n.postShareOtherHeader, topMargin: RasqSpacing.md),
+      RasqListTile(key: const ValueKey('post.share.dm'), leading: Icon(Icons.mail_outline, size: 20, color: scheme.onSurfaceVariant), title: context.l10n.postShareDmTitle, subtitle: context.l10n.postShareDmSubtitle, onTap: _dm),
       if (_note != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text(_note!, style: RasqTypography.caption.copyWith(color: scheme.error))),
     ]);
   }
@@ -280,9 +282,9 @@ class _ShareFooter extends StatelessWidget {
             key: const ValueKey('post.share.browser'),
             onPressed: () => launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication),
             icon: const Icon(Icons.open_in_browser, size: 18),
-            label: const Text('ブラウザで開く'),
+            label: Text(context.l10n.postShareOpenBrowser),
           ),
-          TextButton(key: const ValueKey('post.share.close'), onPressed: onClose, child: const Text('閉じる', style: TextStyle(fontWeight: FontWeight.w700))),
+          TextButton(key: const ValueKey('post.share.close'), onPressed: onClose, child: Text(context.l10n.postShareClose, style: const TextStyle(fontWeight: FontWeight.w700))),
         ],
       );
 }

@@ -7,6 +7,7 @@ import 'package:rasq_store/rasq_store.dart';
 
 import '../clips/clip_picker.dart';
 import '../home/timeline_providers.dart';
+import '../../l10n/l10n.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 
 /// その SNS の「ブックマーク」にあたるアクション(genreTag `Bookmark`: Misskey のお気に入り、Mastodon のブックマーク)。
@@ -44,7 +45,7 @@ class PostBookmarkButton extends ConsumerWidget {
       key: const ValueKey('post.detail.bookmark'),
       icon: done ? Icons.bookmark : Icons.bookmark_border,
       color: done ? RasqColors.accent : null,
-      tooltip: action == null ? 'クリップに追加(長押し)' : (done ? 'ブックマークを外す(長押しでクリップへ)' : 'ブックマーク(長押しでクリップへ)'),
+      tooltip: action == null ? context.l10n.postBookmarkClipTooltip : (done ? context.l10n.postBookmarkRemoveTooltip : context.l10n.postBookmarkAddTooltip),
       onPressed: () => _toggle(ref, action, done),
       onLongPress: () => showAddToClipSheet(ref, post, session: session),
     );
@@ -52,16 +53,17 @@ class PostBookmarkButton extends ConsumerWidget {
 
   Future<void> _toggle(WidgetRef ref, ActionDescriptor? action, bool done) async {
     final messenger = ref.read(rootMessengerKeyProvider).currentState;
+    final l10n = appL10n;
     messenger?.clearSnackBars();
     if (action == null) {
-      messenger?.showSnackBar(const SnackBar(content: Text('このサービスにはブックマークがありません。長押しでクリップに追加できます')));
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.postBookmarkUnsupported)));
       return;
     }
     try {
       await ref.read(timelineProvider(TimelineKind.home).notifier).perform(post, action);
-      messenger?.showSnackBar(SnackBar(content: Text(done ? 'ブックマークを外しました' : 'ブックマークしました')));
+      messenger?.showSnackBar(SnackBar(content: Text(done ? l10n.postBookmarkRemoved : l10n.postBookmarkAdded)));
     } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text('ブックマークできませんでした: $e')));
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.postBookmarkError(e is StateError ? e.message : '$e'))));
     }
   }
 }

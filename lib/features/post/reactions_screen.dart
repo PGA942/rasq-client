@@ -6,6 +6,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../../app/sort_menu.dart';
 import '../../shell/headers.dart';
@@ -56,18 +57,18 @@ class _ReactionsScreenState extends ConsumerState<ReactionsScreen> {
     final childBlocked = ref.watch(childGateProvider).postDetailBlockReason(post);
     if (childBlocked != null) {
       return Scaffold(
-        appBar: RasqPageHeader(title: 'リアクション', leadingAvatar: me),
-        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: 'この投稿は表示できません', hint: childBlocked == 'この投稿は表示できません' ? '見守りの設定は保護者が決めています' : childBlocked),
+        appBar: RasqPageHeader(title: context.l10n.postReactionsTitle, leadingAvatar: me),
+        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: context.l10n.childSafePostHidden, hint: childBlocked == context.l10n.childSafePostHidden ? context.l10n.childSafeScreensBlockedHint : childBlocked),
       );
     }
     final actions = ref.watch(sessionForAccountProvider(acct))?.actions ?? const <ActionDescriptor>[];
     final manager = ref.watch(overlayManagerProvider);
-    final tabs = [const RasqTabItem('返信'), const RasqTabItem('引用'), const RasqTabItem('リアクション'), const RasqTabItem('共有')];
+    final tabs = [RasqTabItem(context.l10n.postReactionsTabReplies), RasqTabItem(context.l10n.postReactionsTabQuotes), RasqTabItem(context.l10n.postReactionsTabReactions), RasqTabItem(context.l10n.postReactionsTabShares)];
     return DefaultTabController(
       length: tabs.length,
       initialIndex: 2,
       child: Scaffold(
-        appBar: RasqPageHeader(title: 'リアクション', leadingAvatar: me, actions: [RasqIconButton(icon: Icons.bookmark_border, onPressed: () {}, tooltip: 'ブックマーク')], onMore: () {}),
+        appBar: RasqPageHeader(title: context.l10n.postReactionsTitle, leadingAvatar: me, actions: [RasqIconButton(icon: Icons.bookmark_border, onPressed: () {}, tooltip: context.l10n.postReactionsBookmarkTooltip)], onMore: () {}),
         body: Column(children: [
           // 対象投稿はインラインフレームの小表示 (D-156、ワイヤーフレーム p.1 右端)。
           if (post != null)
@@ -113,7 +114,7 @@ class _Replies extends ConsumerWidget {
         // チャイルドセーフ (D-407、指摘 #26): 返信にも、ホームと同じ保護者の表示制限を掛ける。
         final gate = ref.watch(childGateProvider);
         final list = sortByReactions(gate.filterPosts([for (final d in t.descendants) if (d.replyToId != null || d.replyTo != null) d]), order, (p) => p.reactionTotal);
-        if (list.isEmpty) return const RasqEmptyView(title: '返信はありません');
+        if (list.isEmpty) return RasqEmptyView(title: context.l10n.postRepliesEmpty);
         return ListView.separated(
           itemCount: list.length,
           separatorBuilder: (_, _) => const Divider(),
@@ -137,7 +138,7 @@ class _QuoteNotes extends ConsumerWidget {
       loading: () => const RasqLoading(),
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
       data: (list) => list.isEmpty
-          ? const RasqEmptyView(title: '引用ノートはありません')
+          ? RasqEmptyView(title: context.l10n.postQuotesEmpty)
           : ListView.separated(
               itemCount: list.length,
               separatorBuilder: (_, _) => const Divider(),
@@ -157,7 +158,7 @@ class _Reposters extends ConsumerWidget {
     return page.when(
       loading: () => const RasqLoading(),
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
-      data: (p) => p.items.isEmpty ? const RasqEmptyView(title: 'リノート・引用はありません') : UserList(users: p.items, account: account),
+      data: (p) => p.items.isEmpty ? RasqEmptyView(title: context.l10n.postRepostersEmpty) : UserList(users: p.items, account: account),
     );
   }
 }
@@ -177,7 +178,7 @@ class ReactionSections extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final emojis = ref.watch(emojiCacheProvider);
     final entries = sortByReactions(post.reactions.entries.toList(), order, (e) => e.value);
-    if (entries.isEmpty) return const RasqEmptyView(title: 'リアクションはありません');
+    if (entries.isEmpty) return RasqEmptyView(title: context.l10n.postReactionsEmpty);
     // prefetch custom emoji urls for :name: reactions not carried by the note
     ref.read(emojiCacheProvider.notifier).request([for (final e in entries) if (e.key.startsWith(':') && !post.reactionEmojis.containsKey(e.key)) e.key.substring(1, e.key.length - 1).replaceAll('@.', '')]);
     return ListView(shrinkWrap: shrinkWrap, physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null, children: [
@@ -194,7 +195,7 @@ class ReactionSections extends ConsumerWidget {
               Text('${e.value}', style: RasqTypography.title),
               const SizedBox(width: RasqSpacing.sm),
               Expanded(child: Text(e.key.startsWith(':') ? e.key : '', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
-              if (post.myReaction == e.key) const RasqPill(label: 'あなた'),
+              if (post.myReaction == e.key) RasqPill(label: context.l10n.postReactionsMine),
               Icon(open.contains(e.key) ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
             ]),
           ),

@@ -5,6 +5,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../shell/headers.dart';
+import '../../l10n/l10n.dart';
 import 'user_list.dart';
 import 'user_providers.dart';
 
@@ -20,13 +21,13 @@ class FollowsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tabs = [const RasqTabItem('フォロー中'), const RasqTabItem('フォロワー')];
+    final tabs = [RasqTabItem(context.l10n.usersFollowsTabFollowing), RasqTabItem(context.l10n.usersFollowsTabFollowers)];
     final acct = account ?? user?.account.key;
     return DefaultTabController(
       length: 2,
       initialIndex: initialFollowers ? 1 : 0,
       child: Scaffold(
-        appBar: RasqPageHeader(title: user?.displayName ?? 'フォロー/フォロワー', onMore: () {}, bottom: RasqTabs(items: tabs)),
+        appBar: RasqPageHeader(title: user?.displayName ?? context.l10n.usersFollowsTitle, onMore: () {}, bottom: RasqTabs(items: tabs)),
         body: TabBarView(children: [
           _List(k: (id: userId, followers: false, account: acct)),
           _List(k: (id: userId, followers: true, account: acct)),
@@ -44,8 +45,8 @@ class _List extends ConsumerWidget {
     final page = ref.watch(followsProvider(k));
     return page.when(
       loading: () => const RasqLoading(),
-      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(followsProvider(k)), retryLabel: '再読み込み'),
-      data: (p) => p.items.isEmpty ? RasqEmptyView(title: k.followers ? 'フォロワーはいません' : 'フォロー中のユーザーはいません') : UserList(users: p.items, account: k.account),
+      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(followsProvider(k)), retryLabel: context.l10n.usersReload),
+      data: (p) => p.items.isEmpty ? RasqEmptyView(title: k.followers ? context.l10n.usersFollowersEmpty : context.l10n.usersFollowingEmpty) : UserList(users: p.items, account: k.account),
     );
   }
 }

@@ -11972,6 +11972,540 @@ abstract class AppLocalizations {
   /// **'ブラシニブ'**
   String get pluginsPaintNibBrush;
 
+  /// 投稿の詳細の返信欄の並び順(ドロップダウンの項目と、欄の帯の右の小さい字)。元の投稿との関連の強い順
+  ///
+  /// In ja, this message translates to:
+  /// **'関連順'**
+  String get postThreadSortRelevance;
+
+  /// 返信欄の並び順: リアクションの多い順
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション数'**
+  String get postThreadSortReactions;
+
+  /// 返信欄の並び順: 元の投稿と同じ語(人名・地名など)を多く含む順
+  ///
+  /// In ja, this message translates to:
+  /// **'キーワード順'**
+  String get postThreadSortKeyword;
+
+  /// 返信欄の並び順: SNS が返した順のまま
+  ///
+  /// In ja, this message translates to:
+  /// **'デフォルト'**
+  String get postThreadSortDefault;
+
+  /// 返信欄の帯を長押しして出す、欄の切り替えの項目。投稿をリノートした人の一覧
+  ///
+  /// In ja, this message translates to:
+  /// **'引用(リノート)'**
+  String get postThreadModeRenotes;
+
+  /// 返信欄の帯に出す欄の名前(リノートした人の一覧のとき)。短く
+  ///
+  /// In ja, this message translates to:
+  /// **'引用'**
+  String get postThreadModeRenotesShort;
+
+  /// 欄の切り替えの項目: 返信の一覧
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get postThreadModeReplies;
+
+  /// 返信欄の帯に出す欄の名前(返信の一覧のとき)。短く
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get postThreadModeRepliesShort;
+
+  /// 欄の切り替えの項目: リアクション(絵文字ごと)の一覧。Misskey だけ
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション'**
+  String get postThreadModeReactions;
+
+  /// 返信欄の帯に出す欄の名前(リアクションの一覧のとき)。短く
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション'**
+  String get postThreadModeReactionsShort;
+
+  /// 欄の切り替えの項目: この投稿を引用した投稿(引用ノート)の一覧
+  ///
+  /// In ja, this message translates to:
+  /// **'共有(引用ノート)'**
+  String get postThreadModeQuotes;
+
+  /// 返信欄の帯に出す欄の名前(引用ノートの一覧のとき)。短く
+  ///
+  /// In ja, this message translates to:
+  /// **'共有'**
+  String get postThreadModeQuotesShort;
+
+  /// 投稿の詳細の見出しのブックマークのボタンのツールチップ。ブックマークの無い SNS で、長押しでクリップに入れられる
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップに追加(長押し)'**
+  String get postBookmarkClipTooltip;
+
+  /// ブックマークのボタンのツールチップ(ブックマーク済み)。長押しでクリップに入れる
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークを外す(長押しでクリップへ)'**
+  String get postBookmarkRemoveTooltip;
+
+  /// ブックマークのボタンのツールチップ(未ブックマーク)。長押しでクリップに入れる
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマーク(長押しでクリップへ)'**
+  String get postBookmarkAddTooltip;
+
+  /// ブックマークの無い SNS でボタンを短く押したときのスナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'このサービスにはブックマークがありません。長押しでクリップに追加できます'**
+  String get postBookmarkUnsupported;
+
+  /// ブックマークを外したときのスナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークを外しました'**
+  String get postBookmarkRemoved;
+
+  /// ブックマークしたときのスナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークしました'**
+  String get postBookmarkAdded;
+
+  /// ブックマーク / 解除に失敗したときのスナックバー。error は失敗の理由(SNS から返った文など)
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークできませんでした: {error}'**
+  String postBookmarkError(String error);
+
+  /// 投稿のリアクションの画面(返信 / 引用 / リアクション / 共有のタブ)の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション'**
+  String get postReactionsTitle;
+
+  /// リアクションの画面のタブ: 返信の一覧
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get postReactionsTabReplies;
+
+  /// リアクションの画面のタブ: リノート・引用した人の一覧
+  ///
+  /// In ja, this message translates to:
+  /// **'引用'**
+  String get postReactionsTabQuotes;
+
+  /// リアクションの画面のタブ: 絵文字ごとのリアクションの一覧
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション'**
+  String get postReactionsTabReactions;
+
+  /// リアクションの画面のタブ: この投稿を引用した投稿(引用ノート)の一覧
+  ///
+  /// In ja, this message translates to:
+  /// **'共有'**
+  String get postReactionsTabShares;
+
+  /// リアクションの画面の見出しのブックマークのボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマーク'**
+  String get postReactionsBookmarkTooltip;
+
+  /// 返信の一覧が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'返信はありません'**
+  String get postRepliesEmpty;
+
+  /// 引用ノート(この投稿を引用した投稿)の一覧が空のとき。リアクションの画面の共有のタブと、投稿の詳細の共有の欄
+  ///
+  /// In ja, this message translates to:
+  /// **'引用ノートはありません'**
+  String get postQuotesEmpty;
+
+  /// リアクションの画面の引用のタブ(リノートした人の一覧)が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'リノート・引用はありません'**
+  String get postRepostersEmpty;
+
+  /// リアクションの一覧が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションはありません'**
+  String get postReactionsEmpty;
+
+  /// リアクションの一覧で、自分が付けたリアクションの行に付ける小さな印
+  ///
+  /// In ja, this message translates to:
+  /// **'あなた'**
+  String get postReactionsMine;
+
+  /// 投稿の詳細の見出しのアカウントのボタンで別のアカウントを選んだが、そのアカウントのサーバーで同じ投稿が見つからなかったときのスナックバー。account はアカウント(@名前@サーバー)
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} ではこの投稿を見つけられませんでした'**
+  String postDetailNotFoundOnAccount(String account);
+
+  /// 投稿の詳細の画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿'**
+  String get postDetailTitle;
+
+  /// 投稿の詳細の見出しのアカウントの選択で、投稿を開いたときのアカウントに付ける印の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'開いたアカウント'**
+  String get postDetailOpenedAccount;
+
+  /// 投稿の詳細で、投稿が消えている(404)とき
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿はありません'**
+  String get postDetailNotFound;
+
+  /// 読み込みに失敗したときのやり直しのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get postReload;
+
+  /// 投稿の詳細の返信欄の帯の右のボタン。リアクションの画面を開く
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクションを表示'**
+  String get postDetailShowReactions;
+
+  /// 投稿の詳細の返信の一覧の下のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'さらに表示'**
+  String get postDetailShowMore;
+
+  /// 投稿の詳細の引用(リノート)の欄が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'リノートはありません'**
+  String get postRenotesEmpty;
+
+  /// 投稿の共有の画面の見出しのアカウントの選択のツールチップ(選べるアカウントが複数のとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'共有に使うアカウント'**
+  String get postShareAccountTooltip;
+
+  /// アカウントの選択のツールチップ(非公開の投稿などで、受け取ったアカウントでしか共有できないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'受け取ったアカウントだけで共有できます'**
+  String get postShareAccountFixedTooltip;
+
+  /// 投稿の共有の画面(FOW)の読み上げの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'共有'**
+  String get postShareSemantics;
+
+  /// 共有の画面で「内容をコピー」を押したときのスナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'内容をコピーしました'**
+  String get postShareContentCopied;
+
+  /// 共有の画面で「リンクをコピー」を押したときのスナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピーしました'**
+  String get postShareLinkCopied;
+
+  /// DM の相手を選ぶ画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'DM へ共有'**
+  String get postShareDmTitle;
+
+  /// 共有の画面 / DM の相手を選ぶ画面を閉じるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get postShareClose;
+
+  /// DM の相手を選ぶ画面で、DM の相手が 1 人もいないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'DM の相手がいません'**
+  String get postShareDmNoRooms;
+
+  /// 投稿を ASTell のルームに共有したときのスナックバー。room はルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{room}」に共有しました'**
+  String postShareAstellShared(String room);
+
+  /// 共有の画面の上段のボタン: 投稿の本文(注意書き付き)をコピーする
+  ///
+  /// In ja, this message translates to:
+  /// **'内容をコピー'**
+  String get postShareCopyContent;
+
+  /// 共有の画面の上段のボタン: 投稿のリンクをコピーする
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピー'**
+  String get postShareCopyLink;
+
+  /// 共有の画面の上段のボタン: 選んだアカウントのコンポーザーにリンクを入れて開く
+  ///
+  /// In ja, this message translates to:
+  /// **'他のアカウントで共有'**
+  String get postShareOtherAccount;
+
+  /// 共有の画面の節の見出し。参加中の ASTell と、共有に対応したプラグインが並ぶ
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインに共有'**
+  String get postSharePluginsHeader;
+
+  /// 共有の画面の行: 参加中の ASTell のルームに投稿を流す
+  ///
+  /// In ja, this message translates to:
+  /// **'ASTell に共有'**
+  String get postShareAstellTitle;
+
+  /// 「ASTell に共有」の行の補足。room はルームの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'参加中のルーム「{room}」へ投稿を流す'**
+  String postShareAstellSubtitle(String room);
+
+  /// 共有の画面で、共有に対応したプラグインが 1 つも無いときの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'共有に対応したプラグインがここに並びます'**
+  String get postSharePluginsEmpty;
+
+  /// 上と同じ説明の、開発者モードのときの文。post.share はプラグインの宣言の名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'post.share を宣言したプラグイン(と参加中の ASTell)がここに並びます'**
+  String get postSharePluginsEmptyDetail;
+
+  /// 共有の画面の節の見出し(DM へ共有など)
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get postShareOtherHeader;
+
+  /// 共有の画面の「DM へ共有」の行の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'選んだアカウントの DM にリンクを送る'**
+  String get postShareDmSubtitle;
+
+  /// 共有の画面の下のボタン: 投稿のリンクをブラウザで開く
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザで開く'**
+  String get postShareOpenBrowser;
+
+  /// 投稿の「…」のメニューの項目
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピー'**
+  String get postMenuCopyLink;
+
+  /// 投稿のメニューの項目: 自分のアカウントページの固定を外す
+  ///
+  /// In ja, this message translates to:
+  /// **'固定を外す'**
+  String get postMenuUnpin;
+
+  /// 投稿のメニューの項目: 自分のアカウントページに固定する
+  ///
+  /// In ja, this message translates to:
+  /// **'固定する'**
+  String get postMenuPin;
+
+  /// 投稿のメニューの項目: 投稿の詳細を開く
+  ///
+  /// In ja, this message translates to:
+  /// **'詳細'**
+  String get postMenuDetail;
+
+  /// 投稿のメニューの項目: 共有の画面を開く
+  ///
+  /// In ja, this message translates to:
+  /// **'共有'**
+  String get postMenuShare;
+
+  /// 投稿のメニューの項目: 投稿の下のボタンの並び(アクションバー)を編集する
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションバーを編集'**
+  String get postMenuEditActionBar;
+
+  /// 投稿のメニューの項目(お気に入り済み)
+  ///
+  /// In ja, this message translates to:
+  /// **'お気に入り解除'**
+  String get postMenuUnfavorite;
+
+  /// 投稿のメニューの項目: お気に入りに入れる
+  ///
+  /// In ja, this message translates to:
+  /// **'お気に入り'**
+  String get postMenuFavorite;
+
+  /// 投稿のメニューの項目
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップに追加'**
+  String get postMenuAddToClip;
+
+  /// 投稿のメニューの項目: 投稿した人のフォローを外す
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー解除'**
+  String get postMenuUnfollow;
+
+  /// 投稿のメニューの項目: 投稿した人をフォローする
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー'**
+  String get postMenuFollow;
+
+  /// 投稿のメニューの項目: 投稿した人のミュートを外す
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュート解除'**
+  String get postMenuUnmute;
+
+  /// 投稿のメニューの項目: 投稿した人をミュートする
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュート'**
+  String get postMenuMute;
+
+  /// 投稿のメニューの項目: 投稿した人のブロックを外す
+  ///
+  /// In ja, this message translates to:
+  /// **'ブロック解除'**
+  String get postMenuUnblock;
+
+  /// 投稿のメニューの項目、およびブロックの確認のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ブロック'**
+  String get postMenuBlock;
+
+  /// 投稿のメニューの項目、および報告の確認のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'報告'**
+  String get postMenuReport;
+
+  /// 投稿のメニューの項目(自分の投稿)、および削除の確認のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get postMenuDelete;
+
+  /// ブロックの確認の見出し。name は投稿した人の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} をブロックしますか？'**
+  String postBlockConfirmTitle(String name);
+
+  /// 確認のダイアログのやめるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get postCancel;
+
+  /// 投稿の報告の確認の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿を報告しますか？'**
+  String get postReportConfirmTitle;
+
+  /// 投稿の報告の確認の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバー管理者に報告します。'**
+  String get postReportConfirmMessage;
+
+  /// 投稿の削除の確認の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿を削除しますか？'**
+  String get postDeleteConfirmTitle;
+
+  /// 投稿の削除の確認の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'この操作は取り消せません。'**
+  String get postDeleteConfirmMessage;
+
+  /// 投稿のメニュー / 共有の画面の、添付を端末に保存する項目。kind は video(動画)か image(画像)
+  ///
+  /// In ja, this message translates to:
+  /// **'{kind, select, video{動画を保存} other{画像を保存}}'**
+  String postSaveMediaLabel(String kind);
+
+  /// 保存するたびに保存先を選ぶ設定のとき、保存先を選ぶシートの見出し。kind は video(動画)か image(画像)
+  ///
+  /// In ja, this message translates to:
+  /// **'{kind, select, video{動画の保存先} other{画像の保存先}}'**
+  String postSaveDestinationTitle(String kind);
+
+  /// 保存先の選択の「写真」の行の補足。RASQ はアルバムの名前(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'アルバム「RASQ」に入ります'**
+  String get postSaveToPhotosSubtitle;
+
+  /// 保存先の選択の「ファイル」の行の補足(iOS)。「ファイル」App の中のフォルダーの場所。「ファイル」App / このiPad / このiPhone は iOS の表示に合わせる。「RASQ › 保存」は端末に作るフォルダーの実際の名前なので訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'「ファイル」App の このiPad(このiPhone)› RASQ › 保存'**
+  String get postSaveToFilesIosSubtitle;
+
+  /// 保存先の選択の「ファイル」の行の補足(iOS 以外)
+  ///
+  /// In ja, this message translates to:
+  /// **'保存する場所を選びます'**
+  String get postSaveToFilesSubtitle;
+
+  /// 保存先の選択のスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'次からもこの保存先にする'**
+  String get postSaveRememberTitle;
+
+  /// 上のスイッチの補足。設定の画面の場所(設定の画面の見出しと揃える)
+  ///
+  /// In ja, this message translates to:
+  /// **'設定 → アプリの外観 →「画像・動画の保存先」で変えられます'**
+  String get postSaveRememberSubtitle;
+
+  /// 添付の保存に失敗したときのスナックバー。kind は video(動画)か image(画像)、error は失敗の理由
+  ///
+  /// In ja, this message translates to:
+  /// **'{kind, select, video{動画を保存できませんでした: {error}} other{画像を保存できませんでした: {error}}}'**
+  String postSaveFailed(String kind, String error);
+
   /// プロフィールの編集画面(RASQ アカウント / SNS)の見出し
   ///
   /// In ja, this message translates to:
@@ -24879,6 +25413,270 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'タブをもう一度押して、表示の設定を変えるかリセットしてください'**
   String get userPageViewEmptyHint;
+
+  /// プロフィールのアイコン / バナーの全画面表示の左上の戻るボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'戻る'**
+  String get usersImageViewerBack;
+
+  /// フォロー申請の画面のタブ: 関連の強い順
+  ///
+  /// In ja, this message translates to:
+  /// **'関連性'**
+  String get usersFollowRequestsTabRelevance;
+
+  /// フォロー申請の画面のタブ: 自分がフォローしている人からの申請
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get usersFollowRequestsTabFollowing;
+
+  /// フォロー申請の画面のタブ: それ以外
+  ///
+  /// In ja, this message translates to:
+  /// **'その他'**
+  String get usersFollowRequestsTabOther;
+
+  /// フォロー申請の画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー申請'**
+  String get usersFollowRequestsTitle;
+
+  /// 読み込みに失敗したときのやり直しのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get usersReload;
+
+  /// フォロー申請が無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー申請はありません'**
+  String get usersFollowRequestsEmpty;
+
+  /// フォロー申請の画面の、最初以外のタブが空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'なし'**
+  String get usersFollowRequestsEmptyOther;
+
+  /// フォロー申請の行のボタン: 申請を受け入れる
+  ///
+  /// In ja, this message translates to:
+  /// **'許可'**
+  String get usersFollowRequestAccept;
+
+  /// フォロー申請の行のボタン: 申請を断る
+  ///
+  /// In ja, this message translates to:
+  /// **'拒否'**
+  String get usersFollowRequestReject;
+
+  /// フォロー / フォロワーの画面のタブ: この人がフォローしている人
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get usersFollowsTabFollowing;
+
+  /// フォロー / フォロワーの画面のタブ: この人をフォローしている人
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワー'**
+  String get usersFollowsTabFollowers;
+
+  /// フォロー / フォロワーの画面の見出し(ユーザーの名前が分からないとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー/フォロワー'**
+  String get usersFollowsTitle;
+
+  /// フォロワーの一覧が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワーはいません'**
+  String get usersFollowersEmpty;
+
+  /// フォロー中の一覧が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中のユーザーはいません'**
+  String get usersFollowingEmpty;
+
+  /// ユーザーページのタブ: 投稿(返信・引用以外)。Misskey の言い方
+  ///
+  /// In ja, this message translates to:
+  /// **'ノート'**
+  String get usersPageTabNotes;
+
+  /// ユーザーページのタブ: 返信
+  ///
+  /// In ja, this message translates to:
+  /// **'返信'**
+  String get usersPageTabReplies;
+
+  /// ユーザーページのタブ: 引用した投稿
+  ///
+  /// In ja, this message translates to:
+  /// **'引用'**
+  String get usersPageTabQuotes;
+
+  /// ユーザーページのタブ: 画像・動画の付いた投稿
+  ///
+  /// In ja, this message translates to:
+  /// **'メディア'**
+  String get usersPageTabMedia;
+
+  /// ユーザーページのタブ: 公開クリップと Play(Misskey の機能の名前)
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ/Play'**
+  String get usersPageTabClips;
+
+  /// ユーザーページで、凍結中 / ブロック中などのため中身を隠しているとき
+  ///
+  /// In ja, this message translates to:
+  /// **'制限されたユーザーです'**
+  String get usersRestrictedTitle;
+
+  /// 上の補足。「表示」はプロフィールの欄のボタンの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「表示」を押すと内容を表示します'**
+  String get usersRestrictedHint;
+
+  /// ユーザーページの「…」のメニューの項目
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピー'**
+  String get usersMenuCopyLink;
+
+  /// ユーザーページのメニューの項目: RASQ のリストにこの人を入れる
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ リストに追加'**
+  String get usersMenuAddToRasqList;
+
+  /// ユーザーページのメニューの項目: この人のサーバーの情報を開く
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバー情報'**
+  String get usersMenuServerInfo;
+
+  /// ユーザーページのメニューの項目
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュート解除'**
+  String get usersMenuUnmute;
+
+  /// ユーザーページのメニューの項目
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュート'**
+  String get usersMenuMute;
+
+  /// ユーザーページのメニューの項目
+  ///
+  /// In ja, this message translates to:
+  /// **'ブロック解除'**
+  String get usersMenuUnblock;
+
+  /// ユーザーページのメニューの項目、およびブロックの確認のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ブロック'**
+  String get usersMenuBlock;
+
+  /// ユーザーページのメニューの項目、および報告の確認のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'報告'**
+  String get usersMenuReport;
+
+  /// ユーザーのブロックの確認の見出し。name はその人の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} をブロックしますか？'**
+  String usersBlockConfirmTitle(String name);
+
+  /// ユーザーのブロックの確認の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'相手からのフォロー・リアクション・返信が届かなくなります。'**
+  String get usersBlockConfirmMessage;
+
+  /// 確認のダイアログのやめるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get usersCancel;
+
+  /// ユーザーの報告の確認の見出し。name はその人の表示名
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を報告しますか？'**
+  String usersReportConfirmTitle(String name);
+
+  /// ユーザーの報告の確認の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバー管理者に報告します。'**
+  String get usersReportConfirmMessage;
+
+  /// ユーザーページのタブの投稿が無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿はありません'**
+  String get usersPostsEmpty;
+
+  /// ユーザーページで、プロフィールに固定(ピン留め)された投稿の上に付ける印
+  ///
+  /// In ja, this message translates to:
+  /// **'ピン留め'**
+  String get usersPinnedBadge;
+
+  /// クリップ/Play のタブで、SNS がクリップにも Play にも対応していないときの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ / Play'**
+  String get usersClipsUnsupportedTitle;
+
+  /// 上の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'この SNS はクリップ・Play に対応していません'**
+  String get usersClipsUnsupportedHint;
+
+  /// クリップ/Play のタブで、公開されたクリップも Play も無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'公開クリップ・Play はありません'**
+  String get usersClipsEmpty;
+
+  /// クリップ/Play のタブの節の見出し(公開クリップの一覧)
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ'**
+  String get usersClipsHeader;
+
+  /// 公開クリップの行の補足の、クリップに入っている投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}件}}'**
+  String usersClipNoteCount(int count);
+
+  /// 公開クリップの行の補足で、投稿の数とクリップの説明のあいだに入れる区切り
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get usersClipSubtitleSeparator;
+
+  /// ユーザーページで、ユーザーが見つからない(404 など)とき
+  ///
+  /// In ja, this message translates to:
+  /// **'このユーザーは存在しないようです。'**
+  String get usersNotFound;
 
   /// VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)
   ///

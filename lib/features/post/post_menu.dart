@@ -10,6 +10,7 @@ import 'package:rasq_store/rasq_store.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../backend/rasq_account_page_api.dart';
+import '../../l10n/l10n.dart';
 import '../clips/clip_picker.dart';
 import '../home/action_bar_edit_sheet.dart';
 import '../home/timeline_providers.dart';
@@ -30,11 +31,12 @@ import 'share_fow.dart';
 /// 全画面表示のボタンからは渡さない(暗いビューワーの上の、ボタンから離れたメニューのまま)。
 Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect anchor, {MediaItem? media, PostMenuPin? pin, Widget? tetherIcon}) async {
   final manager = ref.read(overlayManagerProvider);
+  final l10n = context.l10n;
   // RASQ の投稿 (D-276。全画面表示の … から来る): SNS の操作は効かないので、保存とリンクだけ。
   if (isRasqPost(post)) {
     final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, tetherAnchorChild: tetherIcon, items: [
       if (media != null && isSavableMedia(media)) RasqDropdownItem(saveMediaLabel(media), 'saveImage'),
-      const RasqDropdownItem('リンクをコピー', 'copy'),
+      RasqDropdownItem(l10n.postMenuCopyLink, 'copy'),
     ]);
     if (pick == 'saveImage' && media != null) await saveMediaImage(ref, media);
     if (pick == 'copy') await Clipboard.setData(ClipboardData(text: '${post.url ?? media?.url ?? ''}'));
@@ -51,8 +53,8 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   final loggedIn = (ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[]).any((x) => accountServes(x.account, post.account.kind.name, post.account.instance));
   if (pin != null && (s == null || viewer == null || !loggedIn)) {
     final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, tetherAnchorChild: tetherIcon, items: [
-      const RasqDropdownItem('リンクをコピー', 'copy'),
-      RasqDropdownItem(pin.pinned ? '固定を外す' : '固定する', 'pin'),
+      RasqDropdownItem(l10n.postMenuCopyLink, 'copy'),
+      RasqDropdownItem(pin.pinned ? l10n.postMenuUnpin : l10n.postMenuPin, 'pin'),
     ]);
     if (pick == 'copy' && post.url != null) await Clipboard.setData(ClipboardData(text: '${post.url}'));
     if (pick == 'pin') await pin.toggle();
@@ -65,18 +67,18 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   final fav = ref.read(actionStateProvider.notifier).of(post.key, 'favorite');
 
   final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, tetherAnchorChild: tetherIcon, items: [
-    if (media == null) const RasqDropdownItem('詳細', 'detail') else if (isSavableMedia(media)) RasqDropdownItem(saveMediaLabel(media), 'saveImage'),
-    const RasqDropdownItem('リンクをコピー', 'copy'),
-    const RasqDropdownItem('共有', 'share'),
-    const RasqDropdownItem('アクションバーを編集', 'editActions'),
-    RasqDropdownItem(fav.done ? 'お気に入り解除' : 'お気に入り', 'favorite'),
-    const RasqDropdownItem('クリップに追加', 'clip'),
-    if (pin != null) RasqDropdownItem(pin.pinned ? '固定を外す' : '固定する', 'pin'),
-    if (!isMine) RasqDropdownItem(st.following ? 'フォロー解除' : 'フォロー', 'follow'),
-    if (!isMine) RasqDropdownItem(st.muted ? 'ミュート解除' : 'ミュート', 'mute', accent: true),
-    if (!isMine) RasqDropdownItem(st.blocked ? 'ブロック解除' : 'ブロック', 'block', destructive: true),
-    if (!isMine) const RasqDropdownItem('報告', 'report', destructive: true),
-    if (isMine) const RasqDropdownItem('削除', 'delete', destructive: true),
+    if (media == null) RasqDropdownItem(l10n.postMenuDetail, 'detail') else if (isSavableMedia(media)) RasqDropdownItem(saveMediaLabel(media), 'saveImage'),
+    RasqDropdownItem(l10n.postMenuCopyLink, 'copy'),
+    RasqDropdownItem(l10n.postMenuShare, 'share'),
+    RasqDropdownItem(l10n.postMenuEditActionBar, 'editActions'),
+    RasqDropdownItem(fav.done ? l10n.postMenuUnfavorite : l10n.postMenuFavorite, 'favorite'),
+    RasqDropdownItem(l10n.postMenuAddToClip, 'clip'),
+    if (pin != null) RasqDropdownItem(pin.pinned ? l10n.postMenuUnpin : l10n.postMenuPin, 'pin'),
+    if (!isMine) RasqDropdownItem(st.following ? l10n.postMenuUnfollow : l10n.postMenuFollow, 'follow'),
+    if (!isMine) RasqDropdownItem(st.muted ? l10n.postMenuUnmute : l10n.postMenuMute, 'mute', accent: true),
+    if (!isMine) RasqDropdownItem(st.blocked ? l10n.postMenuUnblock : l10n.postMenuBlock, 'block', destructive: true),
+    if (!isMine) RasqDropdownItem(l10n.postMenuReport, 'report', destructive: true),
+    if (isMine) RasqDropdownItem(l10n.postMenuDelete, 'delete', destructive: true),
   ]);
   if (pick == null || !context.mounted) return;
   final store = ref.read(followStateProvider.notifier);
@@ -105,13 +107,13 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
     case 'mute':
       store.apply(viewer.key, userKey, await s.setMuted(post.author.id, !st.muted));
     case 'block':
-      final ok = st.blocked || await manager.showAlert(id: 'post.block', title: '${post.author.displayName} をブロックしますか？', confirmText: 'ブロック', cancelText: 'キャンセル', destructive: true);
+      final ok = st.blocked || await manager.showAlert(id: 'post.block', title: l10n.postBlockConfirmTitle(post.author.displayName), confirmText: l10n.postMenuBlock, cancelText: l10n.postCancel, destructive: true);
       if (ok) store.apply(viewer.key, userKey, await s.setBlocked(post.author.id, !st.blocked));
     case 'report':
-      final ok = await manager.showAlert(id: 'post.report', title: 'この投稿を報告しますか？', message: 'サーバー管理者に報告します。', confirmText: '報告', cancelText: 'キャンセル', destructive: true);
+      final ok = await manager.showAlert(id: 'post.report', title: l10n.postReportConfirmTitle, message: l10n.postReportConfirmMessage, confirmText: l10n.postMenuReport, cancelText: l10n.postCancel, destructive: true);
       if (ok) await s.reportUser(post.author.id, 'Note: ${post.url ?? post.id}');
     case 'delete':
-      final ok = await manager.showAlert(id: 'post.delete', title: '投稿を削除しますか？', message: 'この操作は取り消せません。', confirmText: '削除', cancelText: 'キャンセル', destructive: true);
+      final ok = await manager.showAlert(id: 'post.delete', title: l10n.postDeleteConfirmTitle, message: l10n.postDeleteConfirmMessage, confirmText: l10n.postMenuDelete, cancelText: l10n.postCancel, destructive: true);
       if (ok) {
         await s.deletePost(post.id);
         await ref.read(timelineProvider(TimelineKind.home).notifier).refresh();
@@ -126,7 +128,10 @@ typedef PostMenuPin = ({bool pinned, Future<void> Function() toggle});
 bool isSavableMedia(MediaItem m) => m.type == MediaType.image || m.type == MediaType.gif || m.type == MediaType.video;
 
 /// メニューの文言(「画像を保存」/「動画を保存」)。
-String saveMediaLabel(MediaItem m) => m.type == MediaType.video ? '動画を保存' : '画像を保存';
+String saveMediaLabel(MediaItem m) => appL10n.postSaveMediaLabel(_mediaKind(m));
+
+/// 文言の select に渡す添付の種類(`video` / `image`)。
+String _mediaKind(MediaItem m) => m.type == MediaType.video ? 'video' : 'image';
 
 /// 保存先を選ぶシートの id (D-334)。
 const mediaSaveAskId = 'media.save.ask';
@@ -135,28 +140,29 @@ const mediaSaveAskId = 'media.save.ask';
 /// シートで選ぶ(「次からもこの保存先にする」で設定に残せる)。選べる先が 1 つだけの端末では聞かない。
 Future<void> saveMediaImage(WidgetRef ref, MediaItem media) async {
   final messenger = ref.read(rootMessengerKeyProvider).currentState;
-  final what = media.type == MediaType.video ? '動画' : '画像';
+  final l10n = appL10n;
+  final kind = _mediaKind(media);
   var dest = resolveMediaSaveDestination(ref.read(mediaSaveDestinationProvider), ref.read(mediaSaveDestinationsHereProvider));
   if (dest == null) {
     final manager = ref.read(overlayManagerProvider);
     var remember = false;
     dest = await manager.showBottomSheet<MediaSaveDestination>(
       id: mediaSaveAskId,
-      title: '$whatの保存先',
+      title: l10n.postSaveDestinationTitle(kind),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => Column(mainAxisSize: MainAxisSize.min, children: [
           for (final d in ref.read(mediaSaveDestinationsHereProvider))
             RasqListTile(
               key: ValueKey('media.save.${d.name}'),
               title: d.label,
-              subtitle: d == MediaSaveDestination.photos ? 'アルバム「RASQ」に入ります' : (Theme.of(ctx).platform == TargetPlatform.iOS ? '「ファイル」App の このiPad(このiPhone)› RASQ › 保存' : '保存する場所を選びます'),
+              subtitle: d == MediaSaveDestination.photos ? l10n.postSaveToPhotosSubtitle : (Theme.of(ctx).platform == TargetPlatform.iOS ? l10n.postSaveToFilesIosSubtitle : l10n.postSaveToFilesSubtitle),
               leading: Icon(d == MediaSaveDestination.photos ? Icons.photo_library_outlined : Icons.folder_outlined),
               onTap: () async {
                 if (remember) await ref.read(settingsAreaProvider(mediaSaveSettingsArea).notifier).set('destination', d.name);
                 manager.close(mediaSaveAskId, result: d);
               },
             ),
-          RasqSwitchListTile(key: const ValueKey('media.save.remember'), title: '次からもこの保存先にする', subtitle: '設定 → アプリの外観 →「画像・動画の保存先」で変えられます', value: remember, onChanged: (v) => setState(() => remember = v)),
+          RasqSwitchListTile(key: const ValueKey('media.save.remember'), title: l10n.postSaveRememberTitle, subtitle: l10n.postSaveRememberSubtitle, value: remember, onChanged: (v) => setState(() => remember = v)),
         ]),
       ),
     );
@@ -166,6 +172,6 @@ Future<void> saveMediaImage(WidgetRef ref, MediaItem media) async {
     final message = await ref.read(imageSaverProvider)(media, dest);
     if (message != null) messenger?.showSnackBar(SnackBar(content: Text(message)));
   } catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text('$whatを保存できませんでした: $e')));
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.postSaveFailed(kind, e is StateError ? e.message : '$e'))));
   }
 }

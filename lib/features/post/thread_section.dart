@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../relational/relational_engine.dart';
 
@@ -9,29 +10,42 @@ import '../relational/relational_engine.dart';
 /// 関連順/キーワード順は SigLIP / GLiNER 配線までは関連TLと同じ
 /// ルールベース近似(擬似 cos / 特徴語一致)で並べる。
 enum ThreadSortOrder {
-  relevance('関連順'),
-  reactions('リアクション数'),
-  keyword('キーワード順'),
-  none('デフォルト');
+  relevance,
+  reactions,
+  keyword,
+  none;
 
-  const ThreadSortOrder(this.label);
-  final String label;
+  /// 表示の名前(表示の言語)。
+  String get label => switch (this) {
+        relevance => appL10n.postThreadSortRelevance,
+        reactions => appL10n.postThreadSortReactions,
+        keyword => appL10n.postThreadSortKeyword,
+        none => appL10n.postThreadSortDefault,
+      };
 }
 
 /// 返信欄に表示する種類 (D-070、長押しで切り替え)。
 enum ThreadSectionMode {
-  renotes('引用(リノート)', '引用'),
-  replies('返信', '返信'),
-  reactions('リアクション', 'リアクション'), // Misskey のみ表示
-  quotes('共有(引用ノート)', '共有');
+  renotes,
+  replies,
+  reactions, // Misskey のみ表示
+  quotes;
 
-  const ThreadSectionMode(this.label, this.shortLabel);
+  /// 長押しメニューの表記(表示の言語)。
+  String get label => switch (this) {
+        renotes => appL10n.postThreadModeRenotes,
+        replies => appL10n.postThreadModeReplies,
+        reactions => appL10n.postThreadModeReactions,
+        quotes => appL10n.postThreadModeQuotes,
+      };
 
-  /// 長押しメニューの表記。
-  final String label;
-
-  /// 欄ヘッダーの表記。
-  final String shortLabel;
+  /// 欄ヘッダーの表記(表示の言語)。
+  String get shortLabel => switch (this) {
+        renotes => appL10n.postThreadModeRenotesShort,
+        replies => appL10n.postThreadModeRepliesShort,
+        reactions => appL10n.postThreadModeReactionsShort,
+        quotes => appL10n.postThreadModeQuotesShort,
+      };
 }
 
 List<T> _sortByScore<T>(List<T> items, double Function(T) score) {

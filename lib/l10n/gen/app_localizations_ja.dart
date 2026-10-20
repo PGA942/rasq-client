@@ -7204,6 +7204,303 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pluginsPaintNibBrush => 'ブラシニブ';
 
   @override
+  String get postThreadSortRelevance => '関連順';
+
+  @override
+  String get postThreadSortReactions => 'リアクション数';
+
+  @override
+  String get postThreadSortKeyword => 'キーワード順';
+
+  @override
+  String get postThreadSortDefault => 'デフォルト';
+
+  @override
+  String get postThreadModeRenotes => '引用(リノート)';
+
+  @override
+  String get postThreadModeRenotesShort => '引用';
+
+  @override
+  String get postThreadModeReplies => '返信';
+
+  @override
+  String get postThreadModeRepliesShort => '返信';
+
+  @override
+  String get postThreadModeReactions => 'リアクション';
+
+  @override
+  String get postThreadModeReactionsShort => 'リアクション';
+
+  @override
+  String get postThreadModeQuotes => '共有(引用ノート)';
+
+  @override
+  String get postThreadModeQuotesShort => '共有';
+
+  @override
+  String get postBookmarkClipTooltip => 'クリップに追加(長押し)';
+
+  @override
+  String get postBookmarkRemoveTooltip => 'ブックマークを外す(長押しでクリップへ)';
+
+  @override
+  String get postBookmarkAddTooltip => 'ブックマーク(長押しでクリップへ)';
+
+  @override
+  String get postBookmarkUnsupported => 'このサービスにはブックマークがありません。長押しでクリップに追加できます';
+
+  @override
+  String get postBookmarkRemoved => 'ブックマークを外しました';
+
+  @override
+  String get postBookmarkAdded => 'ブックマークしました';
+
+  @override
+  String postBookmarkError(String error) {
+    return 'ブックマークできませんでした: $error';
+  }
+
+  @override
+  String get postReactionsTitle => 'リアクション';
+
+  @override
+  String get postReactionsTabReplies => '返信';
+
+  @override
+  String get postReactionsTabQuotes => '引用';
+
+  @override
+  String get postReactionsTabReactions => 'リアクション';
+
+  @override
+  String get postReactionsTabShares => '共有';
+
+  @override
+  String get postReactionsBookmarkTooltip => 'ブックマーク';
+
+  @override
+  String get postRepliesEmpty => '返信はありません';
+
+  @override
+  String get postQuotesEmpty => '引用ノートはありません';
+
+  @override
+  String get postRepostersEmpty => 'リノート・引用はありません';
+
+  @override
+  String get postReactionsEmpty => 'リアクションはありません';
+
+  @override
+  String get postReactionsMine => 'あなた';
+
+  @override
+  String postDetailNotFoundOnAccount(String account) {
+    return '$account ではこの投稿を見つけられませんでした';
+  }
+
+  @override
+  String get postDetailTitle => '投稿';
+
+  @override
+  String get postDetailOpenedAccount => '開いたアカウント';
+
+  @override
+  String get postDetailNotFound => '投稿はありません';
+
+  @override
+  String get postReload => '再読み込み';
+
+  @override
+  String get postDetailShowReactions => 'リアクションを表示';
+
+  @override
+  String get postDetailShowMore => 'さらに表示';
+
+  @override
+  String get postRenotesEmpty => 'リノートはありません';
+
+  @override
+  String get postShareAccountTooltip => '共有に使うアカウント';
+
+  @override
+  String get postShareAccountFixedTooltip => '受け取ったアカウントだけで共有できます';
+
+  @override
+  String get postShareSemantics => '共有';
+
+  @override
+  String get postShareContentCopied => '内容をコピーしました';
+
+  @override
+  String get postShareLinkCopied => 'リンクをコピーしました';
+
+  @override
+  String get postShareDmTitle => 'DM へ共有';
+
+  @override
+  String get postShareClose => '閉じる';
+
+  @override
+  String get postShareDmNoRooms => 'DM の相手がいません';
+
+  @override
+  String postShareAstellShared(String room) {
+    return '「$room」に共有しました';
+  }
+
+  @override
+  String get postShareCopyContent => '内容をコピー';
+
+  @override
+  String get postShareCopyLink => 'リンクをコピー';
+
+  @override
+  String get postShareOtherAccount => '他のアカウントで共有';
+
+  @override
+  String get postSharePluginsHeader => 'プラグインに共有';
+
+  @override
+  String get postShareAstellTitle => 'ASTell に共有';
+
+  @override
+  String postShareAstellSubtitle(String room) {
+    return '参加中のルーム「$room」へ投稿を流す';
+  }
+
+  @override
+  String get postSharePluginsEmpty => '共有に対応したプラグインがここに並びます';
+
+  @override
+  String get postSharePluginsEmptyDetail =>
+      'post.share を宣言したプラグイン(と参加中の ASTell)がここに並びます';
+
+  @override
+  String get postShareOtherHeader => 'その他';
+
+  @override
+  String get postShareDmSubtitle => '選んだアカウントの DM にリンクを送る';
+
+  @override
+  String get postShareOpenBrowser => 'ブラウザで開く';
+
+  @override
+  String get postMenuCopyLink => 'リンクをコピー';
+
+  @override
+  String get postMenuUnpin => '固定を外す';
+
+  @override
+  String get postMenuPin => '固定する';
+
+  @override
+  String get postMenuDetail => '詳細';
+
+  @override
+  String get postMenuShare => '共有';
+
+  @override
+  String get postMenuEditActionBar => 'アクションバーを編集';
+
+  @override
+  String get postMenuUnfavorite => 'お気に入り解除';
+
+  @override
+  String get postMenuFavorite => 'お気に入り';
+
+  @override
+  String get postMenuAddToClip => 'クリップに追加';
+
+  @override
+  String get postMenuUnfollow => 'フォロー解除';
+
+  @override
+  String get postMenuFollow => 'フォロー';
+
+  @override
+  String get postMenuUnmute => 'ミュート解除';
+
+  @override
+  String get postMenuMute => 'ミュート';
+
+  @override
+  String get postMenuUnblock => 'ブロック解除';
+
+  @override
+  String get postMenuBlock => 'ブロック';
+
+  @override
+  String get postMenuReport => '報告';
+
+  @override
+  String get postMenuDelete => '削除';
+
+  @override
+  String postBlockConfirmTitle(String name) {
+    return '$name をブロックしますか？';
+  }
+
+  @override
+  String get postCancel => 'キャンセル';
+
+  @override
+  String get postReportConfirmTitle => 'この投稿を報告しますか？';
+
+  @override
+  String get postReportConfirmMessage => 'サーバー管理者に報告します。';
+
+  @override
+  String get postDeleteConfirmTitle => '投稿を削除しますか？';
+
+  @override
+  String get postDeleteConfirmMessage => 'この操作は取り消せません。';
+
+  @override
+  String postSaveMediaLabel(String kind) {
+    String _temp0 = intl.Intl.selectLogic(kind, {
+      'video': '動画を保存',
+      'other': '画像を保存',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String postSaveDestinationTitle(String kind) {
+    String _temp0 = intl.Intl.selectLogic(kind, {
+      'video': '動画の保存先',
+      'other': '画像の保存先',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get postSaveToPhotosSubtitle => 'アルバム「RASQ」に入ります';
+
+  @override
+  String get postSaveToFilesIosSubtitle =>
+      '「ファイル」App の このiPad(このiPhone)› RASQ › 保存';
+
+  @override
+  String get postSaveToFilesSubtitle => '保存する場所を選びます';
+
+  @override
+  String get postSaveRememberTitle => '次からもこの保存先にする';
+
+  @override
+  String get postSaveRememberSubtitle => '設定 → アプリの外観 →「画像・動画の保存先」で変えられます';
+
+  @override
+  String postSaveFailed(String kind, String error) {
+    String _temp0 = intl.Intl.selectLogic(kind, {
+      'video': '動画を保存できませんでした: $error',
+      'other': '画像を保存できませんでした: $error',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get profileEditTitle => 'プロフィールの更新';
 
   @override
@@ -15175,6 +15472,149 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get userPageViewEmptyHint => 'タブをもう一度押して、表示の設定を変えるかリセットしてください';
+
+  @override
+  String get usersImageViewerBack => '戻る';
+
+  @override
+  String get usersFollowRequestsTabRelevance => '関連性';
+
+  @override
+  String get usersFollowRequestsTabFollowing => 'フォロー中';
+
+  @override
+  String get usersFollowRequestsTabOther => 'その他';
+
+  @override
+  String get usersFollowRequestsTitle => 'フォロー申請';
+
+  @override
+  String get usersReload => '再読み込み';
+
+  @override
+  String get usersFollowRequestsEmpty => 'フォロー申請はありません';
+
+  @override
+  String get usersFollowRequestsEmptyOther => 'なし';
+
+  @override
+  String get usersFollowRequestAccept => '許可';
+
+  @override
+  String get usersFollowRequestReject => '拒否';
+
+  @override
+  String get usersFollowsTabFollowing => 'フォロー中';
+
+  @override
+  String get usersFollowsTabFollowers => 'フォロワー';
+
+  @override
+  String get usersFollowsTitle => 'フォロー/フォロワー';
+
+  @override
+  String get usersFollowersEmpty => 'フォロワーはいません';
+
+  @override
+  String get usersFollowingEmpty => 'フォロー中のユーザーはいません';
+
+  @override
+  String get usersPageTabNotes => 'ノート';
+
+  @override
+  String get usersPageTabReplies => '返信';
+
+  @override
+  String get usersPageTabQuotes => '引用';
+
+  @override
+  String get usersPageTabMedia => 'メディア';
+
+  @override
+  String get usersPageTabClips => 'クリップ/Play';
+
+  @override
+  String get usersRestrictedTitle => '制限されたユーザーです';
+
+  @override
+  String get usersRestrictedHint => '「表示」を押すと内容を表示します';
+
+  @override
+  String get usersMenuCopyLink => 'リンクをコピー';
+
+  @override
+  String get usersMenuAddToRasqList => 'RASQ リストに追加';
+
+  @override
+  String get usersMenuServerInfo => 'サーバー情報';
+
+  @override
+  String get usersMenuUnmute => 'ミュート解除';
+
+  @override
+  String get usersMenuMute => 'ミュート';
+
+  @override
+  String get usersMenuUnblock => 'ブロック解除';
+
+  @override
+  String get usersMenuBlock => 'ブロック';
+
+  @override
+  String get usersMenuReport => '報告';
+
+  @override
+  String usersBlockConfirmTitle(String name) {
+    return '$name をブロックしますか？';
+  }
+
+  @override
+  String get usersBlockConfirmMessage => '相手からのフォロー・リアクション・返信が届かなくなります。';
+
+  @override
+  String get usersCancel => 'キャンセル';
+
+  @override
+  String usersReportConfirmTitle(String name) {
+    return '$name を報告しますか？';
+  }
+
+  @override
+  String get usersReportConfirmMessage => 'サーバー管理者に報告します。';
+
+  @override
+  String get usersPostsEmpty => '投稿はありません';
+
+  @override
+  String get usersPinnedBadge => 'ピン留め';
+
+  @override
+  String get usersClipsUnsupportedTitle => 'クリップ / Play';
+
+  @override
+  String get usersClipsUnsupportedHint => 'この SNS はクリップ・Play に対応していません';
+
+  @override
+  String get usersClipsEmpty => '公開クリップ・Play はありません';
+
+  @override
+  String get usersClipsHeader => 'クリップ';
+
+  @override
+  String usersClipNoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get usersClipSubtitleSeparator => ' ・ ';
+
+  @override
+  String get usersNotFound => 'このユーザーは存在しないようです。';
 
   @override
   String get vcSectionInvited => '招待';
