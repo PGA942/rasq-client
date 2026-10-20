@@ -1,0 +1,15 @@
+{
+  "@@locale": "zh_Hant",
+  "serversOpen": "開啟伺服器",
+  "serversUsers": "{count} 位使用者",
+  "serversPosts": "{count} 則貼文",
+  "serversRegistrationOpen": "開放註冊",
+  "serversRegistrationClosed": "邀請制 / 停止註冊",
+  "serversStatsSeparator": " · ",
+  "serversRaiTitle": "RAi 分析的使用者傾向",
+  "serversRaiSource": "{count, plural, other{由雲端版 RAi 根據 {count} 則公開貼文整理}}",
+  "serversInfoTitle": "伺服器資訊",
+  "serversInfoUnavailable": "{host} 未提供伺服器資訊（可能是沒有實例的服務，或無法取得）",
+  "serversCountHundredMillions": "{value}億",
+  "serversCountTenThousands": "{value}萬"
+}

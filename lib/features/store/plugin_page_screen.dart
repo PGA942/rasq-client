@@ -539,7 +539,7 @@ class _StatBlock extends StatelessWidget {
       );
 }
 
-String _formatDownloads(int n) => n >= 10000 ? appL10n.storeDownloadsTenThousands((n / 10000).toStringAsFixed(1)) : '$n';
+String _formatDownloads(int n) => n >= 10000 ? compactCountOrNull(n) ?? appL10n.storeDownloadsTenThousands((n / 10000).toStringAsFixed(1)) : '$n';
 
 /// ストアのブックマーク (D-033 `/me/bookmarks`)。RASQ アカウントに紐づく
 /// サーバー側の状態なので、接続していないときは出さない。

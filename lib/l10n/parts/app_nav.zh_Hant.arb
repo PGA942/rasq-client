@@ -1,0 +1,13 @@
+{
+  "@@locale": "zh_Hant",
+  "appNavPostTitle": "貼文",
+  "appNavReactionsTitle": "回應",
+  "appNavFollowersTitle": "追蹤者",
+  "appNavFollowingTitle": "追蹤中",
+  "appNavShortcutSearch": "搜尋",
+  "appNavShortcutNewPost": "發文",
+  "appNavShortcutNewMessage": "撰寫訊息",
+  "appNavShortcutAskRai": "和 RAi 一起找",
+  "appNavShortcutGuardianPending": "在監護人完成設定之前無法使用",
+  "appNavShortcutLoginHint": "登入 SNS 帳號後即可使用"
+}

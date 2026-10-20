@@ -1,0 +1,13 @@
+{
+  "@@locale": "zh",
+  "appNavPostTitle": "帖子",
+  "appNavReactionsTitle": "回应",
+  "appNavFollowersTitle": "关注者",
+  "appNavFollowingTitle": "关注中",
+  "appNavShortcutSearch": "搜索",
+  "appNavShortcutNewPost": "发帖",
+  "appNavShortcutNewMessage": "写消息",
+  "appNavShortcutAskRai": "和 RAi 一起找",
+  "appNavShortcutGuardianPending": "在监护人完成设置之前无法使用",
+  "appNavShortcutLoginHint": "登录 SNS 账号后即可使用"
+}

@@ -1,0 +1,9 @@
+{
+  "@@locale": "zh",
+  "adsShowLess": "减少显示频率",
+  "adsShowLessDone": "已减少此广告的显示频率",
+  "adsLabel": "广告",
+  "adsLabelWithHost": "广告 · {host}",
+  "adsMenu": "广告菜单",
+  "adsOpen": "打开广告"
+}

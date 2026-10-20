@@ -1,0 +1,15 @@
+{
+  "@@locale": "zh",
+  "serversOpen": "打开服务器",
+  "serversUsers": "{count} 位用户",
+  "serversPosts": "{count} 条帖子",
+  "serversRegistrationOpen": "开放注册",
+  "serversRegistrationClosed": "邀请制 / 停止注册",
+  "serversStatsSeparator": " · ",
+  "serversRaiTitle": "RAi 分析的用户倾向",
+  "serversRaiSource": "{count, plural, other{由云端版 RAi 根据 {count} 条公开帖子整理}}",
+  "serversInfoTitle": "服务器信息",
+  "serversInfoUnavailable": "{host} 未提供服务器信息（可能是没有实例的服务，或无法获取）",
+  "serversCountHundredMillions": "{value}亿",
+  "serversCountTenThousands": "{value}万"
+}

@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "composePolicyTypeSexual": "Sexual content",
+  "composePolicyTypeViolence": "Violence / threats",
+  "composePolicyTypeSelfHarm": "Self-harm / suicide",
+  "composePolicyTypeHarassment": "Abuse / harassment",
+  "composePolicyTypePersonalInfo": "Personal information (phone numbers, email addresses, home addresses, etc.)",
+  "composePolicyTypeLink": "External links",
+  "composePolicyTypeMedia": "Images / videos",
+  "composePolicyTypeStimulus": "Strong language",
+  "composePolicyTypeTopic": "Restricted topics",
+  "composePolicyWhoGuardian": "Guardian settings",
+  "composePolicyWhoSanction": "Account restrictions",
+  "composePolicyBlockedMediaUnmeasured": "Due to {who}, images and videos can't be sent (this device can't check attachments). Please remove the attachments",
+  "composePolicyBlockedUnmeasured": "Due to {who}, this can't be sent right now (this device can't check for \"{label}\")",
+  "composePolicyBlocked": "Due to {who}, content containing \"{label}\" can't be sent. Please revise it",
+  "composePolicyWarn": "This may contain \"{label}\" ({who}). Send anyway?"
+}

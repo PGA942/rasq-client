@@ -1,0 +1,21 @@
+{
+  "@@locale": "zh_Hant",
+  "settingsEmomTitle": "EmoM 閾值",
+  "settingsEmomBandLow": "保守 — 更早隱藏被營運方限制的趨勢",
+  "settingsEmomBandMiddle": "普通",
+  "settingsEmomBandHigh": "寬鬆 — 僅隱藏被營運方嚴格限制的趨勢",
+  "settingsEmomStatusSending": "正在傳送…",
+  "settingsEmomStatusNoAccount": "使用 RASQ 帳號登入後即可公開（在此裝置上仍可使用）",
+  "settingsEmomStatusFailed": "傳送失敗。下次開啟時（或重新載入趨勢時）將重新傳送",
+  "settingsEmomStatusDisclosed": "已公開（值 {value}）",
+  "settingsEmomStatusPending": "尚未送達",
+  "settingsEmomStatusNotDisclosed": "未公開",
+  "settingsEmomIntro": "EmoM 是 RASQ 用於估算貼文與趨勢的情緒強度與刺激強度的模型（準備中）。目前，此閾值僅在 RASQ 營運方核實檢舉並限制趨勢時作為參考。",
+  "settingsEmomThresholdLabel": "閾值",
+  "settingsEmomScaleLow": "低（更容易隱藏）",
+  "settingsEmomScaleHigh": "高（不易隱藏）",
+  "settingsEmomExplanation": "閾值越高，越能接受刺激性強的話題，被營運方限制的趨勢越不容易被隱藏。閾值越低，越早隱藏被限制的趨勢。預設值為 {defaultValue}。",
+  "settingsEmomDiscloseTitle": "公開閾值（用作限制的參考）",
+  "settingsEmomDiscloseSubtitle": "僅將數值傳送到 RASQ 的伺服器。營運方只使用已公開數值的彙總分布（每個數值有多少人），不會單獨查看你的數值。關閉後，將刪除已傳送的數值。",
+  "settingsEmomRestrictionExplanation": "營運方以「N%」限制某個趨勢時，已公開閾值由低到高約 N% 的人將看不到該趨勢。即使不公開，也會以此裝置上的閾值進行同樣的判定（閾值儲存在此裝置上）。被設為「對所有人隱藏」的趨勢，無論閾值為何都不會顯示。被隱藏的趨勢只是不再出現在搜尋的趨勢列表中。"
+}

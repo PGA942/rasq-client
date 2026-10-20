@@ -216,7 +216,7 @@ Color storeTileColor(StorePluginType type, ColorScheme scheme) {
   return Color.alphaBlend(base.withValues(alpha: dark ? 0.22 : 0.33), scheme.surface);
 }
 
-String formatStoreDownloads(int n) => n >= 10000 ? appL10n.storeDownloadsTenThousands((n / 10000).toStringAsFixed(1)) : '$n';
+String formatStoreDownloads(int n) => n >= 10000 ? compactCountOrNull(n) ?? appL10n.storeDownloadsTenThousands((n / 10000).toStringAsFixed(1)) : '$n';
 
 class _Icon extends StatelessWidget {
   const _Icon({required this.url, required this.type});

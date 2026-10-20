@@ -1,0 +1,13 @@
+{
+  "@@locale": "ko",
+  "appNavPostTitle": "게시물",
+  "appNavReactionsTitle": "리액션",
+  "appNavFollowersTitle": "팔로워",
+  "appNavFollowingTitle": "팔로잉",
+  "appNavShortcutSearch": "검색",
+  "appNavShortcutNewPost": "새 게시물",
+  "appNavShortcutNewMessage": "메시지 작성",
+  "appNavShortcutAskRai": "RAi와 찾기",
+  "appNavShortcutGuardianPending": "보호자가 설정을 마칠 때까지 사용할 수 없습니다",
+  "appNavShortcutLoginHint": "SNS 계정에 로그인하면 사용할 수 있습니다"
+}

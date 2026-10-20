@@ -35,6 +35,8 @@ class MisskeyPlugin extends SnsPlugin {
         verified: true,
         // 正本は rasq-client の assets/legal/plugins/rasq.official.misskey.md(tool/legal/build_legal.py で生成)。
         termsOfService: officialMisskeyTerms,
+        // 規約の参考訳(表示の言語で引く。正本は日本語、tool/legal/build_legal.py で生成)。
+        locales: officialMisskeyTermsLocales,
       );
 
   @override

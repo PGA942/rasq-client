@@ -88,7 +88,11 @@ void main() {
             for (final m in RegExp(r'^"([^"]+)" = "([^"]+)";$', multiLine: true).allMatches(File('ios/Runner/$lang.lproj/InfoPlist.strings').readAsStringSync())) m.group(1)!: m.group(2)!,
           };
       expect(strings('ja'), {for (final t in titles) t!: t});
-      expect(strings('en'), {'検索': 'Search', '新しいポスト': 'New post', 'メッセージを作成': 'New message', 'RAiと探す': 'Ask RAi'});
+      expect(strings('en'), {'検索': 'Search', '新しいポスト': 'New post', 'メッセージを作成': 'New message', 'RAiと探す': 'Search with RAi'});
+      // ほかの言語も同じキー(日本語の既定の名前)を全部訳す。
+      for (final lang in ['zh-Hans', 'zh-Hant', 'ko']) {
+        expect(strings(lang).keys.toSet(), titles.toSet(), reason: lang);
+      }
     });
   });
 

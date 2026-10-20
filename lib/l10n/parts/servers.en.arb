@@ -1,0 +1,15 @@
+{
+  "@@locale": "en",
+  "serversOpen": "Open server",
+  "serversUsers": "{count} users",
+  "serversPosts": "{count} posts",
+  "serversRegistrationOpen": "Open for registration",
+  "serversRegistrationClosed": "Invite only / closed",
+  "serversStatsSeparator": " · ",
+  "serversRaiTitle": "User tendencies by RAi",
+  "serversRaiSource": "{count, plural, =1{Summarized by cloud RAi from 1 public post} other{Summarized by cloud RAi from {count} public posts}}",
+  "serversInfoTitle": "Server info",
+  "serversInfoUnavailable": "{host} doesn't provide server info (it may be a service without instances, or it couldn't be fetched)",
+  "serversCountHundredMillions": "{value}×100M",
+  "serversCountTenThousands": "{value}×10K"
+}

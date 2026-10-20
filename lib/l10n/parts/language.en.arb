@@ -1,0 +1,11 @@
+{
+  "@@locale": "en",
+  "languageSelfName": "English",
+  "languageSettingsTitle": "Language",
+  "languageSettingsRowSubtitle": "App display language",
+  "languageSettingsCaption": "Choose the language for the app's text. If your device's language isn't supported, Japanese is shown.",
+  "languageSettingsCaptionDetail": "Choose the language for the app's text. \"Use system setting\" follows your device's language setting and falls back to Japanese for unsupported languages. The selected language is saved on this device and, if you're logged in to a RASQ account, also sent to ORGATE (language for emails and notifications, D-484).",
+  "languageSettingsSystem": "Use system setting",
+  "languageSettingsSystemCurrent": "Currently {language}",
+  "languageSettingsListHeader": "Display language"
+}

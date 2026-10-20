@@ -1,0 +1,18 @@
+{
+  "@@locale": "zh",
+  "settingsMuteBlockTitle": "静音/屏蔽",
+  "settingsMuteBlockBlockTab": "屏蔽",
+  "settingsMuteBlockMuteTab": "静音",
+  "settingsMuteBlockBlockedUsers": "已屏蔽的用户",
+  "settingsMuteBlockBlockedWords": "已屏蔽的词语",
+  "settingsMuteBlockBlockedLists": "已屏蔽的列表",
+  "settingsMuteBlockComingSoonHint": "准备中",
+  "settingsMuteBlockComingSoonDetail": "词语/列表屏蔽计划在 M2 后半期推出",
+  "settingsMuteBlockRetryButton": "重新加载",
+  "settingsMuteBlockNoBlockedUsers": "没有已屏蔽的用户",
+  "settingsMuteBlockNoMutedUsers": "没有已静音的用户",
+  "settingsMuteBlockBlockButton": "屏蔽",
+  "settingsMuteBlockMuteButton": "静音",
+  "settingsMuteBlockBlockingButton": "已屏蔽",
+  "settingsMuteBlockMutingButton": "已静音"
+}

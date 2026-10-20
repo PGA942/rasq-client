@@ -178,6 +178,8 @@ Future<void> showServerInfoFow(WidgetRef ref, String host) async {
 }
 
 String _count(int n) {
+  final compact = n >= 10000 ? compactCountOrNull(n) : null;
+  if (compact != null) return compact;
   if (n >= 100000000) return appL10n.serversCountHundredMillions((n / 100000000).toStringAsFixed(1));
   if (n >= 10000) return appL10n.serversCountTenThousands((n / 10000).toStringAsFixed(n >= 100000 ? 0 : 1));
   return '$n';

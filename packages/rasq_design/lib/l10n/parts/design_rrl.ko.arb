@@ -1,0 +1,6 @@
+{
+  "@@locale": "ko",
+  "designRrlRange": "{start}~{end}{unit}",
+  "designRrlSend": "보내기",
+  "designRrlNoAuthFlow": "{pluginId}: 로그인 절차가 구성되어 있지 않습니다(기존 토큰으로 등록만 가능)"
+}

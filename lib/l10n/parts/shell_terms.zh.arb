@@ -1,0 +1,18 @@
+{
+  "@@locale": "zh",
+  "shellTermsSheetTitle": "同意使用条款",
+  "shellTermsAgreeButton": "同意",
+  "shellTermsNotice": "要继续使用 RASQ 账号，需要同意当前的使用条款和隐私政策。在同意之前，无法使用 ASTell、购买和数据托管。",
+  "shellTermsNoticeDetail": "D-371 / S-053。在与服务器的 CENTRAL_TERMS_VERSION / CENTRAL_PRIVACY_VERSION 相同版本的同意全部记录之前，状态为“等待同意”。PUT /me/consents/{endpoints}。",
+  "shellTermsReadTermsButton": "阅读使用条款",
+  "shellTermsReadPrivacyButton": "阅读隐私政策",
+  "shellTermsAgeHeader": "年龄",
+  "shellTermsGuardianConsentCheck": "已获得监护人同意",
+  "shellTermsAgreeCheck": "我已阅读并同意使用条款和隐私政策",
+  "shellTermsVersionCaption": "版本：使用条款 {termsVersion} · 隐私政策 {privacyVersion}",
+  "shellTermsAcceptedSnack": "已同意使用条款",
+  "shellTermsOutdatedError": "使用条款已更新。请先更新应用再同意",
+  "shellTermsRecordFailedError": "无法记录同意：{error}",
+  "shellTermsBannerText": "需要同意使用条款。在同意之前，无法使用 ASTell、购买等功能。",
+  "shellTermsBannerOpenButton": "查看"
+}

@@ -1,0 +1,10 @@
+{
+  "@@locale": "ko",
+  "settingsComposerTitle": "게시물 작성기",
+  "settingsComposerAutoAccountTitle": "게시 계정 자동 선택",
+  "settingsComposerAutoAccountSubtitle": "초안에 맞는 계정으로 게시 대상을 자동 전환합니다",
+  "settingsComposerAutoAccountDetail": "초안 내용이 게시 대상 필터에 맞는 계정으로 게시 대상을 자동 전환합니다(수동 선택이 항상 우선)",
+  "settingsComposerRasqLinkedTitle": "RASQ 계정에도 연동 게시",
+  "settingsComposerRasqLinkedSubtitle": "여러 계정에 게시할 때 RASQ 계정도 선택할 수 있습니다",
+  "settingsComposerRasqLinkedDetail": "복수 선택 모드에서 RASQ 계정 행도 선택할 수 있게 됩니다(일반 게시 / 노드 연동). 전달 방식과 필터는 '게시 대상 맞춤 설정'의 RASQ 탭에서 정합니다. RASQ 제한(1000자 / 첨부 6개 / 투표 6개 / 게시물 3개)을 넘는 게시물은 RASQ로 보내지지 않습니다"
+}

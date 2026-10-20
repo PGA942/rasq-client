@@ -186,3 +186,8 @@ flutter:
     - assets/models/
     # 設定第二階層の静的 RRL ページ (D-031, rasq.settings-page/1).
     - assets/settings/
+    # 文書のページの参考訳 (D-535、tool/legal/build_legal.py。フォルダは再帰しないので言語ごとに書く)。
+    - assets/settings/en/
+    - assets/settings/zh/
+    - assets/settings/zh-Hant/
+    - assets/settings/ko/

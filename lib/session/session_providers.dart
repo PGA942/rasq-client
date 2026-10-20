@@ -55,6 +55,8 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
       official: true,
       verified: true,
       termsOfService: officialBlueskyTerms,
+      // 規約の参考訳(表示の言語で引く。正本は日本語、tool/legal/build_legal.py で生成)。
+      locales: officialBlueskyTermsLocales,
     ),
     kind: SnsKind.bluesky,
     loadBytes: () async => (await rootBundle.load('assets/plugins/bluesky_wasm.wasm')).buffer.asUint8List(),
@@ -78,6 +80,8 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
       official: true,
       verified: false,
       termsOfService: officialMixi2Terms,
+      // 規約の参考訳(表示の言語で引く。正本は日本語、tool/legal/build_legal.py で生成)。
+      locales: officialMixi2TermsLocales,
     ),
     kind: SnsKind.mixi2,
     loadBytes: () async => (await rootBundle.load('assets/plugins/mixi2_wasm.wasm')).buffer.asUint8List(),
@@ -98,6 +102,8 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
         official: true,
         verified: true,
         termsOfService: officialMastodonTerms,
+        // 規約の参考訳(表示の言語で引く。正本は日本語、tool/legal/build_legal.py で生成)。
+        locales: officialMastodonTermsLocales,
       ),
       kind: SnsKind.mastodon,
       loadBytes: () async => (await rootBundle.load('assets/plugins/mastodon_wasm.wasm')).buffer.asUint8List(),

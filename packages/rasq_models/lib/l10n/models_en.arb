@@ -1,0 +1,15 @@
+{
+  "@@locale": "en",
+  "modelsErrorFamilyHttp": "HTTP",
+  "modelsErrorFamilySettings": "Settings",
+  "modelsErrorFamilyAffectedSettings": "Affected settings",
+  "modelsErrorFamilyPluginTransfer": "Plugin data transfer",
+  "modelsErrorFamilyDataCorruption": "Data corruption",
+  "modelsErrorFamilyRegulation": "Restriction",
+  "modelsErrorFamilyReserved": "Reserved",
+  "modelsErrorTimeoutHint": "Check your internet connection",
+  "modelsErrorMethodNotAcceptableHint": "Check the plugin's issue reports",
+  "modelsErrorInternalServerErrorHint": "An error occurred on the server",
+  "modelsErrorNoTrendRequirementHint": "Change your favorite genres/directions setting",
+  "modelsErrorRelationalTimelineBrokenHint": "Reloading may fix this"
+}

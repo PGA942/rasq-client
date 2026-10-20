@@ -1,0 +1,10 @@
+{
+  "@@locale": "en",
+  "quickPickEmojiTitle": "Quick emoji",
+  "quickPickEmojiMore": "More emoji",
+  "quickPickSettingsCaption": "Long-press the reaction button or the composer's emoji button to open a panel attached to the button, showing the emoji here and your recently used emoji. Slide without lifting your finger and release on an emoji to add (insert) it. If you release without sliding, the panel stays open and you can tap to choose.",
+  "quickPickSettingsAdd": "Add emoji",
+  "quickPickSettingsReset": "Reset to default",
+  "quickPickSettingsRemove": "Remove {name}",
+  "quickPickSettingsEmpty": "No emoji. The panel will show only recently used emoji"
+}

@@ -9,7 +9,7 @@ abstract class RasqModelsLocalizations {
   final String localeName;
 
   /// 訳のある言語。
-  static const supportedLocales = <String>['ja'];
+  static const supportedLocales = <String>['ja', 'en', 'ko', 'zh', 'zh_Hant'];
 
   /// 誤りのコードの系統の名前: B(認証など、ほかに影響する設定の誤り)
   ///
@@ -113,6 +113,170 @@ class RasqModelsLocalizationsJa extends RasqModelsLocalizations {
   String get modelsErrorTimeoutHint => 'インターネット接続を確認してください';
 }
 
+/// `en` の文言(訳の無いキーは ja の文言)。
+class RasqModelsLocalizationsEn extends RasqModelsLocalizationsJa {
+  const RasqModelsLocalizationsEn([super.localeName = 'en']);
+
+  @override
+  String get modelsErrorFamilyAffectedSettings => 'Affected settings';
+
+  @override
+  String get modelsErrorFamilyDataCorruption => 'Data corruption';
+
+  @override
+  String get modelsErrorFamilyHttp => 'HTTP';
+
+  @override
+  String get modelsErrorFamilyPluginTransfer => 'Plugin data transfer';
+
+  @override
+  String get modelsErrorFamilyRegulation => 'Restriction';
+
+  @override
+  String get modelsErrorFamilyReserved => 'Reserved';
+
+  @override
+  String get modelsErrorFamilySettings => 'Settings';
+
+  @override
+  String get modelsErrorInternalServerErrorHint => 'An error occurred on the server';
+
+  @override
+  String get modelsErrorMethodNotAcceptableHint => 'Check the plugin\'s issue reports';
+
+  @override
+  String get modelsErrorNoTrendRequirementHint => 'Change your favorite genres/directions setting';
+
+  @override
+  String get modelsErrorRelationalTimelineBrokenHint => 'Reloading may fix this';
+
+  @override
+  String get modelsErrorTimeoutHint => 'Check your internet connection';
+}
+
+/// `ko` の文言(訳の無いキーは ja の文言)。
+class RasqModelsLocalizationsKo extends RasqModelsLocalizationsJa {
+  const RasqModelsLocalizationsKo([super.localeName = 'ko']);
+
+  @override
+  String get modelsErrorFamilyAffectedSettings => '영향 설정';
+
+  @override
+  String get modelsErrorFamilyDataCorruption => '데이터 손상';
+
+  @override
+  String get modelsErrorFamilyHttp => 'HTTP';
+
+  @override
+  String get modelsErrorFamilyPluginTransfer => '플러그인 간 데이터 전달';
+
+  @override
+  String get modelsErrorFamilyRegulation => '제한';
+
+  @override
+  String get modelsErrorFamilyReserved => '예약';
+
+  @override
+  String get modelsErrorFamilySettings => '설정';
+
+  @override
+  String get modelsErrorInternalServerErrorHint => '서버에서 오류가 발생했습니다';
+
+  @override
+  String get modelsErrorMethodNotAcceptableHint => '플러그인의 장애 정보를 확인해 주세요';
+
+  @override
+  String get modelsErrorNoTrendRequirementHint => '좋아하는 장르/방향 설정을 변경해 주세요';
+
+  @override
+  String get modelsErrorRelationalTimelineBrokenHint => '새로고침하면 해결될 수 있습니다';
+
+  @override
+  String get modelsErrorTimeoutHint => '인터넷 연결을 확인해 주세요';
+}
+
+/// `zh` の文言(訳の無いキーは ja の文言)。
+class RasqModelsLocalizationsZh extends RasqModelsLocalizationsJa {
+  const RasqModelsLocalizationsZh([super.localeName = 'zh']);
+
+  @override
+  String get modelsErrorFamilyAffectedSettings => '受影响的设置';
+
+  @override
+  String get modelsErrorFamilyDataCorruption => '数据损坏';
+
+  @override
+  String get modelsErrorFamilyHttp => 'HTTP';
+
+  @override
+  String get modelsErrorFamilyPluginTransfer => '插件间数据传递';
+
+  @override
+  String get modelsErrorFamilyRegulation => '限制';
+
+  @override
+  String get modelsErrorFamilyReserved => '预留';
+
+  @override
+  String get modelsErrorFamilySettings => '设置';
+
+  @override
+  String get modelsErrorInternalServerErrorHint => '服务器发生错误';
+
+  @override
+  String get modelsErrorMethodNotAcceptableHint => '请查看插件的故障信息';
+
+  @override
+  String get modelsErrorNoTrendRequirementHint => '请更改“喜欢的类型/方向”设置';
+
+  @override
+  String get modelsErrorRelationalTimelineBrokenHint => '重新加载可能会解决此问题';
+
+  @override
+  String get modelsErrorTimeoutHint => '请检查网络连接';
+}
+
+/// `zh_Hant` の文言(訳の無いキーは ja の文言)。
+class RasqModelsLocalizationsZhHant extends RasqModelsLocalizationsJa {
+  const RasqModelsLocalizationsZhHant([super.localeName = 'zh_Hant']);
+
+  @override
+  String get modelsErrorFamilyAffectedSettings => '受影響的設定';
+
+  @override
+  String get modelsErrorFamilyDataCorruption => '資料損毀';
+
+  @override
+  String get modelsErrorFamilyHttp => 'HTTP';
+
+  @override
+  String get modelsErrorFamilyPluginTransfer => '外掛間資料傳遞';
+
+  @override
+  String get modelsErrorFamilyRegulation => '限制';
+
+  @override
+  String get modelsErrorFamilyReserved => '保留';
+
+  @override
+  String get modelsErrorFamilySettings => '設定';
+
+  @override
+  String get modelsErrorInternalServerErrorHint => '伺服器發生錯誤';
+
+  @override
+  String get modelsErrorMethodNotAcceptableHint => '請查看外掛的故障資訊';
+
+  @override
+  String get modelsErrorNoTrendRequirementHint => '請變更「喜歡的類型/方向」設定';
+
+  @override
+  String get modelsErrorRelationalTimelineBrokenHint => '重新載入可能會解決此問題';
+
+  @override
+  String get modelsErrorTimeoutHint => '請檢查網路連線';
+}
+
 /// [tag](BCP-47。`ja` / `en-US` / `zh_Hant`)の文言。そのタグ → 言語だけ → `ja` の順に倒す。
 RasqModelsLocalizations lookupRasqModelsLocalizations(String tag) {
   final t = tag.replaceAll('_', '-').toLowerCase();
@@ -120,6 +284,14 @@ RasqModelsLocalizations lookupRasqModelsLocalizations(String tag) {
     switch (c) {
       case 'ja':
         return const RasqModelsLocalizationsJa();
+      case 'en':
+        return const RasqModelsLocalizationsEn();
+      case 'ko':
+        return const RasqModelsLocalizationsKo();
+      case 'zh':
+        return const RasqModelsLocalizationsZh();
+      case 'zh-hant':
+        return const RasqModelsLocalizationsZhHant();
     }
   }
   return const RasqModelsLocalizationsJa();

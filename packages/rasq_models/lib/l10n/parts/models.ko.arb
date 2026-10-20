@@ -1,0 +1,15 @@
+{
+  "@@locale": "ko",
+  "modelsErrorFamilyHttp": "HTTP",
+  "modelsErrorFamilySettings": "설정",
+  "modelsErrorFamilyAffectedSettings": "영향 설정",
+  "modelsErrorFamilyPluginTransfer": "플러그인 간 데이터 전달",
+  "modelsErrorFamilyDataCorruption": "데이터 손상",
+  "modelsErrorFamilyRegulation": "제한",
+  "modelsErrorFamilyReserved": "예약",
+  "modelsErrorTimeoutHint": "인터넷 연결을 확인해 주세요",
+  "modelsErrorMethodNotAcceptableHint": "플러그인의 장애 정보를 확인해 주세요",
+  "modelsErrorInternalServerErrorHint": "서버에서 오류가 발생했습니다",
+  "modelsErrorNoTrendRequirementHint": "좋아하는 장르/방향 설정을 변경해 주세요",
+  "modelsErrorRelationalTimelineBrokenHint": "새로고침하면 해결될 수 있습니다"
+}

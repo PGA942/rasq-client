@@ -1,0 +1,18 @@
+{
+  "@@locale": "zh_Hant",
+  "bookmarksRemoved": "已移除書籤",
+  "bookmarksRemoveFailed": "無法移除：{error}",
+  "bookmarksTitle": "書籤",
+  "bookmarksRetry": "重新載入",
+  "bookmarksEmptyTitle": "沒有書籤",
+  "bookmarksEmptyHint": "可透過貼文的 🔖、加入便籤或 ASTell 的書籤來收集",
+  "bookmarksEmptyNoSnsHint": "此服務沒有書籤功能。長按貼文的 🔖 可將其收集到 RASQ 便籤",
+  "bookmarksClips": "便籤",
+  "bookmarksClipCount": "{count, plural, other{{count} 則}}",
+  "bookmarksClipHost": "RASQ（跨 SNS）",
+  "bookmarksClipPrivate": "非公開便籤",
+  "bookmarksSeparator": " · ",
+  "bookmarksFavorites": "最愛",
+  "bookmarksSwipeRemove": "移除",
+  "bookmarksRemove": "移除書籤"
+}

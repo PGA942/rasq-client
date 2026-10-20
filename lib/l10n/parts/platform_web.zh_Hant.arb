@@ -1,0 +1,7 @@
+{
+  "@@locale": "zh_Hant",
+  "platformWebRuntimeLoadFailed": "無法載入執行所需的檔案（網路 / CDN）",
+  "platformWebServerNotConfigured": "尚未設定 RASQ 伺服器的連線位址",
+  "platformWebDownloadFailed": "下載失敗：{error}",
+  "platformWebModelLoadFailed": "無法載入模型：{error}"
+}

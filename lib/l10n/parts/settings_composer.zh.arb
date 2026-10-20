@@ -1,0 +1,10 @@
+{
+  "@@locale": "zh",
+  "settingsComposerTitle": "帖子编辑器",
+  "settingsComposerAutoAccountTitle": "自动选择发帖账号",
+  "settingsComposerAutoAccountSubtitle": "自动将发布目标切换为符合草稿的账号",
+  "settingsComposerAutoAccountDetail": "自动将发布目标切换为草稿内容符合发布目标筛选条件的账号（手动选择始终优先）",
+  "settingsComposerRasqLinkedTitle": "同时发布到 RASQ 账号",
+  "settingsComposerRasqLinkedSubtitle": "向多个账号发布时，也可以选择 RASQ 账号",
+  "settingsComposerRasqLinkedDetail": "在多选模式下，也可以选择 RASQ 账号这一行（普通帖子 / 节点联动）。发送方式和筛选在“自定义发布目标”的 RASQ 标签页中设置。超出 RASQ 上限（1000 字 / 6 个附件 / 6 个投票选项 / 3 条帖子）的帖子不会发送到 RASQ"
+}

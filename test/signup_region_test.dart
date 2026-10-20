@@ -1,7 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/features/onboarding/region/region.dart';
+import 'package:rasq_client/features/onboarding/region/region_names_en.dart';
 import 'package:rasq_client/features/onboarding/region/region_names_ja.dart';
+import 'package:rasq_client/features/onboarding/region/region_names_ko.dart';
+import 'package:rasq_client/features/onboarding/region/region_names_zh.dart';
+import 'package:rasq_client/features/onboarding/region/region_names_zh_hant.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 /// 住んでいる地域の申告 (D-542 / ORGATE O-018): 一覧の読み方・提供の可否・名前と探し方・エラーの理由。
@@ -49,6 +53,20 @@ void main() {
     expect(r.country('US')!.subdivisions.length, 51);
     expect(r.isAvailable('GB'), isTrue);
     expect(r.isAvailable('US-UT'), isTrue);
+  });
+
+  test('訳の表(英・簡体・繁体・韓)は日本語の表と同じコードをそろえ、表示の言語で引ける', () {
+    for (final (countries, states) in [(regionNamesEn, usStateNamesEn), (regionNamesZh, usStateNamesZh), (regionNamesZhHant, usStateNamesZhHant), (regionNamesKo, usStateNamesKo)]) {
+      expect(countries.keys.toSet(), regionNamesJa.keys.toSet());
+      expect(states.keys.toSet(), usStateNamesJa.keys.toSet());
+    }
+    addTearDown(() => RasqUiLocale.tag = 'ja');
+    RasqUiLocale.tag = 'en';
+    expect(regionName('JP'), 'Japan');
+    RasqUiLocale.tag = 'zh-Hant';
+    expect(regionName('TW'), regionNamesZhHant['TW']);
+    RasqUiLocale.tag = 'zh';
+    expect(regionName('TW'), '台湾');
   });
 
   test('名前は表示の言語の表から(州は「国・州」)。名前・かなの読み・コードで探せる', () {

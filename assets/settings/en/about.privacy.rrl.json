@@ -1,0 +1,2741 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "about.privacy",
+  "title": "Privacy Policy",
+  "doc": {
+    "id": "rasq.privacy",
+    "version": "1.0.0-draft.20261007",
+    "bodySha256": "746824911fca56d4fa0667ae5b429917a9200fb1712032c6b70a61065ed0da6a"
+  },
+  "translation": {
+    "locale": "en",
+    "bodySha256": "80bc24a42368d12562ef332b6d194b5261d9860e8aa6f37061d183da401a7679",
+    "governing": "ja"
+  },
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "Notice",
+        "p": {
+          "kind": "warning",
+          "text": "This is a pre-release draft. Items marked 【TBD】 or ［　］ will be decided before the official version is published.",
+          "detail": "rasq.privacy / version 1.0.0-draft.20261007. Reference translation of the user-facing text of the Japanese draft (tool/legal/build_legal.py)."
+        }
+      },
+      {
+        "t": "Notice",
+        "p": {
+          "kind": "info",
+          "text": "Reference translation. This is a reference translation provided for convenience. The Japanese version is the official text, and if there is any difference between them, the Japanese version governs."
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Document ID: "
+            },
+            {
+              "s": "text",
+              "text": "rasq.privacy",
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": " / Version: "
+            },
+            {
+              "s": "text",
+              "text": "［official version number］",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": " / Effective date: "
+            },
+            {
+              "s": "text",
+              "text": "［date］",
+              "bold": true,
+              "code": true
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "1. Operator and Scope"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Mikihisa Goho (the \"Operator\") handles information as described below in the RASQ app, RASQ accounts, ASTell, RAi, Swing, the Plugin Store, public web pages, and other features provided by the Operator. For the time being, the Operator runs the service as an individual."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・Operator: Mikihisa Goho (individual)"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・Address: 〒530-0001 大阪府大阪市北区梅田1丁目2番2号 大阪駅前第2ビル12-12"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・Contact for personal information: "
+            },
+            {
+              "s": "text",
+              "text": "［email address or form URL］",
+              "bold": true,
+              "code": true
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・List of external recipients and contractors: "
+            },
+            {
+              "s": "text",
+              "text": "［public URL］",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": " (contains the same content as the table in Section 8, together with the date of update)"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The Operator runs two kinds of servers with different roles."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "RASQ public server (Central)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nMain role: "
+            },
+            {
+              "s": "text",
+              "text": "Public pages for profiles and posts, ASTell, Swing, the Plugin Store, RAi cloud processing, onboarding search, receipt of reports"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "RASQ personal server (ORGATE)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nMain role: "
+            },
+            {
+              "s": "text",
+              "text": "Login, email and device management, custody of SNS login information and the vault, sync, notifications, payments and points"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Where this policy says \"RASQ servers,\" it refers to both. Information handled by only one of them is identified by that server's name. Only the information necessary for identity verification and the provision of features is exchanged between the two servers."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The handling of information by connected SNSs, third-party plugins, and operators of inference servers specified by users is also subject to their respective policies. What RASQ sends to them is explained in this policy and on the confirmation screen of each feature. If you change the server RASQ connects to, please check the operator and the policy of that server."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "2. Purposes of Handling Information"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The Operator handles information to the extent necessary for the following purposes."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "1. Login, identity verification, device management, saving settings, and providing the integration and sharing features chosen by users."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "2. Providing posting, calls, sharing, search, notifications, assistive features, and the Plugin Store."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "3. Purchases, granting usage rights, payment reconciliation, refunds, responding to inquiries, and managing records required for accounting and by law."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "4. Responding to unauthorized access, violations of the terms, and infringement of rights, reviewing appeals, and ensuring the safety of the service."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "5. Protecting minor users and providing monitoring features for Guardians."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "6. Detecting and investigating failures, and maintaining performance and quality."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "7. Displaying advertisements to cover the costs of the parts provided free of charge (Section 8-2)."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Private conversations and limited-visibility posts are not used for ad targeting. Processing that uses information for a model's answers or classification is distinguished from processing that accumulates information as training data for a model. Providing data for training is governed by Section 10."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "3. Information Stored on the Device"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "In the native versions, SNS login information, settings, drafts, RAi conversation history and achievements, Timeline customizations, muted ads, aggregates used to display posting tendencies, and similar data are stored on the device. SNS login information is stored in the secure storage area of the OS (Keychain on iOS and macOS, encrypted storage on Android)."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The following processing is performed only on the device, and its results are not sent to RASQ servers: detection of duplicate posts, estimation of interests for each Account, prediction of Reactions and ordering, RAi usage statistics, and classification and summarization by on-device models."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "For features in which the user sends or syncs data, features that use server processing, and the login information vault of the web version, the information described in the following sections is sent off the device. Not all information on the device uses the same encryption method or the same storage location."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Data on the device can be managed by deleting history in the app, logging out, and similar actions. Deleting an account and deleting local data on each device are separate operations. Data included in OS backups is also subject to how those backups are managed."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "4. SNS Credentials and Account Integration"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "An SNS access token is a credential used to perform operations on an SNS. RASQ distinguishes the following routes."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Ordinary SNS use",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nRecipient and handling: "
+            },
+            {
+              "s": "text",
+              "text": "The content and credentials necessary for posting, viewing, Reactions, following, etc. on the selected SNS are sent directly from the device to that SNS"
+            },
+            {
+              "s": "text",
+              "text": "\nStopping / revoking: "
+            },
+            {
+              "s": "text",
+              "text": "Log out of or disconnect the SNS. Posts and other content already sent to the SNS are managed by the SNS"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Mastodon authentication brokering",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nRecipient and handling: "
+            },
+            {
+              "s": "text",
+              "text": "The RASQ personal server registers the RASQ app with the destination server, exchanges the authorization code for a token, and returns it to the app. Tokens are not stored solely because of this brokering"
+            },
+            {
+              "s": "text",
+              "text": "\nStopping / revoking: "
+            },
+            {
+              "s": "text",
+              "text": "Cancel authentication, or revoke the integration on the SNS side. Temporary records of the authentication process are deleted after 1 day"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Sharing SNS login information between devices (optional)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nRecipient and handling: "
+            },
+            {
+              "s": "text",
+              "text": "Login information encrypted on the device is stored on the RASQ personal server so that it can be shared among approved devices. The shared content is decrypted with the keys of approved devices, and the Operator cannot decrypt it"
+            },
+            {
+              "s": "text",
+              "text": "\nStopping / revoking: "
+            },
+            {
+              "s": "text",
+              "text": "Stop sharing and manage devices from \"Account security.\" Tokens already passed to another device before stopping are not automatically invalidated on the SNS side"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Login information vault of the web version",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nRecipient and handling: "
+            },
+            {
+              "s": "text",
+              "text": "When you log in to your RASQ account and use an SNS in the web version, login information is sent to the vault on the RASQ personal server and read back when needed. It is encrypted with the server's key when stored. This method allows the Operator's server to decrypt it"
+            },
+            {
+              "s": "text",
+              "text": "\nStopping / revoking: "
+            },
+            {
+              "s": "text",
+              "text": "Log out of the SNS in the web version, delete the vault, or delete the RASQ account"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Displaying SNS posts on the account page (optional)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nRecipient and handling: "
+            },
+            {
+              "s": "text",
+              "text": "For SNSs you consented to on the confirmation screen, the RASQ personal server receives the access token and stores it encrypted with the server's key. Your posts eligible for display are retrieved from the target SNS and displayed on your public RASQ account page. For Bluesky, only the account identifier is held instead of a token, and the information is retrieved from public information"
+            },
+            {
+              "s": "text",
+              "text": "\nStopping / revoking: "
+            },
+            {
+              "s": "text",
+              "text": "Revoke the custody for post display, disconnect the SNS, or delete the RASQ account"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Retrieval for RASQ lists and clips (optional)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nRecipient and handling: "
+            },
+            {
+              "s": "text",
+              "text": "You can separately choose to also use the token held for post display to retrieve the profiles and posts of accounts you have added to RASQ lists or clips, and to check follow relationships"
+            },
+            {
+              "s": "text",
+              "text": "\nStopping / revoking: "
+            },
+            {
+              "s": "text",
+              "text": "Stop this use on the Settings screen, or revoke the custody"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Custody for post display is a choice separate from sharing between devices and the web version vault. With this feature, posts on the selected SNS that correspond to \"Public\" and \"Home / Unlisted\" are made "
+            },
+            {
+              "s": "text",
+              "text": "viewable by anyone on the RASQ account page",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": ". Followers-only posts, direct/DM posts, local-only posts, and posts whose Visibility cannot be confirmed are not included. \"Home / Unlisted\" does not mean followers-only."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Held tokens are not used for write operations such as posting or following. They are also not used for any purpose other than those chosen in the table above."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Bundled account display:",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " The type of SNS being linked, the server, the account identifier, display information, and the result of ownership verification are used. For ownership verification, the RASQ public server reads the public profile on that SNS and checks whether the verification string is present. If you choose verification via Keybase, Keybase's public information is also read. By default, linked SNS accounts are displayed on your RASQ profile, making it possible to find your RASQ account from your SNS accounts. You can choose not to display them on the profile editing screen."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "5. Main Information Stored on RASQ Servers"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Handle, display name, images, bio, birthday (if entered in the public profile), location, links, posts, visibility settings, linked accounts",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nStorage location: "
+            },
+            {
+              "s": "text",
+              "text": "Public server"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose of use / scope of display: "
+            },
+            {
+              "s": "text",
+              "text": "Providing account, profile, and posting features. Displayed to other users and on public web pages according to visibility settings"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Password hash, email address, two-factor authentication settings, device identifier and name, last-used IP address, User-Agent, login date and time",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nStorage location: "
+            },
+            {
+              "s": "text",
+              "text": "Personal server"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose of use / scope of display: "
+            },
+            {
+              "s": "text",
+              "text": "Authentication, account protection, device list, login notifications, identity verification"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Type of consent, document version, date and time, age range, and record of guardian consent",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nStorage location: "
+            },
+            {
+              "s": "text",
+              "text": "Public server"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose of use / scope of display: "
+            },
+            {
+              "s": "text",
+              "text": "Confirming terms of use and choices made, restricting features, responding to inquiries"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Settings chosen for sync, plugin installation information, customizations, data for sharing",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nStorage location: "
+            },
+            {
+              "s": "text",
+              "text": "Personal server"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose of use / scope of display: "
+            },
+            {
+              "s": "text",
+              "text": "Saving, restoring, and sharing between devices. The encryption method is indicated for each feature"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Lists, clips, Bookmarks, Store reviews, and the profiles and posts (up to 200) of other accounts added to lists",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nStorage location: "
+            },
+            {
+              "s": "text",
+              "text": "Public server"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose of use / scope of display: "
+            },
+            {
+              "s": "text",
+              "text": "Providing the features and displaying them with the selected visibility"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Swing posts, images and videos, view counts, read records",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nStorage location: "
+            },
+            {
+              "s": "text",
+              "text": "Public server"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose of use / scope of display: "
+            },
+            {
+              "s": "text",
+              "text": "Providing Swing (Section 6)"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Notification destinations (including Android notification tokens), notification settings, notification titles and bodies",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nStorage location: "
+            },
+            {
+              "s": "text",
+              "text": "Personal server"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose of use / scope of display: "
+            },
+            {
+              "s": "text",
+              "text": "Delivering notifications enabled by the user. With notification tokens issued for macros or ASTell, you can receive notifications addressed to yourself from other features"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Product and order identifiers, price and currency, purchase date and time, payment status, payment provider transaction identifiers, granting, use, and expiration of points, usage rights, records of refunds, cancellations, and inquiries",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nStorage location: "
+            },
+            {
+              "s": "text",
+              "text": "Personal server"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose of use / scope of display: "
+            },
+            {
+              "s": "text",
+              "text": "Payment processing, preventing duplicate grants, restoring purchases, refunds, accounting, preventing fraudulent use"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Reports and appeals, related posts and shared content, results of handling",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nStorage location: "
+            },
+            {
+              "s": "text",
+              "text": "Public server"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose of use / scope of display: "
+            },
+            {
+              "s": "text",
+              "text": "Investigating and re-reviewing violations of the terms, infringement of rights, and safety issues"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Intensity threshold (if you chose to make it public), trend restrictions imposed by the Operator",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nStorage location: "
+            },
+            {
+              "s": "text",
+              "text": "Public server"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose of use / scope of display: "
+            },
+            {
+              "s": "text",
+              "text": "Displaying posting tendencies and restricting display"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Developer application details, signing keys, distributions and source code submitted for review, records of review fees",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nStorage location: "
+            },
+            {
+              "s": "text",
+              "text": "Public server and personal server"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose of use / scope of display: "
+            },
+            {
+              "s": "text",
+              "text": "Review, distribution, and settlement of plugins (Section 6)"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Payments:",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " During the public test period, purchases of points, paid plugins, and paid offerings of ASTell and the plugin proxy are not provided. The only payments during this period are review fees paid by plugin developers. Stripe is used for payments. Payment information such as card numbers is entered on Stripe's screen, and the Operator does not receive it. The Operator sends Stripe the amount, the type of product, and an identifier for reconciling the order. The Operator receives the payment status and the transaction identifier from Stripe."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "6. ASTell, RAi, Swing, Plugins, Monitoring, Onboarding"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "ASTell:",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " Room information, participation information, shared posts, text, and files, transcriptions, etc. are used to provide the selected features. The destinations of audio and video connections, the destinations to which transcription data is sent, and the scope visible to participants are set out in the ASTell terms of use. Turning off caption display is distinguished from stopping the sending and processing for transcription. For safety management and investigation of reports, authorized operations staff may review shared content and other information to the extent necessary."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "In rooms where the host has enabled \"Refuse entry to trolls,\" the Operator's judgment system analyzes, for a person trying to enter, their bio on RASQ, Store reviews, shares and transcriptions in ASTell (up to 200 items), and thumbnails of images (up to 50 items), and decides whether to allow entry. Content shared in ASTell by a person subject to usage restrictions is checked by the same system before it is displayed. When the judgment system is unavailable, checking switches to a word list."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "RAi:",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " Processing by on-device models, the inference server for answers, the embedding server for search, and web search are each separate transmission routes. When external processing is used, the recipient, purpose, and target data are shown in advance. Questions, operation references, retrieval results necessary for answers, and similar information may be subject to processing. If you do not permit external transmission, you can use the features available on the device. On-device models are downloaded from Hugging Face, GitHub, or the RASQ public server. The device's IP address and similar information are disclosed to the download source."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Swing:",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " Posts that disappear after 1 to 24 hours. Posts, images and videos, view counts, and records of who viewed them are stored on the RASQ public server and deleted when the time limit is reached."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Plugins:",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " The information used by a plugin and its external communications can be checked in the permission descriptions and the developer's policy. The handling of features provided by the RASQ Operator and the handling by plugin developers are displayed separately. Deleting a plugin does not necessarily delete, at the same time, information already sent to the developer's server. Deletion methods follow each policy."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "For plugins in which multiple users use the same screen (shared sessions), the plugin's state and the values written by participants are stored on the RASQ public server and distributed to participants. If you enable the optional diagnosis of the shape of a plugin's communications, the destination host, path, and field names are sent. Values are not sent."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Monitoring (Child Safe):",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " A feature that allows a Guardian to monitor a child's use. To verify the Guardian, identity verification by the Digital Agency using a My Number Card is used. The Operator receives only whether the person is 18 or older, the country of residence, the verification method, and a hash of an identifier created from the identity verification. The card number, name, and address are not received. For a monitored child, the daily number of uses and topic headlines are delivered to the Guardian. The body text of posts is not delivered. A Guardian may also create a child's account."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Onboarding (initial guidance):",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " Even before creating a RASQ account, you can use the feature to find SNS servers and people that may suit you. With this feature, the following information is sent to the RASQ public server."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・Selected images, the body text (up to 4,000 characters) and URL of a page opened in the in-app browser, and the text of consultations with RAi."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・If you permit screen reading: images of the screen for about 3 seconds after starting (up to 6 images). Screen reading takes place only when you choose to start it on the OS permission screen, and stops when finished."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The RASQ public server analyzes this information with cloud AI and, when looking for people, searches with Brave Search. Images and consultation text are kept in memory only during processing and are not stored. Screen images remaining on the device are deleted after they are sent. IP addresses are stored for 1 day to enforce usage limits."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "7. Reports, Safety Management, and Automated Processing"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "In handling reports and appeals, we may review the content concerned, related times, rooms, and account information, posts made within 2 hours before and after the report, and past results of handling. To assist processing, we use classification of text and images, analysis along 8 axes of emotion, analysis of changes in posting tendencies, summaries of similar situations, and generation of proposed actions by AI. This is inference processing for the purpose of safety management of the service, and is distinguished from the optional provision of training data under Section 10."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "This processing is performed by a judgment system managed by the Operator (running on a computer managed by the Operator). The judgment system retrieves the necessary information from the RASQ public server, processes it, and stores processing records on that computer. The retention period is set out in Section 9. Actions proposed by AI are applied after a human approves them. However, if the Operator has enabled automatic application, temporary restrictions with high confidence may be applied automatically. Permanent suspensions are not applied automatically."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "If you report an SNS post, the report is sent to the administrator of the SNS server. The RASQ Operator does not receive that report."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Persons who can handle this information are limited to those who need it for their duties. When processing is entrusted to a contractor, the contractor, the information sent, the retention period, etc. are shown in a list. The role of automated processing and how to check the reasons for and appeal usage restrictions are set out in the Terms of Use."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "8. External Services, Handling Outside Japan, and Security Management"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The Operator uses the following external services. The countries or regions where information is processed and stored and links to each policy are published in the "
+            },
+            {
+              "s": "text",
+              "text": "［list of external recipients and contractors］",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": "."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "SAKURA internet (Sakura Cloud)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Information handled by RASQ servers in general"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Server operation"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Cloudflare",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Communication content and IP addresses"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Relaying and protecting communications"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Google (AdMob, AdSense)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Advertising ID, IP address, device and browser information, cookies (web)"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Displaying advertisements (Section 8-2)"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Google (Firebase Cloud Messaging)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Android notification tokens, notification titles and bodies"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Delivering notifications to Android"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Google (STUN)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "IP addresses of call participants"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Connecting ASTell calls"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "LiveKit (streaming server set up by the Operator) ",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "［location］",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Audio and video of streams and screen sharing, account identifiers and display names"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "ASTell streaming"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "［TURN server provider］",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Call audio and IP addresses"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Relaying when devices cannot connect directly"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Servers for transcription, text-to-speech, and AI inference ",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "［provider or set up by the Operator］",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Audio to be transcribed, text to be read aloud, RAi questions, onboarding images and text, public posts used for training eligibility checks (Section 10)"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Providing each feature"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Brave Search",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Search terms"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "RAi web search (off by default), finding people in onboarding, checking the meaning of words in the judgment system"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Keybase",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Keybase username"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Verifying ownership of SNS accounts (optional)"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Digital Agency (identity verification using My Number Card)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Result of identity verification"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Verifying Guardians for monitoring"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Stripe",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Amount, type of product, order identifier"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Payments"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Google (Cloud Firestore of Firebase and the email sending extension firestore-send-email)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Email address, email body"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Confirmation and notification emails"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Hugging Face, GitHub, jsDelivr",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Device IP address"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Downloading models and runtime environments"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "OpenAI (Codex)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Distributions and source code submitted by developers"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Plugin review"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Servers of connected SNSs",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nInformation sent: "
+            },
+            {
+              "s": "text",
+              "text": "Retrieval of public information by the RASQ public server (server information, public profiles, public posts)"
+            },
+            {
+              "s": "text",
+              "text": "\nPurpose: "
+            },
+            {
+              "s": "text",
+              "text": "Introducing servers, verifying ownership, sharing posts to ASTell"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "We do not describe the recipients collectively as \"domestic only.\" Some of the services in the table above are provided by businesses outside Japan and process information outside Japan. For SNSs and inference servers specified by users, please also check how their administrators handle information."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The Operator implements access restrictions appropriate to the information, protection of communications, protection of credentials, supervision of staff and contractors, management of deletion, and other measures. Even for information stored in encrypted form, we distinguish between information decrypted with the Operator's keys and information decrypted only on the user's device. Except where permitted by law or in similar cases, personal data is not provided to third parties without the consent of the person concerned."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "8-2. Advertising"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "RASQ covers part of the costs of the parts provided free of charge through advertising."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・"
+            },
+            {
+              "s": "text",
+              "text": "iOS and Android apps:",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " Using Google's AdMob, ads are displayed on the Timeline, replies, lists, clips, related Timelines, user pages, and search screens, between Swing items, and while waiting for RAi cloud processing. Google's consent screen is shown the first time, and you can choose whether to use personalized ads."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・"
+            },
+            {
+              "s": "text",
+              "text": "Web version and public web pages:",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " Google's AdSense is used. AdSense uses cookies. Ads are also displayed on public web pages (RASQ profile and post pages)."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・"
+            },
+            {
+              "s": "text",
+              "text": "Desktop version (macOS and Linux):",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": " Google ads are not displayed. Ads configured by the server of the connected SNS may be displayed."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Ads are not placed before or after the following content: reported posts, posts with a content warning (CW) or marked as sensitive, displays of plugins before review, and posts held by the Operator for review."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "The Operator does not send DMs, limited-visibility posts, or ASTell conversations to advertising providers."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "9. Retention Period and Deletion"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Information is retained only for the period necessary for its purpose, and upon expiry of that period or a valid request for deletion, it is deleted or made unable to identify individuals. When we say anonymization, we distinguish it from processing that merely replaces identifiers."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Ordinary account, integration, and sync data",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "The period necessary while in use. Deletion begins upon individual revocation or deletion, or upon deletion of the RASQ account"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Tokens for post display and retrieved posts",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "Use stops and deletion occurs upon revocation of custody or disconnection of the SNS. Completion deadline, including retrieval and caches in progress: 7 days"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Web version vault and sharing between devices",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "The scope of deletion upon logout, stopping sharing, etc. is shown on the confirmation screen. Records of approval for sharing between devices: 1 day; history of login renewals: 30 days"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Login sessions (including IP address and User-Agent)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "Expire and are deleted 180 days after last use or 365 days after starting"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Login attempts, verification codes, temporary authentication processing (including IP addresses)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "1 day"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Operational logs",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "90 days. The type and path of requests are recorded; bodies and URL query strings are not recorded. Records of entering and leaving ASTell and shared sessions include handles"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Notification content",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "30 days. Up to 3 days while awaiting transfer from the RASQ public server to the personal server"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "ASTell shares, transcriptions, and uploads",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "Displayed to participants for 10 days from creation; stored internally for 30 days from creation. Deleted within 1 day after expiry. Information requiring individual preservation follows the exceptions below"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Records of closed ASTell rooms",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "30 days from closure. The time limits for shares, transcriptions, and uploads are not extended based on the room's closing date"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Swing",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "1 to 24 hours as selected at the time of posting. Images and videos not used in a post: 1 day"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Images not used in a post",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "1 day"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Shared session values",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "30 days from the end of the session"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Daily monitoring reports",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "60 days. Records of monitoring operations: 1 year"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "IP addresses used for onboarding usage limits",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "1 day. Images and consultation text are not stored"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Reports, appeals, and handling records (including processing records of the judgment system)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "1 year from the conclusion of handling. If extended due to disputes, etc., the necessary scope and end conditions are managed. Even if the reporter deletes their account, the report is retained to the extent necessary for handling"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Contract, payment, refund, and accounting records, and records of review fees",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "8 years from the end of the fiscal year of the transaction. After account deletion, retained with identifiers replaced by ones not linked to the account, and the point balance is set to 0"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Records of consent and withdrawal",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "3 years from account deletion. Used only to prove consent and to respond to inquiries"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Deletion records and information for preventing evasion of suspensions",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "3 years. The latter is limited to the handles of permanently suspended accounts and hashes of the identifiers of devices banned from use"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Records of training eligibility checks (Section 10)",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "90 days from the check"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "Backups",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\nEnd of retention / how to revoke: "
+            },
+            {
+              "s": "text",
+              "text": "Up to 35 days. The status of deletions and withdrawals is also reflected upon restoration"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "You can delete your RASQ account from account management in the app or at "
+            },
+            {
+              "s": "text",
+              "text": "［deletion procedure URL］",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": ". If you cannot access the app, please contact the contact point. Upon deletion, use of ordinary data linked to the account is stopped and deletion processing is carried out. Provision of data for training is also withdrawn at the same time, and deletion of data already provided begins. The minimum information necessary for payments, refunds, legal compliance, protection of rights in pending disputes, and prevention of fraudulent use may be retained separately within the scope of the table above."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Information recorded or reshared by other users, accounts and posts on connected SNSs, and users' devices and backups are not erased merely by deleting the RASQ account. Deletion processing on the RASQ side is not an operation that deletes accounts or posts on each SNS."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "9-2. Information about Persons Who Are Not RASQ Users"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "In addition to posts viewed by RASQ users on SNSs, the Operator may handle information about persons who are not RASQ users in the following situations."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・Public profiles and public posts of SNS accounts that users have added to RASQ lists or clips. These are displayed according to the visibility of the list."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・Public profiles and portions of public posts, used in the provision of data for training (Section 10) to check whether the author of a post has declined use for training."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・Search results when finding people during onboarding."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Regarding the handling of your own information, you can request deletion or suspension of use through the contact point in Section 11. Posts by persons who indicate in their SNS profile that their content is \"not to be used for AI training,\" or who have set themselves to be excluded from search or collection, are not used for training."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "10. Provision of Data for Training"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "Provision of data for training is an optional choice separate from use of RASQ. Detailed conditions are set out in \"About Contributing to Algorithms and the Community.\" The default is \"Do not provide,\" and you can use the ordinary features even if you decline. Acceptance is closed until the Operator announces its start."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "11. Age, Rights of the Data Subject, and Changes"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "RASQ is intended for persons aged 13 or older, and minors must use it with the consent of a guardian. This is a condition of use of RASQ. We handle the information necessary to confirm age range, guardian consent, and the like. If additional identity verification is carried out, the information to be obtained, the provider, and the retention period will be explained before it is obtained."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "You may request disclosure, correction, suspension of use or erasure, cessation of provision to third parties, etc. of retained personal data through the contact point. The method of identity verification, required documents, the amount of any fee, and the procedure are set out at "
+            },
+            {
+              "s": "text",
+              "text": "［request procedure URL］",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": ". If we cannot comply on the basis of law, we will explain the reason."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "If the handling is changed, we will notify you of the changes and the effective date. Changes that require renewed consent or choices, such as expanding the purposes of use or the scope of optional transmissions, will be confirmed before the change. Past versions of the document will also remain available for review."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "Document ID: rasq.privacy · Version: 1.0.0-draft.20261007 (the Japanese version governs)",
+          "pad": 16,
+          "size": 11
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "SHA-256 of the Japanese original: 746824911fca56d4fa0667ae5b429917a9200fb1712032c6b70a61065ed0da6a · SHA-256 of this translation: 80bc24a42368d12562ef332b6d194b5261d9860e8aa6f37061d183da401a7679",
+          "pad": 16,
+          "size": 11,
+          "dev": true
+        }
+      }
+    ]
+  }
+}

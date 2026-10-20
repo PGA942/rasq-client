@@ -20,6 +20,9 @@ import 'package:rasq_client/features/store/store_providers.dart';
 ///
 /// 掲載物は `rasq-central/scripts/smoke.sh` が投入したものを前提にする。
 void main() {
+  // test/flutter_test_config.dart がテストのバインディングを作る(端末の言語をそろえるため)と、HTTP は全部 400 の
+  // 偽物になる。ここは本物のループバックに繋ぐので外す。
+  setUp(() => HttpOverrides.global = null);
   const baseUrl = String.fromEnvironment('ORGATE_LIVE_URL');
   const centralUrl = String.fromEnvironment('CENTRAL_LIVE_URL');
   const pluginId = 'jp.rasq.misskey-wasm-sample';

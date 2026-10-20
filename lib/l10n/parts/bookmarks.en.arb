@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "bookmarksRemoved": "Bookmark removed",
+  "bookmarksRemoveFailed": "Couldn't remove: {error}",
+  "bookmarksTitle": "Bookmarks",
+  "bookmarksRetry": "Reload",
+  "bookmarksEmptyTitle": "No bookmarks",
+  "bookmarksEmptyHint": "Collect posts with 🔖 on a post, Add to clip, or ASTell bookmarks",
+  "bookmarksEmptyNoSnsHint": "This service has no bookmarks. Long-press 🔖 on a post to collect it in a RASQ clip",
+  "bookmarksClips": "Clips",
+  "bookmarksClipCount": "{count, plural, =1{1 item} other{{count} items}}",
+  "bookmarksClipHost": "RASQ (cross-SNS)",
+  "bookmarksClipPrivate": "Private clip",
+  "bookmarksSeparator": " · ",
+  "bookmarksFavorites": "Favorites",
+  "bookmarksSwipeRemove": "Remove",
+  "bookmarksRemove": "Remove bookmark"
+}

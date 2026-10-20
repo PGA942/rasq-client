@@ -1,0 +1,499 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "about.commerce",
+  "title": "특정상거래법에 따른 표기",
+  "doc": {
+    "id": "rasq.commerce",
+    "version": "1.0.0-draft.20261007",
+    "bodySha256": "2378016eb2eeb06a84d1c0740710509438c65c624823e3d9643252ba292e5c7f"
+  },
+  "translation": {
+    "locale": "ko",
+    "bodySha256": "09adaece5f1812d956d8ccd582a3107e804b283fd892f3ab5ec55fbbae38f49c",
+    "governing": "ja"
+  },
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "Notice",
+        "p": {
+          "kind": "warning",
+          "text": "공개 전 초안입니다. 【미정】이나 ［　］로 표시된 부분은 정식판 공개 전까지 정해집니다.",
+          "detail": "rasq.commerce / 버전 1.0.0-draft.20261007. 일본어 초안 중 이용자용 본문의 참고 번역(tool/legal/build_legal.py)."
+        }
+      },
+      {
+        "t": "Notice",
+        "p": {
+          "kind": "info",
+          "text": "참고 번역. 이 문서는 편의를 위해 제공하는 참고 번역입니다. 정식 문서는 일본어판이며, 내용에 차이가 있는 경우 일본어판이 우선합니다."
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "판매 사업자",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "고호 미키히사"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "운영 책임자",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "고호 미키히사"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "소재지",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "〒530-0001 大阪府大阪市北区梅田1丁目2番2号 大阪駅前第2ビル12-12"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "전화번호",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "【전화번호·접수 시간】",
+              "bold": true,
+              "code": true
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "문의",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "【이메일 주소·문의 URL·접수 시간】",
+              "bold": true,
+              "code": true
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "판매 가격",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "공개 테스트 기간 중에는 플러그인 개발자용 심사료(배포물의 내용을 공개된 측정 방법으로 센 피스 수에 따라 다르며, 신청 화면에 세금 포함 금액과 그 계산 내역을 표시)만 해당. 정식판에서는 각 포인트 팩은 엔화 기준 지불 총액과 확정된 세금 처리를, 각 기능은 필요 포인트 수와 세금 포함 엔화 상당액을 표시. 무상분은 구별"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "추가 비용",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "통신료, 이용자가 별도로 계약하는 외부 SNS·추론 서버 등의 요금. 상품에 필수적인 프록시 계약은 명칭과 요금도 표시"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "지불 방법",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "심사료·포인트 구매: Stripe로 제공하는 "
+            },
+            {
+              "s": "text",
+              "text": "【실제로 채택하는 지불 수단】",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": ". 기능 구매·갱신(정식판): RASQ 포인트"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "지불 시기",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "심사료는 신청 시(결제 확정 시). 포인트 구매는 결제 확정 시. 기능 구매는 이용권 부여와 동시, 정기 계약은 표시한 각 기간 개시 시"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "제공 시기",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "심사료: 신청 접수로부터 "
+            },
+            {
+              "s": "text",
+              "text": "【미정: 30일】",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": " 이내에 심사에 착수하고, 착수로부터 "
+            },
+            {
+              "s": "text",
+              "text": "【미정: 30일】",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": " 이내에 결과를 통지(예상 기준. 각각의 날짜를 신청 화면에 표시하며, 늦어질 것으로 예상되는 경우에는 예상 기준일 전에 알림). 포인트: 결제·부여 확인 후 "
+            },
+            {
+              "s": "text",
+              "text": "【통상 소요 시간】",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": ". 지연 시 확인·문의 방법도 표시"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "계약 기간·갱신",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "상품별 개시 일시, 종료 일시, 주기, 필요 포인트 수, 자동 갱신 여부, 갱신 중지 기한·조작 절차"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "판매 수량·기간",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "신청 기간, 이용 수·단말기 수·용량 등에 제한이 있는 경우 그 구체적인 값"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "동작 환경",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "OS·RASQ 최소 버전·인터넷 연결·지원 SNS·필요한 추가 계약. 구매 전에 확인할 수 있는 목록"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "반품·해약·환불",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "심사료는 플러그인 스토어·개발자 약관 제4조의2(반려·불승인만으로는 환불하지 않음. 착수 전 취소, 착수 예상 기준을 지나도 미착수, 결과 통지 예상 기준을 지나도 결과 미통지인 상태에서의 취소, 잘못된 청구, 운영자의 오류로 인한 불승인·반려는 전액 환불). 포인트와 기능은 위 제5조·제6조. 이용자 사정/결함/미제공의 처리와 조작 창구를 구분"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "포인트",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n내용: "
+            },
+            {
+              "s": "text",
+              "text": "유상·무상, 환산, 기한, 사용 순서, 실효, 탈퇴 시·제도 폐지 시의 처리"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "주소나 전화번호의 생략 제도를 이용하는 경우에는 이용 가능한 조건·청구 시 지체 없는 공개·Stripe의 요구 사항을 확인한 후 표시 방식을 정한다. 본 안에서는 자동으로 생략하지 않는다."
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "문서 ID: rasq.commerce · 버전: 1.0.0-draft.20261007 (일본어판이 우선)",
+          "pad": 16,
+          "size": 11
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "일본어 원문의 SHA-256: 2378016eb2eeb06a84d1c0740710509438c65c624823e3d9643252ba292e5c7f · 이 번역의 SHA-256: 09adaece5f1812d956d8ccd582a3107e804b283fd892f3ab5ec55fbbae38f49c",
+          "pad": 16,
+          "size": 11,
+          "dev": true
+        }
+      }
+    ]
+  }
+}

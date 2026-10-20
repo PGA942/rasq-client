@@ -1,0 +1,10 @@
+{
+  "@@locale": "ko",
+  "notifyPushChannelName": "RASQ 알림",
+  "notifyPushChannelDescription": "멘션, 답글, Swing 등의 알림",
+  "notifyOpenAction": "열기",
+  "notifyGlimpseChannelName": "화면 읽기",
+  "notifyGlimpseChannelDescription": "탭하면 지금 보고 있는 화면을 잠깐 읽습니다",
+  "notifyAstellChannelName": "ASTell 시작",
+  "notifyAstellChannelDescription": "북마크한 ASTell의 시작 알림"
+}

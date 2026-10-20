@@ -34,11 +34,15 @@ List<Locale> get supportedUiLocales => AppLocalizations.supportedLocales;
 Locale resolveUiLocale(String? setting, List<Locale> system, {List<Locale>? supported}) {
   final list = supported ?? supportedUiLocales;
   Locale? pick(Locale want) {
+    want = _withChineseScript(want);
     for (final s in list) {
       if (s == want) return s;
     }
     for (final s in list) {
-      if (s.languageCode == want.languageCode && (s.scriptCode == null || s.scriptCode == want.scriptCode) && s.countryCode == null) return s;
+      if (s.languageCode == want.languageCode && s.scriptCode != null && s.scriptCode == want.scriptCode && s.countryCode == null) return s;
+    }
+    for (final s in list) {
+      if (s.languageCode == want.languageCode && s.scriptCode == null && s.countryCode == null) return s;
     }
     for (final s in list) {
       if (s.languageCode == want.languageCode) return s;
@@ -55,6 +59,14 @@ Locale resolveUiLocale(String? setting, List<Locale> system, {List<Locale>? supp
     if (p != null) return p;
   }
   return list.firstWhere((l) => l.languageCode == RasqUiLocale.defaultTag, orElse: () => list.isEmpty ? const Locale(RasqUiLocale.defaultTag) : list.first);
+}
+
+/// 中国語は文字(簡体 / 繁体)で表を分ける(`zh` = 簡体、`zh_Hant` = 繁体)。端末は文字を付けずに地域だけ
+/// (`zh-TW` など)を言うことが多いので、台湾・香港・マカオは繁体、それ以外は簡体とみなす。
+Locale _withChineseScript(Locale l) {
+  if (l.languageCode != 'zh' || l.scriptCode != null) return l;
+  const hant = {'TW', 'HK', 'MO'};
+  return Locale.fromSubtags(languageCode: 'zh', scriptCode: hant.contains(l.countryCode) ? 'Hant' : 'Hans', countryCode: l.countryCode);
 }
 
 /// 保存している言語の設定(BCP-47)。null = システムに合わせる。
@@ -77,11 +89,21 @@ class SystemLocalesNotifier extends Notifier<List<Locale>> with WidgetsBindingOb
     } catch (_) {
       // WidgetsBinding の無いテスト(ProviderContainer だけ)では追わない。
     }
-    return PlatformDispatcher.instance.locales;
+    return _platformLocales();
   }
 
   @override
-  void didChangeLocales(List<Locale>? locales) => state = locales ?? PlatformDispatcher.instance.locales;
+  void didChangeLocales(List<Locale>? locales) => state = locales ?? _platformLocales();
+}
+
+/// 端末の言語。バインディングの platformDispatcher から読む(テストの `localesTestValue` が効く。中身は
+/// [PlatformDispatcher.instance] と同じ)。バインディングが無ければ素のもの。
+List<Locale> _platformLocales() {
+  try {
+    return WidgetsBinding.instance.platformDispatcher.locales;
+  } catch (_) {
+    return PlatformDispatcher.instance.locales;
+  }
 }
 
 final systemLocalesProvider = NotifierProvider<SystemLocalesNotifier, List<Locale>>(SystemLocalesNotifier.new);

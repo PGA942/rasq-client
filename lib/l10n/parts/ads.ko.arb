@@ -1,0 +1,9 @@
+{
+  "@@locale": "ko",
+  "adsShowLess": "덜 표시하기",
+  "adsShowLessDone": "이 광고를 덜 표시합니다",
+  "adsLabel": "광고",
+  "adsLabelWithHost": "광고 · {host}",
+  "adsMenu": "광고 메뉴",
+  "adsOpen": "광고 열기"
+}

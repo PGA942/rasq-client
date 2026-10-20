@@ -1,0 +1,6 @@
+{
+  "@@locale": "zh",
+  "designRrlRange": "{start}~{end}{unit}",
+  "designRrlSend": "发送",
+  "designRrlNoAuthFlow": "{pluginId}:未配置登录流程（仅支持使用现有令牌注册）"
+}

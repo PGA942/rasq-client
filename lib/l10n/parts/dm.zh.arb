@@ -1,0 +1,18 @@
+{
+  "@@locale": "zh",
+  "dmRoomSettings": "此私信的设置",
+  "dmRetry": "重新加载",
+  "dmRoomEmpty": "还没有消息",
+  "dmTabAll": "全部",
+  "dmTabFollowing": "关注中",
+  "dmSettings": "私信设置",
+  "dmFollowingEmpty": "没有与关注对象的私信",
+  "dmNewMessage": "新消息",
+  "dmUserSearchHint": "按用户名搜索..",
+  "dmUserSearchIntro": "搜索要发送私信的对象。",
+  "dmUserNotFound": "未找到",
+  "dmEmptyTitle": "没有私信",
+  "dmEmptyHint": "私信帖子（限定公开）会显示在这里",
+  "dmYouPrefix": "你：",
+  "dmMediaPlaceholder": "[媒体]"
+}

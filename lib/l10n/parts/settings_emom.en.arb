@@ -1,0 +1,21 @@
+{
+  "@@locale": "en",
+  "settingsEmomTitle": "EmoM threshold",
+  "settingsEmomBandLow": "Conservative — hides trends restricted by moderators earlier",
+  "settingsEmomBandMiddle": "Normal",
+  "settingsEmomBandHigh": "Broad — hides only trends strongly restricted by moderators",
+  "settingsEmomStatusSending": "Sending…",
+  "settingsEmomStatusNoAccount": "Log in with a RASQ account to disclose it (it still works on this device)",
+  "settingsEmomStatusFailed": "Couldn't send. It will be resent next time you open this (or reload trends)",
+  "settingsEmomStatusDisclosed": "Disclosed (value {value})",
+  "settingsEmomStatusPending": "Not received yet",
+  "settingsEmomStatusNotDisclosed": "Not disclosed",
+  "settingsEmomIntro": "EmoM is RASQ's model that estimates the emotional and stimulus intensity of posts and trends (coming soon). For now, this threshold is only used as a guide when RASQ moderators review reports and restrict trends.",
+  "settingsEmomThresholdLabel": "Threshold",
+  "settingsEmomScaleLow": "Low (hidden more easily)",
+  "settingsEmomScaleHigh": "High (hidden less easily)",
+  "settingsEmomExplanation": "A higher threshold accepts more intense topics, so trends restricted by moderators are less likely to be hidden. A lower threshold hides restricted trends earlier. The default is {defaultValue}.",
+  "settingsEmomDiscloseTitle": "Disclose threshold (used as a guide for restrictions)",
+  "settingsEmomDiscloseSubtitle": "Only the value is sent to RASQ's server. Moderators only use the aggregated distribution of disclosed values (how many people have each value) and never look at your individual value. Turning this off deletes the value you sent.",
+  "settingsEmomRestrictionExplanation": "When moderators restrict a trend at \"N%\", it stops appearing for roughly the N% of people with the lowest disclosed thresholds. Even if you don't disclose, the threshold on this device is used the same way (the threshold is stored on this device). Trends set to \"Hidden for everyone\" don't appear regardless of threshold. Hidden trends are only removed from the trend list in search."
+}

@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "shellTermsSheetTitle": "Accept the Terms of Service",
+  "shellTermsAgreeButton": "Agree",
+  "shellTermsNotice": "To keep using your RASQ account, you need to accept the current Terms of Service and Privacy Policy. Until you do, ASTell, purchases, and data storage aren't available.",
+  "shellTermsNoticeDetail": "D-371 / S-053. Status stays \"awaiting consent\" until acceptances matching the server's CENTRAL_TERMS_VERSION / CENTRAL_PRIVACY_VERSION are all recorded. PUT /me/consents/{endpoints}.",
+  "shellTermsReadTermsButton": "Read the Terms of Service",
+  "shellTermsReadPrivacyButton": "Read the Privacy Policy",
+  "shellTermsAgeHeader": "Age",
+  "shellTermsGuardianConsentCheck": "I have my guardian's consent",
+  "shellTermsAgreeCheck": "I have read and agree to the Terms of Service and Privacy Policy",
+  "shellTermsVersionCaption": "Versions: Terms of Service {termsVersion} · Privacy Policy {privacyVersion}",
+  "shellTermsAcceptedSnack": "You've accepted the Terms of Service",
+  "shellTermsOutdatedError": "The Terms of Service have been updated. Update the app, then accept",
+  "shellTermsRecordFailedError": "Couldn't record your consent: {error}",
+  "shellTermsBannerText": "You need to accept the Terms of Service. Until you do, ASTell, purchases, and more aren't available.",
+  "shellTermsBannerOpenButton": "Review"
+}

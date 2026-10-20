@@ -1,0 +1,6 @@
+{
+  "@@locale": "en",
+  "designRrlRange": "{start}–{end}{unit}",
+  "designRrlSend": "Send",
+  "designRrlNoAuthFlow": "{pluginId}: No sign-in flow is configured (only registration with an existing token is supported)"
+}

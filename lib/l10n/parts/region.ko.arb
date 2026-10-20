@@ -1,0 +1,18 @@
+{
+  "@@locale": "ko",
+  "regionHeading": "거주 지역",
+  "regionCaption": "거주하는 국가 또는 지역을 선택해 주세요(자기 신고). 미국의 경우 주도 선택합니다.",
+  "regionChoose": "선택해 주세요",
+  "regionCountryAndState": "{country} · {state}",
+  "regionPickerTitle": "거주 지역 선택",
+  "regionStatePickerTitle": "주 선택",
+  "regionSearchHint": "국가 또는 지역 이름으로 검색",
+  "regionStateSearchHint": "주 이름으로 검색",
+  "regionNoMatch": "찾을 수 없습니다",
+  "regionUnavailableBadge": "제공 안 함",
+  "regionUnavailableTitle": "현재 거주 지역에서는 RASQ를 제공하지 않습니다",
+  "regionUnavailableBody": "RASQ는 현재 일부 지역에서만 제공됩니다. 거주 지역에서는 RASQ 계정을 만들 수 없습니다. 제공 지역은 앞으로 바뀔 수 있습니다.",
+  "regionUnavailableBodyWith": "RASQ는 현재 일부 지역에서만 제공됩니다. {region}에서는 RASQ 계정을 만들 수 없습니다. 제공 지역은 앞으로 바뀔 수 있습니다.",
+  "regionUnavailableBack": "뒤로",
+  "regionRequiredError": "거주 지역을 선택한 후 다시 시도해 주세요."
+}

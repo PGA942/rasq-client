@@ -1,0 +1,6 @@
+{
+  "@@locale": "ko",
+  "settingsCommonSeparator": " · ",
+  "settingsCommonBullet": "• {text}",
+  "settingsCommonRange": "{min}~{max}"
+}

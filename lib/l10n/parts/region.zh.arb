@@ -1,0 +1,18 @@
+{
+  "@@locale": "zh",
+  "regionHeading": "居住地区",
+  "regionCaption": "请选择您居住的国家或地区(自行申报)。如在美国,还需选择所在的州。",
+  "regionChoose": "请选择",
+  "regionCountryAndState": "{country} · {state}",
+  "regionPickerTitle": "选择居住地区",
+  "regionStatePickerTitle": "选择州",
+  "regionSearchHint": "按国家或地区名称搜索",
+  "regionStateSearchHint": "按州名搜索",
+  "regionNoMatch": "未找到",
+  "regionUnavailableBadge": "暂未提供",
+  "regionUnavailableTitle": "您所在的地区暂未提供 RASQ",
+  "regionUnavailableBody": "RASQ 目前仅在部分地区提供。您所在的地区无法创建 RASQ 账号。提供服务的地区今后可能会有变化。",
+  "regionUnavailableBodyWith": "RASQ 目前仅在部分地区提供。在{region}无法创建 RASQ 账号。提供服务的地区今后可能会有变化。",
+  "regionUnavailableBack": "返回",
+  "regionRequiredError": "请先选择居住地区,然后重试。"
+}

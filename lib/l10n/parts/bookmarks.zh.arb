@@ -1,0 +1,18 @@
+{
+  "@@locale": "zh",
+  "bookmarksRemoved": "已移除书签",
+  "bookmarksRemoveFailed": "无法移除：{error}",
+  "bookmarksTitle": "书签",
+  "bookmarksRetry": "重新加载",
+  "bookmarksEmptyTitle": "没有书签",
+  "bookmarksEmptyHint": "可通过帖子的 🔖、添加到便签或 ASTell 的书签来收集",
+  "bookmarksEmptyNoSnsHint": "此服务没有书签功能。长按帖子的 🔖 可将其收集到 RASQ 便签",
+  "bookmarksClips": "便签",
+  "bookmarksClipCount": "{count, plural, other{{count} 条}}",
+  "bookmarksClipHost": "RASQ（跨 SNS）",
+  "bookmarksClipPrivate": "非公开便签",
+  "bookmarksSeparator": " · ",
+  "bookmarksFavorites": "收藏",
+  "bookmarksSwipeRemove": "移除",
+  "bookmarksRemove": "移除书签"
+}

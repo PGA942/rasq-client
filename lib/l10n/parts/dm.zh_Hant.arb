@@ -1,0 +1,18 @@
+{
+  "@@locale": "zh_Hant",
+  "dmRoomSettings": "此私訊的設定",
+  "dmRetry": "重新載入",
+  "dmRoomEmpty": "還沒有訊息",
+  "dmTabAll": "全部",
+  "dmTabFollowing": "追蹤中",
+  "dmSettings": "私訊設定",
+  "dmFollowingEmpty": "沒有與追蹤對象的私訊",
+  "dmNewMessage": "新訊息",
+  "dmUserSearchHint": "依使用者名稱搜尋..",
+  "dmUserSearchIntro": "搜尋要傳送私訊的對象。",
+  "dmUserNotFound": "找不到",
+  "dmEmptyTitle": "沒有私訊",
+  "dmEmptyHint": "私訊貼文（限定公開）會顯示在這裡",
+  "dmYouPrefix": "你：",
+  "dmMediaPlaceholder": "[媒體]"
+}

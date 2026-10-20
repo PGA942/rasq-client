@@ -1,0 +1,15 @@
+{
+  "@@locale": "zh_Hant",
+  "modelsErrorFamilyHttp": "HTTP",
+  "modelsErrorFamilySettings": "設定",
+  "modelsErrorFamilyAffectedSettings": "受影響的設定",
+  "modelsErrorFamilyPluginTransfer": "外掛間資料傳遞",
+  "modelsErrorFamilyDataCorruption": "資料損毀",
+  "modelsErrorFamilyRegulation": "限制",
+  "modelsErrorFamilyReserved": "保留",
+  "modelsErrorTimeoutHint": "請檢查網路連線",
+  "modelsErrorMethodNotAcceptableHint": "請查看外掛的故障資訊",
+  "modelsErrorInternalServerErrorHint": "伺服器發生錯誤",
+  "modelsErrorNoTrendRequirementHint": "請變更「喜歡的類型/方向」設定",
+  "modelsErrorRelationalTimelineBrokenHint": "重新載入可能會解決此問題"
+}

@@ -1,0 +1,18 @@
+{
+  "@@locale": "zh",
+  "composePolicyTypeSexual": "色情内容",
+  "composePolicyTypeViolence": "暴力 / 威胁",
+  "composePolicyTypeSelfHarm": "自残 / 自杀",
+  "composePolicyTypeHarassment": "辱骂 / 骚扰",
+  "composePolicyTypePersonalInfo": "个人信息（电话号码、电子邮件地址、住址等）",
+  "composePolicyTypeLink": "外部链接",
+  "composePolicyTypeMedia": "图片 / 视频",
+  "composePolicyTypeStimulus": "过激言辞",
+  "composePolicyTypeTopic": "指定话题",
+  "composePolicyWhoGuardian": "监护人设置",
+  "composePolicyWhoSanction": "账号限制",
+  "composePolicyBlockedMediaUnmeasured": "由于{who}，无法发送图片 / 视频（本设备无法检查附件）。请移除附件",
+  "composePolicyBlockedUnmeasured": "由于{who}，目前无法发送（本设备无法检查“{label}”）",
+  "composePolicyBlocked": "由于{who}，无法发送涉及“{label}”的内容。请修改",
+  "composePolicyWarn": "可能涉及“{label}”（{who}）。仍要发送吗？"
+}

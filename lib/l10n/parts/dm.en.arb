@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "dmRoomSettings": "Settings for this DM",
+  "dmRetry": "Reload",
+  "dmRoomEmpty": "No messages yet",
+  "dmTabAll": "All",
+  "dmTabFollowing": "Following",
+  "dmSettings": "DM settings",
+  "dmFollowingEmpty": "No DMs with people you follow",
+  "dmNewMessage": "New message",
+  "dmUserSearchHint": "Search by username..",
+  "dmUserSearchIntro": "Search for someone to send a DM to.",
+  "dmUserNotFound": "No results",
+  "dmEmptyTitle": "No DMs",
+  "dmEmptyHint": "Direct posts (limited visibility) appear here",
+  "dmYouPrefix": "You: ",
+  "dmMediaPlaceholder": "[Media]"
+}

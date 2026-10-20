@@ -1,0 +1,15 @@
+{
+  "@@locale": "ko",
+  "serversOpen": "서버 열기",
+  "serversUsers": "{count}명",
+  "serversPosts": "게시물 {count}개",
+  "serversRegistrationOpen": "가입 가능",
+  "serversRegistrationClosed": "초대제 / 가입 중단",
+  "serversStatsSeparator": " · ",
+  "serversRaiTitle": "RAi가 분석한 사용자 경향",
+  "serversRaiSource": "{count, plural, other{클라우드 RAi가 공개 게시물 {count}개를 바탕으로 정리했습니다}}",
+  "serversInfoTitle": "서버 정보",
+  "serversInfoUnavailable": "{host}은(는) 서버 정보를 제공하지 않습니다(인스턴스가 없는 서비스이거나 가져올 수 없었습니다)",
+  "serversCountHundredMillions": "{value}억",
+  "serversCountTenThousands": "{value}만"
+}

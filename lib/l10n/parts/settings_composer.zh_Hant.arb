@@ -1,0 +1,10 @@
+{
+  "@@locale": "zh_Hant",
+  "settingsComposerTitle": "貼文編輯器",
+  "settingsComposerAutoAccountTitle": "自動選擇發文帳號",
+  "settingsComposerAutoAccountSubtitle": "自動將發布目標切換為符合草稿的帳號",
+  "settingsComposerAutoAccountDetail": "自動將發布目標切換為草稿內容符合發布目標篩選條件的帳號（手動選擇一律優先）",
+  "settingsComposerRasqLinkedTitle": "同時發布到 RASQ 帳號",
+  "settingsComposerRasqLinkedSubtitle": "向多個帳號發布時，也可以選擇 RASQ 帳號",
+  "settingsComposerRasqLinkedDetail": "在多選模式下，也可以選擇 RASQ 帳號這一列（一般貼文 / 節點連動）。傳送方式與篩選在「自訂發布目標」的 RASQ 分頁中設定。超出 RASQ 上限（1000 字 / 6 個附件 / 6 個投票選項 / 3 則貼文）的貼文不會傳送到 RASQ"
+}

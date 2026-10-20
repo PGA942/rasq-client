@@ -1,0 +1,10 @@
+{
+  "@@locale": "zh",
+  "pluginApiTimelineHome": "关注中",
+  "pluginApiTimelineLocal": "本地",
+  "pluginApiTimelineSocial": "社交",
+  "pluginApiTimelineGlobal": "全局",
+  "pluginApiTimelineRecommended": "推荐",
+  "pluginApiTimelineRelational": "关联",
+  "pluginApiTimelineBundle": "综合"
+}

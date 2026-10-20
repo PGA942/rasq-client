@@ -1,8 +1,16 @@
 import 'package:rasq_models/rasq_models.dart' show RasqUiLocale;
 
+import 'rai_prompts_en.dart';
 import 'rai_prompts_ja.dart';
+import 'rai_prompts_ko.dart';
+import 'rai_prompts_zh.dart';
+import 'rai_prompts_zh_hant.dart';
 
+export 'rai_prompts_en.dart';
 export 'rai_prompts_ja.dart';
+export 'rai_prompts_ko.dart';
+export 'rai_prompts_zh.dart';
+export 'rai_prompts_zh_hant.dart';
 
 /// RAi が LLM / 検索に渡す文(指示・見出し・関数の一覧)の表 (D-492)。
 ///
@@ -77,15 +85,27 @@ abstract class RaiPrompts {
   String webAnswerQuestion(String question);
 }
 
-/// 言語 → 表。言語を足すときはここに足す。
+/// 言語 → 表。言語を足すときはここに足す。キーは表の [RaiPrompts.tag](中国語は字体で分ける: `zh` = 簡体字、`zh-Hant` = 繁体字)。
 const Map<String, RaiPrompts> raiPromptCatalogs = {
   'ja': RaiPromptsJa(),
+  'en': RaiPromptsEn(),
+  'zh': RaiPromptsZh(),
+  'zh-Hant': RaiPromptsZhHant(),
+  'ko': RaiPromptsKo(),
 };
 
-/// [tag](BCP-47)の表: 同じタグ → 言語の部分(`en-US` → `en`)→ 日本語。
+/// [tag](BCP-47)の表: 同じタグ → 親のタグ(`zh-Hant-TW` → `zh-Hant` → `zh`、大文字小文字と `_` / `-` は区別しない)→ 日本語。
+/// 中国語で字体の無いタグは地域で決める(`zh-TW` / `zh-HK` / `zh-MO` → 繁体字、`zh-CN` / `zh-SG` / `zh` → 簡体字)。
 RaiPrompts raiPromptsFor(String tag) {
-  final t = tag.trim().replaceAll('_', '-');
-  return raiPromptCatalogs[t] ?? raiPromptCatalogs[t.split('-').first.toLowerCase()] ?? raiPromptCatalogs[RasqUiLocale.defaultTag]!;
+  final parts = [for (final p in tag.trim().replaceAll('_', '-').split('-')) if (p.isNotEmpty) p.toLowerCase()];
+  if (parts.length > 1 && parts.first == 'zh' && const {'tw', 'hk', 'mo'}.contains(parts[1])) {
+    parts.insert(1, 'hant');
+  }
+  final byNorm = {for (final e in raiPromptCatalogs.entries) e.key.toLowerCase(): e.value};
+  for (var n = parts.length; n > 0; n--) {
+    if (byNorm[parts.take(n).join('-')] case final p?) return p;
+  }
+  return raiPromptCatalogs[RasqUiLocale.defaultTag]!;
 }
 
 /// いまの表示の言語の表。
