@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../relational/relational_engine.dart';
+import '../../l10n/l10n.dart';
 
 /// 仮想目次 (D-036)。クリップ / リスト / TL の投稿列の上に重ねる
 /// **ナビゲーション用の索引** — 投稿を別のタイムラインへ再編成するのではなく、
@@ -58,7 +59,8 @@ class IndexEntry {
   int get count => postKeys.length;
 }
 
-const fallbackIndexLabel = '話題を特定できない投稿';
+/// 話題を特定できない投稿の章の名前(表示の言語、D-529)。
+String get fallbackIndexLabel => appL10n.clipsIndexFallback;
 
 /// ラベル候補: 優先度つきの (語, 重み)。
 Map<String, double> _labelCandidates(Post p) {
@@ -81,7 +83,7 @@ Map<String, double> _labelCandidates(Post p) {
   // 漢字+カタカナ混在の名詞(「猫カフェ」「夏イベント」等)。片方だけの
   // 切り出しより長い表層語を少しだけ優先する(後続の動詞漢字は食わない)。
   final text = '${p.body} ${p.quote?.body ?? ''}';
-  for (final m in RegExp(r'([一-龠々]{1,3}[ァ-ヴー]{2,}|[ァ-ヴー]{2,}[一-龠々]{1,3})').allMatches(text)) {
+  for (final m in RegExp(r'([一-龠々]{1,3}[ァ-ヴー]{2,}|[ァ-ヴー]{2,}[一-龠々]{1,3})').allMatches(text)) { // l10n-ignore
     final t = m.group(1)!;
     if (t.length >= 3) out[t] = 1.2;
   }
@@ -207,7 +209,7 @@ List<IndexEntry> indexForListTimeline(List<Post> posts, {ConversationEngine? eng
       ...entries,
       IndexEntry(
         id: 'singles',
-        label: '単発投稿',
+        label: appL10n.clipsIndexSingles,
         labelSource: 'fallback',
         postKeys: [for (final p in sorted) p.key],
         startedAt: sorted.first.createdAt,
@@ -280,7 +282,7 @@ List<IndexEntry> indexFromConversationEvents(List<ConversationEvent> events, {Da
     };
     out.add(IndexEntry(
       id: e.id,
-      label: named ? best! : '関連投稿 ${e.posts.length}件',
+      label: named ? best! : appL10n.clipsIndexRelated(e.posts.length),
       labelSource: named ? 'event' : 'fallback',
       postKeys: [for (final p in e.posts) p.key],
       representativeKeys: [for (final p in e.anchorPosts) p.key],

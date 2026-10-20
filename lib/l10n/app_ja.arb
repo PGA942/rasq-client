@@ -1,5 +1,75 @@
 {
   "@@locale": "ja",
+  "bookmarksRemoved": "ブックマークを外しました",
+  "@bookmarksRemoved": {
+    "description": "ブックマークを外したときの知らせ"
+  },
+  "bookmarksRemoveFailed": "外せませんでした: {error}",
+  "@bookmarksRemoveFailed": {
+    "description": "ブックマークを外せなかったときの知らせ。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "bookmarksTitle": "ブックマーク",
+  "@bookmarksTitle": {
+    "description": "ブックマークの画面の見出し"
+  },
+  "bookmarksRetry": "再読み込み",
+  "@bookmarksRetry": {
+    "description": "ブックマークを読み込めなかったときの、やり直すボタン"
+  },
+  "bookmarksEmptyTitle": "ブックマークはありません",
+  "@bookmarksEmptyTitle": {
+    "description": "ブックマークが空のとき"
+  },
+  "bookmarksEmptyHint": "投稿の 🔖、クリップに追加、ASTell のしおりで集められます",
+  "@bookmarksEmptyHint": {
+    "description": "ブックマークが空のときの補足。🔖 は投稿のブックマークのボタン"
+  },
+  "bookmarksEmptyNoSnsHint": "このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます",
+  "@bookmarksEmptyNoSnsHint": {
+    "description": "ブックマークが空で、いまの SNS にブックマークの機能が無いときの補足"
+  },
+  "bookmarksClips": "クリップ",
+  "@bookmarksClips": {
+    "description": "ブックマークの画面の節の見出し(自分のクリップ)"
+  },
+  "bookmarksClipCount": "{count, plural, other{{count}件}}",
+  "@bookmarksClipCount": {
+    "description": "クリップの行の、入っている投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookmarksClipHost": "RASQ(SNS 横断)",
+  "@bookmarksClipHost": {
+    "description": "クリップの行の種類: 複数の SNS の投稿を入れられる RASQ のクリップ"
+  },
+  "bookmarksClipPrivate": "非公開クリップ",
+  "@bookmarksClipPrivate": {
+    "description": "クリップの行の種類: SNS の非公開のクリップ"
+  },
+  "bookmarksSeparator": " ・ ",
+  "@bookmarksSeparator": {
+    "description": "クリップの行の補足(件数・種類)の区切り"
+  },
+  "bookmarksFavorites": "お気に入り",
+  "@bookmarksFavorites": {
+    "description": "ブックマークの画面の節の見出し(SNS のお気に入り)"
+  },
+  "bookmarksSwipeRemove": "外す",
+  "@bookmarksSwipeRemove": {
+    "description": "投稿を左へスワイプしたときに出る、ブックマークを外す印"
+  },
+  "bookmarksRemove": "ブックマークを外す",
+  "@bookmarksRemove": {
+    "description": "投稿の下の、ブックマークを外すボタン"
+  },
   "catalogTitle": "コンポーネントカタログ",
   "@catalogTitle": {
     "description": "開発用のコンポーネントカタログ(部品の見本を並べた画面)の見出し"
@@ -1002,6 +1072,245 @@
   "childSafeScreensPendingRefresh": "更新",
   "childSafeScreensPendingLogout": "ログアウト",
   "childSafeScreensPendingRasqLogin": "RASQ アカウントにログイン",
+  "clipsNoSession": "セッションがありません",
+  "@clipsNoSession": {
+    "description": "クリップを読み込もうとしたが、SNS にログインしていないときの誤り"
+  },
+  "clipsChildSafeBlocked": "保護者がこのクリップを止めています",
+  "@clipsChildSafeBlocked": {
+    "description": "チャイルドセーフ: 保護者が止めている中身のクリップを開いたとき"
+  },
+  "clipsRetry": "再読み込み",
+  "@clipsRetry": {
+    "description": "クリップを読み込めなかったときの、やり直すボタン"
+  },
+  "clipsEmptyTitle": "クリップは空です",
+  "@clipsEmptyTitle": {
+    "description": "クリップに投稿が無いとき"
+  },
+  "clipsEmptyHint": "投稿メニューの「クリップに追加」からここへ集められます",
+  "@clipsEmptyHint": {
+    "description": "クリップに投稿が無いときの補足。「クリップに追加」は投稿のメニューの項目の名前"
+  },
+  "clipsPostCount": "{count, plural, other{{count}件}}",
+  "@clipsPostCount": {
+    "description": "クリップの投稿の数(クリップの画面の見出しの下・クリップを選ぶシートの行)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsKindHost": "RASQ クリップ(SNS 横断)",
+  "@clipsKindHost": {
+    "description": "クリップの種類: 端末に保存する、複数の SNS の投稿を入れられるクリップ"
+  },
+  "clipsKindPrivate": "非公開クリップ",
+  "@clipsKindPrivate": {
+    "description": "クリップの種類: SNS の非公開のクリップ"
+  },
+  "clipsCaptionSeparator": " ・ ",
+  "@clipsCaptionSeparator": {
+    "description": "クリップの画面の見出しの下の補足(件数・種類・持ち主)の区切り"
+  },
+  "clipsLoading": "読み込み中…",
+  "@clipsLoading": {
+    "description": "クリップの続きを読み込んでいる間のボタンの文字"
+  },
+  "clipsLoadMore": "さらに読み込む",
+  "@clipsLoadMore": {
+    "description": "クリップの続きを読み込むボタン"
+  },
+  "clipsActionFailed": "できませんでした: {error}",
+  "@clipsActionFailed": {
+    "description": "クリップの公開 / 公開の取りやめに失敗したときの知らせ。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clipsPublishHint": "公開すると、アカウントページと共有リンクから見られます",
+  "@clipsPublishHint": {
+    "description": "RASQ クリップの公開の行の説明(載せられない投稿が無いとき)"
+  },
+  "clipsPublishHintSkipped": "{count, plural, other{公開すると、アカウントページと共有リンクから見られます(フォロワー限定などの {count} 件は載せません)}}",
+  "@clipsPublishHintSkipped": {
+    "description": "RASQ クリップの公開の行の説明(フォロワー限定などで公開に載せない投稿があるとき)。count はその数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsPublishNeedsAccount": "公開するには RASQ アカウントが必要です",
+  "@clipsPublishNeedsAccount": {
+    "description": "RASQ アカウントが無いときの公開の行の説明"
+  },
+  "clipsPublish": "公開する",
+  "@clipsPublish": {
+    "description": "RASQ クリップを公開するボタン"
+  },
+  "clipsPublishedPending": "{count, plural, other{公開しました(公開範囲を確かめている投稿が {count} 件あります)}}",
+  "@clipsPublishedPending": {
+    "description": "公開したときの知らせ(公開範囲を確かめ中の投稿があるとき)。count はその数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsPublished": "公開しました",
+  "@clipsPublished": {
+    "description": "公開したときの知らせ"
+  },
+  "clipsPublishedStatusSkipped": "{count, plural, other{公開中(フォロワー限定などの {count} 件は載せていません)}}",
+  "@clipsPublishedStatusSkipped": {
+    "description": "公開中のクリップの行の状態(載せていない投稿があるとき)。count はその数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsPublishedStatus": "公開中",
+  "@clipsPublishedStatus": {
+    "description": "公開中のクリップの行の状態"
+  },
+  "clipsLinkCopied": "リンクをコピーしました",
+  "@clipsLinkCopied": {
+    "description": "公開中のクリップのリンクをコピーしたときの知らせ"
+  },
+  "clipsCopyLink": "リンクをコピー",
+  "@clipsCopyLink": {
+    "description": "公開中のクリップのリンクをコピーするボタン"
+  },
+  "clipsUnpublished": "公開をやめました",
+  "@clipsUnpublished": {
+    "description": "公開をやめたときの知らせ"
+  },
+  "clipsUnpublish": "公開をやめる",
+  "@clipsUnpublish": {
+    "description": "公開をやめるボタン"
+  },
+  "clipsAddTitle": "クリップに追加",
+  "@clipsAddTitle": {
+    "description": "投稿をクリップに足すシートの見出し"
+  },
+  "clipsAddAddedHost": "追加済み ・ RASQ クリップ",
+  "@clipsAddAddedHost": {
+    "description": "クリップを選ぶシートの行の補足(この投稿がもう入っている RASQ クリップ)"
+  },
+  "clipsAddAddedHostPublished": "追加済み ・ RASQ クリップ(公開中)",
+  "@clipsAddAddedHostPublished": {
+    "description": "クリップを選ぶシートの行の補足(この投稿がもう入っている、公開中の RASQ クリップ)"
+  },
+  "clipsAddHostRow": "{count, plural, other{{count}件 ・ RASQ クリップ(SNS 横断)}}",
+  "@clipsAddHostRow": {
+    "description": "クリップを選ぶシートの RASQ クリップの行の補足。count は入っている投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsAddHostRowPublished": "{count, plural, other{{count}件 ・ RASQ クリップ(SNS 横断) ・ 公開中}}",
+  "@clipsAddHostRowPublished": {
+    "description": "クリップを選ぶシートの、公開中の RASQ クリップの行の補足。count は入っている投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsAddCreate": "新しいクリップを作成",
+  "@clipsAddCreate": {
+    "description": "クリップを選ぶシートの、新しく作る行"
+  },
+  "clipsAdded": "「{name}」に追加しました",
+  "@clipsAdded": {
+    "description": "投稿をクリップに足したときの知らせ。name はクリップの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "clipsAddFailed": "クリップに追加できませんでした: {error}",
+  "@clipsAddFailed": {
+    "description": "クリップに足せなかったときの知らせ。error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clipsCreateTitle": "新しいクリップ",
+  "@clipsCreateTitle": {
+    "description": "新しいクリップを作るシートの見出し"
+  },
+  "clipsCreateNameHint": "クリップ名",
+  "@clipsCreateNameHint": {
+    "description": "新しいクリップの名前の入力欄の薄い文字"
+  },
+  "clipsCreateDescriptionHint": "説明(任意)",
+  "@clipsCreateDescriptionHint": {
+    "description": "新しいクリップの説明の入力欄の薄い文字"
+  },
+  "clipsCreateHost": "RASQ クリップ(SNS 横断)にする",
+  "@clipsCreateHost": {
+    "description": "新しいクリップを RASQ クリップにするスイッチ"
+  },
+  "clipsCreateHostSubtitle": "端末に保存され、別の SNS の投稿も同じクリップへ入れられます",
+  "@clipsCreateHostSubtitle": {
+    "description": "上のスイッチの補足"
+  },
+  "clipsCreateAndAdd": "作成して追加",
+  "@clipsCreateAndAdd": {
+    "description": "新しいクリップを作って投稿を足すボタン"
+  },
+  "clipsIndexFallback": "話題を特定できない投稿",
+  "@clipsIndexFallback": {
+    "description": "クリップの目次の章の名前。話題の語が見つからない投稿をまとめたもの"
+  },
+  "clipsIndexSingles": "単発投稿",
+  "@clipsIndexSingles": {
+    "description": "クリップの目次の章の名前。ほかとつながらない単発の投稿をまとめたもの"
+  },
+  "clipsIndexRelated": "{count, plural, other{関連投稿 {count}件}}",
+  "@clipsIndexRelated": {
+    "description": "クリップ / リストの目次の章の仮の名前(話題の語がまだ決まらないとき)。count は投稿の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsTocTitle": "目次",
+  "@clipsTocTitle": {
+    "description": "クリップの画面の目次の見出し(既定)"
+  },
+  "clipsTocPeople": "{count, plural, other{{count}人}}",
+  "@clipsTocPeople": {
+    "description": "目次の章の行の、話している人の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipsTocFiltering": "絞り込み中",
+  "@clipsTocFiltering": {
+    "description": "目次の章を選んで投稿を絞り込んでいるときの印"
+  },
+  "clipsNoServer": "RASQ アカウントのサーバーが設定されていません",
+  "@clipsNoServer": {
+    "description": "RASQ クリップを公開しようとしたが、RASQ アカウントのサーバーが無いときの誤り"
+  },
+  "clipsNotFound": "クリップがありません",
+  "@clipsNotFound": {
+    "description": "公開しようとした RASQ クリップが見つからないときの誤り"
+  },
   "collectionsImportToTimeline": "タイムラインに取り込む",
   "@collectionsImportToTimeline": {
     "description": "RASQ リストのページの右上のボタンの説明と、押したあとの知らせの見出し。このリストをホームのタイムラインの取り込み元に足す"
@@ -2856,6 +3165,66 @@
   "customAstellRemove": "ルームから外す",
   "customAstellAdd": "プラグインを追加",
   "customAstellPropose": "プラグインを提案",
+  "dmRoomSettings": "このDMの設定",
+  "@dmRoomSettings": {
+    "description": "DM のルームの画面の歯車のボタンのツールチップ(このルームだけの表示の設定)"
+  },
+  "dmRetry": "再読み込み",
+  "@dmRetry": {
+    "description": "DM を読み込めなかったときの、やり直すボタン"
+  },
+  "dmRoomEmpty": "まだメッセージはありません",
+  "@dmRoomEmpty": {
+    "description": "DM のルームにメッセージが無いとき"
+  },
+  "dmTabAll": "全て",
+  "@dmTabAll": {
+    "description": "DM の画面のタブ。全部の DM"
+  },
+  "dmTabFollowing": "フォロー中",
+  "@dmTabFollowing": {
+    "description": "DM の画面のタブ。フォローしている人との DM"
+  },
+  "dmSettings": "DM設定",
+  "@dmSettings": {
+    "description": "DM の画面の歯車のボタンのツールチップ(全部の DM に効く表示の設定)"
+  },
+  "dmFollowingEmpty": "フォロー中のDMはありません",
+  "@dmFollowingEmpty": {
+    "description": "DM の画面の「フォロー中」のタブが空のとき"
+  },
+  "dmNewMessage": "新規メッセージ",
+  "@dmNewMessage": {
+    "description": "新しい DM を始めるボタンのツールチップ、および相手を選ぶシートの見出し"
+  },
+  "dmUserSearchHint": "ユーザー名で検索..",
+  "@dmUserSearchHint": {
+    "description": "相手を選ぶシートの検索欄の薄い文字"
+  },
+  "dmUserSearchIntro": "DM を送る相手を検索します。",
+  "@dmUserSearchIntro": {
+    "description": "相手を選ぶシートの、まだ何も入れていないときの説明"
+  },
+  "dmUserNotFound": "見つかりませんでした",
+  "@dmUserNotFound": {
+    "description": "相手を選ぶシートで、合う人がいないとき"
+  },
+  "dmEmptyTitle": "DMはありません",
+  "@dmEmptyTitle": {
+    "description": "DM の一覧が空のとき"
+  },
+  "dmEmptyHint": "ダイレクト投稿(限定公開)がここに並びます",
+  "@dmEmptyHint": {
+    "description": "DM の一覧が空のときの補足"
+  },
+  "dmYouPrefix": "あなた: ",
+  "@dmYouPrefix": {
+    "description": "DM の一覧の行で、最後のメッセージが自分のものなら本文の前に太字で付ける印(後ろの空白も含む)"
+  },
+  "dmMediaPlaceholder": "[メディア]",
+  "@dmMediaPlaceholder": {
+    "description": "DM の一覧の行で、最後のメッセージが本文の無いメディアだけのときに出す文"
+  },
   "homeCreateMissingAccount": "(いないアカウント)",
   "@homeCreateMissingAccount": {
     "description": "＋ のボタンに置いた投稿のアカウントが、もうログインしていないとき"

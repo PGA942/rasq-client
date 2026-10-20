@@ -10,6 +10,61 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get bookmarksRemoved => 'ブックマークを外しました';
+
+  @override
+  String bookmarksRemoveFailed(String error) {
+    return '外せませんでした: $error';
+  }
+
+  @override
+  String get bookmarksTitle => 'ブックマーク';
+
+  @override
+  String get bookmarksRetry => '再読み込み';
+
+  @override
+  String get bookmarksEmptyTitle => 'ブックマークはありません';
+
+  @override
+  String get bookmarksEmptyHint => '投稿の 🔖、クリップに追加、ASTell のしおりで集められます';
+
+  @override
+  String get bookmarksEmptyNoSnsHint =>
+      'このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます';
+
+  @override
+  String get bookmarksClips => 'クリップ';
+
+  @override
+  String bookmarksClipCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bookmarksClipHost => 'RASQ(SNS 横断)';
+
+  @override
+  String get bookmarksClipPrivate => '非公開クリップ';
+
+  @override
+  String get bookmarksSeparator => ' ・ ';
+
+  @override
+  String get bookmarksFavorites => 'お気に入り';
+
+  @override
+  String get bookmarksSwipeRemove => '外す';
+
+  @override
+  String get bookmarksRemove => 'ブックマークを外す';
+
+  @override
   String get catalogTitle => 'コンポーネントカタログ';
 
   @override
@@ -1100,6 +1155,206 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeScreensPendingRasqLogin => 'RASQ アカウントにログイン';
+
+  @override
+  String get clipsNoSession => 'セッションがありません';
+
+  @override
+  String get clipsChildSafeBlocked => '保護者がこのクリップを止めています';
+
+  @override
+  String get clipsRetry => '再読み込み';
+
+  @override
+  String get clipsEmptyTitle => 'クリップは空です';
+
+  @override
+  String get clipsEmptyHint => '投稿メニューの「クリップに追加」からここへ集められます';
+
+  @override
+  String clipsPostCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsKindHost => 'RASQ クリップ(SNS 横断)';
+
+  @override
+  String get clipsKindPrivate => '非公開クリップ';
+
+  @override
+  String get clipsCaptionSeparator => ' ・ ';
+
+  @override
+  String get clipsLoading => '読み込み中…';
+
+  @override
+  String get clipsLoadMore => 'さらに読み込む';
+
+  @override
+  String clipsActionFailed(String error) {
+    return 'できませんでした: $error';
+  }
+
+  @override
+  String get clipsPublishHint => '公開すると、アカウントページと共有リンクから見られます';
+
+  @override
+  String clipsPublishHintSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '公開すると、アカウントページと共有リンクから見られます(フォロワー限定などの $count 件は載せません)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsPublishNeedsAccount => '公開するには RASQ アカウントが必要です';
+
+  @override
+  String get clipsPublish => '公開する';
+
+  @override
+  String clipsPublishedPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '公開しました(公開範囲を確かめている投稿が $count 件あります)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsPublished => '公開しました';
+
+  @override
+  String clipsPublishedStatusSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '公開中(フォロワー限定などの $count 件は載せていません)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsPublishedStatus => '公開中';
+
+  @override
+  String get clipsLinkCopied => 'リンクをコピーしました';
+
+  @override
+  String get clipsCopyLink => 'リンクをコピー';
+
+  @override
+  String get clipsUnpublished => '公開をやめました';
+
+  @override
+  String get clipsUnpublish => '公開をやめる';
+
+  @override
+  String get clipsAddTitle => 'クリップに追加';
+
+  @override
+  String get clipsAddAddedHost => '追加済み ・ RASQ クリップ';
+
+  @override
+  String get clipsAddAddedHostPublished => '追加済み ・ RASQ クリップ(公開中)';
+
+  @override
+  String clipsAddHostRow(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件 ・ RASQ クリップ(SNS 横断)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String clipsAddHostRowPublished(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件 ・ RASQ クリップ(SNS 横断) ・ 公開中',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsAddCreate => '新しいクリップを作成';
+
+  @override
+  String clipsAdded(String name) {
+    return '「$name」に追加しました';
+  }
+
+  @override
+  String clipsAddFailed(String error) {
+    return 'クリップに追加できませんでした: $error';
+  }
+
+  @override
+  String get clipsCreateTitle => '新しいクリップ';
+
+  @override
+  String get clipsCreateNameHint => 'クリップ名';
+
+  @override
+  String get clipsCreateDescriptionHint => '説明(任意)';
+
+  @override
+  String get clipsCreateHost => 'RASQ クリップ(SNS 横断)にする';
+
+  @override
+  String get clipsCreateHostSubtitle => '端末に保存され、別の SNS の投稿も同じクリップへ入れられます';
+
+  @override
+  String get clipsCreateAndAdd => '作成して追加';
+
+  @override
+  String get clipsIndexFallback => '話題を特定できない投稿';
+
+  @override
+  String get clipsIndexSingles => '単発投稿';
+
+  @override
+  String clipsIndexRelated(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '関連投稿 $count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsTocTitle => '目次';
+
+  @override
+  String clipsTocPeople(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clipsTocFiltering => '絞り込み中';
+
+  @override
+  String get clipsNoServer => 'RASQ アカウントのサーバーが設定されていません';
+
+  @override
+  String get clipsNotFound => 'クリップがありません';
 
   @override
   String get collectionsImportToTimeline => 'タイムラインに取り込む';
@@ -2858,6 +3113,51 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get customAstellPropose => 'プラグインを提案';
+
+  @override
+  String get dmRoomSettings => 'このDMの設定';
+
+  @override
+  String get dmRetry => '再読み込み';
+
+  @override
+  String get dmRoomEmpty => 'まだメッセージはありません';
+
+  @override
+  String get dmTabAll => '全て';
+
+  @override
+  String get dmTabFollowing => 'フォロー中';
+
+  @override
+  String get dmSettings => 'DM設定';
+
+  @override
+  String get dmFollowingEmpty => 'フォロー中のDMはありません';
+
+  @override
+  String get dmNewMessage => '新規メッセージ';
+
+  @override
+  String get dmUserSearchHint => 'ユーザー名で検索..';
+
+  @override
+  String get dmUserSearchIntro => 'DM を送る相手を検索します。';
+
+  @override
+  String get dmUserNotFound => '見つかりませんでした';
+
+  @override
+  String get dmEmptyTitle => 'DMはありません';
+
+  @override
+  String get dmEmptyHint => 'ダイレクト投稿(限定公開)がここに並びます';
+
+  @override
+  String get dmYouPrefix => 'あなた: ';
+
+  @override
+  String get dmMediaPlaceholder => '[メディア]';
 
   @override
   String get homeCreateMissingAccount => '(いないアカウント)';

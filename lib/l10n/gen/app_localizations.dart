@@ -94,6 +94,96 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('ja')];
 
+  /// ブックマークを外したときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークを外しました'**
+  String get bookmarksRemoved;
+
+  /// ブックマークを外せなかったときの知らせ。error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'外せませんでした: {error}'**
+  String bookmarksRemoveFailed(String error);
+
+  /// ブックマークの画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマーク'**
+  String get bookmarksTitle;
+
+  /// ブックマークを読み込めなかったときの、やり直すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get bookmarksRetry;
+
+  /// ブックマークが空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークはありません'**
+  String get bookmarksEmptyTitle;
+
+  /// ブックマークが空のときの補足。🔖 は投稿のブックマークのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿の 🔖、クリップに追加、ASTell のしおりで集められます'**
+  String get bookmarksEmptyHint;
+
+  /// ブックマークが空で、いまの SNS にブックマークの機能が無いときの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます'**
+  String get bookmarksEmptyNoSnsHint;
+
+  /// ブックマークの画面の節の見出し(自分のクリップ)
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ'**
+  String get bookmarksClips;
+
+  /// クリップの行の、入っている投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}件}}'**
+  String bookmarksClipCount(int count);
+
+  /// クリップの行の種類: 複数の SNS の投稿を入れられる RASQ のクリップ
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ(SNS 横断)'**
+  String get bookmarksClipHost;
+
+  /// クリップの行の種類: SNS の非公開のクリップ
+  ///
+  /// In ja, this message translates to:
+  /// **'非公開クリップ'**
+  String get bookmarksClipPrivate;
+
+  /// クリップの行の補足(件数・種類)の区切り
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get bookmarksSeparator;
+
+  /// ブックマークの画面の節の見出し(SNS のお気に入り)
+  ///
+  /// In ja, this message translates to:
+  /// **'お気に入り'**
+  String get bookmarksFavorites;
+
+  /// 投稿を左へスワイプしたときに出る、ブックマークを外す印
+  ///
+  /// In ja, this message translates to:
+  /// **'外す'**
+  String get bookmarksSwipeRemove;
+
+  /// 投稿の下の、ブックマークを外すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ブックマークを外す'**
+  String get bookmarksRemove;
+
   /// 開発用のコンポーネントカタログ(部品の見本を並べた画面)の見出し
   ///
   /// In ja, this message translates to:
@@ -1869,6 +1959,282 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'RASQ アカウントにログイン'**
   String get childSafeScreensPendingRasqLogin;
+
+  /// クリップを読み込もうとしたが、SNS にログインしていないときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションがありません'**
+  String get clipsNoSession;
+
+  /// チャイルドセーフ: 保護者が止めている中身のクリップを開いたとき
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者がこのクリップを止めています'**
+  String get clipsChildSafeBlocked;
+
+  /// クリップを読み込めなかったときの、やり直すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get clipsRetry;
+
+  /// クリップに投稿が無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップは空です'**
+  String get clipsEmptyTitle;
+
+  /// クリップに投稿が無いときの補足。「クリップに追加」は投稿のメニューの項目の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿メニューの「クリップに追加」からここへ集められます'**
+  String get clipsEmptyHint;
+
+  /// クリップの投稿の数(クリップの画面の見出しの下・クリップを選ぶシートの行)
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}件}}'**
+  String clipsPostCount(int count);
+
+  /// クリップの種類: 端末に保存する、複数の SNS の投稿を入れられるクリップ
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ クリップ(SNS 横断)'**
+  String get clipsKindHost;
+
+  /// クリップの種類: SNS の非公開のクリップ
+  ///
+  /// In ja, this message translates to:
+  /// **'非公開クリップ'**
+  String get clipsKindPrivate;
+
+  /// クリップの画面の見出しの下の補足(件数・種類・持ち主)の区切り
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get clipsCaptionSeparator;
+
+  /// クリップの続きを読み込んでいる間のボタンの文字
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込み中…'**
+  String get clipsLoading;
+
+  /// クリップの続きを読み込むボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'さらに読み込む'**
+  String get clipsLoadMore;
+
+  /// クリップの公開 / 公開の取りやめに失敗したときの知らせ。error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'できませんでした: {error}'**
+  String clipsActionFailed(String error);
+
+  /// RASQ クリップの公開の行の説明(載せられない投稿が無いとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'公開すると、アカウントページと共有リンクから見られます'**
+  String get clipsPublishHint;
+
+  /// RASQ クリップの公開の行の説明(フォロワー限定などで公開に載せない投稿があるとき)。count はその数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{公開すると、アカウントページと共有リンクから見られます(フォロワー限定などの {count} 件は載せません)}}'**
+  String clipsPublishHintSkipped(int count);
+
+  /// RASQ アカウントが無いときの公開の行の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'公開するには RASQ アカウントが必要です'**
+  String get clipsPublishNeedsAccount;
+
+  /// RASQ クリップを公開するボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'公開する'**
+  String get clipsPublish;
+
+  /// 公開したときの知らせ(公開範囲を確かめ中の投稿があるとき)。count はその数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{公開しました(公開範囲を確かめている投稿が {count} 件あります)}}'**
+  String clipsPublishedPending(int count);
+
+  /// 公開したときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'公開しました'**
+  String get clipsPublished;
+
+  /// 公開中のクリップの行の状態(載せていない投稿があるとき)。count はその数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{公開中(フォロワー限定などの {count} 件は載せていません)}}'**
+  String clipsPublishedStatusSkipped(int count);
+
+  /// 公開中のクリップの行の状態
+  ///
+  /// In ja, this message translates to:
+  /// **'公開中'**
+  String get clipsPublishedStatus;
+
+  /// 公開中のクリップのリンクをコピーしたときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピーしました'**
+  String get clipsLinkCopied;
+
+  /// 公開中のクリップのリンクをコピーするボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピー'**
+  String get clipsCopyLink;
+
+  /// 公開をやめたときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'公開をやめました'**
+  String get clipsUnpublished;
+
+  /// 公開をやめるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'公開をやめる'**
+  String get clipsUnpublish;
+
+  /// 投稿をクリップに足すシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップに追加'**
+  String get clipsAddTitle;
+
+  /// クリップを選ぶシートの行の補足(この投稿がもう入っている RASQ クリップ)
+  ///
+  /// In ja, this message translates to:
+  /// **'追加済み ・ RASQ クリップ'**
+  String get clipsAddAddedHost;
+
+  /// クリップを選ぶシートの行の補足(この投稿がもう入っている、公開中の RASQ クリップ)
+  ///
+  /// In ja, this message translates to:
+  /// **'追加済み ・ RASQ クリップ(公開中)'**
+  String get clipsAddAddedHostPublished;
+
+  /// クリップを選ぶシートの RASQ クリップの行の補足。count は入っている投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}件 ・ RASQ クリップ(SNS 横断)}}'**
+  String clipsAddHostRow(int count);
+
+  /// クリップを選ぶシートの、公開中の RASQ クリップの行の補足。count は入っている投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}件 ・ RASQ クリップ(SNS 横断) ・ 公開中}}'**
+  String clipsAddHostRowPublished(int count);
+
+  /// クリップを選ぶシートの、新しく作る行
+  ///
+  /// In ja, this message translates to:
+  /// **'新しいクリップを作成'**
+  String get clipsAddCreate;
+
+  /// 投稿をクリップに足したときの知らせ。name はクリップの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」に追加しました'**
+  String clipsAdded(String name);
+
+  /// クリップに足せなかったときの知らせ。error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップに追加できませんでした: {error}'**
+  String clipsAddFailed(String error);
+
+  /// 新しいクリップを作るシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'新しいクリップ'**
+  String get clipsCreateTitle;
+
+  /// 新しいクリップの名前の入力欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップ名'**
+  String get clipsCreateNameHint;
+
+  /// 新しいクリップの説明の入力欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'説明(任意)'**
+  String get clipsCreateDescriptionHint;
+
+  /// 新しいクリップを RASQ クリップにするスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ クリップ(SNS 横断)にする'**
+  String get clipsCreateHost;
+
+  /// 上のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存され、別の SNS の投稿も同じクリップへ入れられます'**
+  String get clipsCreateHostSubtitle;
+
+  /// 新しいクリップを作って投稿を足すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'作成して追加'**
+  String get clipsCreateAndAdd;
+
+  /// クリップの目次の章の名前。話題の語が見つからない投稿をまとめたもの
+  ///
+  /// In ja, this message translates to:
+  /// **'話題を特定できない投稿'**
+  String get clipsIndexFallback;
+
+  /// クリップの目次の章の名前。ほかとつながらない単発の投稿をまとめたもの
+  ///
+  /// In ja, this message translates to:
+  /// **'単発投稿'**
+  String get clipsIndexSingles;
+
+  /// クリップ / リストの目次の章の仮の名前(話題の語がまだ決まらないとき)。count は投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{関連投稿 {count}件}}'**
+  String clipsIndexRelated(int count);
+
+  /// クリップの画面の目次の見出し(既定)
+  ///
+  /// In ja, this message translates to:
+  /// **'目次'**
+  String get clipsTocTitle;
+
+  /// 目次の章の行の、話している人の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count}人}}'**
+  String clipsTocPeople(int count);
+
+  /// 目次の章を選んで投稿を絞り込んでいるときの印
+  ///
+  /// In ja, this message translates to:
+  /// **'絞り込み中'**
+  String get clipsTocFiltering;
+
+  /// RASQ クリップを公開しようとしたが、RASQ アカウントのサーバーが無いときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントのサーバーが設定されていません'**
+  String get clipsNoServer;
+
+  /// 公開しようとした RASQ クリップが見つからないときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップがありません'**
+  String get clipsNotFound;
 
   /// RASQ リストのページの右上のボタンの説明と、押したあとの知らせの見出し。このリストをホームのタイムラインの取り込み元に足す
   ///
@@ -4779,6 +5145,96 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'プラグインを提案'**
   String get customAstellPropose;
+
+  /// DM のルームの画面の歯車のボタンのツールチップ(このルームだけの表示の設定)
+  ///
+  /// In ja, this message translates to:
+  /// **'このDMの設定'**
+  String get dmRoomSettings;
+
+  /// DM を読み込めなかったときの、やり直すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'再読み込み'**
+  String get dmRetry;
+
+  /// DM のルームにメッセージが無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'まだメッセージはありません'**
+  String get dmRoomEmpty;
+
+  /// DM の画面のタブ。全部の DM
+  ///
+  /// In ja, this message translates to:
+  /// **'全て'**
+  String get dmTabAll;
+
+  /// DM の画面のタブ。フォローしている人との DM
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中'**
+  String get dmTabFollowing;
+
+  /// DM の画面の歯車のボタンのツールチップ(全部の DM に効く表示の設定)
+  ///
+  /// In ja, this message translates to:
+  /// **'DM設定'**
+  String get dmSettings;
+
+  /// DM の画面の「フォロー中」のタブが空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中のDMはありません'**
+  String get dmFollowingEmpty;
+
+  /// 新しい DM を始めるボタンのツールチップ、および相手を選ぶシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'新規メッセージ'**
+  String get dmNewMessage;
+
+  /// 相手を選ぶシートの検索欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザー名で検索..'**
+  String get dmUserSearchHint;
+
+  /// 相手を選ぶシートの、まだ何も入れていないときの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'DM を送る相手を検索します。'**
+  String get dmUserSearchIntro;
+
+  /// 相手を選ぶシートで、合う人がいないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかりませんでした'**
+  String get dmUserNotFound;
+
+  /// DM の一覧が空のとき
+  ///
+  /// In ja, this message translates to:
+  /// **'DMはありません'**
+  String get dmEmptyTitle;
+
+  /// DM の一覧が空のときの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'ダイレクト投稿(限定公開)がここに並びます'**
+  String get dmEmptyHint;
+
+  /// DM の一覧の行で、最後のメッセージが自分のものなら本文の前に太字で付ける印(後ろの空白も含む)
+  ///
+  /// In ja, this message translates to:
+  /// **'あなた: '**
+  String get dmYouPrefix;
+
+  /// DM の一覧の行で、最後のメッセージが本文の無いメディアだけのときに出す文
+  ///
+  /// In ja, this message translates to:
+  /// **'[メディア]'**
+  String get dmMediaPlaceholder;
 
   /// ＋ のボタンに置いた投稿のアカウントが、もうログインしていないとき
   ///
