@@ -16,6 +16,7 @@ import '../onboarding/server_signup.dart';
 import 'login_screen.dart' show popOr;
 import 'sns_signup.dart';
 import 'terms_sheet.dart';
+import '../../l10n/l10n.dart';
 
 /// SNS ログインの共通画面: インスタンスURL入力 → サーバー確認 → 利用規約 →
 /// ブラウザ認証 → 「認証を確認」。
@@ -82,9 +83,9 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
       final info = await _plugin.inspectServer(_host.text);
       setState(() => _server = info);
     } on SnsApiException catch (e) {
-      setState(() => _error = '${e.code.display}\n${e.code.message ?? 'サーバーに接続できませんでした'}');
+      setState(() => _error = '${e.code.display}\n${e.code.message ?? context.l10n.loginServerUnreachable}');
     } catch (e) {
-      setState(() => _error = 'サーバーに接続できませんでした: $e');
+      setState(() => _error = context.l10n.loginServerUnreachableWithError('$e'));
     } finally {
       setState(() => _busy = false);
     }
@@ -104,10 +105,10 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
         info = await _plugin.inspectServer(_host.text);
         if (mounted) setState(() => _server = info);
       } on SnsApiException catch (e) {
-        if (mounted) setState(() => _error = '${e.code.display}\n${e.code.message ?? 'サーバーに接続できませんでした'}');
+        if (mounted) setState(() => _error = '${e.code.display}\n${e.code.message ?? context.l10n.loginServerUnreachable}');
         return;
       } catch (e) {
-        if (mounted) setState(() => _error = 'サーバーに接続できませんでした: $e');
+        if (mounted) setState(() => _error = context.l10n.loginServerUnreachableWithError('$e'));
         return;
       } finally {
         if (mounted) setState(() => _busy = false);
@@ -141,12 +142,12 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
       if (flow is! BrowserAuthFlow) throw StateError('unexpected auth flow');
       setState(() => _flow = flow);
       final ok = await launchUrl(flow.url, mode: LaunchMode.externalApplication);
-      if (!ok) setState(() => _error = 'ブラウザを開けませんでした。URL: ${flow.url}');
+      if (!ok) setState(() => _error = context.l10n.loginBrowserOpenFailed('${flow.url}'));
     } on SnsApiException catch (e) {
       // サーバー未設定 (B10) やブローカーのエラーはそのまま見せる。
       setState(() => _error = e.code.message ?? e.code.display);
     } catch (e) {
-      setState(() => _error = '認証を開始できませんでした: $e');
+      setState(() => _error = context.l10n.loginAuthStartFailed('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -170,7 +171,7 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
     } on SnsApiException catch (e) {
       setState(() => _error = e.code.message ?? e.code.display);
     } catch (e) {
-      setState(() => _error = '認証の確認に失敗しました: $e');
+      setState(() => _error = context.l10n.loginAuthCheckFailed('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -181,10 +182,10 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('PDSを変更'), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: () => popOr(context, Routes.login))),
+      appBar: AppBar(title: Text(context.l10n.loginSnsTitle), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: context.l10n.loginBack, onPressed: () => popOr(context, Routes.login))),
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl, vertical: RasqSpacing.md), children: [
-          Text('PDSを変更すると、アプリ外でのURL表示が変わります。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+          Text(context.l10n.loginSnsNote, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: RasqSpacing.xl),
           Row(children: [
             Container(
@@ -198,11 +199,11 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
             Expanded(
               child: RasqInput(
                 controller: _host,
-                hintText: widget.hostHint ?? '移行先のURLを入力 (例: ${widget.defaultHost})',
+                hintText: widget.hostHint ?? context.l10n.loginSnsHostHint(widget.defaultHost),
                 keyboardType: TextInputType.url,
                 textInputAction: TextInputAction.go,
                 onSubmitted: (_) => _inspect(),
-                suffix: IconButton(icon: const Icon(Icons.search), onPressed: _busy ? null : _inspect, tooltip: 'サーバーを検索'),
+                suffix: IconButton(icon: const Icon(Icons.search), onPressed: _busy ? null : _inspect, tooltip: context.l10n.loginSnsSearch),
               ),
             ),
           ]),
@@ -219,16 +220,16 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
               ]),
             ),
           if (_server != null) ...[
-            const RasqSectionHeader(title: 'サーバーの検索', topMargin: 0),
+            RasqSectionHeader(title: context.l10n.loginSnsServerSection, topMargin: 0),
             RasqListTile(
               title: _server!.name,
               subtitle: [
                 _server!.host,
                 if (_server!.version != null) '${_server!.software ?? widget.kind.label} ${_server!.version}',
-                if (_server!.maintainer != null) '管理人:${_server!.maintainer}',
+                if (_server!.maintainer != null) context.l10n.loginSnsMaintainer(_server!.maintainer!),
               ].join(' · '),
               leading: _server!.iconUrl == null ? const Icon(Icons.dns_outlined) : RasqAvatar(imageUrl: _server!.iconUrl, size: 32),
-              trailing: _server!.registrationOpen == false ? const RasqPill(label: '登録停止中', color: RasqColors.muted) : null,
+              trailing: _server!.registrationOpen == false ? RasqPill(label: context.l10n.loginSnsRegistrationClosed, color: RasqColors.muted) : null,
               chevron: false,
             ),
             if (_server!.description != null) Padding(padding: const EdgeInsets.symmetric(vertical: RasqSpacing.sm), child: Text(_server!.description!, style: RasqTypography.bodySmall, maxLines: 4, overflow: TextOverflow.ellipsis)),
@@ -246,10 +247,10 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
               FilledButton.icon(
                 onPressed: _busy ? null : _complete,
                 icon: const Icon(Icons.verified_user_outlined),
-                label: const Text('認証を確認'),
+                label: Text(context.l10n.loginSnsAuthCheck),
                 style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               ),
-              TextButton(onPressed: _busy ? null : () => launchUrl(_flow!.url, mode: LaunchMode.externalApplication), child: const Text('ブラウザをもう一度開く')),
+              TextButton(onPressed: _busy ? null : () => launchUrl(_flow!.url, mode: LaunchMode.externalApplication), child: Text(context.l10n.loginSnsReopenBrowser)),
             ],
           ],
           // 新規登録 (D-471): アカウントを持っていない人は、このサーバー(入力欄)の登録ページへ。
@@ -272,7 +273,7 @@ class MisskeyLoginScreen extends StatelessWidget {
         pluginId: MisskeyPlugin.pluginId,
         kind: SnsKind.misskey,
         defaultHost: host ?? 'misskey.io',
-        authButtonLabel: 'ブラウザで認証する (MiAuth)',
+        authButtonLabel: context.l10n.loginMisskeyAuthButton,
       );
 }
 
@@ -289,7 +290,7 @@ class MastodonLoginScreen extends StatelessWidget {
         pluginId: mastodonPluginId,
         kind: SnsKind.mastodon,
         defaultHost: host ?? 'mastodon.social',
-        authButtonLabel: 'ブラウザで認証する (OAuth)',
-        hostHint: 'インスタンスのURLを入力 (例: mastodon.social)',
+        authButtonLabel: context.l10n.loginMastodonAuthButton,
+        hostHint: context.l10n.loginMastodonHostHint,
       );
 }

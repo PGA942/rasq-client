@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import '../../l10n/l10n.dart';
 
 /// 利用規約画面 (プラグインごと): キャンセル / プラグインの規約 / 同意.
 /// Returns true when the user agreed. No terms → implicit agreement.
@@ -10,8 +11,8 @@ Future<bool> showTermsSheet(OverlayManager manager, PluginManifest manifest) asy
   if (text == null || text.trim().isEmpty) return true;
   final res = await manager.showBottomSheet<bool>(
     id: 'terms.${manifest.id}',
-    title: 'プラグインの規約',
-    confirmText: '同意',
+    title: appL10n.loginTermsTitle,
+    confirmText: appL10n.loginTermsAgree,
     builder: (context) {
       final scheme = Theme.of(context).colorScheme;
       return SingleChildScrollView(
@@ -57,7 +58,7 @@ List<Widget> termsBlocks(String text) {
       final indent = line.startsWith('   ') ? RasqSpacing.lg : 0.0;
       out.add(Padding(
         padding: EdgeInsets.only(left: indent, bottom: RasqSpacing.xs),
-        child: Text(plain(bullet ? '・${s.substring(2)}' : s), style: RasqTypography.body),
+        child: Text(plain(bullet ? appL10n.loginTermsBullet(s.substring(2)) : s), style: RasqTypography.body),
       ));
     }
   }

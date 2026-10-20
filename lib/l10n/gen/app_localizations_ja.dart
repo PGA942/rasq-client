@@ -3690,6 +3690,240 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listsPickerRasqBadgeSemantics => 'RASQ のユーザー';
 
   @override
+  String get loginBack => '戻る';
+
+  @override
+  String get loginTitle => 'SNSにログイン';
+
+  @override
+  String get loginPluginLoadNote =>
+      '初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。';
+
+  @override
+  String get loginChildSafeBlocked => '保護者が SNS アカウントの追加を止めています';
+
+  @override
+  String get loginShareDeviceOnly =>
+      'メールでこの端末を承認しました。SNS アカウントには、下のボタンからこの端末でログインしてください';
+
+  @override
+  String get loginWithBluesky => 'Blueskyでログイン';
+
+  @override
+  String get loginWithMisskey => 'Misskeyでログイン';
+
+  @override
+  String get loginWithMixi2 => 'mixi2でログイン';
+
+  @override
+  String get loginWithMastodon => 'Mastodonでログイン';
+
+  @override
+  String get loginDiscover => 'サービスを探してログイン';
+
+  @override
+  String get loginRaiInstruction => 'Raiのインストラクチャ';
+
+  @override
+  String get loginShareMailUnavailable => 'いまは送れません';
+
+  @override
+  String loginShareMailSent(String to) {
+    return '$to に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください';
+  }
+
+  @override
+  String get loginShareMailSentVerified =>
+      '確認済みのメールアドレス に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください';
+
+  @override
+  String get loginShareMailNoVerified =>
+      '確認済みのメールアドレスがありません。元の端末で承認するか、SNS アカウントにこの端末でログインしてください';
+
+  @override
+  String get loginShareMailTooMany => '送りすぎです。しばらく待ってから、もう一度送ってください';
+
+  @override
+  String get loginShareMailNotSupported => 'このサーバーでは、メールでの承認を使えません';
+
+  @override
+  String loginShareMailFailed(String code) {
+    return '送れませんでした($code)';
+  }
+
+  @override
+  String get loginShareWaiting =>
+      '元の端末で共有を承認すると、SNS アカウントに一斉ログインします。確認済みのメールに届いたリンクからも承認できます';
+
+  @override
+  String get loginShareMailButton => 'メールで承認する(リンクを送る)';
+
+  @override
+  String get loginBundleTitleThis => 'この RASQ アカウント の SNS アカウント';
+
+  @override
+  String loginBundleTitle(String handle) {
+    return '@$handle の SNS アカウント';
+  }
+
+  @override
+  String get loginBundleHint => 'この端末では、まだログインしていません。押すとログインできます。';
+
+  @override
+  String get loginBundleUse => '使う';
+
+  @override
+  String get loginBundleLogin => 'ログイン';
+
+  @override
+  String get loginTermsTitle => 'プラグインの規約';
+
+  @override
+  String get loginTermsAgree => '同意';
+
+  @override
+  String loginTermsBullet(String text) {
+    return '・$text';
+  }
+
+  @override
+  String loginSignupDivider(String service) {
+    return '$service のアカウントを持っていない';
+  }
+
+  @override
+  String get loginSignupButton => '新規登録';
+
+  @override
+  String get loginSignupReopen => '登録ページをもう一度開く';
+
+  @override
+  String loginBrowserOpenFailed(String url) {
+    return 'ブラウザを開けませんでした。URL: $url';
+  }
+
+  @override
+  String get loginPluginMissingMixi2 => 'mixi2 プラグインが見つかりません';
+
+  @override
+  String loginMixi2BrowserPending(String url) {
+    return 'ブラウザで許可してからアプリに戻ってください: $url';
+  }
+
+  @override
+  String loginFailed(String error) {
+    return 'ログインできませんでした: $error';
+  }
+
+  @override
+  String get loginMixi2HostHint => 'ホスト (例: mixi.social)';
+
+  @override
+  String get loginMixi2Note =>
+      'mixi2 の公式 API は申請制で、ログインは RASQ のサーバーを経由します。準備が整うまで「ブラウザで認証」は使えません。';
+
+  @override
+  String get loginMixi2Browser => 'ブラウザで認証';
+
+  @override
+  String get loginMixi2Dummy => 'ダミーアカウントで試す';
+
+  @override
+  String get loginMixi2DummyNote =>
+      'ダミーはネットワークを使わず、プラグインの中の投稿で TL / いいね / リポスト / 投稿 / 通知の流れを確かめられます。';
+
+  @override
+  String get loginMixi2SignupHint =>
+      'mixi2 のアカウントは、ブラウザ(または mixi2 のアプリ)で作ります。作れたら、この画面に戻って「ブラウザで認証」でログインしてください。';
+
+  @override
+  String get loginPluginMissingBluesky => 'Bluesky プラグインが見つかりません';
+
+  @override
+  String get loginBlueskyHostHint => 'PDS (例: bsky.social)';
+
+  @override
+  String get loginBlueskyIdHint => 'ハンドル (例: you.bsky.social) またはメール';
+
+  @override
+  String get loginBlueskyPasswordHint => 'アプリパスワード';
+
+  @override
+  String get loginPasswordHide => '隠す';
+
+  @override
+  String get loginPasswordShow => '表示';
+
+  @override
+  String get loginBlueskyPasswordNote =>
+      'Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」で作ったパスワードを使ってください。本パスワードは入れないでください。';
+
+  @override
+  String get loginButton => 'ログイン';
+
+  @override
+  String get loginBlueskySignupHint =>
+      'ブラウザの Bluesky で「アカウントを作成」から登録してください。登録できたら、Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」でパスワードを作り、上のハンドルとアプリパスワードでログインします。';
+
+  @override
+  String get loginServerUnreachable => 'サーバーに接続できませんでした';
+
+  @override
+  String loginServerUnreachableWithError(String error) {
+    return 'サーバーに接続できませんでした: $error';
+  }
+
+  @override
+  String loginAuthStartFailed(String error) {
+    return '認証を開始できませんでした: $error';
+  }
+
+  @override
+  String loginAuthCheckFailed(String error) {
+    return '認証の確認に失敗しました: $error';
+  }
+
+  @override
+  String get loginSnsTitle => 'PDSを変更';
+
+  @override
+  String get loginSnsNote => 'PDSを変更すると、アプリ外でのURL表示が変わります。';
+
+  @override
+  String loginSnsHostHint(String example) {
+    return '移行先のURLを入力 (例: $example)';
+  }
+
+  @override
+  String get loginSnsSearch => 'サーバーを検索';
+
+  @override
+  String get loginSnsServerSection => 'サーバーの検索';
+
+  @override
+  String loginSnsMaintainer(String name) {
+    return '管理人:$name';
+  }
+
+  @override
+  String get loginSnsRegistrationClosed => '登録停止中';
+
+  @override
+  String get loginSnsAuthCheck => '認証を確認';
+
+  @override
+  String get loginSnsReopenBrowser => 'ブラウザをもう一度開く';
+
+  @override
+  String get loginMisskeyAuthButton => 'ブラウザで認証する (MiAuth)';
+
+  @override
+  String get loginMastodonAuthButton => 'ブラウザで認証する (OAuth)';
+
+  @override
+  String get loginMastodonHostHint => 'インスタンスのURLを入力 (例: mastodon.social)';
+
+  @override
   String get mediaVizStyleMirror => '上下対称のバー';
 
   @override
@@ -10578,6 +10812,59 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get raiModelsNoteNotInstalled => '未DL';
+
+  @override
+  String get serversOpen => 'サーバーを開く';
+
+  @override
+  String serversUsers(String count) {
+    return '$count 人';
+  }
+
+  @override
+  String serversPosts(String count) {
+    return '$count 投稿';
+  }
+
+  @override
+  String get serversRegistrationOpen => '登録受付中';
+
+  @override
+  String get serversRegistrationClosed => '招待制 / 受付停止';
+
+  @override
+  String get serversStatsSeparator => ' ・ ';
+
+  @override
+  String get serversRaiTitle => 'RAi によるユーザーの傾向';
+
+  @override
+  String serversRaiSource(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '公開の投稿 $count 件から、クラウド版 RAi がまとめました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get serversInfoTitle => 'サーバー情報';
+
+  @override
+  String serversInfoUnavailable(String host) {
+    return '$host はサーバー情報を出していません(インスタンスの無いサービスか、取れませんでした)';
+  }
+
+  @override
+  String serversCountHundredMillions(String value) {
+    return '$value億';
+  }
+
+  @override
+  String serversCountTenThousands(String value) {
+    return '$value万';
+  }
 
   @override
   String get settingsActionBarTitle => 'プラグインボタン';

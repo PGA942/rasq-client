@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart' show SnsKind;
 import 'package:url_launcher/url_launcher.dart';
+import '../../l10n/l10n.dart';
 
 /// 「{SNS}でログイン」の画面の「新規登録」(D-471)。
 ///
@@ -44,7 +45,7 @@ class SnsSignupButton extends StatelessWidget {
           const Expanded(child: Divider()),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
-            child: Text('${kind.label} のアカウントを持っていない', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            child: Text(context.l10n.loginSignupDivider(kind.label), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
           const Expanded(child: Divider()),
         ]),
@@ -53,7 +54,7 @@ class SnsSignupButton extends StatelessWidget {
           key: const ValueKey('login.signup'),
           onPressed: onPressed,
           icon: const Icon(Icons.person_add_alt_1_outlined),
-          label: const Text('新規登録'),
+          label: Text(context.l10n.loginSignupButton),
           style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
         ),
       ]),
@@ -84,7 +85,7 @@ class SnsSignupReturnHint extends StatelessWidget {
         ]),
         Align(
           alignment: Alignment.centerRight,
-          child: TextButton(onPressed: onReopen, child: const Text('登録ページをもう一度開く')),
+          child: TextButton(onPressed: onReopen, child: Text(context.l10n.loginSignupReopen)),
         ),
         SelectableText(url.toString(), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
       ]),

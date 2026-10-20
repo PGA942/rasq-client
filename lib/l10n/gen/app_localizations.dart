@@ -6154,6 +6154,402 @@ abstract class AppLocalizations {
   /// **'RASQ のユーザー'**
   String get listsPickerRasqBadgeSemantics;
 
+  /// ログインの画面の左上の戻るボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'戻る'**
+  String get loginBack;
+
+  /// SNS のアカウントでログインする画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'SNSにログイン'**
+  String get loginTitle;
+
+  /// SNS にログインする画面の上の案内。初めてログインする前に、その SNS のプラグインを読み込む
+  ///
+  /// In ja, this message translates to:
+  /// **'初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。'**
+  String get loginPluginLoadNote;
+
+  /// チャイルドセーフ: 保護者が SNS アカウントを足せないようにしているときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'保護者が SNS アカウントの追加を止めています'**
+  String get loginChildSafeBlocked;
+
+  /// メールのリンクで端末を承認した(SNS のログインは共有しない)あとの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'メールでこの端末を承認しました。SNS アカウントには、下のボタンからこの端末でログインしてください'**
+  String get loginShareDeviceOnly;
+
+  /// Bluesky でログインするボタン、およびその画面の見出し。Bluesky はサービス名
+  ///
+  /// In ja, this message translates to:
+  /// **'Blueskyでログイン'**
+  String get loginWithBluesky;
+
+  /// Misskey でログインするボタン。Misskey はサービス名
+  ///
+  /// In ja, this message translates to:
+  /// **'Misskeyでログイン'**
+  String get loginWithMisskey;
+
+  /// mixi2 でログインするボタン、およびその画面の見出し。mixi2 はサービス名
+  ///
+  /// In ja, this message translates to:
+  /// **'mixi2でログイン'**
+  String get loginWithMixi2;
+
+  /// Mastodon でログインするボタン。Mastodon はサービス名
+  ///
+  /// In ja, this message translates to:
+  /// **'Mastodonでログイン'**
+  String get loginWithMastodon;
+
+  /// 合うサーバーや RASQ リストを探してからログインする画面へ進むボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'サービスを探してログイン'**
+  String get loginDiscover;
+
+  /// ログインの画面の下のボタン。RAi(アプリの案内役の AI)に質問する入力欄を出す
+  ///
+  /// In ja, this message translates to:
+  /// **'Raiのインストラクチャ'**
+  String get loginRaiInstruction;
+
+  /// 承認のメールを送れなかった(送る口が無い)ときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'いまは送れません'**
+  String get loginShareMailUnavailable;
+
+  /// 承認のリンクをメールで送ったときの知らせ。to は送り先のメールアドレス
+  ///
+  /// In ja, this message translates to:
+  /// **'{to} に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください'**
+  String loginShareMailSent(String to);
+
+  /// 承認のリンクをメールで送ったときの知らせ(送り先のアドレスが分からないとき。「確認済みのメールアドレス」に送った)
+  ///
+  /// In ja, this message translates to:
+  /// **'確認済みのメールアドレス に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください'**
+  String get loginShareMailSentVerified;
+
+  /// 承認のメールを送れない(確認済みのメールアドレスが無い)とき
+  ///
+  /// In ja, this message translates to:
+  /// **'確認済みのメールアドレスがありません。元の端末で承認するか、SNS アカウントにこの端末でログインしてください'**
+  String get loginShareMailNoVerified;
+
+  /// 承認のメールを送りすぎたとき
+  ///
+  /// In ja, this message translates to:
+  /// **'送りすぎです。しばらく待ってから、もう一度送ってください'**
+  String get loginShareMailTooMany;
+
+  /// サーバーがメールでの承認に対応していないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'このサーバーでは、メールでの承認を使えません'**
+  String get loginShareMailNotSupported;
+
+  /// 承認のメールを送れなかったとき。code は RASQ の誤りのコード(例: 500)
+  ///
+  /// In ja, this message translates to:
+  /// **'送れませんでした({code})'**
+  String loginShareMailFailed(String code);
+
+  /// 別の端末の承認を待っている間の案内
+  ///
+  /// In ja, this message translates to:
+  /// **'元の端末で共有を承認すると、SNS アカウントに一斉ログインします。確認済みのメールに届いたリンクからも承認できます'**
+  String get loginShareWaiting;
+
+  /// 承認のリンクをメールで送るボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'メールで承認する(リンクを送る)'**
+  String get loginShareMailButton;
+
+  /// RASQ アカウントに結び付いた SNS アカウントのうち、この端末でまだ入っていないものの欄の見出し(RASQ アカウントのハンドルが無いとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'この RASQ アカウント の SNS アカウント'**
+  String get loginBundleTitleThis;
+
+  /// RASQ アカウントに結び付いた SNS アカウントのうち、この端末でまだ入っていないものの欄の見出し。handle は RASQ アカウントのハンドル(@ は付けない)
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} の SNS アカウント'**
+  String loginBundleTitle(String handle);
+
+  /// 上の欄の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末では、まだログインしていません。押すとログインできます。'**
+  String get loginBundleHint;
+
+  /// 上の欄の行の右端。この端末にログインがあるので、そのまま使う
+  ///
+  /// In ja, this message translates to:
+  /// **'使う'**
+  String get loginBundleUse;
+
+  /// 上の欄の行の右端。この端末で新しくログインする
+  ///
+  /// In ja, this message translates to:
+  /// **'ログイン'**
+  String get loginBundleLogin;
+
+  /// ログインの前に出す、SNS のプラグインの規約のシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'プラグインの規約'**
+  String get loginTermsTitle;
+
+  /// プラグインの規約のシートの、同意して進むボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'同意'**
+  String get loginTermsAgree;
+
+  /// プラグインの規約の箇条書きの 1 行。text は規約の文(プラグインの中身)
+  ///
+  /// In ja, this message translates to:
+  /// **'・{text}'**
+  String loginTermsBullet(String text);
+
+  /// ログインの画面の下の区切りの文。service はサービス名(Misskey など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{service} のアカウントを持っていない'**
+  String loginSignupDivider(String service);
+
+  /// そのサービスでアカウントを新しく作るボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'新規登録'**
+  String get loginSignupButton;
+
+  /// 登録ページをブラウザで開いたあとの案内の、もう一度開くボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'登録ページをもう一度開く'**
+  String get loginSignupReopen;
+
+  /// ブラウザを開けなかったときの誤り。url は開こうとした URL
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザを開けませんでした。URL: {url}'**
+  String loginBrowserOpenFailed(String url);
+
+  /// mixi2 のプラグインが入っていないときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'mixi2 プラグインが見つかりません'**
+  String get loginPluginMissingMixi2;
+
+  /// mixi2 のブラウザでの認証を始めたときの案内。url は認証のページ
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザで許可してからアプリに戻ってください: {url}'**
+  String loginMixi2BrowserPending(String url);
+
+  /// ログインに失敗したときの誤り。error は理由(英語のことがある)
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインできませんでした: {error}'**
+  String loginFailed(String error);
+
+  /// mixi2 のログインの画面の、ホストの入力欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'ホスト (例: mixi.social)'**
+  String get loginMixi2HostHint;
+
+  /// mixi2 のログインの画面の補足。「ブラウザで認証」はボタンの名前(loginMixi2Browser)と揃える
+  ///
+  /// In ja, this message translates to:
+  /// **'mixi2 の公式 API は申請制で、ログインは RASQ のサーバーを経由します。準備が整うまで「ブラウザで認証」は使えません。'**
+  String get loginMixi2Note;
+
+  /// mixi2 のログインの画面の、ブラウザで認証するボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザで認証'**
+  String get loginMixi2Browser;
+
+  /// 開発者モードだけ: ネットワークを使わないダミーのアカウントで試すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ダミーアカウントで試す'**
+  String get loginMixi2Dummy;
+
+  /// 開発者モードだけ: ダミーのアカウントの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'ダミーはネットワークを使わず、プラグインの中の投稿で TL / いいね / リポスト / 投稿 / 通知の流れを確かめられます。'**
+  String get loginMixi2DummyNote;
+
+  /// mixi2 の登録ページを開いたあとの案内。「ブラウザで認証」はボタンの名前と揃える
+  ///
+  /// In ja, this message translates to:
+  /// **'mixi2 のアカウントは、ブラウザ(または mixi2 のアプリ)で作ります。作れたら、この画面に戻って「ブラウザで認証」でログインしてください。'**
+  String get loginMixi2SignupHint;
+
+  /// Bluesky のプラグインが入っていないときの誤り
+  ///
+  /// In ja, this message translates to:
+  /// **'Bluesky プラグインが見つかりません'**
+  String get loginPluginMissingBluesky;
+
+  /// Bluesky のログインの画面の、PDS(データを置くサーバー)の入力欄の薄い文字。PDS は Bluesky の用語
+  ///
+  /// In ja, this message translates to:
+  /// **'PDS (例: bsky.social)'**
+  String get loginBlueskyHostHint;
+
+  /// Bluesky のログインの画面の、ハンドルかメールアドレスの入力欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'ハンドル (例: you.bsky.social) またはメール'**
+  String get loginBlueskyIdHint;
+
+  /// Bluesky のログインの画面の、アプリパスワードの入力欄の薄い文字。アプリパスワードは Bluesky の機能の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリパスワード'**
+  String get loginBlueskyPasswordHint;
+
+  /// パスワードを伏せるボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'隠す'**
+  String get loginPasswordHide;
+
+  /// パスワードを見せるボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'表示'**
+  String get loginPasswordShow;
+
+  /// Bluesky のアプリパスワードの説明。「」の中は Bluesky の画面の名前(Bluesky のその言語の表記に合わせる)
+  ///
+  /// In ja, this message translates to:
+  /// **'Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」で作ったパスワードを使ってください。本パスワードは入れないでください。'**
+  String get loginBlueskyPasswordNote;
+
+  /// ログインのボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ログイン'**
+  String get loginButton;
+
+  /// Bluesky の登録ページを開いたあとの案内。「」の中は Bluesky の画面の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザの Bluesky で「アカウントを作成」から登録してください。登録できたら、Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」でパスワードを作り、上のハンドルとアプリパスワードでログインします。'**
+  String get loginBlueskySignupHint;
+
+  /// サーバーを確かめられなかったときの誤り(理由が無いとき)
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーに接続できませんでした'**
+  String get loginServerUnreachable;
+
+  /// サーバーを確かめられなかったときの誤り。error は理由(英語のことがある)
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーに接続できませんでした: {error}'**
+  String loginServerUnreachableWithError(String error);
+
+  /// ブラウザでの認証を始められなかったときの誤り。error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'認証を開始できませんでした: {error}'**
+  String loginAuthStartFailed(String error);
+
+  /// ブラウザで許可したあとの確認に失敗したときの誤り。error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'認証の確認に失敗しました: {error}'**
+  String loginAuthCheckFailed(String error);
+
+  /// Misskey / Mastodon のログインの画面の見出し(サーバーを選ぶ)
+  ///
+  /// In ja, this message translates to:
+  /// **'PDSを変更'**
+  String get loginSnsTitle;
+
+  /// Misskey / Mastodon のログインの画面の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'PDSを変更すると、アプリ外でのURL表示が変わります。'**
+  String get loginSnsNote;
+
+  /// サーバーの入力欄の薄い文字。example は例のホスト(misskey.io など)
+  ///
+  /// In ja, this message translates to:
+  /// **'移行先のURLを入力 (例: {example})'**
+  String loginSnsHostHint(String example);
+
+  /// サーバーの入力欄の右の、確かめるボタンのツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーを検索'**
+  String get loginSnsSearch;
+
+  /// 確かめたサーバーの情報の欄の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーの検索'**
+  String get loginSnsServerSection;
+
+  /// サーバーの行の補足。name はサーバーの管理人の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'管理人:{name}'**
+  String loginSnsMaintainer(String name);
+
+  /// サーバーが新規登録を受け付けていないときの印
+  ///
+  /// In ja, this message translates to:
+  /// **'登録停止中'**
+  String get loginSnsRegistrationClosed;
+
+  /// ブラウザで許可したあとに押す、確認のボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'認証を確認'**
+  String get loginSnsAuthCheck;
+
+  /// ブラウザでの認証のページをもう一度開くボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザをもう一度開く'**
+  String get loginSnsReopenBrowser;
+
+  /// Misskey のログインの、ブラウザで認証するボタン。MiAuth は Misskey の認証の方式の名前で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザで認証する (MiAuth)'**
+  String get loginMisskeyAuthButton;
+
+  /// Mastodon のログインの、ブラウザで認証するボタン。OAuth は認証の方式の名前で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザで認証する (OAuth)'**
+  String get loginMastodonAuthButton;
+
+  /// Mastodon のログインの、サーバーの入力欄の薄い文字
+  ///
+  /// In ja, this message translates to:
+  /// **'インスタンスのURLを入力 (例: mastodon.social)'**
+  String get loginMastodonHostHint;
+
   /// 音声を動画にするときの波形の形の選択肢(Visualizer の設定)。中央から上下に伸びるバー
   ///
   /// In ja, this message translates to:
@@ -17413,6 +17809,78 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'未DL'**
   String get raiModelsNoteNotInstalled;
+
+  /// サーバー情報のタイルの右下のボタン(既定)。サーバーのページをブラウザで開く
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーを開く'**
+  String get serversOpen;
+
+  /// サーバー情報のタイルの数の並び。登録している人の数。count は書式済みの数(1.2万 など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{count} 人'**
+  String serversUsers(String count);
+
+  /// サーバー情報のタイルの数の並び。投稿の数。count は書式済みの数(1.2万 など)
+  ///
+  /// In ja, this message translates to:
+  /// **'{count} 投稿'**
+  String serversPosts(String count);
+
+  /// サーバー情報のタイルの並び。新規登録を受け付けている
+  ///
+  /// In ja, this message translates to:
+  /// **'登録受付中'**
+  String get serversRegistrationOpen;
+
+  /// サーバー情報のタイルの並び。新規登録が招待制か止まっている
+  ///
+  /// In ja, this message translates to:
+  /// **'招待制 / 受付停止'**
+  String get serversRegistrationClosed;
+
+  /// サーバー情報のタイルの並び(ソフト・人数・投稿数・登録)の区切り
+  ///
+  /// In ja, this message translates to:
+  /// **' ・ '**
+  String get serversStatsSeparator;
+
+  /// サーバー情報のタイルの、RAi(アプリの AI)がまとめたそのサーバーの人の傾向の欄の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'RAi によるユーザーの傾向'**
+  String get serversRaiTitle;
+
+  /// 上の欄の出典の補足。count はもとにした公開の投稿の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{公開の投稿 {count} 件から、クラウド版 RAi がまとめました}}'**
+  String serversRaiSource(int count);
+
+  /// ユーザーページの「…」から開くサーバー情報のシートの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバー情報'**
+  String get serversInfoTitle;
+
+  /// サーバー情報が無いときの文。host はサーバーのホスト名
+  ///
+  /// In ja, this message translates to:
+  /// **'{host} はサーバー情報を出していません(インスタンスの無いサービスか、取れませんでした)'**
+  String serversInfoUnavailable(String host);
+
+  /// 数の短い書き方(1 億以上)。value は 1 億(10^8)で割った数(小数 1 桁)
+  ///
+  /// In ja, this message translates to:
+  /// **'{value}億'**
+  String serversCountHundredMillions(String value);
+
+  /// 数の短い書き方(1 万以上)。value は 1 万(10^4)で割った数(1 万〜10 万は小数 1 桁、10 万以上は整数)
+  ///
+  /// In ja, this message translates to:
+  /// **'{value}万'**
+  String serversCountTenThousands(String value);
 
   /// No description provided for @settingsActionBarTitle.
   ///
