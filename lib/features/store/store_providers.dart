@@ -217,29 +217,15 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       return fail(appL10n.storeConsentChanged(consent.version ?? m.version));
     }
 
-    final Uint8List bytes;
-    try {
-      bytes = await client.downloadArtifact(pluginId, bundle.id, version: m.version);
-    } on OrgateException catch (e) {
-      return fail(e.message);
-    }
+    final read = await _fetchVerified(pluginId, m, bundle);
+    _previewed = null;
+    final verified = read.verification;
+    if (read.error != null) return fail(read.error!, verified);
+    final bytes = read.bytes!;
+    final package = read.package;
+    debugPrint('store: $pluginId ${m.version} — ${verified!.message}');
 
-    final verified = await verifyArtifact(bytes: bytes, artifact: bundle, storePublicKey: m.storePublicKey);
-    if (!verified.ok) return fail(verified.message, verified);
-    debugPrint('store: $pluginId ${m.version} — ${verified.message}');
-
-    // 配布物が .rasqpkg(zstd 圧縮 tar、D-034)なら、署名を確かめた入れ物の**中身**を目次と突き合わせる。
-    // 何も登録する前に全部見る: 壊れた / 食い違った配布物は「インストール済み」にもしない。
-    RasqPackage? package;
-    if (isRasqPackage(bytes)) {
-      try {
-        package = RasqPackage.open(bytes, decompress: ref.read(rasqpkgZstdProvider));
-      } on RasqPackageException catch (e) {
-        return fail(appL10n.storePackageInvalid(e.message), verified);
-      }
-      if (package.root.id != pluginId || package.root.version != m.version) {
-        return fail(appL10n.storePackageMismatch('${package.root.id} ${package.root.version}', '$pluginId ${m.version}'), verified);
-      }
+    if (package != null) {
       // 土台の SNS プラグイン(他人の土台に足す子、D-244c)。第一期は id の有無だけを見る(版の範囲は見ない)。
       final available = {...bundledSnsPluginIds, for (final p in state) p.id};
       final missing = [for (final r in package.requires) if (!available.contains(r.id)) '${r.id} ${r.version}'];
@@ -249,7 +235,10 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     // 許す内容 (セキュリティ確認 2026-10-09 の [8]): 選んだ版の配布物そのもの(署名を確かめた中身。生の wasm / 中身の無いモックは
     // 構成のマニフェスト)から読む。自動のアップデート(consent なし)で既定の版にするなら、最後の承認に収まること。
     // 広がる / 記録が無いなら、何も登録・保存しない(版を飛ばしても、飛ばした版で増えたものを見落とさない)。
-    final scope = package != null ? packageScope(package) : PluginScope.of([m.manifest]);
+    final scope = read.scope!;
+    // 確認シートで見せた内容(root と子の全部)と違えば、何も登録・保存しない(セキュリティ確認 2026-10-21 の #8)。
+    // 同じなら、見せた内容がそのまま最後の承認になる。
+    if (consent?.scope case final shown? when !shown.sameAs(scope)) return fail(appL10n.storeConsentChanged(m.version), verified);
     final prev = state.where((p) => p.id == pluginId).firstOrNull;
     final isPack = package != null && (package.root.isTheme || package.root.isAssets);
     // 着せ替え / アセットパックと、初めてのインストールはいつも既定にする。
@@ -296,7 +285,8 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       // 分からなければ試みて、だめでもインストール自体は残す(エラーは返す)。
       await _persist([...state.where((p) => p.id != pluginId), record]);
       if (makeDefault && isWasmBytes(bytes) && m.manifest['kind'] != 'sns') {
-        final slot = await ref.read(slotPluginsProvider.notifier).register(storeSlotSource(pluginId, m.version), bytes: bytes);
+        // wasm が名乗る内容は、配布物から読んだこの版の内容に収まること(セキュリティ確認 2026-10-21 の #7)。
+        final slot = await ref.read(slotPluginsProvider.notifier).register(storeSlotSource(pluginId, m.version), bytes: bytes, approved: scope);
         if (slot == null) return fail(ref.read(slotPluginsNoticeProvider) ?? appL10n.storeSlotRegisterFailed, verified);
         await _syncSlots(pluginId);
       }
@@ -331,7 +321,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     // 登録元は `store:<id>@<版>`(子は `…#<childId>`)— 次回起動はストアからその版を取り直して読み込む。
     // 既定にしない(インストールだけ)なら登録しない。
     if (makeDefault) {
-      final error = await _registerPackage(pluginId, m.version, bytes, package);
+      final error = await _registerPackage(pluginId, m.version, bytes, package, approved: scope);
       if (error != null) return fail(error, verified);
     }
     await _persist([...state.where((p) => p.id != pluginId), record]);
@@ -339,13 +329,66 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     return (error: null, verification: verified, widened: const <String>[]);
   }
 
+  /// [previewInstall] で取って確かめた配布物(確認シートを閉じるまで。インストールが取り直さずに使い、もう一度確かめる)。
+  ({String pluginId, String version, String sha512, Uint8List bytes})? _previewed;
+
+  /// インストールの確認シートを出す前に、[m] の配布物を取って確かめ(SHA-512 + 署名、`.rasqpkg` は中身と目次)、
+  /// 許す内容(root と子の全部)を読む(セキュリティ確認 2026-10-21 の #8)。シートはこの内容を見せ、
+  /// [PluginConsent.scope] に渡す。何も登録・保存しない。`error` が null なら `scope` がある。
+  Future<({String? error, PluginScope? scope})> previewInstall(String pluginId, InstallManifest m) async {
+    _previewed = null;
+    final bundle = m.bundle;
+    if (bundle == null) return (error: appL10n.storeNoBundle, scope: null);
+    final read = await _fetchVerified(pluginId, m, bundle);
+    if (read.error != null) return (error: read.error, scope: null);
+    _previewed = (pluginId: pluginId, version: m.version, sha512: bundle.sha512, bytes: read.bytes!);
+    return (error: null, scope: read.scope);
+  }
+
+  /// 確認シートを閉じた(入れない): [previewInstall] で取った配布物を捨てる。
+  void discardPreview() => _previewed = null;
+
+  /// [m] の配布物を取って確かめ、`.rasqpkg` なら開いて目次と突き合わせ、許す内容を読む(インストールと [previewInstall] で同じ)。
+  /// 何も登録する前に全部見る: 壊れた / 食い違った配布物は「インストール済み」にもしない。
+  Future<({String? error, ArtifactVerification? verification, Uint8List? bytes, RasqPackage? package, PluginScope? scope})> _fetchVerified(
+      String pluginId, InstallManifest m, StoreArtifact bundle) async {
+    final Uint8List bytes;
+    final cached = _previewed;
+    if (cached != null && cached.pluginId == pluginId && cached.version == m.version && cached.sha512 == bundle.sha512) {
+      bytes = cached.bytes; // 下の verifyArtifact でもう一度確かめる
+    } else {
+      try {
+        bytes = await ref.read(storeClientProvider).downloadArtifact(pluginId, bundle.id, version: m.version);
+      } on OrgateException catch (e) {
+        return (error: e.message, verification: null, bytes: null, package: null, scope: null);
+      }
+    }
+    final verified = await verifyArtifact(bytes: bytes, artifact: bundle, storePublicKey: m.storePublicKey);
+    if (!verified.ok) return (error: verified.message, verification: verified, bytes: null, package: null, scope: null);
+    // 配布物が .rasqpkg(zstd 圧縮 tar、D-034)なら、署名を確かめた入れ物の**中身**を目次と突き合わせる。
+    RasqPackage? package;
+    if (isRasqPackage(bytes)) {
+      try {
+        package = RasqPackage.open(bytes, decompress: ref.read(rasqpkgZstdProvider));
+      } on RasqPackageException catch (e) {
+        return (error: appL10n.storePackageInvalid(e.message), verification: verified, bytes: null, package: null, scope: null);
+      }
+      if (package.root.id != pluginId || package.root.version != m.version) {
+        return (error: appL10n.storePackageMismatch('${package.root.id} ${package.root.version}', '$pluginId ${m.version}'), verification: verified, bytes: null, package: null, scope: null);
+      }
+    }
+    final scope = package != null ? packageScope(package) : PluginScope.of([m.manifest]);
+    return (error: null, verification: verified, bytes: bytes, package: package, scope: scope);
+  }
+
   /// .rasqpkg の中のスロットプラグインを、その版の登録元で全部登録する。途中で失敗したら、この版で入れたものを外す。
-  Future<String?> _registerPackage(String pluginId, String version, Uint8List bytes, RasqPackage package) async {
+  /// [approved] = 配布物から読んだこの版の内容(どのプラグインも、名乗る内容がこれと中のマニフェストに収まること、#7)。
+  Future<String?> _registerPackage(String pluginId, String version, Uint8List bytes, RasqPackage package, {PluginScope? approved}) async {
     final slots = ref.read(slotPluginsProvider.notifier);
     final registered = <String>[];
     for (final p in package.slotPlugins) {
       final source = storeSlotSource(pluginId, version, child: p.id == pluginId ? null : p.id);
-      final slot = await slots.register(source, bytes: bytes);
+      final slot = await slots.register(source, bytes: bytes, approved: approved);
       if (slot == null) {
         for (final s in registered) {
           await slots.unregisterSource(s);
@@ -384,10 +427,10 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
         if (isRasqPackage(bytes)) {
           final package = RasqPackage.open(bytes, decompress: ref.read(rasqpkgZstdProvider));
           if (package.root.isTheme || package.root.isAssets) continue;
-          final error = await _registerPackage(pluginId, v, bytes, package);
+          final error = await _registerPackage(pluginId, v, bytes, package, approved: record.versionInfo(v)?.scope);
           if (error != null) return error;
         } else if (isWasmBytes(bytes)) {
-          final slot = await slots.register(storeSlotSource(pluginId, v), bytes: bytes);
+          final slot = await slots.register(storeSlotSource(pluginId, v), bytes: bytes, approved: record.versionInfo(v)?.scope);
           final String? notice = slot == null ? (ref.read(slotPluginsNoticeProvider) ?? appL10n.storeSlotRegisterFailed) : null;
           if (notice != null) return notice;
         }

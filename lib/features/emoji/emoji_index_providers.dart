@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../../backend/limited_http.dart';
 import '../compose/compose_providers.dart';
 import '../rai/rai_embedding_model.dart';
 import '../rai/rai_reference.dart' show NgramRaiEmbedder, RaiEmbedder;
@@ -125,15 +125,61 @@ final emojiImageQueryEmbedderProvider = FutureProvider<RaiEmbedder?>((ref) async
   return ref.watch(emojiTextModelProvider).embedder();
 });
 
-/// 絵を取ってくる(テストでは差し替える)。大きすぎる絵(512 KiB 超)と失敗は null。
-final emojiImageFetcherProvider = Provider<Future<Uint8List?> Function(EmojiInfo e)>((ref) => (e) async {
-      try {
-        final res = await http.get(e.url).timeout(const Duration(seconds: 8));
-        return res.statusCode == 200 && res.bodyBytes.isNotEmpty && res.bodyBytes.length <= 512 * 1024 ? res.bodyBytes : null;
-      } catch (_) {
-        return null;
-      }
-    });
+/// 絵文字の絵 1 枚の上限。
+const emojiImageMaxBytes = 512 * 1024;
+
+/// 読み途中の絵の本文の合計の上限(全アカウントの索引づくりで共有、D-546)。1 枚ぶんの上限を先に取ってから読むので、
+/// 同時に読むのは 8 枚まで(アカウントがいくつあっても)。
+const emojiImageInFlightBytes = 8 * emojiImageMaxBytes;
+
+/// 読み途中の本文の大きさの予算。[acquire] で取れるまで順に待ち、読み終えたら [release] で返す。
+class EmojiImageFetchBudget {
+  EmojiImageFetchBudget(this.maxBytes);
+  final int maxBytes;
+  int _inFlight = 0;
+  final _waiters = <(int, Completer<void>)>[];
+
+  /// いま取ってある大きさ(テスト用)。
+  int get inFlight => _inFlight;
+
+  Future<void> acquire(int bytes) {
+    if (_waiters.isEmpty && _inFlight + bytes <= maxBytes) {
+      _inFlight += bytes;
+      return Future.value();
+    }
+    final c = Completer<void>();
+    _waiters.add((bytes, c));
+    return c.future;
+  }
+
+  void release(int bytes) {
+    _inFlight -= bytes;
+    while (_waiters.isNotEmpty && _inFlight + _waiters.first.$1 <= maxBytes) {
+      final (n, c) = _waiters.removeAt(0);
+      _inFlight += n;
+      c.complete();
+    }
+  }
+}
+
+final emojiImageFetchBudgetProvider = Provider<EmojiImageFetchBudget>((_) => EmojiImageFetchBudget(emojiImageInFlightBytes));
+
+/// 絵を取ってくる(テストでは差し替える)。大きすぎる絵([emojiImageMaxBytes] 超)と失敗は null。
+/// 本文は上限までしか読まない(超えたら読むのをやめて通信を切る。セキュリティ確認 2026-10-21 の #22、D-546)。
+final emojiImageFetcherProvider = Provider<Future<Uint8List?> Function(EmojiInfo e)>((ref) {
+  final budget = ref.watch(emojiImageFetchBudgetProvider);
+  return (e) async {
+    await budget.acquire(emojiImageMaxBytes);
+    try {
+      final res = await getLimited(e.url, maxBytes: emojiImageMaxBytes, timeout: const Duration(seconds: 8));
+      return res.statusCode == 200 && res.bodyBytes.isNotEmpty ? res.bodyBytes : null;
+    } catch (_) {
+      return null;
+    } finally {
+      budget.release(emojiImageMaxBytes);
+    }
+  };
+});
 
 /// あるアカウントのサーバーの、**絵から作った**絵文字の索引 (D-293)。流れは [emojiIndexProvider] と同じ
 /// (ディスク → 足りなければ裏で作る → ディスクへ)。絵は 8 枚ずつ取ってきて埋め込む。進み具合は `<key>#image`。

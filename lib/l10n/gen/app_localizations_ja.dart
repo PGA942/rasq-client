@@ -3143,6 +3143,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get customPageError => 'エラー';
 
   @override
+  String get customPageBusy => 'サーバーが混み合っています。しばらくしてから開き直してください';
+
+  @override
   String get customPageMenuInvite => '招待(Swing で送る)';
 
   @override
@@ -16350,6 +16353,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get storeInstallHostsHeader => '接続先';
 
   @override
+  String get storeInstallSlotsHeader => '使う場所';
+
+  @override
   String get storeInstallLoginInstance => 'ログイン先のインスタンス';
 
   @override
@@ -19130,6 +19136,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vcKickedByModerator => 'モデレーターにルームから退出させられました';
 
   @override
+  String get vcKickedBlocked => 'ホストにブロックされているため、このルームに入れません';
+
+  @override
+  String get vcKickedLocked => '運営により新しい入室が止められているため、このルームに入れません';
+
+  @override
+  String get vcKickedUnavailable =>
+      '入室の条件を確かめられなかったため、ルームに入れませんでした。しばらくしてからもう一度お試しください';
+
+  @override
+  String get vcClosedBeforeJoin => 'このルームは終了しています';
+
+  @override
+  String get vcJoinConnectionLost => 'ルームに入る前に接続が切れました';
+
+  @override
   String vcShareHeld(String seconds) {
     return '検閲中: $seconds 秒後に判定して配信されます(アカウントの処置)';
   }
@@ -19138,6 +19160,35 @@ class AppLocalizationsJa extends AppLocalizations {
   String vcShareRejected(String source) {
     return '検閲で却下されました($source)。この発言は配信されていません';
   }
+
+  @override
+  String get vcShareRejectedBanned => 'このルームから BAN されたため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedClosed => 'ルームが終了したため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedRestricted => 'アカウントの処置により、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedBlocked => 'ホストにブロックされたため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedLocked => '運営により新しい入室が止められたため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedLeft => 'ルームを出たため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedSharePolicy =>
+      '共有がモデレーターだけになったため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedUnavailable =>
+      '配信の条件を確かめられなかったため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedOther => '保留中の発言は配信されませんでした';
 
   @override
   String get vcNotInRoom => 'ルームに入っていません';

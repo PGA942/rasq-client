@@ -66,6 +66,7 @@ class RasqMfmTransform extends StatefulWidget {
   final TextStyle? style;
 
   /// 中身を別の文脈で作り直す(`rainbow` の静止 = 文字だけグラデーションにする 2 枚重ね)。
+  /// null なら重ねず [child] だけ(静止の `rainbow` の層の中の `rainbow`。入れ子で作る数が倍々にならないように、D-546)。
   final Widget Function(RasqMfmContext Function(RasqMfmContext) adjust)? layer;
 
   static const Set<String> coreSet = {

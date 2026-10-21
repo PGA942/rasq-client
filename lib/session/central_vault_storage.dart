@@ -105,11 +105,14 @@ class CentralVaultSessionStorage implements SessionStorage, PreLoginSessionsHold
       return null;
     }
     if (accountId == null) return null;
-    final token = _ref.read(orgateAccountProvider.notifier).tokenFor(accountId);
+    final account = _ref.read(orgateAccountProvider.notifier);
     // 保管庫は ORGATE (D-399、本人だけが見る情報)。
     final base = _ref.read(orgateClientProvider);
-    if (base == null || token == null) return null;
-    return (client: base.withToken(() => token), accountId: accountId);
+    if (base == null || account.tokenFor(accountId) == null) return null;
+    // 口は**このアカウント**に縛る(送るたびに、このアカウントのいまのトークンを読む)。取り直しで替わったトークンでも同じ
+    // アカウントへ届き、ほかのアカウントのトークンは付かない。ログアウトしていればトークン無しで送って断られる (#9)。
+    final id = accountId;
+    return (client: base.withToken(() => account.tokenFor(id)), accountId: id);
   }
 
   /// [owner] の保管庫へ、[value](アプリのセッション一覧)のログインを重ねて預ける。いまのアカウントが [owner] でなければ

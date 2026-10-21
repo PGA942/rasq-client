@@ -75,6 +75,15 @@ class PluginScope {
     ];
   }
 
+  /// 中身が同じか(確認シートで見せた内容と、入れるときに配布物から読み直した内容を突き合わせる、セキュリティ確認 2026-10-21 の #8)。
+  bool sameAs(PluginScope other) =>
+      setEquals(permissions, other.permissions) &&
+      setEquals(hosts, other.hosts) &&
+      instance == other.instance &&
+      setEquals(slots, other.slots) &&
+      mapEquals(reasons, other.reasons) &&
+      dataHandling == other.dataHandling;
+
   Map<String, Object?> toJson() => {
         'permissions': [...permissions]..sort(),
         'hosts': [...hosts]..sort(),
@@ -94,6 +103,21 @@ class PluginScope {
       );
 }
 
+/// wasm が `plugin.manifest` で名乗る内容 [self] のうち、確かめた外の範囲を超えるところ(セキュリティ確認 2026-10-21 の #7)。空 = 収まる。
+/// 同意・自動のアップデートの判定は配布物のマニフェストで行うので、実行時の権限・接続先・使う場所も、その範囲を超えてはいけない
+/// (id が同じでも、範囲が同じとは限らない)。
+/// - [packaged] = 署名を確かめた `.rasqpkg` の中の、そのプラグインのマニフェスト。権限・接続先・使う場所を全部比べる。
+/// - [approved] = インストール時に配布物から読んで記録した、その版の内容(`InstalledVersion.scope`)。生の wasm(中にマニフェストが
+///   無い)はストアの構成のマニフェストから読んだもので、使う場所を持たない(同梱のカタログ)ときは使う場所を比べない。
+List<String> selfReportExcess(Map<String, Object?> self, {Map<String, Object?>? packaged, PluginScope? approved}) {
+  final s = PluginScope.of([self]);
+  return {
+    if (packaged != null) ...s.wideningOver(PluginScope.of([packaged])),
+    if (approved != null)
+      ...(packaged == null && approved.slots.isEmpty ? PluginScope(permissions: s.permissions, hosts: s.hosts, instance: s.instance) : s).wideningOver(approved),
+  }.toList();
+}
+
 /// [host] が許していた接続先 [approved] に収まるか(`*` = どこでも、`*.example.com` = そのサブドメイン)。
 /// 判定は net.fetch と同じ fetchHostPermitted に寄せる。`*.a.example.com` は先頭のラベルが `*` のサブドメインとして
 /// 渡せば、`*.example.com` / `*` にだけ収まり、`a.example.com` のような 1 つのホストには収まらない。
@@ -108,9 +132,13 @@ List<String> _strings(Object? v) => [for (final s in v is List ? v : const []) i
 /// [version] / [sha512] = 確認シートで見た版(`manifest.version`)と配布物のダイジェスト(セキュリティ確認 2026-10-09 の [14])。
 /// あれば、インストールはその版を取り直し、構成の版と配布物の SHA-512 が同じときだけ入れる
 /// (シートを開いている間にストアの最新版が変わっても、確かめていない版は入れない)。
+///
+/// [scope] = 確認シートで見せた許す内容(配布物から読んだ root と子の全部、セキュリティ確認 2026-10-21 の #8)。
+/// あれば、インストールは配布物から読み直した内容がこれと同じときだけ入れる(見せた内容 = 記録する最後の承認)。
 @immutable
 class PluginConsent {
-  const PluginConsent({this.version, this.sha512});
+  const PluginConsent({this.version, this.sha512, this.scope});
   final String? version;
   final String? sha512;
+  final PluginScope? scope;
 }

@@ -17,8 +17,8 @@ Future<Post?> resolvePostOn(Ref ref, Post post, AccountId target) async {
   for (final alt in ref.read(postAlternatesProvider)[post.key] ?? const <Post>[]) {
     if (alt.account == target) return alt;
   }
-  final state = ref.read(sessionsProvider).value;
-  final s = state?.allSessions.where((x) => x.account == target).firstOrNull;
+  // 今使ってよいセッションだけ (#10。ほかの RASQ アカウントのもの / 見守りで止めた SNS では引かない)。
+  final s = ref.read(usableSessionsProvider).where((x) => x.account == target).firstOrNull;
   if (s == null) return null;
   final session = ref.read(pluginRegistryProvider).session(s);
   try {

@@ -3163,6 +3163,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get customPageError => '오류';
 
   @override
+  String get customPageBusy => '서버가 혼잡합니다. 잠시 후 다시 열어 주세요.';
+
+  @override
   String get customPageMenuInvite => '초대(Swing으로 보내기)';
 
   @override
@@ -16412,6 +16415,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get storeInstallHostsHeader => '연결 대상';
 
   @override
+  String get storeInstallSlotsHeader => '사용 위치';
+
+  @override
   String get storeInstallLoginInstance => '로그인한 인스턴스';
 
   @override
@@ -19200,6 +19206,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get vcKickedByModerator => '모더레이터가 룸에서 퇴장시켰습니다';
 
   @override
+  String get vcKickedBlocked => '호스트에게 차단되어 이 룸에 들어갈 수 없습니다';
+
+  @override
+  String get vcKickedLocked => '운영자에 의해 새 입장이 중지되어 이 룸에 들어갈 수 없습니다';
+
+  @override
+  String get vcKickedUnavailable =>
+      '입장 조건을 확인하지 못해 룸에 들어가지 못했습니다. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get vcClosedBeforeJoin => '이 룸은 종료되었습니다';
+
+  @override
+  String get vcJoinConnectionLost => '룸에 들어가기 전에 연결이 끊어졌습니다';
+
+  @override
   String vcShareHeld(String seconds) {
     return '검열 중: $seconds초 후 판정되어 전달됩니다(계정 조치)';
   }
@@ -19208,6 +19230,35 @@ class AppLocalizationsKo extends AppLocalizations {
   String vcShareRejected(String source) {
     return '검열에서 거부되었습니다($source). 이 발언은 전달되지 않았습니다';
   }
+
+  @override
+  String get vcShareRejectedBanned => '이 룸에서 BAN되어 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedClosed => '룸이 종료되어 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedRestricted => '계정 조치로 인해 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedBlocked => '호스트에게 차단되어 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedLocked => '운영자에 의해 새 입장이 중지되어 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedLeft => '룸을 나가서 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedSharePolicy =>
+      '공유가 모더레이터 전용으로 바뀌어 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedUnavailable =>
+      '전달 조건을 확인하지 못해 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedOther => '보류 중인 발언이 전달되지 않았습니다';
 
   @override
   String get vcNotInRoom => '룸에 들어가 있지 않습니다';

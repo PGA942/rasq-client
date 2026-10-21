@@ -58,6 +58,10 @@ const customVarMaxTtl = 30 * 24 * 3600;
 const customVarMaxKeys = 256;
 const customAppendMax = 500;
 
+/// welcome の前に届いた `error` が「混んでいていまは入れない」か(Central S-116 の #12: 送信の予算が足りなければ
+/// `error`(`the server is busy; try again shortly`)を送って閉じる)。断りではないので、間を空けてやり直す。
+bool isCustomServerBusy(Object? message) => message is String && message.startsWith('the server is busy');
+
 /// `me.` → `@<accountId>.`。本人以外の `@<id>.` は書けない(null)。形が違うキーも null。
 String? resolveCustomKey(String key, String accountId) {
   if (!customVarKeyPattern.hasMatch(key)) return null;
@@ -116,8 +120,21 @@ class MockCustomSessionClient implements CustomSessionClient {
   final others = <String, List<CustomParticipant>>{};
   var _n = 0;
 
-  /// ルームのホストか(テストで変える)。room の作成はホストだけ。
+  /// 混んでいて断る welcome の数(テスト用。Central S-116 の #12: `error` を送って閉じる)。
+  int busyWelcomes = 0;
+
+  /// 繋いだ回数(テスト用)。
+  int connects = 0;
+
+  /// ルームのホストか(テストで変える)。room の作成はホストだけ。room のセッションでは welcome の role も owner になる。
   bool isRoomHost = true;
+
+  /// owner か(作った人。room ならルームのオーナー / モデレーターも、S-048)。
+  bool _isOwner(String sessionId, CustomParticipant who) {
+    final s = sessions[sessionId];
+    if (s == null) return false;
+    return s.ownerAccountId == who.accountId || (who.accountId == me.accountId && s.scope.startsWith('room:') && isRoomHost);
+  }
 
   @override
   Future<CustomSession> create({required String pluginId, String? version, required String scope}) async {
@@ -199,9 +216,21 @@ class MockCustomSessionClient implements CustomSessionClient {
   @override
   Future<CustomConnection> connect(String sessionId) async {
     if (!sessions.containsKey(sessionId)) throw StateError(appL10n.customClientSessionClosed);
+    connects++;
     final c = _MockCustomConnection(this, sessionId);
     (_conns[sessionId] ??= []).add(c);
     return c;
+  }
+
+  /// ルームのモデレーターを外した(テスト用。Central S-116 の #6)。モデレーターとして入っている接続(作った本人でないもの)へ
+  /// `closed {reason: "moderator_removed"}` を送って切る。入り直せばそのときの立場(member)で入る。
+  Future<void> removeModerator(String sessionId) async {
+    isRoomHost = false;
+    if (sessions[sessionId]?.ownerAccountId == me.accountId) return;
+    for (final c in [...?_conns[sessionId]]) {
+      c._push({'type': 'closed', 'reason': 'moderator_removed'});
+      await c.close();
+    }
   }
 
   /// 期限の来たサーバー変数を消して `var {value: null, by: null, reason: expired}` を配る(Central の掃除の代わり、テスト用)。
@@ -247,7 +276,7 @@ class MockCustomSessionClient implements CustomSessionClient {
       case 'set' || 'op':
         var key = resolveCustomKey('${m['key']}', who.accountId);
         // owner は他人の @<accountId>. を value: null でだけ消せる(契約 v0.22 / S-106)。
-        final owner = sessions[sessionId]?.ownerAccountId == who.accountId;
+        final owner = _isOwner(sessionId, who);
         final removing = key == null && owner && m['type'] == 'set' && m['value'] == null && '${m['key']}'.startsWith('@') && customVarKeyPattern.hasMatch('${m['key']}');
         if (removing) key = '${m['key']}';
         if (key == null) return error('forbidden key: ${m['key']}');
@@ -291,10 +320,16 @@ class MockCustomSessionClient implements CustomSessionClient {
 class _MockCustomConnection implements CustomConnection {
   _MockCustomConnection(this.client, this.sessionId) {
     _controller = StreamController<Map<String, Object?>>.broadcast(onListen: () {
+      if (client.busyWelcomes > 0) {
+        client.busyWelcomes--;
+        _controller.add({'type': 'error', 'message': 'the server is busy; try again shortly'});
+        unawaited(close());
+        return;
+      }
       final s = client.sessions[sessionId]!;
       _controller.add({
         'type': 'welcome',
-        'me': {...client.me.toJson(), 'role': s.ownerAccountId == client.me.accountId ? 'owner' : 'member'},
+        'me': {...client.me.toJson(), 'role': client._isOwner(sessionId, client.me) ? 'owner' : 'member'},
         'now': client.clock().millisecondsSinceEpoch,
         'session': s.toJson(),
         'participants': [for (final p in client._participants(sessionId)) p.toJson()],

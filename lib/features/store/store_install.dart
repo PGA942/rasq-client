@@ -45,12 +45,18 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
   }
   if (manifest == null) return version == null ? appL10n.storeInstallManifestUnavailable : appL10n.storeManifestVersionNotFound(version);
   final bundle = manifest.bundle;
+  // 見せる内容は、確かめた配布物から読む root と子の全部(セキュリティ確認 2026-10-21 の #8: 構成のマニフェスト = root だけを
+  // 見せて、子の権限・接続先・使う場所まで承認として記録しない)。見せた内容をそのまま consent に渡し、入れるときに突き合わせる。
+  onBusy?.call(true);
+  final preview = await installed.previewInstall(d.id, manifest);
+  onBusy?.call(false);
+  if (preview.error != null) return preview.error;
+  final scope = preview.scope!;
   final permissions = [
-    for (final id in (manifest.manifest['permissions'] as List? ?? const []))
-      if (id is String) d.safety.permissions.where((p) => p.permission == id).firstOrNull ?? PermissionEntry(id, ''),
+    for (final id in [...scope.permissions]..sort())
+      d.safety.permissions.where((p) => p.permission == id).firstOrNull ?? PermissionEntry(id, scope.reasons[id] ?? ''),
   ];
   // 最後に許可した内容から広がるもの(セキュリティ確認 2026-10-09 の [8]): 端末の記録と比べる。初めて入れるなら出さない(全部が新しい)。
-  final scope = PluginScope.of([manifest.manifest]);
   final prev = container.read(installedPluginsProvider).where((p) => p.id == d.id).firstOrNull;
   final widened = prev == null ? const <String>[] : scope.wideningOver(prev.approvedScope);
   // インストール確認シート (D-033): 権限(種別ごと・用途理由つき)と配布物が根拠。
@@ -81,7 +87,14 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
             if (scope.hosts.isNotEmpty || scope.instance) ...[
               const SizedBox(height: 4),
               Text(ctx.l10n.storeInstallHostsHeader, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700)),
-              Text([...scope.hosts, if (scope.instance) ctx.l10n.storeInstallLoginInstance].join(ctx.l10n.storeListSeparator), style: RasqTypography.bodySmall),
+              Text([...[...scope.hosts]..sort(), if (scope.instance) ctx.l10n.storeInstallLoginInstance].join(ctx.l10n.storeListSeparator),
+                  key: const ValueKey('store.install.hosts'), style: RasqTypography.bodySmall),
+            ],
+            // 使う場所 = プラグインに渡る入力(投稿 / 下書き / 画像 …)。子が足す場所も出す(#8)。
+            if (scope.slots.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(ctx.l10n.storeInstallSlotsHeader, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700)),
+              Text(([...scope.slots]..sort()).join(ctx.l10n.storeListSeparator), key: const ValueKey('store.install.slots'), style: RasqTypography.bodySmall),
             ],
             if (widened.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -115,11 +128,16 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
       ]);
     },
   );
-  if (ok != true) return null; // 余白/スワイプで閉じた = キャンセル
+  if (ok != true) {
+    installed.discardPreview();
+    return null; // 余白/スワイプで閉じた = キャンセル(何も登録・保存しない)
+  }
   onBusy?.call(true);
   // 確認シートで見た内容を許した(この版の内容を最後の承認として控える)。版と配布物のダイジェストも渡し、
   // シートを開いている間にストアの最新版 / 配布物が変わっていたら入れない(セキュリティ確認 2026-10-09 の [14])。
-  final outcome = await installed.install(d.id, version: manifest.version, activate: activate, consent: PluginConsent(version: manifest.version, sha512: bundle?.sha512));
+  // 見せた内容(root と子の全部)も渡し、記録する承認が見せたものと同じになるようにする(2026-10-21 の #8)。
+  final outcome = await installed.install(d.id,
+      version: manifest.version, activate: activate, consent: PluginConsent(version: manifest.version, sha512: bundle?.sha512, scope: scope));
   onBusy?.call(false);
   if (outcome.error != null) return outcome.error;
   // 着せ替え (D-375): 入れたらそのまま使う。暗い / 明るいモード専用なら、いまのモードで効くかも添える。

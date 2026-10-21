@@ -16,6 +16,7 @@ import 'session_storage.dart';
 import 'bluesky_auth.dart';
 import 'mixi2_auth.dart';
 import '../features/plugins/fetch_shape_telemetry.dart';
+import '../features/child_safe/child_safe_policy.dart' show ChildSafeSnsAllow;
 import '../features/child_safe/child_safe_providers.dart' show childSnsAllowProvider;
 import '../l10n/l10n.dart';
 
@@ -193,10 +194,7 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
   SessionsState _view(List<AccountSession> all, {String? currentKey, bool bundleView = false, RasqAccountsState? ledger}) {
     final owner = (ledger ?? ref.read(rasqAccountsProvider).value ?? const RasqAccountsState()).current;
     final sns = ref.read(childSnsAllowProvider);
-    final visible = [
-      for (final s in all)
-        if ((owner == null || owner.sessionKeys.contains(s.account.key)) && (sns == null || sns.permits(s.account.kind.name, s.account.instance))) s,
-    ];
+    final visible = [for (final s in all) if (_usable(s.account, owner, sns)) s];
     final key = visible.any((s) => s.account.key == currentKey) ? currentKey : visible.firstOrNull?.account.key;
     return SessionsState(sessions: visible, currentKey: key, bundleView: bundleView, allSessions: all);
   }
@@ -293,8 +291,30 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
 
 final sessionsProvider = AsyncNotifierProvider<SessionsNotifier, SessionsState>(SessionsNotifier.new);
 
+/// 今使ってよいセッションか: 現在の RASQ アカウント [owner] に属し(台帳が無ければ問わない)、見守り中 (D-307) なら
+/// 保護者が許した SNS(種類 / サーバー)[sns] のもの。[SessionsState.sessions] と同じ絞り方。
+bool _usable(AccountId a, RasqAccountRecord? owner, ChildSafeSnsAllow? sns) =>
+    (owner == null || owner.sessionKeys.contains(a.key)) && (sns == null || sns.permits(a.kind.name, a.instance));
+
+/// 今使ってよい SNS セッション(セキュリティ確認 2026-10-21 の #10)。[SessionsState.sessions] に、所属と見守りの制限を
+/// **直接 watch して**掛け直したもの: 制限や所属が変わって一覧を読み直しているあいだ(前の値が残っている)も、止めたセッションを
+/// 返さない。また制限が変われば、これを見るアカウント指定のプロバイダ([sessionForAccountProvider] など)も作り直される。
+/// アカウントを指定してセッションを引く経路はここから選ぶ(端末の全保存 [SessionsState.allSessions] からは選ばない)。
+final usableSessionsProvider = Provider<List<AccountSession>>((ref) {
+  final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+  final owner = ref.watch(rasqAccountsProvider).value?.current;
+  final sns = ref.watch(childSnsAllowProvider);
+  return [for (final s in sessions) if (_usable(s.account, owner, sns)) s];
+});
+
 /// Current account session (null while loading / logged out).
-final currentAccountSessionProvider = Provider<AccountSession?>((ref) => ref.watch(sessionsProvider).value?.current);
+/// 見守りの制限が変わって一覧を読み直しているあいだも、止めた SNS を現在にしない (#10)。
+final currentAccountSessionProvider = Provider<AccountSession?>((ref) {
+  final cur = ref.watch(sessionsProvider).value?.current;
+  if (cur == null) return null;
+  final sns = ref.watch(childSnsAllowProvider);
+  return sns == null || sns.permits(cur.account.kind.name, cur.account.instance) ? cur : null;
+});
 
 /// Open SnsSession for the current account.
 final currentSnsSessionProvider = Provider<SnsSession?>((ref) {
@@ -309,10 +329,13 @@ final currentAccountProvider = Provider<AccountId?>((ref) => ref.watch(currentAc
 /// ↓ で別アカウントのコピーを選んで開いた画面は、以降そのアカウントで展開する
 /// (スレッド / リアクション / ユーザーページ / 返信の投稿先)。ログイン中で
 /// なければ現在のセッションに縮退。null = 現在。
+///
+/// 端末に保存はあるが今は使えない key(ほかの RASQ アカウントのもの / 見守りで止めた SNS。#10)は null: 全保存の一覧にも、
+/// 現在のアカウントにも縮退しない(Web の `/user/<id>?account=<key>` などで、止めたセッションを使わせない)。
 final sessionForAccountProvider = Provider.family<SnsSession?, String?>((ref, key) {
   if (key == null) return ref.watch(currentSnsSessionProvider);
-  final state = ref.watch(sessionsProvider).value;
-  final s = _sessionForKey(state, key);
+  final (s, denied) = _sessionForKey(ref, key);
+  if (denied) return null;
   if (s == null) return ref.watch(currentSnsSessionProvider);
   return ref.watch(pluginRegistryProvider).session(s);
 });
@@ -322,13 +345,20 @@ final sessionForAccountProvider = Provider.family<SnsSession?, String?>((ref, ke
 /// アカウントからでも同じものを指す。ユーザーページは作者の `AccountId.key`(Bluesky では `bluesky:<見ているサーバー>:<handle>`)で
 /// 開くので、総合表示で現在のアカウントが Misskey などのとき、Bluesky の人のページが Misskey のセッションで DID を引いて
 /// 「見つからない」になっていた。Misskey / Mastodon の id はサーバーの中でだけ通じるので、代えない(従来どおり現在へ縮退)。
-AccountSession? _sessionForKey(SessionsState? state, String key) {
-  if (state == null) return null;
-  final exact = state.sessions.where((x) => x.account.key == key).firstOrNull ?? state.allSessions.where((x) => x.account.key == key).firstOrNull;
-  if (exact != null || !key.startsWith('${SnsKind.bluesky.name}:')) return exact;
-  final cur = state.current;
-  if (cur != null && cur.account.kind == SnsKind.bluesky) return cur;
-  return state.sessions.where((x) => x.account.kind == SnsKind.bluesky).firstOrNull;
+///
+/// 選ぶのは今使ってよいセッション([usableSessionsProvider])からだけ (#10)。端末に保存はあるが今は使えない key は
+/// `denied`(呼び出し側は縮退させずに拒む。Bluesky の代わりのアカウントも使わない)。
+(AccountSession?, bool denied) _sessionForKey(Ref ref, String key) {
+  final state = ref.watch(sessionsProvider).value;
+  if (state == null) return (null, false);
+  final usable = ref.watch(usableSessionsProvider);
+  final exact = usable.where((x) => x.account.key == key).firstOrNull;
+  if (exact != null) return (exact, false);
+  if (state.allSessions.any((x) => x.account.key == key)) return (null, true);
+  if (!key.startsWith('${SnsKind.bluesky.name}:')) return (null, false);
+  final cur = usable.where((x) => x.account.key == state.current?.account.key).firstOrNull;
+  if (cur != null && cur.account.kind == SnsKind.bluesky) return (cur, false);
+  return (usable.where((x) => x.account.kind == SnsKind.bluesky).firstOrNull, false);
 }
 
 /// [kind] / [instance] の SNS の投稿・人の id がそのまま通じるアカウントか (D-423)。同じ種類で同じサーバー。
@@ -348,7 +378,9 @@ AccountSession? sessionServing(Iterable<AccountSession> sessions, String kind, S
 /// ほかのアカウントの自分の投稿が「他人」になり、フォロー中の一覧も別のアカウントの関係を見て「未フォロー」になっていた。
 final viewerForAccountProvider = Provider.family<AccountId?, String?>((ref, key) {
   if (key != null) {
-    final s = _sessionForKey(ref.watch(sessionsProvider).value, key);
+    final (s, denied) = _sessionForKey(ref, key);
+    // 今は使えない key は、現在のアカウントとしても見ない (#10)。
+    if (denied) return null;
     if (s != null) return s.account;
   }
   return ref.watch(currentAccountProvider);
@@ -358,8 +390,9 @@ final viewerForAccountProvider = Provider.family<AccountId?, String?>((ref, key)
 /// Bluesky はログインで受け取った DID(トークンの JSON の `did`)。ハンドルは変えられるので、ハンドルで比べると、
 /// ハンドルを変えたあとの自分の投稿が「他人」になる。Misskey / Mastodon は持っていない(null。名前と `me()` で比べる)。
 final viewerUserIdProvider = Provider.family<String?, String?>((ref, key) {
-  final state = ref.watch(sessionsProvider).value;
-  final s = (key == null ? null : _sessionForKey(state, key)) ?? state?.current;
+  final (found, denied) = key == null ? (null, false) : _sessionForKey(ref, key);
+  if (denied) return null;
+  final s = found ?? ref.watch(currentAccountSessionProvider);
   return s == null ? null : blueskyDidOf(s);
 });
 

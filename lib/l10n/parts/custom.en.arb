@@ -90,6 +90,7 @@
   "customPageDisconnectedWithError": "Disconnected: {error}",
   "customPageDisconnected": "Disconnected",
   "customPageError": "Error",
+  "customPageBusy": "The server is busy. Please try opening this again in a little while.",
   "customPageMenuInvite": "Invite (send via Swing)",
   "customPageMenuCopyCode": "Copy invite code",
   "customPageMenuCopyLink": "Copy invite link",

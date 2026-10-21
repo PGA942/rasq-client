@@ -5245,6 +5245,12 @@ abstract class AppLocalizations {
   /// **'エラー'**
   String get customPageError;
 
+  /// 共有ページの welcome を混雑で断られ、間を空けてやり直しても入れなかったとき(Central S-116 の #12)
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーが混み合っています。しばらくしてから開き直してください'**
+  String get customPageBusy;
+
   /// No description provided for @customPageMenuInvite.
   ///
   /// In ja, this message translates to:
@@ -27073,6 +27079,12 @@ abstract class AppLocalizations {
   /// **'接続先'**
   String get storeInstallHostsHeader;
 
+  /// No description provided for @storeInstallSlotsHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'使う場所'**
+  String get storeInstallSlotsHeader;
+
   /// No description provided for @storeInstallLoginInstance.
   ///
   /// In ja, this message translates to:
@@ -31566,6 +31578,36 @@ abstract class AppLocalizations {
   /// **'モデレーターにルームから退出させられました'**
   String get vcKickedByModerator;
 
+  /// 入室の直前の確かめ直しで断られたときの案内(ホストにブロックされている)
+  ///
+  /// In ja, this message translates to:
+  /// **'ホストにブロックされているため、このルームに入れません'**
+  String get vcKickedBlocked;
+
+  /// 入室の直前の確かめ直しで断られたときの案内(新規入室の停止)
+  ///
+  /// In ja, this message translates to:
+  /// **'運営により新しい入室が止められているため、このルームに入れません'**
+  String get vcKickedLocked;
+
+  /// 入室の直前の確かめ直しで断られたときの案内(サーバーが条件を確かめられなかった)
+  ///
+  /// In ja, this message translates to:
+  /// **'入室の条件を確かめられなかったため、ルームに入れませんでした。しばらくしてからもう一度お試しください'**
+  String get vcKickedUnavailable;
+
+  /// 入室の直前にルームが閉じられていたときの案内(ホストか運営かは分からない)
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームは終了しています'**
+  String get vcClosedBeforeJoin;
+
+  /// 入室(welcome)の前に、理由の無いまま接続が切れたときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームに入る前に接続が切れました'**
+  String get vcJoinConnectionLost;
+
   /// アカウントの処置で共有が保留されたとき。seconds は秒数(不明なら ?)
   ///
   /// In ja, this message translates to:
@@ -31577,6 +31619,60 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'検閲で却下されました({source})。この発言は配信されていません'**
   String vcShareRejected(String source);
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(BAN された)
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームから BAN されたため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedBanned;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(ルームが閉じられた)
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームが終了したため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedClosed;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(入室 / 共有の処置)
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントの処置により、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedRestricted;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(ホストにブロックされた)
+  ///
+  /// In ja, this message translates to:
+  /// **'ホストにブロックされたため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedBlocked;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(新規入室の停止)
+  ///
+  /// In ja, this message translates to:
+  /// **'運営により新しい入室が止められたため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedLocked;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(退出した)
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームを出たため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedLeft;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(共有がモデレーターだけになった)
+  ///
+  /// In ja, this message translates to:
+  /// **'共有がモデレーターだけになったため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedSharePolicy;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(サーバーが条件を確かめられなかった)
+  ///
+  /// In ja, this message translates to:
+  /// **'配信の条件を確かめられなかったため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedUnavailable;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(分からない理由)
+  ///
+  /// In ja, this message translates to:
+  /// **'保留中の発言は配信されませんでした'**
+  String get vcShareRejectedOther;
 
   /// ルームに入らずに配信へ繋ごうとしたときの失敗
   ///

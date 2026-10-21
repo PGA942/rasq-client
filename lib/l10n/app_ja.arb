@@ -3293,6 +3293,10 @@
   "@customPageError": {
     "description": "サーバーが文を付けずに誤りを知らせたときの既定"
   },
+  "customPageBusy": "サーバーが混み合っています。しばらくしてから開き直してください",
+  "@customPageBusy": {
+    "description": "共有ページの welcome を混雑で断られ、間を空けてやり直しても入れなかったとき(Central S-116 の #12)"
+  },
   "customPageMenuInvite": "招待(Swing で送る)",
   "customPageMenuCopyCode": "招待コードをコピー",
   "customPageMenuCopyLink": "招待リンクをコピー",
@@ -15787,6 +15791,7 @@
   },
   "storeInstallPermissionsHeader": "このプラグインが使う権限",
   "storeInstallHostsHeader": "接続先",
+  "storeInstallSlotsHeader": "使う場所",
   "storeInstallLoginInstance": "ログイン先のインスタンス",
   "storeInstallScopeNoRecord": "許可する内容(前に入れたときの記録がありません)",
   "storeInstallScopeWidened": "最後に許可した内容から広がるもの",
@@ -18537,6 +18542,26 @@
   "@vcKickedByModerator": {
     "description": "ルームから追い出されたときの案内"
   },
+  "vcKickedBlocked": "ホストにブロックされているため、このルームに入れません",
+  "@vcKickedBlocked": {
+    "description": "入室の直前の確かめ直しで断られたときの案内(ホストにブロックされている)"
+  },
+  "vcKickedLocked": "運営により新しい入室が止められているため、このルームに入れません",
+  "@vcKickedLocked": {
+    "description": "入室の直前の確かめ直しで断られたときの案内(新規入室の停止)"
+  },
+  "vcKickedUnavailable": "入室の条件を確かめられなかったため、ルームに入れませんでした。しばらくしてからもう一度お試しください",
+  "@vcKickedUnavailable": {
+    "description": "入室の直前の確かめ直しで断られたときの案内(サーバーが条件を確かめられなかった)"
+  },
+  "vcClosedBeforeJoin": "このルームは終了しています",
+  "@vcClosedBeforeJoin": {
+    "description": "入室の直前にルームが閉じられていたときの案内(ホストか運営かは分からない)"
+  },
+  "vcJoinConnectionLost": "ルームに入る前に接続が切れました",
+  "@vcJoinConnectionLost": {
+    "description": "入室(welcome)の前に、理由の無いまま接続が切れたときの案内"
+  },
   "vcShareHeld": "検閲中: {seconds} 秒後に判定して配信されます(アカウントの処置)",
   "@vcShareHeld": {
     "description": "アカウントの処置で共有が保留されたとき。seconds は秒数(不明なら ?)",
@@ -18554,6 +18579,42 @@
         "type": "String"
       }
     }
+  },
+  "vcShareRejectedBanned": "このルームから BAN されたため、保留中の発言は配信されませんでした",
+  "@vcShareRejectedBanned": {
+    "description": "保留した共有が、待ったあとの確かめ直しで戻されたとき(BAN された)"
+  },
+  "vcShareRejectedClosed": "ルームが終了したため、保留中の発言は配信されませんでした",
+  "@vcShareRejectedClosed": {
+    "description": "保留した共有が、待ったあとの確かめ直しで戻されたとき(ルームが閉じられた)"
+  },
+  "vcShareRejectedRestricted": "アカウントの処置により、保留中の発言は配信されませんでした",
+  "@vcShareRejectedRestricted": {
+    "description": "保留した共有が、待ったあとの確かめ直しで戻されたとき(入室 / 共有の処置)"
+  },
+  "vcShareRejectedBlocked": "ホストにブロックされたため、保留中の発言は配信されませんでした",
+  "@vcShareRejectedBlocked": {
+    "description": "保留した共有が、待ったあとの確かめ直しで戻されたとき(ホストにブロックされた)"
+  },
+  "vcShareRejectedLocked": "運営により新しい入室が止められたため、保留中の発言は配信されませんでした",
+  "@vcShareRejectedLocked": {
+    "description": "保留した共有が、待ったあとの確かめ直しで戻されたとき(新規入室の停止)"
+  },
+  "vcShareRejectedLeft": "ルームを出たため、保留中の発言は配信されませんでした",
+  "@vcShareRejectedLeft": {
+    "description": "保留した共有が、待ったあとの確かめ直しで戻されたとき(退出した)"
+  },
+  "vcShareRejectedSharePolicy": "共有がモデレーターだけになったため、保留中の発言は配信されませんでした",
+  "@vcShareRejectedSharePolicy": {
+    "description": "保留した共有が、待ったあとの確かめ直しで戻されたとき(共有がモデレーターだけになった)"
+  },
+  "vcShareRejectedUnavailable": "配信の条件を確かめられなかったため、保留中の発言は配信されませんでした",
+  "@vcShareRejectedUnavailable": {
+    "description": "保留した共有が、待ったあとの確かめ直しで戻されたとき(サーバーが条件を確かめられなかった)"
+  },
+  "vcShareRejectedOther": "保留中の発言は配信されませんでした",
+  "@vcShareRejectedOther": {
+    "description": "保留した共有が、待ったあとの確かめ直しで戻されたとき(分からない理由)"
   },
   "vcNotInRoom": "ルームに入っていません",
   "@vcNotInRoom": {

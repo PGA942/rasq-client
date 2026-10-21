@@ -229,6 +229,7 @@
   "storeInstallSheetTitle": "安裝 {name} {version}",
   "storeInstallPermissionsHeader": "此外掛使用的權限",
   "storeInstallHostsHeader": "連線目標",
+  "storeInstallSlotsHeader": "使用位置",
   "storeInstallLoginInstance": "登入的實例",
   "storeInstallScopeNoRecord": "允許的內容（沒有先前安裝時的紀錄）",
   "storeInstallScopeWidened": "超出上次允許內容的部分",

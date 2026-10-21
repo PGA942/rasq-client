@@ -5,6 +5,7 @@ import 'dart:js_interop';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:web/web.dart' as web;
 
+import 'storage_quota.dart';
 import 'wasm_web_guard.dart';
 import 'wasm_worker_config.dart';
 
@@ -17,6 +18,7 @@ export 'wasm_worker_config.dart';
 /// v1 の host_fn は同期なので、`net.fetch` は JSPI(下)で host_fn を非同期にして Worker の中の `fetch` で出す
 /// (Worker の中なら UI は止まらない)。ブラウザの通信なので、相手のサーバーが CORS を許していること(Mastodon / Bluesky の API は許している)。
 /// `storage.*` / `fow.*` / アプリ向けホスト関数は、端末版のワーカーと同じ振る舞い(storage はワーカーの中、fow / アプリ向けはメインへ中継)。
+/// `storage.set` の予算(キー数・キーの長さ・値の大きさ・合計、[PluginStorageQuota]、D-546)も端末版と同じ規則・同じ答え。
 ///
 /// サイドロードの制限モード (D-308) は、埋込側が [WasmWorkerConfig] を絞って渡す(`permissions` から `network` /
 /// `storage.unsafe` / `gpu_ml` / `fow.interstitial` / `fow.system` を外す、`fetchHosts` を空に、閉じる関数を `appFns` から外す)。
@@ -26,6 +28,8 @@ export 'wasm_worker_config.dart';
 /// ([webWasmInitTimeout] / [webWasmCallTimeout]) を過ぎたらワーカーを止めて失敗にし、宣言したメモリと実行後のメモリを
 /// 端末版と同じ上限 ([webWasmMaxMemoryBytes]) で見る (D-407、指摘 #10)。起動の前に、各メモリの最大をその上限内に
 /// 書き込んでから instantiate する([capWasmMemory]、D-452)ので、実行中の `memory.grow` も上限で止まる。
+/// テーブルも同じく、数と要素数を端末版と同じ上限 ([webWasmMaxTables] / [webWasmMaxTableElements]) で断り、最大を
+/// 上限内に書き込む([capWasmTables]、D-546)ので、`table.grow` も上限で止まる。
 ///
 /// `net.fetch` のリダイレクト (D-407 / D-408、指摘 #7): ブラウザが JSPI (`WebAssembly.Suspending` / `promising`) を持つなら、
 /// `host_fn` を非同期にして `fetch(..., {redirect: "manual"})` で出し、リダイレクトは追わない(端末版と同じ)。
@@ -63,8 +67,9 @@ class WasmPluginWorker {
 
   static Future<WasmPluginWorker> spawn(WasmWorkerConfig config) async {
     // 起動する前に、宣言したメモリの大きさを断り(指摘 #10)、最大を上限内に書き込む(D-452: 実行後の
-    // checkMemory より先に memory.grow でブラウザのメモリを使い切らせない)。Worker に渡すのは書き換えた方。
-    final wasmBytes = capWasmMemory(config.wasmBytes);
+    // checkMemory より先に memory.grow でブラウザのメモリを使い切らせない)。テーブルも数と要素数を断り、最大を
+    // 上限内に書き込む(D-546: 線形メモリの外でタブのヒープを使わせない)。Worker に渡すのは書き換えた方。
+    final wasmBytes = capWasmTables(capWasmMemory(config.wasmBytes));
     final blob = web.Blob([_workerSource.toJS].toJS, web.BlobPropertyBag(type: 'text/javascript'));
     final url = web.URL.createObjectURL(blob);
     final worker = WasmPluginWorker._(web.Worker(url.toJS), url);
@@ -77,8 +82,15 @@ class WasmPluginWorker {
       // 終わらない start でも期限 (webWasmInitTimeout) でワーカーごと止まる。
       await worker._request('init', timeout: webWasmInitTimeout, args: {
         'maxMemoryBytes': webWasmMaxMemoryBytes,
+        'maxTableElements': webWasmMaxTableElements,
         'wasm': base64Encode(wasmBytes),
         'storage': config.seedStorage,
+        'storageQuota': {
+          'maxKeys': PluginStorageQuota.defaultMaxKeys,
+          'maxKeyBytes': PluginStorageQuota.defaultMaxKeyBytes,
+          'maxValueBytes': PluginStorageQuota.defaultMaxValueBytes,
+          'maxTotalBytes': PluginStorageQuota.defaultMaxTotalBytes,
+        },
         'fowPermissions': config.fowPermissions.toList(),
         'appFns': config.appFns.toList(),
         'knownAppFns': RasqHostFns.appFns.toList(),
@@ -141,7 +153,7 @@ class WasmPluginWorker {
 // Worker の JS のソース。日本語はコメントと、JSPI の無いブラウザでプラグインに返す誤りの文(プラグインへ渡すデータ。端末版のランタイムの文と揃える)なので訳さない。
 const _workerSource = /* l10n-ignore */ r'''
 "use strict";
-let inst = null, ex = null, storage = {}, maxMemoryBytes = 256 * 1024 * 1024, cfg = {fowPermissions: [], appFns: [], knownAppFns: [], permissions: [], fetchHosts: [], instanceAllowed: false, instanceHost: null};
+let inst = null, ex = null, storage = {}, maxMemoryBytes = 256 * 1024 * 1024, maxTableElements = 100000, cfg = {fowPermissions: [], appFns: [], knownAppFns: [], permissions: [], fetchHosts: [], instanceAllowed: false, instanceHost: null};
 // JSPI (D-407、指摘 #7): host_fn を非同期にでき、net.fetch を fetch(redirect: "manual") で出せる。
 // 無ければ net.fetch は断る(同期 XHR はリダイレクトを追って宣言外へ送ってしまう。D-408)。
 const JSPI = typeof WebAssembly.Suspending === "function" && typeof WebAssembly.promising === "function";
@@ -325,6 +337,31 @@ function netFetch(args) {
   throw new HostFnError("E01", NO_JSPI_FETCH);
 }
 
+// storage.set の予算 (D-546、セキュリティ確認 2026-10-21 の #2): 端末版 (storage_quota.dart の PluginStorageQuota) と同じ規則・
+// 同じ答え(E02)。値は init で Dart から受け取る。インスタンスごとに safe / unsafe を合わせて数え、保存と写し (send storage) の前に断る。
+// 断った書き込みは何も変えない。上書きは差分、削除は丸ごと返す。片方を変えたらもう片方も。
+let quota = {maxKeys: 1024, maxKeyBytes: 512, maxValueBytes: 1024 * 1024, maxTotalBytes: 4 * 1024 * 1024};
+let storageBytes = new Map(), storageTotal = 0;
+function utf8Len(s) { return enc.encode(s).length; }
+function seedStorageQuota() {
+  storageBytes = new Map();
+  storageTotal = 0;
+  for (const [k, v] of Object.entries(storage)) { const b = utf8Len(k) + utf8Len(JSON.stringify(v)); storageBytes.set(k, b); storageTotal += b; }
+}
+function storageQuotaSet(fullKey, guestKey, value) {
+  if (utf8Len(guestKey) > quota.maxKeyBytes) throw new HostFnError("E02", "storage key exceeds " + quota.maxKeyBytes + " bytes");
+  const valueBytes = utf8Len(JSON.stringify(value));
+  if (valueBytes > quota.maxValueBytes) throw new HostFnError("E02", "storage value exceeds " + quota.maxValueBytes + " bytes");
+  const old = storageBytes.get(fullKey);
+  if (old === undefined && storageBytes.size >= quota.maxKeys) throw new HostFnError("E02", "storage key count exceeds " + quota.maxKeys);
+  const next = utf8Len(fullKey) + valueBytes;
+  const total = storageTotal - (old || 0) + next;
+  // 減らす上書きは、合計が(最初に渡された値で)上限を超えていても通す。
+  if (total > quota.maxTotalBytes && total > storageTotal) throw new HostFnError("E02", "storage exceeds " + quota.maxTotalBytes + " bytes in total");
+  storageBytes.set(fullKey, next);
+  storageTotal = total;
+}
+
 function invoke(fn, args) {
   const ns = () => String(args.ns == null ? "safe" : args.ns);
   const key = () => ns() + ":" + String(args.key);
@@ -332,8 +369,15 @@ function invoke(fn, args) {
   const requireStorage = () => { if (!cfg.permissions.includes("storage." + ns())) throw new HostFnError("E01", "storage." + ns() + " not permitted"); };
   switch (fn) {
     case "storage.get": { requireStorage(); const v = storage[key()]; return {value: v === undefined ? null : v}; }
-    case "storage.set": requireStorage(); storage[key()] = args.value === undefined ? null : args.value; send({storage: {ns: ns(), key: String(args.key), value: storage[key()]}}); return {};
-    case "storage.delete": requireStorage(); delete storage[key()]; send({storage: {ns: ns(), key: String(args.key), value: null}}); return {};
+    case "storage.set": {
+      requireStorage();
+      const value = args.value === undefined ? null : args.value;
+      storageQuotaSet(key(), String(args.key), value); // 予算を超えるなら、保存も写しもせずに E02
+      storage[key()] = value;
+      send({storage: {ns: ns(), key: String(args.key), value}});
+      return {};
+    }
+    case "storage.delete": requireStorage(); delete storage[key()]; storageTotal -= storageBytes.get(key()) || 0; storageBytes.delete(key()); send({storage: {ns: ns(), key: String(args.key), value: null}}); return {};
     case "net.fetch": return JSPI ? netFetchAsync(args) : netFetch(args);
     case "alert": return {confirmed: true};
     case "ml.infer": throw new HostFnError("E01", "ml.infer backend not wired yet (model: " + args.model + ")");
@@ -404,10 +448,14 @@ async function hostFnAsync(ptr, len) {
 
 // メモリの上限 (D-407、指摘 #10): 端末版と同じ。超えたらインスタンスごと捨てる(fatal でワーカーを止めてもらう)。
 // 主な守りは起動前に書き込んだ最大 (D-452、capWasmMemory) で、ここは二段目(書き込みを抜けた場合の後始末)。
+// 書き出したテーブルの要素数も同じく二段目として見る(主な守りは capWasmTables の書き込んだ最大、D-546)。
 class FatalError extends Error {}
 function checkMemory() {
   const n = inst.exports.memory.buffer.byteLength;
   if (n > maxMemoryBytes) throw new FatalError("plugin exceeded its memory limit (" + maxMemoryBytes + " bytes)");
+  let elements = 0;
+  for (const v of new Set(Object.values(inst.exports))) if (v instanceof WebAssembly.Table) elements += v.length; // 同じテーブルを別名で書き出しても 1 回
+  if (elements > maxTableElements) throw new FatalError("plugin exceeded its table limit (" + maxTableElements + " elements)");
 }
 
 async function handle(ev) {
@@ -416,7 +464,10 @@ async function handle(ev) {
     switch (m.op) {
       case "init": {
         storage = Object.assign({}, m.storage || {});
+        if (m.storageQuota && typeof m.storageQuota === "object") quota = Object.assign({}, quota, m.storageQuota);
+        seedStorageQuota();
         if (typeof m.maxMemoryBytes === "number") maxMemoryBytes = m.maxMemoryBytes;
+        if (typeof m.maxTableElements === "number") maxTableElements = m.maxTableElements;
         cfg = {fowPermissions: m.fowPermissions || [], appFns: m.appFns || [], knownAppFns: m.knownAppFns || [],
                permissions: m.permissions || [], fetchHosts: m.fetchHosts || [], instanceAllowed: !!m.instanceAllowed, instanceHost: null};
         // JSPI の無いブラウザでは、通信を宣言したプラグインの net.fetch は E01 になる(D-408)。開発者に見えるように記録だけ残す。

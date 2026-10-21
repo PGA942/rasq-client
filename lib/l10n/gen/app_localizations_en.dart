@@ -3295,6 +3295,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customPageError => 'Error';
 
   @override
+  String get customPageBusy =>
+      'The server is busy. Please try opening this again in a little while.';
+
+  @override
   String get customPageMenuInvite => 'Invite (send via Swing)';
 
   @override
@@ -17060,6 +17064,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeInstallHostsHeader => 'Connections';
 
   @override
+  String get storeInstallSlotsHeader => 'Where it runs';
+
+  @override
   String get storeInstallLoginInstance => 'Your login instance';
 
   @override
@@ -19946,6 +19953,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vcKickedByModerator => 'A moderator removed you from the room';
 
   @override
+  String get vcKickedBlocked =>
+      'You can\'t join this room because the host has blocked you';
+
+  @override
+  String get vcKickedLocked =>
+      'You can\'t join this room because new entries have been stopped by the moderators';
+
+  @override
+  String get vcKickedUnavailable =>
+      'Couldn\'t verify the conditions for joining, so you weren\'t let in. Please try again later';
+
+  @override
+  String get vcClosedBeforeJoin => 'This room has ended';
+
+  @override
+  String get vcJoinConnectionLost =>
+      'The connection was lost before you joined the room';
+
+  @override
   String vcShareHeld(String seconds) {
     return 'Under review: it will be judged and delivered in $seconds seconds (account action)';
   }
@@ -19954,6 +19980,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String vcShareRejected(String source) {
     return 'Rejected in review ($source). This message was not delivered';
   }
+
+  @override
+  String get vcShareRejectedBanned =>
+      'Your held message wasn\'t delivered because you were banned from this room';
+
+  @override
+  String get vcShareRejectedClosed =>
+      'Your held message wasn\'t delivered because the room has ended';
+
+  @override
+  String get vcShareRejectedRestricted =>
+      'Your held message wasn\'t delivered due to an action on your account';
+
+  @override
+  String get vcShareRejectedBlocked =>
+      'Your held message wasn\'t delivered because the host has blocked you';
+
+  @override
+  String get vcShareRejectedLocked =>
+      'Your held message wasn\'t delivered because new entries were stopped by the moderators';
+
+  @override
+  String get vcShareRejectedLeft =>
+      'Your held message wasn\'t delivered because you left the room';
+
+  @override
+  String get vcShareRejectedSharePolicy =>
+      'Your held message wasn\'t delivered because sharing is now limited to moderators';
+
+  @override
+  String get vcShareRejectedUnavailable =>
+      'Your held message wasn\'t delivered because the conditions for delivering it couldn\'t be verified';
+
+  @override
+  String get vcShareRejectedOther => 'Your held message wasn\'t delivered';
 
   @override
   String get vcNotInRoom => 'You\'re not in the room';

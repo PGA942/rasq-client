@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'storage_quota.dart';
+
 /// A synchronous HTTP request/response pair for `net.fetch`.
 ///
 /// Synchronous because host-function v1 blocks the wasm call
@@ -116,9 +118,13 @@ class RasqHostEnvironment {
     this.instanceAllowed = false,
     this.gpuCompute = false,
     this.onStorageWrite,
+    PluginStorageQuota? storageQuota,
     String? instanceHost,
   })  : storage = storage ?? {},
-        _instanceHost = instanceHost?.trim().toLowerCase();
+        storageQuota = storageQuota ?? PluginStorageQuota(),
+        _instanceHost = instanceHost?.trim().toLowerCase() {
+    this.storageQuota.seed(this.storage);
+  }
 
   /// アプリ向けホスト関数の中継 (D-167)。null → E01。
   AppFnRelay? onAppFn;
@@ -192,6 +198,11 @@ class RasqHostEnvironment {
   /// per plugin namespace later; D-004 `storage.safe`).
   final Map<String, Object?> storage;
 
+  /// `storage.set` のキー数・キーの長さ・値の大きさ・合計の予算 (D-546、セキュリティ確認 2026-10-21 の #2)。
+  /// 制限モード (`storage.safe` だけ) でも全権でも同じ予算で、`safe` / `unsafe` を合わせて数える。
+  /// [storage] を外から書き換えると数がずれるので、書き込みは `storage.*` を通すこと。
+  final PluginStorageQuota storageQuota;
+
   /// `net.fetch` backend; null → B01 network unreachable.
   final SyncFetch? fetch;
 
@@ -238,12 +249,16 @@ class RasqHostEnvironment {
         return {'value': storage[_storageKey(args)]};
       case RasqHostFns.storageSet:
         _requireStorage(args);
+        // 予算 (D-546) は保存と写し (onStorageWrite) より前に見る。断った書き込みは何も変えず、写しも出さない。
+        final over = storageQuota.trySet(_storageKey(args), '${args['key']}', args['value']);
+        if (over != null) throw _HostFnError('E02', over);
         storage[_storageKey(args)] = args['value'];
         onStorageWrite?.call(_storageNs(args), '${args['key']}', args['value']);
         return const <String, Object?>{};
       case RasqHostFns.storageDelete:
         _requireStorage(args);
         storage.remove(_storageKey(args));
+        storageQuota.remove(_storageKey(args));
         onStorageWrite?.call(_storageNs(args), '${args['key']}', null);
         return const <String, Object?>{};
       case RasqHostFns.netFetch:

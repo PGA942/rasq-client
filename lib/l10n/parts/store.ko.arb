@@ -229,6 +229,7 @@
   "storeInstallSheetTitle": "{name} {version} 설치",
   "storeInstallPermissionsHeader": "이 플러그인이 사용하는 권한",
   "storeInstallHostsHeader": "연결 대상",
+  "storeInstallSlotsHeader": "사용 위치",
   "storeInstallLoginInstance": "로그인한 인스턴스",
   "storeInstallScopeNoRecord": "허용할 내용 (이전 설치 기록이 없습니다)",
   "storeInstallScopeWidened": "마지막으로 허용한 내용에서 넓어지는 것",
