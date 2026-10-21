@@ -5,6 +5,7 @@ import 'dart:js_interop';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:web/web.dart' as web;
 
+import 'storage_quota.dart';
 import 'wasm_web_guard.dart';
 import 'wasm_worker_config.dart';
 
@@ -17,6 +18,7 @@ export 'wasm_worker_config.dart';
 /// v1 の host_fn は同期なので、`net.fetch` は JSPI(下)で host_fn を非同期にして Worker の中の `fetch` で出す
 /// (Worker の中なら UI は止まらない)。ブラウザの通信なので、相手のサーバーが CORS を許していること(Mastodon / Bluesky の API は許している)。
 /// `storage.*` / `fow.*` / アプリ向けホスト関数は、端末版のワーカーと同じ振る舞い(storage はワーカーの中、fow / アプリ向けはメインへ中継)。
+/// `storage.set` の予算(キー数・キーの長さ・値の大きさ・合計、[PluginStorageQuota]、D-546)も端末版と同じ規則・同じ答え。
 ///
 /// サイドロードの制限モード (D-308) は、埋込側が [WasmWorkerConfig] を絞って渡す(`permissions` から `network` /
 /// `storage.unsafe` / `gpu_ml` / `fow.interstitial` / `fow.system` を外す、`fetchHosts` を空に、閉じる関数を `appFns` から外す)。
@@ -83,6 +85,12 @@ class WasmPluginWorker {
         'maxTableElements': webWasmMaxTableElements,
         'wasm': base64Encode(wasmBytes),
         'storage': config.seedStorage,
+        'storageQuota': {
+          'maxKeys': PluginStorageQuota.defaultMaxKeys,
+          'maxKeyBytes': PluginStorageQuota.defaultMaxKeyBytes,
+          'maxValueBytes': PluginStorageQuota.defaultMaxValueBytes,
+          'maxTotalBytes': PluginStorageQuota.defaultMaxTotalBytes,
+        },
         'fowPermissions': config.fowPermissions.toList(),
         'appFns': config.appFns.toList(),
         'knownAppFns': RasqHostFns.appFns.toList(),
@@ -329,6 +337,31 @@ function netFetch(args) {
   throw new HostFnError("E01", NO_JSPI_FETCH);
 }
 
+// storage.set の予算 (D-546、セキュリティ確認 2026-10-21 の #2): 端末版 (storage_quota.dart の PluginStorageQuota) と同じ規則・
+// 同じ答え(E02)。値は init で Dart から受け取る。インスタンスごとに safe / unsafe を合わせて数え、保存と写し (send storage) の前に断る。
+// 断った書き込みは何も変えない。上書きは差分、削除は丸ごと返す。片方を変えたらもう片方も。
+let quota = {maxKeys: 1024, maxKeyBytes: 512, maxValueBytes: 1024 * 1024, maxTotalBytes: 4 * 1024 * 1024};
+let storageBytes = new Map(), storageTotal = 0;
+function utf8Len(s) { return enc.encode(s).length; }
+function seedStorageQuota() {
+  storageBytes = new Map();
+  storageTotal = 0;
+  for (const [k, v] of Object.entries(storage)) { const b = utf8Len(k) + utf8Len(JSON.stringify(v)); storageBytes.set(k, b); storageTotal += b; }
+}
+function storageQuotaSet(fullKey, guestKey, value) {
+  if (utf8Len(guestKey) > quota.maxKeyBytes) throw new HostFnError("E02", "storage key exceeds " + quota.maxKeyBytes + " bytes");
+  const valueBytes = utf8Len(JSON.stringify(value));
+  if (valueBytes > quota.maxValueBytes) throw new HostFnError("E02", "storage value exceeds " + quota.maxValueBytes + " bytes");
+  const old = storageBytes.get(fullKey);
+  if (old === undefined && storageBytes.size >= quota.maxKeys) throw new HostFnError("E02", "storage key count exceeds " + quota.maxKeys);
+  const next = utf8Len(fullKey) + valueBytes;
+  const total = storageTotal - (old || 0) + next;
+  // 減らす上書きは、合計が(最初に渡された値で)上限を超えていても通す。
+  if (total > quota.maxTotalBytes && total > storageTotal) throw new HostFnError("E02", "storage exceeds " + quota.maxTotalBytes + " bytes in total");
+  storageBytes.set(fullKey, next);
+  storageTotal = total;
+}
+
 function invoke(fn, args) {
   const ns = () => String(args.ns == null ? "safe" : args.ns);
   const key = () => ns() + ":" + String(args.key);
@@ -336,8 +369,15 @@ function invoke(fn, args) {
   const requireStorage = () => { if (!cfg.permissions.includes("storage." + ns())) throw new HostFnError("E01", "storage." + ns() + " not permitted"); };
   switch (fn) {
     case "storage.get": { requireStorage(); const v = storage[key()]; return {value: v === undefined ? null : v}; }
-    case "storage.set": requireStorage(); storage[key()] = args.value === undefined ? null : args.value; send({storage: {ns: ns(), key: String(args.key), value: storage[key()]}}); return {};
-    case "storage.delete": requireStorage(); delete storage[key()]; send({storage: {ns: ns(), key: String(args.key), value: null}}); return {};
+    case "storage.set": {
+      requireStorage();
+      const value = args.value === undefined ? null : args.value;
+      storageQuotaSet(key(), String(args.key), value); // 予算を超えるなら、保存も写しもせずに E02
+      storage[key()] = value;
+      send({storage: {ns: ns(), key: String(args.key), value}});
+      return {};
+    }
+    case "storage.delete": requireStorage(); delete storage[key()]; storageTotal -= storageBytes.get(key()) || 0; storageBytes.delete(key()); send({storage: {ns: ns(), key: String(args.key), value: null}}); return {};
     case "net.fetch": return JSPI ? netFetchAsync(args) : netFetch(args);
     case "alert": return {confirmed: true};
     case "ml.infer": throw new HostFnError("E01", "ml.infer backend not wired yet (model: " + args.model + ")");
@@ -424,6 +464,8 @@ async function handle(ev) {
     switch (m.op) {
       case "init": {
         storage = Object.assign({}, m.storage || {});
+        if (m.storageQuota && typeof m.storageQuota === "object") quota = Object.assign({}, quota, m.storageQuota);
+        seedStorageQuota();
         if (typeof m.maxMemoryBytes === "number") maxMemoryBytes = m.maxMemoryBytes;
         if (typeof m.maxTableElements === "number") maxTableElements = m.maxTableElements;
         cfg = {fowPermissions: m.fowPermissions || [], appFns: m.appFns || [], knownAppFns: m.knownAppFns || [],
