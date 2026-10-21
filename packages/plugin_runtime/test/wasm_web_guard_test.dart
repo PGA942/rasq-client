@@ -1,5 +1,6 @@
 // D-407 (セキュリティ指摘 #10): Web 版ワーカーの期限とメモリの宣言。ブラウザの WebAssembly は fuel を数えないので、
 // 終わらない start / snapshot / call は期限でワーカーごと止め、待っている要求をすべて失敗にする。
+// D-546 (セキュリティ確認 2026-10-21 の #1): テーブルの数と要素数も起動前に断り、最大を上限内に書き込む。
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -7,6 +8,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_wasm_runtime/rasq_wasm_runtime.dart';
+
+import 'web/table_grow_module.dart';
 
 List<int> leb(int v) {
   final out = <int>[];
@@ -35,8 +38,23 @@ Uint8List moduleWithMemories(List<List<int>> mems, {bool trailer = false}) => wa
 /// メモリ節だけの最小モジュール(初期 [pages] ページ、[max] があれば上限付き)。
 Uint8List moduleWithMemory(int pages, {int? max}) => moduleWithMemories([memType(pages, max: max)]);
 
+/// テーブル 1 つ分の宣言(要素の型, flags, 初期, 最大)。
+List<int> tableType(int min, {int? max, int refType = 0x70, int flags = 0}) => [refType, flags | (max == null ? 0 : 1), ...leb(min), if (max != null) ...leb(max)];
+
+/// テーブル節(と、あればメモリ節・後ろに custom 節)だけの最小モジュール。
+Uint8List moduleWithTables(List<List<int>> tables, {List<List<int>> mems = const [], bool trailer = false}) => wasmModule([
+      (4, [...leb(tables.length), for (final t in tables) ...t]),
+      if (mems.isNotEmpty) (5, [...leb(mems.length), for (final m in mems) ...m]),
+      if (trailer) (0, [4, ...'name'.codeUnits, 1, 2, 3]),
+    ]);
+
 /// 書き換えた後のメモリの宣言 (初期, 最大) を読む(テスト用の素朴な読み手)。
-List<(int, int?)> memoriesOf(Uint8List bytes) {
+List<(int, int?)> memoriesOf(Uint8List bytes) => _limitsOf(bytes, 5);
+
+/// 書き換えた後のテーブルの宣言 (初期, 最大) を読む。
+List<(int, int?)> tablesOf(Uint8List bytes) => _limitsOf(bytes, 4);
+
+List<(int, int?)> _limitsOf(Uint8List bytes, int sectionId) {
   var pos = 8;
   int u() {
     var r = 0, shift = 0;
@@ -53,9 +71,10 @@ List<(int, int?)> memoriesOf(Uint8List bytes) {
     final id = bytes[pos++];
     final size = u();
     final end = pos + size;
-    if (id == 5) {
+    if (id == sectionId) {
       final n = u();
       for (var i = 0; i < n; i++) {
+        if (sectionId == 4) pos++; // テーブルの要素の型
         final flags = bytes[pos++];
         final min = u();
         out.add((min, flags & 1 != 0 ? u() : null));
@@ -169,7 +188,7 @@ void main() {
       }
     });
 
-    test('インポートするメモリ・共有メモリ・memory64・custom page size は断る', () {
+    test('インポートするメモリ・テーブル・共有メモリ・memory64・custom page size は断る', () {
       // (import "env" "memory" (memory 1))
       final imported = wasmModule([
         (2, [1, 3, ...'env'.codeUnits, 6, ...'memory'.codeUnits, 0x02, 0x00, 1]),
@@ -178,18 +197,24 @@ void main() {
       expect(() => capWasmMemory(moduleWithMemories([memType(1, max: 10, flags: 0x02)])), throwsStateError);
       expect(() => capWasmMemory(moduleWithMemories([memType(1, flags: 0x04)])), throwsStateError);
       expect(() => capWasmMemory(moduleWithMemories([memType(1, flags: 0x08)])), throwsStateError);
-      // 関数・テーブル・グローバルのインポートは通す(メモリではない)。
+      // テーブルのインポートも断る(D-546: 上限を書き込めない。ホストは渡さない)。
+      final tableImport = wasmModule([
+        (2, [1, 3, ...'env'.codeUnits, 1, ...'t'.codeUnits, 0x01, 0x70, 0x00, 1]),
+      ]);
+      expect(() => capWasmMemory(tableImport), throwsStateError);
+      expect(() => capWasmTables(tableImport), throwsStateError);
+      // 関数・グローバルのインポートは通す(メモリでもテーブルでもない)。
       final otherImports = wasmModule([
         (1, [1, 0x60, 0, 0]), // type: () -> ()
         (2, [
-          3,
+          2,
           4, ...'rasq'.codeUnits, 7, ...'host_fn'.codeUnits, 0x00, 0, // func
-          3, ...'env'.codeUnits, 1, ...'t'.codeUnits, 0x01, 0x70, 0x00, 1, // table funcref
           3, ...'env'.codeUnits, 1, ...'g'.codeUnits, 0x03, 0x7f, 0x00, // global i32
         ]),
         (5, [1, ...memType(17)]),
       ]);
       expect(memoriesOf(capWasmMemory(otherImports)), [(17, limitPages)]);
+      expect(identical(capWasmTables(otherImports), otherImports), isTrue, reason: 'テーブルが無ければ書き換えない');
     });
 
     test('形の壊れたものは断る(最大 < 初期、メモリ節の重複、途中で切れた節)', () {
@@ -230,16 +255,144 @@ void main() {
       expect(files, isNotEmpty, reason: 'assets/plugins/*.wasm');
       for (final f in files) {
         final src = Uint8List.fromList(f.readAsBytesSync());
-        final capped = capWasmMemory(src);
+        final capped = capWasmTables(capWasmMemory(src));
         final decl = memoriesOf(capped);
         expect(decl, hasLength(1), reason: f.path);
         expect(decl.single.$2, limitPages, reason: '${f.path}: 最大 = 上限');
         expect(memoriesOf(src).single.$2, isNull, reason: '${f.path}: 元は最大を宣言していない');
         expect(wasmDeclaredMemoryBytes(capped), wasmDeclaredMemoryBytes(src));
         expect(identical(capWasmMemory(capped), capped), isTrue, reason: '2 回目は書き換えない');
+        // テーブル (D-546): Rust の wasm32 は 1 本だけ、要素数は上限の内側。
+        final tables = tablesOf(capped);
+        expect(tables.length, lessThanOrEqualTo(webWasmMaxTables), reason: f.path);
+        expect(tables.fold<int>(0, (s, t) => s + t.$2!), lessThanOrEqualTo(webWasmMaxTableElements), reason: f.path);
+        expect(identical(capWasmTables(capped), capped), isTrue, reason: '${f.path}: 2 回目は書き換えない');
         final plugin = RasqWasmPlugin.fromBytes(capped);
         plugin.dispose();
       }
     }, skip: files.isEmpty ? 'assets/plugins/*.wasm がありません' : false);
+  });
+  // D-546 (セキュリティ確認 2026-10-21 の #1、csf_bc46b1e657a57e9edd42cafc): 前はテーブル節を読み飛ばしていたので、
+  // 線形メモリを上限内に保ったまま、大きなテーブル(何本でも / 最大なしなら table.grow で)をタブのヒープに確保できた。
+  // 起動前に数と要素数を断り、各テーブルの最大を合計が上限を超えないよう書き込む(端末版の MAX_TABLES / MAX_TABLE_ELEMENTS)。
+  group('capWasmTables', () {
+    const budget = webWasmMaxTableElements;
+
+    test('ふつうの最大つきのテーブル(Rust の wasm32 の形: 初期 = 最大)は書き換えずに通す', () {
+      final ordinary = moduleWithTables([tableType(42, max: 42)]);
+      expect(identical(capWasmTables(ordinary), ordinary), isTrue);
+      final roomy = moduleWithTables([tableType(1, max: 5000)]);
+      expect(identical(capWasmTables(roomy), roomy), isTrue);
+      final exact = moduleWithTables([tableType(0, max: budget)]);
+      expect(identical(capWasmTables(exact), exact), isTrue);
+      // externref のテーブルも同じ規則。
+      final ext = moduleWithTables([tableType(3, max: 3, refType: 0x6f)]);
+      expect(identical(capWasmTables(ext), ext), isTrue);
+      // テーブルの無いモジュールもそのまま。
+      final none = moduleWithMemory(1);
+      expect(identical(capWasmTables(none), none), isTrue);
+    });
+
+    test('最大の無いテーブル / 上限を超える最大は、予算を最大として書き込む(table.grow で予算を超えられない)', () {
+      expect(tablesOf(capWasmTables(moduleWithTables([tableType(10)]))), [(10, budget)]);
+      expect(tablesOf(capWasmTables(moduleWithTables([tableType(10, max: 0xffffffff)]))), [(10, budget)]);
+      expect(tablesOf(capWasmTables(moduleWithTables([tableType(10, max: budget + 1)]))), [(10, budget)]);
+      // 予算ちょうどの初期サイズ: 最大も初期と同じ(伸ばせない)。
+      expect(tablesOf(capWasmTables(moduleWithTables([tableType(budget)]))), [(budget, budget)]);
+      // 要素の型はそのまま写る。
+      final ext = capWasmTables(moduleWithTables([tableType(2, refType: 0x6f)]));
+      expect(ext.sublist(ext.length - 6), [0x6f, 0x01, 2, ...leb(budget)]);
+    });
+
+    test('初期の要素数が予算を超えるテーブルは起動前に断る', () {
+      expect(() => capWasmTables(moduleWithTables([tableType(budget + 1)])), throwsStateError);
+      expect(() => capWasmTables(moduleWithTables([tableType(budget + 1, max: budget + 1)])), throwsStateError);
+      expect(() => capWasmTables(moduleWithTables([tableType(10000000, max: 10000000)])), throwsStateError);
+    });
+
+    test('数が上限 (1) を超えるテーブルは、1 本ずつは小さくても起動前に断る', () {
+      expect(webWasmMaxTables, 1);
+      expect(() => capWasmTables(moduleWithTables([tableType(1, max: 1), tableType(1, max: 1)])), throwsStateError);
+      // 1 本ずつは予算の内側でも、合計で予算を超える(数の上限を緩めても、合計で断る)。
+      final big = [tableType(60000, max: 60000), tableType(60000, max: 60000)];
+      expect(() => capWasmTables(moduleWithTables(big)), throwsStateError);
+      expect(() => capWasmTables(moduleWithTables(big), maxTables: 2), throwsStateError);
+      final many = [for (var i = 0; i < 20; i++) tableType(budget ~/ 10)];
+      expect(() => capWasmTables(moduleWithTables(many), maxTables: 100), throwsStateError);
+    });
+
+    test('数の上限を緩めたとき: 残りは宣言の順に配り、最大の合計は予算を超えない', () {
+      final a = capWasmTables(moduleWithTables([tableType(10), tableType(20)]), maxTables: 2);
+      expect(tablesOf(a), [(10, budget - 20), (20, 20)]);
+      final b = capWasmTables(moduleWithTables([tableType(10, max: 50), tableType(20)]), maxTables: 2);
+      expect(tablesOf(b), [(10, 50), (20, budget - 50)]);
+      for (final m in [a, b]) {
+        expect(tablesOf(m).fold<int>(0, (s, t) => s + t.$2!), lessThanOrEqualTo(budget));
+      }
+      // 予算を小さくしても同じ規則。
+      expect(tablesOf(capWasmTables(moduleWithTables([tableType(3)]), maxElements: 10)), [(3, 10)]);
+      expect(() => capWasmTables(moduleWithTables([tableType(11)]), maxElements: 10), throwsStateError);
+    });
+
+    test('table64・共有・初期化式つき・GC の参照型のテーブルは断る', () {
+      expect(() => capWasmTables(moduleWithTables([tableType(1, flags: 0x04)])), throwsStateError); // table64
+      expect(() => capWasmTables(moduleWithTables([tableType(1, max: 1, flags: 0x02)])), throwsStateError); // shared
+      // (table 1 funcref (ref.null func)) の初期化式つきの形: 0x40 0x00 tabletype expr。
+      expect(() => capWasmTables(moduleWithTables([[0x40, 0x00, 0x70, 0x00, 1, 0xd0, 0x70, 0x0b]])), throwsStateError);
+      expect(() => capWasmTables(moduleWithTables([[0x64, 0x70, 0x00, 1]])), throwsStateError); // (ref func)
+      expect(() => capWasmTables(moduleWithTables([[0x63, 0x70, 0x00, 1]])), throwsStateError); // (ref null func)
+      // メモリだけを見る capWasmMemory も、同じ読み手なので通さない(読み違えたまま起動しない)。
+      expect(() => capWasmMemory(moduleWithTables([tableType(1, flags: 0x04)])), throwsStateError);
+    });
+
+    test('形の壊れたものは断る(最大 < 初期、テーブル節の重複、途中で切れた節)', () {
+      expect(() => capWasmTables(moduleWithTables([tableType(10, max: 5)])), throwsFormatException);
+      final dup = wasmModule([(4, [1, ...tableType(1)]), (4, [1, ...tableType(1)])]);
+      expect(() => capWasmTables(dup), throwsFormatException);
+      final truncated = moduleWithTables([tableType(17)]);
+      expect(() => capWasmTables(Uint8List.sublistView(truncated, 0, truncated.length - 1)), throwsFormatException);
+    });
+
+    test('メモリとテーブルの両方を書き換えても、ほかの節はそのまま写る / 線形メモリの守りも変わらない', () {
+      const limitPages = webWasmMaxMemoryBytes ~/ 65536;
+      final src = moduleWithTables([tableType(5)], mems: [memType(17)], trailer: true);
+      final capped = capWasmTables(capWasmMemory(src));
+      expect(tablesOf(capped), [(5, budget)]);
+      expect(memoriesOf(capped), [(17, limitPages)]);
+      final tail = [0, 8, 4, ...'name'.codeUnits, 1, 2, 3];
+      expect(capped.sublist(capped.length - tail.length), tail);
+      // 順を逆にしても同じ結果。
+      expect(capWasmMemory(capWasmTables(src)), capped);
+      // テーブルの節の大きさの LEB128 が 1 バイト → 2 バイトに伸びる場合。
+      final wide = moduleWithTables([for (var i = 0; i < 40; i++) tableType(0)], trailer: true);
+      final w = capWasmTables(wide, maxTables: 40);
+      expect(tablesOf(w).first, (0, budget));
+      expect(tablesOf(w).skip(1).every((t) => t == (0, 0)), isTrue);
+      expect(w.sublist(w.length - tail.length), tail);
+      // 線形メモリの上限は前と同じく効く。
+      expect(() => capWasmTables(capWasmMemory(moduleWithTables([tableType(1)], mems: [memType(limitPages + 1)]))), throwsStateError);
+    });
+
+    // 書き換えた最大が正しい wasm で、予算の内側の table.grow は通り、外側は失敗することを、端末版のランタイム (wasmi) で確かめる
+    // (本物のブラウザでの確認は test/web/wasm_web_table_test.dart。ブラウザでは -1 が返る)。
+    test('書き換えた後も正しい wasm: 予算の内側の table.grow は通り、超える分は失敗する', () {
+      String run(int grow) {
+        final src = Uint8List.fromList(tableGrowModule(grow));
+        final capped = capWasmTables(capWasmMemory(src));
+        expect(tablesOf(capped), [(1, budget)]);
+        final plugin = RasqWasmPlugin.fromBytes(capped);
+        try {
+          return plugin.snapshot();
+        } finally {
+          plugin.dispose();
+        }
+      }
+
+      expect(run(1000), 'grown');
+      expect(run(budget - 1), 'grown', reason: '1 + (予算 - 1) = 予算ちょうど');
+      // 端末版は成長の失敗をトラップにする (StoreLimits) ので、start の中で伸ばしすぎると起動ごと失敗する。
+      expect(() => run(budget), throwsA(isA<RasqWasmInstantiateException>()));
+      expect(() => run(budget * 2), throwsA(isA<RasqWasmInstantiateException>()));
+    });
   });
 }
