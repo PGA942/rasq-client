@@ -18538,6 +18538,26 @@
   "@vcKickedByModerator": {
     "description": "ルームから追い出されたときの案内"
   },
+  "vcKickedBlocked": "ホストにブロックされているため、このルームに入れません",
+  "@vcKickedBlocked": {
+    "description": "入室の直前の確かめ直しで断られたときの案内(ホストにブロックされている)"
+  },
+  "vcKickedLocked": "運営により新しい入室が止められているため、このルームに入れません",
+  "@vcKickedLocked": {
+    "description": "入室の直前の確かめ直しで断られたときの案内(新規入室の停止)"
+  },
+  "vcKickedUnavailable": "入室の条件を確かめられなかったため、ルームに入れませんでした。しばらくしてからもう一度お試しください",
+  "@vcKickedUnavailable": {
+    "description": "入室の直前の確かめ直しで断られたときの案内(サーバーが条件を確かめられなかった)"
+  },
+  "vcClosedBeforeJoin": "このルームは終了しています",
+  "@vcClosedBeforeJoin": {
+    "description": "入室の直前にルームが閉じられていたときの案内(ホストか運営かは分からない)"
+  },
+  "vcJoinConnectionLost": "ルームに入る前に接続が切れました",
+  "@vcJoinConnectionLost": {
+    "description": "入室(welcome)の前に、理由の無いまま接続が切れたときの案内"
+  },
   "vcShareHeld": "検閲中: {seconds} 秒後に判定して配信されます(アカウントの処置)",
   "@vcShareHeld": {
     "description": "アカウントの処置で共有が保留されたとき。seconds は秒数(不明なら ?)",

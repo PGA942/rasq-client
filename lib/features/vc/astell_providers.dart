@@ -362,6 +362,9 @@ class AstellSession extends Notifier<AstellSessionState?> {
   /// 自動で見に行くのを止めた(未設定 / 断られた)。同じルームでは繰り返さない。
   bool _streamGaveUp = false;
 
+  /// この接続で welcome を受けた。前なら、切れた / 閉じられたのは「入れなかった」(Central S-116 の #13)。
+  bool _welcomed = false;
+
   /// 配信の口(繋いでいなければ null)。[AstellLiveVideo] が映像を読む。
   AstellStreamer? get streamer => _streamer;
 
@@ -380,6 +383,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
   Future<void> join(AstellRoom room) async {
     await leave();
     state = AstellSessionState(room: room);
+    _welcomed = false;
     _lastChatAt = DateTime.now();
     _waitingForStart = false;
     if (ref.read(astellHoldMusicTickProvider) case final tick?) _holdTick = Timer.periodic(tick, (_) => _syncHoldMusic());
@@ -399,7 +403,11 @@ class AstellSession extends Notifier<AstellSessionState?> {
       final conn = await ref.read(astellClientProvider).connect(room.id);
       _conn = conn;
       _sub = conn.messages.listen(_onMessage, onError: (Object e) => _fail(redactSecrets('$e')), onDone: () {
-        if (state != null) state = state!.copyWith(connected: false);
+        final s = state;
+        if (s == null) return;
+        // welcome の前に理由の無いまま切れた(kicked / closed が届かなかった): 「接続しています…」のまま待たせない。
+        // 繋ぎ直しはしない(入室の条件が外れて閉じられたのかもしれない、Central S-116 の #13)。
+        state = s.copyWith(connected: false, error: !_welcomed && s.error == null ? appL10n.vcJoinConnectionLost : null);
       });
     } catch (e) {
       // 同意待ちのアカウントはサーバーが入室を断る (D-371 / S-053)。WS の失敗には理由が載らないので、ここで言い換える。
@@ -424,6 +432,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
     List<AstellPeer> peersOf(Object? v) => [for (final p in (v as List? ?? const [])) if (p is Map) AstellPeer.fromJson(p.cast<String, Object?>())];
     switch (m['type']) {
       case 'welcome':
+        _welcomed = true;
         state = s.copyWith(
           connected: true,
           clearError: true,
@@ -505,21 +514,20 @@ class AstellSession extends Notifier<AstellSessionState?> {
         _syncWatching();
         _syncHoldMusic(); // 開催が始まった / 保留音の可否が変わった (D-327)
       case 'closed':
-        state = s.copyWith(connected: false, streamConnected: false, clearStreaming: true, screenShareOn: false, error: m['reason'] == 'moderation' ? appL10n.vcClosedByModeration : appL10n.vcClosedByHost);
+        // welcome の前の closed (Central S-116 の #13): 入室の直前に閉じられていた。ホストか運営かは載らない。
+        final closedText = m['reason'] == 'moderation' ? appL10n.vcClosedByModeration : (_welcomed ? appL10n.vcClosedByHost : appL10n.vcClosedBeforeJoin);
+        state = s.copyWith(connected: false, streamConnected: false, clearStreaming: true, screenShareOn: false, error: closedText);
         unawaited(_stopMedia());
         _syncSpeaking(); // 通話と配信を閉じたので、話している印も消す
       case 'kicked':
-        // モデレーションで追い出された (D-149)。接続は切る(状態は残して案内を出す)。
+        // モデレーションで追い出された (D-149)。接続は切る(状態は残して案内を出す)。welcome の前にも届く
+        // (入室の直前の確かめ直しで外れた、Central S-116 の #13)。どちらも繋ぎ直さない。
         state = s.copyWith(
           connected: false,
           streamConnected: false,
           clearStreaming: true,
           screenShareOn: false,
-          error: switch (m['reason']) {
-            'banned' => appL10n.vcKickedBanned,
-            'sanctioned' => appL10n.vcKickedSanctioned,
-            _ => appL10n.vcKickedByModerator,
-          },
+          error: astellKickedText(m['reason']),
         );
         unawaited(_teardown());
         _syncSpeaking();
@@ -1219,6 +1227,18 @@ class AstellSession extends Notifier<AstellSessionState?> {
     }
   }
 }
+
+/// `kicked` の理由を 1 行に (D-149)。`banned` / `sanctioned` / `kicked` は入ったあと、`restricted` / `blocked` / `locked` /
+/// `unavailable` は welcome の前の確かめ直し(Central S-116 の #13。`banned` もこちらで来る)。分からない理由はモデレーター。
+String astellKickedText(Object? reason) => switch (reason) {
+      'banned' => appL10n.vcKickedBanned,
+      // 入室の処置(astell.join)。入ったあとの処置(sanctioned)と同じ案内。
+      'sanctioned' || 'restricted' => appL10n.vcKickedSanctioned,
+      'blocked' => appL10n.vcKickedBlocked,
+      'locked' => appL10n.vcKickedLocked,
+      'unavailable' => appL10n.vcKickedUnavailable,
+      _ => appL10n.vcKickedByModerator,
+    };
 
 /// 配信の失敗を 1 行に (D-317)。
 String astellStreamErrorText(Object e) {

@@ -19949,6 +19949,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vcKickedByModerator => 'A moderator removed you from the room';
 
   @override
+  String get vcKickedBlocked =>
+      'You can\'t join this room because the host has blocked you';
+
+  @override
+  String get vcKickedLocked =>
+      'You can\'t join this room because new entries have been stopped by the moderators';
+
+  @override
+  String get vcKickedUnavailable =>
+      'Couldn\'t verify the conditions for joining, so you weren\'t let in. Please try again later';
+
+  @override
+  String get vcClosedBeforeJoin => 'This room has ended';
+
+  @override
+  String get vcJoinConnectionLost =>
+      'The connection was lost before you joined the room';
+
+  @override
   String vcShareHeld(String seconds) {
     return 'Under review: it will be judged and delivered in $seconds seconds (account action)';
   }

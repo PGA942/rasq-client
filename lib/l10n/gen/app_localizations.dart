@@ -31572,6 +31572,36 @@ abstract class AppLocalizations {
   /// **'モデレーターにルームから退出させられました'**
   String get vcKickedByModerator;
 
+  /// 入室の直前の確かめ直しで断られたときの案内(ホストにブロックされている)
+  ///
+  /// In ja, this message translates to:
+  /// **'ホストにブロックされているため、このルームに入れません'**
+  String get vcKickedBlocked;
+
+  /// 入室の直前の確かめ直しで断られたときの案内(新規入室の停止)
+  ///
+  /// In ja, this message translates to:
+  /// **'運営により新しい入室が止められているため、このルームに入れません'**
+  String get vcKickedLocked;
+
+  /// 入室の直前の確かめ直しで断られたときの案内(サーバーが条件を確かめられなかった)
+  ///
+  /// In ja, this message translates to:
+  /// **'入室の条件を確かめられなかったため、ルームに入れませんでした。しばらくしてからもう一度お試しください'**
+  String get vcKickedUnavailable;
+
+  /// 入室の直前にルームが閉じられていたときの案内(ホストか運営かは分からない)
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームは終了しています'**
+  String get vcClosedBeforeJoin;
+
+  /// 入室(welcome)の前に、理由の無いまま接続が切れたときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームに入る前に接続が切れました'**
+  String get vcJoinConnectionLost;
+
   /// アカウントの処置で共有が保留されたとき。seconds は秒数(不明なら ?)
   ///
   /// In ja, this message translates to:

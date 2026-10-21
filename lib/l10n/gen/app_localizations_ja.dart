@@ -19133,6 +19133,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vcKickedByModerator => 'モデレーターにルームから退出させられました';
 
   @override
+  String get vcKickedBlocked => 'ホストにブロックされているため、このルームに入れません';
+
+  @override
+  String get vcKickedLocked => '運営により新しい入室が止められているため、このルームに入れません';
+
+  @override
+  String get vcKickedUnavailable =>
+      '入室の条件を確かめられなかったため、ルームに入れませんでした。しばらくしてからもう一度お試しください';
+
+  @override
+  String get vcClosedBeforeJoin => 'このルームは終了しています';
+
+  @override
+  String get vcJoinConnectionLost => 'ルームに入る前に接続が切れました';
+
+  @override
   String vcShareHeld(String seconds) {
     return '検閲中: $seconds 秒後に判定して配信されます(アカウントの処置)';
   }

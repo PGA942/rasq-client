@@ -19203,6 +19203,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get vcKickedByModerator => '모더레이터가 룸에서 퇴장시켰습니다';
 
   @override
+  String get vcKickedBlocked => '호스트에게 차단되어 이 룸에 들어갈 수 없습니다';
+
+  @override
+  String get vcKickedLocked => '운영자에 의해 새 입장이 중지되어 이 룸에 들어갈 수 없습니다';
+
+  @override
+  String get vcKickedUnavailable =>
+      '입장 조건을 확인하지 못해 룸에 들어가지 못했습니다. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get vcClosedBeforeJoin => '이 룸은 종료되었습니다';
+
+  @override
+  String get vcJoinConnectionLost => '룸에 들어가기 전에 연결이 끊어졌습니다';
+
+  @override
   String vcShareHeld(String seconds) {
     return '검열 중: $seconds초 후 판정되어 전달됩니다(계정 조치)';
   }

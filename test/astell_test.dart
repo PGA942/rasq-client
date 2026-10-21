@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -241,6 +242,57 @@ void main() {
 
       await session.leave();
       expect(container.read(astellSessionProvider), isNull);
+    });
+
+    // Central S-116 の #13: 台帳に入ったあと welcome の前に入室の条件を確かめ直し、外れていれば welcome を送らずに
+    // kicked {reason} / closed を送って閉じる。理由を出して終わり、ただの切断として繋ぎ直さない(待ち続けもしない)。
+    group('welcome の前に kicked / closed で閉じられる(Central S-116 の #13)', () {
+      Future<(AstellSessionState, _ScriptedAstellClient)> refusedJoin(List<Map<String, Object?>> beforeClose) async {
+        final client = _ScriptedAstellClient(beforeClose);
+        final container = ProviderContainer(overrides: [
+          sessionStorageProvider.overrideWithValue(MemorySessionStorage({})),
+          astellClientProvider.overrideWithValue(client),
+        ]);
+        addTearDown(container.dispose);
+        await container.read(astellSessionProvider.notifier).join(MockAstellClient.seededRooms().first);
+        // 繋ぎ直すなら、この間に connect がもう一度呼ばれる。
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        return (container.read(astellSessionProvider)!, client);
+      }
+
+      for (final (reason, text) in [
+        ('banned', 'このルームから BAN されました'),
+        ('restricted', 'アカウントの処置により退出させられました'),
+        ('blocked', 'ホストにブロックされているため、このルームに入れません'),
+        ('locked', '運営により新しい入室が止められているため、このルームに入れません'),
+        ('unavailable', '入室の条件を確かめられなかったため、ルームに入れませんでした。しばらくしてからもう一度お試しください'),
+      ]) {
+        test('kicked {reason: $reason} → 理由を出して終わる。繋ぎ直さない', () async {
+          final (s, client) = await refusedJoin([
+            {'type': 'kicked', 'reason': reason},
+          ]);
+          expect(s.error, text);
+          expect([s.connected, s.myPeerId], [false, null]);
+          expect(client.connects, 1);
+          expect(client.closed, 1, reason: '受けたら手元でも切る');
+        });
+      }
+
+      test('closed → 終了していると出して終わる(ホストか運営かは載らない)。繋ぎ直さない', () async {
+        final (s, client) = await refusedJoin([
+          {'type': 'closed'},
+        ]);
+        expect(s.error, 'このルームは終了しています');
+        expect([s.connected, s.myPeerId], [false, null]);
+        expect(client.connects, 1);
+      });
+
+      test('理由の届かないまま切れた → 「接続しています…」のまま待たせず、切れたと出す。繋ぎ直さない', () async {
+        final (s, client) = await refusedJoin(const []);
+        expect(s.error, 'ルームに入る前に接続が切れました');
+        expect(s.connected, isFalse);
+        expect(client.connects, 1);
+      });
     });
 
     test('保留音 (D-327): 開催予約の開始待ち / 全員が静か(マイク・画面共有・配信なし、チャット 1 分以上なし)で鳴る、話す・チャット・設定オフで止まる、退出で止まる', () async {
@@ -1511,4 +1563,39 @@ void main() {
     expect(find.text('@tester'), findsWidgets); // 共有した投稿(自分のアカウントで開いた)
     await container.read(astellSessionProvider.notifier).leave();
   });
+}
+
+/// welcome を送らずに [beforeClose] を流して閉じる Central(入室の直前の確かめ直しで外れた、S-116 の #13)。
+class _ScriptedAstellClient extends MockAstellClient {
+  _ScriptedAstellClient(this.beforeClose);
+  final List<Map<String, Object?>> beforeClose;
+  var connects = 0;
+  var closed = 0;
+
+  @override
+  Future<AstellConnection> connect(String roomId) async {
+    connects++;
+    return _ScriptedConnection(this);
+  }
+}
+
+class _ScriptedConnection implements AstellConnection {
+  _ScriptedConnection(this.client) {
+    // 購読が始まってから流して閉じる(サーバーが送ってから Close を送るのと同じ順)。
+    _controller = StreamController<Map<String, Object?>>(onListen: () {
+      client.beforeClose.forEach(_controller.add);
+      _controller.close();
+    });
+  }
+  final _ScriptedAstellClient client;
+  late final StreamController<Map<String, Object?>> _controller;
+
+  @override
+  Stream<Map<String, Object?>> get messages => _controller.stream;
+
+  @override
+  void send(Map<String, Object?> message) => client.sent.add(message);
+
+  @override
+  Future<void> close() async => client.closed++;
 }

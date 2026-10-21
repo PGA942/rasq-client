@@ -18915,6 +18915,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get vcKickedByModerator => '版主已将你移出房间';
 
   @override
+  String get vcKickedBlocked => '你已被主持人屏蔽，无法进入此房间';
+
+  @override
+  String get vcKickedLocked => '运营方已停止新成员进入，无法进入此房间';
+
+  @override
+  String get vcKickedUnavailable => '无法确认进入条件，未能进入房间。请稍后再试';
+
+  @override
+  String get vcClosedBeforeJoin => '此房间已结束';
+
+  @override
+  String get vcJoinConnectionLost => '进入房间前连接已断开';
+
+  @override
   String vcShareHeld(String seconds) {
     return '审查中：将在 $seconds 秒后判定并发送（账号处置）';
   }
@@ -38639,6 +38654,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get vcKickedByModerator => '版主已將你移出房間';
+
+  @override
+  String get vcKickedBlocked => '你已被主持人封鎖，無法進入此房間';
+
+  @override
+  String get vcKickedLocked => '營運方已停止新成員進入，無法進入此房間';
+
+  @override
+  String get vcKickedUnavailable => '無法確認進入條件，未能進入房間。請稍後再試';
+
+  @override
+  String get vcClosedBeforeJoin => '此房間已結束';
+
+  @override
+  String get vcJoinConnectionLost => '進入房間前連線已中斷';
 
   @override
   String vcShareHeld(String seconds) {
