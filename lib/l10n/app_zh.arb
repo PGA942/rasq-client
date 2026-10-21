@@ -857,6 +857,7 @@
   "customPageDisconnectedWithError": "连接已断开：{error}",
   "customPageDisconnected": "连接已断开",
   "customPageError": "错误",
+  "customPageBusy": "服务器繁忙，请稍后重新打开。",
   "customPageMenuInvite": "邀请（通过 Swing 发送）",
   "customPageMenuCopyCode": "复制邀请码",
   "customPageMenuCopyLink": "复制邀请链接",

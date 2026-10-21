@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -90,6 +91,18 @@ String normalizeEditorAspect(Object? aspect) {
 /// [blocked] = チャイルドセーフで保護者が止めている(D-451。理由は [CustomPageController.error])。
 enum CustomPagePhase { resolving, needsConsent, needsInstall, loading, ready, failed, blocked }
 
+/// 共有ページの welcome を混雑で断られたときのやり直し(Central S-116 の #12)。1 → 2 → 4 → 8 秒(それぞれ半分までの揺らぎを足す)
+/// 空けて 4 回まで。それでも入れなければ「混雑」で諦める(合わせて 15〜23 秒ほど)。
+const customBusyFirstDelay = Duration(seconds: 1);
+const customBusyRetries = 4;
+
+/// welcome を混雑で断られた(やり直しても入れなかった)。
+class _CustomBusy implements Exception {
+  const _CustomBusy();
+  @override
+  String toString() => appL10n.customPageBusy;
+}
+
 /// 失敗の 1 行: `StateError` は「Bad state: 」を付けずに理由の文だけ。
 String _failureText(Object e) => e is StateError ? e.message : '$e';
 
@@ -139,6 +152,10 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   /// いまの時刻(エポックミリ秒)。wasm は `SystemTime::now` でトラップするので、`page.open` / `page.event` / RRL のイベントに載せる。
   /// 共有セッションに入っていれば Central の時計に合わせる(期限 `expiresAt` と比べられるように)。
   int get nowMs => DateTime.now().millisecondsSinceEpoch + _clockOffset;
+
+  /// やり直すまでの待ち方(テストで差し替える)。
+  Future<void> Function(Duration) delay = Future<void>.delayed;
+  final _random = math.Random();
 
   /// `media.editor.open` の開き方(画面が渡す。無ければ開けない = `editCancelled`)。
   SvgPaintOpener? editorOpener;
@@ -282,7 +299,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         return;
       }
       try {
-        await _join(sessionId, p);
+        await _enter(sessionId, p);
       } catch (e) {
         _leave();
         _set(() {
@@ -371,6 +388,22 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     participants.clear();
   }
 
+  /// [_join] し、welcome を混雑で断られたら(Central S-116 の #12)間を空けてやり直す。[customBusyRetries] 回やり直しても
+  /// 断られたら [_CustomBusy]。待つあいだに閉じた / 止められたら、何もせずに戻る(呼んだ側が確かめる)。
+  Future<void> _enter(String sessionId, SlotPlugin p) async {
+    for (var attempt = 0;; attempt++) {
+      try {
+        return await _join(sessionId, p);
+      } on _CustomBusy {
+        _disconnect();
+        if (attempt >= customBusyRetries) rethrow;
+      }
+      final wait = customBusyFirstDelay * (1 << attempt);
+      await delay(wait + wait * (_random.nextDouble() / 2));
+      if (_disposed || plugin != p) return;
+    }
+  }
+
   /// [p] のセッションに入る。welcome のセッションが別のプラグインのものなら、`page.open` と共有の口
   /// ([shared]) の前に閉じて失敗にする(参加者 / 値はプラグインへ渡さない)。
   Future<void> _join(String sessionId, SlotPlugin p) async {
@@ -378,7 +411,14 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     final conn = await client.connect(sessionId);
     _conn = conn;
     final welcome = Completer<void>();
+    var busy = false;
     _sub = conn.messages.listen((m) {
+      // 混んでいて断られた(このあとサーバーが閉じる)。切れたことにはせず、やり直す側へ返す。
+      if (!welcome.isCompleted && m['type'] == 'error' && isCustomServerBusy(m['message'])) {
+        busy = true;
+        welcome.completeError(const _CustomBusy());
+        return;
+      }
       if (m['type'] == 'welcome') {
         final s = m['session'];
         final next = s is Map ? CustomSession.fromJson(s.cast<String, Object?>()) : null;
@@ -410,9 +450,11 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
       }
       _onMessage(m);
     }, onError: (Object e) {
+      if (busy) return;
       if (!welcome.isCompleted) welcome.completeError(e);
       _set(() => notice = appL10n.customPageDisconnectedWithError(redactSecrets(_failureText(e))));
     }, onDone: () {
+      if (busy) return;
       if (!welcome.isCompleted) welcome.completeError(StateError(appL10n.customPageDisconnected));
       if (closedReason == null) _set(() => notice = appL10n.customPageDisconnected);
     });
@@ -487,7 +529,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     _set(() => role = null);
     try {
       try {
-        await _join(id, p);
+        await _enter(id, p);
       } catch (e) {
         if (_disposed || plugin != p) return;
         _disconnect();

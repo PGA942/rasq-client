@@ -58,6 +58,10 @@ const customVarMaxTtl = 30 * 24 * 3600;
 const customVarMaxKeys = 256;
 const customAppendMax = 500;
 
+/// welcome の前に届いた `error` が「混んでいていまは入れない」か(Central S-116 の #12: 送信の予算が足りなければ
+/// `error`(`the server is busy; try again shortly`)を送って閉じる)。断りではないので、間を空けてやり直す。
+bool isCustomServerBusy(Object? message) => message is String && message.startsWith('the server is busy');
+
 /// `me.` → `@<accountId>.`。本人以外の `@<id>.` は書けない(null)。形が違うキーも null。
 String? resolveCustomKey(String key, String accountId) {
   if (!customVarKeyPattern.hasMatch(key)) return null;
@@ -115,6 +119,12 @@ class MockCustomSessionClient implements CustomSessionClient {
   /// ほかの参加者(テストで足す)。
   final others = <String, List<CustomParticipant>>{};
   var _n = 0;
+
+  /// 混んでいて断る welcome の数(テスト用。Central S-116 の #12: `error` を送って閉じる)。
+  int busyWelcomes = 0;
+
+  /// 繋いだ回数(テスト用)。
+  int connects = 0;
 
   /// ルームのホストか(テストで変える)。room の作成はホストだけ。room のセッションでは welcome の role も owner になる。
   bool isRoomHost = true;
@@ -206,6 +216,7 @@ class MockCustomSessionClient implements CustomSessionClient {
   @override
   Future<CustomConnection> connect(String sessionId) async {
     if (!sessions.containsKey(sessionId)) throw StateError(appL10n.customClientSessionClosed);
+    connects++;
     final c = _MockCustomConnection(this, sessionId);
     (_conns[sessionId] ??= []).add(c);
     return c;
@@ -309,6 +320,12 @@ class MockCustomSessionClient implements CustomSessionClient {
 class _MockCustomConnection implements CustomConnection {
   _MockCustomConnection(this.client, this.sessionId) {
     _controller = StreamController<Map<String, Object?>>.broadcast(onListen: () {
+      if (client.busyWelcomes > 0) {
+        client.busyWelcomes--;
+        _controller.add({'type': 'error', 'message': 'the server is busy; try again shortly'});
+        unawaited(close());
+        return;
+      }
       final s = client.sessions[sessionId]!;
       _controller.add({
         'type': 'welcome',

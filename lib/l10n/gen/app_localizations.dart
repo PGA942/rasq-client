@@ -5245,6 +5245,12 @@ abstract class AppLocalizations {
   /// **'エラー'**
   String get customPageError;
 
+  /// 共有ページの welcome を混雑で断られ、間を空けてやり直しても入れなかったとき(Central S-116 の #12)
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーが混み合っています。しばらくしてから開き直してください'**
+  String get customPageBusy;
+
   /// No description provided for @customPageMenuInvite.
   ///
   /// In ja, this message translates to:

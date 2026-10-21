@@ -3119,6 +3119,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get customPageError => '错误';
 
   @override
+  String get customPageBusy => '服务器繁忙，请稍后重新打开。';
+
+  @override
   String get customPageMenuInvite => '邀请（通过 Swing 发送）';
 
   @override
@@ -22881,6 +22884,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get customPageError => '錯誤';
+
+  @override
+  String get customPageBusy => '伺服器忙碌中，請稍後重新開啟。';
 
   @override
   String get customPageMenuInvite => '邀請（透過 Swing 傳送）';

@@ -3143,6 +3143,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get customPageError => 'エラー';
 
   @override
+  String get customPageBusy => 'サーバーが混み合っています。しばらくしてから開き直してください';
+
+  @override
   String get customPageMenuInvite => '招待(Swing で送る)';
 
   @override

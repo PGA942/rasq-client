@@ -857,6 +857,7 @@
   "customPageDisconnectedWithError": "연결이 끊겼습니다: {error}",
   "customPageDisconnected": "연결이 끊겼습니다",
   "customPageError": "오류",
+  "customPageBusy": "서버가 혼잡합니다. 잠시 후 다시 열어 주세요.",
   "customPageMenuInvite": "초대(Swing으로 보내기)",
   "customPageMenuCopyCode": "초대 코드 복사",
   "customPageMenuCopyLink": "초대 링크 복사",

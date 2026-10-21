@@ -3293,6 +3293,10 @@
   "@customPageError": {
     "description": "サーバーが文を付けずに誤りを知らせたときの既定"
   },
+  "customPageBusy": "サーバーが混み合っています。しばらくしてから開き直してください",
+  "@customPageBusy": {
+    "description": "共有ページの welcome を混雑で断られ、間を空けてやり直しても入れなかったとき(Central S-116 の #12)"
+  },
   "customPageMenuInvite": "招待(Swing で送る)",
   "customPageMenuCopyCode": "招待コードをコピー",
   "customPageMenuCopyLink": "招待リンクをコピー",

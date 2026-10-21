@@ -3163,6 +3163,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get customPageError => '오류';
 
   @override
+  String get customPageBusy => '서버가 혼잡합니다. 잠시 후 다시 열어 주세요.';
+
+  @override
   String get customPageMenuInvite => '초대(Swing으로 보내기)';
 
   @override

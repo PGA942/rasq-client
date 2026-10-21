@@ -3295,6 +3295,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customPageError => 'Error';
 
   @override
+  String get customPageBusy =>
+      'The server is busy. Please try opening this again in a little while.';
+
+  @override
   String get customPageMenuInvite => 'Invite (send via Swing)';
 
   @override
