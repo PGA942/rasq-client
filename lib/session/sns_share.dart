@@ -448,8 +448,11 @@ class SnsShareView {
 }
 
 class _Ctx {
-  _Ctx(this.api, this.accountId, this.handle, this.email);
+  _Ctx(this.api, this.accountId, this.handle, this.email, this.store);
   final SnsShareApi api;
+
+  /// 端末に置くもの(見回りの初めに取る。途中で破棄されても読み書きできる)。
+  final SnsShareStore store;
   final String accountId;
   final String handle;
   final String? email;
@@ -518,7 +521,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     if (me == null || !ref.mounted) return null;
     final token = ref.read(orgateAccountProvider.notifier).tokenFor(me.id);
     if (token == null) return null;
-    return _Ctx(SnsShareApi(client.withToken(() => token)), me.id, me.handle, me.email);
+    return _Ctx(SnsShareApi(client.withToken(() => token)), me.id, me.handle, me.email, _store);
   }
 
   void _publish(_Ctx c, SnsShareStatus s, {bool busy = false}) {
@@ -539,7 +542,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
   /// 世代 [keyId] で共有を止めて、知らせる(同じものは知らせ直さない)。
   Future<void> _halt(_Ctx c, String keyId, SnsShareProblem kind) async {
     debugPrint('snsShare: stopped sharing on this device (${kind.name})');
-    final fresh = await _store.setProblem(c.accountId, keyId, kind);
+    final fresh = await c.store.setProblem(c.accountId, keyId, kind);
     _problems[c.accountId] = (keyId: keyId, kind: kind);
     if (!ref.mounted) return;
     final s = state.status;
@@ -592,7 +595,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     final c = await _ctx();
     if (c == null) return;
     try {
-      _problems[c.accountId] = await _store.problem(c.accountId);
+      _problems[c.accountId] = await c.store.problem(c.accountId);
       var s = await _ensureRegistered(c);
       _publish(c, s);
       if (s.deviceId == null || !ref.mounted) return;
@@ -675,7 +678,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
 
   /// この端末の X25519 の公開鍵と署名鍵(Ed25519 の公開鍵)。
   Future<({Uint8List publicKey, Uint8List signingKey})> _keys(_Ctx c) async =>
-      (publicKey: await SnsShareCrypto.publicKeyOf(await _store.seed(c.accountId)), signingKey: await SnsShareCrypto.signingPublicKeyOf(await _store.signingSeed(c.accountId)));
+      (publicKey: await SnsShareCrypto.publicKeyOf(await c.store.seed(c.accountId)), signingKey: await SnsShareCrypto.signingPublicKeyOf(await c.store.signingSeed(c.accountId)));
 
   /// この端末の公開鍵と署名鍵を ORGATE に置く。
   Future<SnsShareStatus> _register(_Ctx c, {bool? request}) async {
@@ -686,8 +689,8 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
   /// この端末の公開鍵と署名鍵を Central に置く(無い / どちらかが変わった / 共有を求めるとき)。
   Future<SnsShareStatus> _ensureRegistered(_Ctx c) async {
     final k = await _keys(c);
-    await _store.noteIdentity(c.accountId, handle: c.handle, email: c.email);
-    final entry = await _store.entry(c.accountId);
+    await c.store.noteIdentity(c.accountId, handle: c.handle, email: c.email);
+    final entry = await c.store.entry(c.accountId);
     final request = entry['request'] == true;
     var s = await c.api.status();
     if (s.deviceId == null) return s;
@@ -695,7 +698,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     if (me == null || !listEquals(me.publicKey, k.publicKey) || !listEquals(me.signingKey, k.signingKey) || (request && !me.requested)) {
       s = await c.api.register(k.publicKey, signingKey: k.signingKey, request: request ? true : null);
     }
-    if (request) await _store.update(c.accountId, (e) => {...e}..remove('request'));
+    if (request) await c.store.update(c.accountId, (e) => {...e}..remove('request'));
     return s;
   }
 
@@ -708,7 +711,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     final keyId = s.keyId!;
     final wrapped = s.wrappedKey!;
     final mine = await _keys(c);
-    final trust = await _store.trust(c.accountId);
+    final trust = await c.store.trust(c.accountId);
     final by = s.devices.where((d) => d.deviceId == s.wrappedBy).firstOrNull;
     final self = by != null && by.deviceId == s.deviceId;
     final signer = self ? mine.signingKey : by?.signingKey;
@@ -723,7 +726,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
       debugPrint('snsShare: the signature on the wrapped key did not verify');
       return null;
     }
-    final key = await SnsShareCrypto.unwrap(wrapped: wrapped, seed: await _store.seed(c.accountId), accountId: c.accountId, deviceId: s.deviceId!, keyId: keyId);
+    final key = await SnsShareCrypto.unwrap(wrapped: wrapped, seed: await c.store.seed(c.accountId), accountId: c.accountId, deviceId: s.deviceId!, keyId: keyId);
     if (key == null) {
       debugPrint('snsShare: the wrapped key for this device could not be opened');
       return null;
@@ -733,7 +736,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
       await _halt(c, keyId, SnsShareProblem.keyReplaced);
       return null;
     }
-    await _store.remember(c.accountId, keyId: keyId, fingerprint: fingerprint, holders: {
+    await c.store.remember(c.accountId, keyId: keyId, fingerprint: fingerprint, holders: {
       base64.encode(mine.signingKey),
       base64.encode(signer),
       for (final d in s.devices)
@@ -746,7 +749,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
   Future<SnsShareStatus> _wrapFor(_Ctx c, SnsShareDevice d, List<int> key, String keyId) async {
     final wrapped = await SnsShareCrypto.wrap(shareKey: key, recipientPublicKey: d.publicKey, accountId: c.accountId, deviceId: d.deviceId, keyId: keyId);
     final message = SnsShareCrypto.wrapMessage(accountId: c.accountId, deviceId: d.deviceId, recipientPublicKey: d.publicKey, keyId: keyId, wrappedKey: wrapped);
-    final signature = await SnsShareCrypto.sign(await _store.signingSeed(c.accountId), message);
+    final signature = await SnsShareCrypto.sign(await c.store.signingSeed(c.accountId), message);
     return c.api.wrap(d.deviceId, keyId: keyId, wrappedKey: wrapped, signature: signature);
   }
 
@@ -768,7 +771,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     final keyId = SnsShareCrypto.newKeyId();
     final me = s.me!;
     // 作った世代と K の指紋を覚える(あとで同じ世代の別の K が届いても受け取らない。D-547)。
-    await _store.remember(c.accountId, keyId: keyId, fingerprint: SnsShareCrypto.keyFingerprint(key), holders: {base64.encode((await _keys(c)).signingKey)});
+    await c.store.remember(c.accountId, keyId: keyId, fingerprint: SnsShareCrypto.keyFingerprint(key), holders: {base64.encode((await _keys(c)).signingKey)});
     s = await _wrapFor(c, me, key, keyId);
     for (final d in to) {
       s = await _wrapFor(c, d, key, keyId);
@@ -785,7 +788,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
       final sessions = await ref.read(sessionsProvider.future);
       if (record == null || !ref.mounted) return;
       final local = [for (final s in sessions.allSessions) if (record.sessionKeys.contains(s.account.key)) s];
-      final entry = await _store.entry(c.accountId);
+      final entry = await c.store.entry(c.accountId);
       var known = entry['keyId'] == keyId ? {for (final e in ((entry['known'] as Map?) ?? const {}).entries) '${e.key}': '${e.value}'} : <String, String>{};
       final raw = await c.api.body();
       final current = raw != null && SnsShareCrypto.keyIdOf(raw.bytes) == keyId;
@@ -816,7 +819,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
         for (final e in m.body.ops.entries)
           if (e.value.session != null && after[e.key] == snsShareFingerprint(e.value.session!)) e.key: after[e.key]!,
       };
-      await _store.update(c.accountId, (e) => {...e, 'keyId': keyId, 'known': nextKnown});
+      await c.store.update(c.accountId, (e) => {...e, 'keyId': keyId, 'known': nextKnown});
       final joined = _wasWaiting.remove(c.accountId) && imported > 0;
       if (imported > 0) {
         ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(appL10n.sessionShareImported(imported))));
@@ -865,7 +868,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
       if (!on) {
         _publish(c, await c.api.setMode(SnsShareMode.declined));
         // 止めていた理由も外す(オンにし直すと新しい世代になる。D-547)。
-        await _store.update(c.accountId, (e) => {...e}..remove('known')..remove('keyId')..remove('problem'));
+        await c.store.update(c.accountId, (e) => {...e}..remove('known')..remove('keyId')..remove('problem'));
         _problems.remove(c.accountId);
         return;
       }
