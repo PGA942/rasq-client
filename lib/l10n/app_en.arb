@@ -3247,6 +3247,8 @@
   "sessionShareNo": "No",
   "sessionShareEmailApproved": "Shared SNS access tokens with the device approved by email ({device})",
   "sessionShareImported": "{count, plural, =1{Logged in to 1 SNS account with shared access tokens} other{Logged in to {count} SNS accounts with shared access tokens}}",
+  "sessionShareKeyReplaced": "Stopped sharing SNS access tokens on this device because the sharing key may have been replaced. On a device that is sharing, turn sharing off and then on again",
+  "sessionShareBodyUnreadable": "Stopped sharing SNS access tokens on this device because the shared data can't be opened with this device's key (needs checking). On a device that is sharing, turn sharing off and then on again",
   "sessionLoginFailed": "Login failed",
   "sessionSanctionLight": "Light restriction",
   "sessionSanctionModerate": "Moderate restriction (posts delayed for review)",

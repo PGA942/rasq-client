@@ -15,7 +15,7 @@ import '../../shell/headers.dart';
 import '../onboarding/rasq_register_screen.dart' show rasqPasswordMinChars, rasqPasswordProblem;
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../../session/rasq_account_logout.dart';
-import '../../session/sns_share.dart' show snsShareProvider;
+import '../../session/sns_share.dart' show SnsShareStore, snsShareProvider;
 import 'sns_share_section.dart';
 
 /// この端末の呼び名(ログイン中の端末の一覧に出る)。
@@ -581,8 +581,10 @@ class _AccountLoginScreenState extends ConsumerState<AccountLoginScreen> {
         if (id.isEmpty || _password.text.isEmpty) return _toast(context.l10n.settingsSecurityLoginEnterCredentialsError);
         setState(() => _problem = null);
         final device = await ref.read(orgateAccountProvider.notifier).ensureDeviceId();
+        // この端末がそのアカウントの共有の署名鍵を持っていれば、所持の証明を付ける (D-547)。
+        final signingSeed = await SnsShareStore(ref.read(sessionStorageProvider)).signingSeedForLogin(id);
         try {
-          await _adopt(await api.login(identifier: id, password: _password.text, deviceId: device, label: accountDeviceLabel()));
+          await _adopt(await api.login(identifier: id, password: _password.text, deviceId: device, label: accountDeviceLabel(), signingSeed: signingSeed));
         } on OrgateException catch (e) {
           final challenge = RasqLoginChallenge.of(e);
           if (challenge != null) {

@@ -78,6 +78,9 @@ class _SnsShareSectionState extends ConsumerState<SnsShareSection> {
       subtitle = l.settingsSnsShareSubtitleUnsupported;
     } else if (!on) {
       subtitle = s.mode == SnsShareMode.off ? l.settingsSnsShareSubtitleOffAsk : l.settingsSnsShareSubtitleOff;
+    } else if (view.problem != null) {
+      // D-547: この世代では止めている(鍵が差し替えられた可能性 / 本体が開けない)。直すのは、持ち主の端末でオフ → オン。
+      subtitle = view.problem!.message;
     } else if (s.holding) {
       subtitle = l.settingsSnsShareSubtitleOnHolding;
     } else if (s.waiting) {

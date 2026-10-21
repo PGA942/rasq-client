@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' show sha256;
 import 'package:cryptography/cryptography.dart';
 
 /// SNS のアクセストークンの端末間共有 (D-319) の暗号。**Central は K も平文も見ない**。
@@ -12,8 +13,12 @@ import 'package:cryptography/cryptography.dart';
 ///   形は `一時公開鍵 (32) ‖ nonce (12) ‖ 暗号文 (32) ‖ タグ (16)` = 92 バイト。AAD にアカウント / 端末 / 世代を入れる
 ///   (別の端末あて・別のアカウントあての包みを差し替えても開かない)。
 /// - 本体: K で AES-256-GCM。`{"v":1,"keyId","nonce","ct"}`(ct = 暗号文 ‖ タグ、base64)の JSON。AAD はアカウントと世代。
+/// - 端末の署名鍵 (D-547 / Codex Security #17): Ed25519(種 32 バイト、X25519 の種と同じ置き場)。ログインの所持の証明
+///   ([deviceProofMessage])と、K の包みの署名([wrapMessage])に使う。署名する文字列は ORGATE O-020 と同じバイト列
+///   (UTF-8、行は `\n` でつなぎ、最後に改行は付けない。base64 は標準の形で `=` の埋めあり)。
 class SnsShareCrypto {
   static final _x25519 = X25519();
+  static final _ed25519 = Ed25519();
   static final _aes = AesGcm.with256bits();
   static final _hkdf = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
   static const _wrapInfo = 'rasq sns-share v1 wrap';
@@ -31,6 +36,41 @@ class SnsShareCrypto {
     final kp = await _x25519.newKeyPairFromSeed(seed);
     return Uint8List.fromList((await kp.extractPublicKey()).bytes);
   }
+
+  /// 署名鍵(Ed25519)の種から公開鍵(32 バイト)。種は [newDeviceSeed] と同じく 32 バイトの乱数。
+  static Future<Uint8List> signingPublicKeyOf(List<int> seed) async {
+    final kp = await _ed25519.newKeyPairFromSeed(seed);
+    return Uint8List.fromList((await kp.extractPublicKey()).bytes);
+  }
+
+  /// [message] に、署名鍵の種 [seed] で署名する(64 バイト。Ed25519 なので同じ入力なら同じ署名)。
+  static Future<Uint8List> sign(List<int> seed, List<int> message) async {
+    final sig = await _ed25519.sign(message, keyPair: await _ed25519.newKeyPairFromSeed(seed));
+    return Uint8List.fromList(sig.bytes);
+  }
+
+  /// [signature] が、署名鍵 [publicKey] での [message] の署名か。形が違えば false。
+  static Future<bool> verify({required List<int> publicKey, required List<int> message, required List<int> signature}) async {
+    if (publicKey.length != 32 || signature.length != 64) return false;
+    try {
+      return await _ed25519.verify(message, signature: Signature(signature, publicKey: SimplePublicKey(publicKey, type: KeyPairType.ed25519)));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// ログインの所持の証明で署名する文字列(ORGATE `POST /auth/login` の `deviceProof`)。[nonce] はチャレンジの応答の
+  /// base64 をそのまま使う(ORGATE が出したものと同じ文字列)。
+  static Uint8List deviceProofMessage({required String challengeId, required String nonce, required String deviceId}) =>
+      utf8.encode(['rasq-device-proof/v1', challengeId, nonce, deviceId].join('\n'));
+
+  /// K の包みの署名で署名する文字列(ORGATE `PUT /me/sns-share/devices/{deviceId}/key` の `signature`)。
+  /// [deviceId] / [recipientPublicKey] = 宛先の端末と、その X25519 の公開鍵。
+  static Uint8List wrapMessage({required String accountId, required String deviceId, required List<int> recipientPublicKey, required String keyId, required List<int> wrappedKey}) =>
+      utf8.encode(['rasq-sns-share-wrap/v1', accountId, deviceId, base64.encode(recipientPublicKey), keyId, base64.encode(sha256.convert(wrappedKey).bytes)].join('\n'));
+
+  /// K の指紋(SHA-256(K) の base64)。同じ世代なのに K が替わっていないかを見る(端末に覚えておく)。
+  static String keyFingerprint(List<int> shareKey) => base64.encode(sha256.convert(shareKey).bytes);
 
   /// 新しい共有鍵 K。
   static Uint8List newShareKey() => _random(32);

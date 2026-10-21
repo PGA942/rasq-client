@@ -145,7 +145,8 @@ void main() {
       }
     }
 
-    /// 共有の口を持つ偽の Central(規則は rasq-central の `sns_share.rs` と同じもの)。トークン → 端末。
+    /// 共有の口を持つ偽の Central(規則は rasq-central の `sns_share.rs` と同じもの。D-547 / ORGATE O-020 の署名鍵の登録・
+    /// 署名つきの包み・同じ世代の上書きの拒否も)。トークン → 端末。
     ({MockClient client, _Share share}) fakeCentral() {
       const devices = {'tok-old': 'dev-old', 'tok-new': 'dev-new', 'tok-third': 'dev-third'};
       const labels = {'dev-old': 'laptop', 'dev-new': 'tablet', 'dev-third': 'phone'};
@@ -175,18 +176,26 @@ void main() {
         if (path == '/me/sns-share/device') {
           final b = body();
           final pub = b['publicKey'] as String;
+          final signing = b['signingKey'] as String?;
+          if (signing == null || base64.decode(signing).length != 32) return json({'error': {'code': 'signing_key_required', 'message': 'signingKey is required'}}, 400);
+          share.registers++;
           final d = share.devices[me];
-          final same = d != null && d['publicKey'] == pub;
+          // 署名鍵が変わったときも、公開鍵が変わったときと同じ(包みと求めを外す)。
+          final same = d != null && d['publicKey'] == pub && d['signingKey'] == signing;
           final request = b['request'] as bool?;
           // 新しく求めた: 答えられる端末がいれば、同じアカウントへ知らせる(rasq-central の `should_notify_request` と同じ)。
           final newly = request == true && (!same || d['requested'] != true);
           final otherHolders = share.devices.entries.where((e) => e.key != me && e.value['wrapped'] != null).length;
           if (newly && (share.mode == 'off' || (share.mode == 'on' && otherHolders > 0))) share.notify(me, labels[me]);
           share.devices[me] = {
+            ...?d,
             'publicKey': pub,
+            'signingKey': signing,
             'requested': request ?? (same && d['requested'] == true),
             'wrapped': same && request != false ? d['wrapped'] : null,
             'by': same && request != false ? d['by'] : null,
+            'sig': same && request != false ? d['sig'] : null,
+            'wrapKeyId': same && request != false ? d['wrapKeyId'] : null,
           };
           return status();
         }
@@ -220,6 +229,15 @@ void main() {
           final b = body();
           if (share.mode != 'on') return err('409', 'not on');
           if (d['requested'] != true) return err('409', 'not asked');
+          // 呼んだ端末の署名鍵で、包みの署名を確かめる(ORGATE O-020)。
+          final caller = share.devices[me]?['signingKey'] as String?;
+          final wrapped = base64.decode(b['wrappedKey'] as String);
+          final message = SnsShareCrypto.wrapMessage(accountId: 'acc-a', deviceId: target, recipientPublicKey: base64.decode(d['publicKey'] as String), keyId: b['keyId'] as String, wrappedKey: wrapped);
+          if (caller == null || b['signature'] is! String || !await SnsShareCrypto.verify(publicKey: base64.decode(caller), message: message, signature: base64.decode(b['signature'] as String))) {
+            return json({'error': {'code': 'wrap_signature_invalid', 'message': 'bad signature'}}, 403);
+          }
+          // 同じ世代の包みの上書きは断る。
+          if (d['wrapped'] != null && d['wrapKeyId'] == b['keyId']) return json({'error': {'code': 'already_wrapped', 'message': 'already wrapped'}}, 409);
           final gen = share.holders > 0 ? share.keyId : null;
           if (gen == null) {
             if (target != me) return err('409', 'first key goes to the caller');
@@ -231,6 +249,8 @@ void main() {
           }
           d['wrapped'] = b['wrappedKey'];
           d['by'] = me;
+          d['sig'] = b['signature'];
+          d['wrapKeyId'] = b['keyId'];
           return status();
         }
         if (path == '/me/data/${SnsShareApi.bodyArea}') {
@@ -674,6 +694,214 @@ void main() {
       expect(calls, ['POST']);
     });
 
+    group('D-547 (Codex Security #17): 署名鍵と、受け取るときの検査', () {
+      const snsC = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'carol_sns');
+
+      /// 元の端末が共有をオンにして(snsA)、新しい端末(snsB を持つ)を承認し、揃えたところまで。
+      Future<({MockClient client, _Share share, ({ProviderContainer c, List<SnsShareQuestion> asked, List<bool?> answers, MemorySessionStorage storage}) old, ({ProviderContainer c, List<SnsShareQuestion> asked, List<bool?> answers, MemorySessionStorage storage}) neu})>
+          joined() async {
+        final central = fakeCentral();
+        final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
+        await old.c.read(sessionsProvider.future);
+        await settle(old.c);
+        await old.c.read(snsShareProvider.notifier).setEnabled(true);
+        final neu = device(central.client, token: 'tok-new', sessions: [session(snsB)]);
+        await neu.c.read(sessionsProvider.future);
+        await SnsShareStore(neu.storage).markRequest('acc-a');
+        await settle(neu.c);
+        old.answers.add(true);
+        await settle(old.c);
+        await settle(neu.c);
+        expect((await neu.c.read(sessionsProvider.future)).sessions.map((s) => s.account).toSet(), {snsA, snsB});
+        return (client: central.client, share: central.share, old: old, neu: neu);
+      }
+
+      /// [to] あての K の包みを、[signer] の署名鍵の種で署名して(ORGATE を通さずに)置く。
+      Future<void> plantWrap(_Share share, String to, List<int> key, String keyId, {required String by, required List<int> signer}) async {
+        final d = share.devices[to]!;
+        final wrapped = await SnsShareCrypto.wrap(shareKey: key, recipientPublicKey: base64.decode(d['publicKey'] as String), accountId: 'acc-a', deviceId: to, keyId: keyId);
+        final message = SnsShareCrypto.wrapMessage(accountId: 'acc-a', deviceId: to, recipientPublicKey: base64.decode(d['publicKey'] as String), keyId: keyId, wrappedKey: wrapped);
+        d
+          ..['wrapped'] = base64.encode(wrapped)
+          ..['by'] = by
+          ..['sig'] = base64.encode(await SnsShareCrypto.sign(signer, message))
+          ..['wrapKeyId'] = keyId;
+      }
+
+      Future<void> loginOn(ProviderContainer c, AccountId a) async {
+        await c.read(sessionsProvider.notifier).add(AuthResult(session: session(a, at: DateTime.utc(2026, 10, 1), token: 'secret-${a.handle}'), me: UserSummary(id: 'u', account: a, displayName: a.handle)));
+        await c.read(rasqAccountsProvider.notifier).addCentralSessionKeys([a.key], centralAccountId: 'acc-a');
+      }
+
+      test('登録は署名鍵も送る。ORGATE の署名鍵が手元と違えば登録し直す', () async {
+        final central = fakeCentral();
+        final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
+        await settle(old.c);
+        final store = SnsShareStore(old.storage);
+        final signing = base64.encode(await SnsShareCrypto.signingPublicKeyOf(await store.signingSeed('acc-a')));
+        expect(central.share.devices['dev-old']!['signingKey'], signing);
+        expect(signing, isNot(central.share.devices['dev-old']!['publicKey']), reason: 'X25519 とは別の鍵');
+        final registers = central.share.registers;
+        await settle(old.c);
+        expect(central.share.registers, registers, reason: '変わっていなければ登録し直さない');
+        // ORGATE の行の署名鍵が違う(古い / 書き換わった)→ 手元の鍵で登録し直す。
+        central.share.devices['dev-old']!['signingKey'] = base64.encode(List<int>.filled(32, 5));
+        await settle(old.c);
+        expect(central.share.devices['dev-old']!['signingKey'], signing);
+        expect(central.share.registers, registers + 1);
+        // 手元の署名鍵が替わった → 新しい鍵で登録し直す。
+        await store.update('acc-a', (e) => {...e, 'signingSeed': base64.encode(List<int>.filled(32, 6))});
+        await settle(old.c);
+        expect(central.share.devices['dev-old']!['signingKey'], base64.encode(await SnsShareCrypto.signingPublicKeyOf(List<int>.filled(32, 6))));
+      });
+
+      test('包みには、包んだ端末の署名が付く(ORGATE は署名の無い / 合わない包みを断る)', () async {
+        final j = await joined();
+        final sig = j.share.devices['dev-new']!['sig'] as String;
+        final old = SnsShareStore(j.old.storage);
+        final d = j.share.devices['dev-new']!;
+        final message = SnsShareCrypto.wrapMessage(
+            accountId: 'acc-a', deviceId: 'dev-new', recipientPublicKey: base64.decode(d['publicKey'] as String), keyId: j.share.keyId!, wrappedKey: base64.decode(d['wrapped'] as String));
+        expect(await SnsShareCrypto.verify(publicKey: await SnsShareCrypto.signingPublicKeyOf(await old.signingSeed('acc-a')), message: message, signature: base64.decode(sig)), isTrue);
+        expect(d['by'], 'dev-old');
+      });
+
+      test('同じ keyId で別の K の包みが届いても使わず、本体を上げない(共有を止めて知らせる)。持ち主の端末でオフ → オンで直る', () async {
+        final j = await joined();
+        final writes = j.share.writes;
+        final body = j.share.body;
+        // 同じ世代のまま、別の K' を新しい端末あてに(署名は合う形で)置き直す。ORGATE の壁 2 をすり抜けた場合の、端末の壁 3。
+        await plantWrap(j.share, 'dev-new', SnsShareCrypto.newShareKey(), j.share.keyId!, by: 'dev-old', signer: await SnsShareStore(j.old.storage).signingSeed('acc-a'));
+        await loginOn(j.neu.c, snsC);
+        await settle(j.neu.c);
+        expect(j.share.writes, writes, reason: '手元の SNS のトークンを K\' で上げ直さない');
+        expect(j.share.body, body);
+        expect(j.neu.c.read(snsShareProvider).problem, SnsShareProblem.keyReplaced);
+        expect(SnsShareProblem.keyReplaced.message, contains('共有の鍵が差し替えられた可能性がある'));
+        expect((await SnsShareStore(j.neu.storage).problem('acc-a'))!.kind, SnsShareProblem.keyReplaced, reason: '再起動しても止めたまま');
+
+        // 直す: 持ち主の端末で共有をオフ → オン(新しい世代)→ この端末が求め直して承認される。
+        await j.old.c.read(snsShareProvider.notifier).setEnabled(false);
+        await j.old.c.read(snsShareProvider.notifier).setEnabled(true);
+        await j.neu.c.read(snsShareProvider.notifier).setEnabled(true);
+        j.old.answers.add(true);
+        await settle(j.old.c);
+        await settle(j.neu.c);
+        expect(j.neu.c.read(snsShareProvider).problem, isNull);
+        expect(j.share.writes, greaterThan(writes));
+        await settle(j.old.c);
+        expect((await j.old.c.read(sessionsProvider.future)).sessions.map((s) => s.account), contains(snsC));
+      });
+
+      test('受け取り済みの世代は、包んだ端末が状態から消えても / 署名鍵が替わっても、止めずに続ける(新しい鍵を持ち主として覚えない)', () async {
+        final j = await joined();
+        // 証明なしのログインで ORGATE が元の端末の行を消した: 新しい端末あての包みの wrappedBy は dev-old のまま、一覧には居ない。
+        final gone = j.share.devices.remove('dev-old')!;
+        var writes = j.share.writes;
+        await loginOn(j.neu.c, snsC);
+        await settle(j.neu.c);
+        expect(j.neu.c.read(snsShareProvider).problem, isNull, reason: '受け取り済みの正しい K を誤って捨てない');
+        expect(j.share.writes, greaterThan(writes), reason: '共有は続く');
+        expect(j.neu.c.read(snsShareProvider).status!.holding, isTrue);
+
+        // 同じ deviceId で、別の署名鍵の端末が入り直した(承認はまだ)。
+        final impostor = base64.encode(await SnsShareCrypto.signingPublicKeyOf(List<int>.filled(32, 0x55)));
+        j.share.devices['dev-old'] = {...gone, 'signingKey': impostor, 'wrapped': null, 'sig': null, 'by': null, 'wrapKeyId': null, 'requested': true};
+        writes = j.share.writes;
+        await loginOn(j.neu.c, const AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'dave_sns'));
+        await settle(j.neu.c);
+        expect(j.neu.c.read(snsShareProvider).problem, isNull);
+        expect(j.share.writes, greaterThan(writes));
+        expect((await SnsShareStore(j.neu.storage).trust('acc-a'))!.holders, isNot(contains(impostor)), reason: '入れ替わった端末の鍵は、持ち主として覚えない');
+      });
+
+      test('今の keyId の本体が開けないとき、手元の SNS のトークンを上げない(空として扱わない)', () async {
+        final central = fakeCentral();
+        final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
+        await old.c.read(sessionsProvider.future);
+        await settle(old.c);
+        await old.c.read(snsShareProvider.notifier).setEnabled(true);
+        // 今の世代の名札のまま、別の K で閉じた本体に差し替わる。
+        final planted = await SnsShareCrypto.seal(shareKey: SnsShareCrypto.newShareKey(), keyId: central.share.keyId!, accountId: 'acc-a', plaintext: SessionOps().encode());
+        central.share.body = planted;
+        final writes = central.share.writes;
+        final neu = device(central.client, token: 'tok-new', sessions: [session(snsB, token: 'secret-bob')]);
+        await neu.c.read(sessionsProvider.future);
+        await SnsShareStore(neu.storage).markRequest('acc-a');
+        await settle(neu.c);
+        old.answers.add(true);
+        await settle(old.c);
+        expect(central.share.devices['dev-new']!['wrapped'], isNotNull);
+        await settle(neu.c);
+        expect(central.share.writes, writes, reason: '開けない本体を空として扱って、上げ直さない');
+        expect(central.share.body, planted);
+        expect(neu.c.read(snsShareProvider).problem, SnsShareProblem.bodyUnreadable);
+        expect(old.c.read(snsShareProvider).problem, SnsShareProblem.bodyUnreadable, reason: '持ち主の端末も同じ');
+        expect((await neu.c.read(sessionsProvider.future)).sessions.map((s) => s.account), [snsB]);
+        // 止めている間は、ほかの端末にも包まない。
+        final third = device(central.client, token: 'tok-third');
+        await SnsShareStore(third.storage).markRequest('acc-a');
+        await settle(third.c);
+        old.answers.add(true);
+        await settle(old.c);
+        expect(central.share.devices['dev-third']!['wrapped'], isNull);
+      });
+
+      test('署名の合わない包みは使わない', () async {
+        final central = fakeCentral();
+        final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
+        await old.c.read(sessionsProvider.future);
+        await settle(old.c);
+        await old.c.read(snsShareProvider.notifier).setEnabled(true);
+        final neu = device(central.client, token: 'tok-new');
+        await SnsShareStore(neu.storage).markRequest('acc-a');
+        await settle(neu.c);
+        old.answers.add(true);
+        await settle(old.c);
+        final good = central.share.devices['dev-new']!['sig'] as String;
+        final bad = base64.decode(good)..[0] ^= 1;
+        central.share.devices['dev-new']!['sig'] = base64.encode(bad);
+        await settle(neu.c);
+        expect((await neu.c.read(sessionsProvider.future)).sessions, isEmpty, reason: '署名が合わなければ K を使わない');
+        // 包んだ端末と名乗る端末が違っても(署名は元の端末のもの)使わない。
+        central.share.devices['dev-new']!
+          ..['sig'] = good
+          ..['by'] = 'dev-third';
+        await settle(neu.c);
+        expect((await neu.c.read(sessionsProvider.future)).sessions, isEmpty);
+        central.share.devices['dev-new']!['by'] = 'dev-old';
+        await settle(neu.c);
+        expect((await neu.c.read(sessionsProvider.future)).sessions.map((s) => s.account), [snsA], reason: '正しい包みなら取り込む');
+      });
+
+      test('知らない端末が包んだ包みは、最初の参加でなければ使わない(状態で承認済みでも)', () async {
+        final j = await joined();
+        final third = device(j.client, token: 'tok-third');
+        await SnsShareStore(third.storage).markRequest('acc-a');
+        await settle(third.c);
+        // 3 台目が自分で作った新しい世代 K2 を、自分と新しい端末に包む(状態では 3 台目も承認済みに見える)。
+        final k2 = SnsShareCrypto.newShareKey();
+        const keyId2 = 'k2-generation';
+        final signer = await SnsShareStore(third.storage).signingSeed('acc-a');
+        for (final d in j.share.devices.values) {
+          d['wrapped'] = null;
+        }
+        j.share.keyId = keyId2;
+        await plantWrap(j.share, 'dev-third', k2, keyId2, by: 'dev-third', signer: signer);
+        await plantWrap(j.share, 'dev-new', k2, keyId2, by: 'dev-third', signer: signer);
+        j.share.body = await SnsShareCrypto.seal(
+            shareKey: k2,
+            keyId: keyId2,
+            accountId: 'acc-a',
+            plaintext: SessionOps(ops: {snsC.key: SessionOp(at: DateTime.utc(2026, 10, 2), session: session(snsC).toJson())}).encode());
+        final writes = j.share.writes;
+        await loginOn(j.neu.c, const AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'dave_sns'));
+        await settle(j.neu.c);
+        expect(j.share.writes, writes, reason: '覚えていない持ち主の K では上げない');
+        expect((await j.neu.c.read(sessionsProvider.future)).sessions.map((s) => s.account), isNot(contains(snsC)));
+      });
+    });
+
     testWidgets('D-322: SNS のログイン画面で承認を待っていて、取り込みが済んだら TL へ移る', (tester) async {
       final central = fakeCentral();
       final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
@@ -736,6 +964,7 @@ class _Share {
   Uint8List? body;
   int version = 0;
   int writes = 0;
+  int registers = 0;
 
   /// 受信箱(古い順)と、即時の知らせを待っている数 / 起こす口。
   final notices = <Map<String, Object?>>[];
@@ -766,12 +995,15 @@ class _Share {
         'keyId': mode == 'on' && holders > 0 ? keyId : null,
         'deviceId': me,
         'wrappedKey': devices[me]?['wrapped'],
+        'wrappedBy': devices[me]?['by'],
+        'wrapSignature': devices[me]?['sig'],
         'devices': [
           for (final e in devices.entries)
             {
               'deviceId': e.key,
               'label': labels[e.key],
               'publicKey': e.value['publicKey'],
+              'signingKey': e.value['signingKey'],
               'requested': e.value['requested'] == true,
               'approved': e.value['wrapped'] != null,
               'current': e.key == me,

@@ -12445,6 +12445,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get sessionShareKeyReplaced =>
+      'Stopped sharing SNS access tokens on this device because the sharing key may have been replaced. On a device that is sharing, turn sharing off and then on again';
+
+  @override
+  String get sessionShareBodyUnreadable =>
+      'Stopped sharing SNS access tokens on this device because the shared data can\'t be opened with this device\'s key (needs checking). On a device that is sharing, turn sharing off and then on again';
+
+  @override
   String get sessionLoginFailed => 'Login failed';
 
   @override

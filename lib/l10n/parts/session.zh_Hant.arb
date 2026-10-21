@@ -12,6 +12,8 @@
   "sessionShareNo": "否",
   "sessionShareEmailApproved": "已與透過電子郵件核准的裝置（{device}）共享 SNS 存取權杖",
   "sessionShareImported": "{count, plural, other{已使用共享的存取權杖一次登入 SNS 帳號（{count} 個）}}",
+  "sessionShareKeyReplaced": "共享金鑰可能已被替換，已停止在此裝置上共享 SNS 存取權杖。請在正在共享的裝置上先關閉共享，再重新開啟",
+  "sessionShareBodyUnreadable": "無法用此裝置的金鑰開啟共享的 SNS 存取權杖，已停止在此裝置上共享（需要確認）。請在正在共享的裝置上先關閉共享，再重新開啟",
   "sessionLoginFailed": "登入失敗",
   "sessionSanctionLight": "輕度限制",
   "sessionSanctionModerate": "中度限制（發言需審查延遲）",

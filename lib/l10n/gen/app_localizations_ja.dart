@@ -11963,6 +11963,14 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get sessionShareKeyReplaced =>
+      '共有の鍵が差し替えられた可能性があるため、この端末での SNS のアクセストークンの共有を止めました。共有している端末で、共有をいったんオフにしてからオンにし直してください';
+
+  @override
+  String get sessionShareBodyUnreadable =>
+      '共有されている SNS のアクセストークンをこの端末の鍵で開けないため、この端末での共有を止めました(確認が要ります)。共有している端末で、共有をいったんオフにしてからオンにし直してください';
+
+  @override
   String get sessionLoginFailed => 'ログインに失敗しました';
 
   @override

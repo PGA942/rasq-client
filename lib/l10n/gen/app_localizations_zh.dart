@@ -11836,6 +11836,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get sessionShareKeyReplaced =>
+      '共享密钥可能已被替换，已停止在此设备上共享 SNS 访问令牌。请在正在共享的设备上先关闭共享，再重新开启';
+
+  @override
+  String get sessionShareBodyUnreadable =>
+      '无法用此设备的密钥打开共享的 SNS 访问令牌，已停止在此设备上共享（需要确认）。请在正在共享的设备上先关闭共享，再重新开启';
+
+  @override
   String get sessionLoginFailed => '登录失败';
 
   @override
@@ -31601,6 +31609,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
     );
     return '$_temp0';
   }
+
+  @override
+  String get sessionShareKeyReplaced =>
+      '共享金鑰可能已被替換，已停止在此裝置上共享 SNS 存取權杖。請在正在共享的裝置上先關閉共享，再重新開啟';
+
+  @override
+  String get sessionShareBodyUnreadable =>
+      '無法用此裝置的金鑰開啟共享的 SNS 存取權杖，已停止在此裝置上共享（需要確認）。請在正在共享的裝置上先關閉共享，再重新開啟';
 
   @override
   String get sessionLoginFailed => '登入失敗';
