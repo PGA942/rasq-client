@@ -12002,6 +12002,14 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get sessionShareKeyReplaced =>
+      '공유 키가 바뀌었을 가능성이 있어 이 기기에서 SNS 액세스 토큰 공유를 중지했습니다. 공유 중인 기기에서 공유를 껐다가 다시 켜 주세요';
+
+  @override
+  String get sessionShareBodyUnreadable =>
+      '공유된 SNS 액세스 토큰을 이 기기의 키로 열 수 없어 이 기기에서 공유를 중지했습니다(확인 필요). 공유 중인 기기에서 공유를 껐다가 다시 켜 주세요';
+
+  @override
   String get sessionLoginFailed => '로그인에 실패했습니다';
 
   @override

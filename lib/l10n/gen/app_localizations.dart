@@ -19606,6 +19606,18 @@ abstract class AppLocalizations {
   /// **'{count, plural, other{共有されたアクセストークンで、SNS アカウントに一斉ログインしました({count} 件)}}'**
   String sessionShareImported(int count);
 
+  /// 同じ世代なのに共有の鍵が替わった包みが届いて、この端末で共有を止めたときの知らせ(D-547)
+  ///
+  /// In ja, this message translates to:
+  /// **'共有の鍵が差し替えられた可能性があるため、この端末での SNS のアクセストークンの共有を止めました。共有している端末で、共有をいったんオフにしてからオンにし直してください'**
+  String get sessionShareKeyReplaced;
+
+  /// 今の世代の共有の本体が受け取った鍵で開けず、この端末で共有を止めたときの知らせ(D-547)
+  ///
+  /// In ja, this message translates to:
+  /// **'共有されている SNS のアクセストークンをこの端末の鍵で開けないため、この端末での共有を止めました(確認が要ります)。共有している端末で、共有をいったんオフにしてからオンにし直してください'**
+  String get sessionShareBodyUnreadable;
+
   /// SNS のプラグインがログインの失敗の理由を返さなかったときの文
   ///
   /// In ja, this message translates to:

@@ -49,6 +49,11 @@ import '../l10n/l10n.dart';
 ///   サーバーは K もトークンも見ない(印を付けるだけ)。K を持つ端末は印のある端末に問いを出さずに包む。K を持つ端末が 1 台も
 ///   無ければ、SNS にログインしている端末が K を作り直す。どの端末も開かれていなければ、新しい端末は待つか、自分で SNS にログインする。求めている端末の側も、承認を待っている間は [snsSharePollWhileWaitingProvider] おきに
 ///   見回って(上限つき)、承認されたらすぐ取り込む。取り込んだら [SnsShareView.joins] を進め、SNS のログイン画面は TL へ移る。
+/// - **署名と、受け取るときの検査** (D-547 / Codex Security #17 / ORGATE O-020): 端末ごとに Ed25519 の署名鍵も持ち、公開鍵を
+///   X25519 の公開鍵と一緒に登録する。K を包むときは包みに署名し([SnsShareCrypto.wrapMessage])、受け取るときは、包んだ端末
+///   (`wrappedBy`)の署名鍵で確かめる。包んだ端末は、自分か、この端末が覚えている持ち主(まだ何も覚えていない最初の参加だけは、
+///   状態で承認済みの端末)。同じ世代なのに K の指紋が違う包み・今の世代なのに開けない本体は受け取らず、何も上げずに止まって
+///   知らせる([SnsShareProblem])。ログインのときは、手元の署名鍵で所持の証明を付ける(`AccountSecurityApi.login`)。
 
 /// Central のアカウントの共有の状態。
 enum SnsShareMode {
@@ -59,12 +64,30 @@ enum SnsShareMode {
   static SnsShareMode fromWire(Object? w) => values.where((m) => m.name == w).firstOrNull ?? off;
 }
 
+/// この端末で共有を止めた理由 (D-547)。止めている間は K を使わず、本体を読み書きせず、ほかの端末にも包まない。
+/// 直すのは、持ち主の端末で共有をオフ → オンにすること(新しい世代になれば、止めたものは効かなくなる)。
+enum SnsShareProblem {
+  /// 同じ世代なのに K が替わった包みが届いた(共有の鍵が差し替えられた可能性)。
+  keyReplaced,
+
+  /// 今の世代の本体が、受け取った K で開けない(空として扱って上げ直さない)。
+  bodyUnreadable;
+
+  String get message => switch (this) {
+        keyReplaced => appL10n.sessionShareKeyReplaced,
+        bodyUnreadable => appL10n.sessionShareBodyUnreadable,
+      };
+}
+
 @immutable
 class SnsShareDevice {
-  const SnsShareDevice({required this.deviceId, this.label, required this.publicKey, this.requested = false, this.approved = false, this.current = false, this.approvedBy, this.lastUsedAt, this.emailApproved = false, this.emailDecision});
+  const SnsShareDevice({required this.deviceId, this.label, required this.publicKey, this.signingKey, this.requested = false, this.approved = false, this.current = false, this.approvedBy, this.lastUsedAt, this.emailApproved = false, this.emailDecision});
   final String deviceId;
   final String? label;
   final Uint8List publicKey;
+
+  /// その端末の署名鍵(Ed25519 の公開鍵、D-547)。包みの署名を確かめる。
+  final Uint8List? signingKey;
 
   /// その端末が共有を求めている(新しくログインした / 設定でオンにした)。
   final bool requested;
@@ -87,6 +110,7 @@ class SnsShareDevice {
         deviceId: j['deviceId'] as String? ?? '',
         label: j['label'] as String?,
         publicKey: base64.decode(j['publicKey'] as String? ?? ''),
+        signingKey: _bytes(j['signingKey']),
         requested: j['requested'] == true,
         approved: j['approved'] == true,
         current: j['current'] == true,
@@ -97,9 +121,18 @@ class SnsShareDevice {
       );
 }
 
+Uint8List? _bytes(Object? w) {
+  if (w is! String || w.isEmpty) return null;
+  try {
+    return base64.decode(w);
+  } on FormatException {
+    return null;
+  }
+}
+
 @immutable
 class SnsShareStatus {
-  const SnsShareStatus({this.mode = SnsShareMode.off, this.keyId, this.deviceId, this.wrappedKey, this.devices = const []});
+  const SnsShareStatus({this.mode = SnsShareMode.off, this.keyId, this.deviceId, this.wrappedKey, this.wrappedBy, this.wrapSignature, this.devices = const []});
   final SnsShareMode mode;
 
   /// 今の K の世代(K を持つ端末が無ければ null)。
@@ -110,6 +143,10 @@ class SnsShareStatus {
 
   /// この端末あての包んだ K。
   final Uint8List? wrappedKey;
+
+  /// [wrappedKey] を包んだ端末の deviceId と、その端末の署名 (D-547)。
+  final String? wrappedBy;
+  final Uint8List? wrapSignature;
   final List<SnsShareDevice> devices;
 
   SnsShareDevice? get me => devices.where((d) => d.current).firstOrNull;
@@ -131,6 +168,8 @@ class SnsShareStatus {
         keyId: j['keyId'] as String?,
         deviceId: j['deviceId'] as String?,
         wrappedKey: switch (j['wrappedKey']) { final String w when w.isNotEmpty => base64.decode(w), _ => null },
+        wrappedBy: j['wrappedBy'] as String?,
+        wrapSignature: _bytes(j['wrapSignature']),
         devices: [for (final d in j['devices'] as List? ?? const []) if (d is Map) SnsShareDevice.fromJson(d.cast<String, Object?>())],
       );
 }
@@ -145,14 +184,17 @@ class SnsShareApi {
 
   Future<SnsShareStatus> status() async => SnsShareStatus.fromJson(await _client.getJson('/me/sns-share'));
 
-  Future<SnsShareStatus> register(List<int> publicKey, {bool? request}) async =>
-      SnsShareStatus.fromJson(await _client.putJson('/me/sns-share/device', {'publicKey': base64.encode(publicKey), 'request': ?request}));
+  /// この端末の X25519 の公開鍵 [publicKey] と、署名鍵 [signingKey](D-547、必須)を置く。
+  Future<SnsShareStatus> register(List<int> publicKey, {required List<int> signingKey, bool? request}) async => SnsShareStatus.fromJson(
+      await _client.putJson('/me/sns-share/device', {'publicKey': base64.encode(publicKey), 'signingKey': base64.encode(signingKey), 'request': ?request}));
 
   Future<SnsShareStatus> setMode(SnsShareMode mode, {SnsShareMode? from}) async =>
       SnsShareStatus.fromJson(await _client.putJson('/me/sns-share/state', {'state': mode.name, 'from': ?from?.name}));
 
-  Future<SnsShareStatus> wrap(String deviceId, {required String keyId, required List<int> wrappedKey}) async =>
-      SnsShareStatus.fromJson(await _client.putJson('/me/sns-share/devices/${Uri.encodeComponent(deviceId)}/key', {'keyId': keyId, 'wrappedKey': base64.encode(wrappedKey)}));
+  /// [deviceId] あてに包んだ K を置く。[signature] = この端末の署名鍵での [SnsShareCrypto.wrapMessage] の署名 (D-547)。
+  /// 署名が合わない = 403 `wrap_signature_invalid`、宛先にもう同じ世代の包みがある = 409 `already_wrapped`。
+  Future<SnsShareStatus> wrap(String deviceId, {required String keyId, required List<int> wrappedKey, required List<int> signature}) async =>
+      SnsShareStatus.fromJson(await _client.putJson('/me/sns-share/devices/${Uri.encodeComponent(deviceId)}/key', {'keyId': keyId, 'wrappedKey': base64.encode(wrappedKey), 'signature': base64.encode(signature)}));
 
   Future<SnsShareStatus> remove(String deviceId) async {
     await _client.delete('/me/sns-share/devices/${Uri.encodeComponent(deviceId)}');
@@ -169,6 +211,11 @@ class SnsShareApi {
 /// 端末に置くもの(`rasq.snsShare.v1`、[sessionStorageProvider] = ネイティブはセキュアストレージ、Web はブラウザ):
 /// `{"<Central のアカウント id>": {"seed": 秘密鍵の種 (base64), "request": 次の見回りで共有を求める, "keyId", "known": {"<accountKey>": 指紋}}}`。
 /// `known` = 最後に本体と揃えたときの、ログイン中の SNS セッションの指紋(トークンそのものは置かない。Web 版でもブラウザに残らない)。
+/// D-547 で足したもの:
+/// - `signingSeed` = 署名鍵(Ed25519)の種 (base64)。`seed` と同じく端末から出さない。
+/// - `handle` / `email` = そのアカウントのハンドルとメール(小文字)。ログインで、入力したハンドル / メールから署名鍵を選ぶ。
+/// - `trust` = `{"keyId", "fp": K の指紋, "holders": [持ち主の端末の署名鍵 (base64)]}`。最後に受け取った世代と、その世代で見た持ち主。
+/// - `problem` = `{"keyId", "kind"}`。その世代では共有を止めている([SnsShareProblem])。
 class SnsShareStore {
   SnsShareStore(this._storage);
   final SessionStorage _storage;
@@ -199,6 +246,68 @@ class SnsShareStore {
     final fresh = SnsShareCrypto.newDeviceSeed();
     await update(accountId, (e) => {...e, 'seed': base64.encode(fresh)});
     return fresh;
+  }
+
+  /// その Central のアカウントの署名鍵(Ed25519 の種、D-547)。無ければ作る。
+  Future<Uint8List> signingSeed(String accountId) async {
+    final s = (await entry(accountId))['signingSeed'];
+    if (s is String && s.isNotEmpty) return base64.decode(s);
+    final fresh = SnsShareCrypto.newDeviceSeed();
+    await update(accountId, (e) => {...e, 'signingSeed': base64.encode(fresh)});
+    return fresh;
+  }
+
+  /// ログインで署名鍵を選べるように、そのアカウントのハンドルとメールを控える(変わったときだけ書く)。
+  Future<void> noteIdentity(String accountId, {required String handle, String? email}) async {
+    final e = await entry(accountId);
+    final h = handle.toLowerCase();
+    final m = email?.toLowerCase();
+    if (e['handle'] == h && e['email'] == m) return;
+    await update(accountId, (e) => {...e, 'handle': h, 'email': m});
+  }
+
+  /// ログインで入力したハンドル / メール [identifier] のアカウントの署名鍵(手元に無ければ null = 証明を付けない)。
+  Future<Uint8List?> signingSeedForLogin(String identifier) async {
+    final id = identifier.trim().toLowerCase();
+    final handle = id.startsWith('@') ? id.substring(1) : id;
+    for (final e in (await _all()).values) {
+      final s = e['signingSeed'];
+      if (s is! String || s.isEmpty) continue;
+      if ((handle.isNotEmpty && e['handle'] == handle) || (id.isNotEmpty && e['email'] == id)) return base64.decode(s);
+    }
+    return null;
+  }
+
+  /// 最後に受け取った世代と K の指紋、その世代で見た持ち主の署名鍵 (D-547)。何も覚えていなければ null(最初の参加)。
+  Future<({String keyId, String fingerprint, Set<String> holders})?> trust(String accountId) async {
+    final t = (await entry(accountId))['trust'];
+    if (t is! Map || t['keyId'] is! String || t['fp'] is! String) return null;
+    return (keyId: t['keyId'] as String, fingerprint: t['fp'] as String, holders: {for (final h in t['holders'] as List? ?? const []) if (h is String) h});
+  }
+
+  /// 世代 [keyId] の K(指紋 [fingerprint])を受け取った / 作った。持ち主 [holders] は、同じ世代なら前に見たものに足し、
+  /// 新しい世代なら置き換える(外された端末を、いつまでも持ち主として数えない)。
+  Future<void> remember(String accountId, {required String keyId, required String fingerprint, required Iterable<String> holders}) async {
+    final before = await trust(accountId);
+    final all = {if (before != null && before.keyId == keyId) ...before.holders, ...holders};
+    if (before != null && before.keyId == keyId && before.fingerprint == fingerprint && before.holders.length == all.length) return;
+    await update(accountId, (e) => {...e, 'trust': {'keyId': keyId, 'fp': fingerprint, 'holders': all.toList()..sort()}});
+  }
+
+  /// その世代で共有を止めている理由(止めていなければ null)。
+  Future<({String keyId, SnsShareProblem kind})?> problem(String accountId) async {
+    final p = (await entry(accountId))['problem'];
+    final kind = p is Map ? SnsShareProblem.values.where((k) => k.name == p['kind']).firstOrNull : null;
+    if (kind == null || p is! Map || p['keyId'] is! String) return null;
+    return (keyId: p['keyId'] as String, kind: kind);
+  }
+
+  /// 世代 [keyId] で共有を止める。新しく止めたら true(同じものを止めていれば false = 知らせ直さない)。
+  Future<bool> setProblem(String accountId, String keyId, SnsShareProblem kind) async {
+    final before = await problem(accountId);
+    if (before != null && before.keyId == keyId && before.kind == kind) return false;
+    await update(accountId, (e) => {...e, 'problem': {'keyId': keyId, 'kind': kind.name}});
+    return true;
   }
 
   /// [keys] をこの端末の「揃えた記録」から外す (D-409)。RASQ アカウントからのログアウトで、その SNS がこの端末の
@@ -322,7 +431,7 @@ Future<void> handleSnsShareNotices(Ref ref, List<CentralNotice> notices) async {
 /// 画面が見る形。
 @immutable
 class SnsShareView {
-  const SnsShareView({this.accountId, this.status, this.busy = false, this.joins = 0});
+  const SnsShareView({this.accountId, this.status, this.busy = false, this.joins = 0, this.problem});
 
   /// いま見ている Central のアカウント(ログインしていなければ null)。
   final String? accountId;
@@ -333,13 +442,17 @@ class SnsShareView {
 
   /// 承認を待っていたこの端末が、共有されたログインを取り込んだ回数 (D-322。SNS のログイン画面が TL へ移る合図)。
   final int joins;
+
+  /// 今の世代で共有を止めている(確認が要る、D-547)。
+  final SnsShareProblem? problem;
 }
 
 class _Ctx {
-  _Ctx(this.api, this.accountId, this.handle);
+  _Ctx(this.api, this.accountId, this.handle, this.email);
   final SnsShareApi api;
   final String accountId;
   final String handle;
+  final String? email;
 }
 
 class SnsShareNotifier extends Notifier<SnsShareView> {
@@ -357,6 +470,9 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
 
   /// この起動のあいだに、答えずに閉じた問い(`<accountId>:first` / `<accountId>:<deviceId>`)。見回りのたびに出し直さない。
   final Set<String> _dismissed = {};
+
+  /// アカウントごとの、共有を止めている世代と理由 (D-547。見回りの初めに端末の保存先から読む)。
+  final Map<String, ({String keyId, SnsShareProblem kind})?> _problems = {};
 
   @override
   SnsShareView build() {
@@ -402,7 +518,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     if (me == null || !ref.mounted) return null;
     final token = ref.read(orgateAccountProvider.notifier).tokenFor(me.id);
     if (token == null) return null;
-    return _Ctx(SnsShareApi(client.withToken(() => token)), me.id, me.handle);
+    return _Ctx(SnsShareApi(client.withToken(() => token)), me.id, me.handle, me.email);
   }
 
   void _publish(_Ctx c, SnsShareStatus s, {bool busy = false}) {
@@ -411,7 +527,24 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     final current = ref.read(orgateAccountProvider).value?.id;
     if (current != null && current != c.accountId) return;
     if (s.waiting) _wasWaiting.add(c.accountId);
-    state = SnsShareView(accountId: c.accountId, status: s, busy: busy, joins: state.accountId == c.accountId ? state.joins : 0);
+    state = SnsShareView(accountId: c.accountId, status: s, busy: busy, joins: state.accountId == c.accountId ? state.joins : 0, problem: _problemOf(c, s));
+  }
+
+  /// 今の世代で共有を止めているなら、その理由。
+  SnsShareProblem? _problemOf(_Ctx c, SnsShareStatus s) {
+    final p = _problems[c.accountId];
+    return p != null && s.mode == SnsShareMode.on && p.keyId == s.keyId ? p.kind : null;
+  }
+
+  /// 世代 [keyId] で共有を止めて、知らせる(同じものは知らせ直さない)。
+  Future<void> _halt(_Ctx c, String keyId, SnsShareProblem kind) async {
+    debugPrint('snsShare: stopped sharing on this device (${kind.name})');
+    final fresh = await _store.setProblem(c.accountId, keyId, kind);
+    _problems[c.accountId] = (keyId: keyId, kind: kind);
+    if (!ref.mounted) return;
+    final s = state.status;
+    if (s != null && state.accountId == c.accountId) _publish(c, s, busy: state.busy);
+    if (fresh) ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(kind.message)));
   }
 
   /// 承認を待っている間は、数秒おきに見回る(待ち始めてから上限まで)。待っていなければ止める。
@@ -459,6 +592,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     final c = await _ctx();
     if (c == null) return;
     try {
+      _problems[c.accountId] = await _store.problem(c.accountId);
       var s = await _ensureRegistered(c);
       _publish(c, s);
       if (s.deviceId == null || !ref.mounted) return;
@@ -490,6 +624,8 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
             }
             return;
           }
+          // D-547: この世代で止めている(鍵が差し替えられた / 本体が開けない)。K を使わず、ほかの端末にも包まない。
+          if (_problemOf(c, s) != null) return;
           final key = await _unwrap(c, s);
           if (key == null) return;
           for (final d in s.asking) {
@@ -537,31 +673,81 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     return c.api.requestEmailApproval();
   }
 
-  /// この端末の公開鍵を Central に置く(無い / 変わった / 共有を求めるとき)。
+  /// この端末の X25519 の公開鍵と署名鍵(Ed25519 の公開鍵)。
+  Future<({Uint8List publicKey, Uint8List signingKey})> _keys(_Ctx c) async =>
+      (publicKey: await SnsShareCrypto.publicKeyOf(await _store.seed(c.accountId)), signingKey: await SnsShareCrypto.signingPublicKeyOf(await _store.signingSeed(c.accountId)));
+
+  /// この端末の公開鍵と署名鍵を ORGATE に置く。
+  Future<SnsShareStatus> _register(_Ctx c, {bool? request}) async {
+    final k = await _keys(c);
+    return c.api.register(k.publicKey, signingKey: k.signingKey, request: request);
+  }
+
+  /// この端末の公開鍵と署名鍵を Central に置く(無い / どちらかが変わった / 共有を求めるとき)。
   Future<SnsShareStatus> _ensureRegistered(_Ctx c) async {
-    final seed = await _store.seed(c.accountId);
-    final pub = await SnsShareCrypto.publicKeyOf(seed);
+    final k = await _keys(c);
+    await _store.noteIdentity(c.accountId, handle: c.handle, email: c.email);
     final entry = await _store.entry(c.accountId);
     final request = entry['request'] == true;
     var s = await c.api.status();
     if (s.deviceId == null) return s;
     final me = s.me;
-    if (me == null || !listEquals(me.publicKey, pub) || (request && !me.requested)) {
-      s = await c.api.register(pub, request: request ? true : null);
+    if (me == null || !listEquals(me.publicKey, k.publicKey) || !listEquals(me.signingKey, k.signingKey) || (request && !me.requested)) {
+      s = await c.api.register(k.publicKey, signingKey: k.signingKey, request: request ? true : null);
     }
     if (request) await _store.update(c.accountId, (e) => {...e}..remove('request'));
     return s;
   }
 
+  /// この端末あての包みを確かめてから開く (D-547)。使えなければ null。
+  ///
+  /// - 包んだ端末(`wrappedBy`)は、自分か、覚えている持ち主。まだ何も覚えていない最初の参加だけは、状態で承認済みの端末を信じる。
+  /// - 署名(`wrapSignature`)は、その端末の署名鍵で確かめる(自分なら手元の鍵で)。宛先・公開鍵・世代・包みのバイト列まで含む。
+  /// - 同じ世代なのに K の指紋が覚えているものと違えば、受け取らずに止める([SnsShareProblem.keyReplaced])。
   Future<Uint8List?> _unwrap(_Ctx c, SnsShareStatus s) async {
-    final key = await SnsShareCrypto.unwrap(wrapped: s.wrappedKey!, seed: await _store.seed(c.accountId), accountId: c.accountId, deviceId: s.deviceId!, keyId: s.keyId!);
-    if (key == null) debugPrint('snsShare: the wrapped key for this device could not be opened');
+    final keyId = s.keyId!;
+    final wrapped = s.wrappedKey!;
+    final mine = await _keys(c);
+    final trust = await _store.trust(c.accountId);
+    final by = s.devices.where((d) => d.deviceId == s.wrappedBy).firstOrNull;
+    final self = by != null && by.deviceId == s.deviceId;
+    final signer = self ? mine.signingKey : by?.signingKey;
+    final known = signer != null && (self || (trust == null ? by!.approved : trust.holders.contains(base64.encode(signer))));
+    final signature = s.wrapSignature;
+    if (!known || signature == null) {
+      debugPrint('snsShare: the wrapped key was not wrapped by a known holder');
+      return null;
+    }
+    final message = SnsShareCrypto.wrapMessage(accountId: c.accountId, deviceId: s.deviceId!, recipientPublicKey: mine.publicKey, keyId: keyId, wrappedKey: wrapped);
+    if (!await SnsShareCrypto.verify(publicKey: signer, message: message, signature: signature)) {
+      debugPrint('snsShare: the signature on the wrapped key did not verify');
+      return null;
+    }
+    final key = await SnsShareCrypto.unwrap(wrapped: wrapped, seed: await _store.seed(c.accountId), accountId: c.accountId, deviceId: s.deviceId!, keyId: keyId);
+    if (key == null) {
+      debugPrint('snsShare: the wrapped key for this device could not be opened');
+      return null;
+    }
+    final fingerprint = SnsShareCrypto.keyFingerprint(key);
+    if (trust != null && trust.keyId == keyId && trust.fingerprint != fingerprint) {
+      await _halt(c, keyId, SnsShareProblem.keyReplaced);
+      return null;
+    }
+    await _store.remember(c.accountId, keyId: keyId, fingerprint: fingerprint, holders: {
+      base64.encode(mine.signingKey),
+      base64.encode(signer),
+      for (final d in s.devices)
+        if (d.approved && d.signingKey != null && d.signingKey!.length == 32) base64.encode(d.signingKey!),
+    });
     return key;
   }
 
+  /// [d] あてに K を包み、この端末の署名鍵で署名して置く (D-547)。
   Future<SnsShareStatus> _wrapFor(_Ctx c, SnsShareDevice d, List<int> key, String keyId) async {
     final wrapped = await SnsShareCrypto.wrap(shareKey: key, recipientPublicKey: d.publicKey, accountId: c.accountId, deviceId: d.deviceId, keyId: keyId);
-    return c.api.wrap(d.deviceId, keyId: keyId, wrappedKey: wrapped);
+    final message = SnsShareCrypto.wrapMessage(accountId: c.accountId, deviceId: d.deviceId, recipientPublicKey: d.publicKey, keyId: keyId, wrappedKey: wrapped);
+    final signature = await SnsShareCrypto.sign(await _store.signingSeed(c.accountId), message);
+    return c.api.wrap(d.deviceId, keyId: keyId, wrappedKey: wrapped, signature: signature);
   }
 
   /// 共有をオンにする: 状態を `on` に、この端末も共有を求めた形にして、新しい K を作って自分と [approve] に包み、本体を上げる。
@@ -571,8 +757,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
   /// 2026-10-09 の [16])。包む相手は、K を作る直前に読み直した状態で確かめる(まだ求めていて、問いのときと鍵が同じ端末だけ)。
   Future<void> _enable(_Ctx c, {required SnsShareMode from, List<SnsShareDevice> approve = const [], bool emailApproved = false}) async {
     var s = from == SnsShareMode.on ? await c.api.status() : await c.api.setMode(SnsShareMode.on, from: from);
-    final seed = await _store.seed(c.accountId);
-    s = await c.api.register(await SnsShareCrypto.publicKeyOf(seed), request: true);
+    s = await _register(c, request: true);
     final asking = {for (final d in s.asking) d.deviceId: d};
     final yes = {for (final d in approve) d.deviceId: d};
     final to = [
@@ -582,6 +767,8 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     final key = SnsShareCrypto.newShareKey();
     final keyId = SnsShareCrypto.newKeyId();
     final me = s.me!;
+    // 作った世代と K の指紋を覚える(あとで同じ世代の別の K が届いても受け取らない。D-547)。
+    await _store.remember(c.accountId, keyId: keyId, fingerprint: SnsShareCrypto.keyFingerprint(key), holders: {base64.encode((await _keys(c)).signingKey)});
     s = await _wrapFor(c, me, key, keyId);
     for (final d in to) {
       s = await _wrapFor(c, d, key, keyId);
@@ -601,8 +788,14 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
       final entry = await _store.entry(c.accountId);
       var known = entry['keyId'] == keyId ? {for (final e in ((entry['known'] as Map?) ?? const {}).entries) '${e.key}': '${e.value}'} : <String, String>{};
       final raw = await c.api.body();
-      final opened = raw == null || SnsShareCrypto.keyIdOf(raw.bytes) != keyId ? null : await SnsShareCrypto.open(shareKey: key, keyId: keyId, accountId: c.accountId, body: raw.bytes);
-      // 本体が無い / 前の世代 / 開けない: 空から(前に揃えた記録からログアウトを起こさない)。
+      final current = raw != null && SnsShareCrypto.keyIdOf(raw.bytes) == keyId;
+      final opened = current ? await SnsShareCrypto.open(shareKey: key, keyId: keyId, accountId: c.accountId, body: raw.bytes) : null;
+      // D-547: 今の世代の本体なのに開けない = 受け取った K が違う。空として扱って手元のトークンを上げ直さず、止めて知らせる。
+      if (current && opened == null) {
+        await _halt(c, keyId, SnsShareProblem.bodyUnreadable);
+        return;
+      }
+      // 本体が無い / 前の世代: 空から(前に揃えた記録からログアウトを起こさない)。
       if (opened == null) known = {};
       final remote = opened == null ? SessionOps() : SessionOps.parse(opened);
       final m = mergeSnsShare(remote: remote, local: local, known: known, now: DateTime.now());
@@ -671,13 +864,15 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
       if (!ref.mounted) return;
       if (!on) {
         _publish(c, await c.api.setMode(SnsShareMode.declined));
-        await _store.update(c.accountId, (e) => {...e}..remove('known')..remove('keyId'));
+        // 止めていた理由も外す(オンにし直すと新しい世代になる。D-547)。
+        await _store.update(c.accountId, (e) => {...e}..remove('known')..remove('keyId')..remove('problem'));
+        _problems.remove(c.accountId);
         return;
       }
       final s = await _ensureRegistered(c);
       if (s.mode == SnsShareMode.on && s.keyId != null) {
         // ほかの端末が K を持っている: この端末は承認を待つ。
-        _publish(c, s.me?.requested == true ? s : await c.api.register(await SnsShareCrypto.publicKeyOf(await _store.seed(c.accountId)), request: true));
+        _publish(c, s.me?.requested == true ? s : await _register(c, request: true));
         return;
       }
       // K を持つ端末がいない(on のまま): この端末が K を作り直す。包むのは自分と、メールで承認された端末だけ
@@ -696,7 +891,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
   Future<void> approve(SnsShareDevice d) async {
     final c = await _ctx();
     final s = state.status;
-    if (c == null || s == null || !s.holding) return;
+    if (c == null || s == null || !s.holding || _problemOf(c, s) != null) return;
     final key = await _unwrap(c, s);
     if (key == null) return;
     _publish(c, await _wrapFor(c, d, key, s.keyId!));
