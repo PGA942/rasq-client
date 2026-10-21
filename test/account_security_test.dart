@@ -14,6 +14,8 @@ import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/settings/account_security_screen.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_client/session/sns_share.dart';
+import 'package:rasq_client/session/sns_share_crypto.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -34,13 +36,14 @@ void main() {
   http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
   http.Response err(int code, String message) => json({'error': {'code': '$code', 'message': message}}, code);
 
-  Future<ProviderContainer> pump(WidgetTester tester, MockClient mock, {bool loggedIn = true}) async {
+  Future<ProviderContainer> pump(WidgetTester tester, MockClient mock, {bool loggedIn = true, Map<String, String> stored = const {}}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
       OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'device-abc', if (loggedIn) 'token': 'device-token', if (loggedIn) 'accountId': 'acc-1'}),
+      ...stored,
     });
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -320,6 +323,7 @@ void main() {
     final bodies = <String, Map<String, Object?>>{};
     final auth = <String, String?>{};
     var challenges = 0;
+    var proofs = 0;
     final tokens = {'accountId': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'accessToken': 'login-token', 'refreshToken': 'refresh', 'restoreSecret': 'restore-9', 'restored': true};
     final mock = MockClient((req) async {
       final path = req.url.path.replaceFirst('/api/v1', '');
@@ -341,6 +345,10 @@ void main() {
           return json({
             'error': {'code': 'second_factor_required', 'message': 'メールに確認コードを送りました', 'challengeId': 'ch-$challenges', 'email': 'h***@example.com', 'expiresInSeconds': 600},
           }, 401);
+        case 'POST /auth/device-proof/challenge':
+          // 所持の証明のチャレンジ (D-547 / ORGATE O-020)。
+          proofs++;
+          return json({'challengeId': 'dp-$proofs', 'nonce': base64.encode(List<int>.filled(32, proofs)), 'expiresInSeconds': 300});
         case 'POST /auth/login/confirm':
           return body['challengeId'] == 'ch-$challenges' && body['code'] == '9zYx8-WvUt7' ? json(tokens) : err(400, 'invalid or expired code');
         case 'POST /auth/password/reset/request':
@@ -392,8 +400,58 @@ void main() {
     expect(f.bodies['POST /auth/login']!['label'], startsWith('RASQ ('));
     expect(f.auth['POST /auth/login'], isNull);
     expect(f.calls.where((k) => k.contains('/auth/login/email')), isEmpty);
+    // D-547: この端末にそのアカウントの共有の署名鍵が無い → 所持の証明は付けない(チャレンジも取らない)。
+    expect(f.bodies['POST /auth/login']!.containsKey('deviceProof'), isFalse);
+    expect(f.calls, isNot(contains('POST /auth/device-proof/challenge')));
     expect(c.read(orgateAccountProvider).value?.handle, 'hanako');
     expect(find.byType(AccountLoginScreen), findsNothing);
+  });
+
+  testWidgets('D-547 (#17): この端末がそのアカウントの共有の署名鍵を持っていれば、ログインにチャレンジへの署名(所持の証明)を付ける', (tester) async {
+    final f = fakeLogin();
+    final seed = List<int>.filled(32, 9);
+    final c = await pump(tester, f.mock, loggedIn: false, stored: {
+      SnsShareStore.storageKey: jsonEncode({
+        'acc-9': {'seed': base64.encode(List<int>.filled(32, 8)), 'signingSeed': base64.encode(seed), 'handle': 'hanako', 'email': 'hanako@example.com'},
+        'acc-2': {'signingSeed': base64.encode(List<int>.filled(32, 7)), 'handle': 'jiro'},
+      }),
+    });
+    c.read(routerProvider).push('${Routes.settings}/account-login');
+    await tester.pumpAndSettle();
+    final signing = await SnsShareCrypto.signingPublicKeyOf(seed);
+    Future<void> expectProof(int n) async {
+      final proof = (f.bodies['POST /auth/login']!['deviceProof'] as Map).cast<String, Object?>();
+      expect(proof['challengeId'], 'dp-$n');
+      expect(f.bodies['POST /auth/device-proof/challenge'], {'deviceId': 'device-abc'});
+      final message = SnsShareCrypto.deviceProofMessage(challengeId: 'dp-$n', nonce: base64.encode(List<int>.filled(32, n)), deviceId: 'device-abc');
+      expect(utf8.decode(message), 'rasq-device-proof/v1\ndp-$n\n${base64.encode(List<int>.filled(32, n))}\ndevice-abc');
+      expect(await SnsShareCrypto.verify(publicKey: signing, message: message, signature: base64.decode(proof['signature'] as String)), isTrue);
+    }
+
+    // メールで入れても、控えたメールからそのアカウントの署名鍵を選ぶ(大文字・小文字は問わない)。
+    await typeLogin(tester, 'Hanako@Example.com', 'correct horse battery');
+    expect(find.byKey(const ValueKey('login.challenge')), findsOneWidget);
+    await expectProof(1);
+    // 送り直す(パスワードの段をもう一度)= 新しいチャレンジに署名し直す(チャレンジは 1 回きり)。
+    await tester.tap(find.byKey(const ValueKey('login.resend')));
+    await tester.pumpAndSettle();
+    await expectProof(2);
+    expect(f.calls.where((k) => k == 'POST /auth/device-proof/challenge').length, 2);
+  });
+
+  test('D-547: ログインで選ぶ署名鍵は、入力したハンドル / メールのアカウントのものだけ', () async {
+    final storage = MemorySessionStorage({
+      SnsShareStore.storageKey: jsonEncode({
+        'acc-9': {'signingSeed': base64.encode(List<int>.filled(32, 9)), 'handle': 'hanako', 'email': 'hanako@example.com'},
+        'acc-3': {'seed': base64.encode(List<int>.filled(32, 3)), 'handle': 'saburo'},
+      }),
+    });
+    final store = SnsShareStore(storage);
+    expect(await store.signingSeedForLogin('@Hanako'), List<int>.filled(32, 9));
+    expect(await store.signingSeedForLogin(' hanako@example.com '), List<int>.filled(32, 9));
+    expect(await store.signingSeedForLogin('saburo'), isNull, reason: '署名鍵が無い(入れ直した端末)なら付けない');
+    expect(await store.signingSeedForLogin('someone'), isNull);
+    expect(await store.signingSeedForLogin(''), isNull);
   });
 
   testWidgets('2 段階目 (D-419 / ORGATE O-010): 正しいパスワード → メールのコードの画面 → 違うコード → 送り直し → 正しいコードで入る', (tester) async {

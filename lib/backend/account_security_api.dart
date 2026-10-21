@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'orgate_client.dart';
 import 'rasq_account.dart';
 import '../l10n/l10n.dart';
+import '../session/sns_share_crypto.dart';
 
 /// メール認証とアカウントの強化 (S-019) の口。メールで届くのはどれも確認コード(Base58 で 10 文字)(1 回きり、5 回まで。
 /// 15 分、ログインの 2 段階目とパスワードの再設定は 10 分)。
@@ -127,8 +130,25 @@ class AccountSecurityApi {
   /// ハンドル(かメール)+ パスワード。戻りは [OrgateAccountNotifier.adoptLogin] へ。2 段階目が効いているアカウントは
   /// [OrgateException](`401 second_factor_required`)→ [RasqLoginChallenge.of] → [confirmLogin]。
   /// トークンは添えない(添えると、401 でトークンの取り直しと送り直しが起き、コードが 2 通届く)。
-  Future<Map<String, Object?>> login({required String identifier, required String password, required String deviceId, String? label}) =>
-      _anonymous.postJson('/auth/login', {'handle': identifier, 'password': password, 'deviceId': deviceId, 'label': ?label});
+  ///
+  /// [signingSeed] = そのアカウントの端末の署名鍵の種(SNS 共有の、D-547 / Codex Security #17 / ORGATE O-020)。あれば先に
+  /// チャレンジを取って署名し、所持の証明 `deviceProof` を付ける(証明が無い / 合わないログインでは、ORGATE がその端末の
+  /// 共有の承認を引き継がない)。チャレンジが取れなければログインもしない(証明なしで入って承認を落とさない)。
+  Future<Map<String, Object?>> login({required String identifier, required String password, required String deviceId, String? label, List<int>? signingSeed}) async {
+    Map<String, Object?>? proof;
+    if (signingSeed != null) {
+      final challenge = await deviceProofChallenge(deviceId);
+      final message = SnsShareCrypto.deviceProofMessage(challengeId: challenge.challengeId, nonce: challenge.nonce, deviceId: deviceId);
+      proof = {'challengeId': challenge.challengeId, 'signature': base64.encode(await SnsShareCrypto.sign(signingSeed, message))};
+    }
+    return _anonymous.postJson('/auth/login', {'handle': identifier, 'password': password, 'deviceId': deviceId, 'label': ?label, 'deviceProof': ?proof});
+  }
+
+  /// 端末の所持の証明のチャレンジ (D-547 / ORGATE O-020、認証なし。5 分・1 回きり)。`nonce` は base64 のまま返す。
+  Future<({String challengeId, String nonce})> deviceProofChallenge(String deviceId) async {
+    final r = await _anonymous.postJson('/auth/device-proof/challenge', {'deviceId': deviceId});
+    return (challengeId: '${r['challengeId'] ?? ''}', nonce: '${r['nonce'] ?? ''}');
+  }
 
   /// 2 段階目: メールに届いたコード(短いコードでも、リンクの長いトークンでも)。戻りはログインの応答。
   Future<Map<String, Object?>> confirmLogin({required String challengeId, required String code}) =>
