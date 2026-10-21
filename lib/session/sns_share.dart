@@ -704,27 +704,35 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
 
   /// この端末あての包みを確かめてから開く (D-547)。使えなければ null。
   ///
-  /// - 包んだ端末(`wrappedBy`)は、自分か、覚えている持ち主。まだ何も覚えていない最初の参加だけは、状態で承認済みの端末を信じる。
-  /// - 署名(`wrapSignature`)は、その端末の署名鍵で確かめる(自分なら手元の鍵で)。宛先・公開鍵・世代・包みのバイト列まで含む。
-  /// - 同じ世代なのに K の指紋が覚えているものと違えば、受け取らずに止める([SnsShareProblem.keyReplaced])。
+  /// - **もう受け取った世代**(覚えている `keyId` と同じ)なら、署名は確かめ直さず、K の指紋が覚えているものと同じかだけを見る。
+  ///   違えば受け取らずに止める([SnsShareProblem.keyReplaced])。包んだ端末がそのあと状態から消えた / 署名鍵が替わった
+  ///   (証明なしのログインで ORGATE が行を消した、など)ときに、受け取り済みの正しい K を誤って捨てないように。今の状態の
+  ///   署名鍵は、この場合は使わない(入れ替わった端末の鍵を本物として扱わない)。
+  /// - 新しい世代 / 最初の参加: 包んだ端末(`wrappedBy`)は、自分か、覚えている持ち主。まだ何も覚えていない最初の参加だけは、
+  ///   状態で承認済みの端末を信じる。署名(`wrapSignature`)は、その端末の署名鍵で確かめる(自分なら手元の鍵で)。宛先・
+  ///   公開鍵・世代・包みのバイト列まで含む。
   Future<Uint8List?> _unwrap(_Ctx c, SnsShareStatus s) async {
     final keyId = s.keyId!;
     final wrapped = s.wrappedKey!;
     final mine = await _keys(c);
     final trust = await c.store.trust(c.accountId);
-    final by = s.devices.where((d) => d.deviceId == s.wrappedBy).firstOrNull;
-    final self = by != null && by.deviceId == s.deviceId;
-    final signer = self ? mine.signingKey : by?.signingKey;
-    final known = signer != null && (self || (trust == null ? by!.approved : trust.holders.contains(base64.encode(signer))));
-    final signature = s.wrapSignature;
-    if (!known || signature == null) {
-      debugPrint('snsShare: the wrapped key was not wrapped by a known holder');
-      return null;
-    }
-    final message = SnsShareCrypto.wrapMessage(accountId: c.accountId, deviceId: s.deviceId!, recipientPublicKey: mine.publicKey, keyId: keyId, wrappedKey: wrapped);
-    if (!await SnsShareCrypto.verify(publicKey: signer, message: message, signature: signature)) {
-      debugPrint('snsShare: the signature on the wrapped key did not verify');
-      return null;
+    final accepted = trust != null && trust.keyId == keyId;
+    Uint8List? signer;
+    if (!accepted) {
+      final by = s.devices.where((d) => d.deviceId == s.wrappedBy).firstOrNull;
+      final self = by != null && by.deviceId == s.deviceId;
+      signer = self ? mine.signingKey : by?.signingKey;
+      final known = signer != null && (self || (trust == null ? by!.approved : trust.holders.contains(base64.encode(signer))));
+      final signature = s.wrapSignature;
+      if (!known || signature == null) {
+        debugPrint('snsShare: the wrapped key was not wrapped by a known holder');
+        return null;
+      }
+      final message = SnsShareCrypto.wrapMessage(accountId: c.accountId, deviceId: s.deviceId!, recipientPublicKey: mine.publicKey, keyId: keyId, wrappedKey: wrapped);
+      if (!await SnsShareCrypto.verify(publicKey: signer, message: message, signature: signature)) {
+        debugPrint('snsShare: the signature on the wrapped key did not verify');
+        return null;
+      }
     }
     final key = await SnsShareCrypto.unwrap(wrapped: wrapped, seed: await c.store.seed(c.accountId), accountId: c.accountId, deviceId: s.deviceId!, keyId: keyId);
     if (key == null) {
@@ -732,13 +740,13 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
       return null;
     }
     final fingerprint = SnsShareCrypto.keyFingerprint(key);
-    if (trust != null && trust.keyId == keyId && trust.fingerprint != fingerprint) {
+    if (accepted && trust.fingerprint != fingerprint) {
       await _halt(c, keyId, SnsShareProblem.keyReplaced);
       return null;
     }
     await c.store.remember(c.accountId, keyId: keyId, fingerprint: fingerprint, holders: {
       base64.encode(mine.signingKey),
-      base64.encode(signer),
+      if (signer != null) base64.encode(signer),
       for (final d in s.devices)
         if (d.approved && d.signingKey != null && d.signingKey!.length == 32) base64.encode(d.signingKey!),
     });

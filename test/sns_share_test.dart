@@ -793,6 +793,28 @@ void main() {
         expect((await j.old.c.read(sessionsProvider.future)).sessions.map((s) => s.account), contains(snsC));
       });
 
+      test('受け取り済みの世代は、包んだ端末が状態から消えても / 署名鍵が替わっても、止めずに続ける(新しい鍵を持ち主として覚えない)', () async {
+        final j = await joined();
+        // 証明なしのログインで ORGATE が元の端末の行を消した: 新しい端末あての包みの wrappedBy は dev-old のまま、一覧には居ない。
+        final gone = j.share.devices.remove('dev-old')!;
+        var writes = j.share.writes;
+        await loginOn(j.neu.c, snsC);
+        await settle(j.neu.c);
+        expect(j.neu.c.read(snsShareProvider).problem, isNull, reason: '受け取り済みの正しい K を誤って捨てない');
+        expect(j.share.writes, greaterThan(writes), reason: '共有は続く');
+        expect(j.neu.c.read(snsShareProvider).status!.holding, isTrue);
+
+        // 同じ deviceId で、別の署名鍵の端末が入り直した(承認はまだ)。
+        final impostor = base64.encode(await SnsShareCrypto.signingPublicKeyOf(List<int>.filled(32, 0x55)));
+        j.share.devices['dev-old'] = {...gone, 'signingKey': impostor, 'wrapped': null, 'sig': null, 'by': null, 'wrapKeyId': null, 'requested': true};
+        writes = j.share.writes;
+        await loginOn(j.neu.c, const AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'dave_sns'));
+        await settle(j.neu.c);
+        expect(j.neu.c.read(snsShareProvider).problem, isNull);
+        expect(j.share.writes, greaterThan(writes));
+        expect((await SnsShareStore(j.neu.storage).trust('acc-a'))!.holders, isNot(contains(impostor)), reason: '入れ替わった端末の鍵は、持ち主として覚えない');
+      });
+
       test('今の keyId の本体が開けないとき、手元の SNS のトークンを上げない(空として扱わない)', () async {
         final central = fakeCentral();
         final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
