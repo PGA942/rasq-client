@@ -1,8 +1,13 @@
+import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:rasq_client/features/emoji/emoji_image_preprocess.dart';
 import 'package:rasq_client/features/emoji/emoji_index.dart';
+import 'package:rasq_client/features/emoji/emoji_index_providers.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 EmojiInfo emoji(String name) => EmojiInfo(name: name, url: Uri.parse('https://e/$name.webp'));
@@ -60,5 +65,86 @@ void main() {
     // 合わせた点数で、部分一致のうしろに並ぶ。
     final ranked = filterAndRankEmojis([emoji('blob123'), emoji('zzz')], 'ねこ', s.map((k, v) => MapEntry(k == 'a' ? 'blob123' : k, v)));
     expect([for (final e in ranked) e.name], ['blob123']);
+  });
+
+  // セキュリティ確認 2026-10-21 の #22 (D-546): 絵は上限までしか読まず、読み途中の合計にも上限がある。
+  group('絵の取得', () {
+    const chunk = 64 * 1024;
+
+    test('Content-Length の無い / 嘘の巨大な応答は、512 KiB を超えたところで読むのをやめて null', () async {
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+      final fetch = c.read(emojiImageFetcherProvider);
+      for (final length in [null, 100]) {
+        var sent = 0;
+        var cancelled = false;
+        Stream<List<int>> body() async* {
+          try {
+            while (true) {
+              sent++;
+              yield Uint8List(chunk);
+              await Future<void>.delayed(Duration.zero);
+            }
+          } finally {
+            cancelled = true;
+          }
+        }
+
+        final client = MockClient.streaming((req, _) async => http.StreamedResponse(body(), 200, contentLength: length));
+        final got = await http.runWithClient(() => fetch(emoji('big')), () => client);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(got, isNull);
+        expect(cancelled, isTrue);
+        expect(sent * chunk, lessThanOrEqualTo(emojiImageMaxBytes + 2 * chunk), reason: '上限の先は受け取らない(全部貯めてから大きさを見ない)');
+        expect(c.read(emojiImageFetchBudgetProvider).inFlight, 0);
+      }
+    });
+
+    test('ふつうの絵は届く。200 以外・空は null', () async {
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+      final fetch = c.read(emojiImageFetcherProvider);
+      final client = MockClient((req) async => switch (req.url.path) {
+            '/ok.webp' => http.Response.bytes(Uint8List(1000), 200),
+            '/max.webp' => http.Response.bytes(Uint8List(emojiImageMaxBytes), 200),
+            '/empty.webp' => http.Response.bytes(Uint8List(0), 200),
+            _ => http.Response('', 404),
+          });
+      Future<Uint8List?> get(String name) => http.runWithClient(() => fetch(emoji(name)), () => client);
+      expect((await get('ok'))?.length, 1000);
+      expect((await get('max'))?.length, emojiImageMaxBytes);
+      expect(await get('empty'), isNull);
+      expect(await get('gone'), isNull);
+    });
+
+    test('読み途中は(アカウントをまたいでも)合わせて 8 枚 = 4 MiB まで。終わった順に次へ進み、全部届く', () async {
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+      final fetch = c.read(emojiImageFetcherProvider);
+      final budget = c.read(emojiImageFetchBudgetProvider);
+      final gate = Completer<void>();
+      var open = 0, peak = 0;
+      final client = MockClient.streaming((req, _) async {
+        open++;
+        peak = open > peak ? open : peak;
+        Stream<List<int>> body() async* {
+          await gate.future;
+          yield Uint8List(chunk);
+          open--;
+        }
+
+        return http.StreamedResponse(body(), 200);
+      });
+      // 2 つのアカウントの索引づくりが 8 枚ずつ同時に取りに行く。
+      final all = http.runWithClient(() => Future.wait([for (var i = 0; i < 16; i++) fetch(emoji('e$i'))]), () => client);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(open, 8);
+      expect(budget.inFlight, emojiImageInFlightBytes);
+      gate.complete();
+      final got = await all;
+      expect(got.every((b) => b?.length == chunk), isTrue);
+      expect(peak, 8);
+      expect(budget.inFlight, 0);
+    });
   });
 }
