@@ -354,12 +354,17 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   /// ホストがどのプラグインを動かしているかは知らない。ストアの id(サイドロードは名乗った id)で比べる。
   static bool sessionBelongsTo(CustomSession s, SlotPlugin p) => s.pluginId.isNotEmpty && s.pluginId == (p.storePluginId ?? p.id);
 
-  /// 共有セッションから抜け、受け取ったものを捨てる(プラグインへは渡さない)。
-  void _leave() {
+  /// WS を切る(受け取った値はそのまま)。
+  void _disconnect() {
     _sub?.cancel();
     _sub = null;
     _conn?.close();
     _conn = null;
+  }
+
+  /// 共有セッションから抜け、受け取ったものを捨てる(プラグインへは渡さない)。
+  void _leave() {
+    _disconnect();
     session = null;
     role = null;
     vars.clear();
@@ -452,6 +457,11 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         if (m['value'] != null) vars[key] = CustomVar(value: m['value'], rev: rev);
         _event({'type': 'conflict', 'key': key, 'value': m['value'], 'rev': rev});
       case 'closed':
+        // モデレーターを外されて切られた: セッションは続いているので、閉じたことにせずに入り直す。
+        if (m['reason'] == 'moderator_removed') {
+          unawaited(_rejoin());
+          return;
+        }
         closedReason = '${m['reason'] ?? 'closed'}';
         _event({'type': 'closed', 'reason': closedReason});
       case 'error':
@@ -460,6 +470,41 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         return;
     }
     notifyListeners();
+  }
+
+  /// 入り直しているところ(重ねて呼ばない)。
+  bool _rejoining = false;
+
+  /// ルームのモデレーターを外されて切られた(Central S-116 の #6: `closed {reason: "moderator_removed"}`)。
+  /// 古い立場(owner)はすぐ捨て、つなぎ直していまの立場で入り直し、同じ token で `page.open` し直す(`session.role` が変わる)。
+  /// エラーにはしない。入れなければ(ルームにいない = 403 など)、そこで閉じたことにして理由を出す。
+  Future<void> _rejoin() async {
+    final p = plugin;
+    final id = session?.id ?? args.sessionId;
+    if (_rejoining || p == null || id == null) return;
+    _rejoining = true;
+    _disconnect();
+    _set(() => role = null);
+    try {
+      try {
+        await _join(id, p);
+      } catch (e) {
+        if (_disposed || plugin != p) return;
+        _disconnect();
+        _set(() {
+          closedReason = 'moderator_removed';
+          notice = appL10n.customPageJoinFailed(redactSecrets(_failureText(e)));
+        });
+        _event({'type': 'closed', 'reason': closedReason});
+        return;
+      }
+      if (_disposed || plugin != p || phase != CustomPagePhase.ready) return;
+      final r = await _slots.pageOpen(p, token: token, sink: this, args: _openArgs());
+      if (_disposed || plugin != p || phase != CustomPagePhase.ready) return;
+      if (r.root != null) render(r.root!, r.title);
+    } finally {
+      _rejoining = false;
+    }
   }
 
   // ── PluginPageSink ──

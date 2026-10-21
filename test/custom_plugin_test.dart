@@ -23,6 +23,7 @@ import 'package:rasq_client/features/store/store_models.dart';
 import 'package:rasq_client/features/store/store_providers.dart';
 import 'package:rasq_client/features/vc/astell_models.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
+import 'package:rasq_client/l10n/l10n.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -769,6 +770,67 @@ void main() {
       lower.onRrlEvent('draw', 'tap', fn: 'draw');
       await _settle();
       expect([for (final x in rt.calls.skip(again)) x.$1].where((f) => f == 'page.open'), isEmpty);
+    });
+  });
+
+  group('Central S-116 (D-546): 共有ページの接続の切られ方', () {
+    /// ルーム r1 の、ほかの人(u9)が作ったセッション。自分はルームのモデレーターとして owner で入る。
+    Future<CustomSession> roomSession(MockCustomSessionClient custom) async {
+      final s = CustomSession(id: 'cs-room', pluginId: _boardId, version: '1.0.0', scope: 'room:r1', title: 'ボード', ownerAccountId: 'u9', createdAt: DateTime(2026, 10, 21));
+      custom.sessions[s.id] = s;
+      custom.vars[s.id] = {'@u2.vote': const CustomVar(value: 'b', rev: 1, by: 'u2')};
+      return s;
+    }
+
+    test('#6: モデレーターを外されて切られたら(closed moderator_removed)、エラーにせずつなぎ直し、いまの立場(member)で page.open し直す', () async {
+      final custom = MockCustomSessionClient();
+      final events = <(String, Map<String, Object?>)>[];
+      late FakeSlotRuntime rt;
+      final c = container(custom: custom, plugins: {'store:$_boardId@1.0.0': () => rt = _board(events: events)});
+      await c.read(slotPluginsProvider.notifier).register('store:$_boardId@1.0.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false);
+      final s = await roomSession(custom);
+      final page = CustomPageController(c, CustomPageArgs(pluginId: _boardId, surface: 'astell', sessionId: s.id, roomId: 'r1'));
+      addTearDown(page.dispose);
+      await page.start();
+      await _settle();
+      expect((page.phase, page.role), (CustomPagePhase.ready, 'owner'));
+      final opens = rt.calls.where((x) => x.$1 == 'page.open').length;
+
+      await custom.removeModerator(s.id);
+      await _settle();
+      expect((page.phase, page.role, page.closedReason, page.notice, page.hasSession), (CustomPagePhase.ready, 'member', null, null, true));
+      expect(events.where((x) => x.$1 == 'closed'), isEmpty);
+      // 同じ token で page.open し直し、いまの立場を渡す。
+      final reopened = rt.calls.where((x) => x.$1 == 'page.open').toList();
+      expect(reopened, hasLength(opens + 1));
+      expect((reopened.last.$2['token'], (reopened.last.$2['session'] as Map)['role']), (page.token, 'member'));
+      // つなぎ直した接続で書ける。ほかの人のキーはもう消せない(owner ではない)。
+      page.onRrlEvent('inc', 'tap', fn: 'inc');
+      await _settle();
+      expect(custom.vars[s.id]!['count']!.value, 1);
+      page.shared('shared.set', {'key': '@u2.vote', 'value': null});
+      await _settle();
+      expect(custom.vars[s.id]!['@u2.vote']!.value, 'b');
+    });
+
+    test('#6: 入り直せなければ(セッションに入れない)、そこで閉じたことにして理由を出す', () async {
+      final custom = MockCustomSessionClient();
+      final events = <(String, Map<String, Object?>)>[];
+      final c = container(custom: custom, plugins: {'store:$_boardId@1.0.0': () => _board(events: events)});
+      await c.read(slotPluginsProvider.notifier).register('store:$_boardId@1.0.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false);
+      final s = await roomSession(custom);
+      final page = CustomPageController(c, CustomPageArgs(pluginId: _boardId, surface: 'astell', sessionId: s.id, roomId: 'r1'));
+      addTearDown(page.dispose);
+      await page.start();
+      await _settle();
+      final removing = custom.removeModerator(s.id);
+      custom.sessions.remove(s.id); // 入り直すときには入れない
+      await removing;
+      await _settle();
+      expect((page.phase, page.role, page.closedReason, page.hasSession), (CustomPagePhase.ready, null, 'moderator_removed', false));
+      expect(page.notice, contains(appL10n.customClientSessionClosed));
+      expect(events.last.$1, 'closed');
+      expect(events.last.$2['reason'], 'moderator_removed');
     });
   });
 }

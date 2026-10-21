@@ -116,8 +116,15 @@ class MockCustomSessionClient implements CustomSessionClient {
   final others = <String, List<CustomParticipant>>{};
   var _n = 0;
 
-  /// ルームのホストか(テストで変える)。room の作成はホストだけ。
+  /// ルームのホストか(テストで変える)。room の作成はホストだけ。room のセッションでは welcome の role も owner になる。
   bool isRoomHost = true;
+
+  /// owner か(作った人。room ならルームのオーナー / モデレーターも、S-048)。
+  bool _isOwner(String sessionId, CustomParticipant who) {
+    final s = sessions[sessionId];
+    if (s == null) return false;
+    return s.ownerAccountId == who.accountId || (who.accountId == me.accountId && s.scope.startsWith('room:') && isRoomHost);
+  }
 
   @override
   Future<CustomSession> create({required String pluginId, String? version, required String scope}) async {
@@ -204,6 +211,17 @@ class MockCustomSessionClient implements CustomSessionClient {
     return c;
   }
 
+  /// ルームのモデレーターを外した(テスト用。Central S-116 の #6)。モデレーターとして入っている接続(作った本人でないもの)へ
+  /// `closed {reason: "moderator_removed"}` を送って切る。入り直せばそのときの立場(member)で入る。
+  Future<void> removeModerator(String sessionId) async {
+    isRoomHost = false;
+    if (sessions[sessionId]?.ownerAccountId == me.accountId) return;
+    for (final c in [...?_conns[sessionId]]) {
+      c._push({'type': 'closed', 'reason': 'moderator_removed'});
+      await c.close();
+    }
+  }
+
   /// 期限の来たサーバー変数を消して `var {value: null, by: null, reason: expired}` を配る(Central の掃除の代わり、テスト用)。
   void expire(String sessionId) {
     final store = vars[sessionId];
@@ -247,7 +265,7 @@ class MockCustomSessionClient implements CustomSessionClient {
       case 'set' || 'op':
         var key = resolveCustomKey('${m['key']}', who.accountId);
         // owner は他人の @<accountId>. を value: null でだけ消せる(契約 v0.22 / S-106)。
-        final owner = sessions[sessionId]?.ownerAccountId == who.accountId;
+        final owner = _isOwner(sessionId, who);
         final removing = key == null && owner && m['type'] == 'set' && m['value'] == null && '${m['key']}'.startsWith('@') && customVarKeyPattern.hasMatch('${m['key']}');
         if (removing) key = '${m['key']}';
         if (key == null) return error('forbidden key: ${m['key']}');
@@ -294,7 +312,7 @@ class _MockCustomConnection implements CustomConnection {
       final s = client.sessions[sessionId]!;
       _controller.add({
         'type': 'welcome',
-        'me': {...client.me.toJson(), 'role': s.ownerAccountId == client.me.accountId ? 'owner' : 'member'},
+        'me': {...client.me.toJson(), 'role': client._isOwner(sessionId, client.me) ? 'owner' : 'member'},
         'now': client.clock().millisecondsSinceEpoch,
         'session': s.toJson(),
         'participants': [for (final p in client._participants(sessionId)) p.toJson()],
