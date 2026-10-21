@@ -404,7 +404,7 @@ void main() {
     test('TokenRefreshingClient: いまのトークンで 401 → 1 回だけ取り直して送り直す。ほかのトークンの 401 はそのまま (D-398)', () async {
       final holder = OrgateTokenHolder()..token = 'old';
       var refreshes = 0;
-      holder.refresher = () async {
+      holder.refresher = (_) async {
         refreshes++;
         holder.token = 'new';
         return 'new';
@@ -430,7 +430,7 @@ void main() {
       final later = jwt(DateTime.now().add(const Duration(minutes: 10)));
       final holder = OrgateTokenHolder()..token = soon;
       var refreshes = 0;
-      holder.refresher = () async {
+      holder.refresher = (_) async {
         refreshes++;
         holder.token = later;
         return later;
@@ -450,11 +450,11 @@ void main() {
       // 取り直しに失敗しても(ネットワーク)、そのまま送る(401 なら、そこでもう一度取り直す)。
       holder
         ..token = soon
-        ..refresher = () async => throw Exception('offline');
+        ..refresher = (_) async => throw Exception('offline');
       expect(await c.getJson('/z'), {'ok': true});
       expect(sent.last, 'Bearer $soon');
       // 通知専用のトークンなど、いまのアクセストークンでない要求は触らない。
-      holder.refresher = () async {
+      holder.refresher = (_) async {
         refreshes++;
         return later;
       };

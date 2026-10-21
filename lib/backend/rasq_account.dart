@@ -148,14 +148,17 @@ class _DeviceCredentials {
 
   String? restoreOf(String? accountId) => accountId == null ? null : restore[accountId];
 
-  /// そのアカウントのトークンを足す / 替える(最後に使ったアカウントにもする)。[refreshToken] / [restoreSecret] が無ければ
-  /// 前のものを残す(`/auth/refresh` の応答には復帰の秘密が無い)。
-  _DeviceCredentials withToken(String accountId, String token, {String? refreshToken, String? restoreSecret}) => _DeviceCredentials(
+  /// アクセストークン [token] を持っているアカウント(どれのものでもなければ null)。
+  String? accountOf(String token) => tokens.entries.where((e) => e.value == token).firstOrNull?.key;
+
+  /// そのアカウントのトークンを足す / 替える(最後に使ったアカウントにもする。[current] = false なら変えない)。
+  /// [refreshToken] / [restoreSecret] が無ければ前のものを残す(`/auth/refresh` の応答には復帰の秘密が無い)。
+  _DeviceCredentials withToken(String accountId, String token, {String? refreshToken, String? restoreSecret, bool current = true}) => _DeviceCredentials(
         deviceId: deviceId,
         tokens: {...tokens, accountId: token},
         refresh: {...refresh, if (refreshToken != null && refreshToken.isNotEmpty) accountId: refreshToken},
         restore: {...restore, if (restoreSecret != null && restoreSecret.isNotEmpty) accountId: restoreSecret},
-        currentAccountId: accountId,
+        currentAccountId: current ? accountId : currentAccountId,
       );
 
   /// そのアカウントの復帰の秘密だけを替える(いまのアカウントは変えない)。
@@ -233,17 +236,38 @@ class OrgateTokenHolder extends ChangeNotifier {
   String? token;
 
   /// アクセストークンを取り直す口(ORGATE の `POST /auth/refresh`)。[OrgateAccountNotifier] が入れる。
-  /// 戻り = 新しいアクセストークン(取り直せなければ null = ログインし直し)。
-  Future<String?> Function()? refresher;
+  /// 引数 = 切れた(切れかけた)アクセストークン。**そのトークンのアカウントの**リフレッシュトークンで取り直す(いまのアカウントの
+  /// ものではない)。戻り = そのアカウントの新しいアクセストークン(取り直せない / 待つあいだにそのアカウントがログアウトした・
+  /// ログインし直した なら null = ログインし直し)。
+  Future<String?> Function(String token)? refresher;
 
-  Future<String?>? _refreshing;
+  /// 取り直しの途中のもの。**切れたトークンごと**(= アカウントのセッションごと)。前は端末に 1 本だけで、A の取り直しを
+  /// 待つあいだに B へ切り替え、B の要求も取り直しになると A の答えに相乗りし、B の要求に A のトークンが付いて送られた
+  /// (B の中身が A へ。セキュリティ確認 2026-10-21 の #9)。
+  final Map<String, Future<String?>> _refreshing = {};
 
-  /// 取り直す(同時に何本来ても 1 回だけ。リフレッシュトークンは回るので、並べて送ると後のものが外れる)。
-  Future<String?> refresh() {
+  /// [stale](省けばいまのトークン)を取り直す。同じトークンなら何本来ても 1 回だけ(リフレッシュトークンは回るので、
+  /// 並べて送ると後のものが外れる)。別のトークン = 別のアカウントの取り直しには相乗りしない。
+  Future<String?> refresh([String? stale]) {
     final r = refresher;
-    if (r == null) return Future.value(null);
-    return _refreshing ??= r().whenComplete(() => _refreshing = null);
+    final t = stale ?? token;
+    if (r == null || t == null || t.isEmpty) return Future.value(null);
+    // 後片付けは何も返さない(`remove` の戻り = この Future 自身を返すと、whenComplete が自分を待って終わらない)。
+    return _refreshing[t] ??= r(t).whenComplete(() {
+      _refreshing.remove(t);
+    });
   }
+
+  /// 端末資格情報の、いま持っている写し([OrgateAccountNotifier] のもの)。台帳の切り替えでノーティファイアーは作り直されるが、
+  /// 写しはここで 1 つにする: 切り替えの前に始まった取り直しが、前のノーティファイアーの古い写しを保存して、ほかのアカウントの
+  /// 回ったリフレッシュトークンを巻き戻さないように(#9)。
+  _DeviceCredentials? _creds;
+
+  /// [_creds] を書き換えるたびに進む(読み込みのあいだにほかの口が書き換えたら、読んだ古いものを使わない)。
+  int _credsVersion = 0;
+
+  /// 書きかけの保存(順に書く。古い写しが後から着いて、新しいものを上書きしないように)。
+  Future<void> _saving = Future.value();
 
   /// 期限まで 60 秒を切っている(JWT でなければ false)。
   bool get expiresSoon {
@@ -280,7 +304,14 @@ final orgateTokenHolderProvider = Provider<OrgateTokenHolder>((ref) => OrgateTok
 class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   static const storageKey = 'rasq.orgate.device.v1';
 
-  _DeviceCredentials? _creds;
+  /// 端末資格情報の写しは、トークンの箱に置いて、作り直された後のノーティファイアーとも 1 つを使う(#9)。
+  late final OrgateTokenHolder _holder = ref.read(orgateTokenHolderProvider);
+
+  _DeviceCredentials? get _creds => _holder._creds;
+  set _creds(_DeviceCredentials? v) {
+    _holder._creds = v;
+    _holder._credsVersion++;
+  }
 
   /// いま使っている Central のアカウント id(null = どれにも入っていない)。
   String? _activeId;
@@ -322,7 +353,11 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   bool get lastRestored => _lastRestored;
   bool _lastRestored = false;
 
-  void _publishToken() => ref.read(orgateTokenHolderProvider).token = token;
+  /// 箱にいまのアカウントのトークンを出す。作り直されて退いたノーティファイアー(await から遅れて戻った)は出さない
+  /// (前のアカウントのトークンで、いまのアカウントのトークンを上書きしない)。
+  void _publishToken() {
+    if (ref.mounted) _holder.token = token;
+  }
 
   /// プロフィールを保存したあとの `/me` を状態にする(作り直しで古い控えに戻らないよう、控えも差し替える)。
   void _setAccount(Map<String, Object?> central) {
@@ -332,33 +367,57 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     state = AsyncData(account);
   }
 
-  /// アクセストークンを取り直す(ORGATE の `POST /auth/refresh`)。リフレッシュトークンも回る(新しいものを保存する)。
+  /// アクセストークン [stale] を取り直す(ORGATE の `POST /auth/refresh`)。リフレッシュトークンも回る(新しいものを保存する)。
   /// 取り直せなければ(セッションが消された / 期限切れ)そのアカウントのトークンを捨てて null。
-  Future<String?> _refreshAccess() async {
+  ///
+  /// 取り直すのは **[stale] を持っているアカウント**(いまのアカウントではない。#9: 待つあいだに切り替わっても、
+  /// 答えは始めたアカウントのものだけ)。答えが戻ったら、そのアカウントがまだ同じトークン / リフレッシュトークンを持っているか
+  /// 確かめる。ログアウトした / ログインし直した(世代が替わった)なら、答えは使わずに null(ログアウトしたアカウントの
+  /// トークンを戻さない。新しいセッションを、古いセッションの答えで消さない)。
+  Future<String?> _refreshAccess(String stale) async {
+    if (!ref.mounted) return null;
     final identity = _identity;
-    final id = _activeId;
+    final holder = _holder;
+    final id = _creds?.accountOf(stale);
     final refresh = _creds?.refreshOf(id);
     if (identity == null || id == null || refresh == null) return null;
     final storage = ref.read(sessionStorageProvider);
+    bool same() => _creds?.tokenOf(id) == stale && _creds?.refreshOf(id) == refresh;
     try {
       final res = await identity.withToken(() => null).postJson('/auth/refresh', {'refreshToken': refresh});
       final t = _tokensOf(res);
       if (t == null) return null;
-      _creds = _creds!.withToken(id, t.access, refreshToken: t.refresh);
+      if (!same()) {
+        debugPrint('rasq account: dropped a refresh for $id (signed out or replaced while refreshing)');
+        return null;
+      }
+      // いまのアカウントは変えない(切り替えた後に戻った前のアカウントの取り直しで、最後に使ったアカウントを戻さない)。
+      _creds = _creds!.withToken(id, t.access, refreshToken: t.refresh, current: false);
+      // 箱のトークンは、それが取り直したトークンのときだけ替える(ほかのアカウントのトークンを出しているなら触らない)。
+      if (holder.token == stale) holder.token = t.access;
       await _save(storage);
-      _publishToken();
-      return t.access;
+      // 保存を待つあいだにログアウトしたなら、送り直させない。
+      return _creds?.tokenOf(id) == t.access ? t.access : null;
     } on OrgateException catch (e) {
       if (e.code.code != '401' && e.code.code != 'session_revoked') rethrow;
+      // 待つあいだにログインし直した(新しいセッション)なら、それは捨てない。
+      if (!same()) return null;
       debugPrint('rasq account: refresh token rejected, signing out of $id');
       _creds = _creds!.withoutToken(id);
+      if (holder.token == stale) holder.token = null;
       await _save(storage);
-      _publishToken();
       return null;
     }
   }
 
-  Future<void> _save(SessionStorage storage) => storage.write(storageKey, jsonEncode(_creds!.toJson()));
+  /// 保存は書き始めた順に(作り直す前後のノーティファイアーが同時に書いても、古い写しが後から着かない)。
+  Future<void> _save(SessionStorage storage) {
+    final raw = jsonEncode(_creds!.toJson());
+    final holder = _holder;
+    final next = holder._saving.then((_) => storage.write(storageKey, raw));
+    holder._saving = next.catchError((Object _) {});
+    return next;
+  }
 
   @override
   Future<RasqAccount?> build() async {
@@ -373,15 +432,21 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     });
     if (client == null) return null;
 
+    // 取り直しの口は、このノーティファイアーへ(資格情報の写しは箱にあるので、読み込みを待たずに使える)。
+    _holder.refresher = _refreshAccess;
     final storage = ref.read(sessionStorageProvider);
-    _creds = await _loadOrCreateCredentials(storage);
+    // 書きかけの保存を待ってから読む。読むあいだに写しが書き換わった(切り替えの前に始まった取り直しが戻った)なら、
+    // 読んだ古いもので上書きしない(回ったリフレッシュトークンを巻き戻さない、#9)。
+    await _holder._saving;
+    final version = _holder._credsVersion;
+    final loaded = await _loadOrCreateCredentials(storage);
+    if (_holder._credsVersion == version) _creds = loaded;
     _activeId = switch (target) { null => _creds!.currentAccountId, '' => null, final t => t };
     if (target != null && target.isNotEmpty && _creds!.currentAccountId != target && _creds!.tokens.containsKey(target)) {
       _creds = _creds!.withCurrent(target);
       await _save(storage);
     }
     _publishToken();
-    ref.read(orgateTokenHolderProvider).refresher = _refreshAccess;
 
     // まだ作っていない(トークンなし)なら何もしない — 作るのはユーザーの
     // 選択 (D-138)。台帳で選んだアカウントのトークンが無ければ、ログインし直してもらう。
@@ -398,7 +463,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
       // アクセストークンが切れていたら、まずリフレッシュトークンで取り直す(D-398)。それも駄目なら、この端末で作った
       // アカウントへ戻るだけ(端末側で消えた場合など)。
       if (e.code.code != '401') rethrow;
-      if (await ref.read(orgateTokenHolderProvider).refresh() != null) return _fetchMe(client, storage, legacy: target == null);
+      if (await _holder.refresh(token) != null) return _fetchMe(client, storage, legacy: target == null);
       debugPrint('rasq account: token rejected, restoring the device');
       if (!await _restoreDevice(storage)) return null;
       return _fetchMe(client, storage, legacy: target == null);
