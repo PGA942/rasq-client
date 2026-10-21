@@ -19978,6 +19978,41 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get vcShareRejectedBanned =>
+      'Your held message wasn\'t delivered because you were banned from this room';
+
+  @override
+  String get vcShareRejectedClosed =>
+      'Your held message wasn\'t delivered because the room has ended';
+
+  @override
+  String get vcShareRejectedRestricted =>
+      'Your held message wasn\'t delivered due to an action on your account';
+
+  @override
+  String get vcShareRejectedBlocked =>
+      'Your held message wasn\'t delivered because the host has blocked you';
+
+  @override
+  String get vcShareRejectedLocked =>
+      'Your held message wasn\'t delivered because new entries were stopped by the moderators';
+
+  @override
+  String get vcShareRejectedLeft =>
+      'Your held message wasn\'t delivered because you left the room';
+
+  @override
+  String get vcShareRejectedSharePolicy =>
+      'Your held message wasn\'t delivered because sharing is now limited to moderators';
+
+  @override
+  String get vcShareRejectedUnavailable =>
+      'Your held message wasn\'t delivered because the conditions for delivering it couldn\'t be verified';
+
+  @override
+  String get vcShareRejectedOther => 'Your held message wasn\'t delivered';
+
+  @override
   String get vcNotInRoom => 'You\'re not in the room';
 
   @override

@@ -31614,6 +31614,60 @@ abstract class AppLocalizations {
   /// **'検閲で却下されました({source})。この発言は配信されていません'**
   String vcShareRejected(String source);
 
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(BAN された)
+  ///
+  /// In ja, this message translates to:
+  /// **'このルームから BAN されたため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedBanned;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(ルームが閉じられた)
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームが終了したため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedClosed;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(入室 / 共有の処置)
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントの処置により、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedRestricted;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(ホストにブロックされた)
+  ///
+  /// In ja, this message translates to:
+  /// **'ホストにブロックされたため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedBlocked;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(新規入室の停止)
+  ///
+  /// In ja, this message translates to:
+  /// **'運営により新しい入室が止められたため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedLocked;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(退出した)
+  ///
+  /// In ja, this message translates to:
+  /// **'ルームを出たため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedLeft;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(共有がモデレーターだけになった)
+  ///
+  /// In ja, this message translates to:
+  /// **'共有がモデレーターだけになったため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedSharePolicy;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(サーバーが条件を確かめられなかった)
+  ///
+  /// In ja, this message translates to:
+  /// **'配信の条件を確かめられなかったため、保留中の発言は配信されませんでした'**
+  String get vcShareRejectedUnavailable;
+
+  /// 保留した共有が、待ったあとの確かめ直しで戻されたとき(分からない理由)
+  ///
+  /// In ja, this message translates to:
+  /// **'保留中の発言は配信されませんでした'**
+  String get vcShareRejectedOther;
+
   /// ルームに入らずに配信へ繋ごうとしたときの失敗
   ///
   /// In ja, this message translates to:

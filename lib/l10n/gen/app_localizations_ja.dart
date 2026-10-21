@@ -19159,6 +19159,35 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get vcShareRejectedBanned => 'このルームから BAN されたため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedClosed => 'ルームが終了したため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedRestricted => 'アカウントの処置により、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedBlocked => 'ホストにブロックされたため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedLocked => '運営により新しい入室が止められたため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedLeft => 'ルームを出たため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedSharePolicy =>
+      '共有がモデレーターだけになったため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedUnavailable =>
+      '配信の条件を確かめられなかったため、保留中の発言は配信されませんでした';
+
+  @override
+  String get vcShareRejectedOther => '保留中の発言は配信されませんでした';
+
+  @override
   String get vcNotInRoom => 'ルームに入っていません';
 
   @override

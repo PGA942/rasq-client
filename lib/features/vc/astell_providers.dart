@@ -535,7 +535,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
       case 'held':
         state = s.copyWith(notice: appL10n.vcShareHeld('${m['delaySeconds'] ?? '?'}'), clearError: true);
       case 'rejected':
-        state = s.copyWith(error: appL10n.vcShareRejected('${m['source'] ?? 'review'}'), clearNotice: true);
+        state = s.copyWith(error: astellShareRejectedText(m), clearNotice: true);
       case 'share':
         final x = m['share'];
         if (x is Map) {
@@ -1238,6 +1238,21 @@ String astellKickedText(Object? reason) => switch (reason) {
       'locked' => appL10n.vcKickedLocked,
       'unavailable' => appL10n.vcKickedUnavailable,
       _ => appL10n.vcKickedByModerator,
+    };
+
+/// 保留した共有の `rejected` を 1 行に (D-151)。`review`(理由の無い古いサーバーも)は検閲の却下。ほかは待ったあとの
+/// 確かめ直しで戻された(Central S-116 の #18: 入室の条件 / 退出 / 共有のポリシー / 処置)。分からない理由はただ「配信されなかった」。
+String astellShareRejectedText(Map<String, Object?> m) => switch (m['reason']) {
+      null || 'review' => appL10n.vcShareRejected('${m['source'] ?? 'review'}'),
+      'banned' => appL10n.vcShareRejectedBanned,
+      'closed' => appL10n.vcShareRejectedClosed,
+      'restricted' => appL10n.vcShareRejectedRestricted,
+      'blocked' => appL10n.vcShareRejectedBlocked,
+      'locked' => appL10n.vcShareRejectedLocked,
+      'left' => appL10n.vcShareRejectedLeft,
+      'share-policy' => appL10n.vcShareRejectedSharePolicy,
+      'unavailable' => appL10n.vcShareRejectedUnavailable,
+      _ => appL10n.vcShareRejectedOther,
     };
 
 /// 配信の失敗を 1 行に (D-317)。

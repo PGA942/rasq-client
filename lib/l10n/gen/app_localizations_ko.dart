@@ -19229,6 +19229,35 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get vcShareRejectedBanned => '이 룸에서 BAN되어 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedClosed => '룸이 종료되어 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedRestricted => '계정 조치로 인해 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedBlocked => '호스트에게 차단되어 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedLocked => '운영자에 의해 새 입장이 중지되어 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedLeft => '룸을 나가서 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedSharePolicy =>
+      '공유가 모더레이터 전용으로 바뀌어 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedUnavailable =>
+      '전달 조건을 확인하지 못해 보류 중인 발언이 전달되지 않았습니다';
+
+  @override
+  String get vcShareRejectedOther => '보류 중인 발언이 전달되지 않았습니다';
+
+  @override
   String get vcNotInRoom => '룸에 들어가 있지 않습니다';
 
   @override

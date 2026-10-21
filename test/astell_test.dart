@@ -295,6 +295,42 @@ void main() {
       });
     });
 
+    // Central S-116 の #18: 保留した共有は、待ったあとで入室の条件・接続・共有のポリシー・処置を確かめ直し、外れていれば
+    // 配らずに本人へ rejected {reason, kind} を返す(source は載らない)。理由ごとに見分けて出し、分からない理由はただ「配信されなかった」。
+    test('保留した共有が戻された理由を見分けて出す(Central S-116 の #18)。review は今までどおり検閲の却下、分からない理由は汎用の文', () async {
+      final client = MockAstellClient();
+      final container = ProviderContainer(overrides: [
+        sessionStorageProvider.overrideWithValue(MemorySessionStorage({})),
+        astellClientProvider.overrideWithValue(client),
+      ]);
+      addTearDown(container.dispose);
+      final session = container.read(astellSessionProvider.notifier);
+      await session.join(MockAstellClient.seededRooms().first);
+      await Future<void>.delayed(Duration.zero);
+      for (final (reason, text) in <(String?, String)>[
+        ('banned', 'このルームから BAN されたため、保留中の発言は配信されませんでした'),
+        ('closed', 'ルームが終了したため、保留中の発言は配信されませんでした'),
+        ('restricted', 'アカウントの処置により、保留中の発言は配信されませんでした'),
+        ('blocked', 'ホストにブロックされたため、保留中の発言は配信されませんでした'),
+        ('locked', '運営により新しい入室が止められたため、保留中の発言は配信されませんでした'),
+        ('left', 'ルームを出たため、保留中の発言は配信されませんでした'),
+        ('share-policy', '共有がモデレーターだけになったため、保留中の発言は配信されませんでした'),
+        ('unavailable', '配信の条件を確かめられなかったため、保留中の発言は配信されませんでした'),
+        ('something-new', '保留中の発言は配信されませんでした'),
+        ('review', '検閲で却下されました(review)。この発言は配信されていません'),
+        (null, '検閲で却下されました(review)。この発言は配信されていません'), // 理由の無い古いサーバー
+      ]) {
+        client.emit('r-launch', {'type': 'held', 'reason': 'review', 'delaySeconds': 30, 'kind': 'text'});
+        client.emit('r-launch', {'type': 'rejected', 'reason': ?reason, 'kind': 'text'});
+        await Future<void>.delayed(Duration.zero);
+        final s = container.read(astellSessionProvider)!;
+        expect(s.error, text, reason: '$reason');
+        expect(s.notice, isNull, reason: '保留の案内は消す($reason)');
+        expect(astellShareRejectedText({'type': 'rejected', 'reason': ?reason, 'kind': 'text'}), text);
+      }
+      await session.leave();
+    });
+
     test('保留音 (D-327): 開催予約の開始待ち / 全員が静か(マイク・画面共有・配信なし、チャット 1 分以上なし)で鳴る、話す・チャット・設定オフで止まる、退出で止まる', () async {
       final client = MockAstellClient();
       final storage = MemorySessionStorage({});

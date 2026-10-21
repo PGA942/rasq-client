@@ -18940,6 +18940,33 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get vcShareRejectedBanned => '你已被此房间封禁，保留中的发言未被发送';
+
+  @override
+  String get vcShareRejectedClosed => '房间已结束，保留中的发言未被发送';
+
+  @override
+  String get vcShareRejectedRestricted => '由于账号处置，保留中的发言未被发送';
+
+  @override
+  String get vcShareRejectedBlocked => '你已被主持人屏蔽，保留中的发言未被发送';
+
+  @override
+  String get vcShareRejectedLocked => '运营方已停止新成员进入，保留中的发言未被发送';
+
+  @override
+  String get vcShareRejectedLeft => '你已离开房间，保留中的发言未被发送';
+
+  @override
+  String get vcShareRejectedSharePolicy => '共享已改为仅限版主，保留中的发言未被发送';
+
+  @override
+  String get vcShareRejectedUnavailable => '无法确认发送条件，保留中的发言未被发送';
+
+  @override
+  String get vcShareRejectedOther => '保留中的发言未被发送';
+
+  @override
   String get vcNotInRoom => '你不在房间中';
 
   @override
@@ -38679,6 +38706,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String vcShareRejected(String source) {
     return '審查未通過（$source）。此發言未被傳送';
   }
+
+  @override
+  String get vcShareRejectedBanned => '你已被此房間封鎖，保留中的發言未被傳送';
+
+  @override
+  String get vcShareRejectedClosed => '房間已結束，保留中的發言未被傳送';
+
+  @override
+  String get vcShareRejectedRestricted => '由於帳號處置，保留中的發言未被傳送';
+
+  @override
+  String get vcShareRejectedBlocked => '你已被主持人封鎖，保留中的發言未被傳送';
+
+  @override
+  String get vcShareRejectedLocked => '營運方已停止新成員進入，保留中的發言未被傳送';
+
+  @override
+  String get vcShareRejectedLeft => '你已離開房間，保留中的發言未被傳送';
+
+  @override
+  String get vcShareRejectedSharePolicy => '分享已改為僅限版主，保留中的發言未被傳送';
+
+  @override
+  String get vcShareRejectedUnavailable => '無法確認傳送條件，保留中的發言未被傳送';
+
+  @override
+  String get vcShareRejectedOther => '保留中的發言未被傳送';
 
   @override
   String get vcNotInRoom => '你不在房間中';
