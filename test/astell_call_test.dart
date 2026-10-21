@@ -534,6 +534,87 @@ void main() {
       await session.leave();
     });
 
+    group('強制ミュートされた人の通話(P2P)の声は受け手で鳴らさない(セキュリティ確認 2026-10-21 の #20)', () {
+      Map<String, Object?> peer(String peerId, {required bool muted}) => {'peerId': peerId, 'accountId': 'kurt-$peerId', 'handle': 'kurt', 'displayName': 'クルト', 'state': {'micOn': true, 'mutedByMod': muted}};
+      Map<String, Object?> peerState(String peerId, {required bool muted}) => {'type': 'peer-state', 'peer': peer(peerId, muted: muted)};
+      const douglas = {'peerId': 'p1', 'accountId': 'douglas', 'handle': 'douglas', 'displayName': 'ダグラス'};
+      Map<String, Object?> douglasState({required bool muted}) => {
+            'type': 'peer-state',
+            'peer': {...douglas, 'state': {'micOn': true, 'mutedByMod': muted}},
+          };
+
+      test('繋がったままの相手(改変して送り続ける)も、強制ミュートで止める。解除で戻る — 手元のミュート / スピーカーミュートが許すときだけ', () async {
+        final session = await join(MockAstellClient.seededRooms().first);
+        expect(media.links['p1']!.playback, isTrue);
+        client.emit('r-launch', douglasState(muted: true));
+        await Future<void>.delayed(Duration.zero);
+        expect([media.links['p1']!.playback, media.links['p3']!.playback], [false, true], reason: '止めるのは強制ミュートされた人だけ');
+        // 強制ミュート中は、手元のミュートを外しても / スピーカーを戻しても鳴らさない。
+        session.toggleMute('p1');
+        session.toggleMute('p1');
+        session.toggleSpeaker();
+        session.toggleSpeaker();
+        expect(media.links['p1']!.playback, isFalse);
+        // 手元でもミュートしている間に解除 → まだ鳴らさない。手元のミュートを外して戻る。
+        session.toggleMute('p1');
+        client.emit('r-launch', douglasState(muted: false));
+        await Future<void>.delayed(Duration.zero);
+        expect(media.links['p1']!.playback, isFalse, reason: '手元のミュートが残っている');
+        session.toggleMute('p1');
+        expect(media.links['p1']!.playback, isTrue);
+        // スピーカーミュート中に解除 → スピーカーを戻すまで鳴らさない。
+        client.emit('r-launch', douglasState(muted: true));
+        await Future<void>.delayed(Duration.zero);
+        session.toggleSpeaker();
+        client.emit('r-launch', douglasState(muted: false));
+        await Future<void>.delayed(Duration.zero);
+        expect(media.links['p1']!.playback, isFalse, reason: 'スピーカーミュート');
+        session.toggleSpeaker();
+        expect(media.links['p1']!.playback, isTrue);
+        await session.leave();
+      });
+
+      test('入室(welcome)で強制ミュートされている人とは、鳴らさない状態で繋ぐ', () async {
+        final session = await join(MockAstellClient.seededRooms().first);
+        client.emit('r-launch', {
+          'type': 'welcome',
+          'peerId': 'me',
+          'accountId': 'me',
+          'me': {'peerId': 'me', 'accountId': 'me', 'state': {'micOn': false}},
+          'peers': [
+            {...douglas, 'state': {'micOn': true}},
+            peer('p7', muted: true),
+          ],
+        });
+        await Future<void>.delayed(Duration.zero);
+        await session.mesh!.handle(const {});
+        expect([media.links['p1']!.playback, media.links['p7']!.playback], [true, false]);
+        client.emit('r-launch', peerState('p7', muted: false));
+        await Future<void>.delayed(Duration.zero);
+        expect(media.links['p7']!.playback, isTrue, reason: '解除で戻る');
+        await session.leave();
+      });
+
+      test('あとから入った人 / 新しい接続(offer)も同じ規則: 強制ミュートなら鳴らさない状態で始め、接続が先でも参加者の更新で止める', () async {
+        final session = await join(MockAstellClient.seededRooms().first);
+        // 強制ミュートのまま入ってきた人(peer-joined)→ その人からの offer で作る接続は、最初から鳴らさない。
+        client.emit('r-launch', {'type': 'peer-joined', 'peer': peer('p8', muted: true)});
+        client.emit('r-launch', {'type': 'offer', 'from': 'p8', 'payload': {'sdp': 'o8', 'type': 'offer'}});
+        await Future<void>.delayed(Duration.zero);
+        await session.mesh!.handle(const {});
+        expect(media.links['p8']!.playback, isFalse);
+        // 接続が先にできてから強制ミュートの peer-state が届いた。
+        client.emit('r-launch', {'type': 'offer', 'from': 'p9', 'payload': {'sdp': 'o9', 'type': 'offer'}});
+        await Future<void>.delayed(Duration.zero);
+        await session.mesh!.handle(const {});
+        expect(media.links['p9']!.playback, isTrue);
+        client.emit('r-launch', peerState('p9', muted: true));
+        await Future<void>.delayed(Duration.zero);
+        expect(media.links['p9']!.playback, isFalse);
+        await session.leave();
+      });
+    });
+
     test('接続の状態(開発者向け、D-323): 自分・マイク・ICE サーバー・相手ごとの接続・配信を行にする', () async {
       final session = await join(MockAstellClient.seededRooms().first);
       final lines = await session.diagnostics();

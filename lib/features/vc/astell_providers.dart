@@ -774,7 +774,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
       },
       levelInterval: ref.read(astellLevelIntervalProvider),
     );
-    mesh.setPlayback(speakerMuted: s.speakerMuted, mutedPeerIds: s.mutedPeerIds);
+    mesh.setPlayback(speakerMuted: s.speakerMuted, mutedPeerIds: _silencedPeerIds(s));
     unawaited(mesh.start(me, [for (final p in s.peers) p.peerId]));
     _syncSpeaking(); // 前の通話(入り直す前)の印を残さない
   }
@@ -822,13 +822,21 @@ class AstellSession extends Notifier<AstellSessionState?> {
   /// なら鳴らさない(二重にしない)— 満員で通話に入れなかった人は、ホストの声を配信で聞く。
   /// モデレーターに強制ミュートされた人 (`mutedByMod`) の声も鳴らさない(改変した端末が LiveKit に上げ続けても。
   /// LiveKit の識別子はアカウントなので、そのアカウントの接続のどれかがミュートなら止める。セキュリティ確認 2026-10-09 の [7])。
+  /// 通話(P2P)も同じ — [_silencedPeerIds]。
   void _applyPlayback() {
     final s = state;
     if (s == null) return;
-    _mesh?.setPlayback(speakerMuted: s.speakerMuted, mutedPeerIds: s.mutedPeerIds);
+    _mesh?.setPlayback(speakerMuted: s.speakerMuted, mutedPeerIds: _silencedPeerIds(s));
     _streamer?.setAudioPolicy(_playsOnStream);
     _syncHoldMusic();
   }
+
+  /// 通話(P2P)で鳴らさない相手: 手元でミュートした人と、モデレーターに強制ミュートされた人 (`mutedByMod`)。
+  /// 改変した端末が強制ミュートのあとも繋がったまま送り続けても、受け手で止める。入室(welcome)/ 参加者の更新 /
+  /// 新しい接続・トラック(作った時点の [AstellCallMesh.setPlayback] の値で始まる)も同じ規則。解除で戻るのは、
+  /// 手元のミュート / スピーカーミュートが許すときだけ(セキュリティ確認 2026-10-21 の #20)。
+  /// 強制ミュートはサーバーで接続(peerId)ごとなので、ここも peerId で止める。
+  Set<String> _silencedPeerIds(AstellSessionState s) => {...s.mutedPeerIds, for (final p in s.peers) if (p.mutedByMod) p.peerId};
 
   bool _playsOnStream(String identity) {
     final s = state;

@@ -194,7 +194,8 @@ class AstellCallMesh {
         onChanged?.call();
       });
 
-  /// 相手の声を鳴らすか: スピーカーミュートなら全員、手元でミュートした相手は鳴らさない。
+  /// 相手の声を鳴らすか: スピーカーミュートなら全員、[mutedPeerIds](手元でミュートした相手 / 強制ミュートされた相手)は
+  /// 鳴らさない。あとから作る接続(届くトラック)も、この値で始める。
   void setPlayback({required bool speakerMuted, required Set<String> mutedPeerIds}) {
     _speakerMuted = speakerMuted;
     _muted = mutedPeerIds;
