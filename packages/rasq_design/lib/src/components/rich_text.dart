@@ -100,6 +100,11 @@ class RasqRichText extends StatefulWidget {
   /// 入れ子の段(MFM の箱の中)の文脈。null = いちばん外(ここから決める)。
   final RasqMfmContext? mfm;
 
+  /// 1 つの本文(いちばん外の [RasqRichText])で作る MFM の箱(中に [RasqRichText] を持つ [RasqMfmTransform])の上限 (D-546)。
+  /// 静止の `rainbow` は中身を 2 枚重ねで 2 回作るので、`rainbow` とその中の箱は 2 つと数える(動くかどうか・どちらの
+  /// 層かに関わらず同じ数え方)。超えた装飾は箱を作らず、中身をそのまま行に流す。
+  static const int maxMfmBoxes = 1000;
+
   @override
   State<RasqRichText> createState() => _RasqRichTextState();
 }
@@ -125,6 +130,46 @@ class _RasqRichTextState extends State<RasqRichText> {
   /// MFM の関数(Misskey の装飾)を含むか。
   static bool _hasMfmFn(List<RasqSpan> spans) => spans.any((s) => s is RasqTransformSpan && (RasqMfmTransform.misskeyFns.contains(s.fn) || _hasMfmFn(s.children)));
 
+  static bool _isBox(String fn) => RasqMfmTransform.boxFns.contains(fn) || RasqMfmTransform.blockFns.contains(fn);
+
+  /// 箱 1 つの数え方([RasqRichText.maxMfmBoxes])。`rainbow` の中(2 枚重ねで 2 回作られる)と `rainbow` 自身は 2。
+  static int _boxCost(String fn, bool inRainbow) => inRainbow || fn == 'rainbow' ? 2 : 1;
+
+  static int _countBoxes(List<RasqSpan> spans, bool inRainbow) {
+    var n = 0;
+    for (final s in spans) {
+      if (s is! RasqTransformSpan) continue;
+      if (_isBox(s.fn)) n += _boxCost(s.fn, inRainbow);
+      n += _countBoxes(s.children, inRainbow || s.fn == 'rainbow');
+    }
+    return n;
+  }
+
+  /// 箱の数を [RasqRichText.maxMfmBoxes] に収める (D-546)。前から数えて、超えた箱の装飾は外して中身だけ残す。
+  /// 収まる本文(ふつうの本文)はそのまま返す。
+  static List<RasqSpan> _withinBoxBudget(List<RasqSpan> spans) {
+    if (_countBoxes(spans, false) <= RasqRichText.maxMfmBoxes) return spans;
+    var left = RasqRichText.maxMfmBoxes;
+    List<RasqSpan> trim(List<RasqSpan> spans, bool inRainbow) {
+      final out = <RasqSpan>[];
+      for (final s in spans) {
+        if (s is! RasqTransformSpan) {
+          out.add(s);
+        } else if (!_isBox(s.fn)) {
+          out.add(RasqTransformSpan(s.fn, args: s.args, children: trim(s.children, inRainbow)));
+        } else if (left < _boxCost(s.fn, inRainbow)) {
+          out.addAll(trim(s.children, inRainbow));
+        } else {
+          left -= _boxCost(s.fn, inRainbow);
+          out.add(RasqTransformSpan(s.fn, args: s.args, children: trim(s.children, inRainbow || s.fn == 'rainbow')));
+        }
+      }
+      return out;
+    }
+
+    return trim(spans, false);
+  }
+
   @override
   Widget build(BuildContext context) {
     for (final r in _recognizers) {
@@ -148,8 +193,10 @@ class _RasqRichTextState extends State<RasqRichText> {
       ctx = RasqMfmContext(emojiEm: _hasMfmFn(widget.spans) ? 2.0 : (emojiOnly ? 2.5 : 1.25), textAlign: widget.textAlign);
     }
 
+    // 箱の上限はいちばん外で 1 度だけ(中の段は外で削った中身を受け取る = 本文全体で 1 つの予算)。
+    final spans = nested ? widget.spans : _withinBoxBudget(widget.spans);
     return Text.rich(
-      TextSpan(children: _spans(widget.spans, base, ctx)),
+      TextSpan(children: _spans(spans, base, ctx)),
       maxLines: widget.maxLines,
       overflow: widget.overflow,
       textAlign: nested ? ctx.textAlign : widget.textAlign,
@@ -249,7 +296,10 @@ class _RasqRichTextState extends State<RasqRichText> {
     final childStyle = RasqMfmTransform.childStyle(fn, s.args, st, zoomDepth: ctx.zoomDepth);
     final childCtx = fn == 'center' ? ctx.copyWith(textAlign: TextAlign.center) : ctx;
     Widget layer(RasqMfmContext Function(RasqMfmContext) adjust) => RasqRichText(s.children, style: childStyle, mfm: adjust(childCtx));
-    final box = RasqMfmTransform(fn: fn, args: s.args, style: childStyle, layer: layer, child: layer((c) => c));
+    // 静止の `rainbow` の層の中の `rainbow` は重ねない (D-546): 外の層がもう文字の色(グラデーション)と絵文字の
+    // 出し分けを決めているので見た目は同じ。重ねると入れ子の段ごとに中身を作る数が倍々になる。
+    final inRainbowLayer = ctx.hideEmoji || ctx.transparentText;
+    final box = RasqMfmTransform(fn: fn, args: s.args, style: childStyle, layer: inRainbowLayer ? null : layer, child: layer((c) => c));
     if (block) return WidgetSpan(child: box);
     // inline-block: 中の最初の行の基準線を行の基準線に揃える。
     return WidgetSpan(alignment: PlaceholderAlignment.baseline, baseline: TextBaseline.alphabetic, child: box);

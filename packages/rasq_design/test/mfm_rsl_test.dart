@@ -60,6 +60,78 @@ void main() {
       expect(find.text('虹'), findsWidgets);
     });
 
+    // セキュリティ確認 2026-10-21 の #21 (D-546): 静止の rainbow の入れ子で中身を作る数が倍々にならない。
+    group('rainbow nesting / box budget', () {
+      final emoji = Uri.parse('https://e.invalid/e.png');
+      List<RasqSpan> nested(int depth, List<RasqSpan> leaf) {
+        var spans = leaf;
+        for (var i = 0; i < depth; i++) {
+          spans = [RasqTransformSpan('rainbow', children: spans)];
+        }
+        return spans;
+      }
+
+      testWidgets('20 nested static rainbows build a linear number of layers (not 2^20)', (tester) async {
+        await tester.pumpWidget(wrap(RasqRichText(nested(20, [const RasqTextSpan('虹'), RasqEmojiSpan(shortcode: 'e', url: emoji)]))));
+        await tester.pump();
+        expect(tester.widgetList(find.byType(RasqMfmTransform)).length, lessThanOrEqualTo(2 * 20));
+        expect(tester.widgetList(find.byType(RasqRichText)).length, lessThanOrEqualTo(2 * 20 + 1));
+        // 重ねるのはいちばん外の 1 回だけ: グラデーションは 1 枚、絵文字は「隠した層」と「見せる層」の 2 つ。
+        expect(find.byType(ShaderMask), findsOneWidget);
+        expect(find.textContaining('虹', findRichText: true), findsWidgets);
+        expect(find.byType(RasqCustomEmoji), findsNWidgets(2));
+        final hidden = tester.widgetList<Opacity>(find.ancestor(of: find.byType(RasqCustomEmoji), matching: find.byType(Opacity))).where((o) => o.opacity == 0);
+        expect(hidden, hasLength(1), reason: '絵文字はグラデーションの層でだけ隠す(見える絵文字は 1 つ)');
+      });
+
+      testWidgets('animated rainbows also nest linearly', (tester) async {
+        await tester.pumpWidget(MaterialApp(
+          theme: RasqTheme.light(),
+          home: Scaffold(body: RasqRichText(nested(20, [const RasqTextSpan('虹')]))),
+        ));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(tester.widgetList(find.byType(RasqRichText)).length, 21);
+        expect(find.byType(ShaderMask), findsNothing);
+        expect(find.byType(ColorFiltered), findsNWidgets(20));
+        await tester.pumpWidget(const SizedBox()); // Ticker を止める
+      });
+
+      testWidgets('boxes over the budget render as plain text (both rainbow layers share one budget)', (tester) async {
+        final many = [for (var i = 0; i < RasqRichText.maxMfmBoxes; i++) RasqTransformSpan('bg', args: const {'color': '00f'}, children: [RasqTextSpan('$i ')])];
+        // rainbow の中の箱は 2 枚重ねで 2 回作られるので 2 つと数える → rainbow の中の箱は予算の半分ほどまで。
+        await tester.pumpWidget(wrap(RasqRichText([
+          RasqTransformSpan('rainbow', children: [
+            RasqTransformSpan('rainbow', children: many),
+          ]),
+          const RasqTextSpan('後ろ'),
+          const RasqTransformSpan('bg', children: [RasqTextSpan('予算切れ')]),
+        ])));
+        await tester.pump();
+        final boxes = tester.widgetList(find.byType(RasqMfmTransform)).length;
+        expect(boxes, lessThanOrEqualTo(RasqRichText.maxMfmBoxes));
+        expect(boxes, greaterThan(RasqRichText.maxMfmBoxes - 4), reason: '予算までは箱を作る');
+        expect(tester.widgetList(find.byType(RasqRichText)).length, lessThanOrEqualTo(RasqRichText.maxMfmBoxes + 1));
+        expect(find.byType(ShaderMask), findsOneWidget);
+        // 外した装飾の中身は文字のまま残る。
+        expect(find.textContaining('${RasqRichText.maxMfmBoxes - 1} ', findRichText: true), findsWidgets);
+        expect(find.textContaining('予算切れ', findRichText: true), findsOneWidget);
+      });
+
+      testWidgets('animated and static count the same budget', (tester) async {
+        final many = [for (var i = 0; i < RasqRichText.maxMfmBoxes; i++) RasqTransformSpan('bg', children: [RasqTextSpan('$i')])];
+        final spans = [RasqTransformSpan('rainbow', children: many)];
+        await tester.pumpWidget(wrap(RasqRichText(spans)));
+        final staticBoxes = tester.widgetList<RasqMfmTransform>(find.byType(RasqMfmTransform)).where((t) => t.fn == 'bg').length;
+        await tester.pumpWidget(MaterialApp(theme: RasqTheme.light(), home: Scaffold(body: SingleChildScrollView(child: RasqRichText(spans)))));
+        await tester.pump(const Duration(milliseconds: 100));
+        final animatedBoxes = tester.widgetList<RasqMfmTransform>(find.byType(RasqMfmTransform)).where((t) => t.fn == 'bg').length;
+        // 静止は 2 枚重ねで同じ箱が 2 回、動くときは 1 回(どちらも同じ箱だけ残す)。
+        expect(staticBoxes, animatedBoxes * 2);
+        expect(animatedBoxes, (RasqRichText.maxMfmBoxes - 2) ~/ 2);
+        await tester.pumpWidget(const SizedBox());
+      });
+    });
+
     test('speedOf / color parsing', () {
       expect(RasqMfmTransform.speedOf(const {'speed': '1.5s'}, Duration.zero), const Duration(milliseconds: 1500));
       expect(RasqMfmTransform.speedOf(const {'speed': 0.5}, Duration.zero), const Duration(milliseconds: 500));
