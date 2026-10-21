@@ -131,7 +131,9 @@ Future<void> openRasqSnsTile(BuildContext context, WidgetRef ref, RasqSnsTile t)
   }
 
   final l10n = context.l10n;
-  final sessions = ref.read(sessionsProvider).value?.allSessions ?? const [];
+  // 今使ってよいセッションだけ (#10): 端末の全保存から選ぶと、ほかの RASQ アカウントのものや、見守りで止めた SNS のセッションで
+  // 人を引いて(フォローなども)できてしまう。無ければブラウザへ。
+  final sessions = ref.read(usableSessionsProvider);
   // Bluesky はサーバー(PDS)に関係なく、どの Bluesky のアカウントからでも引ける (D-423)。
   final mine = sessionServing(sessions, t.kind, t.instance, preferKey: t.key);
   if (mine != null) {
