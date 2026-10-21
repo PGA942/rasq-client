@@ -27073,6 +27073,12 @@ abstract class AppLocalizations {
   /// **'接続先'**
   String get storeInstallHostsHeader;
 
+  /// No description provided for @storeInstallSlotsHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'使う場所'**
+  String get storeInstallSlotsHeader;
+
   /// No description provided for @storeInstallLoginInstance.
   ///
   /// In ja, this message translates to:

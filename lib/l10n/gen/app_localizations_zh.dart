@@ -16147,6 +16147,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get storeInstallHostsHeader => '连接目标';
 
   @override
+  String get storeInstallSlotsHeader => '使用位置';
+
+  @override
   String get storeInstallLoginInstance => '登录的实例';
 
   @override
@@ -35868,6 +35871,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get storeInstallHostsHeader => '連線目標';
+
+  @override
+  String get storeInstallSlotsHeader => '使用位置';
 
   @override
   String get storeInstallLoginInstance => '登入的實例';

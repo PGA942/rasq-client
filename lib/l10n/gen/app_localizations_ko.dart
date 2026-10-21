@@ -16412,6 +16412,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get storeInstallHostsHeader => '연결 대상';
 
   @override
+  String get storeInstallSlotsHeader => '사용 위치';
+
+  @override
   String get storeInstallLoginInstance => '로그인한 인스턴스';
 
   @override

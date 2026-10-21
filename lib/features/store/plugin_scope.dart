@@ -75,6 +75,15 @@ class PluginScope {
     ];
   }
 
+  /// 中身が同じか(確認シートで見せた内容と、入れるときに配布物から読み直した内容を突き合わせる、セキュリティ確認 2026-10-21 の #8)。
+  bool sameAs(PluginScope other) =>
+      setEquals(permissions, other.permissions) &&
+      setEquals(hosts, other.hosts) &&
+      instance == other.instance &&
+      setEquals(slots, other.slots) &&
+      mapEquals(reasons, other.reasons) &&
+      dataHandling == other.dataHandling;
+
   Map<String, Object?> toJson() => {
         'permissions': [...permissions]..sort(),
         'hosts': [...hosts]..sort(),
@@ -108,9 +117,13 @@ List<String> _strings(Object? v) => [for (final s in v is List ? v : const []) i
 /// [version] / [sha512] = 確認シートで見た版(`manifest.version`)と配布物のダイジェスト(セキュリティ確認 2026-10-09 の [14])。
 /// あれば、インストールはその版を取り直し、構成の版と配布物の SHA-512 が同じときだけ入れる
 /// (シートを開いている間にストアの最新版が変わっても、確かめていない版は入れない)。
+///
+/// [scope] = 確認シートで見せた許す内容(配布物から読んだ root と子の全部、セキュリティ確認 2026-10-21 の #8)。
+/// あれば、インストールは配布物から読み直した内容がこれと同じときだけ入れる(見せた内容 = 記録する最後の承認)。
 @immutable
 class PluginConsent {
-  const PluginConsent({this.version, this.sha512});
+  const PluginConsent({this.version, this.sha512, this.scope});
   final String? version;
   final String? sha512;
+  final PluginScope? scope;
 }

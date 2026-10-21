@@ -4488,6 +4488,7 @@
   "storeInstallSheetTitle": "Install {name} {version}",
   "storeInstallPermissionsHeader": "Permissions this plugin uses",
   "storeInstallHostsHeader": "Connections",
+  "storeInstallSlotsHeader": "Where it runs",
   "storeInstallLoginInstance": "Your login instance",
   "storeInstallScopeNoRecord": "What will be allowed (no record from a previous install)",
   "storeInstallScopeWidened": "What goes beyond what you last allowed",

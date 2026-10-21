@@ -284,6 +284,7 @@
   "@storeInstallSheetTitle": {"description": "インストールの確認シートの見出し", "placeholders": {"name": {"type": "String"}, "version": {"type": "String"}}},
   "storeInstallPermissionsHeader": "このプラグインが使う権限",
   "storeInstallHostsHeader": "接続先",
+  "storeInstallSlotsHeader": "使う場所",
   "storeInstallLoginInstance": "ログイン先のインスタンス",
   "storeInstallScopeNoRecord": "許可する内容(前に入れたときの記録がありません)",
   "storeInstallScopeWidened": "最後に許可した内容から広がるもの",

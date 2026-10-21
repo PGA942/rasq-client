@@ -17060,6 +17060,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storeInstallHostsHeader => 'Connections';
 
   @override
+  String get storeInstallSlotsHeader => 'Where it runs';
+
+  @override
   String get storeInstallLoginInstance => 'Your login instance';
 
   @override

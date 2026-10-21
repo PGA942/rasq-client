@@ -16350,6 +16350,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get storeInstallHostsHeader => '接続先';
 
   @override
+  String get storeInstallSlotsHeader => '使う場所';
+
+  @override
   String get storeInstallLoginInstance => 'ログイン先のインスタンス';
 
   @override
