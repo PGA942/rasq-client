@@ -285,7 +285,8 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       // 分からなければ試みて、だめでもインストール自体は残す(エラーは返す)。
       await _persist([...state.where((p) => p.id != pluginId), record]);
       if (makeDefault && isWasmBytes(bytes) && m.manifest['kind'] != 'sns') {
-        final slot = await ref.read(slotPluginsProvider.notifier).register(storeSlotSource(pluginId, m.version), bytes: bytes);
+        // wasm が名乗る内容は、配布物から読んだこの版の内容に収まること(セキュリティ確認 2026-10-21 の #7)。
+        final slot = await ref.read(slotPluginsProvider.notifier).register(storeSlotSource(pluginId, m.version), bytes: bytes, approved: scope);
         if (slot == null) return fail(ref.read(slotPluginsNoticeProvider) ?? appL10n.storeSlotRegisterFailed, verified);
         await _syncSlots(pluginId);
       }
@@ -320,7 +321,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     // 登録元は `store:<id>@<版>`(子は `…#<childId>`)— 次回起動はストアからその版を取り直して読み込む。
     // 既定にしない(インストールだけ)なら登録しない。
     if (makeDefault) {
-      final error = await _registerPackage(pluginId, m.version, bytes, package);
+      final error = await _registerPackage(pluginId, m.version, bytes, package, approved: scope);
       if (error != null) return fail(error, verified);
     }
     await _persist([...state.where((p) => p.id != pluginId), record]);
@@ -381,12 +382,13 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
   }
 
   /// .rasqpkg の中のスロットプラグインを、その版の登録元で全部登録する。途中で失敗したら、この版で入れたものを外す。
-  Future<String?> _registerPackage(String pluginId, String version, Uint8List bytes, RasqPackage package) async {
+  /// [approved] = 配布物から読んだこの版の内容(どのプラグインも、名乗る内容がこれと中のマニフェストに収まること、#7)。
+  Future<String?> _registerPackage(String pluginId, String version, Uint8List bytes, RasqPackage package, {PluginScope? approved}) async {
     final slots = ref.read(slotPluginsProvider.notifier);
     final registered = <String>[];
     for (final p in package.slotPlugins) {
       final source = storeSlotSource(pluginId, version, child: p.id == pluginId ? null : p.id);
-      final slot = await slots.register(source, bytes: bytes);
+      final slot = await slots.register(source, bytes: bytes, approved: approved);
       if (slot == null) {
         for (final s in registered) {
           await slots.unregisterSource(s);
@@ -425,10 +427,10 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
         if (isRasqPackage(bytes)) {
           final package = RasqPackage.open(bytes, decompress: ref.read(rasqpkgZstdProvider));
           if (package.root.isTheme || package.root.isAssets) continue;
-          final error = await _registerPackage(pluginId, v, bytes, package);
+          final error = await _registerPackage(pluginId, v, bytes, package, approved: record.versionInfo(v)?.scope);
           if (error != null) return error;
         } else if (isWasmBytes(bytes)) {
-          final slot = await slots.register(storeSlotSource(pluginId, v), bytes: bytes);
+          final slot = await slots.register(storeSlotSource(pluginId, v), bytes: bytes, approved: record.versionInfo(v)?.scope);
           final String? notice = slot == null ? (ref.read(slotPluginsNoticeProvider) ?? appL10n.storeSlotRegisterFailed) : null;
           if (notice != null) return notice;
         }

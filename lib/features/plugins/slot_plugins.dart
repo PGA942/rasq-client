@@ -22,6 +22,7 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/plugin_actions.dart' show actionButtonPrefsProvider, migrateViewerPluginSettings, postTransformActionId;
 import '../media/image_scale.dart';
 import '../settings/settings_dsl.dart';
+import '../store/plugin_scope.dart' show PluginScope, selfReportExcess;
 import '../store/rasqpkg.dart';
 import '../store/store_models.dart' show InstalledPlugin;
 import '../store/store_providers.dart';
@@ -603,7 +604,10 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
               ref.read(slotPluginsNoticeProvider.notifier).set(appL10n.pluginsArtifactMismatch(pluginId));
               continue;
             }
-            await register(p, bytes: bytes, persist: false);
+            // 名乗る内容は、インストール時に記録したその版の内容に収まること(#7)。
+            final v = version ?? record?.version;
+            final approved = v == null ? null : record?.versionInfo(v)?.scope;
+            await register(p, bytes: bytes, persist: false, approved: approved);
           } catch (e) {
             debugPrint('slot plugin restore $p: $e');
           }
@@ -631,7 +635,12 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   /// [admit] = 動かしてよいかの関所(止める理由 / null = 通す、D-451)。**ゲストのコードを動かす前に**、配布物の目次の id
   /// (中身はまだ分からない = text null)で 1 度、マニフェストを読んだあと宣言どおりに起動し直す前に、名乗った id と中身で 1 度。
   /// 止めたら登録しない(通知に理由を出して null)。
-  Future<SlotPlugin?> register(String source, {Uint8List? bytes, bool persist = true, bool temporary = false, String? Function(String pluginId, List<String>? text)? admit}) async {
+  ///
+  /// ストア (`store:`) の登録は、wasm が名乗るマニフェストが確かめた外の範囲に収まるときだけ (セキュリティ確認 2026-10-21 の #7):
+  /// `.rasqpkg` の中のそのプラグインのマニフェストと、[approved](インストール時に配布物から読んで記録したその版の内容)。
+  /// 超える権限・接続先・使う場所を名乗ったら登録しない([selfReportExcess])。インストール・次回起動の読み直し・更新・一時的に動かす、で同じ。
+  Future<SlotPlugin?> register(String source,
+      {Uint8List? bytes, bool persist = true, bool temporary = false, String? Function(String pluginId, List<String>? text)? admit, PluginScope? approved}) async {
     try {
       final (:container, :pluginId) = splitPackageSource(source);
       // `asset:` はアプリ同梱のアセット(次回起動の読み直しは bytes 無しで来る)。
@@ -649,6 +658,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
               ? SideloadTrust.swing
               : await sideloadTrustOfContainer(container, data, ownFingerprints: ownFingerprints);
       String? expectedId;
+      Map<String, Object?>? packaged;
       // 未審査の Swing (D-379): 子プラグインを持たない 1 つだけ、Swing の面のページ型だけ。
       if (swing) checkSwingPackage(data, decompress: ref.read(rasqpkgZstdProvider));
       if (isRasqPackage(data)) {
@@ -656,6 +666,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         if (entry.isSns) throw StateError(appL10n.pluginsIsSnsPlugin(entry.id));
         data = entry.wasm;
         expectedId = entry.id;
+        packaged = entry.manifest;
         if (admit?.call(entry.id, null) case final blocked?) throw StateError(blocked);
       }
       final loader = ref.read(slotRuntimeLoaderProvider);
@@ -686,6 +697,15 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       if (expectedId != null && manifest.id != expectedId) {
         runtime.dispose();
         throw StateError(appL10n.pluginsIdMismatch(expectedId, manifest.id));
+      }
+      // 審査済み(ストア)は宣言どおりに開ける (D-308) ので、その宣言(wasm の自己申告)が、同意・審査の対象の配布物のマニフェストと
+      // 記録した版の内容を超えないこと(セキュリティ確認 2026-10-21 の #7)。超えたら登録しない(足した下書き・通信は 1 度も開けない)。
+      if (isReviewedSlotSource(source)) {
+        final over = selfReportExcess(m.cast<String, Object?>(), packaged: packaged, approved: approved);
+        if (over.isNotEmpty) {
+          runtime.dispose();
+          throw StateError(appL10n.storeWidenedOver(over.join(appL10n.storeListSeparator)));
+        }
       }
       runtime.dispose();
       if (admit?.call(manifest.id, pluginExamplePieces(name: manifest.name, description: manifest.description, slots: manifest.slots)) case final blocked?) throw StateError(blocked);

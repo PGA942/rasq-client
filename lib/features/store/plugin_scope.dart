@@ -103,6 +103,21 @@ class PluginScope {
       );
 }
 
+/// wasm が `plugin.manifest` で名乗る内容 [self] のうち、確かめた外の範囲を超えるところ(セキュリティ確認 2026-10-21 の #7)。空 = 収まる。
+/// 同意・自動のアップデートの判定は配布物のマニフェストで行うので、実行時の権限・接続先・使う場所も、その範囲を超えてはいけない
+/// (id が同じでも、範囲が同じとは限らない)。
+/// - [packaged] = 署名を確かめた `.rasqpkg` の中の、そのプラグインのマニフェスト。権限・接続先・使う場所を全部比べる。
+/// - [approved] = インストール時に配布物から読んで記録した、その版の内容(`InstalledVersion.scope`)。生の wasm(中にマニフェストが
+///   無い)はストアの構成のマニフェストから読んだもので、使う場所を持たない(同梱のカタログ)ときは使う場所を比べない。
+List<String> selfReportExcess(Map<String, Object?> self, {Map<String, Object?>? packaged, PluginScope? approved}) {
+  final s = PluginScope.of([self]);
+  return {
+    if (packaged != null) ...s.wideningOver(PluginScope.of([packaged])),
+    if (approved != null)
+      ...(packaged == null && approved.slots.isEmpty ? PluginScope(permissions: s.permissions, hosts: s.hosts, instance: s.instance) : s).wideningOver(approved),
+  }.toList();
+}
+
 /// [host] が許していた接続先 [approved] に収まるか(`*` = どこでも、`*.example.com` = そのサブドメイン)。
 /// 判定は net.fetch と同じ fetchHostPermitted に寄せる。`*.a.example.com` は先頭のラベルが `*` のサブドメインとして
 /// 渡せば、`*.example.com` / `*` にだけ収まり、`a.example.com` のような 1 つのホストには収まらない。
