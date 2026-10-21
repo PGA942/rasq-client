@@ -211,6 +211,61 @@ class _Attachment {
   MediaItem? uploaded;
 }
 
+/// 送る内容 (セキュリティ確認 2026-10-21 の #19): 送るときに入力欄・注釈・投票・公開範囲・添付・連動先から写して確定したもの。
+/// 見守り / 制限の判定はこれにかけ、送るのもこれだけ。判定のあと(アップロード / 検閲の待ち / 警告の確認のあいだ)に入力欄や
+/// 投票・公開範囲が変わっても、プラグインが本文を書き換えても、ここは変わらない(判定し直していないものは送らない)。
+class _SendPlan {
+  const _SendPlan({
+    required this.input,
+    required this.cwInput,
+    required this.poll,
+    required this.files,
+    required this.opts,
+    required this.direct,
+    required this.fallback,
+    required this.primaryText,
+    required this.linked,
+    required this.transformed,
+  });
+
+  /// 入力欄の本文そのまま(判定と、当たった語の印の範囲はこれに対して)。
+  final String input;
+  String get text => input.trim();
+
+  /// 注釈の入力(注釈がオンのときだけ。判定はこのまま)。
+  final String? cwInput;
+  String? get cw => (cwInput?.trim().isNotEmpty ?? false) ? cwInput!.trim() : null;
+  final NewPoll? poll;
+
+  /// 添付と、確定したときのセンシティブの印。
+  final List<(_Attachment, bool)> files;
+  final ComposeOptions opts;
+
+  /// 公開範囲がダイレクトになる投稿([_ComposerBodyState._sendsDirect] を確定したときの公開範囲で)。
+  final bool direct;
+
+  /// 代わりのフォーマット (D-126)。
+  final Map<String, String>? fallback;
+
+  /// 本体へ送る本文(正規表現の加工 (D-130) のあと)。
+  final String primaryText;
+
+  /// 連動先 (D-128/D-129): (セッション, フォールバック, 届け方, 送る本文(そのアカウントでの加工のあと))。
+  final List<(AccountSession, Map<String, String>?, String, String)> linked;
+
+  /// 送る前の加工があるか(無ければ送る本文 = 入力欄の本文)。
+  final bool transformed;
+
+  /// 判定に足す、実際に送る本文 ([20]): 本体と連動先ごと(下書きにするだけのものは除く。開いて送るときにまた判定する)。
+  List<String> get sentTexts => !transformed
+      ? const <String>[]
+      : [
+          primaryText,
+          for (final (_, _, delivery, t) in linked)
+            if (delivery != 'draft') t,
+        ];
+}
+
 /// FOW の外に置くコンポーザー (D-421)。中身は投稿 / 返信のコンポーザー([showComposer])と同じもの
 /// (アクションバー・添付と加工・投票・注釈・絵文字 / MFM・メンションの補完・テキスト加工プラグイン・下書き)。
 /// Swing の返信(`SwingBar` のコンポーザーの形)が使う。
@@ -1299,13 +1354,14 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// 計画の実行 (D-128/D-129/D-130): auto/confirm 済み = 投稿、draft =
   /// そのアカウント宛の下書き(次にそのアカウントを投稿先に選ぶと復元)。
   /// 失敗したアカウント表記を返す(本体は落とさない)。プラグインが添えた知らせ(D-500)もアカウント表記と一緒に返す。
+  /// 送る本文・添付は確定した送る内容 ([_SendPlan]、#19) のもの。本文は連動先ごとに判定した加工のあとのものをそのまま送る。
   Future<(List<String>, List<String>, List<(String, SnsNotice)>)> _executeMultiPlan(
-      List<(AccountSession, Map<String, String>?, String)> plan, NewPost base, List<(String, String, String)> regexRules) async {
+      List<(AccountSession, Map<String, String>?, String, String)> plan, NewPost base, List<(_Attachment, bool)> files) async {
     final registry = ref.read(pluginRegistryProvider);
     final errors = <String>[];
     final posted = <String>[]; // 連動の正例 (D-132)
     final notices = <(String, SnsNotice)>[];
-    for (final (s, fb, delivery) in plan) {
+    for (final (s, fb, delivery, text) in plan) {
       final label = '${s.account}';
       var cw = base.contentWarning;
       var visibility = base.visibility;
@@ -1319,8 +1375,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         case 'localOnly':
           localOnly = true;
       }
-      // 投稿加工(正規表現, D-130): 送信先アカウントごとに本文へ適用。
-      final text = applyComposerRegex(base.text, label, regexRules);
+      // 投稿加工(正規表現, D-130): 送信先アカウントごとに本文へ適用したもの(確定したときに作り、判定したもの)。
       if (delivery == 'draft') {
         // 下書きだけ作る (D-129): 次にそのアカウントを投稿先に選ぶと復元。
         _drafts.save('linked:${s.account.key}', ComposeDraft(text: text, cw: cw ?? '', cwOn: cw != null));
@@ -1331,10 +1386,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         try {
           final api = ref.read(rasqAccountPageApiProvider);
           if (api == null) throw StateError(appL10n.composeRasqNoServer);
-          if (text.length > rasqPostMaxChars || _files.length > rasqPostMaxImages || (base.poll?.choices.length ?? 0) > rasqPostMaxPollChoices) throw StateError(appL10n.composeRasqOverLimit);
+          if (text.length > rasqPostMaxChars || files.length > rasqPostMaxImages || (base.poll?.choices.length ?? 0) > rasqPostMaxPollChoices) throw StateError(appL10n.composeRasqOverLimit);
           await api.createPost(
             text,
-            images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: f.sensitive)],
+            images: [for (final (f, sensitive) in files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: sensitive)],
             cw: cw ?? '',
             visibility: const {'public', 'home', 'followers'}.contains(visibility) ? visibility! : (visibility == null ? 'public' : 'followers'),
             likeOnly: base.reactionAcceptance == 'likeOnly',
@@ -1353,8 +1408,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         final session = registry.session(s);
         // メディアは各アカウントのサーバーへ上げ直す(id は流用できない)。
         final ids = <String>[];
-        for (final f in _files) {
-          ids.add((await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: f.sensitive)).id);
+        for (final (f, sensitive) in files) {
+          ids.add((await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: sensitive)).id);
         }
         final sent = await session.createPostWithNotice(NewPost(
             text: text, contentWarning: cw, visibility: visibility, localOnly: localOnly, reactionAcceptance: base.reactionAcceptance, mediaIds: ids, poll: base.poll));
@@ -1370,13 +1425,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   /// 学習ループ (D-132): 確定ラベルをプロファイルへ EMA 追加(手動切替は
   /// 強く学習)+ 連動 (A→B) の正例/負例の記録。送信は落とさない。
-  Future<void> _recordLearning({required String primaryLabel, required bool corrected, required List<String> posted, required List<String> removed}) async {
+  Future<void> _recordLearning({required String primaryLabel, required String text, required bool corrected, required List<String> posted, required List<String> removed}) async {
     try {
       final accKey = ref.read(currentAccountProvider)?.key;
       final area = storageSafeAreaFor(accKey);
       final slot = composerLearnSlot(primaryLabel);
       final existing = (await ref.read(settingsAreaProvider(area).future))[slot];
-      final updated = composerLearnUpdate(existing is Map ? existing.cast<String, Object?>() : null, _text.text.trim(), weight: corrected ? 3.0 : 1.0);
+      final updated = composerLearnUpdate(existing is Map ? existing.cast<String, Object?>() : null, text, weight: corrected ? 3.0 : 1.0);
       await ref.read(settingsAreaProvider(area).notifier).set(slot, updated);
       if (posted.isNotEmpty || removed.isNotEmpty) {
         var relations = ((await ref.read(settingsAreaProvider('composer.learn').future))['relations'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
@@ -1603,6 +1658,28 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     return (hasText || hasMedia || (_poll != null && pollOk)) && !(_isDm && _files.length > 1);
   }
 
+  /// 今の入力から送る内容を確定する (#19)。写しなので、あとで入力欄 / 注釈 / 投票 / 公開範囲 / 添付の並び / センシティブの印が
+  /// 変わっても、プラグインの遅れた書き換え(`text.changed` の onReplace)が来ても変わらない。
+  /// [linked] = 連動の計画(確認のあと)。送る本文は送り先ごとに [regexRules] の加工をここで当てる(判定するのも送るのもこれ)。
+  _SendPlan _freezePlan({String primaryLabel = '', Map<String, String>? fallback, List<(AccountSession, Map<String, String>?, String)> linked = const [], List<(String, String, String)> regexRules = const []}) {
+    final input = _text.text;
+    final text = input.trim();
+    final opts = ref.read(composeOptionsProvider);
+    final poll = _poll;
+    return _SendPlan(
+      input: input,
+      cwInput: _cwOn ? _cw.text : null,
+      poll: poll == null ? null : NewPoll(choices: List.unmodifiable(poll.texts), multiple: poll.multiple, expiresAfter: poll.expiresAfter),
+      files: List.unmodifiable([for (final f in _files) (f, f.sensitive)]),
+      opts: opts,
+      direct: !_isDm && (_directReply || const {'specified', 'direct'}.contains(opts.visibility)),
+      fallback: fallback == null ? null : Map.unmodifiable(fallback),
+      primaryText: applyComposerRegex(text, primaryLabel, regexRules),
+      linked: List.unmodifiable([for (final (s, fb, delivery) in linked) (s, fb, delivery, applyComposerRegex(text, '${s.account}', regexRules))]),
+      transformed: regexRules.isNotEmpty,
+    );
+  }
+
   /// RASQ アカウントとして投稿する (D-271 → D-275)。作り方は SNS と共通: 注釈 / 公開範囲 / リアクションの受け入れ(いいねのみ)/
   /// センシティブな画像 / 投票。**違うのは、連合に関わるもの(連合なし、リモート向けの受け入れ)が無いことと、上限**
   /// (添付 6 つ / 投票 6 個 / 本文 1000 文字)。動画 / 音声も付けられる(D-276。32 MiB まで)。引用は RASQ の投稿だけ。投稿先の連動は使えない。
@@ -1610,20 +1687,23 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final api = ref.read(rasqAccountPageApiProvider);
     final me = ref.read(orgateAccountProvider).value;
     if (api == null || me == null) return setState(() => _error = appL10n.composeRasqNotLoggedIn);
-    if (_files.any((f) => f.bytes.length > rasqPostMaxMediaBytes)) return setState(() => _error = appL10n.composeRasqMediaTooLarge(rasqPostMaxMediaBytes ~/ (1024 * 1024)));
-    if (_rasqTextOnlyReply && (_files.isNotEmpty || _poll != null)) return setState(() => _error = appL10n.composeRasqReplyTextOnly);
-    if (_rasqReply && _text.text.trim().length > rasqReplyMaxChars) return setState(() => _error = appL10n.composeRasqReplyMaxChars(rasqReplyMaxChars));
-    if (_files.length > rasqPostMaxImages) return setState(() => _error = appL10n.composeRasqMaxImages(rasqPostMaxImages));
-    if (_text.text.trim().length > rasqPostMaxChars) return setState(() => _error = appL10n.composeRasqMaxChars(rasqPostMaxChars));
-    final poll = _poll;
-    if (poll != null && poll.texts.length > rasqPostMaxPollChoices) return setState(() => _error = appL10n.composeRasqMaxPollChoices(rasqPostMaxPollChoices));
+    // 送る内容を確定する (#19): 判定するのも送るのもこの値(判定の待ちのあいだの書き換えは送らない)。
+    final plan = _freezePlan();
+    final files = plan.files;
+    if (files.any((e) => e.$1.bytes.length > rasqPostMaxMediaBytes)) return setState(() => _error = appL10n.composeRasqMediaTooLarge(rasqPostMaxMediaBytes ~/ (1024 * 1024)));
+    if (_rasqTextOnlyReply && (files.isNotEmpty || plan.poll != null)) return setState(() => _error = appL10n.composeRasqReplyTextOnly);
+    if (_rasqReply && plan.text.length > rasqReplyMaxChars) return setState(() => _error = appL10n.composeRasqReplyMaxChars(rasqReplyMaxChars));
+    if (files.length > rasqPostMaxImages) return setState(() => _error = appL10n.composeRasqMaxImages(rasqPostMaxImages));
+    if (plan.text.length > rasqPostMaxChars) return setState(() => _error = appL10n.composeRasqMaxChars(rasqPostMaxChars));
+    final poll = plan.poll;
+    if (poll != null && poll.choices.length > rasqPostMaxPollChoices) return setState(() => _error = appL10n.composeRasqMaxPollChoices(rasqPostMaxPollChoices));
     final sanctions = ref.read(rasqSanctionsProvider).value ?? RasqSanctions.none;
-    final blocked = sanctions.blockedMessage('post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
+    final blocked = sanctions.blockedMessage('post') ?? (files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
     if (blocked != null) return setState(() => _error = blocked);
-    if (!await _childSafeAllows(dm: false)) return;
-    if (!await _composePolicyAllows()) return;
+    if (!await _childSafeAllows(plan, dm: false)) return;
+    if (!await _composePolicyAllows(plan)) return;
     // 公開設定は SNS と同じ FOW から。RASQ に無いもの(指名 / リモート向けの受け入れ)は、近いものへ寄せる。
-    final opts = ref.read(composeOptionsProvider);
+    final opts = plan.opts;
     final visibility = const {'public', 'home', 'followers'}.contains(opts.visibility) ? opts.visibility : 'followers';
     setState(() {
       _busy = true;
@@ -1633,21 +1713,22 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     try {
       // 返信 (D-292): 公開範囲 / リアクションの受け入れは送らない(Swing のスレッドへの返信は Central が `swing` にする)。
       // 注釈は返信にも付く。添付 / 投票は Swing のスレッドへの返信だけ (D-421 / S-076)。
+      final images = [for (final (f, sensitive) in files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: sensitive)];
       final created = _rasqReply
           ? await api.createPost(
-              _text.text.trim(),
+              plan.text,
               replyTo: _replyTo!.id,
-              images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: f.sensitive)],
-              cw: _cwOn ? _cw.text.trim() : '',
-              poll: poll == null ? null : (choices: poll.texts, multiple: poll.multiple, expiresAfter: poll.expiresAfter),
+              images: images,
+              cw: plan.cwInput?.trim() ?? '',
+              poll: poll == null ? null : (choices: poll.choices, multiple: poll.multiple, expiresAfter: poll.expiresAfter),
             )
           : await api.createPost(
-        _text.text.trim(),
-        images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: f.sensitive)],
-        cw: _cwOn ? _cw.text.trim() : '',
+        plan.text,
+        images: images,
+        cw: plan.cwInput?.trim() ?? '',
         visibility: visibility,
         likeOnly: opts.reactionAcceptance == 'likeOnly',
-        poll: poll == null ? null : (choices: poll.texts, multiple: poll.multiple, expiresAfter: poll.expiresAfter),
+        poll: poll == null ? null : (choices: poll.choices, multiple: poll.multiple, expiresAfter: poll.expiresAfter),
         quoteOf: _rasqQuote ? _quoteOf!.id : null,
       );
       ref.invalidate(rasqAccountPageProvider(me.handle));
@@ -1686,15 +1767,16 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   }
 
   /// チャイルドセーフ (D-307): 見守りの制限(DM / メディア / 1 日の数 / 本文の強さ)。止めたら理由を出し、当たった語を選んで印を付ける。
-  /// [sentTexts] = 実際に送る本文(正規表現の加工のあと、送り先ごと。[20])。
+  /// 判定するのは確定した送る内容 [plan] (#19)。実際に送る本文(正規表現の加工のあと、送り先ごと。[20])も。
   /// 本文の判定(強い言葉 / 話題)で止めたときは、**種類だけ**を Central へ知らせる (D-462)。
-  Future<bool> _childSafeAllows({required bool dm, bool direct = false, List<String> sentTexts = const []}) async {
-    final verdict = await childComposeVerdict(ref, text: _text.text, dm: dm, direct: direct, media: _files.isNotEmpty, sentTexts: sentTexts);
+  /// 印は、入力欄が判定した本文のままのときだけ付ける。
+  Future<bool> _childSafeAllows(_SendPlan plan, {required bool dm, bool direct = false}) async {
+    final verdict = await childComposeVerdict(ref, text: plan.input, dm: dm, direct: direct, media: plan.files.isNotEmpty, sentTexts: plan.sentTexts);
     if (verdict == null) return true;
     if (verdict.type case final type?) reportComposeTrips(ref, [(type: type, mode: composeModeChildSafe)], surface: _surface);
     if (!mounted) return false;
     setState(() => _error = verdict.message);
-    if (verdict.hasRange && verdict.end! <= _text.text.length) {
+    if (verdict.hasRange && _text.text == plan.input && verdict.end! <= _text.text.length) {
       _text.selection = TextSelection(baseOffset: verdict.start!, extentOffset: verdict.end!);
       _focus.requestFocus();
     }
@@ -1716,13 +1798,14 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   ///   (見守りなら「止めた数」も数える)。本文・画像はどこにも送らない。
   /// - `warn` だけなら、送ってよいか聞く(知らせない)。
   /// - 端末で判定できない種類(画像)は、見守りの `block` なら止める側、ほかは通す側([evaluateCompose])。
-  Future<bool> _composePolicyAllows({List<String> sentTexts = const []}) async {
+  /// - 判定するのは確定した送る内容 [plan] (#19)。
+  Future<bool> _composePolicyAllows(_SendPlan plan) async {
     final policy = await currentComposePolicy(ref);
     if (!mounted) return false;
     if (policy.rules.isEmpty) return true;
     final verdict = evaluateCompose(
       policy,
-      ComposeInput(texts: [_text.text, if (_cwOn) _cw.text, ...?_poll?.texts, ...sentTexts], mediaCount: _files.length),
+      ComposeInput(texts: [plan.input, ?plan.cwInput, ...?plan.poll?.choices, ...plan.sentTexts], mediaCount: plan.files.length),
     );
     final first = verdict.first;
     if (first == null) return true;
@@ -1731,7 +1814,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       if (verdict.blocks.any((t) => t.mode == composeModeChildSafe)) await childComposeBlocked(ref);
       if (!mounted) return false;
       setState(() => _error = first.message);
-      if (first.hasRange && first.end! <= _text.text.length) {
+      if (first.hasRange && _text.text == plan.input && first.end! <= _text.text.length) {
         _text.selection = TextSelection(baseOffset: first.start!, extentOffset: first.end!);
         _focus.requestFocus();
       }
@@ -1771,6 +1854,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     if (_rasqTarget) return _sendRasq();
     final session = _session;
     if (session == null) return;
+    // 本体の投稿先と、代わりのフォーマット (D-126) は押したときのもの(待ちのあいだのサジェストの打ち直しで変わらない。#19)。
+    final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
+    final fb = (_postAs == null && _suggestedPostAs != null) ? _suggestedFallback : null;
     // 連動投稿の計画 (D-129): confirm の届け方があれば**送信前(busy に入る
     // 前)に**チェック済み状態のシートで確認する(閉じたら送信自体を中止)。
     var multiPlan = await _buildMultiPlan();
@@ -1783,28 +1869,21 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       removedByConfirm = approved.$2;
     }
     if (!mounted) return;
+    // 送る内容を確定する (セキュリティ確認 2026-10-21 の #19): ここから先は入力欄 / 注釈 / 投票 / 公開範囲 / 添付を読まない。
+    // 判定するのも送るのもこの値(アップロード / 検閲の待ちのあいだに書き換えても、判定し直していないものは送らない)。
+    final plan = _freezePlan(primaryLabel: primaryLabel, fallback: fb, linked: multiPlan, regexRules: regexRules);
     // アカウントの処置 (D-151): 投稿 / メディア付き投稿 / DM が止まっていれば送らない。
     // 公開範囲がダイレクトになる返信も DM として([_sendsDirect]、[19])。
-    final sendsDirect = _sendsDirect;
     final sanctions = ref.read(rasqSanctionsProvider).value ?? RasqSanctions.none;
-    final blocked = (sendsDirect ? sanctions.blockedMessage('dm') : null) ?? sanctions.blockedMessage(_isDm ? 'dm' : 'post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
+    final blocked = (plan.direct ? sanctions.blockedMessage('dm') : null) ?? sanctions.blockedMessage(_isDm ? 'dm' : 'post') ?? (plan.files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
     if (blocked != null) {
       setState(() => _error = blocked);
       return;
     }
-    // 見守り ([20]): 判定するのは実際に送る本文。正規表現の加工 (D-130) のあとの本体と、連動先ごと(下書きにするだけのものは除く。
-    // 開いて送るときにまた判定する)。
-    final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
-    final sentTexts = regexRules.isEmpty
-        ? const <String>[]
-        : [
-            applyComposerRegex(_text.text.trim(), primaryLabel, regexRules),
-            for (final (s, _, delivery) in multiPlan)
-              if (delivery != 'draft') applyComposerRegex(_text.text.trim(), '${s.account}', regexRules),
-          ];
-    if (!await _childSafeAllows(dm: _isDm, direct: sendsDirect, sentTexts: sentTexts)) return;
+    // 見守り ([20]): 判定するのは実際に送る本文。正規表現の加工 (D-130) のあとの本体と、連動先ごと([_SendPlan.sentTexts])。
+    if (!await _childSafeAllows(plan, dm: _isDm, direct: plan.direct)) return;
     // 見守り / 制限の閾値 (D-462): 端末で判定して止める(本文は Central に送らない)。
-    if (!await _composePolicyAllows(sentTexts: sentTexts)) return;
+    if (!await _composePolicyAllows(plan)) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -1819,15 +1898,15 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         }
       }
       final ids = <String>[];
-      for (var i = 0; i < _files.length; i++) {
-        final f = _files[i];
-        setState(() => _progress = appL10n.composeUploading(i + 1, _files.length));
-        f.uploaded ??= await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: f.sensitive);
+      for (var i = 0; i < plan.files.length; i++) {
+        final (f, sensitive) = plan.files[i];
+        setState(() => _progress = appL10n.composeUploading(i + 1, plan.files.length));
+        f.uploaded ??= await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: sensitive);
         ids.add(f.uploaded!.id);
       }
       setState(() => _progress = appL10n.composeSending);
-      // 投稿オプション (D-045: FOW ヘッダーの公開設定/連合/リアクション受け入れ)。
-      final opts = ref.read(composeOptionsProvider);
+      // 投稿オプション (D-045: FOW ヘッダーの公開設定/連合/リアクション受け入れ)。確定したときのもの (#19)。
+      final opts = plan.opts;
       final replyTo = _replyTo;
       final quoteOf = switch (widget.target) { ComposeQuote(of: final p) => p, _ => null };
       final parent = replyTo ?? quoteOf;
@@ -1839,8 +1918,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       // 代わりのフォーマットで投稿 (D-126): サジェストがフォールバック経由の
       // アカウントで送るとき、指定のフォーマット(注釈/フォロワー限定/
       // 連合なし)を下書きに適用する。
-      final fb = (_postAs == null && _suggestedPostAs != null) ? _suggestedFallback : null;
-      String? cw = _cwOn && _cw.text.trim().isNotEmpty ? _cw.text.trim() : null;
+      final fb = plan.fallback;
+      String? cw = plan.cw;
       String? visibility = _isDm ? null : (direct ? 'specified' : opts.visibility);
       var localOnly = !_isDm && ((parent?.localOnly ?? false) || (!direct && opts.localOnly));
       switch (fb?['format']) {
@@ -1851,9 +1930,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         case 'localOnly':
           if (!_isDm) localOnly = true;
       }
-      // 投稿加工(正規表現, D-130): 本体の投稿先アカウントにも適用(送る前の判定 [20] と同じ本文)。
+      // 投稿加工(正規表現, D-130): 本体の投稿先アカウントにも適用(送る前の判定 [20] と同じ本文。確定したときに作ったもの)。
       final draft = NewPost(
-        text: applyComposerRegex(_text.text.trim(), primaryLabel, regexRules),
+        text: plan.primaryText,
         contentWarning: cw,
         replyToId: replyTo?.id,
         quoteOfId: quoteOf?.id,
@@ -1862,7 +1941,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         reactionAcceptance: (_isDm || direct) ? null : opts.reactionAcceptance,
         directToIds: direct ? {replyTo!.author.id, ...replyTo.directToIds}.where((id) => id != myId).toList() : const [],
         mediaIds: ids,
-        poll: _poll == null ? null : NewPoll(choices: _poll!.texts, multiple: _poll!.multiple, expiresAfter: _poll!.expiresAfter),
+        poll: plan.poll,
       );
       // 知らせ付き (契約 v0.25、D-500): 投稿はできたが利用者に知らせたいこと(引用の代わりに URL を付けた等)。
       final sent = switch (widget.target) {
@@ -1877,19 +1956,19 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       final talkedTo = replyTo ?? quoteOf;
       if (talkedTo != null) ref.read(accountAffinityProvider.notifier).record(Post(id: talkedTo.id, account: session.account, author: talkedTo.author, createdAt: talkedTo.createdAt, body: '')).ignore();
       // 複数選択モード (D-128/D-129): 計画の実行 — auto/confirm 済みは投稿、
-      // draft はそのアカウント宛の下書き。正規表現加工 (D-130) も各送信先に。
-      final (linkErrors, linkedPosted, linkedNotices) = await _executeMultiPlan(multiPlan, NewPost(
-        text: _text.text.trim(),
+      // draft はそのアカウント宛の下書き。正規表現加工 (D-130) も各送信先に(判定した加工のあとの本文をそのまま)。
+      final (linkErrors, linkedPosted, linkedNotices) = await _executeMultiPlan(plan.linked, NewPost(
+        text: plan.text,
         contentWarning: cw,
         visibility: visibility,
         localOnly: localOnly,
         reactionAcceptance: (_isDm || direct) ? null : opts.reactionAcceptance,
-        poll: _poll == null ? null : NewPoll(choices: _poll!.texts, multiple: _poll!.multiple, expiresAfter: _poll!.expiresAfter),
-      ), regexRules);
+        poll: plan.poll,
+      ), plan.files);
       // 学習ループ (D-132): 確定ラベル(手動切替は強く学習)+ 連動の正負例。
-      if (widget.target is ComposeNormal && _text.text.trim().isNotEmpty) {
+      if (widget.target is ComposeNormal && plan.text.isNotEmpty) {
         final corrected = _postAs != null && _suggestedPostAs != null && _postAs!.account.key != _suggestedPostAs!.account.key;
-        await _recordLearning(primaryLabel: primaryLabel, corrected: corrected, posted: linkedPosted, removed: removedByConfirm);
+        await _recordLearning(primaryLabel: primaryLabel, text: plan.text, corrected: corrected, posted: linkedPosted, removed: removedByConfirm);
       }
       if (_draftId != null) _drafts.clear(_draftId!); // 送信済み → 下書き破棄
       _skipDraftOnDispose = true;
@@ -2012,13 +2091,15 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     Row(children: [
                       Icon(Icons.visibility_outlined, size: 18, color: scheme.onSurfaceVariant),
                       const SizedBox(width: 6),
-                      Expanded(child: TextField(controller: _cw, decoration: InputDecoration(hintText: context.l10n.composeCwHint, isDense: true), style: RasqTypography.bodySmall)),
+                      Expanded(child: TextField(controller: _cw, readOnly: _busy, decoration: InputDecoration(hintText: context.l10n.composeCwHint, isDense: true), style: RasqTypography.bodySmall)),
                       RasqIconButton(icon: Icons.cancel, size: 20, tooltip: context.l10n.composeCwRemoveTooltip, onPressed: () => setState(() => _cwOn = false)),
                     ]),
                   TextField(
                     key: const ValueKey('composer.input'),
                     controller: _text,
                     focusNode: _focus,
+                    // 送っているあいだは書き換えられない(送るのは確定した内容だけ。#19)。
+                    readOnly: _busy,
                     // 常駐 stick は縮小状態で置かれる(タップで展開)。
                     autofocus: !widget.resident,
                     // stick の折りたたみ時は 1 行の書き込みバー(展開で伸びる)。
