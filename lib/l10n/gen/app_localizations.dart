@@ -19762,6 +19762,12 @@ abstract class AppLocalizations {
   /// **'登録の審査'**
   String get sessionSanctionCategoryAdmission;
 
+  /// 処置の分類 admission(入場の審査で断られた、D-548)の本人向けの説明。処置の案内と解除申請のシートに出る
+  ///
+  /// In ja, this message translates to:
+  /// **'登録の審査で通らなかったため、RASQ の公開の機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます'**
+  String get sessionSanctionCategoryAdmissionHelp;
+
   /// アカウントの処置が無いとき
   ///
   /// In ja, this message translates to:

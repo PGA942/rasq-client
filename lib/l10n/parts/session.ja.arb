@@ -39,6 +39,8 @@
   "@sessionSanctionPermanent": {"description": "アカウントの処置の段階: 恒久的な凍結"},
   "sessionSanctionCategoryAdmission": "登録の審査",
   "@sessionSanctionCategoryAdmission": {"description": "アカウントの処置の分類: 入場の審査で断られた(D-548)。解除申請のボタンなどに出る"},
+  "sessionSanctionCategoryAdmissionHelp": "登録の審査で通らなかったため、RASQ の公開の機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます",
+  "@sessionSanctionCategoryAdmissionHelp": {"description": "処置の分類 admission(入場の審査で断られた、D-548)の本人向けの説明。処置の案内と解除申請のシートに出る"},
   "sessionSanctionNone": "制限なし",
   "@sessionSanctionNone": {"description": "アカウントの処置が無いとき"},
   "sessionSanctionBlocked": "アカウントの処置により {feature} は利用できません。",

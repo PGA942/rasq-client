@@ -12538,6 +12538,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionSanctionCategoryAdmission => 'Registration review';
 
   @override
+  String get sessionSanctionCategoryAdmissionHelp =>
+      'Your registration didn\'t pass review, so RASQ\'s public features aren\'t available. If you think this is a mistake, you can submit an appeal';
+
+  @override
   String get sessionSanctionNone => 'No restrictions';
 
   @override

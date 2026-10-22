@@ -72,7 +72,7 @@ Future<void> showSanctionAppealSheet(BuildContext context, WidgetRef ref, RasqSa
       return ListView(shrinkWrap: true, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Text('${entry.categoryLabel} / ${entry.level}${entry.note == null ? '' : ' — ${entry.note}'}\n${rasqDetail(ctx, ctx.l10n.shellAccountAppealCaption, ctx.l10n.shellAccountAppealCaptionDetail)}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text('${entry.categoryLabel} / ${entry.level}${entry.note == null ? '' : ' — ${entry.note}'}${entry.categoryHelp == null ? '' : '\n${entry.categoryHelp}'}\n${rasqDetail(ctx, ctx.l10n.shellAccountAppealCaption, ctx.l10n.shellAccountAppealCaptionDetail)}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
         ),
         Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqInput(controller: text, hintText: ctx.l10n.shellAccountAppealReasonHint, maxLines: 4, autofocus: true)),
         Padding(
@@ -301,6 +301,8 @@ class RasqAccountPanel extends ConsumerWidget {
                 if (sanctions.restrictedFeatures.isNotEmpty)
                   Text(context.l10n.shellAccountSanctionRestrictedFeatures(sanctions.restrictedFeatures.map((f) => RasqSanctions.featureLabel(f) ?? f).join(' / ')), style: RasqTypography.caption),
                 if (sanctions.moderated) Text(context.l10n.shellAccountSanctionReviewDelay(sanctions.reviewDelaySeconds), style: RasqTypography.caption),
+                // 分類の説明(登録の審査で通らなかった など、D-548)。
+                for (final h in {for (final e in sanctions.entries) ?e.categoryHelp}) Text(h, key: const ValueKey('sanction.categoryHelp'), style: RasqTypography.caption),
                 for (final n in sanctions.notes) Text(context.l10n.shellAccountSanctionStaffNote(n), style: RasqTypography.caption),
                 Text(sanctions.expiresAt == null ? context.l10n.shellAccountSanctionNoExpiry : context.l10n.shellAccountSanctionExpiry('${sanctions.expiresAt!.toLocal()}'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 // 解除申請 (D-152): 処置ごとに 1 つ。未処理があれば「申請中」。

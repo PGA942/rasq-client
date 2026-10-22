@@ -20,6 +20,7 @@
   "sessionSanctionSevere": "Severe restriction (features suspended)",
   "sessionSanctionPermanent": "Permanent suspension",
   "sessionSanctionCategoryAdmission": "Registration review",
+  "sessionSanctionCategoryAdmissionHelp": "Your registration didn't pass review, so RASQ's public features aren't available. If you think this is a mistake, you can submit an appeal",
   "sessionSanctionNone": "No restrictions",
   "sessionSanctionBlocked": "{feature} is unavailable due to an action on your account.",
   "sessionSanctionBlockedUntil": "{feature} is unavailable due to an action on your account (until {until}).",

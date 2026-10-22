@@ -12089,6 +12089,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sessionSanctionCategoryAdmission => '등록 심사';
 
   @override
+  String get sessionSanctionCategoryAdmissionHelp =>
+      '등록 심사를 통과하지 못해 RASQ의 공개 기능을 사용할 수 없습니다. 이의가 있으면 해제 신청(이의 제기)을 할 수 있습니다';
+
+  @override
   String get sessionSanctionNone => '제한 없음';
 
   @override

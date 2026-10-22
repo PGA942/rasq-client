@@ -20,6 +20,7 @@
   "sessionSanctionSevere": "重度限制（功能停用）",
   "sessionSanctionPermanent": "永久冻结",
   "sessionSanctionCategoryAdmission": "注册审核",
+  "sessionSanctionCategoryAdmissionHelp": "由于注册未通过审核，无法使用 RASQ 的公开功能。如有异议，可以提出解除申请（申诉）",
   "sessionSanctionNone": "无限制",
   "sessionSanctionBlocked": "由于账号处置，{feature}无法使用。",
   "sessionSanctionBlockedUntil": "由于账号处置，{feature}无法使用（至 {until}）。",

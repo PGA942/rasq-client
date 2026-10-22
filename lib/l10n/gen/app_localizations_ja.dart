@@ -12049,6 +12049,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sessionSanctionCategoryAdmission => '登録の審査';
 
   @override
+  String get sessionSanctionCategoryAdmissionHelp =>
+      '登録の審査で通らなかったため、RASQ の公開の機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます';
+
+  @override
   String get sessionSanctionNone => '制限なし';
 
   @override

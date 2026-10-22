@@ -11921,6 +11921,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sessionSanctionCategoryAdmission => '注册审核';
 
   @override
+  String get sessionSanctionCategoryAdmissionHelp =>
+      '由于注册未通过审核，无法使用 RASQ 的公开功能。如有异议，可以提出解除申请（申诉）';
+
+  @override
   String get sessionSanctionNone => '无限制';
 
   @override
@@ -31835,6 +31839,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sessionSanctionCategoryAdmission => '註冊審核';
+
+  @override
+  String get sessionSanctionCategoryAdmissionHelp =>
+      '由於註冊未通過審核，無法使用 RASQ 的公開功能。如有異議，可以提出解除申請（申訴）';
 
   @override
   String get sessionSanctionNone => '無限制';

@@ -3273,6 +3273,7 @@
   "sessionSanctionSevere": "중대한 제한(기능 정지)",
   "sessionSanctionPermanent": "영구 정지",
   "sessionSanctionCategoryAdmission": "등록 심사",
+  "sessionSanctionCategoryAdmissionHelp": "등록 심사를 통과하지 못해 RASQ의 공개 기능을 사용할 수 없습니다. 이의가 있으면 해제 신청(이의 제기)을 할 수 있습니다",
   "sessionSanctionNone": "제한 없음",
   "sessionSanctionBlocked": "계정 조치로 인해 {feature}을(를) 이용할 수 없습니다.",
   "sessionSanctionBlockedUntil": "계정 조치로 인해 {feature}을(를) 이용할 수 없습니다({until}까지).",
