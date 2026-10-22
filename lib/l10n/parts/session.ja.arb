@@ -37,6 +37,8 @@
   "@sessionSanctionSevere": {"description": "アカウントの処置の段階: 重い制限(機能が止まる)"},
   "sessionSanctionPermanent": "恒久的な凍結",
   "@sessionSanctionPermanent": {"description": "アカウントの処置の段階: 恒久的な凍結"},
+  "sessionSanctionCategoryAdmission": "登録の審査",
+  "@sessionSanctionCategoryAdmission": {"description": "アカウントの処置の分類: 入場の審査で断られた(D-548)。解除申請のボタンなどに出る"},
   "sessionSanctionNone": "制限なし",
   "@sessionSanctionNone": {"description": "アカウントの処置が無いとき"},
   "sessionSanctionBlocked": "アカウントの処置により {feature} は利用できません。",

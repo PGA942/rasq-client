@@ -66,6 +66,10 @@
       }
     }
   },
+  "admissionCodeNotWaitlisted": "いまは招待コードを入れる必要はありません",
+  "@admissionCodeNotWaitlisted": {
+    "description": "招待コードを送ったが、もう招待コード待ちではなかった(409 admission_not_waitlisted)"
+  },
   "adsShowLess": "表示頻度を下げる",
   "@adsShowLess": {
     "description": "サーバーの広告の「…」のメニューの項目。この広告を出す回数を減らす"
@@ -12650,6 +12654,10 @@
   "sessionSanctionPermanent": "恒久的な凍結",
   "@sessionSanctionPermanent": {
     "description": "アカウントの処置の段階: 恒久的な凍結"
+  },
+  "sessionSanctionCategoryAdmission": "登録の審査",
+  "@sessionSanctionCategoryAdmission": {
+    "description": "アカウントの処置の分類: 入場の審査で断られた(D-548)。解除申請のボタンなどに出る"
   },
   "sessionSanctionNone": "制限なし",
   "@sessionSanctionNone": {

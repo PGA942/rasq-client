@@ -58,6 +58,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get admissionCodeNotWaitlisted => '지금은 초대 코드를 입력할 필요가 없습니다';
+
+  @override
   String get adsShowLess => '덜 표시하기';
 
   @override
@@ -12081,6 +12084,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get sessionSanctionPermanent => '영구 정지';
+
+  @override
+  String get sessionSanctionCategoryAdmission => '등록 심사';
 
   @override
   String get sessionSanctionNone => '제한 없음';

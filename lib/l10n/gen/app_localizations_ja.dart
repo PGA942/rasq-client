@@ -57,6 +57,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get admissionCodeNotWaitlisted => 'いまは招待コードを入れる必要はありません';
+
+  @override
   String get adsShowLess => '表示頻度を下げる';
 
   @override
@@ -12041,6 +12044,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get sessionSanctionPermanent => '恒久的な凍結';
+
+  @override
+  String get sessionSanctionCategoryAdmission => '登録の審査';
 
   @override
   String get sessionSanctionNone => '制限なし';

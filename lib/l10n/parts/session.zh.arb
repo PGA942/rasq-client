@@ -19,6 +19,7 @@
   "sessionSanctionModerate": "中度限制（发言需审查延迟）",
   "sessionSanctionSevere": "重度限制（功能停用）",
   "sessionSanctionPermanent": "永久冻结",
+  "sessionSanctionCategoryAdmission": "注册审核",
   "sessionSanctionNone": "无限制",
   "sessionSanctionBlocked": "由于账号处置，{feature}无法使用。",
   "sessionSanctionBlockedUntil": "由于账号处置，{feature}无法使用（至 {until}）。",

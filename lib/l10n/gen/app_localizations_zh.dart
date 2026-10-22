@@ -56,6 +56,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get admissionCodeNotWaitlisted => '目前无需输入邀请码';
+
+  @override
   String get adsShowLess => '减少显示频率';
 
   @override
@@ -11915,6 +11918,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sessionSanctionPermanent => '永久冻结';
 
   @override
+  String get sessionSanctionCategoryAdmission => '注册审核';
+
+  @override
   String get sessionSanctionNone => '无限制';
 
   @override
@@ -19964,6 +19970,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String admissionCodeFailed(String error) {
     return '無法送出邀請碼：$error';
   }
+
+  @override
+  String get admissionCodeNotWaitlisted => '目前無需輸入邀請碼';
 
   @override
   String get adsShowLess => '降低顯示頻率';
@@ -31823,6 +31832,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sessionSanctionPermanent => '永久凍結';
+
+  @override
+  String get sessionSanctionCategoryAdmission => '註冊審核';
 
   @override
   String get sessionSanctionNone => '無限制';

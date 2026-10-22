@@ -20,6 +20,9 @@ class RasqSanctionEntry {
   final String category;
   final String level;
   final String? note;
+
+  /// 分類の表示の名前(表示の言語)。名前を持たない分類は、サーバーの語のまま。
+  String get categoryLabel => RasqSanctions.categoryLabel(category);
   final DateTime? expiresAt;
 
   /// 直近の解除申請: open | accepted | rejected | null。
@@ -74,6 +77,13 @@ class RasqSanctions {
     final f = featureLabel(feature) ?? feature;
     return expiresAt == null ? appL10n.sessionSanctionBlocked(f) : appL10n.sessionSanctionBlockedUntil(f, _fmt(expiresAt!));
   }
+
+  /// 処置の分類(サーバーの `category`)→ 表示の名前。`admission` = 入場の審査で断られた (D-548 / Central S-120 追記3)。
+  /// ほかの分類は今まで通りサーバーの語のまま出す。
+  static String categoryLabel(String category) => switch (category) {
+        'admission' => appL10n.sessionSanctionCategoryAdmission,
+        _ => category,
+      };
 
   /// 機能の id(サーバーの `restrictedFeatures` の値)→ 表示の名前(表示の言語)。知らない id は null。
   static String? featureLabel(String feature) {

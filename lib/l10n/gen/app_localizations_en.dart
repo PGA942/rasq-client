@@ -62,6 +62,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get admissionCodeNotWaitlisted =>
+      'You don\'t need to enter an invite code right now';
+
+  @override
   String get adsShowLess => 'Show less often';
 
   @override
@@ -12529,6 +12533,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionSanctionPermanent => 'Permanent suspension';
+
+  @override
+  String get sessionSanctionCategoryAdmission => 'Registration review';
 
   @override
   String get sessionSanctionNone => 'No restrictions';

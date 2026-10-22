@@ -13,5 +13,6 @@
   "admissionCodeExpired": "이 초대 코드는 기한이 지났습니다",
   "admissionCodeUsedUp": "이 초대 코드는 사용 가능 인원에 도달했습니다",
   "admissionCodeRevoked": "이 초대 코드는 더 이상 사용할 수 없습니다",
-  "admissionCodeFailed": "초대 코드를 보내지 못했습니다: {error}"
+  "admissionCodeFailed": "초대 코드를 보내지 못했습니다: {error}",
+  "admissionCodeNotWaitlisted": "지금은 초대 코드를 입력할 필요가 없습니다"
 }

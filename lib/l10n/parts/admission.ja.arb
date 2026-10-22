@@ -26,5 +26,7 @@
   "admissionCodeRevoked": "この招待コードは使えなくなっています",
   "@admissionCodeRevoked": {"description": "招待コードが効かない: 止められた (reason = revoked)"},
   "admissionCodeFailed": "招待コードを送れませんでした: {error}",
-  "@admissionCodeFailed": {"description": "招待コードを送れなかった(つながらない など)。error はサーバーの文", "placeholders": {"error": {"type": "String"}}}
+  "@admissionCodeFailed": {"description": "招待コードを送れなかった(つながらない など)。error はサーバーの文", "placeholders": {"error": {"type": "String"}}},
+  "admissionCodeNotWaitlisted": "いまは招待コードを入れる必要はありません",
+  "@admissionCodeNotWaitlisted": {"description": "招待コードを送ったが、もう招待コード待ちではなかった(409 admission_not_waitlisted)"}
 }

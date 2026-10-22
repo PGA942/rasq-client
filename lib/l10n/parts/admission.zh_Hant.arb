@@ -13,5 +13,6 @@
   "admissionCodeExpired": "此邀請碼已過期",
   "admissionCodeUsedUp": "此邀請碼的可用人數已滿",
   "admissionCodeRevoked": "此邀請碼已停用",
-  "admissionCodeFailed": "無法送出邀請碼：{error}"
+  "admissionCodeFailed": "無法送出邀請碼：{error}",
+  "admissionCodeNotWaitlisted": "目前無需輸入邀請碼"
 }

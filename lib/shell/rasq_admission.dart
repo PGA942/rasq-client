@@ -140,6 +140,9 @@ enum RasqInviteProblem {
 /// 招待コードが効かなかった(`400 admission_invite_invalid`)。
 bool isAdmissionInviteInvalid(Object e) => e is OrgateException && e.isReason('admission_invite_invalid');
 
+/// 招待コードを入れる場面でなかった(本人が `waitlisted` でない、`409 admission_not_waitlisted`)。
+bool isAdmissionNotWaitlisted(Object e) => e is OrgateException && e.isReason('admission_not_waitlisted');
+
 /// Central の利用者の口(`/api/v1/me/admission*`)。
 class RasqAdmissionApi {
   const RasqAdmissionApi(this._client);
@@ -147,7 +150,8 @@ class RasqAdmissionApi {
 
   Future<RasqAdmission> status() async => RasqAdmission.fromJson(await _client.getJson('/me/admission'));
 
-  /// 後から招待コードを入れる(`waitlisted` → `pending`)。効かなければ `400 admission_invite_invalid`。
+  /// 後から招待コードを入れる(`waitlisted` → `pending`)。効かなければ `400 admission_invite_invalid`、
+  /// `waitlisted` でなければ `409 admission_not_waitlisted`。
   Future<RasqAdmission> submitCode(String code) async => RasqAdmission.fromJson(await _client.postJson('/me/admission/code', {'code': code}));
 
   Future<({List<RasqInvite> items, int remaining})> invites() async {
@@ -294,6 +298,12 @@ class _RasqAdmissionCodeFieldState extends ConsumerState<RasqAdmissionCodeField>
       await ref.read(rasqAdmissionProvider.notifier).submitCode(code);
       messenger?.showSnackBar(SnackBar(content: Text(appL10n.admissionCodeAccepted)));
     } on OrgateException catch (e) {
+      if (isAdmissionNotWaitlisted(e)) {
+        // ほかの端末で入れた / 枠の戻しで審査待ちになった など: 状態を読み直す(欄は消える)。
+        messenger?.showSnackBar(SnackBar(content: Text(appL10n.admissionCodeNotWaitlisted)));
+        await ref.read(rasqAdmissionProvider.notifier).refresh();
+        return;
+      }
       if (mounted) setState(() => _error = isAdmissionInviteInvalid(e) ? RasqInviteProblem.of(e).message : appL10n.admissionCodeFailed(e.message));
     } finally {
       if (mounted) setState(() => _busy = false);

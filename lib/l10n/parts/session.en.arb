@@ -19,6 +19,7 @@
   "sessionSanctionModerate": "Moderate restriction (posts delayed for review)",
   "sessionSanctionSevere": "Severe restriction (features suspended)",
   "sessionSanctionPermanent": "Permanent suspension",
+  "sessionSanctionCategoryAdmission": "Registration review",
   "sessionSanctionNone": "No restrictions",
   "sessionSanctionBlocked": "{feature} is unavailable due to an action on your account.",
   "sessionSanctionBlockedUntil": "{feature} is unavailable due to an action on your account (until {until}).",

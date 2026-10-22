@@ -19,6 +19,7 @@
   "sessionSanctionModerate": "中度限制（發言需審查延遲）",
   "sessionSanctionSevere": "重度限制（功能停用）",
   "sessionSanctionPermanent": "永久凍結",
+  "sessionSanctionCategoryAdmission": "註冊審核",
   "sessionSanctionNone": "無限制",
   "sessionSanctionBlocked": "由於帳號處置，{feature}無法使用。",
   "sessionSanctionBlockedUntil": "由於帳號處置，{feature}無法使用（至 {until}）。",

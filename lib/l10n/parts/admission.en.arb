@@ -13,5 +13,6 @@
   "admissionCodeExpired": "This invite code has expired",
   "admissionCodeUsedUp": "This invite code has already been used by as many people as it allows",
   "admissionCodeRevoked": "This invite code is no longer valid",
-  "admissionCodeFailed": "Couldn't submit the invite code: {error}"
+  "admissionCodeFailed": "Couldn't submit the invite code: {error}",
+  "admissionCodeNotWaitlisted": "You don't need to enter an invite code right now"
 }

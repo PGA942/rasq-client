@@ -187,6 +187,12 @@ abstract class AppLocalizations {
   /// **'招待コードを送れませんでした: {error}'**
   String admissionCodeFailed(String error);
 
+  /// 招待コードを送ったが、もう招待コード待ちではなかった(409 admission_not_waitlisted)
+  ///
+  /// In ja, this message translates to:
+  /// **'いまは招待コードを入れる必要はありません'**
+  String get admissionCodeNotWaitlisted;
+
   /// サーバーの広告の「…」のメニューの項目。この広告を出す回数を減らす
   ///
   /// In ja, this message translates to:
@@ -19749,6 +19755,12 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'恒久的な凍結'**
   String get sessionSanctionPermanent;
+
+  /// アカウントの処置の分類: 入場の審査で断られた(D-548)。解除申請のボタンなどに出る
+  ///
+  /// In ja, this message translates to:
+  /// **'登録の審査'**
+  String get sessionSanctionCategoryAdmission;
 
   /// アカウントの処置が無いとき
   ///

@@ -15,6 +15,7 @@ import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/settings/rasq_invites_screen.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart' show astellStreamErrorText;
 import 'package:rasq_client/mock/mock_data.dart';
+import 'package:rasq_client/session/sanctions.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/rasq_admission.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -45,6 +46,8 @@ void main() {
         case 'POST /me/admission/code':
           final code = (jsonDecode(req.body) as Map)['code'] as String?;
           a.lastCode = code;
+          // 追記2: 本人が waitlisted でなければ 409。
+          if (a.state != 'waitlisted') return json({'error': {'code': 'admission_not_waitlisted', 'message': 'not waitlisted'}}, 409);
           final reason = a.badCodes[code];
           if (reason != null) return json({'error': {'code': 'admission_invite_invalid', 'message': 'invite code is not valid', 'reason': reason}}, 400);
           a.state = 'pending';
@@ -142,6 +145,12 @@ void main() {
       expect(c.read(rasqAdmissionProvider).value!.state, RasqAdmissionState.waitlisted);
     });
 
+    test('処置の分類 admission(断られた、追記3)は名前で出す。ほかの分類はサーバーの語のまま', () {
+      expect(RasqSanctions.categoryLabel('admission'), '登録の審査');
+      expect(RasqSanctionEntry.fromJson({'id': 's1', 'category': 'admission', 'level': 'permanent'}).categoryLabel, '登録の審査');
+      expect(RasqSanctions.categoryLabel('spam'), 'spam');
+    });
+
     test('審査の無い(古い)サーバー: 状態が読めなければ何も出さない', () async {
       final f = fake()..a.missing = true;
       final c = ProviderContainer(overrides: overrides(f.mock, storage()));
@@ -211,6 +220,24 @@ void main() {
       expect(c.read(rasqAdmissionProvider).value!.state, RasqAdmissionState.pending);
       expect(find.byKey(const ValueKey('admission.code')), findsNothing);
       expect(find.text('招待コードを受け付けました。審査が通るまでお待ちください'), findsOneWidget);
+      expect(find.text(pendingText), findsOneWidget);
+    });
+
+    testWidgets('招待コード待ちでなくなっていたら(409 admission_not_waitlisted)、知らせて状態を読み直す', (tester) async {
+      final f = fake()
+        ..a.state = 'waitlisted'
+        ..a.waitReason = 'invite';
+      final c = await pump(tester, f.mock);
+      expect(find.byKey(const ValueKey('admission.code')), findsOneWidget);
+      // ほかの端末でコードを入れて、もう審査待ち。
+      f.a.state = 'pending';
+      f.a.waitReason = null;
+      await tester.enterText(find.byKey(const ValueKey('admission.code')), 'K7PQ2MXR9A');
+      await tester.tap(find.byKey(const ValueKey('admission.code.submit')));
+      await tester.pumpAndSettle();
+      expect(find.text('いまは招待コードを入れる必要はありません'), findsOneWidget);
+      expect(c.read(rasqAdmissionProvider).value!.state, RasqAdmissionState.pending);
+      expect(find.byKey(const ValueKey('admission.code')), findsNothing);
       expect(find.text(pendingText), findsOneWidget);
     });
   });

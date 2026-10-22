@@ -19,6 +19,7 @@
   "sessionSanctionModerate": "중간 수준의 제한(발언 검열 지연)",
   "sessionSanctionSevere": "중대한 제한(기능 정지)",
   "sessionSanctionPermanent": "영구 정지",
+  "sessionSanctionCategoryAdmission": "등록 심사",
   "sessionSanctionNone": "제한 없음",
   "sessionSanctionBlocked": "계정 조치로 인해 {feature}을(를) 이용할 수 없습니다.",
   "sessionSanctionBlockedUntil": "계정 조치로 인해 {feature}을(를) 이용할 수 없습니다({until}까지).",

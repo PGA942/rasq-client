@@ -72,7 +72,7 @@ Future<void> showSanctionAppealSheet(BuildContext context, WidgetRef ref, RasqSa
       return ListView(shrinkWrap: true, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Text('${entry.category} / ${entry.level}${entry.note == null ? '' : ' — ${entry.note}'}\n${rasqDetail(ctx, ctx.l10n.shellAccountAppealCaption, ctx.l10n.shellAccountAppealCaptionDetail)}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text('${entry.categoryLabel} / ${entry.level}${entry.note == null ? '' : ' — ${entry.note}'}\n${rasqDetail(ctx, ctx.l10n.shellAccountAppealCaption, ctx.l10n.shellAccountAppealCaptionDetail)}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
         ),
         Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqInput(controller: text, hintText: ctx.l10n.shellAccountAppealReasonHint, maxLines: 4, autofocus: true)),
         Padding(
@@ -309,9 +309,9 @@ class RasqAccountPanel extends ConsumerWidget {
                     e.canAppeal
                         ? OutlinedButton(
                             onPressed: () => showSanctionAppealSheet(context, ref, e),
-                            child: Text(context.l10n.shellAccountSanctionAppealButton(e.category, e.level), style: RasqTypography.caption),
+                            child: Text(context.l10n.shellAccountSanctionAppealButton(e.categoryLabel, e.level), style: RasqTypography.caption),
                           )
-                        : RasqPill(label: context.l10n.shellAccountSanctionAppealPending(e.category), color: RasqColors.sub, textColor: Colors.white),
+                        : RasqPill(label: context.l10n.shellAccountSanctionAppealPending(e.categoryLabel), color: RasqColors.sub, textColor: Colors.white),
                 ]),
               ]),
             ),
