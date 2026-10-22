@@ -37,6 +37,7 @@ import '../features/settings/emom_threshold_screen.dart';
 import '../features/settings/legal_screen.dart';
 import '../features/settings/account_security_screen.dart';
 import '../features/settings/notify_token_screen.dart';
+import '../features/settings/rasq_invites_screen.dart';
 import '../features/settings/mute_block_screen.dart';
 import '../features/settings/settings_dsl.dart';
 import '../features/settings/settings_section_screen.dart';
@@ -461,6 +462,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'rasq-verify/:key', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqSnsVerifyScreen(accountKey: s.pathParameters['key']!)),
             GoRoute(path: 'rasq-keybase', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RasqKeybaseScreen()),
             GoRoute(path: 'security', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountSecurityScreen()),
+            // 招待コード (D-548): 通った利用者が出す。
+            GoRoute(path: 'invites', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RasqInvitesScreen()),
             GoRoute(path: 'account-login', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountLoginScreen()),
             // パスワードの再設定 (D-419)。`?email=` = ログインの画面で入れていたメール。閉じるとメールを返す。
             GoRoute(path: 'account-reset', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => AccountResetScreen(initialEmail: s.uri.queryParameters['email'])),

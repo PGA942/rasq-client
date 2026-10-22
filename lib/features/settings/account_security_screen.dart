@@ -16,6 +16,7 @@ import '../onboarding/rasq_register_screen.dart' show rasqPasswordMinChars, rasq
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../../session/rasq_account_logout.dart';
 import '../../session/sns_share.dart' show SnsShareStore, snsShareProvider;
+import '../../shell/rasq_admission.dart' show rasqAdmissionProvider;
 import 'sns_share_section.dart';
 
 /// この端末の呼び名(ログイン中の端末の一覧に出る)。
@@ -359,6 +360,10 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
 
         // ── SNS のアクセストークンの共有 (D-319) ──
         const SnsShareSection(),
+
+        // ── 招待コード (D-548): 通った利用者がコードを出せる設定のときだけ ──
+        if (ref.watch(rasqAdmissionProvider).value?.canInvite ?? false)
+          RasqListTile(key: const ValueKey('security.invites'), title: l.settingsInvitesTitle, subtitle: l.settingsInvitesEntrySubtitle, onTap: () => context.push('${Routes.settings}/invites')),
 
         // ── 確認コードの入力(メールを外す / 削除)──
         if (_pending == ConfirmAction.emailRemove || _pending == ConfirmAction.accountDelete) ...[
