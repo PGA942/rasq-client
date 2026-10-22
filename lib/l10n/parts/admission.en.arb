@@ -1,0 +1,17 @@
+{
+  "@@locale": "en",
+  "admissionBannerText": "Your account is under review. You can keep using your own SNS accounts as usual. Public features become available once the review passes",
+  "admissionRejectedMessage": "Registration of this RASQ account was not approved. Public features are not available",
+  "admissionBannerClose": "Close",
+  "admissionWaitCapacity": "Registration is full right now, so you are waiting your turn",
+  "admissionWaitCapacityPosition": "Registration is full right now, so you are waiting your turn (about #{position})",
+  "admissionWaitInvite": "Enter an invite code to move on to review",
+  "admissionCodeLabel": "Invite code",
+  "admissionCodeSubmit": "Submit",
+  "admissionCodeAccepted": "Invite code accepted. Please wait for the review to pass",
+  "admissionCodeUnknown": "This invite code wasn't found. Please check what you entered",
+  "admissionCodeExpired": "This invite code has expired",
+  "admissionCodeUsedUp": "This invite code has already been used by as many people as it allows",
+  "admissionCodeRevoked": "This invite code is no longer valid",
+  "admissionCodeFailed": "Couldn't submit the invite code: {error}"
+}

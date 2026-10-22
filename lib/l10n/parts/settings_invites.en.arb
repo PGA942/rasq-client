@@ -1,0 +1,22 @@
+{
+  "@@locale": "en",
+  "settingsInvitesTitle": "Invite codes",
+  "settingsInvitesEntrySubtitle": "Issue codes that invite people to RASQ",
+  "settingsInvitesCaption": "People you give a code to can enter it when creating their RASQ account to move on to review. A code is shown only when you issue it, so copy it and pass it on right away",
+  "settingsInvitesRemaining": "{count, plural, =1{You can issue 1 more} other{You can issue {count} more}}",
+  "settingsInvitesIssueButton": "Issue an invite code",
+  "settingsInvitesIssueFailed": "Couldn't issue an invite code: {error}",
+  "settingsInvitesIssuedTitle": "Invite code issued",
+  "settingsInvitesIssuedText": "Up to {uses} people can use it (until {date}). Once you close this screen, the code won't be shown again",
+  "settingsInvitesCopyCode": "Copy code",
+  "settingsInvitesCopied": "Invite code copied",
+  "settingsInvitesCopyMessage": "Copy invite message",
+  "settingsInvitesShareMessage": "You're invited to RASQ. Enter the invite code {code} when you create your account",
+  "settingsInvitesMessageCopied": "Invite message copied",
+  "settingsInvitesIssuedHeader": "Issued codes",
+  "settingsInvitesNone": "You haven't issued any yet",
+  "settingsInvitesItemTitle": "{hint}…",
+  "settingsInvitesItemActive": "{used} of {uses} used · until {date}",
+  "settingsInvitesItemExpired": "{used} of {uses} used · expired",
+  "settingsInvitesItemRevoked": "{used} of {uses} used · revoked"
+}

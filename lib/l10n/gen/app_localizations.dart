@@ -103,6 +103,90 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// 入場の審査を通っていないときの帯の文。止められた機能を使おうとしたとき(403 admission_pending)の案内にも使う
+  ///
+  /// In ja, this message translates to:
+  /// **'審査中です。自分の SNS はこのまま使えます。公開の機能は審査が通ると使えます'**
+  String get admissionBannerText;
+
+  /// 入場の審査で断られたアカウントが、止められた機能を使おうとしたときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'この RASQ アカウントの登録は承認されませんでした。公開の機能は使えません'**
+  String get admissionRejectedMessage;
+
+  /// ホームの審査の帯を閉じるボタン(この起動のあいだ)
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get admissionBannerClose;
+
+  /// 枠待ち(人数の枠が埋まっている)のときの帯の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'登録の枠が埋まっているため、順番を待っています'**
+  String get admissionWaitCapacity;
+
+  /// 枠待ちの帯の見出し。position は順番の目安
+  ///
+  /// In ja, this message translates to:
+  /// **'登録の枠が埋まっているため、順番を待っています(目安: {position} 番目)'**
+  String admissionWaitCapacityPosition(int position);
+
+  /// 招待コード待ちのときの帯の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードを入れると審査に進みます'**
+  String get admissionWaitInvite;
+
+  /// 帯の中の、招待コードを入れる欄
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コード'**
+  String get admissionCodeLabel;
+
+  /// 招待コードを送るボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'送る'**
+  String get admissionCodeSubmit;
+
+  /// 招待コードを受け付けたときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードを受け付けました。審査が通るまでお待ちください'**
+  String get admissionCodeAccepted;
+
+  /// 招待コードが効かない: 見つからない (reason = unknown)
+  ///
+  /// In ja, this message translates to:
+  /// **'この招待コードは見つかりません。入力を確かめてください'**
+  String get admissionCodeUnknown;
+
+  /// 招待コードが効かない: 期限切れ (reason = expired)
+  ///
+  /// In ja, this message translates to:
+  /// **'この招待コードは期限が切れています'**
+  String get admissionCodeExpired;
+
+  /// 招待コードが効かない: 使い切った (reason = used_up)
+  ///
+  /// In ja, this message translates to:
+  /// **'この招待コードは使える人数に達しています'**
+  String get admissionCodeUsedUp;
+
+  /// 招待コードが効かない: 止められた (reason = revoked)
+  ///
+  /// In ja, this message translates to:
+  /// **'この招待コードは使えなくなっています'**
+  String get admissionCodeRevoked;
+
+  /// 招待コードを送れなかった(つながらない など)。error はサーバーの文
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードを送れませんでした: {error}'**
+  String admissionCodeFailed(String error);
+
   /// サーバーの広告の「…」のメニューの項目。この広告を出す回数を減らす
   ///
   /// In ja, this message translates to:
@@ -12418,6 +12502,24 @@ abstract class AppLocalizations {
   /// **'リスト「{name}」'**
   String onboardingFeedListName(String name);
 
+  /// ① の招待コードの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コード(任意)'**
+  String get onboardingInviteHeading;
+
+  /// ① の招待コードの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードをお持ちなら入れてください。無くても作れます。審査があるときは、通るまで公開の機能が使えません(自分の SNS はそのまま使えます)'**
+  String get onboardingInviteCaption;
+
+  /// ① の招待コードの欄
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コード'**
+  String get onboardingInviteLabel;
+
   /// No description provided for @onboardingDiscoverTitle.
   ///
   /// In ja, this message translates to:
@@ -20785,6 +20887,120 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'SNS プラグインが設定ページ \"{area}\" を提供していません'**
   String settingsHomeMissingSnsPage(String area);
+
+  /// 招待コードの画面の見出し / 設定の入口
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コード'**
+  String get settingsInvitesTitle;
+
+  /// 設定の入口の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ に人を招くコードを出す'**
+  String get settingsInvitesEntrySubtitle;
+
+  /// 招待コードの画面の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'コードを渡された人は、RASQ アカウントを作るときに入れると審査に進めます。コードは出したときにだけ表示されるので、その場でコピーして渡してください'**
+  String get settingsInvitesCaption;
+
+  /// 出せる残りの数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{あと {count} 個出せます}}'**
+  String settingsInvitesRemaining(int count);
+
+  /// 招待コードを出すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードを出す'**
+  String get settingsInvitesIssueButton;
+
+  /// 出せなかった。error はサーバーの文
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードを出せませんでした: {error}'**
+  String settingsInvitesIssueFailed(String error);
+
+  /// 出したばかりのコードの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードを出しました'**
+  String get settingsInvitesIssuedTitle;
+
+  /// 出したばかりのコードの説明。uses は使える人数、date は期限の日付
+  ///
+  /// In ja, this message translates to:
+  /// **'{uses} 人まで使えます({date} まで)。この画面を閉じると、このコードはもう表示されません'**
+  String settingsInvitesIssuedText(int uses, String date);
+
+  /// コードをコピーするボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'コードをコピー'**
+  String get settingsInvitesCopyCode;
+
+  /// コピーしたときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'招待コードをコピーしました'**
+  String get settingsInvitesCopied;
+
+  /// 招待の文(コードつき)をコピーして共有するボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'招待の文をコピー'**
+  String get settingsInvitesCopyMessage;
+
+  /// 共有する招待の文。code は招待コード
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ に招待します。アカウントを作るときに、招待コード {code} を入れてください'**
+  String settingsInvitesShareMessage(String code);
+
+  /// 招待の文をコピーしたときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'招待の文をコピーしました'**
+  String get settingsInvitesMessageCopied;
+
+  /// 一覧の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'出したコード'**
+  String get settingsInvitesIssuedHeader;
+
+  /// 一覧が空
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ出していません'**
+  String get settingsInvitesNone;
+
+  /// 一覧の行の見出し。hint はコードの一部(平文は残らない)
+  ///
+  /// In ja, this message translates to:
+  /// **'{hint}…'**
+  String settingsInvitesItemTitle(String hint);
+
+  /// 一覧の行。used は使った人数、uses は使える人数、date は期限
+  ///
+  /// In ja, this message translates to:
+  /// **'{used} / {uses} 人が使用・{date} まで'**
+  String settingsInvitesItemActive(int used, int uses, String date);
+
+  /// 一覧の行(期限切れ)
+  ///
+  /// In ja, this message translates to:
+  /// **'{used} / {uses} 人が使用・期限切れ'**
+  String settingsInvitesItemExpired(int used, int uses);
+
+  /// 一覧の行(止められた)
+  ///
+  /// In ja, this message translates to:
+  /// **'{used} / {uses} 人が使用・止められました'**
+  String settingsInvitesItemRevoked(int used, int uses);
 
   /// No description provided for @settingsLearningTitle.
   ///

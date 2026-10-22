@@ -1,0 +1,17 @@
+{
+  "@@locale": "zh",
+  "admissionBannerText": "正在审核中。你可以照常使用自己的 SNS 账号。审核通过后即可使用公开功能",
+  "admissionRejectedMessage": "此 RASQ 账号的注册未获批准。无法使用公开功能",
+  "admissionBannerClose": "关闭",
+  "admissionWaitCapacity": "注册名额已满，正在排队等候",
+  "admissionWaitCapacityPosition": "注册名额已满，正在排队等候（大约第 {position} 位）",
+  "admissionWaitInvite": "输入邀请码即可进入审核",
+  "admissionCodeLabel": "邀请码",
+  "admissionCodeSubmit": "提交",
+  "admissionCodeAccepted": "邀请码已接受。请等待审核通过",
+  "admissionCodeUnknown": "找不到此邀请码。请检查输入内容",
+  "admissionCodeExpired": "此邀请码已过期",
+  "admissionCodeUsedUp": "此邀请码的可用人数已满",
+  "admissionCodeRevoked": "此邀请码已停用",
+  "admissionCodeFailed": "无法提交邀请码：{error}"
+}

@@ -121,5 +121,8 @@
   "onboardingFeedTitle": "来自公开的 RASQ 列表",
   "onboardingFeedCaption": "跨社交媒体的用户列表中阅读量高的帖子",
   "onboardingFeedEmpty": "目前没有可显示的帖子",
-  "onboardingFeedListName": "列表“{name}”"
+  "onboardingFeedListName": "列表“{name}”",
+  "onboardingInviteHeading": "邀请码（可选）",
+  "onboardingInviteCaption": "如果你有邀请码，请在此输入。没有也可以创建账号。如有审核，通过前无法使用公开功能（自己的 SNS 账号可照常使用）",
+  "onboardingInviteLabel": "邀请码"
 }

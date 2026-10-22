@@ -1,0 +1,22 @@
+{
+  "@@locale": "zh",
+  "settingsInvitesTitle": "邀请码",
+  "settingsInvitesEntrySubtitle": "生成邀请他人加入 RASQ 的邀请码",
+  "settingsInvitesCaption": "收到邀请码的人在创建 RASQ 账号时输入即可进入审核。邀请码只在生成时显示，请当场复制并转交",
+  "settingsInvitesRemaining": "{count, plural, other{还可以生成 {count} 个}}",
+  "settingsInvitesIssueButton": "生成邀请码",
+  "settingsInvitesIssueFailed": "无法生成邀请码：{error}",
+  "settingsInvitesIssuedTitle": "已生成邀请码",
+  "settingsInvitesIssuedText": "最多 {uses} 人可使用（有效期至 {date}）。关闭此页面后将不再显示此邀请码",
+  "settingsInvitesCopyCode": "复制邀请码",
+  "settingsInvitesCopied": "已复制邀请码",
+  "settingsInvitesCopyMessage": "复制邀请文字",
+  "settingsInvitesShareMessage": "邀请你加入 RASQ。创建账号时请输入邀请码 {code}",
+  "settingsInvitesMessageCopied": "已复制邀请文字",
+  "settingsInvitesIssuedHeader": "已生成的邀请码",
+  "settingsInvitesNone": "尚未生成",
+  "settingsInvitesItemTitle": "{hint}…",
+  "settingsInvitesItemActive": "已使用 {used} / {uses} 人・有效期至 {date}",
+  "settingsInvitesItemExpired": "已使用 {used} / {uses} 人・已过期",
+  "settingsInvitesItemRevoked": "已使用 {used} / {uses} 人・已停用"
+}

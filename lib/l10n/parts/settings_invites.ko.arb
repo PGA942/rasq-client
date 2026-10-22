@@ -1,0 +1,22 @@
+{
+  "@@locale": "ko",
+  "settingsInvitesTitle": "초대 코드",
+  "settingsInvitesEntrySubtitle": "RASQ에 사람을 초대하는 코드를 발급합니다",
+  "settingsInvitesCaption": "코드를 받은 사람은 RASQ 계정을 만들 때 입력하면 심사로 넘어갈 수 있습니다. 코드는 발급할 때만 표시되므로 그 자리에서 복사해 전달해 주세요",
+  "settingsInvitesRemaining": "{count, plural, other{{count}개 더 발급할 수 있습니다}}",
+  "settingsInvitesIssueButton": "초대 코드 발급",
+  "settingsInvitesIssueFailed": "초대 코드를 발급하지 못했습니다: {error}",
+  "settingsInvitesIssuedTitle": "초대 코드를 발급했습니다",
+  "settingsInvitesIssuedText": "최대 {uses}명이 사용할 수 있습니다({date}까지). 이 화면을 닫으면 이 코드는 다시 표시되지 않습니다",
+  "settingsInvitesCopyCode": "코드 복사",
+  "settingsInvitesCopied": "초대 코드를 복사했습니다",
+  "settingsInvitesCopyMessage": "초대 문구 복사",
+  "settingsInvitesShareMessage": "RASQ에 초대합니다. 계정을 만들 때 초대 코드 {code}를 입력해 주세요",
+  "settingsInvitesMessageCopied": "초대 문구를 복사했습니다",
+  "settingsInvitesIssuedHeader": "발급한 코드",
+  "settingsInvitesNone": "아직 발급하지 않았습니다",
+  "settingsInvitesItemTitle": "{hint}…",
+  "settingsInvitesItemActive": "{used} / {uses}명 사용 · {date}까지",
+  "settingsInvitesItemExpired": "{used} / {uses}명 사용 · 기한 만료",
+  "settingsInvitesItemRevoked": "{used} / {uses}명 사용 · 중지됨"
+}

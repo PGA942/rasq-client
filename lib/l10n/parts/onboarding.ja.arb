@@ -144,5 +144,11 @@
   "onboardingFeedCaption": "SNS をまたいだ人のリストで、よく読まれている投稿です",
   "onboardingFeedEmpty": "いまは表示できる投稿がありません",
   "onboardingFeedListName": "リスト「{name}」",
-  "@onboardingFeedListName": {"placeholders": {"name": {"type": "String"}}}
+  "@onboardingFeedListName": {"placeholders": {"name": {"type": "String"}}},
+  "onboardingInviteHeading": "招待コード(任意)",
+  "@onboardingInviteHeading": {"description": "① の招待コードの見出し"},
+  "onboardingInviteCaption": "招待コードをお持ちなら入れてください。無くても作れます。審査があるときは、通るまで公開の機能が使えません(自分の SNS はそのまま使えます)",
+  "@onboardingInviteCaption": {"description": "① の招待コードの説明"},
+  "onboardingInviteLabel": "招待コード",
+  "@onboardingInviteLabel": {"description": "① の招待コードの欄"}
 }

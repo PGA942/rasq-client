@@ -1,0 +1,22 @@
+{
+  "@@locale": "zh_Hant",
+  "settingsInvitesTitle": "邀請碼",
+  "settingsInvitesEntrySubtitle": "產生邀請他人加入 RASQ 的邀請碼",
+  "settingsInvitesCaption": "收到邀請碼的人在建立 RASQ 帳號時輸入即可進入審核。邀請碼只在產生時顯示，請當場複製並轉交",
+  "settingsInvitesRemaining": "{count, plural, other{還可以產生 {count} 個}}",
+  "settingsInvitesIssueButton": "產生邀請碼",
+  "settingsInvitesIssueFailed": "無法產生邀請碼：{error}",
+  "settingsInvitesIssuedTitle": "已產生邀請碼",
+  "settingsInvitesIssuedText": "最多 {uses} 人可使用（有效期至 {date}）。關閉此頁面後將不再顯示此邀請碼",
+  "settingsInvitesCopyCode": "複製邀請碼",
+  "settingsInvitesCopied": "已複製邀請碼",
+  "settingsInvitesCopyMessage": "複製邀請文字",
+  "settingsInvitesShareMessage": "邀請你加入 RASQ。建立帳號時請輸入邀請碼 {code}",
+  "settingsInvitesMessageCopied": "已複製邀請文字",
+  "settingsInvitesIssuedHeader": "已產生的邀請碼",
+  "settingsInvitesNone": "尚未產生",
+  "settingsInvitesItemTitle": "{hint}…",
+  "settingsInvitesItemActive": "已使用 {used} / {uses} 人・有效期至 {date}",
+  "settingsInvitesItemExpired": "已使用 {used} / {uses} 人・已過期",
+  "settingsInvitesItemRevoked": "已使用 {used} / {uses} 人・已停用"
+}

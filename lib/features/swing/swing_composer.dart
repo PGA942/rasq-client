@@ -9,12 +9,13 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
-import '../../backend/orgate_client.dart' show OrgateException;
+import '../../backend/orgate_client.dart' show AdmissionPendingException, OrgateException;
 import '../../app/providers.dart' show overlayManagerProvider;
 import '../../app/router.dart';
 import '../../backend/rasq_collections_api.dart';
 import '../../shell/column_takeover.dart';
 import '../../shell/headers.dart';
+import '../../shell/rasq_admission.dart' show RasqAdmissionBanner;
 import '../collections/rasq_collections.dart';
 import '../compose/media_file_pick.dart' show mediaVideoExtensions, mediaMimeFor;
 import '../custom/custom_plugins_screen.dart' show installedPagePluginsProvider;
@@ -531,6 +532,9 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.swingSent(ttl))));
       _close();
+    } on AdmissionPendingException catch (e) {
+      // 入場の審査を通っていない (D-548): 失敗ではなく案内(帯も出る)。
+      setState(() => _error = e.message);
     } on OrgateException catch (e) {
       // `429 swing_limit` (D-503: 文ではなく名前と HTTP の番号で見る)。
       setState(() => _error = e.isReason('swing_limit', legacyText: 'swing_limit') || e.code.code == '429' ? appL10n.swingErrorLimit : appL10n.swingSendFailed(e.message));
@@ -582,6 +586,8 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
               ? const RasqLoading(key: ValueKey('swing.composer.starting'))
               : _editing
                   ? ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.xxl), children: [
+                      // 入場の審査を通るまでは Swing を出せない (D-548)。
+                      const RasqAdmissionBanner(),
                       ..._pluginSection(),
                       ..._ttlSection(),
                       ?error,

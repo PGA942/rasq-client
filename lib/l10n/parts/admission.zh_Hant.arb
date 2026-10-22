@@ -1,0 +1,17 @@
+{
+  "@@locale": "zh_Hant",
+  "admissionBannerText": "正在審核中。你可以照常使用自己的 SNS 帳號。審核通過後即可使用公開功能",
+  "admissionRejectedMessage": "此 RASQ 帳號的註冊未獲核准。無法使用公開功能",
+  "admissionBannerClose": "關閉",
+  "admissionWaitCapacity": "註冊名額已滿，正在排隊等候",
+  "admissionWaitCapacityPosition": "註冊名額已滿，正在排隊等候（大約第 {position} 位）",
+  "admissionWaitInvite": "輸入邀請碼即可進入審核",
+  "admissionCodeLabel": "邀請碼",
+  "admissionCodeSubmit": "送出",
+  "admissionCodeAccepted": "邀請碼已接受。請等待審核通過",
+  "admissionCodeUnknown": "找不到此邀請碼。請檢查輸入內容",
+  "admissionCodeExpired": "此邀請碼已過期",
+  "admissionCodeUsedUp": "此邀請碼的可用人數已滿",
+  "admissionCodeRevoked": "此邀請碼已停用",
+  "admissionCodeFailed": "無法送出邀請碼：{error}"
+}

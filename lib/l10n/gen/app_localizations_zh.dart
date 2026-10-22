@@ -10,6 +10,52 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get admissionBannerText => '正在审核中。你可以照常使用自己的 SNS 账号。审核通过后即可使用公开功能';
+
+  @override
+  String get admissionRejectedMessage => '此 RASQ 账号的注册未获批准。无法使用公开功能';
+
+  @override
+  String get admissionBannerClose => '关闭';
+
+  @override
+  String get admissionWaitCapacity => '注册名额已满，正在排队等候';
+
+  @override
+  String admissionWaitCapacityPosition(int position) {
+    return '注册名额已满，正在排队等候（大约第 $position 位）';
+  }
+
+  @override
+  String get admissionWaitInvite => '输入邀请码即可进入审核';
+
+  @override
+  String get admissionCodeLabel => '邀请码';
+
+  @override
+  String get admissionCodeSubmit => '提交';
+
+  @override
+  String get admissionCodeAccepted => '邀请码已接受。请等待审核通过';
+
+  @override
+  String get admissionCodeUnknown => '找不到此邀请码。请检查输入内容';
+
+  @override
+  String get admissionCodeExpired => '此邀请码已过期';
+
+  @override
+  String get admissionCodeUsedUp => '此邀请码的可用人数已满';
+
+  @override
+  String get admissionCodeRevoked => '此邀请码已停用';
+
+  @override
+  String admissionCodeFailed(String error) {
+    return '无法提交邀请码：$error';
+  }
+
+  @override
   String get adsShowLess => '减少显示频率';
 
   @override
@@ -7370,6 +7416,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get onboardingInviteHeading => '邀请码（可选）';
+
+  @override
+  String get onboardingInviteCaption =>
+      '如果你有邀请码，请在此输入。没有也可以创建账号。如有审核，通过前无法使用公开功能（自己的 SNS 账号可照常使用）';
+
+  @override
+  String get onboardingInviteLabel => '邀请码';
+
+  @override
   String get onboardingDiscoverTitle => '寻找 SNS 服务';
 
   @override
@@ -12538,6 +12594,85 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String settingsHomeMissingSnsPage(String area) {
     return 'SNS 插件未提供设置页面“$area”';
+  }
+
+  @override
+  String get settingsInvitesTitle => '邀请码';
+
+  @override
+  String get settingsInvitesEntrySubtitle => '生成邀请他人加入 RASQ 的邀请码';
+
+  @override
+  String get settingsInvitesCaption =>
+      '收到邀请码的人在创建 RASQ 账号时输入即可进入审核。邀请码只在生成时显示，请当场复制并转交';
+
+  @override
+  String settingsInvitesRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '还可以生成 $count 个',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsInvitesIssueButton => '生成邀请码';
+
+  @override
+  String settingsInvitesIssueFailed(String error) {
+    return '无法生成邀请码：$error';
+  }
+
+  @override
+  String get settingsInvitesIssuedTitle => '已生成邀请码';
+
+  @override
+  String settingsInvitesIssuedText(int uses, String date) {
+    return '最多 $uses 人可使用（有效期至 $date）。关闭此页面后将不再显示此邀请码';
+  }
+
+  @override
+  String get settingsInvitesCopyCode => '复制邀请码';
+
+  @override
+  String get settingsInvitesCopied => '已复制邀请码';
+
+  @override
+  String get settingsInvitesCopyMessage => '复制邀请文字';
+
+  @override
+  String settingsInvitesShareMessage(String code) {
+    return '邀请你加入 RASQ。创建账号时请输入邀请码 $code';
+  }
+
+  @override
+  String get settingsInvitesMessageCopied => '已复制邀请文字';
+
+  @override
+  String get settingsInvitesIssuedHeader => '已生成的邀请码';
+
+  @override
+  String get settingsInvitesNone => '尚未生成';
+
+  @override
+  String settingsInvitesItemTitle(String hint) {
+    return '$hint…';
+  }
+
+  @override
+  String settingsInvitesItemActive(int used, int uses, String date) {
+    return '已使用 $used / $uses 人・有效期至 $date';
+  }
+
+  @override
+  String settingsInvitesItemExpired(int used, int uses) {
+    return '已使用 $used / $uses 人・已过期';
+  }
+
+  @override
+  String settingsInvitesItemRevoked(int used, int uses) {
+    return '已使用 $used / $uses 人・已停用';
   }
 
   @override
@@ -19783,6 +19918,52 @@ class AppLocalizationsZh extends AppLocalizations {
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get admissionBannerText => '正在審核中。你可以照常使用自己的 SNS 帳號。審核通過後即可使用公開功能';
+
+  @override
+  String get admissionRejectedMessage => '此 RASQ 帳號的註冊未獲核准。無法使用公開功能';
+
+  @override
+  String get admissionBannerClose => '關閉';
+
+  @override
+  String get admissionWaitCapacity => '註冊名額已滿，正在排隊等候';
+
+  @override
+  String admissionWaitCapacityPosition(int position) {
+    return '註冊名額已滿，正在排隊等候（大約第 $position 位）';
+  }
+
+  @override
+  String get admissionWaitInvite => '輸入邀請碼即可進入審核';
+
+  @override
+  String get admissionCodeLabel => '邀請碼';
+
+  @override
+  String get admissionCodeSubmit => '送出';
+
+  @override
+  String get admissionCodeAccepted => '邀請碼已接受。請等待審核通過';
+
+  @override
+  String get admissionCodeUnknown => '找不到此邀請碼。請檢查輸入內容';
+
+  @override
+  String get admissionCodeExpired => '此邀請碼已過期';
+
+  @override
+  String get admissionCodeUsedUp => '此邀請碼的可用人數已滿';
+
+  @override
+  String get admissionCodeRevoked => '此邀請碼已停用';
+
+  @override
+  String admissionCodeFailed(String error) {
+    return '無法送出邀請碼：$error';
+  }
 
   @override
   String get adsShowLess => '降低顯示頻率';
@@ -27146,6 +27327,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String get onboardingInviteHeading => '邀請碼（選填）';
+
+  @override
+  String get onboardingInviteCaption =>
+      '如果你有邀請碼，請在此輸入。沒有也可以建立帳號。如有審核，通過前無法使用公開功能（自己的 SNS 帳號可照常使用）';
+
+  @override
+  String get onboardingInviteLabel => '邀請碼';
+
+  @override
   String get onboardingDiscoverTitle => '尋找 SNS 服務';
 
   @override
@@ -32313,6 +32504,85 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String settingsHomeMissingSnsPage(String area) {
     return 'SNS 外掛未提供設定頁面「$area」';
+  }
+
+  @override
+  String get settingsInvitesTitle => '邀請碼';
+
+  @override
+  String get settingsInvitesEntrySubtitle => '產生邀請他人加入 RASQ 的邀請碼';
+
+  @override
+  String get settingsInvitesCaption =>
+      '收到邀請碼的人在建立 RASQ 帳號時輸入即可進入審核。邀請碼只在產生時顯示，請當場複製並轉交';
+
+  @override
+  String settingsInvitesRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '還可以產生 $count 個',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsInvitesIssueButton => '產生邀請碼';
+
+  @override
+  String settingsInvitesIssueFailed(String error) {
+    return '無法產生邀請碼：$error';
+  }
+
+  @override
+  String get settingsInvitesIssuedTitle => '已產生邀請碼';
+
+  @override
+  String settingsInvitesIssuedText(int uses, String date) {
+    return '最多 $uses 人可使用（有效期至 $date）。關閉此頁面後將不再顯示此邀請碼';
+  }
+
+  @override
+  String get settingsInvitesCopyCode => '複製邀請碼';
+
+  @override
+  String get settingsInvitesCopied => '已複製邀請碼';
+
+  @override
+  String get settingsInvitesCopyMessage => '複製邀請文字';
+
+  @override
+  String settingsInvitesShareMessage(String code) {
+    return '邀請你加入 RASQ。建立帳號時請輸入邀請碼 $code';
+  }
+
+  @override
+  String get settingsInvitesMessageCopied => '已複製邀請文字';
+
+  @override
+  String get settingsInvitesIssuedHeader => '已產生的邀請碼';
+
+  @override
+  String get settingsInvitesNone => '尚未產生';
+
+  @override
+  String settingsInvitesItemTitle(String hint) {
+    return '$hint…';
+  }
+
+  @override
+  String settingsInvitesItemActive(int used, int uses, String date) {
+    return '已使用 $used / $uses 人・有效期至 $date';
+  }
+
+  @override
+  String settingsInvitesItemExpired(int used, int uses) {
+    return '已使用 $used / $uses 人・已過期';
+  }
+
+  @override
+  String settingsInvitesItemRevoked(int used, int uses) {
+    return '已使用 $used / $uses 人・已停用';
   }
 
   @override

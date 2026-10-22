@@ -121,5 +121,8 @@
   "onboardingFeedTitle": "From public RASQ lists",
   "onboardingFeedCaption": "Popular posts from lists of people across social networks",
   "onboardingFeedEmpty": "No posts to show right now",
-  "onboardingFeedListName": "List \"{name}\""
+  "onboardingFeedListName": "List \"{name}\"",
+  "onboardingInviteHeading": "Invite code (optional)",
+  "onboardingInviteCaption": "If you have an invite code, enter it here. You can create an account without one. If accounts are being reviewed, public features stay unavailable until yours passes (your own SNS accounts keep working)",
+  "onboardingInviteLabel": "Invite code"
 }
