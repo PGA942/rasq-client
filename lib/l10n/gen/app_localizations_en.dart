@@ -10,6 +10,62 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get admissionBannerText =>
+      'Your account is under review. You can keep using your own SNS accounts as usual. Public features become available once the review passes';
+
+  @override
+  String get admissionRejectedMessage =>
+      'Registration of this RASQ account was not approved. Public features are not available';
+
+  @override
+  String get admissionBannerClose => 'Close';
+
+  @override
+  String get admissionWaitCapacity =>
+      'Registration is full right now, so you are waiting your turn';
+
+  @override
+  String admissionWaitCapacityPosition(int position) {
+    return 'Registration is full right now, so you are waiting your turn (about #$position)';
+  }
+
+  @override
+  String get admissionWaitInvite => 'Enter an invite code to move on to review';
+
+  @override
+  String get admissionCodeLabel => 'Invite code';
+
+  @override
+  String get admissionCodeSubmit => 'Submit';
+
+  @override
+  String get admissionCodeAccepted =>
+      'Invite code accepted. Please wait for the review to pass';
+
+  @override
+  String get admissionCodeUnknown =>
+      'This invite code wasn\'t found. Please check what you entered';
+
+  @override
+  String get admissionCodeExpired => 'This invite code has expired';
+
+  @override
+  String get admissionCodeUsedUp =>
+      'This invite code has already been used by as many people as it allows';
+
+  @override
+  String get admissionCodeRevoked => 'This invite code is no longer valid';
+
+  @override
+  String admissionCodeFailed(String error) {
+    return 'Couldn\'t submit the invite code: $error';
+  }
+
+  @override
+  String get admissionCodeNotWaitlisted =>
+      'You don\'t need to enter an invite code right now';
+
+  @override
   String get adsShowLess => 'Show less often';
 
   @override
@@ -7760,6 +7816,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get onboardingInviteHeading => 'Invite code (optional)';
+
+  @override
+  String get onboardingInviteCaption =>
+      'If you have an invite code, enter it here. You can create an account without one. If accounts are being reviewed, public features stay unavailable until yours passes (your own SNS accounts keep working)';
+
+  @override
+  String get onboardingInviteLabel => 'Invite code';
+
+  @override
   String get onboardingDiscoverTitle => 'Find SNS services';
 
   @override
@@ -12469,6 +12535,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionSanctionPermanent => 'Permanent suspension';
 
   @override
+  String get sessionSanctionCategoryAdmission => 'Registration review';
+
+  @override
+  String get sessionSanctionCategoryAdmissionHelp =>
+      'Your registration didn\'t pass review, so RASQ\'s public features aren\'t available. If you think this is a mistake, you can submit an appeal';
+
+  @override
   String get sessionSanctionNone => 'No restrictions';
 
   @override
@@ -13193,6 +13266,87 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String settingsHomeMissingSnsPage(String area) {
     return 'The SNS plugin doesn\'t provide the settings page \"$area\"';
+  }
+
+  @override
+  String get settingsInvitesTitle => 'Invite codes';
+
+  @override
+  String get settingsInvitesEntrySubtitle =>
+      'Issue codes that invite people to RASQ';
+
+  @override
+  String get settingsInvitesCaption =>
+      'People you give a code to can enter it when creating their RASQ account to move on to review. A code is shown only when you issue it, so copy it and pass it on right away';
+
+  @override
+  String settingsInvitesRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'You can issue $count more',
+      one: 'You can issue 1 more',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsInvitesIssueButton => 'Issue an invite code';
+
+  @override
+  String settingsInvitesIssueFailed(String error) {
+    return 'Couldn\'t issue an invite code: $error';
+  }
+
+  @override
+  String get settingsInvitesIssuedTitle => 'Invite code issued';
+
+  @override
+  String settingsInvitesIssuedText(int uses, String date) {
+    return 'Up to $uses people can use it (until $date). Once you close this screen, the code won\'t be shown again';
+  }
+
+  @override
+  String get settingsInvitesCopyCode => 'Copy code';
+
+  @override
+  String get settingsInvitesCopied => 'Invite code copied';
+
+  @override
+  String get settingsInvitesCopyMessage => 'Copy invite message';
+
+  @override
+  String settingsInvitesShareMessage(String code) {
+    return 'You\'re invited to RASQ. Enter the invite code $code when you create your account';
+  }
+
+  @override
+  String get settingsInvitesMessageCopied => 'Invite message copied';
+
+  @override
+  String get settingsInvitesIssuedHeader => 'Issued codes';
+
+  @override
+  String get settingsInvitesNone => 'You haven\'t issued any yet';
+
+  @override
+  String settingsInvitesItemTitle(String hint) {
+    return '$hint…';
+  }
+
+  @override
+  String settingsInvitesItemActive(int used, int uses, String date) {
+    return '$used of $uses used · until $date';
+  }
+
+  @override
+  String settingsInvitesItemExpired(int used, int uses) {
+    return '$used of $uses used · expired';
+  }
+
+  @override
+  String settingsInvitesItemRevoked(int used, int uses) {
+    return '$used of $uses used · revoked';
   }
 
   @override

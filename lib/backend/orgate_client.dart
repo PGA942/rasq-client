@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -113,6 +114,20 @@ class OrgateException implements Exception {
   }
 }
 
+/// 入場の審査 (D-548 / Central S-120) を通っていないアカウントで、止められた口を呼んだ(`403 admission_pending`)。
+/// エラーではなく案内として扱う: [message] / [toString] は案内の文(`error.admission` の状態ごと)で、そのまま出しても
+/// エラーの形にならない。投げるたびに [OrgateClient.admissionBlocked] へ状態を流す(審査の帯が読み直す)。
+class AdmissionPendingException extends OrgateException {
+  AdmissionPendingException(this.admission, {required ErrorCode code, super.details})
+      : super(code, admission == 'rejected' ? appL10n.admissionRejectedMessage : appL10n.admissionBannerText, serverCode: 'admission_pending');
+
+  /// `pending` / `waitlisted` / `rejected`。
+  final String admission;
+
+  @override
+  String toString() => message;
+}
+
 /// `/api/v1` 配下への薄い HTTP 口。認証は Bearer だけで Cookie は使わない。
 class OrgateClient {
   OrgateClient({required this.baseUrl, http.Client? httpClient, this.tokenProvider, this.localeProvider}) : _http = httpClient ?? http.Client();
@@ -128,6 +143,11 @@ class OrgateClient {
   final String Function()? localeProvider;
 
   static const _timeout = Duration(seconds: 20);
+
+  /// `403 admission_pending` を受けたときの状態(D-548)。審査の状態(`rasqAdmissionProvider`) が聞いて読み直す。
+  /// どの口(テストで差し替えた口も)から来ても届くよう、インスタンスではなくここに置く。
+  static Stream<String> get admissionBlocked => _admissionBlocked.stream;
+  static final _admissionBlocked = StreamController<String>.broadcast(sync: true);
 
   /// 同じ接続先 / HTTP クライアントで、別のトークンを使う口 (D-239: 通知専用のアクセストークンで受信箱を読む)。
   OrgateClient withToken(String? Function() tokenProvider) => OrgateClient(baseUrl: baseUrl, httpClient: _http, tokenProvider: tokenProvider, localeProvider: localeProvider);
@@ -165,6 +185,11 @@ class OrgateClient {
       }
     } catch (_) {
       // JSON でない応答(プロキシのエラーページ等)は HTTP コードのまま扱う。
+    }
+    if (serverCode == 'admission_pending') {
+      final admission = details['admission'] is String ? details['admission'] as String : 'pending';
+      _admissionBlocked.add(admission);
+      throw AdmissionPendingException(admission, code: code, details: details);
     }
     throw OrgateException(code, message, serverCode: serverCode, details: details);
   }

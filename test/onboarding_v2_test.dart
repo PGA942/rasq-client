@@ -84,6 +84,32 @@ void main() {
       expect(central.calls, isNot(contains('POST /auth/device')));
     });
 
+    testWidgets('D-548: ① の招待コード(任意)を入れれば、作るときに inviteCode で送る。空なら送らない', (tester) async {
+      Future<Map<String, Object?>?> create(String? code) async {
+        final central = _FakeCentral();
+        await _pump(tester, central);
+        await fillStep1(tester);
+        expect(find.text('招待コード(任意)'), findsOneWidget);
+        if (code != null) {
+          await tester.ensureVisible(find.byKey(const ValueKey('onb.inviteCode')));
+          await tester.enterText(find.byKey(const ValueKey('onb.inviteCode')), code);
+        }
+        expect(next(tester).onPressed, isNotNull, reason: '招待コードが無くても進める');
+        await tester.tap(find.byKey(const ValueKey('onb.next')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('onb.agree')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('onb.register')));
+        await tester.pumpAndSettle();
+        expect(central.calls.where((x) => x == 'POST /auth/device').length, 1);
+        return central.deviceBody;
+      }
+
+      expect((await create('  K7PQ2MXR9A '))!['inviteCode'], 'K7PQ2MXR9A', reason: '前後の空白は外す');
+      await tester.pumpWidget(const SizedBox());
+      expect((await create(null))!.containsKey('inviteCode'), isFalse);
+    });
+
     testWidgets('② 規約に同意するまで登録できない → 登録(承諾は一緒に)→ ユーザー名 → パスワード → ③ へ。ポップアップ (D-413) は頼まない', (tester) async {
       final central = _FakeCentral();
       final c = await _pump(tester, central);
@@ -1309,6 +1335,9 @@ class _FakeCentral {
   final calls = <String>[];
   Map<String, Object?>? consents;
 
+  /// `POST /auth/device` の本文(D-548: 招待コードを送るか)。
+  Map<String, Object?>? deviceBody;
+
   /// `GET /regions` の答え (D-542 / ORGATE O-018)。null = 読めない(古いサーバー)。
   final Map<String, Object?>? regions;
 
@@ -1411,6 +1440,7 @@ class _FakeCentral {
     }
     if (req.method == 'POST' && path == '/auth/device') {
       final body = jsonDecode(req.body) as Map;
+      deviceBody = body.cast<String, Object?>();
       region = body['region'] as String?;
       if (regionRequired) return json({'error': {'code': 'region_required', 'message': '住んでいる地域を選んでください'}}, 400);
       if (refuseRegions.contains(region)) return json({'error': {'code': 'region_not_served', 'message': 'お住まいの地域では、いまは RASQ を提供していません'}}, 403);

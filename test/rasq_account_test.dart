@@ -579,6 +579,41 @@ void main() {
     expect(find.textContaining('解除を申請しました'), findsOneWidget);
   });
 
+  testWidgets('D-548: 登録の審査で断られた処置(分類 admission)は「登録の審査」と説明つきで出し、解除申請できる', (tester) async {
+    final http_ = MockClient((req) async => http.Response('[]', 200, headers: {'content-type': 'application/json'}));
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p-${v.handle}', v, '${v.handle} の投稿')]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(seededStorage()),
+        pluginRegistryProvider.overrideWithValue(registry),
+        settingsAreaProvider(backendSettingsArea).overrideWith(() => _FixedSettingsArea({'baseUrl': 'https://central.test'})),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: http_, tokenProvider: () => 'tok')),
+        rasqSanctionsProvider.overrideWith((ref) async => RasqSanctions.fromJson({
+              'level': 'permanent',
+              'categories': ['admission'],
+              'sanctions': [
+                {'id': 'sa9', 'category': 'admission', 'level': 'permanent', 'note': '', 'appealStatus': null},
+              ],
+            })),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    RasqSidebar.open(container.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('RASQ アカウント'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(rasqSanctionBannerKey), findsOneWidget);
+    const help = '登録の審査で通らなかったため、RASQ の公開の機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます';
+    expect(find.text(help), findsOneWidget);
+    expect(find.textContaining('admission'), findsNothing, reason: '分類はサーバーの語ではなく名前で');
+    await tester.tap(find.textContaining('解除を申請(登録の審査'));
+    await tester.pumpAndSettle();
+    expect(find.text('処置の解除を申請'), findsOneWidget);
+    expect(find.textContaining(help), findsWidgets, reason: '申請のシートにも説明');
+  });
+
   testWidgets('サイドバー … → RASQ アカウント FOW: 投稿タイル風の行(表示名/@handle)+ 左の通知バッジ枠 + … ドロップダウン', (tester) async {
     final container = await pump(tester);
     RasqSidebar.open(container.read(overlayManagerProvider));

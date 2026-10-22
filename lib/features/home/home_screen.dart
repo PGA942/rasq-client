@@ -15,6 +15,7 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/headers.dart';
+import '../../shell/rasq_admission.dart' show RasqAdmissionBanner;
 import '../../shell/rasq_shell.dart';
 import '../../shell/scroll_memory.dart';
 import '../../shell/scroll_to_top.dart' show VisibleTabPage, scrollToTopIn;
@@ -150,6 +151,8 @@ class HomeScreen extends ConsumerWidget {
               }),
             ]),
           ),
+          // 入場の審査を通っていない (D-548): 自分の SNS はこのまま使える案内。閉じられる(TL の読み書きの邪魔をしない)。
+          const RasqAdmissionBanner(dismissible: true),
           Expanded(
             child: TabBarView(children: [
               // 見えているタブだけ動かす (D-505 / D-508): 隠れたタブは、いちばん上へ送らない / 読み直さない。

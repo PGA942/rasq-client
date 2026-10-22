@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../home/create_fow.dart' show RadialCreateFab;
+import '../../shell/rasq_admission.dart' show RasqAdmissionBanner;
 import '../../shell/rasq_terms_gate.dart';
 import '../settings/settings_dsl.dart';
 import '../../app/providers.dart';
@@ -171,6 +172,8 @@ class _VcScreenState extends ConsumerState<VcScreen> {
           child: ListView(key: const ValueKey('astell.home.list'), children: [
             // 同意待ちなら AsTell は使えない (D-371)。
             const RasqTermsBanner(),
+            // 入場の審査を通るまでは AsTell は使えない (D-548)。
+            const RasqAdmissionBanner(),
             // 参加中のルームがあれば先頭に戻り口(FOW を閉じても接続は続く)。
             if (session != null)
               RasqListTile(

@@ -1258,6 +1258,8 @@ String astellShareRejectedText(Map<String, Object?> m) => switch (m['reason']) {
 /// 配信の失敗を 1 行に (D-317)。
 String astellStreamErrorText(Object e) {
   if (e is AstellMediaException) return e.message;
+  // 入場の審査を通っていない (D-548): エラーではなく案内の文のまま。
+  if (e is AdmissionPendingException) return e.message;
   if (e is OrgateException) {
     return switch (e.code.code) {
       '501' => appL10n.vcStreamUnavailable,

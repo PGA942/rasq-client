@@ -121,5 +121,8 @@
   "onboardingFeedTitle": "來自公開的 RASQ 清單",
   "onboardingFeedCaption": "跨社群服務的使用者清單中閱讀量高的貼文",
   "onboardingFeedEmpty": "目前沒有可顯示的貼文",
-  "onboardingFeedListName": "清單「{name}」"
+  "onboardingFeedListName": "清單「{name}」",
+  "onboardingInviteHeading": "邀請碼（選填）",
+  "onboardingInviteCaption": "如果你有邀請碼，請在此輸入。沒有也可以建立帳號。如有審核，通過前無法使用公開功能（自己的 SNS 帳號可照常使用）",
+  "onboardingInviteLabel": "邀請碼"
 }

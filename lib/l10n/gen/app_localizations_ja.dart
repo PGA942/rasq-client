@@ -10,6 +10,56 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get admissionBannerText => '審査中です。自分の SNS はこのまま使えます。公開の機能は審査が通ると使えます';
+
+  @override
+  String get admissionRejectedMessage =>
+      'この RASQ アカウントの登録は承認されませんでした。公開の機能は使えません';
+
+  @override
+  String get admissionBannerClose => '閉じる';
+
+  @override
+  String get admissionWaitCapacity => '登録の枠が埋まっているため、順番を待っています';
+
+  @override
+  String admissionWaitCapacityPosition(int position) {
+    return '登録の枠が埋まっているため、順番を待っています(目安: $position 番目)';
+  }
+
+  @override
+  String get admissionWaitInvite => '招待コードを入れると審査に進みます';
+
+  @override
+  String get admissionCodeLabel => '招待コード';
+
+  @override
+  String get admissionCodeSubmit => '送る';
+
+  @override
+  String get admissionCodeAccepted => '招待コードを受け付けました。審査が通るまでお待ちください';
+
+  @override
+  String get admissionCodeUnknown => 'この招待コードは見つかりません。入力を確かめてください';
+
+  @override
+  String get admissionCodeExpired => 'この招待コードは期限が切れています';
+
+  @override
+  String get admissionCodeUsedUp => 'この招待コードは使える人数に達しています';
+
+  @override
+  String get admissionCodeRevoked => 'この招待コードは使えなくなっています';
+
+  @override
+  String admissionCodeFailed(String error) {
+    return '招待コードを送れませんでした: $error';
+  }
+
+  @override
+  String get admissionCodeNotWaitlisted => 'いまは招待コードを入れる必要はありません';
+
+  @override
   String get adsShowLess => '表示頻度を下げる';
 
   @override
@@ -7457,6 +7507,16 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get onboardingInviteHeading => '招待コード(任意)';
+
+  @override
+  String get onboardingInviteCaption =>
+      '招待コードをお持ちなら入れてください。無くても作れます。審査があるときは、通るまで公開の機能が使えません(自分の SNS はそのまま使えます)';
+
+  @override
+  String get onboardingInviteLabel => '招待コード';
+
+  @override
   String get onboardingDiscoverTitle => 'SNS サービスを探す';
 
   @override
@@ -11986,6 +12046,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sessionSanctionPermanent => '恒久的な凍結';
 
   @override
+  String get sessionSanctionCategoryAdmission => '登録の審査';
+
+  @override
+  String get sessionSanctionCategoryAdmissionHelp =>
+      '登録の審査で通らなかったため、RASQ の公開の機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます';
+
+  @override
   String get sessionSanctionNone => '制限なし';
 
   @override
@@ -12674,6 +12741,85 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String settingsHomeMissingSnsPage(String area) {
     return 'SNS プラグインが設定ページ \"$area\" を提供していません';
+  }
+
+  @override
+  String get settingsInvitesTitle => '招待コード';
+
+  @override
+  String get settingsInvitesEntrySubtitle => 'RASQ に人を招くコードを出す';
+
+  @override
+  String get settingsInvitesCaption =>
+      'コードを渡された人は、RASQ アカウントを作るときに入れると審査に進めます。コードは出したときにだけ表示されるので、その場でコピーして渡してください';
+
+  @override
+  String settingsInvitesRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'あと $count 個出せます',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsInvitesIssueButton => '招待コードを出す';
+
+  @override
+  String settingsInvitesIssueFailed(String error) {
+    return '招待コードを出せませんでした: $error';
+  }
+
+  @override
+  String get settingsInvitesIssuedTitle => '招待コードを出しました';
+
+  @override
+  String settingsInvitesIssuedText(int uses, String date) {
+    return '$uses 人まで使えます($date まで)。この画面を閉じると、このコードはもう表示されません';
+  }
+
+  @override
+  String get settingsInvitesCopyCode => 'コードをコピー';
+
+  @override
+  String get settingsInvitesCopied => '招待コードをコピーしました';
+
+  @override
+  String get settingsInvitesCopyMessage => '招待の文をコピー';
+
+  @override
+  String settingsInvitesShareMessage(String code) {
+    return 'RASQ に招待します。アカウントを作るときに、招待コード $code を入れてください';
+  }
+
+  @override
+  String get settingsInvitesMessageCopied => '招待の文をコピーしました';
+
+  @override
+  String get settingsInvitesIssuedHeader => '出したコード';
+
+  @override
+  String get settingsInvitesNone => 'まだ出していません';
+
+  @override
+  String settingsInvitesItemTitle(String hint) {
+    return '$hint…';
+  }
+
+  @override
+  String settingsInvitesItemActive(int used, int uses, String date) {
+    return '$used / $uses 人が使用・$date まで';
+  }
+
+  @override
+  String settingsInvitesItemExpired(int used, int uses) {
+    return '$used / $uses 人が使用・期限切れ';
+  }
+
+  @override
+  String settingsInvitesItemRevoked(int used, int uses) {
+    return '$used / $uses 人が使用・止められました';
   }
 
   @override

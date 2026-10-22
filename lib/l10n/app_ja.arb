@@ -1,5 +1,75 @@
 {
   "@@locale": "ja",
+  "admissionBannerText": "審査中です。自分の SNS はこのまま使えます。公開の機能は審査が通ると使えます",
+  "@admissionBannerText": {
+    "description": "入場の審査を通っていないときの帯の文。止められた機能を使おうとしたとき(403 admission_pending)の案内にも使う"
+  },
+  "admissionRejectedMessage": "この RASQ アカウントの登録は承認されませんでした。公開の機能は使えません",
+  "@admissionRejectedMessage": {
+    "description": "入場の審査で断られたアカウントが、止められた機能を使おうとしたときの案内"
+  },
+  "admissionBannerClose": "閉じる",
+  "@admissionBannerClose": {
+    "description": "ホームの審査の帯を閉じるボタン(この起動のあいだ)"
+  },
+  "admissionWaitCapacity": "登録の枠が埋まっているため、順番を待っています",
+  "@admissionWaitCapacity": {
+    "description": "枠待ち(人数の枠が埋まっている)のときの帯の見出し"
+  },
+  "admissionWaitCapacityPosition": "登録の枠が埋まっているため、順番を待っています(目安: {position} 番目)",
+  "@admissionWaitCapacityPosition": {
+    "description": "枠待ちの帯の見出し。position は順番の目安",
+    "placeholders": {
+      "position": {
+        "type": "int"
+      }
+    }
+  },
+  "admissionWaitInvite": "招待コードを入れると審査に進みます",
+  "@admissionWaitInvite": {
+    "description": "招待コード待ちのときの帯の見出し"
+  },
+  "admissionCodeLabel": "招待コード",
+  "@admissionCodeLabel": {
+    "description": "帯の中の、招待コードを入れる欄"
+  },
+  "admissionCodeSubmit": "送る",
+  "@admissionCodeSubmit": {
+    "description": "招待コードを送るボタン"
+  },
+  "admissionCodeAccepted": "招待コードを受け付けました。審査が通るまでお待ちください",
+  "@admissionCodeAccepted": {
+    "description": "招待コードを受け付けたときの知らせ"
+  },
+  "admissionCodeUnknown": "この招待コードは見つかりません。入力を確かめてください",
+  "@admissionCodeUnknown": {
+    "description": "招待コードが効かない: 見つからない (reason = unknown)"
+  },
+  "admissionCodeExpired": "この招待コードは期限が切れています",
+  "@admissionCodeExpired": {
+    "description": "招待コードが効かない: 期限切れ (reason = expired)"
+  },
+  "admissionCodeUsedUp": "この招待コードは使える人数に達しています",
+  "@admissionCodeUsedUp": {
+    "description": "招待コードが効かない: 使い切った (reason = used_up)"
+  },
+  "admissionCodeRevoked": "この招待コードは使えなくなっています",
+  "@admissionCodeRevoked": {
+    "description": "招待コードが効かない: 止められた (reason = revoked)"
+  },
+  "admissionCodeFailed": "招待コードを送れませんでした: {error}",
+  "@admissionCodeFailed": {
+    "description": "招待コードを送れなかった(つながらない など)。error はサーバーの文",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "admissionCodeNotWaitlisted": "いまは招待コードを入れる必要はありません",
+  "@admissionCodeNotWaitlisted": {
+    "description": "招待コードを送ったが、もう招待コード待ちではなかった(409 admission_not_waitlisted)"
+  },
   "adsShowLess": "表示頻度を下げる",
   "@adsShowLess": {
     "description": "サーバーの広告の「…」のメニューの項目。この広告を出す回数を減らす"
@@ -8387,6 +8457,18 @@
       }
     }
   },
+  "onboardingInviteHeading": "招待コード(任意)",
+  "@onboardingInviteHeading": {
+    "description": "① の招待コードの見出し"
+  },
+  "onboardingInviteCaption": "招待コードをお持ちなら入れてください。無くても作れます。審査があるときは、通るまで公開の機能が使えません(自分の SNS はそのまま使えます)",
+  "@onboardingInviteCaption": {
+    "description": "① の招待コードの説明"
+  },
+  "onboardingInviteLabel": "招待コード",
+  "@onboardingInviteLabel": {
+    "description": "① の招待コードの欄"
+  },
   "onboardingDiscoverTitle": "SNS サービスを探す",
   "onboardingDiscoverIntro": "好きなものから、合いそうな SNS のサーバーと RASQ リスト(SNS をまたいだ人のリスト)を探します。",
   "onboardingDiscoverContentTitle": "好きな画像やコンテンツから探す",
@@ -12573,6 +12655,14 @@
   "@sessionSanctionPermanent": {
     "description": "アカウントの処置の段階: 恒久的な凍結"
   },
+  "sessionSanctionCategoryAdmission": "登録の審査",
+  "@sessionSanctionCategoryAdmission": {
+    "description": "アカウントの処置の分類: 入場の審査で断られた(D-548)。解除申請のボタンなどに出る"
+  },
+  "sessionSanctionCategoryAdmissionHelp": "登録の審査で通らなかったため、RASQ の公開の機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます",
+  "@sessionSanctionCategoryAdmissionHelp": {
+    "description": "処置の分類 admission(入場の審査で断られた、D-548)の本人向けの説明。処置の案内と解除申請のシートに出る"
+  },
   "sessionSanctionNone": "制限なし",
   "@sessionSanctionNone": {
     "description": "アカウントの処置が無いとき"
@@ -13134,6 +13224,137 @@
     "placeholders": {
       "area": {
         "type": "String"
+      }
+    }
+  },
+  "settingsInvitesTitle": "招待コード",
+  "@settingsInvitesTitle": {
+    "description": "招待コードの画面の見出し / 設定の入口"
+  },
+  "settingsInvitesEntrySubtitle": "RASQ に人を招くコードを出す",
+  "@settingsInvitesEntrySubtitle": {
+    "description": "設定の入口の説明"
+  },
+  "settingsInvitesCaption": "コードを渡された人は、RASQ アカウントを作るときに入れると審査に進めます。コードは出したときにだけ表示されるので、その場でコピーして渡してください",
+  "@settingsInvitesCaption": {
+    "description": "招待コードの画面の説明"
+  },
+  "settingsInvitesRemaining": "{count, plural, other{あと {count} 個出せます}}",
+  "@settingsInvitesRemaining": {
+    "description": "出せる残りの数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsInvitesIssueButton": "招待コードを出す",
+  "@settingsInvitesIssueButton": {
+    "description": "招待コードを出すボタン"
+  },
+  "settingsInvitesIssueFailed": "招待コードを出せませんでした: {error}",
+  "@settingsInvitesIssueFailed": {
+    "description": "出せなかった。error はサーバーの文",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsInvitesIssuedTitle": "招待コードを出しました",
+  "@settingsInvitesIssuedTitle": {
+    "description": "出したばかりのコードの見出し"
+  },
+  "settingsInvitesIssuedText": "{uses} 人まで使えます({date} まで)。この画面を閉じると、このコードはもう表示されません",
+  "@settingsInvitesIssuedText": {
+    "description": "出したばかりのコードの説明。uses は使える人数、date は期限の日付",
+    "placeholders": {
+      "uses": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsInvitesCopyCode": "コードをコピー",
+  "@settingsInvitesCopyCode": {
+    "description": "コードをコピーするボタン"
+  },
+  "settingsInvitesCopied": "招待コードをコピーしました",
+  "@settingsInvitesCopied": {
+    "description": "コピーしたときの知らせ"
+  },
+  "settingsInvitesCopyMessage": "招待の文をコピー",
+  "@settingsInvitesCopyMessage": {
+    "description": "招待の文(コードつき)をコピーして共有するボタン"
+  },
+  "settingsInvitesShareMessage": "RASQ に招待します。アカウントを作るときに、招待コード {code} を入れてください",
+  "@settingsInvitesShareMessage": {
+    "description": "共有する招待の文。code は招待コード",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsInvitesMessageCopied": "招待の文をコピーしました",
+  "@settingsInvitesMessageCopied": {
+    "description": "招待の文をコピーしたときの知らせ"
+  },
+  "settingsInvitesIssuedHeader": "出したコード",
+  "@settingsInvitesIssuedHeader": {
+    "description": "一覧の見出し"
+  },
+  "settingsInvitesNone": "まだ出していません",
+  "@settingsInvitesNone": {
+    "description": "一覧が空"
+  },
+  "settingsInvitesItemTitle": "{hint}…",
+  "@settingsInvitesItemTitle": {
+    "description": "一覧の行の見出し。hint はコードの一部(平文は残らない)",
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsInvitesItemActive": "{used} / {uses} 人が使用・{date} まで",
+  "@settingsInvitesItemActive": {
+    "description": "一覧の行。used は使った人数、uses は使える人数、date は期限",
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "uses": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsInvitesItemExpired": "{used} / {uses} 人が使用・期限切れ",
+  "@settingsInvitesItemExpired": {
+    "description": "一覧の行(期限切れ)",
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "uses": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsInvitesItemRevoked": "{used} / {uses} 人が使用・止められました",
+  "@settingsInvitesItemRevoked": {
+    "description": "一覧の行(止められた)",
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "uses": {
+        "type": "int"
       }
     }
   },
