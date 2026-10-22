@@ -103,7 +103,7 @@ Future<RasqAccountRecord?> completeRasqRegistration(RasqProviderRead read, RasqR
   // (以前は作ったあとで同意を書き、失敗しても登録を続けていた)。
   RasqAccount? account;
   try {
-    account = await notifier.createAccount(displayName: displayName, consents: choice.toConsentsJson(), another: another, resume: attempt?.accountId, region: choice.region);
+    account = await notifier.createAccount(displayName: displayName, consents: choice.toConsentsJson(), another: another, resume: attempt?.accountId, region: choice.region, inviteCode: choice.inviteCode);
   } on OrgateException catch (e) {
     if (isTermsVersionError(e)) {
       onMessage(appL10n.onboardingTermsOutdated);

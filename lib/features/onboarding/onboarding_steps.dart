@@ -32,13 +32,16 @@ import 'region/region_picker.dart';
 /// ① で入れた内容(② へ渡す。パスワードは画面の中だけ、保存しない)。
 @immutable
 class OnboardingDraft {
-  const OnboardingDraft({required this.handle, required this.password, required this.age, this.standalone = false, this.attempt, this.region});
+  const OnboardingDraft({required this.handle, required this.password, required this.age, this.standalone = false, this.attempt, this.region, this.inviteCode});
   final String handle;
   final String password;
   final RasqAgeBand age;
 
   /// 住んでいる地域(D-542 / ORGATE O-018。`JP` / `US-CA`)。作るときに送る。
   final String? region;
+
+  /// 招待コード(D-548、任意。空なら null)。作るときに送る。
+  final String? inviteCode;
 
   /// オンボーディングの外から(作れたら ② は台帳の行を返して閉じる。ほかの RASQ アカウントに入っていても新しく作る)。
   final bool standalone;
@@ -131,6 +134,7 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
   final _handle = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
+  final _invite = TextEditingController();
   RasqAgeBand? _age;
   bool _show = false;
 
@@ -148,6 +152,7 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
     _handle.dispose();
     _password.dispose();
     _confirm.dispose();
+    _invite.dispose();
     super.dispose();
   }
 
@@ -184,7 +189,8 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
   }
 
   Future<void> _next() async {
-    final draft = OnboardingDraft(handle: _handle.text, password: _password.text, age: _age!, standalone: widget.standalone, attempt: _attempt, region: _region);
+    final invite = _invite.text.trim();
+    final draft = OnboardingDraft(handle: _handle.text, password: _password.text, age: _age!, standalone: widget.standalone, attempt: _attempt, region: _region, inviteCode: invite.isEmpty ? null : invite);
     final result = await context.push<Object>(Routes.onboardingTerms, extra: draft);
     if (!mounted) return;
     // 文字列 = ユーザー名を断られた(① でやり直す)。[RasqCreateRequest] = オンボーディングの外から (D-419): 閉じてから登録する。
@@ -261,6 +267,16 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
               title: Text(region == null ? context.l10n.regionChoose : regionName(region)),
               trailing: const Icon(Icons.chevron_right),
               onTap: _pickRegion,
+            ),
+            // 招待コード (D-548、任意)。無くても作れる(運営が審査を入れていれば、通るまで公開の機能が止まる)。
+            RasqSectionHeader(title: context.l10n.onboardingInviteHeading, topMargin: RasqSpacing.md),
+            Text(context.l10n.onboardingInviteCaption, style: caption),
+            TextField(
+              key: const ValueKey('onb.inviteCode'),
+              controller: _invite,
+              autocorrect: false,
+              textCapitalization: TextCapitalization.characters,
+              decoration: InputDecoration(labelText: context.l10n.onboardingInviteLabel),
             ),
             const SizedBox(height: RasqSpacing.md),
           ]),
@@ -380,7 +396,7 @@ class _OnboardingTermsScreenState extends ConsumerState<OnboardingTermsScreen> {
     final d = widget.draft!;
     setState(() => _busy = true);
     try {
-      final choice = RasqRegisterChoice(age: d.age, replaceBundle: _keepsCurrentBundle ? false : (_snsCount > 0 ? _replace : true), password: d.password, region: d.region);
+      final choice = RasqRegisterChoice(age: d.age, replaceBundle: _keepsCurrentBundle ? false : (_snsCount > 0 ? _replace : true), password: d.password, region: d.region, inviteCode: d.inviteCode);
       // オンボーディングの外から (D-419): ここでは送らず、選んだ内容を ① へ返す(① も閉じ、元の画面へ戻ってから登録する)。
       if (d.standalone) return context.pop(RasqCreateRequest(handle: d.handle, choice: choice));
       final rec = await completeRasqRegistration(ref.read, choice, handle: d.handle, attempt: d.attempt, onMessage: _toast);
