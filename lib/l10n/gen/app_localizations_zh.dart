@@ -18937,6 +18937,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get usersNotFound => '该用户似乎不存在。';
 
   @override
+  String usersFieldMentionNotFound(String handle) {
+    return '未找到 $handle';
+  }
+
+  @override
   String get vcSectionInvited => '邀请';
 
   @override
@@ -39229,6 +39234,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get usersNotFound => '該使用者似乎不存在。';
+
+  @override
+  String usersFieldMentionNotFound(String handle) {
+    return '找不到 $handle';
+  }
 
   @override
   String get vcSectionInvited => '邀請';

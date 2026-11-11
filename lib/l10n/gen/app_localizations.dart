@@ -31589,6 +31589,12 @@ abstract class AppLocalizations {
   /// **'このユーザーは存在しないようです。'**
   String get usersNotFound;
 
+  /// プロフィールの項目の @ハンドルを押して、その人が見つからなかったとき (D-560)
+  ///
+  /// In ja, this message translates to:
+  /// **'{handle} は見つかりませんでした'**
+  String usersFieldMentionNotFound(String handle);
+
   /// VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)
   ///
   /// In ja, this message translates to:

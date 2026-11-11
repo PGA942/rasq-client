@@ -5237,6 +5237,7 @@
   "usersClipNoteCount": "{count, plural, other{{count} 条}}",
   "usersClipSubtitleSeparator": " · ",
   "usersNotFound": "该用户似乎不存在。",
+  "usersFieldMentionNotFound": "未找到 {handle}",
   "vcSectionInvited": "邀请",
   "vcSectionRecommended": "推荐",
   "vcSectionUpcoming": "即将举行",

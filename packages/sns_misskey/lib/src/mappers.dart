@@ -16,6 +16,8 @@ abstract final class MisskeyMappers {
       displayName: (j['name'] as String?)?.trim().isNotEmpty == true ? j['name'] as String : username,
       avatarUrl: _uri(j['avatarUrl']),
       bio: j['description'] as String?,
+      // 名前の絵文字 (D-560): リモートの人は `emojis`(名前 → URL)に入ってくる。ローカルの人はサーバーの絵文字の一覧で引ける。
+      emojis: SnsWire.emojisFrom(j['emojis']),
     );
   }
 
@@ -42,6 +44,9 @@ abstract final class MisskeyMappers {
       isSuspended: j['isSuspended'] as bool? ?? false,
       pinnedPosts: [for (final n in (j['pinnedNotes'] as List? ?? const [])) if (n is Map) note(n.cast<String, Object?>(), viewer: account, host: host)],
       profileUrl: Uri.https(s.account.instance, '/@${s.handle}'),
+      // フォロー / フォロワーの公開範囲 (D-560)。2023.12 より前のサーバーは ffVisibility 1 つ。
+      followingVisibility: FollowListVisibility.parse(j['followingVisibility'] ?? j['ffVisibility']),
+      followersVisibility: FollowListVisibility.parse(j['followersVisibility'] ?? j['ffVisibility']),
     );
   }
 

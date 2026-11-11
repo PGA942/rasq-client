@@ -39,6 +39,8 @@ final notificationsProvider = FutureProvider<Page<NotificationItem>>((ref) async
   final gate = ref.watch(childGateProvider);
   final page = await s.notifications(limit: 40);
   await ref.read(userListHelperProvider).primeRelationships(page.items.expand((n) => n.actors.map((a) => a.id)));
+  // 名前の絵文字 (D-560): 閲覧中のサーバーの絵文字を取りに行く(リモートの人の絵文字は UserSummary.emojis)。
+  ref.read(emojiCacheProvider.notifier).request({for (final n in page.items) for (final a in n.actors) ...InlineSpans.emojiShortcodes(a.displayName)});
   return gate.supervised ? Page(items: gate.filterNotifications(page.items), nextCursor: page.nextCursor) : page;
 });
 
@@ -335,23 +337,42 @@ Future<void> openNotificationActor(BuildContext context, WidgetRef ref, List<Use
   if (pick != null && context.mounted) context.pushUser(actors[pick], account: account);
 }
 
-String _names(AppLocalizations l, List<UserSummary> actors) => switch (actors) {
+String _names(AppLocalizations l, List<String> names, int count) => switch (names) {
       [] => '',
-      [final a] => l.notificationsActorsOne(a.displayName),
-      [final a, final b] => l.notificationsActorsTwo(a.displayName, b.displayName),
-      [final a, final b, ...] => l.notificationsActorsMore(a.displayName, b.displayName, actors.length - 2),
+      [final a] => l.notificationsActorsOne(a),
+      [final a, final b] => l.notificationsActorsTwo(a, b),
+      [final a, final b, ...] => l.notificationsActorsMore(a, b, count - 2),
     };
 
-/// 文の中の [name] だけを太字にする (D-484)。[sentence] は名前の位置に渡した印を入れた文を返す。
-List<RasqSpan> _boldNameSpans(String Function(String name) sentence, String name) {
+/// 文の中の名前だけを太字にする (D-484)。名前の絵文字も描く (D-560、閲覧中のサーバーの絵文字 + その人が持ってきた絵文字)。
+/// [sentence] は名前の位置に渡した印を入れた文を返す。何人もいれば「A、B ほか n 人」の A / B をそれぞれ絵文字つきに。
+List<RasqSpan> _boldNameSpans(AppLocalizations l, String Function(String name) sentence, List<UserSummary> actors, Map<String, Uri?> emojis) {
   const mark = '\u0000';
+  // 人ごとの印(\u0001, \u0002)で「名前たち」の文を作り、あとで絵文字つきの名前に差し替える。
+  final shown = actors.take(2).toList();
+  final names = _names(l, [for (var i = 0; i < shown.length; i++) String.fromCharCode(1 + i)], actors.length);
+  final out = <RasqSpan>[];
   final parts = sentence(mark).split(mark);
-  return [
-    for (var i = 0; i < parts.length; i++) ...[
-      if (parts[i].isNotEmpty) RasqTextSpan(parts[i]),
-      if (i < parts.length - 1) RasqTextSpan(name, bold: true),
-    ],
-  ];
+  for (var i = 0; i < parts.length; i++) {
+    if (parts[i].isNotEmpty) out.add(RasqTextSpan(parts[i]));
+    if (i == parts.length - 1) break;
+    final buf = StringBuffer();
+    void flush() {
+      if (buf.isNotEmpty) out.add(RasqTextSpan(buf.toString(), bold: true));
+      buf.clear();
+    }
+
+    for (final ch in names.runes) {
+      if (ch >= 1 && ch <= shown.length) {
+        flush();
+        out.addAll(InlineSpans.name(shown[ch - 1], emojis: emojis, bold: true));
+      } else {
+        buf.writeCharCode(ch);
+      }
+    }
+    flush();
+  }
+  return out;
 }
 
 /// アクション系: アイコンリスト(グループアバター) + 本文(DSL) + 投稿の省略.
@@ -391,11 +412,12 @@ class _ActionTile extends ConsumerWidget {
       Padding(
         padding: const EdgeInsets.only(left: 24 + RasqSpacing.md, top: 4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          RasqRichText(_boldNameSpans(sentence, _names(l10n, item.actors)), style: RasqTypography.bodySmall),
+          RasqRichText(_boldNameSpans(l10n, sentence, item.actors, emojis), style: RasqTypography.bodySmall),
           if (item.reactionsByActor.isNotEmpty || item.reaction != null)
             Padding(
               padding: const EdgeInsets.only(top: 2),
-              child: Wrap(spacing: 4, children: [for (final r in (item.reactionsByActor.isNotEmpty ? item.reactionsByActor.values : [item.reaction!]).toSet()) _Reaction(r, emojis)]),
+              // リアクションの絵文字 (D-560): リモートの絵文字(`:name@host:`)は、その投稿の reactionEmojis から。
+              child: Wrap(spacing: 4, children: [for (final r in (item.reactionsByActor.isNotEmpty ? item.reactionsByActor.values : [item.reaction!]).toSet()) _Reaction(r, emojis, remote: item.post?.reactionEmojis ?? const {})]),
             ),
           if (item.post != null) Padding(padding: const EdgeInsets.only(top: 2), child: RasqRichText(InlineSpans.parse(item.post!.body, emojis: emojis), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis)),
         ]),
@@ -405,13 +427,17 @@ class _ActionTile extends ConsumerWidget {
 }
 
 class _Reaction extends StatelessWidget {
-  const _Reaction(this.r, this.emojis);
+  const _Reaction(this.r, this.emojis, {this.remote = const {}});
   final String r;
   final Map<String, Uri?> emojis;
+
+  /// その投稿のリアクションの絵文字(`name@host` → URL、D-560)。
+  final Map<String, Uri> remote;
   @override
   Widget build(BuildContext context) {
-    if (r.startsWith(':')) {
-      final url = emojis[r.substring(1, r.length - 1).replaceAll('@.', '')];
+    if (r.startsWith(':') && r.endsWith(':') && r.length > 2) {
+      final code = r.substring(1, r.length - 1);
+      final url = remote[code] ?? remote[code.replaceAll('@.', '')] ?? emojis[code.replaceAll('@.', '')];
       return url == null ? Text(r, style: RasqTypography.caption) : Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), height: 18, errorBuilder: (_, _, _) => Text(r, style: RasqTypography.caption));
     }
     return Text(r, style: const TextStyle(fontSize: 16));
@@ -440,7 +466,7 @@ class _FollowTile extends ConsumerWidget {
       const SizedBox(width: RasqSpacing.md),
       if (u != null) RasqAvatar(key: ValueKey('notif.avatar.${item.id}'), imageUrl: u.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: u.displayName, onTap: () => context.pushUser(u, account: item.account.key)),
       const SizedBox(width: RasqSpacing.sm),
-      Expanded(child: RasqRichText(_boldNameSpans(sentence, u?.displayName ?? ''), style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
+      Expanded(child: RasqRichText(_boldNameSpans(l10n, sentence, [?u], ref.watch(emojiCacheProvider)), style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
       if (u != null && item.kind != NotificationKind.followRequest) RasqTogglePillButton(label: l10n.notificationsFollowButton, activeLabel: l10n.notificationsFollowingButton, active: st.following, onPressed: () => ref.read(userListHelperProvider).toggleFollow(u)),
       if (item.kind == NotificationKind.followRequest) const Icon(Icons.chevron_right),
     ]);

@@ -19233,6 +19233,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get usersNotFound => '이 사용자는 존재하지 않는 것 같습니다.';
 
   @override
+  String usersFieldMentionNotFound(String handle) {
+    return '$handle을(를) 찾지 못했습니다';
+  }
+
+  @override
   String get vcSectionInvited => '초대';
 
   @override

@@ -1,4 +1,5 @@
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart' show UserSummary;
 
 import '../l10n/l10n.dart';
 import 'mfm/mfm_node.dart';
@@ -45,6 +46,15 @@ abstract final class InlineSpans {
     bool htmlFns = false,
   }) =>
       _Converter(emojis: emojis, onLink: onLink, onMention: onMention, onHashtag: onHashtag).spans(Mfm.parse(text, htmlFns: htmlFns, emojiHost: true));
+
+  /// 人の名前 (D-560): 名前の絵文字を描く。閲覧中のサーバーの絵文字([emojis])に、その人が持ってきた絵文字
+  /// ([UserSummary.emojis]、リモートの人の認証マークなど)を重ねる。持ってきた絵文字が無ければ [emojis] をそのまま使う
+  /// (新しい表を作らない = 行の覚えを壊さない)。[bold] なら文字を太字に。
+  static List<RasqSpan> name(UserSummary user, {Map<String, Uri?> emojis = const {}, bool bold = false}) {
+    final all = user.emojis.isEmpty ? emojis : {...emojis, ...user.emojis};
+    final spans = parse(user.displayName, emojis: all);
+    return bold ? [for (final s in spans) s is RasqTextSpan ? s.copyWith(bold: true) : s] : spans;
+  }
 
   /// Misskey の名前などの簡易な解析(`parseSimple`: 絵文字と `<plain>` だけ)。
   static List<RasqSpan> parseSimple(String text, {Map<String, Uri?> emojis = const {}}) => _Converter(emojis: emojis).spans(Mfm.parseSimple(text));

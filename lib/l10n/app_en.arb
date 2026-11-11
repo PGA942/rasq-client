@@ -5237,6 +5237,7 @@
   "usersClipNoteCount": "{count, plural, =1{1 note} other{{count} notes}}",
   "usersClipSubtitleSeparator": " · ",
   "usersNotFound": "This user doesn't seem to exist.",
+  "usersFieldMentionNotFound": "{handle} wasn't found",
   "vcSectionInvited": "Invited",
   "vcSectionRecommended": "Recommended",
   "vcSectionUpcoming": "Upcoming",

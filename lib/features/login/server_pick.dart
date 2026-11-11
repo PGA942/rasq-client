@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../backend/server_info_api.dart';
 import '../../l10n/l10n.dart';
 import '../swing/wagara.dart';
+import '../vc/astell_tile.dart' show AstellTile, AstellTileStrip;
 
 /// ログインの画面の「サーバーの検索」(D-554、ワイヤーフレーム p.4「PDS変更 / インスタンスURL入力」)。
 ///
@@ -277,8 +278,27 @@ const serverGridTwoColumnsMinWidth = 260.0;
 /// カードの縦横比(幅 / 高さ)。縦長のまま (D-557)。
 const serverCardAspectRatio = 0.68;
 
-/// 1 列のときのカードの幅の上限(縦長のまま、画面いっぱいに大きくしない)。
-const serverCardMaxWidth = 220.0;
+/// カードの幅 (D-560): AsTell のタイルと同じ([AstellTile.minWidth] 220px 〜 [AstellTileStrip.maxTileWidth] 600px)。
+/// 幅が広がったら、カードを大きくする前に列を増やす(最大 [serverGridMaxColumns] 列)。5 列でも余るときだけ 600px まで大きくし、
+/// それより広ければ中央に寄せる(大きな画面でカードの余白が広がりすぎないように)。
+const serverCardMinWidth = AstellTile.minWidth;
+const serverCardMaxWidth = AstellTileStrip.maxTileWidth;
+const serverGridMaxColumns = 5;
+
+/// 1 列のときのカードの幅(縦長のまま、画面いっぱいに大きくしない)。
+const serverCardSingleWidth = 220.0;
+
+/// カードの間。
+const serverGridGap = RasqSpacing.sm;
+
+/// 幅 [width] に並べる列の数 (D-560)。
+int serverGridColumns(double width) {
+  if (width < serverGridTwoColumnsMinWidth) return 1;
+  return ((width + serverGridGap) / (serverCardMinWidth + serverGridGap)).floor().clamp(2, serverGridMaxColumns);
+}
+
+/// [cols] 列のときのカード 1 枚の幅([serverCardMaxWidth] まで)。
+double serverCardWidth(double width, int cols) => math.min((width - serverGridGap * (cols - 1)) / cols, serverCardMaxWidth);
 
 /// 「サーバーの検索」: 見出し → 検索欄(並んでいるサーバーを絞り込む)→ 有力なサーバーのカード(縦 2 列のグリッド、D-556。カードは縦長の比、D-557)。
 class ServerPickList extends ConsumerStatefulWidget {
@@ -326,21 +346,26 @@ class _ServerPickListState extends ConsumerState<ServerPickList> {
           child: Text(l10n.loginServerSearchEmpty, key: const ValueKey('login.server.none'), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
         ),
       LayoutBuilder(builder: (context, box) {
-        final cols = box.maxWidth >= serverGridTwoColumnsMinWidth ? 2 : 1;
+        final cols = serverGridColumns(box.maxWidth);
+        // カードの幅 (D-560): 1 列は 220px、2〜5 列は幅を割ったもの(600px まで)。行は中央に寄せる。
+        final w = cols == 1 ? math.min(box.maxWidth, serverCardSingleWidth) : serverCardWidth(box.maxWidth, cols);
         Widget card(String host) => ServerPickCard(host: host, kind: widget.kind, onLogin: widget.enabled ? () => widget.onPick(host) : null);
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           for (var i = 0; i < shown.length; i += cols)
             Padding(
-              padding: const EdgeInsets.only(bottom: RasqSpacing.sm),
-              // カードは縦長の比で決まる (D-557)。説明の長さで高さは変わらない。
-              child: cols == 1
-                  ? Center(child: SizedBox(width: math.min(box.maxWidth, serverCardMaxWidth), child: AspectRatio(aspectRatio: serverCardAspectRatio, child: card(shown[i]))))
-                  : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      for (var j = 0; j < cols; j++) ...[
-                        if (j > 0) const SizedBox(width: RasqSpacing.sm),
-                        Expanded(child: AspectRatio(aspectRatio: serverCardAspectRatio, child: i + j < shown.length ? card(shown[i + j]) : const SizedBox.shrink())),
-                      ],
-                    ]),
+              padding: const EdgeInsets.only(bottom: serverGridGap),
+              // カードは縦長の比で決まる (D-557)。説明の長さで高さは変わらない。最後の行の空きは、左に詰める(グリッドの位置をそろえる)。
+              child: Center(
+                child: SizedBox(
+                  width: w * cols + serverGridGap * (cols - 1),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    for (var j = 0; j < cols; j++) ...[
+                      if (j > 0) const SizedBox(width: serverGridGap),
+                      SizedBox(width: w, child: i + j < shown.length ? AspectRatio(aspectRatio: serverCardAspectRatio, child: card(shown[i + j])) : null),
+                    ],
+                  ]),
+                ),
+              ),
             ),
         ]);
       }),

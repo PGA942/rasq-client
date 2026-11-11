@@ -53,6 +53,8 @@
   "designTimeHoursAgo": "{count, plural, =1{1 hour ago} other{{count} hours ago}}",
   "designTimeDaysAgo": "{count, plural, =1{1 day ago} other{{count} days ago}}",
   "designErrorRetry": "Try again",
+  "designProfileCountPrivate": "Private",
+  "designProfileCountFollowersOnly": "Visible to followers only",
   "designOverlayCancel": "Cancel",
   "designOverlayClose": "Close",
   "designOverlaySwitcher": "Switch FOW",

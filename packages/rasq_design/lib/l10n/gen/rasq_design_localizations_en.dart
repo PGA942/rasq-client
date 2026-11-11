@@ -257,6 +257,12 @@ class RasqDesignLocalizationsEn extends RasqDesignLocalizations {
   String get designErrorRetry => 'Try again';
 
   @override
+  String get designProfileCountPrivate => 'Private';
+
+  @override
+  String get designProfileCountFollowersOnly => 'Visible to followers only';
+
+  @override
   String get designOverlayCancel => 'Cancel';
 
   @override
