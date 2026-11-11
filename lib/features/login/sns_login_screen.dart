@@ -202,13 +202,7 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
         child: SingleChildScrollView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl, vertical: RasqSpacing.md), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const SizedBox(height: RasqSpacing.md),
           Row(children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(color: RasqSnsPill.colorOf(widget.kind), shape: BoxShape.circle),
-              alignment: Alignment.center,
-              child: Text(widget.kind.label.characters.first, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-            ),
+            RasqSnsMark(kind: widget.kind),
             const SizedBox(width: RasqSpacing.md),
             Expanded(
               child: RasqInput(

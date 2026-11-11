@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show LicenseRegistry;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import 'package:rasq_client/features/login/server_pick.dart';
 import 'package:rasq_client/features/login/sns_login_screen.dart';
 import 'package:rasq_client/features/onboarding/sns_discover_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:sns_misskey/sns_misskey.dart';
@@ -150,5 +152,42 @@ void main() {
       // どのボタンも同じ高さ・同じ幅。
       expect(tester.getSize(find.byKey(ValueKey(k))), tester.getSize(find.byKey(const ValueKey('discover.content'))), reason: k);
     }
+  });
+
+  testWidgets('SNS の印 (D-555): Bluesky / Misskey / Mastodon はロゴ、ロゴの無い SNS は色の丸に頭文字。ログインのボタンもロゴ', (tester) async {
+    expect(RasqBrandAssets.snsLogo(SnsKind.bluesky), RasqBrandAssets.snsBluesky);
+    expect(RasqBrandAssets.snsLogo(SnsKind.misskey), RasqBrandAssets.snsMisskey);
+    expect(RasqBrandAssets.snsLogo(SnsKind.mastodon), RasqBrandAssets.snsMastodon);
+    expect(RasqBrandAssets.snsLogo(SnsKind.mixi2), isNull);
+    await tester.pumpWidget(const MaterialApp(home: Row(children: [RasqSnsMark(kind: SnsKind.bluesky), RasqSnsMark(kind: SnsKind.mixi2, size: 40)])));
+    expect(find.byKey(const ValueKey('sns.mark.bluesky')), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
+    expect(find.text('m'), findsOneWidget, reason: 'mixi2 は頭文字');
+
+    final c = await _pump(tester, _MisskeyPlugin(), []);
+    expect(c.read(routerProvider).routerDelegate.currentConfiguration.uri.path, Routes.login);
+    for (final k in ['bluesky', 'misskey', 'mastodon']) {
+      expect(find.byKey(ValueKey('sns.mark.$k')), findsOneWidget, reason: k);
+    }
+    // ロゴの画像は、パッケージの素材として読める。
+    await tester.runAsync(() async {
+      for (final a in [RasqBrandAssets.snsBluesky, RasqBrandAssets.snsMisskey, RasqBrandAssets.snsMastodon]) {
+        final data = await rootBundle.load('packages/rasq_design/$a');
+        expect(data.lengthInBytes, greaterThan(1000), reason: a);
+      }
+    });
+  });
+
+  test('ロゴの出典を「ライセンス」の一覧に載せる(2 度呼んでも 1 度だけ)', () async {
+    registerRasqBrandLicenses();
+    registerRasqBrandLicenses();
+    final entries = await LicenseRegistry.licenses.toList();
+    String textOf(String name) => [
+          for (final e in entries)
+            if (e.packages.contains(name)) e.paragraphs.map((p) => p.text).join('\n'),
+        ].single;
+    expect(textOf('Misskey logo'), allOf(contains('Misskey Project'), contains('CC BY-SA'), contains('https://assets.misskey-hub.net/public/icon.png')));
+    expect(textOf('Bluesky logo'), allOf(contains('Bluesky Social, PBC'), contains('Trademark and Brand Guidelines')));
+    expect(textOf('Mastodon logo'), allOf(contains('Mastodon Trademark Policy'), contains('https://joinmastodon.org/ja/branding')));
   });
 }

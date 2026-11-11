@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:rasq_design/rasq_design.dart' show registerRasqBrandLicenses;
 import 'package:sns_misskey/sns_misskey.dart';
 
 import 'app/app.dart';
@@ -23,6 +24,8 @@ Future<void> main() async {
   await prepareDeviceRuntime();
   // 落書きの zstd の SVG(契約 v0.23、D-472)を RRL の Image / 編集画面で読めるように。
   installSvgzDecoder();
+  // SNS のロゴの出典 (D-555) を「ライセンス」の一覧に。
+  registerRasqBrandLicenses();
   runApp(ProviderScope(
     // 端末だけの実装(端末内モデルなど)。Web 版では空 (D-295)。
     overrides: deviceOverrides(),

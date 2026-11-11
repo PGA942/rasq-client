@@ -234,7 +234,7 @@ class _BundleAccounts extends ConsumerWidget {
 }
 
 /// 入口のボタン(丸いアイコン + 中央の文言 + 右の矢印)。SNS ごとのログイン(オンボーディング v2 の ③ でも使う)と、
-/// 「SNS サービスを探す」の入口 (D-554) で同じ見た目にする。左の丸は 32px で揃える: SNS は [kind] の色に頭文字、
+/// 「SNS サービスを探す」の入口 (D-554) で同じ見た目にする。左の丸は 32px で揃える: SNS は [RasqSnsMark](ロゴ、D-555)、
 /// それ以外は [icon](地は文字色、中は面の色)か [leading](RAi のアイコンなど、そのまま置く)。
 class SnsServiceButton extends StatelessWidget {
   const SnsServiceButton({super.key, this.kind, required this.label, required this.onTap, this.external = false, this.icon, this.leading})
@@ -257,13 +257,16 @@ class SnsServiceButton extends StatelessWidget {
     final color = onTap == null ? scheme.onSurface.withValues(alpha: 0.38) : scheme.onSurface;
     final Widget mark = leading != null
         ? SizedBox.square(dimension: iconSize, child: Center(child: leading))
-        : Container(
-            width: iconSize,
-            height: iconSize,
-            decoration: BoxDecoration(color: kind != null ? RasqSnsPill.colorOf(kind!) : color, shape: BoxShape.circle),
-            alignment: Alignment.center,
-            child: kind != null ? Text(kind!.label.characters.first, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)) : Icon(icon, size: 18, color: scheme.surface),
-          );
+        : kind != null
+            // SNS はロゴ(ロゴの無い SNS は色の丸に頭文字、D-555)。
+            ? RasqSnsMark(kind: kind!, size: iconSize)
+            : Container(
+                width: iconSize,
+                height: iconSize,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                alignment: Alignment.center,
+                child: Icon(icon, size: 18, color: scheme.surface),
+              );
     return Padding(
       padding: const EdgeInsets.only(bottom: RasqSpacing.md),
       child: Semantics(

@@ -78,13 +78,7 @@ class _BlueskyLoginScreenState extends ConsumerState<BlueskyLoginScreen> {
       body: SafeArea(
         child: SingleChildScrollView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl, vertical: RasqSpacing.md), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(color: RasqSnsPill.colorOf(SnsKind.bluesky), shape: BoxShape.circle),
-              alignment: Alignment.center,
-              child: const Text('B', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-            ),
+            const RasqSnsMark(kind: SnsKind.bluesky),
             const SizedBox(width: RasqSpacing.md),
             Expanded(
               child: RasqInput(
