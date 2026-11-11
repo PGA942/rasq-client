@@ -17,6 +17,7 @@ import '../../backend/rasq_account_page_api.dart' hide RasqNotice;
 import '../../l10n/l10n.dart';
 import 'rasq_account_page_screen.dart' show RasqSnsTileChip;
 import 'rasq_ownership_screens.dart' show rasqVerifiableKinds;
+import 'x_identity_section.dart';
 import '../../shell/headers.dart';
 import '../../session/bluesky_auth.dart' show blueskyDidOf;
 
@@ -356,6 +357,8 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                   },
                 ),
               ),
+              // ── X の名乗り(ダミーの X 認証、D-551)。Keybase の下(確認の系統の並び)──
+              _Labeled(l10n.onboardingExportXIdentityTitle, const XIdentitySection()),
               RasqNotice(
                 text: l10n.profileEditNotice,
                 detail: l10n.profileEditNoticeDetail,

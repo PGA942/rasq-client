@@ -35,6 +35,9 @@ dependencies:
   url_launcher: ^6.3.0
   # サーバーの登録ページをアプリの中で開く (D-412)。Android / iOS / macOS だけ(Linux / Windows / Web は外部のブラウザ)。
   webview_flutter: ^4.14.1
+  # 「この画面を探す」(D-552): WebView の番号(webViewIdentifier)を取って、ネイティブで写しを撮る。
+  webview_flutter_android: ^4.14.1
+  webview_flutter_wkwebview: ^3.26.1
   crypto: ^3.0.3
   # ストア配布物の ed25519 署名検証 (D-034)。純 Dart 実装で全プラットフォーム同一。
   cryptography: ^2.9.0

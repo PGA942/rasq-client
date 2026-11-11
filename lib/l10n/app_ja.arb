@@ -8482,7 +8482,7 @@
   },
   "onboardingDiscoverPeopleSubtitle": "好きな人の名前や分野から",
   "onboardingDiscoverExportTitle": "外部 SNS のエクスポートデータから探す",
-  "onboardingDiscoverExportSubtitle": "準備中",
+  "onboardingDiscoverExportSubtitle": "フォロー / フォロワーの書き出しから、RASQ にいる人を探します",
   "onboardingDiscoverAskTitle": "RAi に聞く",
   "@onboardingDiscoverAskTitle": {
     "description": "探す画面の入口・見出し・人から探すで見つからなかったときのボタン"
@@ -8768,6 +8768,192 @@
   "onboardingDiscoverApiFrameSize": "コマは 1 枚 10 MiB までです",
   "onboardingDiscoverApiFramesTotal": "コマは合計 24 MiB までです",
   "onboardingDiscoverApiEmpty": "画像・本文・URL のどれかが要ります",
+  "onboardingExportFileTypeLabel": "SNS の書き出し",
+  "onboardingExportIntro": "ほかの SNS から書き出した(エクスポートした)データを読み、そこに出てくるフォロー / フォロワーの中から、RASQ にいる人を探します。書き出しはこの端末の中で読み、サーバーへは送りません。",
+  "onboardingExportFormats": "読める形: X(Twitter)の zip / Mastodon・Misskey のフォローの CSV / Instagram・Threads の zip / Bluesky の repo.car。zip の中のファイルだけを選んでもかまいません。",
+  "onboardingExportPick": "書き出しのファイルを選ぶ",
+  "onboardingExportPickAgain": "ほかのファイルを選ぶ",
+  "onboardingExportPickFailed": "ファイルを選べませんでした",
+  "onboardingExportReadFailed": "ファイルを読めませんでした",
+  "onboardingExportNothingFound": "このファイルからは、フォロー / フォロワーを読み取れませんでした。対応している書き出しか確かめてください。",
+  "onboardingExportFoundHeading": "読み取ったアカウント",
+  "onboardingExportFoundLine": "{service}: フォロー {following} / フォロワー {followers} / やりとり {mentions}",
+  "@onboardingExportFoundLine": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      },
+      "following": {
+        "type": "int"
+      },
+      "followers": {
+        "type": "int"
+      },
+      "mentions": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingExportXIdNote": "X の書き出しのフォロー / フォロワーは内部 ID だけです。ID で照合し、ツイートのメンションからハンドルも分かった {count} 人はハンドルでも照合します。",
+  "@onboardingExportXIdNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingExportSkipped": "大きすぎるファイルを {count} 個読みませんでした",
+  "@onboardingExportSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingExportXAuthTitle": "X の書き出しを使うには、X で認証します",
+  "onboardingExportXAuthDone": "X で認証しました(試作)",
+  "onboardingExportXAuthDummyNote": "いまは試作のため、X には確かめに行きません(ボタンを押すだけで通ります)。",
+  "onboardingExportXAuthButton": "X で認証(試作)",
+  "onboardingExportXSelfTitle": "自分の X(@{handle})をプロフィールに登録する",
+  "@onboardingExportXSelfTitle": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingExportXSelfBody": "登録すると、あなたをフォローしている人が、自分の X の書き出しからあなたを見つけられます。X には確かめに行かないので、確認済みの印は付きません(試作)。",
+  "onboardingExportXSelfRegister": "登録する",
+  "onboardingExportXSelfDone": "登録しました",
+  "onboardingExportXRegisterFailed": "X のアカウントを登録できませんでした",
+  "onboardingExportSearch": "この {count} 人から RASQ のユーザーを探す",
+  "@onboardingExportSearch": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingExportHashNote": "サーバーへ送るのは、アカウントごとのハッシュとサービス名だけです。サーバーは保存しません。",
+  "onboardingExportProgress": "照合しています({done} / {total})",
+  "@onboardingExportProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingExportBusy": "混み合っています。少し待ってからもう一度お試しください",
+  "onboardingExportMatchFailed": "照合できませんでした",
+  "onboardingExportNoMatches": "RASQ にいる人は見つかりませんでした。相手がプロフィールにその SNS のリンクを載せているか、SNS アカウントをつないでいると見つかります。",
+  "onboardingExportMatchesHeading": "RASQ にいる人({count})",
+  "@onboardingExportMatchesHeading": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingExportRelationFollowing": "フォロー",
+  "onboardingExportRelationFollower": "フォロワー",
+  "onboardingExportRelationMention": "やりとり",
+  "onboardingExportVia": "{service} の{relation}: {name}",
+  "@onboardingExportVia": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      },
+      "relation": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingExportUnverified": "本人の確認はまだ(プロフィールでそう名乗っています)",
+  "onboardingExportXIdentityTitle": "X アカウント(X で認証・試作)",
+  "onboardingExportXIdentityBody": "X のハンドルを登録すると、ほかの人が X の書き出しからあなたを見つけられます。いまは試作のため X には確かめに行かず、確認済みの印は付きません。",
+  "onboardingExportXIdentityNone": "未登録",
+  "onboardingExportXIdentityCurrent": "@{handle}(試作・未確認)",
+  "@onboardingExportXIdentityCurrent": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingExportXIdentityHandleLabel": "X のハンドル(@ の後ろ)",
+  "onboardingExportXIdentityIdLabel": "X の内部 ID(数字、任意)",
+  "onboardingExportXIdentityIdHelp": "X の書き出しの account.js にある accountId。入れると、ハンドルの分からないフォロワーの書き出しからも見つかります。",
+  "onboardingExportXIdentitySave": "X で認証(試作)",
+  "onboardingExportXIdentityRemove": "登録を消す",
+  "onboardingExportXIdentityInvalid": "ハンドルは英数字と _ の 15 文字まで、ID は数字で入れてください",
+  "onboardingExportXIdentityFailed": "X のアカウントを保存できませんでした",
+  "onboardingPageSearchBrowseButton": "この画面を探す",
+  "onboardingPageSearchCaptureFailed": "このページを写せませんでした",
+  "onboardingPageSearchTitle": "この画面を探す",
+  "onboardingPageSearchLengthLabel": "長さ",
+  "onboardingPageSearchModeDraw": "囲む",
+  "onboardingPageSearchModeScroll": "スクロール",
+  "onboardingPageSearchHint": "探したい部分をドラッグで囲みます(いくつでも)。囲みをタップすると、検索文字列を直したり、画像で探すようにできます。",
+  "onboardingPageSearchSketchNote": "この端末ではページの写しを撮れないため、文字の位置だけを出しています。囲んで文字で探せます(画像では探せません)。",
+  "onboardingPageSearchButton": "{count} か所を探す",
+  "@onboardingPageSearchButton": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingPageSearchRegionsFull": "囲めるのは {max} か所までです",
+  "@onboardingPageSearchRegionsFull": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingPageSearchTooManyImages": "画像で探せるのは、1 回に {max} か所までです",
+  "@onboardingPageSearchTooManyImages": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingPageSearchRegionTitle": "囲み {index}",
+  "@onboardingPageSearchRegionTitle": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingPageSearchRegionCancel": "キャンセル",
+  "onboardingPageSearchRegionConfirm": "決定",
+  "onboardingPageSearchByText": "文字で探す",
+  "onboardingPageSearchByImage": "画像で探す",
+  "onboardingPageSearchQueryLabel": "検索文字列",
+  "onboardingPageSearchQueryHint": "名前、@ハンドル、言葉など",
+  "onboardingPageSearchOpenEditor": "画像エディターで開く",
+  "onboardingPageSearchEdited": "画像エディターで直した画像で探します",
+  "onboardingPageSearchDelete": "この囲みを消す",
+  "onboardingPageSearchResultsTitle": "見つかったもの",
+  "onboardingPageSearchTermsHeading": "探した言葉",
+  "onboardingPageSearchUsersHeading": "RASQ のユーザー",
+  "onboardingPageSearchPostsHeading": "RASQ の投稿",
+  "onboardingPageSearchImagesFailed": "画像 {count} 枚は、言葉にできませんでした(混み合っているか、読み取れませんでした)",
+  "@onboardingPageSearchImagesFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "onboardingTourPageSnsTitle": "いくつもの SNS を、ひとつの場所で",
   "onboardingTourPageSnsBody": "Misskey・Mastodon・Bluesky などのアカウントを、まとめて使えます。RASQ アカウントがあれば、設定やアカウントのまとまりを、ほかの端末でも使えます。",
   "onboardingTourPageSnsPicture": "Bluesky・Misskey・mixi2・Mastodon が RASQ にまとまる絵",

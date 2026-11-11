@@ -70,6 +70,7 @@ import '../features/settings/settings_screen.dart';
 import '../features/settings/backend_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/onboarding/onboarding_steps.dart';
+import '../features/onboarding/export_discover_screen.dart';
 import '../features/onboarding/sns_discover_screen.dart';
 import '../features/onboarding/screen_glimpse.dart' show isValidGlimpseId;
 import '../features/onboarding/rasq_register_screen.dart';
@@ -140,6 +141,10 @@ abstract final class Routes {
   static const snsDiscoverBrowse = '/sns-discover/browse';
   static const snsDiscoverPeople = '/sns-discover/people';
   static const snsDiscoverAsk = '/sns-discover/ask';
+  static const snsDiscoverExport = '/sns-discover/export';
+
+  /// 探す画面の中から開く RASQ アカウントのページ (D-551): SNS にログインする前でも開ける(`/sns-discover/…` は入口の外)。
+  static String snsDiscoverAccount(String handle) => '/sns-discover/account/${Uri.encodeComponent(handle)}';
 
   /// 登録の前に読む文書(設定の「ヘルプ、法的表示」と同じページ)。オンボーディング中も開ける (D-405)。
   static const termsDoc = '/settings/dsl/about.terms';
@@ -594,6 +599,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                     glimpseResultId: s.uri.queryParameters['glimpse'] == 'done' && isValidGlimpseId(s.uri.queryParameters['id']) ? s.uri.queryParameters['id'] : null)),
             GoRoute(path: 'browse', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverBrowseScreen()),
             GoRoute(path: 'people', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverPeopleScreen()),
+            GoRoute(path: 'export', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverExportScreen()),
+            GoRoute(path: 'account/:handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!)),
             GoRoute(path: 'ask', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverAskScreen()),
           ]),
           // RASQ の機能の紹介 (D-471)。
