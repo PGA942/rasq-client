@@ -1,7 +1,8 @@
 {
   "@@locale": "ko",
   "userPageViewTitle": "{tab} 표시",
-  "userPageViewClose": "닫기",
+  "userPageViewCancel": "취소",
+  "userPageViewConfirm": "확인",
   "userPageViewSearchHint": "이 사람의 {tab}에서 찾기",
   "userPageViewSortLabel": "정렬",
   "userPageViewSortNewest": "최신순",

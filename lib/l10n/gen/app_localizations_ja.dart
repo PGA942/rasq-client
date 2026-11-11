@@ -4481,9 +4481,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loginTermsTitle => 'プラグインの規約';
 
   @override
-  String get loginTermsAgree => '同意';
-
-  @override
   String loginTermsBullet(String text) {
     return '・$text';
   }
@@ -4641,6 +4638,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String loginBlueskyHandleCompleteNote(String host) {
     return '名前だけ入れると、ログインのときに「.$host」を補います';
   }
+
+  @override
+  String get loginTermsAgreeLogin => '同意してログイン';
+
+  @override
+  String get loginTermsAgreeSignup => '同意して新規登録';
+
+  @override
+  String get loginTermsCancel => 'キャンセル';
+
+  @override
+  String get loginTermsClose => '閉じる';
 
   @override
   String get mediaVizStyleMirror => '上下対称のバー';
@@ -18939,7 +18948,10 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get userPageViewClose => '閉じる';
+  String get userPageViewCancel => 'キャンセル';
+
+  @override
+  String get userPageViewConfirm => '決定';
 
   @override
   String userPageViewSearchHint(String tab) {

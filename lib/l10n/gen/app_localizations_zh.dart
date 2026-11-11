@@ -4441,9 +4441,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get loginTermsTitle => '插件条款';
 
   @override
-  String get loginTermsAgree => '同意';
-
-  @override
   String loginTermsBullet(String text) {
     return '• $text';
   }
@@ -4601,6 +4598,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String loginBlueskyHandleCompleteNote(String host) {
     return '只输入名称时,登录时会补上“.$host”';
   }
+
+  @override
+  String get loginTermsAgreeLogin => '同意并登录';
+
+  @override
+  String get loginTermsAgreeSignup => '同意并注册';
+
+  @override
+  String get loginTermsCancel => '取消';
+
+  @override
+  String get loginTermsClose => '关闭';
 
   @override
   String get mediaVizStyleMirror => '上下对称条形';
@@ -18713,7 +18722,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get userPageViewClose => '关闭';
+  String get userPageViewCancel => '取消';
+
+  @override
+  String get userPageViewConfirm => '确定';
 
   @override
   String userPageViewSearchHint(String tab) {
@@ -24721,9 +24733,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get loginTermsTitle => '外掛條款';
 
   @override
-  String get loginTermsAgree => '同意';
-
-  @override
   String loginTermsBullet(String text) {
     return '• $text';
   }
@@ -24881,6 +24890,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String loginBlueskyHandleCompleteNote(String host) {
     return '只輸入名稱時,登入時會補上「.$host」';
   }
+
+  @override
+  String get loginTermsAgreeLogin => '同意並登入';
+
+  @override
+  String get loginTermsAgreeSignup => '同意並註冊';
+
+  @override
+  String get loginTermsCancel => '取消';
+
+  @override
+  String get loginTermsClose => '關閉';
 
   @override
   String get mediaVizStyleMirror => '上下對稱長條';
@@ -38995,7 +39016,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get userPageViewClose => '關閉';
+  String get userPageViewCancel => '取消';
+
+  @override
+  String get userPageViewConfirm => '確定';
 
   @override
   String userPageViewSearchHint(String tab) {

@@ -26,7 +26,6 @@
   "loginBundleUse": "使用",
   "loginBundleLogin": "登录",
   "loginTermsTitle": "插件条款",
-  "loginTermsAgree": "同意",
   "loginTermsBullet": "• {text}",
   "loginSignupDivider": "没有 {service} 账号",
   "loginSignupButton": "注册",
@@ -70,5 +69,9 @@
   "loginServerMore": "此服务器的菜单",
   "loginServerOpenInBrowser": "在浏览器中打开服务器",
   "loginBlueskyNext": "使用此 PDS 继续",
-  "loginBlueskyHandleCompleteNote": "只输入名称时,登录时会补上“.{host}”"
+  "loginBlueskyHandleCompleteNote": "只输入名称时,登录时会补上“.{host}”",
+  "loginTermsAgreeLogin": "同意并登录",
+  "loginTermsAgreeSignup": "同意并注册",
+  "loginTermsCancel": "取消",
+  "loginTermsClose": "关闭"
 }

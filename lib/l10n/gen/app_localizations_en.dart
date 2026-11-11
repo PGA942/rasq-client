@@ -4677,9 +4677,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginTermsTitle => 'Plugin terms';
 
   @override
-  String get loginTermsAgree => 'Agree';
-
-  @override
   String loginTermsBullet(String text) {
     return '• $text';
   }
@@ -4839,6 +4836,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String loginBlueskyHandleCompleteNote(String host) {
     return 'If you enter just a name, “.$host” is added when you sign in';
   }
+
+  @override
+  String get loginTermsAgreeLogin => 'Agree and sign in';
+
+  @override
+  String get loginTermsAgreeSignup => 'Agree and sign up';
+
+  @override
+  String get loginTermsCancel => 'Cancel';
+
+  @override
+  String get loginTermsClose => 'Close';
 
   @override
   String get mediaVizStyleMirror => 'Mirrored bars';
@@ -19753,7 +19762,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get userPageViewClose => 'Close';
+  String get userPageViewCancel => 'Cancel';
+
+  @override
+  String get userPageViewConfirm => 'Done';
 
   @override
   String userPageViewSearchHint(String tab) {

@@ -61,6 +61,12 @@ class _BlueskyLoginScreenState extends ConsumerState<BlueskyLoginScreen> {
   /// 新規登録 (D-471): Bluesky のアプリ(bsky.app)の登録ページを外部のブラウザで開く。登録はブラウザで行い、戻ってきたら
   /// アプリパスワードを作ってログインする。
   Future<void> _signup() async {
+    // 新規登録の前にもプラグインの規約 (D-557):「同意して新規登録」。
+    final plugin = ref.read(pluginRegistryProvider).plugin(blueskyPluginId);
+    if (plugin != null) {
+      final agreed = await showTermsSheet(ref.read(overlayManagerProvider), plugin.manifest, purpose: TermsPurpose.signup);
+      if (!agreed || !mounted) return;
+    }
     final url = snsSignupPageUrl(SnsKind.bluesky, _host.text.trim().isEmpty ? blueskyDefaultHost : _host.text);
     final ok = await ref.read(snsSignupLauncherProvider)(url);
     if (!mounted) return;

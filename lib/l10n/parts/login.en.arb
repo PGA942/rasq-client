@@ -26,7 +26,6 @@
   "loginBundleUse": "Use",
   "loginBundleLogin": "Log in",
   "loginTermsTitle": "Plugin terms",
-  "loginTermsAgree": "Agree",
   "loginTermsBullet": "• {text}",
   "loginSignupDivider": "Don't have a {service} account?",
   "loginSignupButton": "Sign up",
@@ -70,5 +69,9 @@
   "loginServerMore": "Server menu",
   "loginServerOpenInBrowser": "Open the server in the browser",
   "loginBlueskyNext": "Continue with this PDS",
-  "loginBlueskyHandleCompleteNote": "If you enter just a name, “.{host}” is added when you sign in"
+  "loginBlueskyHandleCompleteNote": "If you enter just a name, “.{host}” is added when you sign in",
+  "loginTermsAgreeLogin": "Agree and sign in",
+  "loginTermsAgreeSignup": "Agree and sign up",
+  "loginTermsCancel": "Cancel",
+  "loginTermsClose": "Close"
 }

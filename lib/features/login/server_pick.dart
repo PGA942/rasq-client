@@ -236,16 +236,26 @@ class ServerPickCard extends ConsumerWidget {
               ),
             ]),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.sm, 0),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text(title, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-              Text(host, style: caption, maxLines: 1, overflow: TextOverflow.ellipsis),
-              if (text.isNotEmpty) Padding(padding: const EdgeInsets.only(top: RasqSpacing.xs), child: Text(text, style: caption, maxLines: 3, overflow: TextOverflow.ellipsis)),
-            ]),
+          // カードは縦長の比で決まっている (D-557): 名前 / ホスト / 説明は残りの高さに入るだけ(説明は入る行数で切る)。
+          // ボタンはいつも下に。
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.sm, 0),
+              child: LayoutBuilder(builder: (context, box) {
+                final lineHeight = (caption.fontSize ?? 12) * (caption.height ?? 1.4) * MediaQuery.textScalerOf(context).scale(1);
+                // 名前とホストのぶん(およそ 2 行 + 間)を引いた残りに、説明が何行入るか。
+                final room = box.maxHeight - lineHeight * 2.4 - RasqSpacing.xs;
+                final descLines = (room / lineHeight).floor().clamp(0, 4);
+                return ClipRect(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                    Text(title, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(host, style: caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    if (text.isNotEmpty && descLines > 0) Padding(padding: const EdgeInsets.only(top: RasqSpacing.xs), child: Text(text, key: ValueKey('login.server.$host.desc'), style: caption, maxLines: descLines, overflow: TextOverflow.ellipsis)),
+                  ]),
+                );
+              }),
+            ),
           ),
-          // 説明の長さが違っても、ボタンは下にそろえる(行の高さは長い方に合わせる)。
-          const Spacer(),
           Padding(
             padding: const EdgeInsets.all(RasqSpacing.sm),
             child: FilledButton(
@@ -261,10 +271,16 @@ class ServerPickCard extends ConsumerWidget {
   }
 }
 
-/// 2 列にする幅の下限(これより狭ければ 1 列)。
-const serverGridTwoColumnsMinWidth = 340.0;
+/// 2 列にする幅の下限(これより狭ければ 1 列)。カードは縦長なので、ふつうの電話の幅では 2 列。
+const serverGridTwoColumnsMinWidth = 260.0;
 
-/// 「サーバーの検索」: 見出し → 検索欄(並んでいるサーバーを絞り込む)→ 有力なサーバーのカード(縦 2 列のグリッド、D-556)。
+/// カードの縦横比(幅 / 高さ)。縦長のまま (D-557)。
+const serverCardAspectRatio = 0.68;
+
+/// 1 列のときのカードの幅の上限(縦長のまま、画面いっぱいに大きくしない)。
+const serverCardMaxWidth = 220.0;
+
+/// 「サーバーの検索」: 見出し → 検索欄(並んでいるサーバーを絞り込む)→ 有力なサーバーのカード(縦 2 列のグリッド、D-556。カードは縦長の比、D-557)。
 class ServerPickList extends ConsumerStatefulWidget {
   const ServerPickList({super.key, required this.kind, required this.onPick, this.enabled = true});
   final SnsKind kind;
@@ -316,15 +332,15 @@ class _ServerPickListState extends ConsumerState<ServerPickList> {
           for (var i = 0; i < shown.length; i += cols)
             Padding(
               padding: const EdgeInsets.only(bottom: RasqSpacing.sm),
-              // 行の高さを、その行のいちばん高いカードに合わせる。
-              child: IntrinsicHeight(
-                child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  for (var j = 0; j < cols; j++) ...[
-                    if (j > 0) const SizedBox(width: RasqSpacing.sm),
-                    Expanded(child: i + j < shown.length ? card(shown[i + j]) : const SizedBox.shrink()),
-                  ],
-                ]),
-              ),
+              // カードは縦長の比で決まる (D-557)。説明の長さで高さは変わらない。
+              child: cols == 1
+                  ? Center(child: SizedBox(width: math.min(box.maxWidth, serverCardMaxWidth), child: AspectRatio(aspectRatio: serverCardAspectRatio, child: card(shown[i]))))
+                  : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      for (var j = 0; j < cols; j++) ...[
+                        if (j > 0) const SizedBox(width: RasqSpacing.sm),
+                        Expanded(child: AspectRatio(aspectRatio: serverCardAspectRatio, child: i + j < shown.length ? card(shown[i + j]) : const SizedBox.shrink())),
+                      ],
+                    ]),
             ),
         ]);
       }),

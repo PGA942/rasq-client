@@ -26,7 +26,6 @@
   "loginBundleUse": "사용",
   "loginBundleLogin": "로그인",
   "loginTermsTitle": "플러그인 약관",
-  "loginTermsAgree": "동의",
   "loginTermsBullet": "• {text}",
   "loginSignupDivider": "{service} 계정이 없나요?",
   "loginSignupButton": "회원가입",
@@ -70,5 +69,9 @@
   "loginServerMore": "이 서버의 메뉴",
   "loginServerOpenInBrowser": "브라우저에서 서버 열기",
   "loginBlueskyNext": "이 PDS로 다음",
-  "loginBlueskyHandleCompleteNote": "이름만 입력하면 로그인할 때 '.{host}'를 붙입니다"
+  "loginBlueskyHandleCompleteNote": "이름만 입력하면 로그인할 때 '.{host}'를 붙입니다",
+  "loginTermsAgreeLogin": "동의하고 로그인",
+  "loginTermsAgreeSignup": "동의하고 가입",
+  "loginTermsCancel": "취소",
+  "loginTermsClose": "닫기"
 }
