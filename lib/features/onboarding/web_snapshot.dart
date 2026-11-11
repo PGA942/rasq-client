@@ -8,11 +8,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 /// アプリの中のブラウザの「この画面を探す」(D-552) の、ページの写し。
 ///
 /// ページの上から [pageSnapshotMaxScreens] 画面ぶんまでを、スクロールしながら見えている範囲を撮ってつなぐ。
-/// 見えている範囲を撮るのはネイティブの口(`rasq/web_snapshot`、いまは **Android だけ**)。撮れない端末では、
+/// 見えている範囲を撮るのはネイティブの口(`rasq/web_snapshot`: Android = WebView を描く、iOS / macOS = `WKWebView.takeSnapshot`)。撮れない端末では、
 /// ページの文字の位置だけを読んで**見取り図**(文字を置いた下書き)を出す — 囲んで文字で探すことはできる(画像では探せない)。
 /// 写しはメモリに持つだけで、保存しない。
 
@@ -135,11 +136,17 @@ final webViewShotProvider = Provider<WebViewShot>((ref) => captureVisibleWebView
 const _snapshotChannel = MethodChannel('rasq/web_snapshot');
 
 Future<Uint8List?> captureVisibleWebView(WebViewController controller) async {
-  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+  if (kIsWeb) return null;
   final platform = controller.platform;
-  if (platform is! AndroidWebViewController) return null;
+  // WebView の番号(ネイティブの側で、その番号から WebView を取り出す)。
+  final id = switch (platform) {
+    AndroidWebViewController() when defaultTargetPlatform == TargetPlatform.android => platform.webViewIdentifier,
+    WebKitWebViewController() when defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS => platform.webViewIdentifier,
+    _ => null,
+  };
+  if (id == null) return null;
   try {
-    return await _snapshotChannel.invokeMethod<Uint8List>('captureVisible', {'id': platform.webViewIdentifier, 'maxWidth': pageSnapshotMaxWidth});
+    return await _snapshotChannel.invokeMethod<Uint8List>('captureVisible', {'id': id, 'maxWidth': pageSnapshotMaxWidth});
   } on MissingPluginException {
     return null;
   } catch (e) {
