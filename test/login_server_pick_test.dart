@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/backend/server_info_api.dart';
 import 'package:rasq_client/features/login/login_screen.dart' show SnsServiceButton;
 import 'package:rasq_client/features/login/server_pick.dart';
 import 'package:rasq_client/features/login/sns_login_screen.dart';
@@ -94,21 +95,27 @@ void main() {
     // URL の欄は空(例は薄い文字で)。
     final urlField = tester.widgetList<EditableText>(find.byType(EditableText)).first;
     expect(urlField.controller.text, isEmpty);
-    // 有力なサーバーが 10 個。
-    expect(find.byType(ServerPickTile), findsNWidgets(10));
+    // 有力なサーバーが 10 個(カード、2 列のグリッド)。
+    expect(find.byType(ServerPickCard), findsNWidgets(10));
+    final a = tester.getRect(find.byKey(const ValueKey('login.server.misskey.io')));
+    final b = tester.getRect(find.byKey(const ValueKey('login.server.misskey.design')));
+    expect(a.top, b.top, reason: '1 行に 2 枚');
+    expect(b.left, greaterThan(a.right));
+    // Central の情報が無いので、どのカードもホスト名を種にした和柄の背景。
+    expect(find.byKey(const ValueKey('login.server.misskey.io.pattern')), findsOneWidget);
     expect(find.byKey(const ValueKey('login.server.misskey.io')), findsOneWidget);
     // 検索欄で絞り込む。
     await tester.enterText(find.byKey(const ValueKey('login.server.search')), 'design');
     await tester.pumpAndSettle();
-    expect(find.byType(ServerPickTile), findsOneWidget);
+    expect(find.byType(ServerPickCard), findsOneWidget);
     await tester.enterText(find.byKey(const ValueKey('login.server.search')), 'どこにも無い');
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('login.server.none')), findsOneWidget);
     await tester.enterText(find.byKey(const ValueKey('login.server.search')), '');
     await tester.pumpAndSettle();
 
-    // タイルを押す → サーバーを確かめ、規約 → ブラウザの認証が開く(「ブラウザで認証する」は押さない)。
-    await tester.tap(find.byKey(const ValueKey('login.server.misskey.design')));
+    // カードの「ログイン」を押す → サーバーを確かめ、規約 → ブラウザの認証が開く(「ブラウザで認証する」は押さない)。
+    await tester.tap(find.byKey(const ValueKey('login.server.misskey.design.login')));
     await tester.pumpAndSettle();
     if (find.text('同意').evaluate().isNotEmpty) {
       await tester.tap(find.text('同意'));
@@ -119,6 +126,7 @@ void main() {
     expect(launched, ['https://misskey.design/miauth/x']);
     // 確かめたサーバーはタイルの形で出て(説明のタグは外す)、「認証を確認」に進んでいる。一覧は畳む。
     expect(find.byType(ServerPickTile), findsOneWidget);
+    expect(find.byType(ServerPickCard), findsNothing);
     expect(find.text('サーバー misskey.design'), findsOneWidget);
     expect(find.text('説明 太字'), findsOneWidget);
     expect(find.text('ブラウザで許可したら戻ってきてください'), findsOneWidget);
@@ -189,5 +197,45 @@ void main() {
     expect(textOf('Misskey logo'), allOf(contains('Misskey Project'), contains('CC BY-SA'), contains('https://assets.misskey-hub.net/public/icon.png')));
     expect(textOf('Bluesky logo'), allOf(contains('Bluesky Social, PBC'), contains('Trademark and Brand Guidelines')));
     expect(textOf('Mastodon logo'), allOf(contains('Mastodon Trademark Policy'), contains('https://joinmastodon.org/ja/branding')));
+  });
+
+  test('バナーの無いサーバーの背景の種は、ホスト名から決まる(大小文字は同じ)', () {
+    expect(serverBannerSeed('misskey.io'), serverBannerSeed('Misskey.IO'));
+    expect(serverBannerSeed('misskey.io'), isNot(serverBannerSeed('mstdn.jp')));
+    // 同じ種なら同じ柄・同じ色。
+    final a = ServerBannerPainter('misskey.io').spec, b = ServerBannerPainter('misskey.io').spec;
+    expect((a.first, a.second, a.colors, a.unit), (b.first, b.second, b.colors, b.unit));
+  });
+
+  testWidgets('バナー: Misskey の背景の画像 → 無ければバナー → どちらも無ければ和柄。狭い幅では 1 列', (tester) async {
+    tester.view.physicalSize = const Size(320, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    RasqServerInfo info(String host, {Uri? bg, Uri? banner}) => RasqServerInfo(host: host, name: 'サーバー $host', backgroundImageUrl: bg, bannerUrl: banner);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        popularServersProvider(SnsKind.misskey).overrideWithValue(const ['a.example', 'b.example', 'c.example']),
+        serverInfoProvider('a.example').overrideWith((ref) async => info('a.example', bg: Uri.parse('https://a.example/bg.png'), banner: Uri.parse('https://a.example/banner.png'))),
+        serverInfoProvider('b.example').overrideWith((ref) async => info('b.example', banner: Uri.parse('https://b.example/banner.png'))),
+        serverInfoProvider('c.example').overrideWith((ref) async => info('c.example')),
+      ],
+      child: MaterialApp(home: Scaffold(body: SingleChildScrollView(child: ServerPickList(kind: SnsKind.misskey, onPick: (_) {})))),
+    ));
+    await tester.pumpAndSettle();
+    String? urlOf(String host) {
+      final f = find.byKey(ValueKey('login.server.$host.banner'));
+      if (f.evaluate().isEmpty) return null;
+      return ((tester.widget<Image>(f).image) as NetworkImage).url;
+    }
+
+    expect(urlOf('a.example'), 'https://a.example/bg.png', reason: 'Misskey の背景の画像を先に');
+    expect(urlOf('b.example'), 'https://b.example/banner.png');
+    expect(urlOf('c.example'), isNull);
+    expect(find.byKey(const ValueKey('login.server.c.example.pattern')), findsOneWidget);
+    // 320 幅は 1 列。
+    final a = tester.getRect(find.byKey(const ValueKey('login.server.a.example')));
+    final b = tester.getRect(find.byKey(const ValueKey('login.server.b.example')));
+    expect(b.top, greaterThan(a.bottom - 1));
+    expect(find.text('サーバー a.example'), findsOneWidget);
   });
 }
