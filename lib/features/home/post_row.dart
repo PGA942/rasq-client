@@ -261,7 +261,7 @@ class _PostRowState extends ConsumerState<PostRow> {
             name: post.author.displayName,
             emojis: emojis,
             spans: InlineSpans.parse(post.body, emojis: emojis, onLink: (u) => launchUrl(u, mode: LaunchMode.externalApplication), onHashtag: (t) => context.pushTrend(t)),
-            nameSpans: InlineSpans.parse(post.author.displayName, emojis: emojis),
+            nameSpans: InlineSpans.name(post.author, emojis: emojis),
           );
     final spans = parsed.spans;
     final nameSpans = parsed.nameSpans;
@@ -648,7 +648,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       variant: RasqPostTileVariant.embedded,
       author: q.author,
       createdAt: q.createdAt,
-      nameSpans: InlineSpans.parse(q.author.displayName, emojis: emojis),
+      nameSpans: InlineSpans.name(q.author, emojis: emojis),
       content: q.body.isNotEmpty ? RasqRichText(InlineSpans.parse(q.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis) : const SizedBox.shrink(),
       media: mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems) : null,
       onTap: () => context.pushPost(q),
@@ -677,7 +677,7 @@ class InlinePostFrame extends ConsumerWidget {
     final thumbs = <Uri>[for (final m in mediaItems) if (m.type == MediaType.image || m.type == MediaType.video || m.type == MediaType.gif) m.thumbnailUrl ?? m.url];
     return RasqInlinePostCard(
       author: post.author,
-      nameSpans: InlineSpans.parse(post.author.displayName, emojis: emojis),
+      nameSpans: InlineSpans.name(post.author, emojis: emojis),
       content: body.isNotEmpty
           ? RasqRichText(InlineSpans.parse(body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: maxLines, overflow: TextOverflow.ellipsis)
           : Text(mediaItems.isNotEmpty ? context.l10n.homePostAttachments(mediaItems.length) : '', style: RasqTypography.caption),

@@ -21,6 +21,7 @@ class UserSummary {
     this.bio,
     this.presence = UserPresence.none,
     this.verification = UserVerification.none,
+    this.emojis = const {},
   });
 
   /// Plugin-scoped stable id (DID / Misskey id …).
@@ -31,6 +32,10 @@ class UserSummary {
   final String? bio;
   final UserPresence presence;
   final UserVerification verification;
+
+  /// 名前に使っている絵文字(ショートコード → 画像の URL、D-560)。Misskey のリモートの人の `emojis` / Mastodon の `emojis` など、
+  /// 閲覧中のサーバーの絵文字の一覧には無いもの(認証マークの絵文字など)。無ければ空。
+  final Map<String, Uri> emojis;
 
   String get handle => account.handle;
 

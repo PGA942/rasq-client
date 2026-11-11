@@ -19163,6 +19163,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get usersNotFound => 'このユーザーは存在しないようです。';
 
   @override
+  String usersFieldMentionNotFound(String handle) {
+    return '$handle は見つかりませんでした';
+  }
+
+  @override
   String get vcSectionInvited => '招待';
 
   @override

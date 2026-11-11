@@ -424,6 +424,18 @@ abstract class RasqDesignLocalizations {
   /// **'見てみる'**
   String get designErrorRetry;
 
+  /// プロフィールのフォロー / フォロワーの人数が非公開(本人だけ)のときの説明。人数の代わりに 🔒 を出す (D-560)
+  ///
+  /// In ja, this message translates to:
+  /// **'非公開'**
+  String get designProfileCountPrivate;
+
+  /// 人数がフォロワーにだけ公開で見えないときの説明。人数の代わりに ? を出す (D-560)
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワーにだけ公開'**
+  String get designProfileCountFollowersOnly;
+
   /// オーバーレイ(ボトムシート・確かめ・つながったパネル)の、やめるボタンの既定の名前
   ///
   /// In ja, this message translates to:

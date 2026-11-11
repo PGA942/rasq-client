@@ -248,6 +248,12 @@ class RasqDesignLocalizationsKo extends RasqDesignLocalizations {
   String get designErrorRetry => '다시 시도';
 
   @override
+  String get designProfileCountPrivate => '비공개';
+
+  @override
+  String get designProfileCountFollowersOnly => '팔로워에게만 공개';
+
+  @override
   String get designOverlayCancel => '취소';
 
   @override

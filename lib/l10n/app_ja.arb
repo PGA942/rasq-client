@@ -18297,6 +18297,15 @@
   "@usersNotFound": {
     "description": "ユーザーページで、ユーザーが見つからない(404 など)とき"
   },
+  "usersFieldMentionNotFound": "{handle} は見つかりませんでした",
+  "@usersFieldMentionNotFound": {
+    "description": "プロフィールの項目の @ハンドルを押して、その人が見つからなかったとき (D-560)",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
   "vcSectionInvited": "招待",
   "@vcSectionInvited": {
     "description": "VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)"

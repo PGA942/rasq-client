@@ -19983,6 +19983,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get usersNotFound => 'This user doesn\'t seem to exist.';
 
   @override
+  String usersFieldMentionNotFound(String handle) {
+    return '$handle wasn\'t found';
+  }
+
+  @override
   String get vcSectionInvited => 'Invited';
 
   @override
