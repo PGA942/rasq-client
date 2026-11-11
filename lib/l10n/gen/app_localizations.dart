@@ -29610,6 +29610,36 @@ abstract class AppLocalizations {
   /// **'Swing を読めませんでした'**
   String get swingUnreadable;
 
+  /// No description provided for @swingErrorSendHeld.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報された Swing の確認ができなかったため、しばらく Swing を出せません(72 時間で解除されます)'**
+  String get swingErrorSendHeld;
+
+  /// No description provided for @swingP2pFetching.
+  ///
+  /// In ja, this message translates to:
+  /// **'相手の端末から受け取っています…'**
+  String get swingP2pFetching;
+
+  /// No description provided for @swingP2pUnavailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'いま届けられる人がいません。少し待ってからもう一度開いてください'**
+  String get swingP2pUnavailable;
+
+  /// No description provided for @swingP2pUnverified.
+  ///
+  /// In ja, this message translates to:
+  /// **'作った人の署名を確かめられないため、表示しません'**
+  String get swingP2pUnverified;
+
+  /// No description provided for @swingP2pRetry.
+  ///
+  /// In ja, this message translates to:
+  /// **'もう一度'**
+  String get swingP2pRetry;
+
   /// 着せ替えとして入れようとしたパッケージが着せ替えではないときの誤り。id はパッケージの id
   ///
   /// In ja, this message translates to:

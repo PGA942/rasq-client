@@ -26,6 +26,8 @@ import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart' show isRasqPackage, rasqpkgZstdProvider;
 import '../store/store_providers.dart' show installedPluginsProvider;
 import 'swing_models.dart';
+import 'p2p/swing_p2p.dart';
+import 'swing_client.dart';
 import 'swing_providers.dart';
 import 'wagara.dart';
 import '../../l10n/l10n.dart';
@@ -505,14 +507,49 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       _error = null;
     });
     try {
-      final mediaId = d.plugin ? null : await api.uploadMedia(d.bytes!, contentType: d.mime!);
       final plugin = _pluginId == null ? null : ref.read(swingPluginsProvider).where((p) => (p.storePluginId ?? p.id) == _pluginId).firstOrNull;
       final pkg = d.plugin ? _package : null;
-      final packageId = pkg == null ? null : await api.uploadMedia(pkg.bytes, contentType: isRasqPackage(pkg.bytes) ? 'application/vnd.rasq.pkg' : 'application/wasm');
       final cw = _cw.text.trim();
       final ttl = _ttl.value;
       // shared のカスタムプラグイン (D-424): この Swing のセッションを Central に作らせ、見る人はそこに入る。
       final shared = plugin?.manifest.page?.isShared ?? false;
+      // P2P (D-549 / Central S-128): 実体を Central に上げず、端末から配る。サーバーが受けなければ今までの形で作る。
+      // 未審査の入れ物は P2P で出さない(Central がまだ受けない)。
+      final p2p = pkg != null
+          ? null
+          : await createP2pSwing(
+              ref,
+              draft: NewSwing(kind: d.kind, audience: _audience.toAudience(), ttlHours: ttl, cw: _cwOn && cw.isNotEmpty ? cw : null, sensitive: _cwOn),
+              bytes: d.plugin ? null : d.bytes,
+              contentType: d.plugin ? null : d.mime,
+              plugin: d.plugin && _pluginId != null ? {'id': _pluginId!, 'version': ?plugin?.storeVersion, if (shared) 'session': SwingPlugin.newSession} : null,
+            );
+      if (p2p == null) await _sendToServer(api, d, plugin: plugin, pkg: pkg, shared: shared, cw: cw, ttl: ttl);
+      ref.invalidate(mySwingsProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.swingSent(ttl))));
+      _close();
+    } on AdmissionPendingException catch (e) {
+      // 入場の審査を通っていない (D-548): 失敗ではなく案内(帯も出る)。
+      setState(() => _error = e.message);
+    } on OrgateException catch (e) {
+      // `429 swing_limit` (D-503: 文ではなく名前と HTTP の番号で見る)。`429 swing_send_held`(通報の写しが揃わなかった、D-549)。
+      setState(() => _error = e.isReason('swing_send_held', legacyText: 'swing_send_held')
+          ? appL10n.swingErrorSendHeld
+          : e.isReason('swing_limit', legacyText: 'swing_limit') || e.code.code == '429'
+              ? appL10n.swingErrorLimit
+              : appL10n.swingSendFailed(e.message));
+    } catch (e) {
+      setState(() => _error = appL10n.swingSendFailed(e is StateError ? e.message : '$e'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// 今までの形(実体を Central に上げる)。P2P を受けないサーバー / 未審査の入れ物のとき。
+  Future<void> _sendToServer(SwingApi api, SwingDraft d, {required SlotPlugin? plugin, required ({String name, Uint8List bytes, String id, String version, String title})? pkg, required bool shared, required String cw, required int ttl}) async {
+      final mediaId = d.plugin ? null : await api.uploadMedia(d.bytes!, contentType: d.mime!);
+      final packageId = pkg == null ? null : await api.uploadMedia(pkg.bytes, contentType: isRasqPackage(pkg.bytes) ? 'application/vnd.rasq.pkg' : 'application/wasm');
       // 端末の版がそのサーバーで配られていなければ(同梱のサンプルなど)、サーバーの現在の版で作り直す(createServed)。
       await api.createServed(NewSwing(
         kind: d.kind,
@@ -528,21 +565,6 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
         cw: _cwOn && cw.isNotEmpty ? cw : null,
         sensitive: _cwOn,
       ));
-      ref.invalidate(mySwingsProvider);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.swingSent(ttl))));
-      _close();
-    } on AdmissionPendingException catch (e) {
-      // 入場の審査を通っていない (D-548): 失敗ではなく案内(帯も出る)。
-      setState(() => _error = e.message);
-    } on OrgateException catch (e) {
-      // `429 swing_limit` (D-503: 文ではなく名前と HTTP の番号で見る)。
-      setState(() => _error = e.isReason('swing_limit', legacyText: 'swing_limit') || e.code.code == '429' ? appL10n.swingErrorLimit : appL10n.swingSendFailed(e.message));
-    } catch (e) {
-      setState(() => _error = appL10n.swingSendFailed(e is StateError ? e.message : '$e'));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
   }
 
   @override

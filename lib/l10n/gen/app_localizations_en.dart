@@ -18789,6 +18789,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get swingUnreadable => 'Couldn\'t read the Swing';
 
   @override
+  String get swingErrorSendHeld =>
+      'You can\'t post Swings for a while because a reported Swing couldn\'t be confirmed (lifted after 72 hours)';
+
+  @override
+  String get swingP2pFetching => 'Receiving from another device…';
+
+  @override
+  String get swingP2pUnavailable =>
+      'No one can deliver this right now. Wait a bit and open it again';
+
+  @override
+  String get swingP2pUnverified =>
+      'Not shown because the creator\'s signature could not be verified';
+
+  @override
+  String get swingP2pRetry => 'Try again';
+
+  @override
   String themeNotAThemePack(String id) {
     return 'Not a theme pack: $id';
   }
