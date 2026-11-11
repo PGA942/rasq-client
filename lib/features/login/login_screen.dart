@@ -233,22 +233,42 @@ class _BundleAccounts extends ConsumerWidget {
   }
 }
 
-/// SNS ごとのログインのボタン(オンボーディング v2 の ③ でも使う)。
+/// 入口のボタン(丸いアイコン + 中央の文言 + 右の矢印)。SNS ごとのログイン(オンボーディング v2 の ③ でも使う)と、
+/// 「SNS サービスを探す」の入口 (D-554) で同じ見た目にする。左の丸は 32px で揃える: SNS は [kind] の色に頭文字、
+/// それ以外は [icon](地は文字色、中は面の色)か [leading](RAi のアイコンなど、そのまま置く)。
 class SnsServiceButton extends StatelessWidget {
-  const SnsServiceButton({super.key, required this.kind, required this.label, required this.onTap, this.external = false});
-  final SnsKind kind;
+  const SnsServiceButton({super.key, this.kind, required this.label, required this.onTap, this.external = false, this.icon, this.leading})
+      : assert(kind != null || icon != null || leading != null);
+  final SnsKind? kind;
   final String label;
-  final VoidCallback onTap;
+
+  /// null = 押せない(薄く出す)。
+  final VoidCallback? onTap;
   final bool external;
+  final IconData? icon;
+  final Widget? leading;
+
+  /// 左の丸の大きさ。
+  static const double iconSize = 32;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = scheme.onSurface;
+    final color = onTap == null ? scheme.onSurface.withValues(alpha: 0.38) : scheme.onSurface;
+    final Widget mark = leading != null
+        ? SizedBox.square(dimension: iconSize, child: Center(child: leading))
+        : Container(
+            width: iconSize,
+            height: iconSize,
+            decoration: BoxDecoration(color: kind != null ? RasqSnsPill.colorOf(kind!) : color, shape: BoxShape.circle),
+            alignment: Alignment.center,
+            child: kind != null ? Text(kind!.label.characters.first, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)) : Icon(icon, size: 18, color: scheme.surface),
+          );
     return Padding(
       padding: const EdgeInsets.only(bottom: RasqSpacing.md),
       child: Semantics(
         button: true,
+        enabled: onTap != null,
         label: label,
         child: Material(
           color: Colors.transparent,
@@ -260,9 +280,9 @@ class SnsServiceButton extends StatelessWidget {
               decoration: BoxDecoration(border: Border.all(color: color, width: 1.5), borderRadius: BorderRadius.circular(24)),
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(children: [
-                Container(width: 32, height: 32, decoration: BoxDecoration(color: RasqSnsPill.colorOf(kind), shape: BoxShape.circle), alignment: Alignment.center,
-                    child: Text(kind.label.characters.first, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
-                Expanded(child: Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 17, color: color))),
+                mark,
+                // 長い文言は縮めて 1 行に収める(探す画面の入口は文が長い)。
+                Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1, style: TextStyle(fontSize: 17, color: color))))),
                 Icon(external ? Icons.north_east : Icons.chevron_right, color: color),
               ]),
             ),

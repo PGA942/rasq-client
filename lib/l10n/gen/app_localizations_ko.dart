@@ -4644,6 +4644,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get loginMastodonHostHint => '인스턴스 URL 입력 (예: mastodon.social)';
 
   @override
+  String get loginServerSearchHint => '이름이나 호스트로 좁히기';
+
+  @override
+  String get loginServerSearchEmpty => '목록에 없습니다. 위 칸에 서버의 URL을 입력해 주세요';
+
+  @override
+  String get loginServerMore => '이 서버의 메뉴';
+
+  @override
+  String get loginServerOpenInBrowser => '브라우저에서 서버 열기';
+
+  @override
+  String get loginBlueskyNext => '이 PDS로 다음';
+
+  @override
+  String loginBlueskyHandleCompleteNote(String host) {
+    return '이름만 입력하면 로그인할 때 \'.$host\'를 붙입니다';
+  }
+
+  @override
   String get mediaVizStyleMirror => '상하 대칭 막대';
 
   @override

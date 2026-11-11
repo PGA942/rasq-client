@@ -174,6 +174,9 @@ abstract final class Routes {
   static const loginMisskey = '/login/misskey';
   static const loginMastodon = '/login/mastodon';
   static const loginBluesky = '/login/bluesky';
+
+  /// Bluesky のハンドルとアプリパスワードのページ (D-554)。[host] = 前のページで決めた PDS。
+  static String loginBlueskyHandle(String host) => '/login/bluesky/handle?host=${Uri.encodeQueryComponent(host)}';
   static const loginMixi2 = '/login/mixi2';
 
   /// ノードプログラミング画面 (D-090)。`/nodes/<scope>`。TL スコープの
@@ -636,7 +639,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(path: 'misskey', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => MisskeyLoginScreen(host: s.uri.queryParameters['host'])),
               GoRoute(path: 'mastodon', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => MastodonLoginScreen(host: s.uri.queryParameters['host'])),
-              GoRoute(path: 'bluesky', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BlueskyLoginScreen()),
+              GoRoute(path: 'bluesky', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BlueskyLoginScreen(), routes: [
+                GoRoute(path: 'handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => BlueskyHandleScreen(host: s.uri.queryParameters['host'] ?? '')),
+              ]),
               GoRoute(path: 'mixi2', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const Mixi2LoginScreen()),
             ],
           ),

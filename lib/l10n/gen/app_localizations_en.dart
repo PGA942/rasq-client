@@ -4820,6 +4820,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter instance URL (e.g. mastodon.social)';
 
   @override
+  String get loginServerSearchHint => 'Filter by name or host';
+
+  @override
+  String get loginServerSearchEmpty =>
+      'Not in the list. Enter the server\'s URL in the field above';
+
+  @override
+  String get loginServerMore => 'Server menu';
+
+  @override
+  String get loginServerOpenInBrowser => 'Open the server in the browser';
+
+  @override
+  String get loginBlueskyNext => 'Continue with this PDS';
+
+  @override
+  String loginBlueskyHandleCompleteNote(String host) {
+    return 'If you enter just a name, “.$host” is added when you sign in';
+  }
+
+  @override
   String get mediaVizStyleMirror => 'Mirrored bars';
 
   @override

@@ -14,6 +14,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../onboarding/server_signup.dart';
 import 'login_screen.dart' show popOr;
+import 'server_pick.dart';
 import 'sns_signup.dart';
 import 'terms_sheet.dart';
 import '../../l10n/l10n.dart';
@@ -34,13 +35,17 @@ class SnsLoginScreen extends ConsumerStatefulWidget {
     required this.defaultHost,
     required this.authButtonLabel,
     this.hostHint,
+    this.initialHost,
   });
 
   final String pluginId;
   final SnsKind kind;
 
-  /// 入力欄の初期値(代表的なインスタンス)。
+  /// 入力欄の例に出すホスト(代表的なインスタンス)。入力欄そのものは空で始める (D-554)。
   final String defaultHost;
+
+  /// 入力欄に先に入れておくサーバー(RASQ アカウントのバンドルからのログイン D-316 / サーバーのタイルからの登録 D-412)。
+  final String? initialHost;
 
   /// 「ブラウザで認証する (MiAuth)」のような、認証方式込みのラベル。
   final String authButtonLabel;
@@ -51,7 +56,7 @@ class SnsLoginScreen extends ConsumerStatefulWidget {
 }
 
 class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
-  late final _host = TextEditingController(text: widget.defaultHost);
+  late final _host = TextEditingController(text: widget.initialHost ?? '');
   ServerInfo? _server;
   BrowserAuthFlow? _flow;
   bool _busy = false;
@@ -63,7 +68,7 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
   void initState() {
     super.initState();
     // サーバーのタイルから登録してきた (D-412): サーバーは決まっているので、すぐ確かめる。
-    if (ref.read(serverSignupTargetProvider)?.host == widget.defaultHost) WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? _inspect() : null);
+    if (widget.initialHost != null && ref.read(serverSignupTargetProvider)?.host == widget.initialHost) WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? _inspect() : null);
   }
 
   @override
@@ -91,11 +96,20 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
     }
   }
 
+  /// 「サーバーの検索」のタイルを押した (D-554): そのサーバーを確かめて、そのまま認証(規約 → ブラウザ)へ進む。
+  Future<void> _pick(String host) async {
+    _host.text = host;
+    await _inspect();
+    if (mounted && _server != null) await _startAuth();
+  }
+
   /// 新規登録 (D-471): サーバーを確かめて(済んでいればそのまま)、D-412 の登録ページ(RAi の案内つき)へ。
   /// 登録できたら「登録できた」→ このサーバーのログイン → ログインしたら RASQ の機能の紹介。
   Future<void> _signup() async {
     var info = _server;
-    final typed = _host.text.trim().replaceFirst(RegExp(r'^https?://'), '').split('/').first.toLowerCase();
+    // 入力欄が空なら、代表のサーバー(例に出しているもの)で登録する。
+    if (_host.text.trim().isEmpty) _host.text = widget.defaultHost;
+    final typed = serverHostOf(_host.text);
     if (info == null || (typed.isNotEmpty && info.host != typed)) {
       setState(() {
         _busy = true;
@@ -184,7 +198,8 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.loginSnsTitle), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: context.l10n.loginBack, onPressed: () => popOr(context, Routes.login))),
       body: SafeArea(
-        child: ListView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl, vertical: RasqSpacing.md), children: [
+        // 一覧が長くても下の「新規登録」まで作っておく(遅延の ListView にしない)。
+        child: SingleChildScrollView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl, vertical: RasqSpacing.md), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const SizedBox(height: RasqSpacing.md),
           Row(children: [
             Container(
@@ -220,18 +235,23 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
             ),
           if (_server != null) ...[
             RasqSectionHeader(title: context.l10n.loginSnsServerSection, topMargin: 0),
-            RasqListTile(
-              title: _server!.name,
-              subtitle: [
-                _server!.host,
-                if (_server!.version != null) '${_server!.software ?? widget.kind.label} ${_server!.version}',
-                if (_server!.maintainer != null) context.l10n.loginSnsMaintainer(_server!.maintainer!),
-              ].join(' · '),
-              leading: _server!.iconUrl == null ? const Icon(Icons.dns_outlined) : RasqAvatar(imageUrl: _server!.iconUrl, size: 32),
+            // 確かめたサーバー(ワイヤーフレーム p.4 のタイルの形、D-554)。
+            ServerPickTile(
+              host: _server!.host,
+              kind: widget.kind,
+              name: _server!.name,
+              iconUrl: _server!.iconUrl,
+              description: _server!.description ?? '',
               trailing: _server!.registrationOpen == false ? RasqPill(label: context.l10n.loginSnsRegistrationClosed, color: RasqColors.muted) : null,
-              chevron: false,
             ),
-            if (_server!.description != null) Padding(padding: const EdgeInsets.symmetric(vertical: RasqSpacing.sm), child: Text(_server!.description!, style: RasqTypography.bodySmall, maxLines: 4, overflow: TextOverflow.ellipsis)),
+            if (_server!.version != null || _server!.maintainer != null)
+              Text(
+                [
+                  if (_server!.version != null) '${_server!.software ?? widget.kind.label} ${_server!.version}',
+                  if (_server!.maintainer != null) context.l10n.loginSnsMaintainer(_server!.maintainer!),
+                ].join(' · '),
+                style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
+              ),
             const SizedBox(height: RasqSpacing.lg),
             if (_flow == null)
               FilledButton.icon(
@@ -252,9 +272,11 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
               TextButton(onPressed: _busy ? null : () => launchUrl(_flow!.url, mode: LaunchMode.externalApplication), child: Text(context.l10n.loginSnsReopenBrowser)),
             ],
           ],
+          // サーバーの検索 (D-554): まだサーバーを決めていない間は、有力なサーバーを並べる。押すとそのまま認証へ。
+          if (_server == null) ServerPickList(kind: widget.kind, enabled: !_busy, onPick: _pick),
           // 新規登録 (D-471): アカウントを持っていない人は、このサーバー(入力欄)の登録ページへ。
           SnsSignupButton(kind: widget.kind, onPressed: _busy ? null : _signup),
-        ]),
+        ])),
       ),
     );
   }
@@ -271,7 +293,8 @@ class MisskeyLoginScreen extends StatelessWidget {
   Widget build(BuildContext context) => SnsLoginScreen(
         pluginId: MisskeyPlugin.pluginId,
         kind: SnsKind.misskey,
-        defaultHost: host ?? 'misskey.io',
+        defaultHost: 'misskey.io',
+        initialHost: host,
         authButtonLabel: context.l10n.loginMisskeyAuthButton,
       );
 }
@@ -288,7 +311,8 @@ class MastodonLoginScreen extends StatelessWidget {
   Widget build(BuildContext context) => SnsLoginScreen(
         pluginId: mastodonPluginId,
         kind: SnsKind.mastodon,
-        defaultHost: host ?? 'mastodon.social',
+        defaultHost: 'mastodon.social',
+        initialHost: host,
         authButtonLabel: context.l10n.loginMastodonAuthButton,
         hostHint: context.l10n.loginMastodonHostHint,
       );

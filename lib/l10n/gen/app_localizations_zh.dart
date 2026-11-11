@@ -4583,6 +4583,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get loginMastodonHostHint => '输入实例 URL（例：mastodon.social）';
 
   @override
+  String get loginServerSearchHint => '按名称或主机筛选';
+
+  @override
+  String get loginServerSearchEmpty => '列表中未找到。请在上方输入服务器的 URL';
+
+  @override
+  String get loginServerMore => '此服务器的菜单';
+
+  @override
+  String get loginServerOpenInBrowser => '在浏览器中打开服务器';
+
+  @override
+  String get loginBlueskyNext => '使用此 PDS 继续';
+
+  @override
+  String loginBlueskyHandleCompleteNote(String host) {
+    return '只输入名称时,登录时会补上“.$host”';
+  }
+
+  @override
   String get mediaVizStyleMirror => '上下对称条形';
 
   @override
@@ -24841,6 +24861,26 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get loginMastodonHostHint => '輸入站台 URL（例：mastodon.social）';
+
+  @override
+  String get loginServerSearchHint => '依名稱或主機篩選';
+
+  @override
+  String get loginServerSearchEmpty => '清單中找不到。請在上方輸入伺服器的 URL';
+
+  @override
+  String get loginServerMore => '此伺服器的選單';
+
+  @override
+  String get loginServerOpenInBrowser => '在瀏覽器中開啟伺服器';
+
+  @override
+  String get loginBlueskyNext => '使用此 PDS 繼續';
+
+  @override
+  String loginBlueskyHandleCompleteNote(String host) {
+    return '只輸入名稱時,登入時會補上「.$host」';
+  }
 
   @override
   String get mediaVizStyleMirror => '上下對稱長條';

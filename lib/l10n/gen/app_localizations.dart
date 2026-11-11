@@ -7692,6 +7692,42 @@ abstract class AppLocalizations {
   /// **'インスタンスのURLを入力 (例: mastodon.social)'**
   String get loginMastodonHostHint;
 
+  /// No description provided for @loginServerSearchHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'名前かホストで絞り込む'**
+  String get loginServerSearchHint;
+
+  /// No description provided for @loginServerSearchEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'一覧に見つかりません。上の欄にサーバーの URL を入れてください'**
+  String get loginServerSearchEmpty;
+
+  /// No description provided for @loginServerMore.
+  ///
+  /// In ja, this message translates to:
+  /// **'このサーバーのメニュー'**
+  String get loginServerMore;
+
+  /// No description provided for @loginServerOpenInBrowser.
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーをブラウザで開く'**
+  String get loginServerOpenInBrowser;
+
+  /// No description provided for @loginBlueskyNext.
+  ///
+  /// In ja, this message translates to:
+  /// **'この PDS で次へ'**
+  String get loginBlueskyNext;
+
+  /// No description provided for @loginBlueskyHandleCompleteNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'名前だけ入れると、ログインのときに「.{host}」を補います'**
+  String loginBlueskyHandleCompleteNote(String host);
+
   /// 音声を動画にするときの波形の形の選択肢(Visualizer の設定)。中央から上下に伸びるバー
   ///
   /// In ja, this message translates to:

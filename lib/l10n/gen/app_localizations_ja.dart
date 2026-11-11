@@ -4623,6 +4623,26 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loginMastodonHostHint => 'インスタンスのURLを入力 (例: mastodon.social)';
 
   @override
+  String get loginServerSearchHint => '名前かホストで絞り込む';
+
+  @override
+  String get loginServerSearchEmpty => '一覧に見つかりません。上の欄にサーバーの URL を入れてください';
+
+  @override
+  String get loginServerMore => 'このサーバーのメニュー';
+
+  @override
+  String get loginServerOpenInBrowser => 'サーバーをブラウザで開く';
+
+  @override
+  String get loginBlueskyNext => 'この PDS で次へ';
+
+  @override
+  String loginBlueskyHandleCompleteNote(String host) {
+    return '名前だけ入れると、ログインのときに「.$host」を補います';
+  }
+
+  @override
   String get mediaVizStyleMirror => '上下対称のバー';
 
   @override
