@@ -8044,6 +8044,35 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingExportXIdentityFailed => '无法保存 X 账号';
 
   @override
+  String get onboardingHistoryTitle => '整合搜索记录来查找';
+
+  @override
+  String get onboardingHistorySubtitle => '汇总之前搜索过的词语,查找 RASQ 的用户和列表';
+
+  @override
+  String get onboardingHistoryIntro =>
+      '这些是你在“查找 SNS 服务”中搜索过的词语。将汇总所选词语来查找 RASQ 用户和 RASQ 列表。记录仅保存在本设备上。';
+
+  @override
+  String get onboardingHistoryEmpty => '还没有记录。通过图片、内容或热门用户查找后,词语会显示在这里。';
+
+  @override
+  String get onboardingHistoryRemove => '删除此词语';
+
+  @override
+  String get onboardingHistoryClear => '清除全部记录';
+
+  @override
+  String onboardingHistorySearch(int count) {
+    return '用所选的 $count 个词语查找';
+  }
+
+  @override
+  String onboardingHistoryTooMany(int max) {
+    return '一次最多可选 $max 个';
+  }
+
+  @override
   String get onboardingPageSearchBrowseButton => '搜索此页面';
 
   @override
@@ -8132,6 +8161,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String onboardingPageSearchImagesFailed(int count) {
     return '有 $count 张图片无法转换为词语(服务器繁忙或无法识别)';
   }
+
+  @override
+  String get onboardingQrTitle => '通过朋友的二维码查找';
+
+  @override
+  String get onboardingQrSubtitle => '拍摄 RASQ 账号的二维码,或从图片读取';
+
+  @override
+  String get onboardingQrIntro =>
+      '读取朋友的 RASQ 账号二维码来找到对方。二维码在本设备上读取,图片不会发送到任何地方。';
+
+  @override
+  String get onboardingQrReadHeading => '读取朋友的二维码';
+
+  @override
+  String get onboardingQrCamera => '拍摄二维码';
+
+  @override
+  String get onboardingQrImage => '从图片读取';
+
+  @override
+  String get onboardingQrNotFound => '图片中未找到二维码。请让二维码更大一些后重拍';
+
+  @override
+  String get onboardingQrNotRasq => '这不是 RASQ 账号的二维码';
+
+  @override
+  String onboardingQrNoAccount(String handle) {
+    return '未找到 @$handle';
+  }
+
+  @override
+  String get onboardingQrReadFailed => '无法读取二维码';
+
+  @override
+  String get onboardingQrMineHeading => '我的二维码';
+
+  @override
+  String get onboardingQrMineNone => '登录 RASQ 账号后可显示自己的二维码';
+
+  @override
+  String get onboardingQrMineHint => '朋友读取此二维码后会打开你的页面';
 
   @override
   String get onboardingTourPageSnsTitle => '多个 SNS，集中在一处';
@@ -28232,6 +28303,35 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get onboardingExportXIdentityFailed => '無法儲存 X 帳號';
 
   @override
+  String get onboardingHistoryTitle => '整合搜尋紀錄來尋找';
+
+  @override
+  String get onboardingHistorySubtitle => '彙整之前搜尋過的詞語,尋找 RASQ 的使用者和清單';
+
+  @override
+  String get onboardingHistoryIntro =>
+      '這些是你在「尋找 SNS 服務」中搜尋過的詞語。將彙整所選詞語來尋找 RASQ 使用者和 RASQ 清單。紀錄僅保存在本裝置上。';
+
+  @override
+  String get onboardingHistoryEmpty => '還沒有紀錄。透過圖片、內容或熱門使用者尋找後,詞語會顯示在這裡。';
+
+  @override
+  String get onboardingHistoryRemove => '刪除此詞語';
+
+  @override
+  String get onboardingHistoryClear => '清除全部紀錄';
+
+  @override
+  String onboardingHistorySearch(int count) {
+    return '用所選的 $count 個詞語尋找';
+  }
+
+  @override
+  String onboardingHistoryTooMany(int max) {
+    return '一次最多可選 $max 個';
+  }
+
+  @override
   String get onboardingPageSearchBrowseButton => '搜尋此頁面';
 
   @override
@@ -28320,6 +28420,48 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String onboardingPageSearchImagesFailed(int count) {
     return '有 $count 張圖片無法轉換為詞語(伺服器忙碌或無法辨識)';
   }
+
+  @override
+  String get onboardingQrTitle => '透過朋友的 QR 碼尋找';
+
+  @override
+  String get onboardingQrSubtitle => '拍攝 RASQ 帳號的 QR 碼,或從圖片讀取';
+
+  @override
+  String get onboardingQrIntro =>
+      '讀取朋友的 RASQ 帳號 QR 碼來找到對方。QR 碼在本裝置上讀取,圖片不會傳送到任何地方。';
+
+  @override
+  String get onboardingQrReadHeading => '讀取朋友的 QR 碼';
+
+  @override
+  String get onboardingQrCamera => '拍攝 QR 碼';
+
+  @override
+  String get onboardingQrImage => '從圖片讀取';
+
+  @override
+  String get onboardingQrNotFound => '圖片中找不到 QR 碼。請讓 QR 碼更大一些後重拍';
+
+  @override
+  String get onboardingQrNotRasq => '這不是 RASQ 帳號的 QR 碼';
+
+  @override
+  String onboardingQrNoAccount(String handle) {
+    return '找不到 @$handle';
+  }
+
+  @override
+  String get onboardingQrReadFailed => '無法讀取 QR 碼';
+
+  @override
+  String get onboardingQrMineHeading => '我的 QR 碼';
+
+  @override
+  String get onboardingQrMineNone => '登入 RASQ 帳號後可顯示自己的 QR 碼';
+
+  @override
+  String get onboardingQrMineHint => '朋友讀取此 QR 碼後會開啟你的頁面';
 
   @override
   String get onboardingTourPageSnsTitle => '多個 SNS，集中在一處';

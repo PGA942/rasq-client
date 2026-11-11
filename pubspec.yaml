@@ -115,6 +115,7 @@ dependencies:
   firebase_messaging: ^16.7.0
   # ホーム画面のアプリのショートカット (D-483、flutter.dev): iOS は Info.plist の静的な項目(SF Symbols)、Android は動的な項目。
   quick_actions: ^1.1.1
+  zxing2: ^0.2.4
 dev_dependencies:
   flutter_test:
     sdk: flutter

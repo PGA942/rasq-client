@@ -13497,6 +13497,54 @@ abstract class AppLocalizations {
   /// **'X のアカウントを保存できませんでした'**
   String get onboardingExportXIdentityFailed;
 
+  /// No description provided for @onboardingHistoryTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索履歴を統合して探す'**
+  String get onboardingHistoryTitle;
+
+  /// No description provided for @onboardingHistorySubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'これまでに探した言葉をまとめて、RASQ の人とリストを探します'**
+  String get onboardingHistorySubtitle;
+
+  /// No description provided for @onboardingHistoryIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'「SNS サービスを探す」でこれまでに探した言葉です。選んだ言葉をまとめて、RASQ のユーザーと RASQ リストを探します。履歴はこの端末の中だけに残ります。'**
+  String get onboardingHistoryIntro;
+
+  /// No description provided for @onboardingHistoryEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ履歴がありません。「好きな画像やコンテンツから探す」や「有力なユーザーから探す」で探すと、ここに言葉が並びます。'**
+  String get onboardingHistoryEmpty;
+
+  /// No description provided for @onboardingHistoryRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'この言葉を消す'**
+  String get onboardingHistoryRemove;
+
+  /// No description provided for @onboardingHistoryClear.
+  ///
+  /// In ja, this message translates to:
+  /// **'履歴をすべて消す'**
+  String get onboardingHistoryClear;
+
+  /// No description provided for @onboardingHistorySearch.
+  ///
+  /// In ja, this message translates to:
+  /// **'選んだ {count} 個の言葉で探す'**
+  String onboardingHistorySearch(int count);
+
+  /// No description provided for @onboardingHistoryTooMany.
+  ///
+  /// In ja, this message translates to:
+  /// **'一度に選べるのは {max} 個までです'**
+  String onboardingHistoryTooMany(int max);
+
   /// No description provided for @onboardingPageSearchBrowseButton.
   ///
   /// In ja, this message translates to:
@@ -13652,6 +13700,84 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'画像 {count} 枚は、言葉にできませんでした(混み合っているか、読み取れませんでした)'**
   String onboardingPageSearchImagesFailed(int count);
+
+  /// No description provided for @onboardingQrTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'友だちの QR から探す'**
+  String get onboardingQrTitle;
+
+  /// No description provided for @onboardingQrSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントの QR を撮るか、画像から読みます'**
+  String get onboardingQrSubtitle;
+
+  /// No description provided for @onboardingQrIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'友だちの RASQ アカウントの QR を読んで、その人を探します。QR はこの端末の中で読み、画像はどこにも送りません。'**
+  String get onboardingQrIntro;
+
+  /// No description provided for @onboardingQrReadHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'友だちの QR を読む'**
+  String get onboardingQrReadHeading;
+
+  /// No description provided for @onboardingQrCamera.
+  ///
+  /// In ja, this message translates to:
+  /// **'QR を撮る'**
+  String get onboardingQrCamera;
+
+  /// No description provided for @onboardingQrImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像から読む'**
+  String get onboardingQrImage;
+
+  /// No description provided for @onboardingQrNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像の中に QR が見つかりませんでした。QR が大きく写るように撮り直してください'**
+  String get onboardingQrNotFound;
+
+  /// No description provided for @onboardingQrNotRasq.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントの QR ではありません'**
+  String get onboardingQrNotRasq;
+
+  /// No description provided for @onboardingQrNoAccount.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} は見つかりませんでした'**
+  String onboardingQrNoAccount(String handle);
+
+  /// No description provided for @onboardingQrReadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'QR を読めませんでした'**
+  String get onboardingQrReadFailed;
+
+  /// No description provided for @onboardingQrMineHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の QR'**
+  String get onboardingQrMineHeading;
+
+  /// No description provided for @onboardingQrMineNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインすると、自分の QR を出せます'**
+  String get onboardingQrMineNone;
+
+  /// No description provided for @onboardingQrMineHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'友だちにこの QR を読んでもらうと、あなたのページが開きます'**
+  String get onboardingQrMineHint;
 
   /// No description provided for @onboardingTourPageSnsTitle.
   ///

@@ -8893,6 +8893,28 @@
   "onboardingExportXIdentityRemove": "登録を消す",
   "onboardingExportXIdentityInvalid": "ハンドルは英数字と _ の 15 文字まで、ID は数字で入れてください",
   "onboardingExportXIdentityFailed": "X のアカウントを保存できませんでした",
+  "onboardingHistoryTitle": "検索履歴を統合して探す",
+  "onboardingHistorySubtitle": "これまでに探した言葉をまとめて、RASQ の人とリストを探します",
+  "onboardingHistoryIntro": "「SNS サービスを探す」でこれまでに探した言葉です。選んだ言葉をまとめて、RASQ のユーザーと RASQ リストを探します。履歴はこの端末の中だけに残ります。",
+  "onboardingHistoryEmpty": "まだ履歴がありません。「好きな画像やコンテンツから探す」や「有力なユーザーから探す」で探すと、ここに言葉が並びます。",
+  "onboardingHistoryRemove": "この言葉を消す",
+  "onboardingHistoryClear": "履歴をすべて消す",
+  "onboardingHistorySearch": "選んだ {count} 個の言葉で探す",
+  "@onboardingHistorySearch": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingHistoryTooMany": "一度に選べるのは {max} 個までです",
+  "@onboardingHistoryTooMany": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "onboardingPageSearchBrowseButton": "この画面を探す",
   "onboardingPageSearchCaptureFailed": "このページを写せませんでした",
   "onboardingPageSearchTitle": "この画面を探す",
@@ -8954,6 +8976,26 @@
       }
     }
   },
+  "onboardingQrTitle": "友だちの QR から探す",
+  "onboardingQrSubtitle": "RASQ アカウントの QR を撮るか、画像から読みます",
+  "onboardingQrIntro": "友だちの RASQ アカウントの QR を読んで、その人を探します。QR はこの端末の中で読み、画像はどこにも送りません。",
+  "onboardingQrReadHeading": "友だちの QR を読む",
+  "onboardingQrCamera": "QR を撮る",
+  "onboardingQrImage": "画像から読む",
+  "onboardingQrNotFound": "画像の中に QR が見つかりませんでした。QR が大きく写るように撮り直してください",
+  "onboardingQrNotRasq": "RASQ アカウントの QR ではありません",
+  "onboardingQrNoAccount": "@{handle} は見つかりませんでした",
+  "@onboardingQrNoAccount": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingQrReadFailed": "QR を読めませんでした",
+  "onboardingQrMineHeading": "自分の QR",
+  "onboardingQrMineNone": "RASQ アカウントにログインすると、自分の QR を出せます",
+  "onboardingQrMineHint": "友だちにこの QR を読んでもらうと、あなたのページが開きます",
   "onboardingTourPageSnsTitle": "いくつもの SNS を、ひとつの場所で",
   "onboardingTourPageSnsBody": "Misskey・Mastodon・Bluesky などのアカウントを、まとめて使えます。RASQ アカウントがあれば、設定やアカウントのまとまりを、ほかの端末でも使えます。",
   "onboardingTourPageSnsPicture": "Bluesky・Misskey・mixi2・Mastodon が RASQ にまとまる絵",

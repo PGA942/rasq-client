@@ -1,0 +1,16 @@
+{
+  "@@locale": "en",
+  "onboardingQrTitle": "Find from a friend's QR code",
+  "onboardingQrSubtitle": "Take a photo of a RASQ account QR code, or read it from an image",
+  "onboardingQrIntro": "Read a friend's RASQ account QR code to find them. The code is read on this device and the image isn't sent anywhere.",
+  "onboardingQrReadHeading": "Read a friend's QR code",
+  "onboardingQrCamera": "Take a photo",
+  "onboardingQrImage": "Read from an image",
+  "onboardingQrNotFound": "No QR code was found in the image. Try again with the code filling more of the picture",
+  "onboardingQrNotRasq": "This isn't a RASQ account QR code",
+  "onboardingQrNoAccount": "@{handle} wasn't found",
+  "onboardingQrReadFailed": "Couldn't read the QR code",
+  "onboardingQrMineHeading": "Your QR code",
+  "onboardingQrMineNone": "Sign in to your RASQ account to show your QR code",
+  "onboardingQrMineHint": "When a friend reads this code, your page opens"
+}

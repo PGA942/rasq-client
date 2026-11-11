@@ -8496,6 +8496,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingExportXIdentityFailed => 'Couldn\'t save the X account';
 
   @override
+  String get onboardingHistoryTitle => 'Find from your search history';
+
+  @override
+  String get onboardingHistorySubtitle =>
+      'Combine the words you\'ve searched for to find RASQ people and lists';
+
+  @override
+  String get onboardingHistoryIntro =>
+      'These are the words you\'ve searched for in “Find SNS services”. The ones you select are combined to find RASQ users and RASQ lists. The history stays on this device only.';
+
+  @override
+  String get onboardingHistoryEmpty =>
+      'No history yet. Words appear here after you search from images, content or popular users.';
+
+  @override
+  String get onboardingHistoryRemove => 'Remove this word';
+
+  @override
+  String get onboardingHistoryClear => 'Clear history';
+
+  @override
+  String onboardingHistorySearch(int count) {
+    return 'Search with the $count selected word(s)';
+  }
+
+  @override
+  String onboardingHistoryTooMany(int max) {
+    return 'You can select up to $max at a time';
+  }
+
+  @override
   String get onboardingPageSearchBrowseButton => 'Search this page';
 
   @override
@@ -8585,6 +8616,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String onboardingPageSearchImagesFailed(int count) {
     return '$count image(s) couldn\'t be turned into words (the server is busy or couldn\'t read them)';
   }
+
+  @override
+  String get onboardingQrTitle => 'Find from a friend\'s QR code';
+
+  @override
+  String get onboardingQrSubtitle =>
+      'Take a photo of a RASQ account QR code, or read it from an image';
+
+  @override
+  String get onboardingQrIntro =>
+      'Read a friend\'s RASQ account QR code to find them. The code is read on this device and the image isn\'t sent anywhere.';
+
+  @override
+  String get onboardingQrReadHeading => 'Read a friend\'s QR code';
+
+  @override
+  String get onboardingQrCamera => 'Take a photo';
+
+  @override
+  String get onboardingQrImage => 'Read from an image';
+
+  @override
+  String get onboardingQrNotFound =>
+      'No QR code was found in the image. Try again with the code filling more of the picture';
+
+  @override
+  String get onboardingQrNotRasq => 'This isn\'t a RASQ account QR code';
+
+  @override
+  String onboardingQrNoAccount(String handle) {
+    return '@$handle wasn\'t found';
+  }
+
+  @override
+  String get onboardingQrReadFailed => 'Couldn\'t read the QR code';
+
+  @override
+  String get onboardingQrMineHeading => 'Your QR code';
+
+  @override
+  String get onboardingQrMineNone =>
+      'Sign in to your RASQ account to show your QR code';
+
+  @override
+  String get onboardingQrMineHint =>
+      'When a friend reads this code, your page opens';
 
   @override
   String get onboardingTourPageSnsTitle => 'Many social networks, one place';

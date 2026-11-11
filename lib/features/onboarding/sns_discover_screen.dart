@@ -28,6 +28,7 @@ import '../rai/rai_widgets.dart' show RaiIcon, RaiPromptBar;
 import '../settings/developer_mode.dart';
 import '../settings/settings_dsl.dart' show settingsAreaProvider;
 import 'discover_circle_editor.dart';
+import 'discover_history.dart';
 import 'discover_image_crop.dart';
 import 'onboarding_previews.dart' show signupFromList;
 import 'page_search_screen.dart';
@@ -37,12 +38,14 @@ import 'web_snapshot.dart';
 
 /// SNS サービスを探す画面 (D-414)。オンボーディングの ③ と、SNS のログインの「サービスを探してログイン」から開く。
 ///
-/// 入口は 4 つ(Central の口は CONTRACT §2〜§6、どれも匿名で呼べる):
+/// 入口は 6 つ(Central の口は CONTRACT §2〜§6、どれも匿名で呼べる):
 /// - **好きな画像やコンテンツから探す** — 画像を選ぶ(端末の画像の選択、6 枚まで。1 枚ずつ「囲って検索」で探したい部分を囲み、
 ///   端末で切り抜いて `frames` + `source: picker` で送る、D-418)/ いつものブラウザで見て、通知のタップで画面を 3 秒だけ読み取る
 ///   (D-415、[ScreenGlimpse]。iOS は開発者モードの「画面の読み取りを試す(iOS)」のときだけ)/ アプリの中のブラウザで見て「この画面から探す」(本文 + URL)→ §2
 /// - **有力なユーザー / インフルエンサーから探す** — 名前や分野 → §3(まず RASQ リストの中、Brave は最終手段で既定は無効)
 /// - **外部 SNS のエクスポートデータから探す** — 書き出しを端末で読み、ハッシュで RASQ のユーザーを照合する(D-551、`export_discover_screen.dart`)
+/// - **友だちの QR から探す** — 自分の QR と、友だちの QR を撮って / 画像から読む(D-553、`qr_discover_screen.dart`)
+/// - **検索履歴を統合して探す** — これまでに探した言葉をまとめて RASQ の人とリストを探す(D-553、`history_discover_screen.dart`)
 /// - **RAi に聞く** — クラウドの RAi との会話 → §5(端末に RAi のデータが無くてよい)
 /// 結果のサーバー → D-412 の登録(WebView + RAi の案内 → ログイン)/ ログイン、RASQ リスト → SNS アカウントがあれば開いて取り込む
 /// (D-347)、無ければリストの人がいるサーバーへ登録してから。RASQ アカウントは ①② で作ってあるので、D-413 のポップアップは頼まない。
@@ -203,6 +206,21 @@ class SnsDiscoverScreen extends ConsumerWidget {
                 title: context.l10n.onboardingDiscoverExportTitle,
                 subtitle: context.l10n.onboardingDiscoverExportSubtitle,
                 onTap: () => context.push(Routes.snsDiscoverExport),
+              ),
+              // 友だちの QR から探す / 検索履歴を統合して探す (D-553)。
+              RasqListTile(
+                key: const ValueKey('discover.qr'),
+                leading: const Icon(Icons.qr_code_scanner),
+                title: context.l10n.onboardingQrTitle,
+                subtitle: context.l10n.onboardingQrSubtitle,
+                onTap: () => context.push(Routes.snsDiscoverQr),
+              ),
+              RasqListTile(
+                key: const ValueKey('discover.history'),
+                leading: const Icon(Icons.manage_search),
+                title: context.l10n.onboardingHistoryTitle,
+                subtitle: context.l10n.onboardingHistorySubtitle,
+                onTap: () => context.push(Routes.snsDiscoverHistory),
               ),
               RasqListTile(
                 key: const ValueKey('discover.ask'),
@@ -734,6 +752,8 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
     try {
       if (api == null) throw ArgumentError(context.l10n.onboardingDiscoverNoCentral);
       final r = await api.content(image: c.image, frames: c.frames, source: c.source, capturedAt: c.capturedAt, text: c.text, url: c.url);
+      // 探した言葉を控える (D-553)。見本の結果(外のサービスが未設定)の言葉は控えない。
+      if (r.mode != 'dummy') unawaited(ref.read(discoverHistoryProvider.notifier).record(r.query.keywords.take(5), DiscoverHistorySource.content));
       if (mounted) {
         setState(() => _result = r);
         if (c.pictureCount > 1) _showFrame(discoverInitialFrame(r.query.crops, c.pictureCount, preferFirst: c.source == 'picker'));
@@ -1372,6 +1392,7 @@ class _DiscoverPeopleScreenState extends ConsumerState<DiscoverPeopleScreen> {
     try {
       if (api == null) throw ArgumentError(context.l10n.onboardingDiscoverNoCentral);
       final r = await api.people(q);
+      unawaited(ref.read(discoverHistoryProvider.notifier).record([q], DiscoverHistorySource.people));
       if (mounted) setState(() => _result = r);
     } catch (e) {
       debugPrint('discover people: $e');

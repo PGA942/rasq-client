@@ -1,0 +1,11 @@
+{
+  "@@locale": "en",
+  "onboardingHistoryTitle": "Find from your search history",
+  "onboardingHistorySubtitle": "Combine the words you've searched for to find RASQ people and lists",
+  "onboardingHistoryIntro": "These are the words you've searched for in “Find SNS services”. The ones you select are combined to find RASQ users and RASQ lists. The history stays on this device only.",
+  "onboardingHistoryEmpty": "No history yet. Words appear here after you search from images, content or popular users.",
+  "onboardingHistoryRemove": "Remove this word",
+  "onboardingHistoryClear": "Clear history",
+  "onboardingHistorySearch": "Search with the {count} selected word(s)",
+  "onboardingHistoryTooMany": "You can select up to {max} at a time"
+}
