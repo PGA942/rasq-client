@@ -8,12 +8,15 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : FlutterActivity() {
     private var glimpse: ScreenGlimpseBridge? = null
     private var astellAudio: AstellAudioBridge? = null
+    private var webSnapshot: WebSnapshotBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         glimpse = ScreenGlimpseBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         // AsTell の通話 (D-455): マイク / Bluetooth の許可と、ルームにいる間の前面サービス。
         astellAudio = AstellAudioBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+        // アプリの中のブラウザの「この画面を探す」(D-552): 見えている範囲の写し。
+        webSnapshot = WebSnapshotBridge(flutterEngine)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -21,6 +24,8 @@ class MainActivity : FlutterActivity() {
         glimpse = null
         astellAudio?.detach()
         astellAudio = null
+        webSnapshot?.detach()
+        webSnapshot = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 

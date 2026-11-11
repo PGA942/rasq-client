@@ -30,8 +30,10 @@ import '../settings/settings_dsl.dart' show settingsAreaProvider;
 import 'discover_circle_editor.dart';
 import 'discover_image_crop.dart';
 import 'onboarding_previews.dart' show signupFromList;
+import 'page_search_screen.dart';
 import 'screen_glimpse.dart';
 import 'server_signup.dart';
+import 'web_snapshot.dart';
 
 /// SNS サービスを探す画面 (D-414)。オンボーディングの ③ と、SNS のログインの「サービスを探してログイン」から開く。
 ///
@@ -40,7 +42,7 @@ import 'server_signup.dart';
 ///   端末で切り抜いて `frames` + `source: picker` で送る、D-418)/ いつものブラウザで見て、通知のタップで画面を 3 秒だけ読み取る
 ///   (D-415、[ScreenGlimpse]。iOS は開発者モードの「画面の読み取りを試す(iOS)」のときだけ)/ アプリの中のブラウザで見て「この画面から探す」(本文 + URL)→ §2
 /// - **有力なユーザー / インフルエンサーから探す** — 名前や分野 → §3(まず RASQ リストの中、Brave は最終手段で既定は無効)
-/// - **外部 SNS のエクスポートデータから探す** — 準備中(押せない)
+/// - **外部 SNS のエクスポートデータから探す** — 書き出しを端末で読み、ハッシュで RASQ のユーザーを照合する(D-551、`export_discover_screen.dart`)
 /// - **RAi に聞く** — クラウドの RAi との会話 → §5(端末に RAi のデータが無くてよい)
 /// 結果のサーバー → D-412 の登録(WebView + RAi の案内 → ログイン)/ ログイン、RASQ リスト → SNS アカウントがあれば開いて取り込む
 /// (D-347)、無ければリストの人がいるサーバーへ登録してから。RASQ アカウントは ①② で作ってあるので、D-413 のポップアップは頼まない。
@@ -200,8 +202,7 @@ class SnsDiscoverScreen extends ConsumerWidget {
                 leading: const Icon(Icons.file_open_outlined),
                 title: context.l10n.onboardingDiscoverExportTitle,
                 subtitle: context.l10n.onboardingDiscoverExportSubtitle,
-                enabled: false,
-                chevron: false,
+                onTap: () => context.push(Routes.snsDiscoverExport),
               ),
               RasqListTile(
                 key: const ValueKey('discover.ask'),
@@ -1077,11 +1078,16 @@ abstract interface class DiscoverPageCapturer {
   Future<DiscoverCapture> capture();
 }
 
+/// ページの写しも撮れる口 (D-552「この画面を探す」)。アプリの中のブラウザが持つ。
+abstract interface class DiscoverPageSnapshotter {
+  Future<PageSnapshot> snapshot();
+}
+
 /// ブラウザの部分(テストで差し替える)。[attach] = 読み取りの口ができた。
 typedef DiscoverBrowserBuilder = Widget Function(BuildContext context, Uri initial, ValueChanged<DiscoverPageCapturer> attach);
 
 final discoverBrowserProvider = Provider<DiscoverBrowserBuilder>(
-  (ref) => (context, initial, attach) => inAppSignupWebViewSupported ? _InAppDiscoverBrowser(initial: initial, attach: attach) : const _ManualCapturePanel(),
+  (ref) => (context, initial, attach) => inAppSignupWebViewSupported ? _InAppDiscoverBrowser(initial: initial, attach: attach, shot: ref.watch(webViewShotProvider)) : const _ManualCapturePanel(),
 );
 
 /// 最初に開くページ(検索)。
@@ -1127,6 +1133,26 @@ class _DiscoverBrowseScreenState extends ConsumerState<DiscoverBrowseScreen> {
     super.dispose();
   }
 
+  /// 「この画面を探す」(D-552): ページの写し → 囲んで探す画面。
+  Future<void> _searchThisPage() async {
+    final c = _capturer;
+    if (c is! DiscoverPageSnapshotter) return;
+    setState(() => _busy = true);
+    PageSnapshot? snap;
+    try {
+      snap = await (c as DiscoverPageSnapshotter).snapshot();
+    } catch (e) {
+      debugPrint('discover page snapshot: $e');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.onboardingPageSearchCaptureFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (snap == null) return;
+    if (mounted) await openDiscoverPageSearch(context, snap);
+    // 写しは、囲む画面を閉じたら捨てる。
+    snap.image?.dispose();
+  }
+
   Future<void> _captureAndReturn() async {
     final c = _capturer;
     if (c == null) return;
@@ -1170,13 +1196,38 @@ class _DiscoverBrowseScreenState extends ConsumerState<DiscoverBrowseScreen> {
           if (_capturer != null)
             Padding(
               padding: const EdgeInsets.all(RasqSpacing.sm),
-              child: FilledButton.icon(
-                key: const ValueKey('discover.browse.capture'),
-                onPressed: _busy ? null : _captureAndReturn,
-                icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.center_focus_strong, size: 18),
-                label: Text(context.l10n.onboardingDiscoverBrowseCapture),
-                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-              ),
+              child: Row(children: [
+                // 「この画面を探す」(D-552): 写しを囲んで、RASQ の人・投稿とサービス / リストを探す。
+                if (_capturer is DiscoverPageSnapshotter) ...[
+                  Expanded(
+                    child: FilledButton.icon(
+                      key: const ValueKey('discover.browse.pageSearch'),
+                      onPressed: _busy ? null : _searchThisPage,
+                      icon: const Icon(Icons.crop_free, size: 18),
+                      label: Text(context.l10n.onboardingPageSearchBrowseButton),
+                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                    ),
+                  ),
+                  const SizedBox(width: RasqSpacing.xs),
+                ],
+                Expanded(
+                  child: _capturer is DiscoverPageSnapshotter
+                      ? OutlinedButton.icon(
+                          key: const ValueKey('discover.browse.capture'),
+                          onPressed: _busy ? null : _captureAndReturn,
+                          icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.center_focus_strong, size: 18),
+                          label: Text(context.l10n.onboardingDiscoverBrowseCapture),
+                          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                        )
+                      : FilledButton.icon(
+                          key: const ValueKey('discover.browse.capture'),
+                          onPressed: _busy ? null : _captureAndReturn,
+                          icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.center_focus_strong, size: 18),
+                          label: Text(context.l10n.onboardingDiscoverBrowseCapture),
+                          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                        ),
+                ),
+              ]),
             ),
         ]),
       ),
@@ -1185,16 +1236,19 @@ class _DiscoverBrowseScreenState extends ConsumerState<DiscoverBrowseScreen> {
 }
 
 /// アプリの中のブラウザ(Android / iOS / macOS)。「この画面から探す」= **本文 + URL だけ**(CONTRACT §2 の text / url)。
-/// 画面の写しは送らない (D-415): 画像は端末の画像の選択だけ、画面は「いつものブラウザで見て探す」の通知から読み取る([ScreenGlimpse])。
+/// 「この画面を探す」(D-552、D-415 の「画面の写しは送らない」を改めた)= ページの写しを端末で撮り、囲んだ部分だけを文字 / 画像で探す。
 class _InAppDiscoverBrowser extends StatefulWidget {
-  const _InAppDiscoverBrowser({required this.initial, required this.attach});
+  const _InAppDiscoverBrowser({required this.initial, required this.attach, required this.shot});
   final Uri initial;
   final ValueChanged<DiscoverPageCapturer> attach;
+
+  /// 見えている範囲を撮る口 (D-552)。
+  final WebViewShot shot;
   @override
   State<_InAppDiscoverBrowser> createState() => _InAppDiscoverBrowserState();
 }
 
-class _InAppDiscoverBrowserState extends State<_InAppDiscoverBrowser> implements DiscoverPageCapturer {
+class _InAppDiscoverBrowserState extends State<_InAppDiscoverBrowser> implements DiscoverPageCapturer, DiscoverPageSnapshotter {
   late final WebViewController _controller = WebViewController()
     ..setJavaScriptMode(JavaScriptMode.unrestricted)
     ..setNavigationDelegate(NavigationDelegate(
@@ -1224,6 +1278,10 @@ class _InAppDiscoverBrowserState extends State<_InAppDiscoverBrowser> implements
     } catch (_) {}
     return DiscoverCapture(text: text, url: url);
   }
+
+  /// ページの上から数画面ぶんの写し (D-552)。写しは端末の中だけで使い、送るのは囲んで「探す」を押した部分だけ。
+  @override
+  Future<PageSnapshot> snapshot() => capturePageSnapshot(_controller, widget.shot);
 
   @override
   Widget build(BuildContext context) => WebViewWidget(key: const ValueKey('discover.webview'), controller: _controller);

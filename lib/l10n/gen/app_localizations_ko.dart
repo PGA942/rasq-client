@@ -7567,7 +7567,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get onboardingDiscoverExportTitle => '다른 SNS의 내보내기 데이터로 찾기';
 
   @override
-  String get onboardingDiscoverExportSubtitle => '준비 중';
+  String get onboardingDiscoverExportSubtitle =>
+      '내보낸 팔로우 / 팔로워에서 RASQ에 있는 사람을 찾습니다';
 
   @override
   String get onboardingDiscoverAskTitle => 'RAi에게 묻기';
@@ -8006,6 +8007,261 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get onboardingDiscoverApiEmpty => '이미지, 본문, URL 중 하나가 필요합니다';
+
+  @override
+  String get onboardingExportFileTypeLabel => 'SNS 내보내기 데이터';
+
+  @override
+  String get onboardingExportIntro =>
+      '다른 SNS에서 내보낸 데이터를 읽어, 그 안의 팔로우 / 팔로워 중 RASQ에 있는 사람을 찾습니다. 내보낸 데이터는 이 기기 안에서만 읽고 서버로 보내지 않습니다.';
+
+  @override
+  String get onboardingExportFormats =>
+      '지원 형식: X(Twitter) zip, Mastodon / Misskey 팔로우 CSV, Instagram / Threads zip, Bluesky repo.car. zip 안의 파일만 골라도 됩니다.';
+
+  @override
+  String get onboardingExportPick => '내보낸 파일 선택';
+
+  @override
+  String get onboardingExportPickAgain => '다른 파일 선택';
+
+  @override
+  String get onboardingExportPickFailed => '파일을 선택하지 못했습니다';
+
+  @override
+  String get onboardingExportReadFailed => '파일을 읽지 못했습니다';
+
+  @override
+  String get onboardingExportNothingFound =>
+      '이 파일에서 팔로우 / 팔로워를 읽지 못했습니다. 지원되는 내보내기 데이터인지 확인해 주세요.';
+
+  @override
+  String get onboardingExportFoundHeading => '읽어 온 계정';
+
+  @override
+  String onboardingExportFoundLine(
+    String service,
+    int following,
+    int followers,
+    int mentions,
+  ) {
+    return '$service: 팔로우 $following / 팔로워 $followers / 멘션 $mentions';
+  }
+
+  @override
+  String onboardingExportXIdNote(int count) {
+    return 'X 내보내기의 팔로우 / 팔로워는 내부 ID뿐입니다. ID로 대조하고, 트윗의 멘션에서 핸들까지 알 수 있는 $count명은 핸들로도 대조합니다.';
+  }
+
+  @override
+  String onboardingExportSkipped(int count) {
+    return '너무 큰 파일 $count개는 읽지 않았습니다';
+  }
+
+  @override
+  String get onboardingExportXAuthTitle => 'X 내보내기를 쓰려면 X로 인증합니다';
+
+  @override
+  String get onboardingExportXAuthDone => 'X로 인증했습니다(시제품)';
+
+  @override
+  String get onboardingExportXAuthDummyNote =>
+      '지금은 시제품이라 X에 확인하지 않습니다(버튼을 누르기만 하면 통과합니다).';
+
+  @override
+  String get onboardingExportXAuthButton => 'X로 인증(시제품)';
+
+  @override
+  String onboardingExportXSelfTitle(String handle) {
+    return '내 X(@$handle)를 프로필에 등록';
+  }
+
+  @override
+  String get onboardingExportXSelfBody =>
+      '등록하면 나를 팔로우하는 사람이 자신의 X 내보내기에서 나를 찾을 수 있습니다. X에 확인하지 않으므로 확인됨 표시는 붙지 않습니다(시제품).';
+
+  @override
+  String get onboardingExportXSelfRegister => '등록';
+
+  @override
+  String get onboardingExportXSelfDone => '등록했습니다';
+
+  @override
+  String get onboardingExportXRegisterFailed => 'X 계정을 등록하지 못했습니다';
+
+  @override
+  String onboardingExportSearch(int count) {
+    return '이 $count명 중에서 RASQ 사용자 찾기';
+  }
+
+  @override
+  String get onboardingExportHashNote =>
+      '서버로 보내는 것은 계정별 해시와 서비스 이름뿐이며, 서버는 저장하지 않습니다.';
+
+  @override
+  String onboardingExportProgress(int done, int total) {
+    return '대조 중($done / $total)';
+  }
+
+  @override
+  String get onboardingExportBusy => '서버가 혼잡합니다. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get onboardingExportMatchFailed => '대조하지 못했습니다';
+
+  @override
+  String get onboardingExportNoMatches =>
+      'RASQ에 있는 사람을 찾지 못했습니다. 상대가 프로필에 해당 SNS 링크를 올렸거나 SNS 계정을 연결해 두면 찾을 수 있습니다.';
+
+  @override
+  String onboardingExportMatchesHeading(int count) {
+    return 'RASQ에 있는 사람($count)';
+  }
+
+  @override
+  String get onboardingExportRelationFollowing => '팔로우';
+
+  @override
+  String get onboardingExportRelationFollower => '팔로워';
+
+  @override
+  String get onboardingExportRelationMention => '멘션';
+
+  @override
+  String onboardingExportVia(String service, String relation, String name) {
+    return '$service $relation: $name';
+  }
+
+  @override
+  String get onboardingExportUnverified => '본인 확인 전(프로필에서 그렇게 밝히고 있습니다)';
+
+  @override
+  String get onboardingExportXIdentityTitle => 'X 계정(X로 인증・시제품)';
+
+  @override
+  String get onboardingExportXIdentityBody =>
+      'X 핸들을 등록하면 다른 사람이 X 내보내기에서 나를 찾을 수 있습니다. 지금은 시제품이라 X에 확인하지 않으며 확인됨 표시도 붙지 않습니다.';
+
+  @override
+  String get onboardingExportXIdentityNone => '등록 안 됨';
+
+  @override
+  String onboardingExportXIdentityCurrent(String handle) {
+    return '@$handle(시제품・미확인)';
+  }
+
+  @override
+  String get onboardingExportXIdentityHandleLabel => 'X 핸들(@ 뒤)';
+
+  @override
+  String get onboardingExportXIdentityIdLabel => 'X 내부 ID(숫자, 선택)';
+
+  @override
+  String get onboardingExportXIdentityIdHelp =>
+      'X 내보내기의 account.js에 있는 accountId. 입력하면 ID만 있는 내보내기에서도 나를 찾을 수 있습니다.';
+
+  @override
+  String get onboardingExportXIdentitySave => 'X로 인증(시제품)';
+
+  @override
+  String get onboardingExportXIdentityRemove => '등록 삭제';
+
+  @override
+  String get onboardingExportXIdentityInvalid =>
+      '핸들은 영문・숫자・_ 15자까지, ID는 숫자로 입력해 주세요';
+
+  @override
+  String get onboardingExportXIdentityFailed => 'X 계정을 저장하지 못했습니다';
+
+  @override
+  String get onboardingPageSearchBrowseButton => '이 화면 찾기';
+
+  @override
+  String get onboardingPageSearchCaptureFailed => '이 페이지를 캡처하지 못했습니다';
+
+  @override
+  String get onboardingPageSearchTitle => '이 화면 찾기';
+
+  @override
+  String get onboardingPageSearchLengthLabel => '길이';
+
+  @override
+  String get onboardingPageSearchModeDraw => '선택';
+
+  @override
+  String get onboardingPageSearchModeScroll => '스크롤';
+
+  @override
+  String get onboardingPageSearchHint =>
+      '찾고 싶은 부분을 드래그로 선택하세요(여러 개 가능). 선택 영역을 탭하면 검색어를 고치거나 이미지로 찾도록 바꿀 수 있습니다.';
+
+  @override
+  String get onboardingPageSearchSketchNote =>
+      '이 기기에서는 페이지를 캡처할 수 없어 글자의 위치만 표시합니다. 선택해서 글자로 찾을 수 있습니다(이미지로는 찾을 수 없습니다).';
+
+  @override
+  String onboardingPageSearchButton(int count) {
+    return '$count곳 찾기';
+  }
+
+  @override
+  String onboardingPageSearchRegionsFull(int max) {
+    return '최대 $max곳까지 선택할 수 있습니다';
+  }
+
+  @override
+  String onboardingPageSearchTooManyImages(int max) {
+    return '이미지로 찾을 수 있는 것은 한 번에 $max곳까지입니다';
+  }
+
+  @override
+  String onboardingPageSearchRegionTitle(int index) {
+    return '선택 영역 $index';
+  }
+
+  @override
+  String get onboardingPageSearchRegionCancel => '취소';
+
+  @override
+  String get onboardingPageSearchRegionConfirm => '확인';
+
+  @override
+  String get onboardingPageSearchByText => '글자로';
+
+  @override
+  String get onboardingPageSearchByImage => '이미지로';
+
+  @override
+  String get onboardingPageSearchQueryLabel => '검색어';
+
+  @override
+  String get onboardingPageSearchQueryHint => '이름, @핸들, 단어 등';
+
+  @override
+  String get onboardingPageSearchOpenEditor => '이미지 편집기로 열기';
+
+  @override
+  String get onboardingPageSearchEdited => '이미지 편집기에서 고친 이미지로 찾습니다';
+
+  @override
+  String get onboardingPageSearchDelete => '이 선택 영역 삭제';
+
+  @override
+  String get onboardingPageSearchResultsTitle => '찾은 결과';
+
+  @override
+  String get onboardingPageSearchTermsHeading => '찾은 단어';
+
+  @override
+  String get onboardingPageSearchUsersHeading => 'RASQ 사용자';
+
+  @override
+  String get onboardingPageSearchPostsHeading => 'RASQ 게시물';
+
+  @override
+  String onboardingPageSearchImagesFailed(int count) {
+    return '이미지 $count장은 단어로 바꾸지 못했습니다(혼잡하거나 읽지 못했습니다)';
+  }
 
   @override
   String get onboardingTourPageSnsTitle => '여러 SNS를 한곳에서';
