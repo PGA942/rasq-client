@@ -285,8 +285,6 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                     ),
                 ]),
               ),
-              // ── X の名乗り(ダミーの X 認証、D-551)──
-              _Labeled(l10n.onboardingExportXIdentityTitle, const XIdentitySection()),
               // ── アカウントページに出す SNS アカウント (D-270) ──
               if ((_snsLinks ?? const []).isNotEmpty)
                 _Labeled(
@@ -359,6 +357,8 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                   },
                 ),
               ),
+              // ── X の名乗り(ダミーの X 認証、D-551)。Keybase の下(確認の系統の並び)──
+              _Labeled(l10n.onboardingExportXIdentityTitle, const XIdentitySection()),
               RasqNotice(
                 text: l10n.profileEditNotice,
                 detail: l10n.profileEditNoticeDetail,
