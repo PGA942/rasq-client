@@ -4441,9 +4441,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get loginTermsTitle => '插件条款';
 
   @override
-  String get loginTermsAgree => '同意';
-
-  @override
   String loginTermsBullet(String text) {
     return '• $text';
   }
@@ -4601,6 +4598,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String loginBlueskyHandleCompleteNote(String host) {
     return '只输入名称时,登录时会补上“.$host”';
   }
+
+  @override
+  String get loginTermsAgreeLogin => '同意并登录';
+
+  @override
+  String get loginTermsAgreeSignup => '同意并注册';
+
+  @override
+  String get loginTermsCancel => '取消';
+
+  @override
+  String get loginTermsClose => '关闭';
 
   @override
   String get mediaVizStyleMirror => '上下对称条形';
@@ -11722,19 +11731,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get raiModelsEmbeddingRasqText => 'RASQ MiniLM（文本）';
+  String get raiModelsEmbeddingRasqText => 'RAM pico txt';
 
   @override
   String get raiModelsEmbeddingMiniLmL12 => 'MiniLM-L12 多语言（paraphrase, int8）';
 
   @override
-  String get raiModelsEmbeddingRasqVision => 'RASQ MobileNet（帖子图片）';
+  String get raiModelsEmbeddingRasqVision => 'RAM pico img';
 
   @override
-  String get raiModelsEmbeddingSiglipText => 'SigLIP2 base（文本塔 · int8）';
+  String get raiModelsEmbeddingSiglipText => 'SIG pico txt';
 
   @override
-  String get raiModelsEmbeddingSiglipVision => 'SigLIP2 base（图像端 · int8）';
+  String get raiModelsEmbeddingSiglipVision => 'SIG pico img';
 
   @override
   String raiModelsEmbeddingFailed(String message) {
@@ -18713,7 +18722,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get userPageViewClose => '关闭';
+  String get userPageViewCancel => '取消';
+
+  @override
+  String get userPageViewConfirm => '确定';
 
   @override
   String userPageViewSearchHint(String tab) {
@@ -24721,9 +24733,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get loginTermsTitle => '外掛條款';
 
   @override
-  String get loginTermsAgree => '同意';
-
-  @override
   String loginTermsBullet(String text) {
     return '• $text';
   }
@@ -24881,6 +24890,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String loginBlueskyHandleCompleteNote(String host) {
     return '只輸入名稱時,登入時會補上「.$host」';
   }
+
+  @override
+  String get loginTermsAgreeLogin => '同意並登入';
+
+  @override
+  String get loginTermsAgreeSignup => '同意並註冊';
+
+  @override
+  String get loginTermsCancel => '取消';
+
+  @override
+  String get loginTermsClose => '關閉';
 
   @override
   String get mediaVizStyleMirror => '上下對稱長條';
@@ -32000,19 +32021,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get raiModelsEmbeddingRasqText => 'RASQ MiniLM（文字）';
+  String get raiModelsEmbeddingRasqText => 'RAM pico txt';
 
   @override
   String get raiModelsEmbeddingMiniLmL12 => 'MiniLM-L12 多語言（paraphrase, int8）';
 
   @override
-  String get raiModelsEmbeddingRasqVision => 'RASQ MobileNet（貼文圖片）';
+  String get raiModelsEmbeddingRasqVision => 'RAM pico img';
 
   @override
-  String get raiModelsEmbeddingSiglipText => 'SigLIP2 base（文字塔 · int8）';
+  String get raiModelsEmbeddingSiglipText => 'SIG pico txt';
 
   @override
-  String get raiModelsEmbeddingSiglipVision => 'SigLIP2 base（圖像端 · int8）';
+  String get raiModelsEmbeddingSiglipVision => 'SIG pico img';
 
   @override
   String raiModelsEmbeddingFailed(String message) {
@@ -38995,7 +39016,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get userPageViewClose => '關閉';
+  String get userPageViewCancel => '取消';
+
+  @override
+  String get userPageViewConfirm => '確定';
 
   @override
   String userPageViewSearchHint(String tab) {

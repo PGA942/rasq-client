@@ -31,14 +31,16 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('小さい RAi アイコンは 3D が有効でも 2D で描く(three_js のインスタンスを増やさない)', (tester) async {
+  testWidgets('小さい RAi アイコンは 3D が有効でも 3D を作らず、丸い画像で出す (D-559)', (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [raiMascot3dProvider.overrideWithValue(true)],
-      child: const MaterialApp(home: Center(child: RaiIcon())),
+      child: const MaterialApp(home: Center(child: RaiIcon(size: 28))),
     ));
     await tester.pump();
     expect(find.byType(RaiMascot3d), findsNothing);
-    expect(find.byType(CustomPaint), findsWidgets);
+    final image = tester.widget<Image>(find.descendant(of: find.byType(RaiIcon), matching: find.byType(Image)));
+    expect((image.image as AssetImage).assetName, RaiIcon.asset);
+    expect(tester.getSize(find.byType(RaiIcon)), const Size(28, 28));
     expect(tester.takeException(), isNull);
   });
 

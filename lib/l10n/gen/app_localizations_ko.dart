@@ -4502,9 +4502,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get loginTermsTitle => '플러그인 약관';
 
   @override
-  String get loginTermsAgree => '동의';
-
-  @override
   String loginTermsBullet(String text) {
     return '• $text';
   }
@@ -4662,6 +4659,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String loginBlueskyHandleCompleteNote(String host) {
     return '이름만 입력하면 로그인할 때 \'.$host\'를 붙입니다';
   }
+
+  @override
+  String get loginTermsAgreeLogin => '동의하고 로그인';
+
+  @override
+  String get loginTermsAgreeSignup => '동의하고 가입';
+
+  @override
+  String get loginTermsCancel => '취소';
+
+  @override
+  String get loginTermsClose => '닫기';
 
   @override
   String get mediaVizStyleMirror => '상하 대칭 막대';
@@ -11893,19 +11902,19 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get raiModelsEmbeddingRasqText => 'RASQ MiniLM(문장)';
+  String get raiModelsEmbeddingRasqText => 'RAM pico txt';
 
   @override
   String get raiModelsEmbeddingMiniLmL12 => 'MiniLM-L12 다국어(paraphrase, int8)';
 
   @override
-  String get raiModelsEmbeddingRasqVision => 'RASQ MobileNet(게시물 이미지)';
+  String get raiModelsEmbeddingRasqVision => 'RAM pico img';
 
   @override
-  String get raiModelsEmbeddingSiglipText => 'SigLIP2 base(텍스트 타워·int8)';
+  String get raiModelsEmbeddingSiglipText => 'SIG pico txt';
 
   @override
-  String get raiModelsEmbeddingSiglipVision => 'SigLIP2 base(이미지 측·int8)';
+  String get raiModelsEmbeddingSiglipVision => 'SIG pico img';
 
   @override
   String raiModelsEmbeddingFailed(String message) {
@@ -19009,7 +19018,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get userPageViewClose => '닫기';
+  String get userPageViewCancel => '취소';
+
+  @override
+  String get userPageViewConfirm => '확인';
 
   @override
   String userPageViewSearchHint(String tab) {

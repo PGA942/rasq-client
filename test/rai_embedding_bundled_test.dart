@@ -143,7 +143,8 @@ void main() {
 
   test('既定の RASQ MiniLM は同梱を指し、pubspec はその置き場を Web 以外にだけ入れる', () {
     expect(raiEmbeddingSpec.bundledAsset, '$raiBundledEmbeddingDir/${raiEmbeddingSpec.fileName}');
-    expect(postVisionEmbeddingSpec.bundledAsset, isNull, reason: '画像の塔は従来どおりダウンロード');
+    // D-558: 画像の塔(RAM pico img)も同梱(プリインストール)。
+    expect(postVisionEmbeddingSpec.bundledAsset, '$raiBundledEmbeddingDir/${postVisionEmbeddingSpec.fileName}');
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final entry = RegExp(r'- path: assets/rai_embedding/\n\s+platforms: \[([^\]]*)\]').firstMatch(pubspec);
     expect(entry, isNotNull);

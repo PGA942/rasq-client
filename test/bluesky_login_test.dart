@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rasq_client/features/login/terms_sheet.dart' show termsAgreeKey;
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
@@ -79,8 +80,8 @@ void main() {
     await tester.tap(find.byKey(blueskyLoginButtonKey));
     await tester.pumpAndSettle();
     // 利用規約シート → 同意。
-    if (find.text('同意').evaluate().isNotEmpty) {
-      await tester.tap(find.text('同意'));
+    if (find.byKey(termsAgreeKey).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(termsAgreeKey));
       await tester.pumpAndSettle();
     }
     expect(plugin.calls.last, ('bsky.social', 'alice.bsky.social', 'wrong'));
@@ -89,8 +90,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(blueskyLoginButtonKey));
     await tester.pumpAndSettle();
-    if (find.text('同意').evaluate().isNotEmpty) {
-      await tester.tap(find.text('同意'));
+    if (find.byKey(termsAgreeKey).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(termsAgreeKey));
       await tester.pumpAndSettle();
     }
     final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
@@ -133,8 +134,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(blueskyLoginButtonKey));
     await tester.pumpAndSettle();
-    if (find.text('同意').evaluate().isNotEmpty) {
-      await tester.tap(find.text('同意'));
+    if (find.byKey(termsAgreeKey).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(termsAgreeKey));
       await tester.pumpAndSettle();
     }
     expect(plugin.calls.last, ('bsky.social', 'alice.bsky.social', 'app-pass'));

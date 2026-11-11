@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rasq_client/features/login/terms_sheet.dart' show termsAgreeKey;
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
@@ -117,8 +118,8 @@ void main() {
     // カードの「ログイン」を押す → サーバーを確かめ、規約 → ブラウザの認証が開く(「ブラウザで認証する」は押さない)。
     await tester.tap(find.byKey(const ValueKey('login.server.misskey.design.login')));
     await tester.pumpAndSettle();
-    if (find.text('同意').evaluate().isNotEmpty) {
-      await tester.tap(find.text('同意'));
+    if (find.byKey(termsAgreeKey).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(termsAgreeKey));
       await tester.pumpAndSettle();
     }
     expect(plugin.inspected, ['misskey.design']);
@@ -207,8 +208,8 @@ void main() {
     expect((a.first, a.second, a.colors, a.unit), (b.first, b.second, b.colors, b.unit));
   });
 
-  testWidgets('バナー: Misskey の背景の画像 → 無ければバナー → どちらも無ければ和柄。狭い幅では 1 列', (tester) async {
-    tester.view.physicalSize = const Size(320, 1600);
+  testWidgets('バナー: Misskey の背景の画像 → 無ければバナー → どちらも無ければ和柄。ごく狭い幅では 1 列', (tester) async {
+    tester.view.physicalSize = const Size(240, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     RasqServerInfo info(String host, {Uri? bg, Uri? banner}) => RasqServerInfo(host: host, name: 'サーバー $host', backgroundImageUrl: bg, bannerUrl: banner);
@@ -232,10 +233,39 @@ void main() {
     expect(urlOf('b.example'), 'https://b.example/banner.png');
     expect(urlOf('c.example'), isNull);
     expect(find.byKey(const ValueKey('login.server.c.example.pattern')), findsOneWidget);
-    // 320 幅は 1 列。
+    // 240 幅は 1 列。1 列でもカードは縦長のまま (D-557)。
     final a = tester.getRect(find.byKey(const ValueKey('login.server.a.example')));
     final b = tester.getRect(find.byKey(const ValueKey('login.server.b.example')));
     expect(b.top, greaterThan(a.bottom - 1));
+    expect(a.width / a.height, closeTo(serverCardAspectRatio, 0.01));
     expect(find.text('サーバー a.example'), findsOneWidget);
+  });
+
+  testWidgets('カードは縦長の比のまま (D-557): 説明の長さが違っても同じ大きさ。電話の幅でも 2 列、はみ出さない', (tester) async {
+    for (final width in [320.0, 390.0, 600.0]) {
+      tester.view.physicalSize = Size(width, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          popularServersProvider(SnsKind.misskey).overrideWithValue(const ['a.example', 'b.example']),
+          serverInfoProvider('a.example').overrideWith((ref) async => const RasqServerInfo(host: 'a.example', name: 'A', description: '短い')),
+          serverInfoProvider('b.example').overrideWith((ref) async => RasqServerInfo(host: 'b.example', name: 'B', description: 'とても長い説明。' * 30)),
+        ],
+        child: MaterialApp(home: Scaffold(body: SingleChildScrollView(padding: const EdgeInsets.all(24), child: ServerPickList(kind: SnsKind.misskey, onPick: (_) {})))),
+      ));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'はみ出さない ($width)');
+      final a = tester.getRect(find.byKey(const ValueKey('login.server.a.example')));
+      final b = tester.getRect(find.byKey(const ValueKey('login.server.b.example')));
+      expect(a.top, b.top, reason: '2 列 ($width)');
+      expect(a.size, b.size, reason: '説明の長さで大きさは変わらない ($width)');
+      expect(a.width / a.height, closeTo(serverCardAspectRatio, 0.01), reason: '$width');
+      expect(a.height, greaterThan(a.width), reason: '縦長 ($width)');
+      // ログインのボタンはカードの中、下の方。
+      final button = tester.getRect(find.byKey(const ValueKey('login.server.b.example.login')));
+      expect(button.bottom, lessThanOrEqualTo(b.bottom));
+      expect(button.top, greaterThan(b.center.dy));
+    }
   });
 }

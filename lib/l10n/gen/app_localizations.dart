@@ -7458,12 +7458,6 @@ abstract class AppLocalizations {
   /// **'プラグインの規約'**
   String get loginTermsTitle;
 
-  /// プラグインの規約のシートの、同意して進むボタン
-  ///
-  /// In ja, this message translates to:
-  /// **'同意'**
-  String get loginTermsAgree;
-
   /// プラグインの規約の箇条書きの 1 行。text は規約の文(プラグインの中身)
   ///
   /// In ja, this message translates to:
@@ -7727,6 +7721,30 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'名前だけ入れると、ログインのときに「.{host}」を補います'**
   String loginBlueskyHandleCompleteNote(String host);
+
+  /// SNS のプラグインの規約の FOW の、下のボタン (D-557)
+  ///
+  /// In ja, this message translates to:
+  /// **'同意してログイン'**
+  String get loginTermsAgreeLogin;
+
+  /// SNS のプラグインの規約の FOW の、下のボタン (D-557)
+  ///
+  /// In ja, this message translates to:
+  /// **'同意して新規登録'**
+  String get loginTermsAgreeSignup;
+
+  /// SNS のプラグインの規約の FOW の、下のボタン (D-557)
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get loginTermsCancel;
+
+  /// SNS のプラグインの規約の FOW の、下のボタン (D-557)
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get loginTermsClose;
 
   /// 音声を動画にするときの波形の形の選択肢(Visualizer の設定)。中央から上下に伸びるバー
   ///
@@ -19179,7 +19197,7 @@ abstract class AppLocalizations {
   /// **'準備完了'**
   String get raiModelsPhaseReady;
 
-  /// アプリに同梱した埋め込みモデル(RASQ MiniLM)を使っているときの状態
+  /// アプリに同梱した埋め込みモデル(RAM pico txt / RAM pico img)を使っているときの状態
   ///
   /// In ja, this message translates to:
   /// **'準備完了(同梱)'**
@@ -19530,7 +19548,7 @@ abstract class AppLocalizations {
   /// 埋め込みモデルの名前
   ///
   /// In ja, this message translates to:
-  /// **'RASQ MiniLM(文)'**
+  /// **'RAM pico txt'**
   String get raiModelsEmbeddingRasqText;
 
   /// No description provided for @raiModelsEmbeddingMiniLmL12.
@@ -19542,19 +19560,19 @@ abstract class AppLocalizations {
   /// No description provided for @raiModelsEmbeddingRasqVision.
   ///
   /// In ja, this message translates to:
-  /// **'RASQ MobileNet(投稿の画像)'**
+  /// **'RAM pico img'**
   String get raiModelsEmbeddingRasqVision;
 
   /// No description provided for @raiModelsEmbeddingSiglipText.
   ///
   /// In ja, this message translates to:
-  /// **'SigLIP2 base(テキスト塔・int8)'**
+  /// **'SIG pico txt'**
   String get raiModelsEmbeddingSiglipText;
 
   /// No description provided for @raiModelsEmbeddingSiglipVision.
   ///
   /// In ja, this message translates to:
-  /// **'SigLIP2 base(画像側・int8)'**
+  /// **'SIG pico img'**
   String get raiModelsEmbeddingSiglipVision;
 
   /// No description provided for @raiModelsEmbeddingFailed.
@@ -31181,11 +31199,17 @@ abstract class AppLocalizations {
   /// **'{tab}の表示'**
   String userPageViewTitle(String tab);
 
-  /// No description provided for @userPageViewClose.
+  /// No description provided for @userPageViewCancel.
   ///
   /// In ja, this message translates to:
-  /// **'閉じる'**
-  String get userPageViewClose;
+  /// **'キャンセル'**
+  String get userPageViewCancel;
+
+  /// パネルの見出しの右: いまの並べ替え・絞り込みで確定して閉じる。左の「キャンセル」は開いたときの状態へ戻して閉じる (D-557)
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get userPageViewConfirm;
 
   /// パネルの検索欄の薄い字。読み込んだ投稿の本文を探す。tab はタブの名前
   ///

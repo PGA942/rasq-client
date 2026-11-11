@@ -139,13 +139,21 @@ void main() {
       expect(find.descendant(of: fow, matching: find.byKey(const ValueKey('rasqOverlay.fow.handle.top'))), findsOneWidget);
       final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
       expect(tester.getRect(fow).bottom, greaterThan(screen.height - 120), reason: '下にドック');
-      // D-517: 下は FOW の標準のフッター(件数 + リセット / 閉じる)。パネルの下の辺。
+      // D-517: 下は FOW の標準のフッター(件数だけ)。パネルの下の辺。
       final footer = find.descendant(of: fow, matching: find.byType(FowFooter));
       expect(footer, findsOneWidget);
       expect(tester.getRect(footer).bottom, closeTo(tester.getRect(fow).bottom, 1));
-      for (final k in ['user.tabView.count', 'user.tabView.reset', 'user.tabView.close']) {
-        expect(find.descendant(of: footer, matching: find.byKey(ValueKey(k))), findsOneWidget, reason: k);
+      expect(find.descendant(of: footer, matching: find.byKey(const ValueKey('user.tabView.count'))), findsOneWidget);
+      // D-557: 決定 / キャンセルは見出しに、リセットは検索欄の横。
+      final header = find.descendant(of: fow, matching: find.byKey(const ValueKey('rasqOverlay.fow.header')));
+      for (final k in ['user.tabView.cancel', 'user.tabView.confirm']) {
+        expect(find.descendant(of: header, matching: find.byKey(ValueKey(k))), findsOneWidget, reason: k);
       }
+      expect(find.descendant(of: footer, matching: find.byKey(const ValueKey('user.tabView.reset'))), findsNothing);
+      final reset = tester.getRect(find.byKey(const ValueKey('user.tabView.reset')));
+      final searchBox = tester.getRect(find.byKey(const ValueKey('user.tabView.search')));
+      expect(reset.center.dy, closeTo(searchBox.center.dy, 4), reason: '検索欄と同じ行');
+      expect(reset.left, greaterThanOrEqualTo(searchBox.right - 1));
       // D-518: 見た目は「このタイムラインから探す」と同じ並び(太い下線の節)、指向性 / 刺激性はトレンドと同じ部品。
       expect(find.descendant(of: panel, matching: find.byType(RasqSectionHeader)), findsNWidgets(3));
       expect(find.descendant(of: panel, matching: find.byType(TendencyControls)), findsOneWidget);
@@ -159,7 +167,7 @@ void main() {
 
       await tester.tap(tab('ノート'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('user.tabView.close')));
+      await tester.tap(find.byKey(const ValueKey('user.tabView.confirm')));
       await tester.pumpAndSettle();
       expect(panel, findsNothing);
     });
@@ -208,7 +216,7 @@ void main() {
       expect(saved['posts'], {'sort': 'reactions', 'renotes': false, 'digest': true});
       expect(jsonEncode(saved), isNot(contains('カレー')));
 
-      await tester.tap(find.byKey(const ValueKey('user.tabView.close')));
+      await tester.tap(find.byKey(const ValueKey('user.tabView.confirm')));
       await tester.pumpAndSettle();
       // 変えているタブの印(名前の右肩の点)。
       expect(find.descendant(of: find.byType(TabBar), matching: find.byKey(const ValueKey('tab.dot'))), findsOneWidget);
@@ -231,6 +239,50 @@ void main() {
       expect(shownBodies(tester), [curry.body, angry.body, renote.body, rocket.body]);
       final after = jsonDecode((await storage.read('userPageTabs.v1'))!) as Map;
       expect(after['posts'], isNull);
+    });
+
+    testWidgets('キャンセル(見出し / タブのもう一度のタップ)は開いたときの状態へ巻き戻す。決定はそのまま (D-557)', (tester) async {
+      await pump(tester);
+      final before = shownBodies(tester);
+      await tester.tap(tab('ノート'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('user.tabView.sort.reactions')));
+      await tester.enterText(find.byKey(const ValueKey('user.tabView.search')), 'カレー');
+      await tester.pumpAndSettle();
+      expect(shownBodies(tester), [curry.body], reason: '開いている間はすぐ効く');
+      await tester.tap(find.byKey(const ValueKey('user.tabView.cancel')));
+      await tester.pumpAndSettle();
+      expect(panel, findsNothing);
+      expect(shownBodies(tester), before, reason: '並べ替えも検索の語も元どおり');
+      expect(await storage.read('userPageTabs.v1'), anyOf(isNull, isNot(contains('reactions'))));
+
+      // タブのもう一度のタップで閉じても巻き戻す。
+      await tester.tap(tab('ノート'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('user.tabView.renotes')));
+      await tester.pumpAndSettle();
+      expect(shownBodies(tester), isNot(before));
+      await tester.tap(tab('ノート'));
+      await tester.pumpAndSettle();
+      expect(panel, findsNothing);
+      expect(shownBodies(tester), before);
+
+      // 決定はそのまま残る。検索欄の横のリセットは、既定に戻すだけで閉じない。
+      await tester.tap(tab('ノート'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('user.tabView.sort.reactions')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('user.tabView.reset')));
+      await tester.pumpAndSettle();
+      expect(panel, findsOneWidget);
+      expect(shownBodies(tester), before);
+      await tester.tap(find.byKey(const ValueKey('user.tabView.sort.reactions')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('user.tabView.confirm')));
+      await tester.pumpAndSettle();
+      expect(shownBodies(tester), [angry.body, rocket.body, curry.body, renote.body]);
+      final saved = jsonDecode((await storage.read('userPageTabs.v1'))!) as Map;
+      expect(saved['posts'], {'sort': 'reactions'});
     });
 
     testWidgets('指向性 / 刺激性の欄に指を置いている間は、タブの横のスワイプと戻るジェスチャーを止める。レーダーで刺激性を絞る', (tester) async {

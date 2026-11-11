@@ -130,6 +130,9 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
     }
     final server = info;
     if (!mounted) return;
+    // 新規登録の前にもプラグインの規約 (D-557):「同意して新規登録」。
+    final agreed = await showTermsSheet(ref.read(overlayManagerProvider), _plugin.manifest, purpose: TermsPurpose.signup);
+    if (!agreed || !mounted) return;
     startServerSignup(
       context,
       ref,

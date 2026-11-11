@@ -26,7 +26,6 @@
   "loginBundleUse": "使用",
   "loginBundleLogin": "登入",
   "loginTermsTitle": "外掛條款",
-  "loginTermsAgree": "同意",
   "loginTermsBullet": "• {text}",
   "loginSignupDivider": "沒有 {service} 帳號",
   "loginSignupButton": "註冊",
@@ -70,5 +69,9 @@
   "loginServerMore": "此伺服器的選單",
   "loginServerOpenInBrowser": "在瀏覽器中開啟伺服器",
   "loginBlueskyNext": "使用此 PDS 繼續",
-  "loginBlueskyHandleCompleteNote": "只輸入名稱時,登入時會補上「.{host}」"
+  "loginBlueskyHandleCompleteNote": "只輸入名稱時,登入時會補上「.{host}」",
+  "loginTermsAgreeLogin": "同意並登入",
+  "loginTermsAgreeSignup": "同意並註冊",
+  "loginTermsCancel": "取消",
+  "loginTermsClose": "關閉"
 }

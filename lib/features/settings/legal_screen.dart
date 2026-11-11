@@ -42,7 +42,7 @@ class LegalScreen extends ConsumerWidget {
             title: p.manifest.name,
             subtitle: (p.manifest.termsOfService ?? '').trim().isEmpty ? l.settingsLegalPluginNoTerms : 'v${p.manifest.version}',
             chevron: (p.manifest.termsOfService ?? '').trim().isNotEmpty,
-            onTap: (p.manifest.termsOfService ?? '').trim().isEmpty ? null : () => showTermsSheet(manager, p.manifest),
+            onTap: (p.manifest.termsOfService ?? '').trim().isEmpty ? null : () => showTermsSheet(manager, p.manifest, purpose: TermsPurpose.view),
           ),
         RasqSectionHeader(title: l.settingsLegalLicensesHeader),
         RasqListTile(

@@ -4481,9 +4481,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loginTermsTitle => 'プラグインの規約';
 
   @override
-  String get loginTermsAgree => '同意';
-
-  @override
   String loginTermsBullet(String text) {
     return '・$text';
   }
@@ -4641,6 +4638,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String loginBlueskyHandleCompleteNote(String host) {
     return '名前だけ入れると、ログインのときに「.$host」を補います';
   }
+
+  @override
+  String get loginTermsAgreeLogin => '同意してログイン';
+
+  @override
+  String get loginTermsAgreeSignup => '同意して新規登録';
+
+  @override
+  String get loginTermsCancel => 'キャンセル';
+
+  @override
+  String get loginTermsClose => '閉じる';
 
   @override
   String get mediaVizStyleMirror => '上下対称のバー';
@@ -11856,19 +11865,19 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get raiModelsEmbeddingRasqText => 'RASQ MiniLM(文)';
+  String get raiModelsEmbeddingRasqText => 'RAM pico txt';
 
   @override
   String get raiModelsEmbeddingMiniLmL12 => 'MiniLM-L12 多言語(paraphrase, int8)';
 
   @override
-  String get raiModelsEmbeddingRasqVision => 'RASQ MobileNet(投稿の画像)';
+  String get raiModelsEmbeddingRasqVision => 'RAM pico img';
 
   @override
-  String get raiModelsEmbeddingSiglipText => 'SigLIP2 base(テキスト塔・int8)';
+  String get raiModelsEmbeddingSiglipText => 'SIG pico txt';
 
   @override
-  String get raiModelsEmbeddingSiglipVision => 'SigLIP2 base(画像側・int8)';
+  String get raiModelsEmbeddingSiglipVision => 'SIG pico img';
 
   @override
   String raiModelsEmbeddingFailed(String message) {
@@ -18939,7 +18948,10 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get userPageViewClose => '閉じる';
+  String get userPageViewCancel => 'キャンセル';
+
+  @override
+  String get userPageViewConfirm => '決定';
 
   @override
   String userPageViewSearchHint(String tab) {
