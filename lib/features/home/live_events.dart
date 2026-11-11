@@ -9,6 +9,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/redact.dart';
+import '../swing/p2p/swing_p2p.dart';
 import '../swing/swing_models.dart';
 import '../swing/swing_providers.dart';
 import '../vc/astell_models.dart';
@@ -104,6 +105,9 @@ class LiveEvents extends Notifier<bool> {
       case 'swing':
         final s = Swing.tryParse(m['swing']);
         if (s != null) ref.read(swingFeedProvider.notifier).upsertLocal(s);
+      // P2P の Swing (D-549): シグナリングと、通報の写しの求め。
+      case 'swing.signal' || 'swing.evidence_request':
+        ref.read(swingP2pProvider)?.onLiveEvent(m);
       case 'astell':
         final raw = m['room'];
         if (raw is Map) {

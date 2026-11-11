@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show File;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -28,6 +29,7 @@ import '../media/fow_avoid.dart';
 import '../media/video_player.dart';
 import '../plugins/pro_media_editor_screen.dart' show openSvgPaintEditor;
 import '../plugins/slot_plugins.dart';
+import 'p2p/swing_p2p.dart';
 import 'swing_models.dart';
 import 'swing_providers.dart';
 import 'swing_bar.dart';
@@ -795,6 +797,7 @@ class _SwingPage extends StatelessWidget {
     final body = switch (swing.kind) {
       SwingKind.text => _TextBody(text: swing.text),
       SwingKind.image => _ImageBody(swing: swing),
+      SwingKind.video when swing.isP2p => _P2pBody(swing: swing, builder: (file) => _VideoBody(swing: swing.withMediaUrl(Uri.file(file.path)), active: live, paused: paused, onDone: onEnd, onSeekable: onSeekable)),
       SwingKind.video => _VideoBody(swing: swing, active: live, paused: paused, onDone: onEnd, onSeekable: onSeekable),
       SwingKind.plugin => _PluginBody(swing: swing, active: live, onLockChanged: onLockChanged, onEnd: onEnd, onSwipe: onSwipe),
     };
@@ -965,6 +968,9 @@ class _ImageBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (swing.isP2p) {
+      return _P2pBody(swing: swing, builder: (file) => Image.file(file, key: const ValueKey('swing.image'), fit: BoxFit.contain, errorBuilder: (_, _, _) => const _Missing()));
+    }
     final url = swing.mediaUrl;
     if (url == null) return const _Missing();
     return Image.network(
@@ -973,6 +979,69 @@ class _ImageBody extends StatelessWidget {
       webHtmlElementStrategy: rasqWebImageStrategy,
       fit: BoxFit.contain,
       errorBuilder: (_, _, _) => const _Missing(),
+    );
+  }
+}
+
+/// P2P の Swing の実体 (D-549): 相手の端末から受け取り(署名と SHA-256 を確かめてから)、手元のファイルにして [builder] へ。
+/// 受け取れなければ「いま届けられる人がいません」ともう一度のボタン。
+class _P2pBody extends ConsumerStatefulWidget {
+  const _P2pBody({required this.swing, required this.builder});
+  final Swing swing;
+  final Widget Function(File file) builder;
+
+  @override
+  ConsumerState<_P2pBody> createState() => _P2pBodyState();
+}
+
+class _P2pBodyState extends ConsumerState<_P2pBody> {
+  Future<File>? _file;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  void _load() {
+    final p2p = ref.read(swingP2pProvider);
+    if (p2p == null) return;
+    final type = widget.swing.p2pMedia?.contentType ?? '';
+    final ext = !type.startsWith('video/') ? null : type.contains('quicktime') ? 'mov' : type.contains('webm') ? 'webm' : 'mp4';
+    setState(() => _file = p2p.fetch(widget.swing).then((bytes) => p2p.store.fileFor(widget.swing.id, bytes, extension: ext)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final f = _file;
+    if (f == null) return const _Missing();
+    return FutureBuilder<File>(
+      future: f,
+      builder: (context, snap) {
+        if (snap.hasData) return widget.builder(snap.data!);
+        if (snap.hasError) {
+          final unverified = snap.error is SwingP2pException && (snap.error! as SwingP2pException).failure == SwingP2pFailure.unverified;
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(RasqSpacing.xxl),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text(unverified ? context.l10n.swingP2pUnverified : context.l10n.swingP2pUnavailable, key: const ValueKey('swing.p2p.unavailable'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+                if (!unverified) ...[
+                  const SizedBox(height: RasqSpacing.md),
+                  TextButton(onPressed: _load, child: Text(context.l10n.swingP2pRetry)),
+                ],
+              ]),
+            ),
+          );
+        }
+        return Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const CircularProgressIndicator(color: Colors.white70),
+            const SizedBox(height: RasqSpacing.md),
+            Text(context.l10n.swingP2pFetching, style: const TextStyle(color: Colors.white70)),
+          ]),
+        );
+      },
     );
   }
 }

@@ -21,6 +21,9 @@ class MisskeySession extends SnsSessionBase {
   final List<ActionDescriptor>? _customActions;
   Map<String, Uri>? _emojis;
 
+  /// 絵文字の一覧の読み込み(同時に何度呼ばれても 1 回だけ取りに行く。前は最初の画面の絵文字の数だけ並べて取っていた)。
+  Future<Map<String, Uri>>? _emojisLoad;
+
   String get host => session.account.instance;
 
   /// Default reaction used by the single-tap "reaction" button.
@@ -735,18 +738,20 @@ class MisskeySession extends SnsSessionBase {
 
   @override
   Future<Uri?> emojiUrl(String shortcode) async {
-    if (_emojis == null) {
-      try {
-        final res = await api.callMap('emojis');
-        _emojis = {
-          for (final e in (res['emojis'] as List? ?? const []))
-            if (e is Map && e['name'] is String && e['url'] is String) e['name'] as String: Uri.parse(e['url'] as String),
-        };
-      } on SnsApiException {
-        _emojis = const {};
-      }
+    final emojis = _emojis ?? await (_emojisLoad ??= _loadEmojis());
+    return emojis[shortcode.replaceAll('@.', '')];
+  }
+
+  Future<Map<String, Uri>> _loadEmojis() async {
+    try {
+      final res = await api.callMap('emojis');
+      return _emojis = {
+        for (final e in (res['emojis'] as List? ?? const []))
+          if (e is Map && e['name'] is String && e['url'] is String) e['name'] as String: Uri.parse(e['url'] as String),
+      };
+    } on SnsApiException {
+      return _emojis = const {};
     }
-    return _emojis![shortcode.replaceAll('@.', '')];
   }
 
   @override

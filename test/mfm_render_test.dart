@@ -71,6 +71,11 @@ void main() {
         final provider = RasqMediaPolicy.unrestricted.imageFor(e.value);
         final key = await provider.obtainKey(ImageConfiguration.empty);
         PaintingBinding.instance.imageCache.putIfAbsent(key, () => OneFrameImageStreamCompleter(SynchronousFuture(ImageInfo(image: img))));
+        // 絵文字は高さ × 画素比でデコードする (D-550)。その鍵でも引けるように、出うる高さぶん入れておく。
+        for (var h = 1; h <= 256; h++) {
+          final resized = await ResizeImage.resizeIfNeeded(null, h, provider).obtainKey(ImageConfiguration.empty);
+          PaintingBinding.instance.imageCache.putIfAbsent(resized, () => OneFrameImageStreamCompleter(SynchronousFuture(ImageInfo(image: img.clone()))));
+        }
       }
     });
   }

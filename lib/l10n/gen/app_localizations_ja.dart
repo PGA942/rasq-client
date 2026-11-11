@@ -18012,6 +18012,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get swingUnreadable => 'Swing を読めませんでした';
 
   @override
+  String get swingErrorSendHeld =>
+      '通報された Swing の確認ができなかったため、しばらく Swing を出せません(72 時間で解除されます)';
+
+  @override
+  String get swingP2pFetching => '相手の端末から受け取っています…';
+
+  @override
+  String get swingP2pUnavailable => 'いま届けられる人がいません。少し待ってからもう一度開いてください';
+
+  @override
+  String get swingP2pUnverified => '作った人の署名を確かめられないため、表示しません';
+
+  @override
+  String get swingP2pRetry => 'もう一度';
+
+  @override
   String themeNotAThemePack(String id) {
     return '着せ替えパックではありません: $id';
   }

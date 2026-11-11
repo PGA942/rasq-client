@@ -18080,6 +18080,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get swingUnreadable => 'Swing을 읽지 못했습니다';
 
   @override
+  String get swingErrorSendHeld =>
+      '신고된 Swing을 확인하지 못해 당분간 Swing을 올릴 수 없습니다(72시간 후 해제)';
+
+  @override
+  String get swingP2pFetching => '상대방 기기에서 받는 중…';
+
+  @override
+  String get swingP2pUnavailable => '지금은 전달할 수 있는 사람이 없습니다. 잠시 후 다시 열어 주세요';
+
+  @override
+  String get swingP2pUnverified => '작성자의 서명을 확인할 수 없어 표시하지 않습니다';
+
+  @override
+  String get swingP2pRetry => '다시 시도';
+
+  @override
   String themeNotAThemePack(String id) {
     return '테마 팩이 아닙니다: $id';
   }

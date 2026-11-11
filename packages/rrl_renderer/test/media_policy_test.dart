@@ -12,19 +12,22 @@ Widget wrap(Widget child) => MaterialApp(
       home: Scaffold(body: SingleChildScrollView(child: SizedBox(width: 400, child: child))),
     );
 
+/// 表示の大きさでデコードする包み(D-550 の `ResizeImage`)を外した、実際に読む provider。
+ImageProvider<Object> _unwrap(ImageProvider<Object> p) => p is ResizeImage ? p.imageProvider : p;
+
 /// 木の下で作られた NetworkImage / RasqPolicyNetworkImage の URL(= ホストが送ろうとする通信)。
 List<String> networkUrls(WidgetTester tester) => [
       for (final img in tester.widgetList<Image>(find.byType(Image)))
-        if (img.image case final NetworkImage n)
+        if (_unwrap(img.image) case final NetworkImage n)
           n.url
-        else if (img.image case final RasqPolicyNetworkImage n)
+        else if (_unwrap(img.image) case final RasqPolicyNetworkImage n)
           n.url.toString(),
     ];
 
 /// リダイレクトを各ホップで確かめる読み方 (セキュリティ確認 2026-10-09 の [11]) の URL。
 List<String> policedUrls(WidgetTester tester) => [
       for (final img in tester.widgetList<Image>(find.byType(Image)))
-        if (img.image case final RasqPolicyNetworkImage n) n.url.toString(),
+        if (_unwrap(img.image) case final RasqPolicyNetworkImage n) n.url.toString(),
     ];
 
 const _draft = 'まだ投稿していない下書き';

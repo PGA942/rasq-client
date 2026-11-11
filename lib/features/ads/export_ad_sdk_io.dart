@@ -128,8 +128,13 @@ class _AdMobBanner extends StatefulWidget {
   State<_AdMobBanner> createState() => _AdMobBannerState();
 }
 
-class _AdMobBannerState extends State<_AdMobBanner> {
+class _AdMobBannerState extends State<_AdMobBanner> with AutomaticKeepAliveClientMixin {
   BannerAd? _ad;
+
+  /// 読み込めた広告は、リストの外へ流れても保つ (D-550): 前は戻るたびに広告(WebView の platform view)を作り直し、
+  /// 速いスクロールの途中で引っかかっていた。
+  @override
+  bool get wantKeepAlive => _size != null;
   AdSize? _size;
   bool _settled = false;
 
@@ -158,6 +163,7 @@ class _AdMobBannerState extends State<_AdMobBanner> {
           if (!mounted || !identical(ad, _ad)) return;
           if (size == null) return _fail();
           setState(() => _size = size);
+          updateKeepAlive();
           if (!_settled) {
             _settled = true;
             widget.onLoaded();
@@ -184,6 +190,7 @@ class _AdMobBannerState extends State<_AdMobBanner> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final ad = _ad;
     final size = _size;
     if (ad == null || size == null) return const SizedBox.shrink();

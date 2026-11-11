@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/router.dart';
 import '../backend/notify_api.dart';
 import '../backend/rasq_account.dart';
+import '../features/swing/p2p/swing_p2p.dart';
 import 'local_notifier.dart';
 import '../l10n/l10n.dart';
 
@@ -128,6 +129,12 @@ final pushBridgeProvider = Provider<void>((ref) {
       }
     }),
     push.foreground.listen((m) {
+      // データだけのプッシュ (D-549 / ORGATE O-025): 通報の写しの求め。画面には出さない。
+      if (m.data['kind'] == 'swing.evidence_request') {
+        final id = m.data['swingId'], hash = m.data['manifestSha256'];
+        if (id != null && hash != null) unawaited(ref.read(swingP2pProvider)?.answerEvidenceRequest(id, manifestSha256: hash));
+        return;
+      }
       unawaited(ref.read(localNotifierProvider).show(id: (m.data['id'] ?? '${m.title}${m.body}').hashCode & 0x7fffffff, title: m.title, body: m.body, payload: pushNotificationPayload));
     }),
     push.opened.listen((_) => unawaited(ref.read(routerProvider).push(Routes.notifications))),

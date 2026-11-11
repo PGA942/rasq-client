@@ -17797,6 +17797,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get swingUnreadable => '无法读取 Swing';
 
   @override
+  String get swingErrorSendHeld => '由于被举报的 Swing 无法确认，暂时无法发布 Swing(72 小时后解除)';
+
+  @override
+  String get swingP2pFetching => '正在从对方的设备接收…';
+
+  @override
+  String get swingP2pUnavailable => '目前没有人可以传送。请稍后再打开';
+
+  @override
+  String get swingP2pUnverified => '无法验证创建者的签名，因此不显示';
+
+  @override
+  String get swingP2pRetry => '重试';
+
+  @override
   String themeNotAThemePack(String id) {
     return '不是主题包：$id';
   }
@@ -37719,6 +37734,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get swingUnreadable => '無法讀取 Swing';
+
+  @override
+  String get swingErrorSendHeld => '由於被檢舉的 Swing 無法確認，暫時無法發布 Swing(72 小時後解除)';
+
+  @override
+  String get swingP2pFetching => '正在從對方的裝置接收…';
+
+  @override
+  String get swingP2pUnavailable => '目前沒有人可以傳送。請稍後再開啟';
+
+  @override
+  String get swingP2pUnverified => '無法驗證建立者的簽章，因此不顯示';
+
+  @override
+  String get swingP2pRetry => '重試';
 
   @override
   String themeNotAThemePack(String id) {
