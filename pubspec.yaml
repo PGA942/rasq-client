@@ -142,9 +142,10 @@ flutter:
     - assets/models/siglip2_tokenizer.model
     # MiniLM(XLM-R Unigram)の語彙 (D-193: id 順 piece \t score、7.7 MB)。ONNX 本体はダウンロード。
     - assets/models/minilm_unigram.tsv
-    # 同梱の RASQ MiniLM(文の塔、D-522)。LLM が無くても RAi の検索 / 投稿の埋め込みなどに要るので、端末のアプリに入れる。
-    # `tool/fetch_embedding_model.sh` で text_tower_uint8.onnx を置く(無いビルドは従来どおり Central から取る)。
-    # Web 版には入れない(onnxruntime-web で従来どおり取りに行く。35 MB を配信物に載せない)。
+    # 同梱の埋め込みモデル 2 つ(D-522 / D-558): RAM pico txt(文の塔、もと RASQ MiniLM)と RAM pico img(画像の塔、もと RASQ MobileNet)。
+    # LLM が無くても RAi の検索 / 投稿の埋め込みなどに要るので、端末のアプリに入れる(プリインストール)。
+    # `tool/fetch_embedding_model.sh` で text_tower_uint8.onnx / image_tower_uint8.onnx を置く(無いビルドは従来どおり Central から取る)。
+    # Web 版には入れない(onnxruntime-web で従来どおり取りに行く。67 MB を配信物に載せない)。
     - path: assets/rai_embedding/
       platforms: [android, ios, linux, macos, windows]
     - assets/rai/functions.jsonl

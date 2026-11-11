@@ -23,8 +23,8 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../collections/rasq_list_picker.dart' show importRasqListToHomeWith;
 import '../login/login_screen.dart' show SnsServiceButton, popOr;
-import '../rai/rai_chat.dart' show RaiChatUserRow, RaiReplyRow;
-import '../rai/rai_widgets.dart' show RaiIcon, RaiPromptBar;
+import '../rai/rai_chat.dart' show RaiChatEmptyView, RaiChatFrame, RaiChatUserRow, RaiReplyRow;
+import '../rai/rai_widgets.dart' show RaiIcon, RaiMascot, RaiPromptBar;
 import '../settings/developer_mode.dart';
 import '../settings/settings_dsl.dart' show settingsAreaProvider;
 import 'discover_circle_editor.dart';
@@ -1544,8 +1544,9 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
     // 見守り ([13]): 開いたあとに保護者が RAi を止めたら、入力の代わりに案内を出す(送る口は [_send] でも止める)。
     final raiOk = ref.watch(childGateProvider).raiEnabled;
-    // 見た目は RAi ホームのチャットと同じ (D-427): 質問は右の吹き出し、返事は RAi のアイコン + 枠なしの文 + 時刻、
-    // 候補のタイルは返事の下。新しいものが下。入力は RAi バーと同じ形(案内やモードの切り替えは無い)。
+    // 見た目は RAi ホームのチャットと同じ (D-427 → D-558 でページの組みも共通の部品 [RaiChatFrame]): 列の幅・奥の薄い RAi・
+    // 空のときの見出し。質問は右の吹き出し、返事は RAi のアイコン + 枠なしの文 + 時刻、候補のタイルは返事の下。新しいものが下。
+    // 入力は RAi バーと同じ形(案内やモードの切り替えは無い)。
     final rows = <Widget>[
       for (final (i, t) in _turns.indexed)
         if (t.fromUser)
@@ -1565,30 +1566,24 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
       appBar: RasqPageHeader(title: context.l10n.onboardingDiscoverAskTitle, showMore: false),
       body: SafeArea(
         top: false,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Expanded(
-                child: rows.isEmpty
-                    // 空のとき (RAi ホームの「マクロとか、お任せください！」と同じ形)。
-                    ? ListView(key: const ValueKey('discover.ask.list'), padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xl, RasqSpacing.page, RasqSpacing.md), children: [
-                        const Center(child: RaiIcon(size: 48)),
-                        const SizedBox(height: RasqSpacing.sm),
-                        Text(context.l10n.onboardingDiscoverAskEmptyTitle, textAlign: TextAlign.center, style: RasqTypography.title),
-                        const SizedBox(height: RasqSpacing.xs),
-                        Text(context.l10n.onboardingDiscoverAskEmptyBody, textAlign: TextAlign.center, style: caption),
-                        const SizedBox(height: RasqSpacing.xs),
-                        Text(context.l10n.onboardingDiscoverAskEmptyCloud, textAlign: TextAlign.center, style: caption),
-                      ])
-                    : ListView(
-                        key: const ValueKey('discover.ask.list'),
-                        reverse: true,
-                        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, RasqSpacing.md),
-                        children: rows.reversed.toList(),
-                      ),
-              ),
-              Padding(
+        child: RaiChatFrame(
+          // 奥の RAi: RAi ホームと同じ大きさ・薄さ(ここは RAi の層を出さないので、その場に置く。3D が使えれば 3D)。
+          background: (size) => RaiMascot(key: const ValueKey('discover.ask.mascot'), size: size, opacity: 0.35),
+          list: rows.isEmpty
+              // 空のとき (RAi ホームの「マクロとか、お任せください！」と同じ部品)。
+              ? RaiChatEmptyView(
+                  key: const ValueKey('discover.ask.list'),
+                  bottomPadding: RasqSpacing.md,
+                  title: context.l10n.onboardingDiscoverAskEmptyTitle,
+                  body: [context.l10n.onboardingDiscoverAskEmptyBody, context.l10n.onboardingDiscoverAskEmptyCloud],
+                )
+              : ListView(
+                  key: const ValueKey('discover.ask.list'),
+                  reverse: true,
+                  padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, RasqSpacing.md),
+                  children: rows.reversed.toList(),
+                ),
+          input: Padding(
                 padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.sm),
                 child: !raiOk
                     ? Text(context.l10n.onboardingDiscoverRaiBlocked, key: const ValueKey('discover.ask.blocked'), textAlign: TextAlign.center, style: caption)
@@ -1604,8 +1599,6 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
                       onChanged: (_) => setState(() {}),
                       onSubmit: _send,
                     ),
-              ),
-            ]),
           ),
         ),
       ),

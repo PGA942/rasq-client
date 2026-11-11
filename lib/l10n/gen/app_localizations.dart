@@ -19197,7 +19197,7 @@ abstract class AppLocalizations {
   /// **'準備完了'**
   String get raiModelsPhaseReady;
 
-  /// アプリに同梱した埋め込みモデル(RASQ MiniLM)を使っているときの状態
+  /// アプリに同梱した埋め込みモデル(RAM pico txt / RAM pico img)を使っているときの状態
   ///
   /// In ja, this message translates to:
   /// **'準備完了(同梱)'**
@@ -19548,7 +19548,7 @@ abstract class AppLocalizations {
   /// 埋め込みモデルの名前
   ///
   /// In ja, this message translates to:
-  /// **'RASQ MiniLM(文)'**
+  /// **'RAM pico txt'**
   String get raiModelsEmbeddingRasqText;
 
   /// No description provided for @raiModelsEmbeddingMiniLmL12.
@@ -19560,19 +19560,19 @@ abstract class AppLocalizations {
   /// No description provided for @raiModelsEmbeddingRasqVision.
   ///
   /// In ja, this message translates to:
-  /// **'RASQ MobileNet(投稿の画像)'**
+  /// **'RAM pico img'**
   String get raiModelsEmbeddingRasqVision;
 
   /// No description provided for @raiModelsEmbeddingSiglipText.
   ///
   /// In ja, this message translates to:
-  /// **'SigLIP2 base(テキスト塔・int8)'**
+  /// **'SIG pico txt'**
   String get raiModelsEmbeddingSiglipText;
 
   /// No description provided for @raiModelsEmbeddingSiglipVision.
   ///
   /// In ja, this message translates to:
-  /// **'SigLIP2 base(画像側・int8)'**
+  /// **'SIG pico img'**
   String get raiModelsEmbeddingSiglipVision;
 
   /// No description provided for @raiModelsEmbeddingFailed.

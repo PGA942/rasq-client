@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -22,7 +23,7 @@ import '../post/post_resolve.dart';
 import 'feature_tour.dart' show featureTourHoldSignup, featureTourHoldsProvider;
 import 'rasq_account_nudge.dart' show requestRasqAccountNudge;
 import 'signup_pointer.dart';
-import '../rai/rai_widgets.dart' show RaiIcon;
+import '../rai/rai_widgets.dart' show RaiIcon, RaiMascot;
 
 /// サーバーのタイルから始める登録 (D-412): タップ → **アプリの中でサーバーの登録ページ**(WebView。開けない端末は外部のブラウザ)+
 /// **RAi が手順を文字で案内** →「登録できた」→ いつもの SNS のログイン(MiAuth / OAuth)→ ログインできたら、タップした投稿 /
@@ -238,13 +239,27 @@ class _ServerSignupScreenState extends ConsumerState<ServerSignupScreen> {
       body: SafeArea(
         child: LayoutBuilder(builder: (context, c) {
           if (c.maxWidth >= RasqSizes.tabletBreakpoint) {
+            // タブレット (D-558): 右の枠に RAi(3D が使えれば 3D)が立ち、その下に案内の吹き出し。
             return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Expanded(child: web),
               const VerticalDivider(width: 1),
               SizedBox(
                 width: 320,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(RasqSpacing.sm), child: guide)),
+                  Expanded(
+                    child: LayoutBuilder(builder: (context, side) {
+                      // RAi は枠の幅の 3/4 か、枠の高さの 45% の小さい方(縦横比 4:5 で収まるように)。
+                      final size = math.min(side.maxWidth * 0.75, side.maxHeight * 0.45 / 1.25).clamp(96.0, 260.0);
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.all(RasqSpacing.sm),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          Center(child: IgnorePointer(child: RaiMascot(key: const ValueKey('signup.rai'), size: size))),
+                          const SizedBox(height: RasqSpacing.sm),
+                          guide,
+                        ]),
+                      );
+                    }),
+                  ),
                   done,
                 ]),
               ),

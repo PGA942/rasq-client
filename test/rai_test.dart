@@ -94,8 +94,10 @@ void main() {
     expect(raiModelSpecById('qwen3.5-0.8b-q4km').codename, 'QA Nano');
     expect(raiModelSpecById('agents-a1-4b-q4km').codename, 'Agent Lite+');
     expect(raiModelSpecById('unknown').codename, 'QA Mini'); // 知らない id は既定(D-216: ローカルは 3 つだけ)
-    expect(raiCloudModelSpecs.firstWhere((m) => m.id == 'cloud-qwen3.9-33b-a3b').codename, 'QA Max');
-    expect(raiCloudModelSpecs.firstWhere((m) => m.id == 'cloud-cyllm-jp-150b').codename, 'CyLLM Extreme');
+    // 実申請に合わせて (D-558): QA Max = Qwen 3.8 27B、CyLLM は外した。
+    expect(raiCloudModelSpecs.single.label, 'Qwen 3.8 27B');
+    expect(raiCloudModelSpecs.firstWhere((m) => m.id == 'cloud-qwen3.8-27b').codename, 'QA Max');
+    expect(raiCloudModelSpecs.any((m) => m.label.contains('CyLLM')), isFalse);
     expect(raiSizeClass(10), 'Core');
     expect(raiSizeClass(20), 'Core+');
     expect(raiSizeClass(100), 'Max+');
@@ -298,11 +300,13 @@ void main() {
     expect(find.textContaining('Qwen3.5 2B (Q4_K_M)'), findsWidgets); // gguf 名は元のまま
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.ram.qwen3.5-2b-q4km'))).data, 'メモリ: 動作可'); // 8 GB の端末
     final fowList = find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first;
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.tile.cloud-cyllm-jp-150b')), 120, scrollable: fowList);
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.tile.cloud-qwen3.8-27b')), 120, scrollable: fowList);
     await tester.pumpAndSettle();
     expect(find.text('クラウド'), findsWidgets);
-    expect(find.text('完遂率 集計外'), findsOneWidget); // 150B は集計外
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.phase.cloud-qwen3.9-33b-a3b'))).data, '未接続');
+    expect(find.textContaining('Qwen 3.8 27B'), findsWidgets);
+    expect(find.textContaining('CyLLM'), findsNothing, reason: 'D-558 で外した');
+    expect(find.text('完遂率 集計外'), findsNothing, reason: '35B 以上のモデルはもう無い');
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.phase.cloud-qwen3.8-27b'))).data, '未接続');
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.download')), -120, scrollable: fowList);
     await tester.pumpAndSettle();
     // 既定は Qwen3.5 2B Q4_K_M の GGUF (D-188 → D-219)。ダウンロード → 準備完了(解放 / 削除が出る)。
@@ -420,7 +424,7 @@ void main() {
     final fowList = find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first;
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.embed.tile')), 120, scrollable: fowList);
     await tester.pumpAndSettle();
-    expect(find.text('RASQ MiniLM(文)'), findsOneWidget, reason: 'D-390: 既定は RASQ MiniLM');
+    expect(find.text('RAM pico txt'), findsOneWidget, reason: 'D-390: 既定は RASQ MiniLM(表示名は RAM pico txt、D-558)');
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.embed.phase'))).data, '未ダウンロード');
     expect(find.textContaining('いまは語の一致で探します'), findsOneWidget);
     await clearOfBar(tester, fowList, find.byKey(const ValueKey('rai.embed.download')));
