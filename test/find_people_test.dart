@@ -78,9 +78,9 @@ Uint8List _car() {
 
 /// 照合の口だけの Central。[known] = (サービス, 名前) → ハンドル。
 class _Central {
-  _Central(this.known, {this.salt = 'rasq-link-match-v1', this.maxItems = 200, this.busyOnce = false});
+  _Central(this.known, {this.maxItems = 200, this.busyOnce = false});
   final Map<(String, String), ({String handle, bool verified})> known;
-  final String salt;
+  final String salt = 'rasq-link-match-v1';
   final int maxItems;
   bool busyOnce;
   final batches = <int>[];
@@ -97,18 +97,18 @@ class _Central {
         return json({'error': {'code': '429', 'message': 'busy'}}, 429);
       }
       bodies.add(req.body);
-      final items = (jsonDecode(req.body) as Map)['items'] as List;
+      final items = [for (final i in (jsonDecode(req.body) as Map)['items'] as List) (i as Map).cast<String, Object?>()];
       batches.add(items.length);
       final table = {for (final e in known.entries) '${e.key.$1}\n${linkMatchHash(salt, e.key.$1, e.key.$2)}': e.value};
       return json({
         'matches': [
           for (final i in items)
-            if (table['${i['service']}\n${i['hash']}'] != null)
+            if (table['${i['service']}\n${i['hash']}'] case final hit?)
               {
                 'service': i['service'],
                 'hash': i['hash'],
                 'accounts': [
-                  {'id': 'id-${table['${i['service']}\n${i['hash']}']!.handle}', 'handle': table['${i['service']}\n${i['hash']}']!.handle, 'displayName': '', 'bio': '', 'verified': table['${i['service']}\n${i['hash']}']!.verified},
+                  {'id': 'id-${hit.handle}', 'handle': hit.handle, 'displayName': '', 'bio': '', 'verified': hit.verified},
                 ],
               },
         ],
