@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'json_bytes.dart';
 import 'l10n.dart';
 
 /// Thin Misskey HTTP client. Every endpoint is `POST /api/{path}` with a JSON
@@ -43,9 +44,10 @@ class MisskeyApi {
     }
     if (res.statusCode == 204) return null;
     Object? decoded;
-    if (res.body.isNotEmpty) {
+    // `res.body` は本文全体を文字列にするので使わない(大きい応答で 2 回デコードになる)。大きいものは別の isolate で。
+    if (res.bodyBytes.isNotEmpty) {
       try {
-        decoded = jsonDecode(utf8.decode(res.bodyBytes));
+        decoded = await decodeJsonBytes(res.bodyBytes);
       } catch (_) {
         decoded = null;
       }
