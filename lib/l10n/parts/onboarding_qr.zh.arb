@@ -1,0 +1,16 @@
+{
+  "@@locale": "zh",
+  "onboardingQrTitle": "通过朋友的二维码查找",
+  "onboardingQrSubtitle": "拍摄 RASQ 账号的二维码,或从图片读取",
+  "onboardingQrIntro": "读取朋友的 RASQ 账号二维码来找到对方。二维码在本设备上读取,图片不会发送到任何地方。",
+  "onboardingQrReadHeading": "读取朋友的二维码",
+  "onboardingQrCamera": "拍摄二维码",
+  "onboardingQrImage": "从图片读取",
+  "onboardingQrNotFound": "图片中未找到二维码。请让二维码更大一些后重拍",
+  "onboardingQrNotRasq": "这不是 RASQ 账号的二维码",
+  "onboardingQrNoAccount": "未找到 @{handle}",
+  "onboardingQrReadFailed": "无法读取二维码",
+  "onboardingQrMineHeading": "我的二维码",
+  "onboardingQrMineNone": "登录 RASQ 账号后可显示自己的二维码",
+  "onboardingQrMineHint": "朋友读取此二维码后会打开你的页面"
+}

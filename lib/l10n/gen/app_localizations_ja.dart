@@ -4623,6 +4623,26 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loginMastodonHostHint => 'インスタンスのURLを入力 (例: mastodon.social)';
 
   @override
+  String get loginServerSearchHint => '名前かホストで絞り込む';
+
+  @override
+  String get loginServerSearchEmpty => '一覧に見つかりません。上の欄にサーバーの URL を入れてください';
+
+  @override
+  String get loginServerMore => 'このサーバーのメニュー';
+
+  @override
+  String get loginServerOpenInBrowser => 'サーバーをブラウザで開く';
+
+  @override
+  String get loginBlueskyNext => 'この PDS で次へ';
+
+  @override
+  String loginBlueskyHandleCompleteNote(String host) {
+    return '名前だけ入れると、ログインのときに「.$host」を補います';
+  }
+
+  @override
   String get mediaVizStyleMirror => '上下対称のバー';
 
   @override
@@ -8146,6 +8166,36 @@ class AppLocalizationsJa extends AppLocalizations {
   String get onboardingExportXIdentityFailed => 'X のアカウントを保存できませんでした';
 
   @override
+  String get onboardingHistoryTitle => '検索履歴を統合して探す';
+
+  @override
+  String get onboardingHistorySubtitle => 'これまでに探した言葉をまとめて、RASQ の人とリストを探します';
+
+  @override
+  String get onboardingHistoryIntro =>
+      '「SNS サービスを探す」でこれまでに探した言葉です。選んだ言葉をまとめて、RASQ のユーザーと RASQ リストを探します。履歴はこの端末の中だけに残ります。';
+
+  @override
+  String get onboardingHistoryEmpty =>
+      'まだ履歴がありません。「好きな画像やコンテンツから探す」や「有力なユーザーから探す」で探すと、ここに言葉が並びます。';
+
+  @override
+  String get onboardingHistoryRemove => 'この言葉を消す';
+
+  @override
+  String get onboardingHistoryClear => '履歴をすべて消す';
+
+  @override
+  String onboardingHistorySearch(int count) {
+    return '選んだ $count 個の言葉で探す';
+  }
+
+  @override
+  String onboardingHistoryTooMany(int max) {
+    return '一度に選べるのは $max 個までです';
+  }
+
+  @override
   String get onboardingPageSearchBrowseButton => 'この画面を探す';
 
   @override
@@ -8234,6 +8284,49 @@ class AppLocalizationsJa extends AppLocalizations {
   String onboardingPageSearchImagesFailed(int count) {
     return '画像 $count 枚は、言葉にできませんでした(混み合っているか、読み取れませんでした)';
   }
+
+  @override
+  String get onboardingQrTitle => '友だちの QR から探す';
+
+  @override
+  String get onboardingQrSubtitle => 'RASQ アカウントの QR を撮るか、画像から読みます';
+
+  @override
+  String get onboardingQrIntro =>
+      '友だちの RASQ アカウントの QR を読んで、その人を探します。QR はこの端末の中で読み、画像はどこにも送りません。';
+
+  @override
+  String get onboardingQrReadHeading => '友だちの QR を読む';
+
+  @override
+  String get onboardingQrCamera => 'QR を撮る';
+
+  @override
+  String get onboardingQrImage => '画像から読む';
+
+  @override
+  String get onboardingQrNotFound =>
+      '画像の中に QR が見つかりませんでした。QR が大きく写るように撮り直してください';
+
+  @override
+  String get onboardingQrNotRasq => 'RASQ アカウントの QR ではありません';
+
+  @override
+  String onboardingQrNoAccount(String handle) {
+    return '@$handle は見つかりませんでした';
+  }
+
+  @override
+  String get onboardingQrReadFailed => 'QR を読めませんでした';
+
+  @override
+  String get onboardingQrMineHeading => '自分の QR';
+
+  @override
+  String get onboardingQrMineNone => 'RASQ アカウントにログインすると、自分の QR を出せます';
+
+  @override
+  String get onboardingQrMineHint => '友だちにこの QR を読んでもらうと、あなたのページが開きます';
 
   @override
   String get onboardingTourPageSnsTitle => 'いくつもの SNS を、ひとつの場所で';

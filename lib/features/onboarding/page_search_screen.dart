@@ -17,6 +17,7 @@ import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../plugins/media_plugin_panel.dart' show MediaEditResult;
 import '../plugins/pro_media_editor_screen.dart' show ProMediaEditorArgs, ProMediaEditorScreen;
+import 'discover_history.dart';
 import 'export_discover_screen.dart' show LinkMatchAccountCard;
 import 'page_search.dart';
 import 'sns_discover_screen.dart' show DiscoverResultsView;
@@ -180,6 +181,8 @@ class _DiscoverPageSelectScreenState extends ConsumerState<DiscoverPageSelectScr
         searchAccounts: (t) => page.searchAccounts(t, limit: 5),
         searchPosts: (t) async => (await page.searchPosts(t, limit: 5)).posts,
       );
+      // 探した言葉を控える (D-553)。
+      unawaited(ref.read(discoverHistoryProvider.notifier).record(outcome.terms, DiscoverHistorySource.page));
       if (!mounted) return;
       await Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => DiscoverPageResultsScreen(outcome: outcome)));
     } catch (e) {

@@ -64,5 +64,11 @@
   "loginSnsReopenBrowser": "브라우저 다시 열기",
   "loginMisskeyAuthButton": "브라우저에서 인증 (MiAuth)",
   "loginMastodonAuthButton": "브라우저에서 인증 (OAuth)",
-  "loginMastodonHostHint": "인스턴스 URL 입력 (예: mastodon.social)"
+  "loginMastodonHostHint": "인스턴스 URL 입력 (예: mastodon.social)",
+  "loginServerSearchHint": "이름이나 호스트로 좁히기",
+  "loginServerSearchEmpty": "목록에 없습니다. 위 칸에 서버의 URL을 입력해 주세요",
+  "loginServerMore": "이 서버의 메뉴",
+  "loginServerOpenInBrowser": "브라우저에서 서버 열기",
+  "loginBlueskyNext": "이 PDS로 다음",
+  "loginBlueskyHandleCompleteNote": "이름만 입력하면 로그인할 때 '.{host}'를 붙입니다"
 }
