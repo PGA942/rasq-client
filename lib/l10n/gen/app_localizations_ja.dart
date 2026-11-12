@@ -2424,6 +2424,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get composeAttachmentSensitive => 'センシティブにする';
 
   @override
+  String get composeTargetUnavailable => '投稿先のアカウントは今は使えません(保護者が止めています)';
+
+  @override
+  String composeVisibilityPublicOnlyTitle(String sns) {
+    return '$sns では公開範囲を選べません';
+  }
+
+  @override
+  String get composeVisibilityPublicOnlyBody => 'この投稿は公開になり、誰でも見られます。公開で送りますか?';
+
+  @override
+  String get composeVisibilityPublicOnlySend => '公開で送る';
+
+  @override
   String get composeMediaPickTypeLabel => '動画 / 音声';
 
   @override
@@ -3560,6 +3574,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get dmMediaPlaceholder => '[メディア]';
+
+  @override
+  String get dmLastMessageHidden => 'このメッセージは表示できません';
 
   @override
   String get homeCreateMissingAccount => '(いないアカウント)';

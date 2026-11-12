@@ -2542,6 +2542,21 @@
   },
   "composeAttachmentUnsensitive": "センシティブ解除",
   "composeAttachmentSensitive": "センシティブにする",
+  "composeTargetUnavailable": "投稿先のアカウントは今は使えません(保護者が止めています)",
+  "@composeTargetUnavailable": {
+    "description": "送る直前に、投稿先の SNS が見守りで止められていた"
+  },
+  "composeVisibilityPublicOnlyTitle": "{sns} では公開範囲を選べません",
+  "@composeVisibilityPublicOnlyTitle": {
+    "description": "投稿先の SNS が公開範囲(ホーム / フォロワー限定)を持たないときの確認の見出し",
+    "placeholders": {
+      "sns": {
+        "type": "String"
+      }
+    }
+  },
+  "composeVisibilityPublicOnlyBody": "この投稿は公開になり、誰でも見られます。公開で送りますか?",
+  "composeVisibilityPublicOnlySend": "公開で送る",
   "composeMediaPickTypeLabel": "動画 / 音声",
   "@composeMediaPickTypeLabel": {
     "description": "ファイル選択ダイアログの種類の名前"
@@ -3818,6 +3833,10 @@
   "dmMediaPlaceholder": "[メディア]",
   "@dmMediaPlaceholder": {
     "description": "DM の一覧の行で、最後のメッセージが本文の無いメディアだけのときに出す文"
+  },
+  "dmLastMessageHidden": "このメッセージは表示できません",
+  "@dmLastMessageHidden": {
+    "description": "DM 一覧の最新の 1 行: 見守りで見せない本文の代わり"
   },
   "homeCreateMissingAccount": "(いないアカウント)",
   "@homeCreateMissingAccount": {

@@ -3,13 +3,13 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../app/navigation.dart';
+import '../../backend/limited_http.dart';
 import '../../l10n/l10n.dart';
 import '../../app/providers.dart';
 import '../home/post_row.dart';
@@ -24,6 +24,10 @@ class VideoPrefs {
   static double defaultSpeed = 1.0;
   static bool pipKeepPosition = true;
 }
+
+/// http の動画を手元に落とすときの上限 (#6)。
+const videoFallbackMaxBytes = 256 * 1024 * 1024;
+const videoFallbackTimeout = Duration(minutes: 3);
 
 class VideoSession extends ChangeNotifier {
   VideoSession(this.item, {this.autoplay = false, this.startAt}) {
@@ -56,12 +60,19 @@ class VideoSession extends ChangeNotifier {
       direct.dispose().ignore();
       if (item.url.scheme != 'http' || kIsWeb) rethrow;
     }
-    final res = await http.get(item.url).timeout(const Duration(seconds: 60));
-    if (res.statusCode != 200) throw StateError('HTTP ${res.statusCode}');
+    // 上限つきで、ファイルへ順に書く (セキュリティ確認 2026-11-11 の #6): 全部をメモリに貯めない。上限 / 期限 / 閉じたら
+    // 通信を取り消し、途中のファイルも消す。
     final dir = await Directory.systemTemp.createTemp('rasq_video');
     final path = item.url.path.toLowerCase();
     final f = File('${dir.path}/video${path.endsWith('.webm') ? '.webm' : path.endsWith('.mov') ? '.mov' : '.mp4'}');
-    await f.writeAsBytes(res.bodyBytes, flush: true);
+    try {
+      await getLimitedToFile(item.url, f, maxBytes: videoFallbackMaxBytes, timeout: videoFallbackTimeout, cancelled: () => _disposed);
+    } catch (_) {
+      try {
+        await dir.delete(recursive: true);
+      } catch (_) {}
+      rethrow;
+    }
     _local = f;
     final c = VideoPlayerController.file(f);
     await c.initialize();

@@ -2551,6 +2551,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get composeAttachmentSensitive => 'Mark as sensitive';
 
   @override
+  String get composeTargetUnavailable =>
+      'This account can\'t be used right now (blocked by your guardian)';
+
+  @override
+  String composeVisibilityPublicOnlyTitle(String sns) {
+    return '$sns has no post visibility settings';
+  }
+
+  @override
+  String get composeVisibilityPublicOnlyBody =>
+      'This post will be public and visible to anyone. Send it publicly?';
+
+  @override
+  String get composeVisibilityPublicOnlySend => 'Send publicly';
+
+  @override
   String get composeMediaPickTypeLabel => 'Video / audio';
 
   @override
@@ -3729,6 +3745,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dmMediaPlaceholder => '[Media]';
+
+  @override
+  String get dmLastMessageHidden => 'This message can\'t be shown';
 
   @override
   String get homeCreateMissingAccount => '(missing account)';

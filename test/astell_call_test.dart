@@ -759,6 +759,54 @@ void main() {
       await session.leave();
     });
 
+    group('#14 配信を始める途中のミュート(セキュリティ確認 2026-11-11)', () {
+      Future<AstellSession> ownRoomWithMicOn() async {
+        final room = await client.createRoom(const NewAstellRoom(title: '自分の配信'));
+        final session = await join(room);
+        await session.toggleMic();
+        expect(container.read(astellSessionProvider)!.micOn, isTrue);
+        return session;
+      }
+
+      test('繋ぐ待ちのあいだにミュートすると、マイクなしで上げる', () async {
+        final session = await ownRoomWithMicOn();
+        streamer.connectGate = Completer<void>();
+        final start = session.startHostStream('camera');
+        await Future<void>.delayed(Duration.zero);
+        await session.toggleMic();
+        streamer.connectGate!.complete();
+        await start;
+        expect(streamer.published, [('camera', false)]);
+        expect(streamer.mic, isFalse);
+        await session.leave();
+      });
+
+      test('上げる待ちのあいだにミュートすると、上げ終わったあとマイクを下ろす(画面共有も)', () async {
+        final session = await ownRoomWithMicOn();
+        streamer.publishGate = Completer<void>();
+        final start = session.startHostStream('camera');
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+        expect(streamer.published, [('camera', true)]);
+        await session.toggleMic();
+        streamer.publishGate!.complete();
+        await start;
+        expect(streamer.mic, isFalse, reason: '最後に押した向き(オフ)');
+        await session.leave();
+      });
+
+      test('繋ぐ待ちのあいだに退出したら、上げない', () async {
+        final session = await ownRoomWithMicOn();
+        streamer.connectGate = Completer<void>();
+        final start = session.startHostStream('camera');
+        await Future<void>.delayed(Duration.zero);
+        await session.leave();
+        streamer.connectGate!.complete();
+        await start;
+        expect(streamer.published, isEmpty);
+      });
+    });
+
     test('画面共有: 画面を上げてから state.screenShare を立てる / やめると下ろす。上げられなければ立てない', () async {
       final session = await join(MockAstellClient.seededRooms().firstWhere((r) => r.id == 'r-surprise'));
       await session.toggleScreenShare(screenSourceId: 'screen:0');
@@ -950,6 +998,10 @@ class FakeStreamer extends AstellStreamer {
   int policySet = 0;
   AstellMediaException? publishError;
 
+  /// 渡すと、繋ぐ / 上げるのをテストが完了させるまで待つ(セキュリティ確認 2026-11-11 の #14)。
+  Completer<void>? connectGate;
+  Completer<void>? publishGate;
+
   @override
   bool get connected => _connected;
   @override
@@ -959,6 +1011,7 @@ class FakeStreamer extends AstellStreamer {
 
   @override
   Future<void> connect(AstellStreamToken token) async {
+    if (connectGate != null) await connectGate!.future;
     connectedWith = token;
     _connected = true;
   }
@@ -967,6 +1020,7 @@ class FakeStreamer extends AstellStreamer {
   Future<void> publish(String kind, {required bool mic, String? screenSourceId}) async {
     if (publishError != null) throw publishError!;
     published.add((kind, mic));
+    if (publishGate != null) await publishGate!.future;
     this.mic = mic;
     sourceId = screenSourceId;
     _publishing = kind;

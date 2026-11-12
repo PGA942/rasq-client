@@ -18,6 +18,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/providers.dart';
 import '../../l10n/l10n.dart';
 import '../../text/inline_spans.dart';
+import '../child_safe/child_gate.dart' show ChildGate;
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/plugin_actions.dart' show actionButtonPrefsProvider, migrateViewerPluginSettings, postTransformActionId;
 import '../media/image_scale.dart';
@@ -524,7 +525,9 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   /// トークン → 反映先(コンポーザーの添付/本文、ビューワーの重ね)。
   final Map<String, void Function(Uint8List bytes, String mime, String? name)> _mediaReplace = {};
   final Map<String, void Function(int start, int end, String text)> _textReplace = {};
-  final Map<String, void Function(RrlNode root)> _overlaySet = {};
+  /// ビューワーの重ね: (呼び出し元のランタイム, トークン) → 反映先 (セキュリティ確認 2026-11-11 の #4)。
+  /// トークンだけで引くと、同じトークンを知るほかのプラグインの重ねとして描かれる(権限の取り違え)。
+  final Map<(SlotRuntime, String), void Function(RrlNode root)> _overlaySet = {};
   final Map<String, void Function(Uint8List bytes, String mime, int? width, int? height)> _mediaPreview = {};
   final Map<String, void Function(RrlNode? root)> _mediaOverlay = {};
   final Map<String, void Function(String text, Uint8List? media, String? mime, String? name)> _composerOpen = {};
@@ -567,6 +570,9 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     });
     // AsTell の出来事をプラグインへ (CONTRACT §2.1 `astell.event`)。
     ref.listen<AstellSessionState?>(astellSessionProvider, _onAstellChanged);
+    // 見守りの制限が変わった (セキュリティ確認 2026-11-11 の #5): AsTell を止めたプラグインのトークンを消す
+    // (許し直しても、利用者が開き直すまでは古いトークンを戻さない)。
+    ref.listen<ChildGate>(childGateProvider, (_, _) => _pruneAstellTokens());
     // 自分の開発者鍵の一覧 (D-306) が届いた / 変わった: 登録済みのサイドロードの段を確かめ直す(起動直後の読み直しは
     // 一覧が届く前に走るので、ここで full へ上がる。鍵を失効すれば restricted へ下がる)。
     ref.listen<Set<String>>(ownDevKeyFingerprintsProvider, (prev, next) {
@@ -948,7 +954,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         final cb = _textReplace['${args['token']}'];
         if (cb != null) cb((args['start'] as num?)?.toInt() ?? 0, (args['end'] as num?)?.toInt() ?? 0, '${args['text'] ?? ''}');
       case RasqHostFns.viewerOverlaySet:
-        final cb = _overlaySet['${args['token']}'];
+        final cb = _overlaySet[(plugin.runtime, '${args['token']}')];
         final root = args['root'];
         if (cb != null && root is Map) cb(RrlNode.fromJson(root.cast<String, Object?>()));
       // ページの口 (D-451): 保護者が止めたプラグインの描画 / 共有は受けない。
@@ -1002,7 +1008,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   Future<void> _astellShare(SlotPlugin plugin, String kind, Map<String, Object?> payload) async {
     final session = ref.read(astellSessionProvider.notifier);
     final s = ref.read(astellSessionProvider);
-    if (s == null) return;
+    if (s == null || !_astellAllowed(plugin)) return;
     var p = payload;
     if (kind == 'media' && payload['bytesB64'] is String) {
       // 生成画像 (CONTRACT §2.1): アセットにアップロードして URL にする。
@@ -1025,6 +1031,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         return;
       }
     }
+    // アップロードの待ちのあいだに止めた / 部屋を出たなら共有しない (#5)。
+    if (_disposed || !_astellAllowed(plugin) || ref.read(astellSessionProvider)?.room.id != s.room.id) return;
     session.share(kind, p);
   }
 
@@ -1053,12 +1061,29 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   static Map<String, Object?> _peerJson(AstellPeer p) => {'peerId': p.peerId, 'accountId': p.accountId, 'handle': p.handle, 'displayName': p.displayName, 'micOn': p.micOn};
   static Map<String, Object?> _shareJson(AstellShare x) => {'id': x.id, 'kind': x.kind, 'payload': x.payload, 'displayName': x.displayName, 'handle': x.handle, 'createdAt': x.createdAt.toIso8601String()};
 
+  /// このプラグインに、今 AsTell を使わせてよいか(見守りの `allow.plugins` の id とスロット。#5)。
+  bool _astellAllowed(SlotPlugin p) => ref.read(childGateProvider).pluginAllowed(p.id, SlotIds.astellAction, text: p.examplePieces);
+
+  /// 今は AsTell を使わせないプラグイン(止めた / 外した / いまのアカウントで動かない版)のトークンを消す (#5)。
+  void _pruneAstellTokens() {
+    if (_astellTokens.isEmpty || _disposed) return;
+    final live = {for (final p in active()) p.id: p};
+    _astellTokens.removeWhere((id, _) => live[id] == null || !_astellAllowed(live[id]!));
+  }
+
   void _onAstellChanged(AstellSessionState? prev, AstellSessionState? next) {
     if (_astellTokens.isEmpty) return;
+    // 送る直前に今の許可を見る (#5): 止めたプラグインには何も送らず、トークンも消す。
+    _pruneAstellTokens();
     void send(Map<String, Object?> ev) {
       for (final p in active()) {
         final token = _astellTokens[p.id];
-        if (token != null) p.value('astell.event', {'token': token, ...ev});
+        if (token == null) continue;
+        if (!_astellAllowed(p)) {
+          _astellTokens.remove(p.id);
+          continue;
+        }
+        p.value('astell.event', {'token': token, ...ev});
       }
     }
     if (next == null || (prev != null && next.room.id != prev.room.id)) {
@@ -1328,23 +1353,25 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   /// メディア全画面 (CONTRACT §2.4)。戻りは重ねる RRL(無ければ null)と、失敗の説明(成功なら null)。
   /// 契約では壊れた入力(`D01`)は「黙って重ねない」だが、ユーザーには理由を見せる (D-246: トグルに出す)。
   Future<({RrlNode? root, String? error})> viewerOpen(SlotPlugin plugin, {required String token, required String url, required String mimeType, required int width, required int height, Uint8List? bytes, required void Function(RrlNode root) onOverlay}) async {
-    _overlaySet[token] = onOverlay;
+    _overlaySet[(plugin.runtime, token)] = onOverlay;
     try {
       final r = await plugin.call('viewer.open', {'token': token, 'url': url, 'mimeType': mimeType, 'width': width, 'height': height, if (bytes != null) 'bytesB64': base64Encode(bytes)});
       if (r['ok'] != true) {
+        _overlaySet.remove((plugin.runtime, token));
         final e = r['error'];
         return (root: null, error: e is Map ? '${e['code'] ?? ''} ${e['message'] ?? ''}'.trim() : appL10n.pluginsErrorReturned);
       }
       final root = (r['value'] as Map?)?['root'];
       return (root: root is Map ? RrlNode.fromJson(root.cast<String, Object?>()) : null, error: null);
     } catch (e) {
+      _overlaySet.remove((plugin.runtime, token));
       debugPrint('slot plugin ${plugin.manifest.id}.viewer.open: $e');
       return (root: null, error: '$e');
     }
   }
 
   void viewerClose(SlotPlugin plugin, String token) {
-    _overlaySet.remove(token);
+    _overlaySet.remove((plugin.runtime, token));
     plugin.value('viewer.close', {'token': token});
   }
 

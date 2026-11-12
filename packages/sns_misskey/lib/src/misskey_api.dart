@@ -6,18 +6,34 @@ import 'package:http/http.dart' as http;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'bounded_body.dart';
 import 'json_bytes.dart';
 import 'l10n.dart';
 
 /// Thin Misskey HTTP client. Every endpoint is `POST /api/{path}` with a JSON
 /// body; the token travels as the `i` field.
 class MisskeyApi {
-  MisskeyApi(this.host, {this.token, http.Client? client, this.timeout = const Duration(seconds: 20)}) : _client = client ?? http.Client();
+  MisskeyApi(this.host, {this.token, http.Client? client, this.timeout = const Duration(seconds: 20), this.bodyTimeout = const Duration(seconds: 90), this.maxResponseBytes = defaultMaxResponseBytes})
+      : _client = client ?? http.Client();
 
   final String host;
   final String? token;
   final http.Client _client;
+
+  /// 応答の頭までの期限。
   final Duration timeout;
+
+  /// 本文を読み終えるまでの全体の期限 (セキュリティ確認 2026-11-11 の #13)。
+  final Duration bodyTimeout;
+
+  /// 応答の本文の上限(展開後のバイト数、#13)。超えたら読むのをやめて通信を切る。
+  final int maxResponseBytes;
+
+  /// [maxResponseBytes] の既定(大きなサーバーの絵文字の一覧も入る大きさ)。
+  static const defaultMaxResponseBytes = 64 * 1024 * 1024;
+
+  /// アップロードの応答(ファイルの情報 1 つ)の上限。
+  static const maxUploadResponseBytes = 4 * 1024 * 1024;
 
   // 開発 / デモ用の差し替え (D-359) があればそちらへ。
   Uri endpoint(String path) => snsUri(host, '/api/$path');
@@ -25,11 +41,20 @@ class MisskeyApi {
   Future<Object?> call(String path, [Map<String, Object?> body = const {}]) async {
     final payload = <String, Object?>{...body};
     if (token != null) payload['i'] = token;
-    http.Response res;
+    ({int statusCode, Uint8List body}) res;
     try {
-      res = await _client
-          .post(endpoint(path), headers: const {'content-type': 'application/json'}, body: jsonEncode(payload))
-          .timeout(timeout);
+      // 上限 / 期限つきで読む (#13): 頭までは [timeout]、本文の最後までは [bodyTimeout]。超えたら要求を取り消す。
+      res = await sendBounded(
+        _client,
+        (abort) => http.AbortableRequest('POST', endpoint(path), abortTrigger: abort)
+          ..headers['content-type'] = 'application/json'
+          ..body = jsonEncode(payload),
+        maxBytes: maxResponseBytes,
+        headerTimeout: timeout,
+        totalTimeout: bodyTimeout,
+      );
+    } on MisskeyResponseTooLarge catch (e) {
+      throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '04', title: 'Response Too Large', message: snsMisskeyL10n.misskeyApiResponseTooLarge(host, e.maxBytes)), cause: e);
     } on TimeoutException catch (e) {
       throw SnsApiException(ErrorCode.timeout.copyWith(message: snsMisskeyL10n.misskeyApiTimeout(host, timeout.inSeconds)), cause: e);
     } on http.ClientException catch (e) {
@@ -44,10 +69,10 @@ class MisskeyApi {
     }
     if (res.statusCode == 204) return null;
     Object? decoded;
-    // `res.body` は本文全体を文字列にするので使わない(大きい応答で 2 回デコードになる)。大きいものは別の isolate で。
-    if (res.bodyBytes.isNotEmpty) {
+    // 本文はバイトのまま解く(文字列にすると大きい応答で 2 回デコードになる)。大きいものは別の isolate で。
+    if (res.body.isNotEmpty) {
       try {
-        decoded = await decodeJsonBytes(res.bodyBytes);
+        decoded = await decodeJsonBytes(res.body);
       } catch (_) {
         decoded = null;
       }
@@ -65,16 +90,26 @@ class MisskeyApi {
     final req = http.MultipartRequest('POST', endpoint(path))
       ..fields.addAll({...fields, 'i': ?token})
       ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: mimeType == null ? null : _mediaType(mimeType)));
-    http.StreamedResponse streamed;
+    ({int statusCode, Uint8List body}) res;
     try {
-      streamed = await _client.send(req).timeout(const Duration(minutes: 2));
+      // 応答も上限 / 期限つきで読む (#13): 本文が続いても、期限と大きさで通信を切る。
+      res = await sendBounded(
+        _client,
+        (abort) => http.AbortableMultipartRequest('POST', req.url, abortTrigger: abort)
+          ..fields.addAll(req.fields)
+          ..files.addAll(req.files),
+        maxBytes: maxUploadResponseBytes,
+        headerTimeout: const Duration(minutes: 2),
+        totalTimeout: const Duration(minutes: 3),
+      );
+    } on MisskeyResponseTooLarge catch (e) {
+      throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '04', title: 'Response Too Large', message: snsMisskeyL10n.misskeyApiResponseTooLarge(host, e.maxBytes)), cause: e);
     } on TimeoutException catch (e) {
       throw SnsApiException(ErrorCode.timeout.copyWith(message: snsMisskeyL10n.misskeyUploadTimeout), cause: e);
     } on Exception catch (e) {
       throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable', message: snsMisskeyL10n.misskeyApiUnreachablePlain(host, '$e')), cause: e);
     }
-    final res = await http.Response.fromStream(streamed);
-    final decoded = res.body.isEmpty ? null : jsonDecode(utf8.decode(res.bodyBytes));
+    final decoded = res.body.isEmpty ? null : jsonDecode(utf8.decode(res.body));
     if (res.statusCode >= 400) {
       final err = decoded is Map ? decoded['error'] : null;
       final msg = err is Map ? (err['message'] ?? err['code'])?.toString() : null;
