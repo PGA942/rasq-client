@@ -99,7 +99,8 @@ Future<(int, Map<String, String>)> _streamLimited(
   check();
   try {
     if (stop.isCompleted) throw await stop.future;
-    final send = c.send(http.AbortableRequest('GET', url, abortTrigger: abort.future));
+    // 頭が来るまでの待ちにも、同じ期限を直接掛ける(上の ticker / end は本文の読み込みも含めて止める)。
+    final send = c.send(http.AbortableRequest('GET', url, abortTrigger: abort.future)).timeout(timeout);
     final res = await Future.any<Object>([send, stop.future]);
     if (res is! http.StreamedResponse) {
       // 頭が来る前に止めた: あとから来た応答も読まずに捨てる。
