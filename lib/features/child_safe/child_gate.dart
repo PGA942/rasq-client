@@ -406,6 +406,8 @@ class ChildGate {
     if (!supervised) return false;
     if (locked || group == null) return true;
     if (group == 'rai.web' && !searchAllowed('web')) return true;
+    // ユーザーの検索 (#24): 検索画面のユーザー欄と同じ `search.users`。
+    if (fn == 'user.search' && !searchAllowed('users')) return true;
     if (fn.startsWith('dm.') && !featureAllowed('dm')) return true;
     if (group == 'rai.astell' && !featureAllowed('astell.join')) return true;
     final r = allow?.rai;

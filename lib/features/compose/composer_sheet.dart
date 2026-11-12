@@ -15,7 +15,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../session/sanctions.dart';
-import '../child_safe/child_safe_providers.dart' show childComposeVerdict, childComposeSent, childComposeBlocked, childGateProvider;
+import '../child_safe/child_safe_providers.dart' show childComposeVerdict, childComposeSent, childComposeBlocked, childComposeFeatureBlock, childGateProvider, childSafeSearchUsers, childSafeUserSearch, childUserSearchBlockReason;
 import '../compose_policy/compose_policy.dart';
 import '../compose_policy/compose_policy_providers.dart' show currentComposePolicy, reportComposeTrips;
 import '../../app/router.dart';
@@ -144,7 +144,10 @@ Future<Post?> showComposerWith(ComposeTarget target, {required OverlayManager ma
 /// FOW ヘッダー右側のコントロール群 (D-045)。状態は [composeOptionsProvider]
 /// (本文側と共有、アプリ起動中は前回値を記憶)。
 class ComposerHeaderControls extends ConsumerWidget {
-  const ComposerHeaderControls({super.key});
+  const ComposerHeaderControls({super.key, this.visibilities = composeAllVisibilities});
+
+  /// 投稿先の SNS で選べる公開範囲 ([composeVisibilitiesFor]、#8)。1 つだけなら公開範囲のボタンは出さない。
+  final List<String> visibilities;
 
   Rect _anchorOf(BuildContext ctx) {
     final box = ctx.findRenderObject() as RenderBox;
@@ -156,9 +159,11 @@ class ComposerHeaderControls extends ConsumerWidget {
     final opts = ref.watch(composeOptionsProvider);
     final store = ref.read(composeOptionsProvider.notifier);
     final manager = ref.read(overlayManagerProvider);
+    final shown = visibilities.contains(opts.visibility) ? opts.visibility : visibilities.first;
     return Row(mainAxisSize: MainAxisSize.min, children: [
+      if (visibilities.length > 1)
       Builder(builder: (ctx) {
-          final (icon, label) = switch (opts.visibility) {
+          final (icon, label) = switch (shown) {
             'home' => (Icons.home_outlined, context.l10n.composeVisibilityHome),
             'followers' => (Icons.lock_outline, context.l10n.composeVisibilityFollowers),
             _ => (Icons.public, context.l10n.composeVisibilityPublic),
@@ -168,9 +173,9 @@ class ComposerHeaderControls extends ConsumerWidget {
             tooltip: context.l10n.composeVisibilityTooltip(label),
             onTap: () async {
               final picked = await manager.showDropdown<String>(id: 'composer.visibility', ownerId: composerFowId, anchor: _anchorOf(ctx), dense: true, items: [
-                RasqDropdownItem(context.l10n.composeVisibilityPublic, 'public'),
-                RasqDropdownItem(context.l10n.composeVisibilityHome, 'home'),
-                RasqDropdownItem(context.l10n.composeVisibilityFollowers, 'followers'),
+                if (visibilities.contains('public')) RasqDropdownItem(context.l10n.composeVisibilityPublic, 'public'),
+                if (visibilities.contains('home')) RasqDropdownItem(context.l10n.composeVisibilityHome, 'home'),
+                if (visibilities.contains('followers')) RasqDropdownItem(context.l10n.composeVisibilityFollowers, 'followers'),
               ]);
               if (picked != null) store.setVisibility(picked);
             },
@@ -1018,10 +1023,27 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   AccountSession? get _effectivePostAs => _postAs ?? _suggestedPostAs;
 
+  /// 送り先は、持っている [AccountSession] をそのまま使わず、今使ってよいセッション ([usableSessionsProvider]) から
+  /// key で引き直す(セキュリティ確認 2026-11-11 の #10)。開いているあいだに保護者がその SNS / サーバーを止めたら null(送れない)。
   SnsSession? get _session {
     final t = _effectivePostAs;
-    if (t != null) return ref.read(pluginRegistryProvider).session(t);
+    if (t != null) {
+      final live = _usableSession(t.account.key);
+      return live == null ? null : ref.read(pluginRegistryProvider).session(live);
+    }
     return ref.read(currentSnsSessionProvider);
+  }
+
+  AccountSession? _usableSession(String key) => ref.read(usableSessionsProvider).where((s) => s.account.key == key).firstOrNull;
+
+  /// 送る直前の確かめ直し (#9 / #10): 待ち(検閲の遅延 / アップロード / 確認)のあいだに、見守りで投稿 / DM / 添付を止めたり、
+  /// 送り先の SNS を止めたりしていたら、理由を出して false。[accountKey] = 送り先のアカウント(RASQ へは null)。
+  bool _stillAllowed(_SendPlan plan, {String? accountKey, bool dm = false}) {
+    final why = childComposeFeatureBlock(ref.read(childGateProvider), dm: dm, direct: plan.direct, media: plan.files.isNotEmpty) ??
+        (accountKey != null && _usableSession(accountKey) == null ? appL10n.composeTargetUnavailable : null);
+    if (why == null) return true;
+    if (mounted) setState(() => _error = why);
+    return false;
   }
 
   void _scheduleTargetEval() {
@@ -1283,7 +1305,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// composercfg の届け方(auto/confirm/draft)。
   Future<List<(AccountSession, Map<String, String>?, String)>> _buildMultiPlan() async {
     if (!_multiSelect || widget.target is! ComposeNormal || !_multiSel.values.any((v) => v != _selNone)) return const [];
-    final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    final sessions = ref.read(usableSessionsProvider);
     final primaryKey = (_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account.key;
     List<(String, Map<String, String>?)> choices = const [];
     Map<String, bool> gates = const {};
@@ -1375,10 +1397,20 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         case 'localOnly':
           localOnly = true;
       }
+      // 公開範囲 (#8): この送り先の SNS が選んだ公開範囲で送れないなら送らない(黙って公開にしない)。
+      if (delivery != 'draft' && s.pluginId != rasqLinkPluginId && !composeVisibilitySupported(s.account.kind, visibility)) {
+        errors.add(label);
+        continue;
+      }
       // 投稿加工(正規表現, D-130): 送信先アカウントごとに本文へ適用したもの(確定したときに作り、判定したもの)。
       if (delivery == 'draft') {
         // 下書きだけ作る (D-129): 次にそのアカウントを投稿先に選ぶと復元。
         _drafts.save('linked:${s.account.key}', ComposeDraft(text: text, cw: cw ?? '', cwOn: cw != null));
+        continue;
+      }
+      // 送る直前に確かめ直す (#9 / #10): 見守りで投稿を止めた / この SNS を止めたなら、この送り先には送らない。
+      if (childComposeFeatureBlock(ref.read(childGateProvider), media: files.isNotEmpty) != null || (s.pluginId != rasqLinkPluginId && _usableSession(s.account.key) == null)) {
+        errors.add(label);
         continue;
       }
       // RASQ への連動 (D-286): SNS のプラグインではなく、Central へ。RASQ に無いもの(指名 / 連合なし)は近いものへ寄せ、上限を超える分は送らない。
@@ -1405,12 +1437,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         continue;
       }
       try {
-        final session = registry.session(s);
+        final session = registry.session(_usableSession(s.account.key)!);
         // メディアは各アカウントのサーバーへ上げ直す(id は流用できない)。
         final ids = <String>[];
         for (final (f, sensitive) in files) {
           ids.add((await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: sensitive)).id);
         }
+        if (childComposeFeatureBlock(ref.read(childGateProvider), media: files.isNotEmpty) != null || _usableSession(s.account.key) == null) throw StateError('blocked while uploading');
         final sent = await session.createPostWithNotice(NewPost(
             text: text, contentWarning: cw, visibility: visibility, localOnly: localOnly, reactionAcceptance: base.reactionAcceptance, mediaIds: ids, poll: base.poll));
         posted.add(label);
@@ -1480,19 +1513,24 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Future<void> _searchMentions(String q) async {
     final seq = ++_mentionSeq;
     final hits = <({String insert, String name, Uri? avatarUrl})>[];
+    // 見守りでユーザーの検索を止めていれば、候補を引かない(呼ぶ直前と結果のあとに今の許可を見る。#24)。
+    if (childUserSearchBlockReason(ref.read(childGateProvider)) != null) {
+      if (mounted && _mentionHits.isNotEmpty) setState(() => _mentionHits = const []);
+      return;
+    }
     // 打ったままの文字(表示名に当たる)と、かなをローマ字に読み替えたもの(ハンドルに当たる。D-289)の両方で引いて、合わせる。
     final romaji = kanaToRomaji(q);
     for (final term in [q, if (romaji != null && romaji != q.toLowerCase()) romaji]) {
       try {
         if (_rasqTarget) {
           final api = ref.read(rasqAccountPageApiProvider);
-          hits.addAll([for (final a in await api?.searchAccounts(term) ?? const <RasqPostAuthor>[]) (insert: '@${a.handle}', name: a.label, avatarUrl: a.avatarUrl)]);
+          hits.addAll([for (final a in api == null ? const <RasqPostAuthor>[] : await childSafeUserSearch(() => ref.read(childGateProvider), () => api.searchAccounts(term))) (insert: '@${a.handle}', name: a.label, avatarUrl: a.avatarUrl)]);
         } else {
           final session = _session;
           final me = session?.account;
-          final page = await session?.searchUsers(term, limit: 8);
+          final users = session == null ? const <UserSummary>[] : await childSafeSearchUsers(() => ref.read(childGateProvider), session, term, limit: 8);
           hits.addAll([
-            for (final u in page?.items ?? const <UserSummary>[])
+            for (final u in users)
               (insert: u.account.instance == me?.instance ? '@${u.handle}' : '@${u.handle}@${u.account.instance}', name: u.displayName, avatarUrl: u.avatarUrl),
           ]);
         }
@@ -1504,7 +1542,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final seen = <String>{};
     hits.retainWhere((h) => seen.add(h.insert));
     if (!mounted || seq != _mentionSeq) return;
-    setState(() => _mentionHits = hits);
+    setState(() => _mentionHits = childUserSearchBlockReason(ref.read(childGateProvider)) == null ? hits : const []);
   }
 
   /// 打っている途中の `@…` を、選んだメンションに置き換える。
@@ -1714,6 +1752,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       // 返信 (D-292): 公開範囲 / リアクションの受け入れは送らない(Swing のスレッドへの返信は Central が `swing` にする)。
       // 注釈は返信にも付く。添付 / 投票は Swing のスレッドへの返信だけ (D-421 / S-076)。
       final images = [for (final (f, sensitive) in files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: sensitive)];
+      if (!_stillAllowed(plan)) return;
       final created = _rasqReply
           ? await api.createPost(
               plan.text,
@@ -1824,6 +1863,31 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     return ok && mounted;
   }
 
+  /// 投稿先の SNS が公開範囲を選べない (#8): 公開で送ってよいか聞く。閉じたら送らない。
+  Future<bool> _confirmPublicOnly(SnsKind kind) async {
+    final manager = ref.read(overlayManagerProvider);
+    const id = 'composer.visibility.publicOnly';
+    final ok = await manager.showBottomSheet<bool>(
+      id: id,
+      title: appL10n.composeVisibilityPublicOnlyTitle(kind.label),
+      builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+          child: Text(ctx.l10n.composeVisibilityPublicOnlyBody),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+          child: FilledButton(key: const ValueKey('composer.visibility.sendPublic'), onPressed: () => manager.close(id, result: true), child: Text(ctx.l10n.composeVisibilityPublicOnlySend)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
+          child: TextButton(key: const ValueKey('composer.visibility.cancel'), onPressed: () => manager.close(id, result: false), child: Text(ctx.l10n.composePolicyConfirmEdit)),
+        ),
+      ]),
+    );
+    return ok == true;
+  }
+
   /// `warn` に当たった: 種類の名前を見せて、このまま送るか聞く。閉じたら送らない。
   Future<bool> _confirmComposeWarn(List<ComposeTrip> warns) async {
     final manager = ref.read(overlayManagerProvider);
@@ -1884,6 +1948,17 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     if (!await _childSafeAllows(plan, dm: _isDm, direct: plan.direct)) return;
     // 見守り / 制限の閾値 (D-462): 端末で判定して止める(本文は Central に送らない)。
     if (!await _composePolicyAllows(plan)) return;
+    // 公開範囲 (#8): 投稿先の SNS が選んだ公開範囲(フォールバックのフォロワー限定も)で送れないなら、黙って公開にしない。
+    // 公開で送ってよいか聞き、よいときだけ公開で送る。
+    var forcePublic = false;
+    if (!_isDm && !plan.direct && !(_replyTo?.isDirect ?? false)) {
+      final wanted = plan.fallback?['format'] == 'followers' ? 'followers' : plan.opts.visibility;
+      if (!composeVisibilitySupported(session.account.kind, wanted)) {
+        if (!await _confirmPublicOnly(session.account.kind)) return;
+        if (!mounted) return;
+        forcePublic = true;
+      }
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -1900,10 +1975,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       final ids = <String>[];
       for (var i = 0; i < plan.files.length; i++) {
         final (f, sensitive) = plan.files[i];
+        if (!_stillAllowed(plan, accountKey: session.account.key, dm: _isDm)) return;
         setState(() => _progress = appL10n.composeUploading(i + 1, plan.files.length));
         f.uploaded ??= await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: sensitive);
         ids.add(f.uploaded!.id);
       }
+      // 送る直前 (#9 / #10): 待ちのあいだに止めたものは送らない。
+      if (!_stillAllowed(plan, accountKey: session.account.key, dm: _isDm)) return;
       setState(() => _progress = appL10n.composeSending);
       // 投稿オプション (D-045: FOW ヘッダーの公開設定/連合/リアクション受け入れ)。確定したときのもの (#19)。
       final opts = plan.opts;
@@ -1930,6 +2008,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         case 'localOnly':
           if (!_isDm) localOnly = true;
       }
+      if (forcePublic) visibility = 'public';
       // 投稿加工(正規表現, D-130): 本体の投稿先アカウントにも適用(送る前の判定 [20] と同じ本文。確定したときに作ったもの)。
       final draft = NewPost(
         text: plan.primaryText,
@@ -2150,7 +2229,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       // 伸びて(いなければ 0px)、入力部・バーが子に被らない。
       if ((widget.spec ?? widget.hostSpec) case final gap?) FowChildGap(spec: gap, top: true),
       // @ 補完の候補 (D-285): 本文で `@…` を打っている間だけ、ツールバーの上に並ぶ。押すと、その場のメンションに置き換わる。
-      if (_mentionHits.isNotEmpty)
+      // 見守りでユーザーの検索を止めたら、出ている候補も消す (#24)。
+      if (_mentionHits.isNotEmpty && childUserSearchBlockReason(ref.watch(childGateProvider)) == null)
         _suggestStrip(const ValueKey('composer.mentions'), [
           for (final h in _mentionHits)
             ActionChip(
@@ -2238,7 +2318,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 }),
                 // 投稿オプション (D-052: ヘッダーからツールバーへ移動)。RASQ の返信は公開範囲 / 受け入れを送らないので出さない
                 // (D-421。Swing のスレッドへの返信は、Swing を見られる人だけに決まっている)。
-                if (!_isDm && !_directReply && !_rasqReply) const ComposerHeaderControls(),
+                // 選べる公開範囲は投稿先の SNS に合わせる (#8。Bluesky は公開だけ)。
+                if (!_isDm && !_directReply && !_rasqReply)
+                  ComposerHeaderControls(visibilities: _rasqTarget ? composeAllVisibilities : composeVisibilitiesFor((_effectivePostAs?.account ?? ref.watch(currentAccountProvider))?.kind)),
               ]),
             ),
           ),

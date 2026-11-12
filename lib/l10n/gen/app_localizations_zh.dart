@@ -2402,6 +2402,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get composeAttachmentSensitive => '标记为敏感';
 
   @override
+  String get composeTargetUnavailable => '目前无法使用此账号（已被监护人禁用）';
+
+  @override
+  String composeVisibilityPublicOnlyTitle(String sns) {
+    return '$sns 无法选择公开范围';
+  }
+
+  @override
+  String get composeVisibilityPublicOnlyBody => '此帖子将公开，任何人都能看到。要公开发送吗？';
+
+  @override
+  String get composeVisibilityPublicOnlySend => '公开发送';
+
+  @override
   String get composeMediaPickTypeLabel => '视频 / 音频';
 
   @override
@@ -3531,6 +3545,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dmMediaPlaceholder => '[媒体]';
+
+  @override
+  String get dmLastMessageHidden => '无法显示此消息';
 
   @override
   String get homeCreateMissingAccount => '（不存在的账号）';
@@ -22697,6 +22714,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get composeAttachmentSensitive => '標記為敏感';
 
   @override
+  String get composeTargetUnavailable => '目前無法使用此帳號（已被監護人停用）';
+
+  @override
+  String composeVisibilityPublicOnlyTitle(String sns) {
+    return '$sns 無法選擇公開範圍';
+  }
+
+  @override
+  String get composeVisibilityPublicOnlyBody => '此貼文將公開，任何人都能看到。要公開傳送嗎？';
+
+  @override
+  String get composeVisibilityPublicOnlySend => '公開傳送';
+
+  @override
   String get composeMediaPickTypeLabel => '影片 / 音訊';
 
   @override
@@ -23826,6 +23857,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get dmMediaPlaceholder => '[媒體]';
+
+  @override
+  String get dmLastMessageHidden => '無法顯示此訊息';
 
   @override
   String get homeCreateMissingAccount => '（不存在的帳號）';

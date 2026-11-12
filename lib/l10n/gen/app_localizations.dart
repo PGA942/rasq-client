@@ -3991,6 +3991,30 @@ abstract class AppLocalizations {
   /// **'センシティブにする'**
   String get composeAttachmentSensitive;
 
+  /// 送る直前に、投稿先の SNS が見守りで止められていた
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿先のアカウントは今は使えません(保護者が止めています)'**
+  String get composeTargetUnavailable;
+
+  /// 投稿先の SNS が公開範囲(ホーム / フォロワー限定)を持たないときの確認の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'{sns} では公開範囲を選べません'**
+  String composeVisibilityPublicOnlyTitle(String sns);
+
+  /// No description provided for @composeVisibilityPublicOnlyBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿は公開になり、誰でも見られます。公開で送りますか?'**
+  String get composeVisibilityPublicOnlyBody;
+
+  /// No description provided for @composeVisibilityPublicOnlySend.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開で送る'**
+  String get composeVisibilityPublicOnlySend;
+
   /// ファイル選択ダイアログの種類の名前
   ///
   /// In ja, this message translates to:
@@ -5927,6 +5951,12 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'[メディア]'**
   String get dmMediaPlaceholder;
+
+  /// DM 一覧の最新の 1 行: 見守りで見せない本文の代わり
+  ///
+  /// In ja, this message translates to:
+  /// **'このメッセージは表示できません'**
+  String get dmLastMessageHidden;
 
   /// ＋ のボタンに置いた投稿のアカウントが、もうログインしていないとき
   ///

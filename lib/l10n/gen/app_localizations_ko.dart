@@ -2440,6 +2440,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get composeAttachmentSensitive => '민감으로 설정';
 
   @override
+  String get composeTargetUnavailable => '지금은 이 계정을 사용할 수 없습니다(보호자가 막아 두었습니다)';
+
+  @override
+  String composeVisibilityPublicOnlyTitle(String sns) {
+    return '$sns에서는 공개 범위를 선택할 수 없습니다';
+  }
+
+  @override
+  String get composeVisibilityPublicOnlyBody =>
+      '이 게시물은 공개되어 누구나 볼 수 있습니다. 공개로 보낼까요?';
+
+  @override
+  String get composeVisibilityPublicOnlySend => '공개로 보내기';
+
+  @override
   String get composeMediaPickTypeLabel => '동영상 / 오디오';
 
   @override
@@ -3581,6 +3596,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dmMediaPlaceholder => '[미디어]';
+
+  @override
+  String get dmLastMessageHidden => '이 메시지는 표시할 수 없습니다';
 
   @override
   String get homeCreateMissingAccount => '(없는 계정)';

@@ -14,5 +14,6 @@
   "dmEmptyTitle": "没有私信",
   "dmEmptyHint": "私信帖子（限定公开）会显示在这里",
   "dmYouPrefix": "你：",
-  "dmMediaPlaceholder": "[媒体]"
+  "dmMediaPlaceholder": "[媒体]",
+  "dmLastMessageHidden": "无法显示此消息"
 }

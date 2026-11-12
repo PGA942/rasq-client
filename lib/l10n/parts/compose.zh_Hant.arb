@@ -139,5 +139,9 @@
   "composeAttachmentRemove": "刪除",
   "composeAttachmentEdit": "編輯",
   "composeAttachmentUnsensitive": "取消敏感標記",
-  "composeAttachmentSensitive": "標記為敏感"
+  "composeAttachmentSensitive": "標記為敏感",
+  "composeTargetUnavailable": "目前無法使用此帳號（已被監護人停用）",
+  "composeVisibilityPublicOnlyTitle": "{sns} 無法選擇公開範圍",
+  "composeVisibilityPublicOnlyBody": "此貼文將公開，任何人都能看到。要公開傳送嗎？",
+  "composeVisibilityPublicOnlySend": "公開傳送"
 }
