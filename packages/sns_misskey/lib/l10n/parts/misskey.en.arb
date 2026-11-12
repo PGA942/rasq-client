@@ -91,5 +91,6 @@
   "misskeyActionReply": "Reply",
   "misskeyActionRenote": "Renote",
   "misskeyActionReaction": "Reaction",
-  "misskeyActionFavorite": "Favorite"
+  "misskeyActionFavorite": "Favorite",
+  "misskeyApiResponseTooLarge": "The response from {host} is too large (over {maxBytes} bytes)"
 }

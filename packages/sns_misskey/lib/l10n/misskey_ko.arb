@@ -91,5 +91,6 @@
   "misskeyActionReply": "답글",
   "misskeyActionRenote": "리노트",
   "misskeyActionReaction": "리액션",
-  "misskeyActionFavorite": "즐겨찾기"
+  "misskeyActionFavorite": "즐겨찾기",
+  "misskeyApiResponseTooLarge": "{host}의 응답이 너무 큽니다({maxBytes} bytes 초과)"
 }

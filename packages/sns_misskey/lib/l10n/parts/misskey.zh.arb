@@ -91,5 +91,6 @@
   "misskeyActionReply": "回复",
   "misskeyActionRenote": "转帖",
   "misskeyActionReaction": "回应",
-  "misskeyActionFavorite": "收藏"
+  "misskeyActionFavorite": "收藏",
+  "misskeyApiResponseTooLarge": "{host} 的响应过大（超过 {maxBytes} bytes）"
 }
