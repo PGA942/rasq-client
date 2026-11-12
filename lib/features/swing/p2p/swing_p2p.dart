@@ -63,6 +63,12 @@ class SwingP2p {
   final _signals = StreamController<Map<String, Object?>>.broadcast();
   final _inflight = <String, Future<Uint8List>>{};
   final _serving = <String, _Serve>{};
+
+  /// 取りに行っている受け渡し(期限 / 破棄で止める。セキュリティ確認 2026-11-11 の #16)。
+  final _fetching = <Completer<Uint8List>>{};
+
+  /// 配るときの実体の読み込み(同じ Swing を同時に求められても 1 回だけ読む。#20)。
+  final _entryLoads = <String, Future<({Uint8List bytes, String sha256, String? contentType})?>>{};
   bool _foreground = true;
   bool _disposed = false;
   ({List<Map<String, Object?>> ice, DateTime until})? _turn;
@@ -143,7 +149,8 @@ class SwingP2p {
           s.source,
           media.sha256,
           media.size,
-        ).timeout(fetchTimeout);
+        // 期限は [_fetchFrom] の中で掛けて接続も閉じる (#16)。ここは接続を作る前で止まったときの予備。
+        ).timeout(fetchTimeout + const Duration(seconds: 5));
         await store.put(
           swing.id,
           bytes,
@@ -171,20 +178,40 @@ class SwingP2p {
     int size,
   ) async {
     final session = newSwingId();
-    final pc = await peerConnection({
-      'iceServers': await _ice(),
-      'sdpSemantics': 'unified-plan',
-    });
+    // 期限は接続を持つここで掛ける (#16): 外の Future だけを期限切れにすると、相手が終わりの知らせを送らないあいだ
+    // 接続と受け取った塊が残る。期限 / 破棄で [done] を失敗にし、下の finally で接続と購読を必ず閉じる。
     final done = Completer<Uint8List>();
-    final asm = SwingAssembler(expectSha256: sha256, maxBytes: size);
-    final pendingIce = <RTCIceCandidate>[];
-    var remoteSet = false;
-    late final StreamSubscription<Map<String, Object?>> sub;
+    void fail(Object e) {
+      if (!done.isCompleted) done.completeError(e);
+    }
+
+    final deadline = Timer(fetchTimeout, () => fail(TimeoutException('swing p2p fetch', fetchTimeout)));
+    _fetching.add(done);
+    RTCPeerConnection? pc;
+    StreamSubscription<Map<String, Object?>>? sub;
     try {
-      final dc = await pc.createDataChannel(
+      pc = await peerConnection({
+        'iceServers': await _ice(),
+        'sdpSemantics': 'unified-plan',
+      });
+      if (done.isCompleted) return await done.future;
+      final conn = pc;
+      final asm = SwingAssembler(expectSha256: sha256, maxBytes: size);
+      final pendingIce = <RTCIceCandidate>[];
+      var remoteSet = false;
+      conn.onConnectionState = (st) {
+        if (st == RTCPeerConnectionState.RTCPeerConnectionStateFailed || st == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+          fail(StateError('the connection closed'));
+        }
+      };
+      final dc = await conn.createDataChannel(
         'swing',
         RTCDataChannelInit()..ordered = true,
       );
+      // 相手がチャネルを閉じたら、終わりの知らせを待たない (#16)。
+      dc.onDataChannelState = (st) {
+        if (st == RTCDataChannelState.RTCDataChannelClosed) fail(StateError('the channel closed'));
+      };
       dc.onMessage = (m) {
         if (done.isCompleted) return;
         try {
@@ -198,7 +225,7 @@ class SwingP2p {
           done.completeError(e);
         }
       };
-      pc.onIceCandidate = (c) {
+      conn.onIceCandidate = (c) {
         if (c.candidate == null) return;
         unawaited(
           api
@@ -228,7 +255,7 @@ class SwingP2p {
             try {
               switch (m['kind']) {
                 case 'answer' when data is Map:
-                  await pc.setRemoteDescription(
+                  await conn.setRemoteDescription(
                     RTCSessionDescription(
                       data['sdp'] as String?,
                       data['type'] as String? ?? 'answer',
@@ -236,7 +263,7 @@ class SwingP2p {
                   );
                   remoteSet = true;
                   for (final c in pendingIce) {
-                    await pc.addCandidate(c);
+                    await conn.addCandidate(c);
                   }
                   pendingIce.clear();
                 case 'ice' when data is Map:
@@ -245,7 +272,7 @@ class SwingP2p {
                     data['sdpMid'] as String?,
                     (data['sdpMLineIndex'] as num?)?.toInt(),
                   );
-                  remoteSet ? await pc.addCandidate(c) : pendingIce.add(c);
+                  remoteSet ? await conn.addCandidate(c) : pendingIce.add(c);
                 case 'bye':
                   if (!done.isCompleted) {
                     done.completeError(StateError('the source declined'));
@@ -255,8 +282,9 @@ class SwingP2p {
               if (!done.isCompleted) done.completeError(e);
             }
           });
-      final offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+      final offer = await conn.createOffer();
+      await conn.setLocalDescription(offer);
+      if (done.isCompleted) return await done.future;
       await api.signal(
         swing.id,
         to: source,
@@ -265,15 +293,22 @@ class SwingP2p {
         data: {'sdp': offer.sdp, 'type': offer.type},
       );
       return await done.future;
+    } catch (e) {
+      fail(e);
+      rethrow;
     } finally {
-      unawaited(sub.cancel());
+      deadline.cancel();
+      _fetching.remove(done);
+      if (!done.isCompleted) done.completeError(StateError('fetch ended'));
+      done.future.ignore();
+      unawaited(sub?.cancel());
       unawaited(
         api
             .signal(swing.id, to: source, session: session, kind: 'bye')
             .catchError((Object _) {}),
       );
       try {
-        await pc.close();
+        await pc?.close();
       } catch (_) {}
     }
   }
@@ -301,29 +336,47 @@ class SwingP2p {
       );
       return;
     }
-    final entry = await store.entry(swingId);
-    if (entry == null) {
-      unawaited(
-        api
-            .signal(swingId, to: from, session: session, kind: 'bye')
-            .catchError((Object _) {}),
-      );
-      return;
-    }
-    final serve = _Serve(
+    // 枠は最初の await より前に取る (セキュリティ確認 2026-11-11 の #20): 読み込みの待ちのあいだに届いたほかの offer も、
+    // この保留の枠を数える([maxServing] を超えて読み込み・接続を始めない)。同じ session の重ねは上で断る。
+    // 終わったときは、台帳の持ち主がこの受け渡しのときだけ外す(ほかの受け渡しの登録を消さない)。
+    late final _Serve serve;
+    serve = _Serve(
       swingId: swingId,
       to: from,
       session: session,
       api: api,
-      onClosed: () => _serving.remove(session),
+      onClosed: () {
+        if (identical(_serving[session], serve)) _serving.remove(session);
+      },
     );
     _serving[session] = serve;
+    // 期限は読み込みの前から (#20)。相手が受け取らないまま止まっても、ずっと抱えない。
+    final expire = Timer(fetchTimeout * 2, () => unawaited(serve.close()));
+    serve.onDone = expire.cancel;
     try {
+      final entry = await (_entryLoads[swingId] ??= store.entry(swingId).whenComplete(() {
+        _entryLoads.remove(swingId);
+      }));
+      if (entry == null || serve.closed || _disposed || !_foreground) {
+        unawaited(
+          api
+              .signal(swingId, to: from, session: session, kind: 'bye')
+              .catchError((Object _) {}),
+        );
+        await serve.close();
+        return;
+      }
       final pc = await peerConnection({
         'iceServers': await _ice(),
         'sdpSemantics': 'unified-plan',
       });
       serve.pc = pc;
+      if (serve.closed) {
+        try {
+          await pc.close();
+        } catch (_) {}
+        return;
+      }
       pc.onIceCandidate = (c) {
         if (c.candidate == null) return;
         unawaited(
@@ -365,8 +418,6 @@ class SwingP2p {
         kind: 'answer',
         data: {'sdp': answer.sdp, 'type': answer.type},
       );
-      // 相手が受け取らないまま止まっても、ずっと抱えない。
-      Timer(fetchTimeout * 2, () => unawaited(serve.close()));
     } catch (e) {
       debugPrint('swing p2p: serving $swingId failed: $e');
       await serve.close();
@@ -414,6 +465,10 @@ class SwingP2p {
 
   Future<void> dispose() async {
     _disposed = true;
+    // 取りに行っている受け渡しも止める (#16): 接続と受け取った塊は、それぞれの finally で手放す。
+    for (final d in [..._fetching]) {
+      if (!d.isCompleted) d.completeError(StateError('disposed'));
+    }
     for (final s in [..._serving.values]) {
       await s.close();
     }
@@ -435,6 +490,10 @@ class _Serve {
   final VoidCallback onClosed;
   RTCPeerConnection? pc;
   bool _remote = false, _closed = false, _sending = false;
+  bool get closed => _closed;
+
+  /// 閉じたときに呼ぶ(期限のタイマーを止める)。
+  VoidCallback? onDone;
   final _pendingIce = <RTCIceCandidate>[];
 
   Future<void> remoteSet() async {
@@ -493,6 +552,7 @@ class _Serve {
     if (_closed) return;
     _closed = true;
     onClosed();
+    onDone?.call();
     try {
       await pc?.close();
     } catch (_) {}
