@@ -5,6 +5,7 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:sns_misskey/sns_misskey.dart';
 
 import 'app/app.dart';
+import 'app/error_journal.dart';
 import 'features/plugins/svgz.dart' show installSvgzDecoder;
 import 'platform/device_overrides.dart';
 import 'session/session_storage.dart';
@@ -15,6 +16,9 @@ const _probeHost = String.fromEnvironment('RASQ_PROBE');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // バグレポート (D-554): 起動ごとに最初の例外と直近の数件を端末に残す(前の受け手もそのまま呼ぶ = 動きは変えない)。
+  // ほかの初期化で落ちても残るように、いちばん先に。
+  ErrorJournalRecorder.installDefault();
   // Web 版 (D-456): `#/…` でなく path の URL(Central が `/app/` の下を index.html に落とす、rasq-central S-092)。
   // Central のページのチップ(`/app/astell/<code>` / `/app/rasq/<handle>` / `/app/custom/invite/<code>`)がそのまま場所になる。
   // 端末では何もしない。

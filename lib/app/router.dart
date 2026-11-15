@@ -36,6 +36,7 @@ import '../features/settings/composer_settings_screen.dart';
 import '../features/settings/learning_screen.dart';
 import '../features/settings/emom_threshold_screen.dart';
 import '../features/settings/legal_screen.dart';
+import '../features/settings/bug_report_screen.dart';
 import '../features/settings/account_security_screen.dart';
 import '../features/settings/notify_token_screen.dart';
 import '../features/settings/rasq_invites_screen.dart';
@@ -183,6 +184,9 @@ abstract final class Routes {
 
   /// ヘルプ、法的表示 (D-238)。
   static const settingsLegal = '/settings/legal';
+
+  /// バグレポート (D-554): 端末に残った例外を見る / 書き出す。設定 → RASQ について。
+  static const settingsBugReport = '/settings/bug-report';
 
   /// 通知専用のアクセストークン (D-239)。
   static const settingsNotifyToken = '/settings/notify-token';
@@ -458,6 +462,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'composer', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ComposerSettingsScreen()),
             GoRoute(path: 'server', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BackendSettingsScreen()),
             GoRoute(path: 'legal', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LegalScreen()),
+            GoRoute(path: 'bug-report', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BugReportScreen()),
             GoRoute(path: 'notify-token', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const NotifyTokenScreen()),
             GoRoute(path: 'rasq-profile', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RasqProfileEditScreen()),
             GoRoute(path: 'rasq-verify/:key', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqSnsVerifyScreen(accountKey: s.pathParameters['key']!)),

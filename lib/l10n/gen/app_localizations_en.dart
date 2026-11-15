@@ -304,6 +304,123 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookmarksRemove => 'Remove bookmark';
 
   @override
+  String get bugReportTitle => 'Bug report';
+
+  @override
+  String get bugReportRowSubtitle =>
+      'See and export the errors this device recorded when something went wrong';
+
+  @override
+  String get bugReportIntro =>
+      'These are the errors this device recorded when something went wrong. To send them as screenshots, take one or two screenshots of this screen from the top.';
+
+  @override
+  String get bugReportPrivacyNote =>
+      'Post text, tokens, handles, URLs and the device name are not included (they are masked even inside error messages).';
+
+  @override
+  String get bugReportDeviceHeader => 'Device';
+
+  @override
+  String get bugReportAppVersion => 'App version';
+
+  @override
+  String get bugReportOs => 'OS';
+
+  @override
+  String get bugReportDevice => 'Model';
+
+  @override
+  String get bugReportScreen => 'Screen';
+
+  @override
+  String get bugReportLocale => 'Language';
+
+  @override
+  String get bugReportNow => 'Now';
+
+  @override
+  String get bugReportFirstHeader => 'First error';
+
+  @override
+  String bugReportFirstCaption(String started, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count errors',
+      one: '1 error',
+    );
+    return 'First error of the launch at $started ($_temp0 in that launch)';
+  }
+
+  @override
+  String get bugReportTime => 'Time';
+
+  @override
+  String get bugReportType => 'Type';
+
+  @override
+  String get bugReportWhere => 'Where';
+
+  @override
+  String get bugReportWidgetPath => 'Widget path (top)';
+
+  @override
+  String get bugReportStack => 'Stack (top)';
+
+  @override
+  String get bugReportRecentHeader => 'Recent errors';
+
+  @override
+  String bugReportOlderLaunches(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count earlier launches also had errors (included in the full text)',
+      one: '1 earlier launch also had errors (included in the full text)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bugReportEmpty => 'No errors recorded';
+
+  @override
+  String get bugReportCopyButton => 'Copy full text';
+
+  @override
+  String get bugReportCopied => 'Copied the full bug report';
+
+  @override
+  String get bugReportSaveButton => 'Save to file';
+
+  @override
+  String bugReportSaved(String where) {
+    return 'Saved to $where';
+  }
+
+  @override
+  String bugReportSaveFailed(String error) {
+    return 'Couldn\'t save: $error';
+  }
+
+  @override
+  String get bugReportClearButton => 'Clear';
+
+  @override
+  String get bugReportClearConfirmTitle => 'Clear the recorded errors?';
+
+  @override
+  String get bugReportClearConfirmMessage => 'This can\'t be undone.';
+
+  @override
+  String get bugReportCancel => 'Cancel';
+
+  @override
+  String get bugReportCleared => 'Cleared';
+
+  @override
   String get catalogTitle => 'Component catalog';
 
   @override

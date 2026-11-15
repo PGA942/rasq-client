@@ -595,6 +595,192 @@ abstract class AppLocalizations {
   /// **'ブックマークを外す'**
   String get bookmarksRemove;
 
+  /// 設定 → RASQ について の行と、その画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'バグレポート'**
+  String get bugReportTitle;
+
+  /// 設定の行の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'不具合のときに端末に残った例外を見る・書き出す'**
+  String get bugReportRowSubtitle;
+
+  /// 画面の先頭の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'不具合が起きたときに、この端末に残った例外です。スクリーンショットで送るときは、この画面を上から 1〜2 枚撮ってください。'**
+  String get bugReportIntro;
+
+  /// 個人の情報を含めないことの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿の本文・トークン・ハンドル・URL・端末の名前は入っていません(例外の文に混じったものも伏せています)。'**
+  String get bugReportPrivacyNote;
+
+  /// 端末の情報の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'端末'**
+  String get bugReportDeviceHeader;
+
+  /// 項目名
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリの版'**
+  String get bugReportAppVersion;
+
+  /// 項目名
+  ///
+  /// In ja, this message translates to:
+  /// **'OS'**
+  String get bugReportOs;
+
+  /// 項目名(iPad14,5 など。端末の名前ではない)
+  ///
+  /// In ja, this message translates to:
+  /// **'端末の型'**
+  String get bugReportDevice;
+
+  /// 項目名(画面の大きさ)
+  ///
+  /// In ja, this message translates to:
+  /// **'画面'**
+  String get bugReportScreen;
+
+  /// 項目名(表示の言語)
+  ///
+  /// In ja, this message translates to:
+  /// **'言語'**
+  String get bugReportLocale;
+
+  /// 項目名(スクリーンショットを撮った時刻)
+  ///
+  /// In ja, this message translates to:
+  /// **'いまの時刻'**
+  String get bugReportNow;
+
+  /// 見出し(いちばん新しい、例外のあった起動の最初の 1 件)
+  ///
+  /// In ja, this message translates to:
+  /// **'最初の例外'**
+  String get bugReportFirstHeader;
+
+  /// started は起動した時刻、count はその起動での例外の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{started} に起動した回の最初の例外(この回で {count, plural, other{{count} 件}})'**
+  String bugReportFirstCaption(String started, int count);
+
+  /// 項目名
+  ///
+  /// In ja, this message translates to:
+  /// **'時刻'**
+  String get bugReportTime;
+
+  /// 項目名(例外の型)
+  ///
+  /// In ja, this message translates to:
+  /// **'種類'**
+  String get bugReportType;
+
+  /// 項目名(building Foo など、どこで起きたか)
+  ///
+  /// In ja, this message translates to:
+  /// **'場所'**
+  String get bugReportWhere;
+
+  /// 失敗した部品の経路の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'部品の経路(先頭)'**
+  String get bugReportWidgetPath;
+
+  /// スタックの先頭の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'スタック(先頭)'**
+  String get bugReportStack;
+
+  /// 見出し(同じ起動の、新しい順)
+  ///
+  /// In ja, this message translates to:
+  /// **'直近の例外'**
+  String get bugReportRecentHeader;
+
+  /// count は前の起動の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{ほかに {count} 回の起動で例外がありました(全文に入っています)}}'**
+  String bugReportOlderLaunches(int count);
+
+  /// 何も記録されていないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'記録された例外はありません'**
+  String get bugReportEmpty;
+
+  /// ボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'全文をコピー'**
+  String get bugReportCopyButton;
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'バグレポートの全文をコピーしました'**
+  String get bugReportCopied;
+
+  /// ボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルに保存'**
+  String get bugReportSaveButton;
+
+  /// where は保存した場所
+  ///
+  /// In ja, this message translates to:
+  /// **'{where} に保存しました'**
+  String bugReportSaved(String where);
+
+  /// error は理由
+  ///
+  /// In ja, this message translates to:
+  /// **'保存できませんでした: {error}'**
+  String bugReportSaveFailed(String error);
+
+  /// ボタン(記録を消す)
+  ///
+  /// In ja, this message translates to:
+  /// **'消去'**
+  String get bugReportClearButton;
+
+  /// 確認の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'記録した例外を消しますか?'**
+  String get bugReportClearConfirmTitle;
+
+  /// 確認の本文
+  ///
+  /// In ja, this message translates to:
+  /// **'消すと元に戻せません。'**
+  String get bugReportClearConfirmMessage;
+
+  /// 確認のキャンセル
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get bugReportCancel;
+
+  /// スナックバー
+  ///
+  /// In ja, this message translates to:
+  /// **'消去しました'**
+  String get bugReportCleared;
+
   /// 開発用のコンポーネントカタログ(部品の見本を並べた画面)の見出し
   ///
   /// In ja, this message translates to:

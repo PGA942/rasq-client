@@ -281,6 +281,117 @@ class AppLocalizationsZh extends AppLocalizations {
   String get bookmarksRemove => '移除书签';
 
   @override
+  String get bugReportTitle => '错误报告';
+
+  @override
+  String get bugReportRowSubtitle => '查看并导出出现问题时本设备记录的异常';
+
+  @override
+  String get bugReportIntro => '这是出现问题时本设备记录的异常。用截图发送时,请从上往下截取本画面 1〜2 张。';
+
+  @override
+  String get bugReportPrivacyNote => '不包含帖子正文、令牌、用户名、URL 和设备名称(混在异常信息中的也会隐去)。';
+
+  @override
+  String get bugReportDeviceHeader => '设备';
+
+  @override
+  String get bugReportAppVersion => '应用版本';
+
+  @override
+  String get bugReportOs => '操作系统';
+
+  @override
+  String get bugReportDevice => '型号';
+
+  @override
+  String get bugReportScreen => '屏幕';
+
+  @override
+  String get bugReportLocale => '语言';
+
+  @override
+  String get bugReportNow => '当前时间';
+
+  @override
+  String get bugReportFirstHeader => '首个异常';
+
+  @override
+  String bugReportFirstCaption(String started, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个',
+    );
+    return '$started 启动的那次运行中的首个异常(本次共 $_temp0)';
+  }
+
+  @override
+  String get bugReportTime => '时间';
+
+  @override
+  String get bugReportType => '类型';
+
+  @override
+  String get bugReportWhere => '位置';
+
+  @override
+  String get bugReportWidgetPath => '组件路径(开头)';
+
+  @override
+  String get bugReportStack => '堆栈(开头)';
+
+  @override
+  String get bugReportRecentHeader => '最近的异常';
+
+  @override
+  String bugReportOlderLaunches(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '另有 $count 次启动出现过异常(已包含在全文中)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bugReportEmpty => '没有记录到异常';
+
+  @override
+  String get bugReportCopyButton => '复制全文';
+
+  @override
+  String get bugReportCopied => '已复制错误报告全文';
+
+  @override
+  String get bugReportSaveButton => '保存到文件';
+
+  @override
+  String bugReportSaved(String where) {
+    return '已保存到 $where';
+  }
+
+  @override
+  String bugReportSaveFailed(String error) {
+    return '无法保存:$error';
+  }
+
+  @override
+  String get bugReportClearButton => '清除';
+
+  @override
+  String get bugReportClearConfirmTitle => '要清除记录的异常吗?';
+
+  @override
+  String get bugReportClearConfirmMessage => '清除后无法恢复。';
+
+  @override
+  String get bugReportCancel => '取消';
+
+  @override
+  String get bugReportCleared => '已清除';
+
+  @override
   String get catalogTitle => '组件目录';
 
   @override
@@ -20199,6 +20310,117 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get bookmarksRemove => '移除書籤';
+
+  @override
+  String get bugReportTitle => '錯誤報告';
+
+  @override
+  String get bugReportRowSubtitle => '查看並匯出出現問題時本裝置記錄的例外';
+
+  @override
+  String get bugReportIntro => '這是出現問題時本裝置記錄的例外。以截圖傳送時,請從上往下截取本畫面 1〜2 張。';
+
+  @override
+  String get bugReportPrivacyNote => '不包含貼文內文、權杖、帳號名稱、URL 和裝置名稱(混在例外訊息中的也會隱去)。';
+
+  @override
+  String get bugReportDeviceHeader => '裝置';
+
+  @override
+  String get bugReportAppVersion => 'App 版本';
+
+  @override
+  String get bugReportOs => '作業系統';
+
+  @override
+  String get bugReportDevice => '型號';
+
+  @override
+  String get bugReportScreen => '螢幕';
+
+  @override
+  String get bugReportLocale => '語言';
+
+  @override
+  String get bugReportNow => '目前時間';
+
+  @override
+  String get bugReportFirstHeader => '第一個例外';
+
+  @override
+  String bugReportFirstCaption(String started, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 個',
+    );
+    return '$started 啟動的那次執行中的第一個例外(本次共 $_temp0)';
+  }
+
+  @override
+  String get bugReportTime => '時間';
+
+  @override
+  String get bugReportType => '類型';
+
+  @override
+  String get bugReportWhere => '位置';
+
+  @override
+  String get bugReportWidgetPath => '元件路徑(開頭)';
+
+  @override
+  String get bugReportStack => '堆疊(開頭)';
+
+  @override
+  String get bugReportRecentHeader => '最近的例外';
+
+  @override
+  String bugReportOlderLaunches(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '另有 $count 次啟動出現過例外(已包含在全文中)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bugReportEmpty => '沒有記錄到例外';
+
+  @override
+  String get bugReportCopyButton => '複製全文';
+
+  @override
+  String get bugReportCopied => '已複製錯誤報告全文';
+
+  @override
+  String get bugReportSaveButton => '儲存到檔案';
+
+  @override
+  String bugReportSaved(String where) {
+    return '已儲存到 $where';
+  }
+
+  @override
+  String bugReportSaveFailed(String error) {
+    return '無法儲存:$error';
+  }
+
+  @override
+  String get bugReportClearButton => '清除';
+
+  @override
+  String get bugReportClearConfirmTitle => '要清除記錄的例外嗎?';
+
+  @override
+  String get bugReportClearConfirmMessage => '清除後無法復原。';
+
+  @override
+  String get bugReportCancel => '取消';
+
+  @override
+  String get bugReportCleared => '已清除';
 
   @override
   String get catalogTitle => '元件目錄';
