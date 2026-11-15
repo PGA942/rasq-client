@@ -33,6 +33,7 @@ import 'own_posts.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
 import 'timeline_search.dart';
+import '../media/viewer_sequence.dart';
 import '../nodeprog/tl_components.dart' show TlDisplayMode;
 import '../nodeprog/tl_sections_view.dart';
 import '../../l10n/l10n.dart';
@@ -548,7 +549,8 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
     );
     // ヘッダー(タブの行)のすぐ下に浮かべる。出し入れで一覧を作り直さないよう、いつも Stack の 1 つ目に置く。
     return Stack(children: [
-      Positioned.fill(child: body),
+      // この TL から開いた全画面は、TL の並びでスワイプを続ける (D-549)。
+      Positioned.fill(child: ViewerSequenceScope(sequence: ViewerSequence.ofTimeline(context, widget.kind), child: body)),
       if (pillShown)
         Positioned(
         top: RasqSpacing.sm,

@@ -24,6 +24,7 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
 import '../features/media/media_viewer_screen.dart';
+import '../features/media/viewer_sequence.dart';
 import '../features/login/bluesky_login_screen.dart';
 import '../features/login/mixi2_login_screen.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
@@ -518,8 +519,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: Routes.viewer,
             parentNavigatorKey: _appNavigatorKey,
             pageBuilder: (_, s) {
-              final x = s.extra as ({Post post, int index});
-              return CustomTransitionPage(child: MediaViewerScreen(post: x.post, initialIndex: x.index), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child));
+              // 並び付き (D-549: 投稿をまたいでスワイプ) / 投稿と番号だけ(これまでの形)。
+              final x = switch (s.extra) {
+                MediaViewerArgs a => a,
+                ({Post post, int index}) r => MediaViewerArgs(post: r.post, index: r.index),
+                _ => throw ArgumentError('viewer: extra ${s.extra.runtimeType}'),
+              };
+              return CustomTransitionPage(child: MediaViewerScreen(post: x.post, initialIndex: x.index, sequence: x.sequence), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child));
             },
           ),
           GoRoute(

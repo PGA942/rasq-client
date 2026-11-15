@@ -26,6 +26,7 @@ import '../collections/rasq_collection_tile.dart';
 import '../collections/rasq_collections.dart';
 import '../collections/rasq_list_picker.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
+import '../media/viewer_sequence.dart';
 import '../home/action_bundle_fow.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
@@ -616,7 +617,7 @@ class ListDetailScreen extends ConsumerWidget {
             error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: l10n.listsReload),
             data: (s) => s.posts.isEmpty
                 ? RasqEmptyView(title: l10n.listsNoPosts)
-                : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier, timelineId: kind.id, scope: topicScope, entries: topics),
+                : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier, kind: kind, timelineId: kind.id, scope: topicScope, entries: topics),
           ),
           ListTopicsTab(scope: topicScope, entries: topics, posts: {for (final p in loaded) p.key: p}, postsTabIndex: 1),
         ]),
@@ -666,7 +667,7 @@ class FeedTimelineScreen extends ConsumerWidget {
         tl.when(
           loading: () => const RasqLoading(),
           error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: l10n.listsReload),
-          data: (s) => s.posts.isEmpty ? RasqEmptyView(title: l10n.listsNoPosts) : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier, scope: topicScope, entries: topics),
+          data: (s) => s.posts.isEmpty ? RasqEmptyView(title: l10n.listsNoPosts) : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier, kind: kind, scope: topicScope, entries: topics),
         ),
         ListTopicsTab(scope: topicScope, entries: topics, posts: {for (final p in loaded) p.key: p}, postsTabIndex: 0),
       ]),
@@ -677,7 +678,10 @@ class FeedTimelineScreen extends ConsumerWidget {
 /// リストTL の投稿列 (D-036 → D-368): 目次(会話イベントを章にしたもの)は「話題の目次」タブへ移し、
 /// ここは選んだ話題での絞り込みだけ([ListTopicFilterBar] で解除)。
 class _ListTimelinePosts extends ConsumerStatefulWidget {
-  const _ListTimelinePosts({required this.posts, required this.actions, required this.notifier, this.timelineId, required this.scope, required this.entries});
+  const _ListTimelinePosts({required this.posts, required this.actions, required this.notifier, required this.kind, this.timelineId, required this.scope, required this.entries});
+
+  /// この並びの TL(全画面のスワイプの続きを読む先、D-549)。
+  final TimelineKind kind;
   final List<Post> posts;
 
   /// 話題の目次 (D-368): 選んだ話題の置き場の scope と、目次。
@@ -724,7 +728,10 @@ class _ListTimelinePostsState extends ConsumerState<_ListTimelinePosts> {
         await WidgetsBinding.instance.endOfFrame;
       });
     });
-    return RefreshIndicator(
+    // ここから開いた全画面は、この TL の並びでスワイプを続ける (D-549)。話題で絞っているときは、絞った並び(出している分だけ)。
+    // (全画面の下に隠れている間はこの画面は組み立て直されないので、TL の並びは provider から読む = [ViewerSequence.ofTimeline]。)
+    final sequence = selected == null ? ViewerSequence.ofTimeline(context, widget.kind) : ViewerSequence(posts: () => visible);
+    return ViewerSequenceScope(sequence: sequence, child: RefreshIndicator(
       onRefresh: widget.notifier.refresh,
       child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), children: [
         // 話題の目次で選んだ話題だけにしているとき (D-368)。目次そのものは「話題の目次」タブ。
@@ -743,7 +750,7 @@ class _ListTimelinePostsState extends ConsumerState<_ListTimelinePosts> {
             ),
         ]),
       ]),
-    );
+    ));
   }
 }
 

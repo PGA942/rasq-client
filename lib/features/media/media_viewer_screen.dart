@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,6 +27,7 @@ import '../home/timeline_providers.dart';
 import '../compose/post_video.dart' show isAudioMedia;
 import 'video_player.dart';
 import 'viewer_plugin_overlay.dart';
+import 'viewer_sequence.dart';
 
 /// 全画面表示(画像/動画/音声): 黒背景、PageView、戻る/…。
 /// 下側はダークモードの FOW (D-202、D-326 で下側**中央**・最大 600px): 動画の操作(左にシークバー、右にボタン類)/
@@ -36,10 +39,17 @@ import 'viewer_plugin_overlay.dart';
 /// センシティブ / 注釈(CW)のメディアは**1 枚ずつ**クッション (D-510): タイルで開いた 1 枚は開いたまま、スワイプした先の
 /// ほかの 1 枚は押すまでクッション(押すまでは自動再生も全画面表示プラグインへの受け渡しもしない)。セーフモード / 見守り中で
 /// タイルから取り除いたメディアは、外せないクッション。開いた記録はタイルと共有([mediaRevealProvider])。
+/// **投稿をまたいでスワイプ** (D-549): [sequence](開いたタイムラインの並び)があれば、添付の最後(最初)から次(前)の
+/// メディア付き投稿へそのまま移る。下の端に近づいたら続きを読み込む。上の端(新しい側)は止まる。
+/// **上下に引っ張って閉じる** (D-550): 拡大していなければ上下どちらへ引いても閉じる。拡大中はパンの限界(画像の上端 / 下端)に
+/// 達してから、さらに同じ向きへ引いたぶんだけを数える(ピンチ / パンと取り合わない)。
 class MediaViewerScreen extends ConsumerStatefulWidget {
-  const MediaViewerScreen({super.key, required this.post, this.initialIndex = 0});
+  const MediaViewerScreen({super.key, required this.post, this.initialIndex = 0, this.sequence});
   final Post post;
   final int initialIndex;
+
+  /// 投稿をまたいで続ける並び (D-549)。null = この投稿の添付だけ。
+  final ViewerSequence? sequence;
   @override
   ConsumerState<MediaViewerScreen> createState() => _MediaViewerScreenState();
 }
@@ -58,18 +68,74 @@ const viewerMinFreeSpace = 120.0;
 /// メディアを寄せる余白の枠(テストが読む)。
 const viewerMediaInsetKey = ValueKey('viewer.media.inset');
 
-/// 下向きスワイプで閉じる (D-326): この距離を超えて離すか、この速さ以上で下へ払うと閉じる。
+/// 上下に引っ張って閉じる (D-326 → D-550): この距離を超えて離すか、この速さ以上で同じ向きへ払うと閉じる。
+/// 拡大中は、パンの限界を越えて引いたぶん(払う速さは見ない)がこの距離を超えたら閉じる。
 const viewerSwipeCloseDistance = 120.0;
 const viewerSwipeCloseVelocity = 700.0;
 
 class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
-  late final PageController _ctrl = PageController(initialPage: widget.initialIndex);
-  late final ValueNotifier<int> _page = ValueNotifier(widget.initialIndex);
+  /// 全画面の並び (D-549): (投稿, 添付の番号)。開いた投稿のぶん + 並びのほかのメディア付き投稿。足すのは末尾だけ
+  /// (番号 = ページ = 下の表の鍵がずれない)。
+  late List<ViewerSlide> _slides = _initialSlides();
+  late final int _startPage = _slides.indexWhere((x) => x.post.key == widget.post.key && x.media == widget.initialIndex).clamp(0, math.max(0, _slides.length - 1));
+  late final PageController _ctrl = PageController(initialPage: _startPage);
+  late final ValueNotifier<int> _page = ValueNotifier(_startPage);
+
+  List<ViewerSlide> _initialSlides() {
+    final seq = widget.sequence;
+    final slides = seq == null ? null : buildViewerSlides(seq.posts(), widget.post, visibleMedia: _visibleMedia);
+    // 並びが無い / 開いた 1 枚が並びに無い: これまでどおり、この投稿の添付だけ。
+    if (slides == null || !slides.any((x) => x.post.key == widget.post.key && x.media == widget.initialIndex)) {
+      return [for (var m = 0; m < widget.post.media.length; m++) (post: widget.post, media: m)];
+    }
+    return slides;
+  }
+
+  /// ほかの投稿はタイルに出ている添付だけ(セーフモード / 見守りで取り除いたものは飛ばす)。
+  List<int> _visibleMedia(Post p) => ref.read(safetySettingsProvider).applyToPost(p).$2;
+
+  ViewerSlide _slide(int i) => _slides[i.clamp(0, _slides.length - 1)];
+  MediaItem _mediaAt(int i) => _slide(i).post.media[_slide(i).media];
+
+  /// いま見ている 1 枚の投稿。
+  Post get _post => _slide(_page.value).post;
+
+  // ── 続きの読み込み (D-549) ──
+  bool _extending = false;
+
+  /// 読み込み済みの最後から [viewerLoadMoreAhead] 枚以内に来たら、並びの続きを足す。TL がもう読んでいればそれを、無ければ
+  /// TL の「続きを読む」を呼ぶ(メディアの無いページだけが返ってきたら、もう少し読む。3 回まで)。上の端では何もしない。
+  Future<void> _maybeExtend(int i) async {
+    final seq = widget.sequence;
+    if (seq == null || _extending || i < _slides.length - 1 - viewerLoadMoreAhead) return;
+    if (!_slides.any((x) => x.post.key != widget.post.key) && !seq.posts().any((p) => p.key == widget.post.key)) return; // 並びに無い投稿で開いた
+    if (_appendFrom(seq.posts())) return;
+    final load = seq.loadMore;
+    if (load == null) return;
+    _extending = true;
+    try {
+      for (var tries = 0; tries < 3 && mounted && (seq.canLoadMore?.call() ?? false); tries++) {
+        await load();
+        if (!mounted || _appendFrom(seq.posts())) break;
+      }
+    } catch (e) {
+      debugPrint('viewer: load more failed: $e');
+    } finally {
+      _extending = false;
+    }
+  }
+
+  bool _appendFrom(List<Post> posts) {
+    final more = appendViewerSlides(_slides, posts, visibleMedia: _visibleMedia);
+    if (more.isEmpty || !mounted) return false;
+    setState(() => _slides = [..._slides, ...more]);
+    return true;
+  }
 
   /// 動画のセッション(ページごと、D-201)。ページを離れると一時停止、開くと自動再生 (D-202)。
   final _sessions = <int, VideoSession>{};
   VideoSession _session(int i) => _sessions.putIfAbsent(i, () {
-        final s = VideoSession(widget.post.media[i], autoplay: true);
+        final s = VideoSession(_mediaAt(i), autoplay: true);
         // クッションの下では再生しない(開いたら [_reveal] が外す)。
         if (_gate(i) != _ViewerGate.open) s.hold = true;
         return s;
@@ -77,22 +143,22 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
 
   /// その 1 枚をいま見せてよいか (D-510)。タイルと同じ答え([SafetySettings.applyToPost] + 開いた記録)。
   _ViewerGate _gate(int i) {
-    final post = widget.post;
-    if (i < 0 || i >= post.media.length) return _ViewerGate.locked;
+    if (i < 0 || i >= _slides.length) return _ViewerGate.locked;
+    final (:post, :media) = _slides[i];
     final (items, map) = ref.read(safetySettingsProvider).applyToPost(post);
-    final j = map.indexOf(i);
+    final j = map.indexOf(media);
     if (j < 0) return _ViewerGate.locked; // セーフモード / 見守り中: タイルから取り除いたもの
     if (!items[j].sensitive) return _ViewerGate.open;
-    return (ref.read(mediaRevealProvider)[post.key]?.contains(post.media[i].id) ?? false) ? _ViewerGate.open : _ViewerGate.cushion;
+    return (ref.read(mediaRevealProvider)[post.key]?.contains(post.media[media].id) ?? false) ? _ViewerGate.open : _ViewerGate.cushion;
   }
 
   /// クッションを外す(その 1 枚だけ)。外してから全画面表示プラグインへ渡し、動画 / 音声は自動再生 (D-326)。
   void _reveal(int i) {
-    final post = widget.post;
-    ref.read(mediaRevealProvider.notifier).reveal(post, post.media[i].id);
+    final post = _slide(i).post;
+    final m = _mediaAt(i);
+    ref.read(mediaRevealProvider.notifier).reveal(post, m.id);
     _sessions[i]?.hold = false;
     _askOverlay(i);
-    final m = post.media[i];
     if (i == _page.value && (m.type == MediaType.video || isAudioMedia(m))) _session(i).play();
     _manager?.requestRebuild();
     if (mounted) setState(() {});
@@ -165,10 +231,10 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     if (inset != _fowInset) setState(() => _fowInset = inset);
   }
 
-  // ── 下向きスワイプで閉じる (D-326) ──
+  // ── 上下に引っ張って閉じる (D-326 → D-550) ──
 
-  /// 面を指に付けて下げ、離したときの距離 / 速さで閉じるか戻すか。拡大中は InteractiveViewer のパンに譲る
-  /// (縦ドラッグのジェスチャーを登録しない)。
+  /// 面を指に付けて動かし、離したときの距離 / 速さで閉じるか戻すか。拡大中は縦ドラッグのジェスチャーを登録せず
+  /// InteractiveViewer のパンに譲り、パンの限界を越えたぶんだけを [_onZoomedPointerMove] が数える。
   double _swipeDy = 0;
   bool _swiping = false;
   bool _zoomed = false;
@@ -188,13 +254,72 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
 
   void _onSwipeUpdate(DragUpdateDetails d) => setState(() {
         _swiping = true;
-        _swipeDy = math.max(0, _swipeDy + d.delta.dy);
+        _swipeDy += d.delta.dy;
       });
 
   void _onSwipeEnd(DragEndDetails d) {
     final v = d.primaryVelocity ?? d.velocity.pixelsPerSecond.dy;
-    if (_swipeDy >= viewerSwipeCloseDistance || (_swipeDy > 0 && v >= viewerSwipeCloseVelocity)) {
-      Navigator.of(context).maybePop();
+    // 上でも下でも: 離した位置が遠いか、引いている向きへ速く払った。
+    if (_swipeDy.abs() >= viewerSwipeCloseDistance || (_swipeDy != 0 && v.sign == _swipeDy.sign && v.abs() >= viewerSwipeCloseVelocity)) {
+      _close();
+      return;
+    }
+    _resetSwipe();
+  }
+
+  bool _closing = false;
+  void _close() {
+    if (_closing) return;
+    _closing = true;
+    Navigator.of(context).maybePop();
+  }
+
+  // 拡大中 (D-550): 指 1 本で動かしている間、パンが限界(画像の上端 / 下端)で止まっているのに同じ向きへ引いたぶんを数える。
+  // 2 本目の指(ピンチ)が来たら数えない。押してからタッチの遊び(kTouchSlop)ぶん動くまでは数えない(パンが始まる前)。
+  final Set<int> _pointers = {};
+  double _pointerTravel = 0;
+  double? _lastTy;
+  double _viewportH = 0;
+
+  void _onZoomedPointerDown(PointerDownEvent e) {
+    _pointers.add(e.pointer);
+    _pointerTravel = 0;
+    _lastTy = _zoomOf(_page.value).value.getTranslation().y;
+    if (_pointers.length > 1) _resetSwipe();
+  }
+
+  void _onZoomedPointerMove(PointerMoveEvent e) {
+    if (!_zoomed || _pointers.length != 1 || _viewportH <= 0) return;
+    _pointerTravel += e.delta.distance;
+    final m = _zoomOf(_page.value).value;
+    final ty = m.getTranslation().y;
+    final panned = _lastTy != null && (ty - _lastTy!).abs() > 0.01;
+    _lastTy = ty;
+    if (_pointerTravel < kTouchSlop) return;
+    final dy = e.delta.dy;
+    if (_swipeDy != 0) {
+      // 引いている途中: 戻す向きならそのぶん減らす(0 を越えたら引くのをやめる)。
+      final next = _swipeDy + dy;
+      setState(() => _swipeDy = next.sign == _swipeDy.sign ? next : 0);
+      return;
+    }
+    if (panned) return; // まだパンしている(限界に達していない)
+    final scale = m.getMaxScaleOnAxis();
+    final atTop = ty >= -0.5;
+    final atBottom = ty <= _viewportH - scale * _viewportH + 0.5;
+    if ((dy > 0 && atTop) || (dy < 0 && atBottom)) {
+      setState(() {
+        _swiping = true;
+        _swipeDy = dy;
+      });
+    }
+  }
+
+  void _onZoomedPointerUp(PointerEvent e) {
+    _pointers.remove(e.pointer);
+    if (!_zoomed || _swipeDy == 0) return;
+    if (e is PointerUpEvent && _pointers.isEmpty && _swipeDy.abs() >= viewerSwipeCloseDistance) {
+      _close();
       return;
     }
     _resetSwipe();
@@ -240,6 +365,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
       if (!mounted) return;
       _askOverlay(_page.value);
       _openPanel();
+      unawaited(_maybeExtend(_page.value)); // 開いたのが読み込み済みの端の近く
     });
   }
 
@@ -291,7 +417,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
       barrierBehavior: OverlayBarrierBehavior.dismiss,
       onBarrierTap: _collapse,
       barrierEnabled: _barrier,
-      builder: (_, _) => _ViewerPanel(post: widget.post, page: _page, sessionOf: _session, isOpen: (i) => _gate(i) == _ViewerGate.open, spec: _spec),
+      builder: (_, _) => _ViewerPanel(slideAt: _slide, page: _page, sessionOf: _session, isOpen: (i) => _gate(i) == _ViewerGate.open, spec: _spec),
     );
   }
 
@@ -310,7 +436,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   /// バンドルはアイコンから出る FOW。全画面表示プラグインのトグル(`slot:<id>:viewer.overlay`)もこのバーの
   /// ボタン(ON = 塗り / アクセント。動画の再生中は出さない)。
   List<Widget> _viewerActionBar() {
-    final post = widget.post;
+    final post = _post;
     // RASQ の投稿 (D-276) には、SNS のアクションは効かないので出さない。
     final session = isRasqPost(post) ? null : ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
@@ -318,7 +444,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     if (actions.isEmpty && viewerPlugins.isEmpty) return const [];
     final notifier = ref.read(timelineProvider(TimelineKind.home).notifier);
     final i = _page.value;
-    final m = post.media[i];
+    final m = _mediaAt(i);
     final playing = m.type == MediaType.video && (_sessions[i]?.playing ?? false);
     final merged = mergePluginActions(
       config: ref.watch(actionBarConfigProvider(ActionBarConfigStore.viewerKey(post.account.key))),
@@ -375,7 +501,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   /// 全画面表示プラグインの ON / OFF (D-207 → D-214 → D-246 → D-305): この全画面限り(保存しない)。失敗中はやり直し。
   Future<void> _toggleViewerPlugin(String pluginId) async {
     final i = _page.value;
-    final m = widget.post.media[i];
+    final m = _mediaAt(i);
     // クッションの下の 1 枚は渡さない(開いたときに [_reveal] が渡す、D-510)。
     final url = _gate(i) != _ViewerGate.open ? null : m.type == MediaType.video ? m.thumbnailUrl : (m.type == MediaType.image || m.type == MediaType.gif ? m.url : null);
     await _overlays.toggle(pluginId, i, url);
@@ -385,12 +511,13 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   /// PiP (D-204): ビューワーを閉じてインライン再生 FOW を同じ位置から開く。
   void _toPip() {
     final i = _page.value;
-    final m = widget.post.media[i];
+    final m = _mediaAt(i);
     if (m.type != MediaType.video || _gate(i) != _ViewerGate.open) return;
     final manager = ref.read(overlayManagerProvider);
     final at = VideoPrefs.pipKeepPosition ? _sessions[i]?.position : null; // 再生位置の引き継ぎ (D-238 の設定)
+    final post = _post;
     Navigator.of(context).maybePop();
-    WidgetsBinding.instance.addPostFrameCallback((_) => showVideoFowWith(manager, m, post: widget.post, startAt: at));
+    WidgetsBinding.instance.addPostFrameCallback((_) => showVideoFowWith(manager, m, post: post, startAt: at));
   }
 
   /// クッションの面 (D-510): サムネイル(動画はサムネイル、画像は本体)をぼかした上に、文言と「表示する」。
@@ -409,10 +536,10 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   }
 
   void _askOverlay(int i) {
-    if (i >= widget.post.media.length) return;
+    if (i < 0 || i >= _slides.length) return;
     // クッションの下の 1 枚はプラグインへ渡さない(開いたら渡す、D-510)。
     if (_gate(i) != _ViewerGate.open) return;
-    final m = widget.post.media[i];
+    final m = _mediaAt(i);
     if (m.type == MediaType.video) {
       // 全画面表示プラグインが**オン**なら再生を止め(D-202 → D-326: 登録があるだけでは止めない = 自動再生)、
       // サムネイルを渡す(再生中のフレームの取り出しは後段)。
@@ -428,11 +555,12 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final post = widget.post;
+    final post = _post;
+    final slide = _slide(_page.value);
     final manager = ref.watch(overlayManagerProvider);
     // 閲覧注意の設定 / 開いた記録が変わったら描き直す (D-510)。
     ref.watch(safetySettingsProvider);
-    ref.watch(mediaRevealProvider.select((s) => s[post.key]));
+    ref.watch(mediaRevealProvider);
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(children: [
@@ -442,62 +570,75 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOutCubic,
           padding: _fowInset,
-          // 下向きスワイプ (D-326): 面を指に付けて下げ、離すと閉じる / 戻る。
+          // 上下に引っ張って閉じる (D-550): 面を指に付けて動かし、離すと閉じる / 戻る。
           child: AnimatedContainer(
             duration: _swiping ? Duration.zero : const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
             transform: Matrix4.translationValues(0, _swipeDy, 0),
             transformAlignment: Alignment.center,
-            child: GestureDetector(
-              // タップ (D-203): 下側の FOW が消えていれば開き直す(開く手段が無くならないように)。出ていれば上のクロームの表示切替。
-              // 動画の面のタップでは再生を止めない。
-              onTap: () {
-                if (!manager.contains(viewerFowId)) {
-                  _openPanel();
-                  return;
-                }
-                setState(() => _chrome = !_chrome);
-              },
-              // 拡大中は InteractiveViewer のパンに譲る(登録しない)。
-              onVerticalDragUpdate: _zoomed ? null : _onSwipeUpdate,
-              onVerticalDragEnd: _zoomed ? null : _onSwipeEnd,
-              onVerticalDragCancel: _zoomed ? null : _resetSwipe,
-              child: PageView.builder(
-                controller: _ctrl,
-                itemCount: post.media.length,
-                onPageChanged: (i) {
-                  for (final e in _sessions.entries) {
-                    if (e.key != i) e.value.pause();
+            child: Listener(
+              // 拡大中にパンの限界を越えて引いたぶん (D-550)。拡大していないときは下の縦ドラッグが受ける。
+              onPointerDown: _onZoomedPointerDown,
+              onPointerMove: _onZoomedPointerMove,
+              onPointerUp: _onZoomedPointerUp,
+              onPointerCancel: _onZoomedPointerUp,
+              child: GestureDetector(
+                // タップ (D-203): 下側の FOW が消えていれば開き直す(開く手段が無くならないように)。出ていれば上のクロームの表示切替。
+                // 動画の面のタップでは再生を止めない。
+                onTap: () {
+                  if (!manager.contains(viewerFowId)) {
+                    _openPanel();
+                    return;
                   }
-                  _page.value = i;
-                  setState(() {});
-                  _syncZoomed(i);
-                  _askOverlay(i);
-                  final m = post.media[i];
-                  // 動画と音声は開くと自動再生 (D-326)。クッションの下では押すまで再生しない (D-510)。
-                  if ((m.type == MediaType.video || isAudioMedia(m)) && _gate(i) == _ViewerGate.open) _session(i).play();
+                  setState(() => _chrome = !_chrome);
                 },
-                itemBuilder: (_, i) {
-                  final m = post.media[i];
-                  final gate = _gate(i);
-                  if (gate != _ViewerGate.open) return _cushionPage(i, m, locked: gate == _ViewerGate.locked);
-                  return InteractiveViewer(
-                    transformationController: _zoomOf(i),
-                    minScale: 1,
-                    maxScale: 5,
-                    child: Center(
-                      child: isAudioMedia(m)
-                          // 音声 (D-326): 音符の面。再生は動画と同じセッション、操作は下側の FOW。
-                          ? _AudioFace(key: ValueKey('viewer.audio.${m.id}'), item: m, session: _session(i))
-                          : m.type == MediaType.file
-                              ? Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.insert_drive_file_outlined, color: Colors.white, size: 64), Text(m.fileName ?? '', style: const TextStyle(color: Colors.white))])
-                              : m.type == MediaType.video
-                                  // 動画 (D-200 → D-201): 面はタップで再生 / 一時停止。操作は下側の FOW。
-                                  ? RasqVideoView(key: ValueKey('viewer.video.${m.id}'), session: _session(i), tapToggles: false)
-                                  : _overlays.wrap(i, Image.network(webHtmlElementStrategy: rasqWebImageStrategy, m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
-                    ),
+                // 拡大中は InteractiveViewer のパンに譲る(登録しない)。
+                onVerticalDragUpdate: _zoomed ? null : _onSwipeUpdate,
+                onVerticalDragEnd: _zoomed ? null : _onSwipeEnd,
+                onVerticalDragCancel: _zoomed ? null : _resetSwipe,
+                child: LayoutBuilder(builder: (context, c) {
+                  _viewportH = c.maxHeight;
+                  return PageView.builder(
+                    controller: _ctrl,
+                    itemCount: _slides.length,
+                    onPageChanged: (i) {
+                      for (final e in _sessions.entries) {
+                        if (e.key != i) e.value.pause();
+                      }
+                      _page.value = i;
+                      setState(() {});
+                      _syncZoomed(i);
+                      _askOverlay(i);
+                      final m = _mediaAt(i);
+                      // 動画と音声は開くと自動再生 (D-326)。クッションの下では押すまで再生しない (D-510)。
+                      if ((m.type == MediaType.video || isAudioMedia(m)) && _gate(i) == _ViewerGate.open) _session(i).play();
+                      // 読み込み済みの端に近づいたら続きを (D-549)。
+                      unawaited(_maybeExtend(i));
+                    },
+                    itemBuilder: (_, i) {
+                      final m = _mediaAt(i);
+                      final gate = _gate(i);
+                      if (gate != _ViewerGate.open) return _cushionPage(i, m, locked: gate == _ViewerGate.locked);
+                      return InteractiveViewer(
+                        key: ValueKey('viewer.page.${_slide(i).post.key}.${_slide(i).media}'),
+                        transformationController: _zoomOf(i),
+                        minScale: 1,
+                        maxScale: 5,
+                        child: Center(
+                          child: isAudioMedia(m)
+                              // 音声 (D-326): 音符の面。再生は動画と同じセッション、操作は下側の FOW。
+                              ? _AudioFace(key: ValueKey('viewer.audio.${m.id}'), item: m, session: _session(i))
+                              : m.type == MediaType.file
+                                  ? Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.insert_drive_file_outlined, color: Colors.white, size: 64), Text(m.fileName ?? '', style: const TextStyle(color: Colors.white))])
+                                  : m.type == MediaType.video
+                                      // 動画 (D-200 → D-201): 面はタップで再生 / 一時停止。操作は下側の FOW。
+                                      ? RasqVideoView(key: ValueKey('viewer.video.${m.id}'), session: _session(i), tapToggles: false)
+                                      : _overlays.wrap(i, Image.network(webHtmlElementStrategy: rasqWebImageStrategy, m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
+                        ),
+                      );
+                    },
                   );
-                },
+                }),
               ),
             ),
           ),
@@ -511,12 +652,13 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
               // Flexible にすると使い切らない余白が末尾に残って右端から離れるので、幅の上限を LayoutBuilder で
               // 計算して枚数の Expanded に残りを渡す。
               child: LayoutBuilder(builder: (context, c) {
-                final video = post.media[_page.value].type == MediaType.video && _gate(_page.value) == _ViewerGate.open;
+                final video = _mediaAt(_page.value).type == MediaType.video && _gate(_page.value) == _ViewerGate.open;
                 final fixed = 40.0 + 2 + 40 + (video ? 42 : 0) + 56; // 戻る / … / PiP / 枚数の最低幅
                 final barMax = math.max(0.0, c.maxWidth - fixed);
                 return Row(children: [
                   _Circle(child: RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, color: Colors.white, onPressed: () => Navigator.of(context).maybePop(), tooltip: context.l10n.mediaViewerBack)),
-                  Expanded(child: post.media.length > 1 ? Text('${_page.value + 1} / ${post.media.length}', style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center) : const SizedBox.shrink()),
+                  // 枚数はいま見ている投稿の中で (D-549: 投稿をまたいでも、その投稿の何枚目か)。
+                  Expanded(child: post.media.length > 1 ? Text('${slide.media + 1} / ${post.media.length}', key: const ValueKey('viewer.count'), style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center) : const SizedBox.shrink()),
                   // 全画面アクションバー (D-212 → D-214): `viewer:<accountKey>` の構成。全画面表示プラグインの
                   // トグルもこのバーのボタン(編集画面で並べ替え / 削除 / 検索)。狭ければ横スクロール。
                   ConstrainedBox(
@@ -539,9 +681,8 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                         onPressed: () {
                           final box = ctx.findRenderObject() as RenderBox;
                           final rect = box.localToGlobal(Offset.zero) & box.size;
-                          final m = post.media[_page.value];
                           // クッションの下の 1 枚は保存させない (D-510)。
-                          showPostMenu(ctx, ref, post, rect, media: _gate(_page.value) == _ViewerGate.open ? m : null);
+                          showPostMenu(ctx, ref, post, rect, media: _gate(_page.value) == _ViewerGate.open ? _mediaAt(_page.value) : null);
                         },
                       ),
                     ),
@@ -567,11 +708,14 @@ enum _ViewerGate {
   locked,
 }
 
-/// 下側の FOW の中身 (D-202): [動画の操作] / [アクションバー] / [投稿のインライン表示(添付は無し)]。
+/// 下側の FOW の中身 (D-202 → D-553): **投稿アクションバー付き FOW**。上辺に**その投稿の実物のアクションバー**
+/// (タイムラインの投稿と同じ [PostRow] のバー。リアクションのピッカー / リノートのバンドルは押したボタンにつながって出る。
+/// 以前はバーの複製(押すと実行するだけのボタン列)を置いていた)/ [動画の操作] / [投稿のインライン表示(添付は無し)]。
 /// 折りたたみの段は上 2 つの実測高さに合わせる(AsTell のルーム FOW と同じ作法)。
+/// 投稿をまたいでスワイプしたら (D-549)、いま見ている 1 枚の投稿に替わる。
 class _ViewerPanel extends ConsumerStatefulWidget {
-  const _ViewerPanel({required this.post, required this.page, required this.sessionOf, required this.isOpen, required this.spec});
-  final Post post;
+  const _ViewerPanel({required this.slideAt, required this.page, required this.sessionOf, required this.isOpen, required this.spec});
+  final ViewerSlide Function(int) slideAt;
   final ValueListenable<int> page;
   final VideoSession Function(int) sessionOf;
 
@@ -582,11 +726,39 @@ class _ViewerPanel extends ConsumerStatefulWidget {
   ConsumerState<_ViewerPanel> createState() => _ViewerPanelState();
 }
 
+/// 下側の FOW の上辺のアクションバー(テストが読む)。
+const viewerPanelBarKey = ValueKey('viewer.panel.bar');
+
 class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
   final _topKey = GlobalKey();
 
   /// FOW のクローム(ハンドル + 余白)ぶん。
   static const _chromeHeight = kFowHandleHeight + 12;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.page.addListener(_onPage);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ViewerPanel old) {
+    super.didUpdateWidget(old);
+    if (old.page != widget.page) {
+      old.page.removeListener(_onPage);
+      widget.page.addListener(_onPage);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.page.removeListener(_onPage);
+    super.dispose();
+  }
+
+  void _onPage() {
+    if (mounted) setState(() {});
+  }
 
   void _syncCollapsedStop(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -607,67 +779,37 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final post = widget.post;
+    final i = widget.page.value;
+    final slide = widget.slideAt(i);
+    final post = slide.post;
+    final m = slide.media < post.media.length ? post.media[slide.media] : null;
     // アクションは投稿が流れてきたアカウントのもの (D-200)。無ければ現在のアカウント。
     // RASQ の投稿 (D-276) には、SNS のアクションは効かないので出さない。
     final session = isRasqPost(post) ? null : ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final notifier = ref.read(timelineProvider(TimelineKind.home).notifier);
-    // 下側の FOW のバーは投稿アクションバーそのまま (D-212: 全画面アクションバーはヘッダーの「…」の左)。
-    final merged = mergePluginActions(
-      config: ref.watch(actionBarConfigProvider(post.account.key)),
-      snsActions: actions,
-      plugins: ref.watch(pluginActionsProvider),
-      settings: ref.watch(slotActionSettingsProvider(post.account.key)),
-      prefs: ref.watch(actionButtonPrefsProvider),
-    );
-    final entries = merged.config.apply(merged.actions);
     // クッションを外したら操作を出し直す (D-510)。
     ref.watch(mediaRevealProvider.select((s) => s[post.key]));
-    return ValueListenableBuilder<int>(
-      key: viewerPanelKey,
-      valueListenable: widget.page,
-      builder: (context, i, _) {
-        final m = i < post.media.length ? post.media[i] : null;
-        _syncCollapsedStop(context);
-        // 折りたたみの段の実測前 / 過渡期に上のブロックが枠より高くてもはみ出さない(スクロールに逃がす)。
-        return ListView(padding: EdgeInsets.zero, children: [
-          Column(key: _topKey, mainAxisSize: MainAxisSize.min, children: [
-            // 動画 / 音声の操作 (D-201 → D-202、音声は D-326): 左にシークバー、右にボタン類(小画面では下の行)。
-            if (m != null && (m.type == MediaType.video || isAudioMedia(m)) && widget.isOpen(i)) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), child: VideoControls(session: widget.sessionOf(i))),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-              for (final e in entries)
-                switch (e) {
-                  SingleActionEntry() => RasqActionButton.icon(icon: PostRow.iconFor(e.action.icon, Icons.circle_outlined), doneIcon: e.action.doneIcon == null ? null : PostRow.iconFor(e.action.doneIcon, Icons.circle), tooltip: e.action.label, onTap: () => notifier.perform(post, e.action).catchError((_) {})),
-                  // バンドル: アイコンから出る FOW (D-210)。
-                  ActionListEntry() => Builder(
-                      key: ValueKey('viewer.bundle.${e.list.id}'),
-                      builder: (bctx) => RasqActionButton.icon(
-                        icon: bundleIconOf(e.list, e.members),
-                        tooltip: e.list.name,
-                        onTap: () {
-                          final box = bctx.findRenderObject() as RenderBox;
-                          showActionBundleMenuFow(ref, anchor: box.localToGlobal(Offset.zero) & box.size, entry: e, onPick: (a) => notifier.perform(post, a).catchError((_) {}));
-                        },
-                      ),
-                    ),
-                },
-              RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.mediaViewerShare, onTap: () {}),
-            ]),
-            Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
-          ]),
-          // 投稿のインライン表示(添付はビューワー本体にあるので出さない)。
-          PostRow(
-            key: const ValueKey('viewer.post'),
-            post: post,
-            actions: const [],
-            onAction: (a, {args = const {}}) => notifier.perform(post, a, args: args),
-            onTap: () => context.pushPost(post),
-            hideMedia: true,
-          ),
-        ]);
-      },
-    );
+    _syncCollapsedStop(context);
+    final controls = m != null && (m.type == MediaType.video || isAudioMedia(m)) && widget.isOpen(i);
+    // 折りたたみの段の実測前 / 過渡期に上のブロックが枠より高くてもはみ出さない(スクロールに逃がす)。
+    return ListView(key: viewerPanelKey, padding: EdgeInsets.zero, children: [
+      // 投稿のインライン表示(添付はビューワー本体にあるので出さない)。バーは投稿の上 = FOW の上辺 (D-553)。
+      PostRow(
+        key: ValueKey('viewer.post.${post.key}'),
+        post: post,
+        actions: actions,
+        onAction: (a, {args = const {}}) => notifier.perform(post, a, args: args),
+        onTap: () => context.pushPost(post),
+        hideMedia: true,
+        actionBarAbove: (bar) => Column(key: _topKey, mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (bar != null) KeyedSubtree(key: viewerPanelBarKey, child: bar),
+          // 動画 / 音声の操作 (D-201 → D-202、音声は D-326): 左にシークバー、右にボタン類(小画面では下の行)。
+          if (controls) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), child: VideoControls(session: widget.sessionOf(i))),
+          Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
+        ]),
+      ),
+    ]);
   }
 }
 

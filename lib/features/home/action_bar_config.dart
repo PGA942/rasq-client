@@ -153,9 +153,13 @@ class ActionBarConfigStore extends Notifier<ActionBarConfig> {
   static String viewerKey(String accountKey) => 'viewer:$accountKey';
 
   /// 保存が無いときの構成 (D-447): RASQ の全画面アクションバー(Swing の上、`rasq:viewer`)は**何も入っていない**(編集の (+) で足す)。
-  /// SNS のバー(投稿 / 全画面)では Misskey の「お気に入り」(☆)を初めは外しておく。
+  /// SNS の投稿のバーでは Misskey の「お気に入り」(☆)を初めは外しておく。
+  /// SNS の全画面アクションバー(`viewer:<accountKey>`)は**投稿まわりのアクションを初めは外す** (D-553): 投稿へのアクションは
+  /// 下側の「投稿アクションバー付き FOW」(実物のバー)でする。上のバーは全画面表示プラグインのトグルなど、全画面の操作だけ。
+  /// 編集の (+) で足せば、これまでどおり上にも並ぶ(保存した構成はそのまま)。
   static ActionBarConfig defaultFor(String arg) => switch (arg) {
         'rasq:viewer' => const ActionBarConfig(hidden: {'rasq.reply', 'rasq.rebroad', 'rasq.queue'}),
+        _ when arg.startsWith('viewer:') => const ActionBarConfig(hidden: viewerDefaultHiddenActions),
         _ when arg.startsWith('editor:') || arg.startsWith('astell:') || arg.startsWith('rasq:') => const ActionBarConfig(),
         _ => const ActionBarConfig(hidden: {'favorite'}),
       };
@@ -185,6 +189,11 @@ class ActionBarConfigStore extends Notifier<ActionBarConfig> {
 
   void reset() => set(defaultFor(arg));
 }
+
+/// 全画面アクションバーの既定で外す、SNS の投稿まわりのアクション (D-553)。同梱 / サンプルの SNS プラグインの id
+/// (Misskey: reply / renote / reaction / favorite、Mastodon: reply / reblog / favourite / bookmark、Bluesky / mixi2: reply / repost /
+/// favorite / quote)。ほかの SNS プラグインの独自の id は既定のまま出る(編集で外せる)。
+const viewerDefaultHiddenActions = <String>{'reply', 'renote', 'reaction', 'favorite', 'favourite', 'reblog', 'repost', 'quote', 'bookmark', 'like'};
 
 /// アカウント(`AccountId.key`)ごとの構成。'' は旧来の共通構成。
 final actionBarConfigProvider = NotifierProvider.family<ActionBarConfigStore, ActionBarConfig, String>(ActionBarConfigStore.new);

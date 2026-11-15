@@ -1248,9 +1248,9 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     _mediaReplace.remove(s.token);
     _mediaOverlay.remove(s.token);
     if (_disposed) return;
-    final overlay = ref.read(overlayManagerProvider);
+    // プラグインの下付き FOW は先に閉じる(返事を待たない。編集の最中だと `media.cancel` は前の呼びが終わるまで返らない)。
+    ref.read(overlayManagerProvider).closeOwnedBy('$_fowOwner.${s.plugin.id}');
     await s.plugin.value('media.cancel', {'token': s.token});
-    if (!_disposed) overlay.closeOwnedBy('$_fowOwner.${s.plugin.id}');
   }
 
   /// コンポーザー本文 (CONTRACT §2.3)。`token` は入力欄ごとに 1 つ。

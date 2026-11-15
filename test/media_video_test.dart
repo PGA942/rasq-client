@@ -64,7 +64,11 @@ void main() {
     // 幅 360dp の小画面 → ボタン類はシークバーの下の行。
     expect(find.byKey(const ValueKey('video.controls.stacked')), findsOneWidget);
     expect(tester.getRect(find.byKey(const ValueKey('video.seek'))).bottom, lessThanOrEqualTo(tester.getRect(find.byKey(const ValueKey('video.play'))).top + 1));
-    expect(tester.getRect(find.byKey(const ValueKey('video.controls'))).bottom, lessThanOrEqualTo(tester.getRect(find.byTooltip('共有')).top + 1)); // アクションバーの上
+    // 投稿アクションバー付き FOW (D-553): 上辺は投稿の実物のアクションバー、操作はその下。
+    final bar = find.byKey(viewerPanelBarKey);
+    expect(bar, findsOneWidget);
+    expect(find.descendant(of: bar, matching: find.byTooltip('共有')), findsOneWidget);
+    expect(tester.getRect(find.byKey(const ValueKey('video.controls'))).top, greaterThanOrEqualTo(tester.getRect(bar).bottom - 1));
     expect(find.descendant(of: find.byKey(viewerPanelKey), matching: find.byType(PostRow)), findsOneWidget); // 投稿のインライン表示
     expect(find.descendant(of: find.byKey(viewerPanelKey), matching: find.byType(RasqMediaGrid)), findsNothing); // 添付は出さない
     // 折りたたみ(操作 + アクションバー)⇄ 展開(投稿まで): ハンドルを上へ → 高くなる、外側タップ → 折りたたみに戻る。
@@ -84,10 +88,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RasqVideoView), findsOneWidget);
     expect(find.byKey(const ValueKey('video.controls')), findsOneWidget);
-    // 全画面アクションバー (D-212): ヘッダーの「…」の左に並ぶ。下の FOW は投稿アクションバー。
-    expect(find.byKey(const ValueKey('viewer.action.reply')), findsOneWidget);
+    // 全画面アクションバー (D-212): ヘッダーの「…」の左に並ぶ。投稿まわりのボタンは既定では無い (D-553: 下の FOW の実物のバーで)。
+    expect(find.byKey(const ValueKey('viewer.action.reply')), findsNothing);
     final menuX = tester.getCenter(find.descendant(of: find.byType(MediaViewerScreen), matching: find.byTooltip('メニュー'))).dx;
-    expect(tester.getCenter(find.byKey(const ValueKey('viewer.action.reply'))).dx, lessThan(menuX));
     expect(tester.getCenter(find.byKey(const ValueKey('viewer.pip'))).dx, lessThan(menuX)); // 「…」が一番右
     expect(tester.getRect(find.byTooltip('戻る').first).top, lessThan(60)); // 上付き
     // FOW が消えても、面のタップで開き直せる (D-203)。面のタップは再生を止めない(トグルのジェスチャーは無い)。
