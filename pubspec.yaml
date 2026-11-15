@@ -47,6 +47,10 @@ dependencies:
   image: ^4.5.0
   # 動画 / 音声のファイル選択 (D-250: image_picker のギャラリーは音声を出せない)。
   file_selector: ^1.0.3
+  # 他のアプリからコンポーザーへメディアを落とす (D-555)。macOS / Web / Windows / Linux / Android はこれ。iPadOS は 0.9 から
+  # (Flutter 3.47.7 以上が要る)なので、0.8 の間は ios/Runner/MediaDropBridge.swift が同じ口(`desktop_drop`)で話す。
+  # Apache-2.0。足りない依存は universal_platform(MIT)だけ(cross_file / web / dbus は既に入っている)。
+  desktop_drop: ^0.8.4
   rasq_models:
     path: packages/rasq_models
   rasq_design:

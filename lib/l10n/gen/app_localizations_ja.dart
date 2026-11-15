@@ -2537,6 +2537,26 @@ class AppLocalizationsJa extends AppLocalizations {
   String get composeAttachmentSensitive => 'センシティブにする';
 
   @override
+  String composeDropHint(int count) {
+    return '離すと添付します(あと $count 件)';
+  }
+
+  @override
+  String composeDropFull(int max) {
+    return '添付は $max 件までです';
+  }
+
+  @override
+  String composeDropNotMedia(String names) {
+    return 'メディアではないので添付しませんでした: $names';
+  }
+
+  @override
+  String composeDropOverLimit(int max, int count) {
+    return '添付は $max 件までなので、$count 件は入れませんでした';
+  }
+
+  @override
   String get composeMediaPickTypeLabel => '動画 / 音声';
 
   @override

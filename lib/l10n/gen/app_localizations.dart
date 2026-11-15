@@ -4177,6 +4177,30 @@ abstract class AppLocalizations {
   /// **'センシティブにする'**
   String get composeAttachmentSensitive;
 
+  /// コンポーザーの上にメディアをドラッグしている間に出す案内。{count} = あと何件付けられるか。
+  ///
+  /// In ja, this message translates to:
+  /// **'離すと添付します(あと {count} 件)'**
+  String composeDropHint(int count);
+
+  /// 添付がもういっぱいのときにドラッグしてきたときの案内。{max} = 上限の件数。
+  ///
+  /// In ja, this message translates to:
+  /// **'添付は {max} 件までです'**
+  String composeDropFull(int max);
+
+  /// 画像 / 動画 / 音声ではないファイルを落としたとき。{names} = ファイル名(読点で区切る)。
+  ///
+  /// In ja, this message translates to:
+  /// **'メディアではないので添付しませんでした: {names}'**
+  String composeDropNotMedia(String names);
+
+  /// 上限を超えて落としたとき。{max} = 上限、{count} = 入れなかった数。
+  ///
+  /// In ja, this message translates to:
+  /// **'添付は {max} 件までなので、{count} 件は入れませんでした'**
+  String composeDropOverLimit(int max, int count);
+
   /// ファイル選択ダイアログの種類の名前
   ///
   /// In ja, this message translates to:

@@ -2513,6 +2513,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get composeAttachmentSensitive => '标记为敏感';
 
   @override
+  String composeDropHint(int count) {
+    return '松开即可添加(还可添加 $count 个)';
+  }
+
+  @override
+  String composeDropFull(int max) {
+    return '最多可添加 $max 个附件';
+  }
+
+  @override
+  String composeDropNotMedia(String names) {
+    return '不是媒体文件,未添加:$names';
+  }
+
+  @override
+  String composeDropOverLimit(int max, int count) {
+    return '最多可添加 $max 个附件,有 $count 个未添加';
+  }
+
+  @override
   String get composeMediaPickTypeLabel => '视频 / 音频';
 
   @override
@@ -22542,6 +22562,26 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get composeAttachmentSensitive => '標記為敏感';
+
+  @override
+  String composeDropHint(int count) {
+    return '放開即可加入(還可加入 $count 個)';
+  }
+
+  @override
+  String composeDropFull(int max) {
+    return '最多可加入 $max 個附件';
+  }
+
+  @override
+  String composeDropNotMedia(String names) {
+    return '不是媒體檔案,未加入:$names';
+  }
+
+  @override
+  String composeDropOverLimit(int max, int count) {
+    return '最多可加入 $max 個附件,有 $count 個未加入';
+  }
 
   @override
   String get composeMediaPickTypeLabel => '影片 / 音訊';

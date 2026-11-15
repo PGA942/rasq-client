@@ -2668,6 +2668,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get composeAttachmentSensitive => 'Mark as sensitive';
 
   @override
+  String composeDropHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more',
+      one: '1 more',
+    );
+    return 'Drop to attach ($_temp0)';
+  }
+
+  @override
+  String composeDropFull(int max) {
+    return 'You can attach up to $max files';
+  }
+
+  @override
+  String composeDropNotMedia(String names) {
+    return 'Not attached (not an image, video, or audio file): $names';
+  }
+
+  @override
+  String composeDropOverLimit(int max, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files were',
+      one: '1 file was',
+    );
+    return 'You can attach up to $max files, so $_temp0 left out';
+  }
+
+  @override
   String get composeMediaPickTypeLabel => 'Video / audio';
 
   @override

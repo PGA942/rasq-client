@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -39,6 +40,7 @@ import '../home/own_posts.dart';
 import 'kana_romaji.dart';
 import 'compose_target.dart';
 import 'media_file_pick.dart';
+import 'media_drop.dart';
 import 'drafts_fow.dart';
 import 'emoji_picker_fow.dart';
 import 'quick_emoji_picker.dart';
@@ -1647,6 +1649,36 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
   }
 
+  /// 落としたメディアを添付に入れる (D-555)。上限・種類はボタンから選ぶときと同じ(上限を超えた分 / メディアでないものは入れずに知らせる)。
+  Future<void> _addDropped(List<DroppedMediaFile> dropped) async {
+    if (_busy || _rasqTextOnlyReply || !mounted) return;
+    final plan = planMediaDrop(dropped, current: _files.length, max: _maxFiles);
+    final notes = <String>[
+      if (plan.notMedia.isNotEmpty) appL10n.composeDropNotMedia(plan.notMedia.join(', ')),
+      if (plan.overLimit > 0) appL10n.composeDropOverLimit(_maxFiles, plan.overLimit),
+    ];
+    for (final (f, mime) in plan.accepted) {
+      try {
+        final bytes = await f.read();
+        if (!mounted) return;
+        // 読んでいる間にほかの経路で埋まったら、そこで止める。
+        if (_files.length >= _maxFiles) {
+          notes.add(appL10n.composeDropOverLimit(_maxFiles, 1));
+          continue;
+        }
+        if (bytes.isEmpty) {
+          notes.add(appL10n.composeDropNotMedia(f.name));
+          continue;
+        }
+        _files.add(_Attachment(bytes: bytes, name: f.name, mimeType: mime));
+      } catch (e) {
+        notes.add(appL10n.composePickMediaFailed('$e'));
+      }
+    }
+    if (!mounted) return;
+    setState(() => _error = notes.isEmpty ? null : notes.join('\n'));
+  }
+
   bool get _canSend {
     // RASQ に投稿する / 返すときは SNS のセッションが無くてもよい (D-421)。
     if (_busy || (_session == null && !_rasqTarget)) return false;
@@ -2017,7 +2049,14 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final over = count > _max;
     _scheduleStickFit(); // 高さ段階の実測 (D-049/D-051: 全ターゲット共通)
 
-    return Column(mainAxisSize: MainAxisSize.min, children: [
+    // 他のアプリからメディアを落とす (D-555): コンポーザー全体が受け口。ホバー中は枠と「あと n 件」の案内。
+    return ComposerMediaDropTarget(
+      enabled: !_busy,
+      remaining: _maxFiles - _files.length,
+      max: _maxFiles,
+      blockedReason: _rasqTextOnlyReply ? _rasqTextOnlyTip : null,
+      onDrop: _addDropped,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
       Flexible(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
@@ -2122,17 +2161,29 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
             if (_files.isNotEmpty)
               SizedBox(
                 height: 88,
-                child: ListView.separated(
+                // 並べ替え (D-556): 添付をドラッグして順を変える(送る順 = 投稿のメディアの順)。マウスはそのまま掴んで、
+                // タッチは長押ししてから(横のスクロールと取り合わないように)。左右の端へ持っていくと一覧がスクロールする。
+                child: ReorderableListView.builder(
+                  key: const ValueKey('composer.attachments'),
                   scrollDirection: Axis.horizontal,
+                  buildDefaultDragHandles: false,
                   itemCount: _files.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) => _AttachmentTile(
-                    a: _files[i],
-                    onRemove: () => setState(() => _files.removeAt(i)),
-                    onToggleSensitive: () => setState(() => _files[i].sensitive = !_files[i].sensitive),
-                    // プラグインで加工 (D-167): スロット `composer.media` の登録があるときだけ。
-                    onEdit: () => _editAttachment(_files[i]),
-                  ),
+                  onReorderItem: (from, to) => setState(() => moveAttachment(_files, from, to)),
+                  proxyDecorator: (child, _, _) => Material(color: Colors.transparent, elevation: 6, borderRadius: BorderRadius.circular(8), child: child),
+                  itemBuilder: (_, i) {
+                    final a = _files[i];
+                    final tile = Padding(
+                      padding: EdgeInsets.only(right: i == _files.length - 1 ? 0 : 8),
+                      child: _AttachmentTile(
+                        a: a,
+                        onRemove: () => setState(() => _files.remove(a)),
+                        onToggleSensitive: () => setState(() => a.sensitive = !a.sensitive),
+                        // プラグインで加工 (D-167): スロット `composer.media` の登録があるときだけ。
+                        onEdit: () => _editAttachment(a),
+                      ),
+                    );
+                    return reorderDragListener(key: ObjectKey(a), index: i, child: tile);
+                  },
                 ),
               ),
             if (_poll != null) PollEditor(draft: _poll!, maxChoices: _rasqTarget ? rasqPostMaxPollChoices : 10, onRemove: () => setState(() => _poll = null)),
@@ -2261,7 +2312,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       // 子 FOW の回避伸縮 (D-068): バー後ろ側の可変 padding(下ドック時は
       // こちらが伸びて、バーが子ピッカーの上辺に載る)。
       if ((widget.spec ?? widget.hostSpec) case final gap?) FowChildGap(spec: gap),
-    ]);
+    ]),
+    );
   }
 }
 
@@ -2301,7 +2353,11 @@ class _AttachmentTile extends StatelessWidget {
   bool get _isVideo => (a.mimeType ?? '').startsWith('video/') || _isAudio;
 
   @override
-  Widget build(BuildContext context) => Stack(children: [
+  Widget build(BuildContext context) => TooltipTheme(
+        // 並べ替え (D-556): タッチの端末では、タイルの隅のボタン(当たりが 48×48 でタイルのほぼ全面を覆う)のツールチップを
+        // 長押しで出さない(出すと並べ替えの長押しを取られる)。読み上げのラベルはそのまま。マウスはホバーで出る。
+        data: attachmentsDragWithMouse ? TooltipTheme.of(context) : TooltipTheme.of(context).copyWith(triggerMode: TooltipTriggerMode.manual),
+        child: Stack(children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           // 動画 (D-174) / 音声 (D-250): サムネイルは作らず 再生 / 波形 のアイコン + ファイル名。
@@ -2331,7 +2387,8 @@ class _AttachmentTile extends StatelessWidget {
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
         ),
-      ]);
+      ]),
+      );
 }
 
 /// キャンセル時のポップアップの選択 (D-177)。
@@ -2360,3 +2417,20 @@ enum _CloseChoice { overwrite, saveNew, discard }
 
 /// 連動の計画の中で、RASQ アカウントを表す仮のセッションの pluginId (D-286)。
 const rasqLinkPluginId = 'rasq.central';
+
+/// 添付の並べ替え (D-556): [ReorderableListView.onReorderItem] の (from, to) で [list] の中を動かす(to は動かしたあとの位置)。
+void moveAttachment<T>(List<T> list, int from, int to) {
+  if (from < 0 || from >= list.length) return;
+  final target = to.clamp(0, list.length - 1);
+  if (target == from) return;
+  list.insert(target, list.removeAt(from));
+}
+
+/// 添付をマウスで並べ替える端末か(デスクトップ / Web)。それ以外はタッチ(長押しから)。
+bool get attachmentsDragWithMouse => kIsWeb || const {TargetPlatform.macOS, TargetPlatform.windows, TargetPlatform.linux}.contains(defaultTargetPlatform);
+
+/// 並べ替えの掴み方 (D-556): マウス(デスクトップ / Web)はそのまま掴んで動かす。タッチの端末は長押しから(横のスクロールと、
+/// 添付の上のボタンのタップを邪魔しない)。
+Widget reorderDragListener({required Key key, required int index, required Widget child}) {
+  return attachmentsDragWithMouse ? ReorderableDragStartListener(key: key, index: index, child: child) : ReorderableDelayedDragStartListener(key: key, index: index, child: child);
+}

@@ -2553,6 +2553,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get composeAttachmentSensitive => '민감으로 설정';
 
   @override
+  String composeDropHint(int count) {
+    return '놓으면 첨부합니다(앞으로 $count개)';
+  }
+
+  @override
+  String composeDropFull(int max) {
+    return '첨부는 $max개까지입니다';
+  }
+
+  @override
+  String composeDropNotMedia(String names) {
+    return '미디어가 아니라서 첨부하지 않았습니다: $names';
+  }
+
+  @override
+  String composeDropOverLimit(int max, int count) {
+    return '첨부는 $max개까지라서 $count개는 넣지 않았습니다';
+  }
+
+  @override
   String get composeMediaPickTypeLabel => '동영상 / 오디오';
 
   @override

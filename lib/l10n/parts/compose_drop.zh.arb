@@ -1,0 +1,7 @@
+{
+  "@@locale": "zh",
+  "composeDropHint": "松开即可添加(还可添加 {count} 个)",
+  "composeDropFull": "最多可添加 {max} 个附件",
+  "composeDropNotMedia": "不是媒体文件,未添加:{names}",
+  "composeDropOverLimit": "最多可添加 {max} 个附件,有 {count} 个未添加"
+}
