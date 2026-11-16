@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// システム(Unicode)の絵文字を名前で探す (D-558)。
+/// システム(Unicode)の絵文字を名前で探す (D-574)。
 ///
 /// 名前のデータは `assets/emoji/unicode_emoji_names.tsv.gz`(@misskey-dev/emoji-data 17.0.3 の日本語 / ひらがな / 英語の索引から
 /// `tool/build_unicode_emoji_names.py` で作る。ライセンスは同じフォルダの LICENSES.txt)。1915 個、gzip で 87KB。

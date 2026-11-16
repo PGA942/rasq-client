@@ -47,7 +47,7 @@ dependencies:
   image: ^4.5.0
   # 動画 / 音声のファイル選択 (D-250: image_picker のギャラリーは音声を出せない)。
   file_selector: ^1.0.3
-  # 他のアプリからコンポーザーへメディアを落とす (D-555)。macOS / Web / Windows / Linux / Android はこれ。iPadOS は 0.9 から
+  # 他のアプリからコンポーザーへメディアを落とす (D-571)。macOS / Web / Windows / Linux / Android はこれ。iPadOS は 0.9 から
   # (Flutter 3.47.7 以上が要る)なので、0.8 の間は ios/Runner/MediaDropBridge.swift が同じ口(`desktop_drop`)で話す。
   # Apache-2.0。足りない依存は universal_platform(MIT)だけ(cross_file / web / dbus は既に入っている)。
   desktop_drop: ^0.8.4
@@ -133,7 +133,7 @@ flutter:
     # RAi のアイコン (D-180: obsidian-vault/RAi 動作リファレンス/アイコン案1.jpeg、外側の黒を透明に)。
     - assets/images/rai_icon.png
     - assets/audio/hold_music.wav
-    # システムの絵文字の名前 (D-558): @misskey-dev/emoji-data 17.0.3 の日本語 / 英語の索引(tool/build_unicode_emoji_names.py、
+    # システムの絵文字の名前 (D-574): @misskey-dev/emoji-data 17.0.3 の日本語 / 英語の索引(tool/build_unicode_emoji_names.py、
     # gzip で 87KB。ライセンスは LICENSES.txt)。絵文字ピッカーで初めて探したときに読む。
     - assets/emoji/
     - assets/audio/alarm.wav

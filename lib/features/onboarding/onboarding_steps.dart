@@ -92,7 +92,7 @@ class OnboardingStepHeader extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           if (onBack != null) IconButton(key: const ValueKey('onb.back'), icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: context.l10n.onboardingBack, onPressed: onBack) else const RasqLogo(height: 28),
-          // 表示の言語 (D-559): 左上(戻る / ロゴの隣)。設定を開く前に読める言語へ変えられる。
+          // 表示の言語 (D-575): 左上(戻る / ロゴの隣)。設定を開く前に読める言語へ変えられる。
           const SizedBox(width: RasqSpacing.xs),
           const LanguageQuickButton(),
           const Spacer(),
@@ -171,7 +171,7 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
     return null;
   }
 
-  /// 弱い要件 (D-560): サーバーと同じ規則で、当たったものを全部チップに。新規登録ではメールはまだ無い。
+  /// 弱い要件 (D-576): サーバーと同じ規則で、当たったものを全部チップに。新規登録ではメールはまだ無い。
   List<PasswordWeakness> get _passwordWeak => rasqPasswordProblem(_password.text) != null ? const [] : passwordWeaknesses(_password.text, handle: _handle.text);
 
   bool get _ready =>
@@ -251,7 +251,7 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
               decoration: InputDecoration(
                 labelText: context.l10n.onboardingPasswordLabel(rasqPasswordMinChars),
                 errorText: rasqPasswordProblem(_password.text),
-                // 「脆弱なパスワードです」+ 当たった要件のチップ (D-560)。
+                // 「脆弱なパスワードです」+ 当たった要件のチップ (D-576)。
                 error: _passwordWeak.isEmpty ? null : WeakPasswordNotice(weaknesses: _passwordWeak),
                 suffixIcon: IconButton(icon: Icon(_show ? Icons.visibility_off : Icons.visibility), tooltip: _show ? context.l10n.onboardingPasswordHide : context.l10n.onboardingPasswordShow, onPressed: () => setState(() => _show = !_show)),
               ),

@@ -19,7 +19,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'support/fake_slot_runtime.dart';
 import 'support/fakes.dart';
 
-/// 加工画面でプラグインのボタンを選んで編集している間も × が効く (D-551、ユーザー報告 2026-11-16)。
+/// 加工画面でプラグインのボタンを選んで編集している間も × が効く (D-567、ユーザー報告 2026-11-16)。
 ///
 /// 実機のプラグインは専用 isolate で呼びを 1 つずつ処理するので、編集(`media.action`)の最中に送った `media.cancel` は
 /// 前の呼びが終わるまで返らない。以前の × はその返事を待ってから閉じていたので、重い編集の間は押しても何も起きなかった。

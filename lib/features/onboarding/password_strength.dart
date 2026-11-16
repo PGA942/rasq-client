@@ -3,7 +3,7 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../../l10n/l10n.dart';
 
-/// 弱いパスワードの要件 (D-560)。判定はサーバー(ORGATE `src/auth/password.rs` の `validate_password_for`、S-019)と同じ規則を
+/// 弱いパスワードの要件 (D-576)。判定はサーバー(ORGATE `src/auth/password.rs` の `validate_password_for`、S-019)と同じ規則を
 /// 端末でも行い、当たった要件をすべてチップで出す。サーバーは**最初に当たった 1 つだけ**を文で返す
 /// (`400 "password is too weak: <理由>"`)ので、要件の一覧はここで作る。サーバーが一覧を返す形の案は docs/PASSWORD_STRENGTH.md。
 enum PasswordWeakness {

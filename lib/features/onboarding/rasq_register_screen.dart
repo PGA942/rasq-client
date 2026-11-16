@@ -18,7 +18,7 @@ import 'region/region_picker.dart' show showRegionUnavailable;
 const rasqPasswordMinChars = 8;
 
 /// パスワードの長さの確かめ(サーバーの決まり S-019 と同じ: 8〜256 文字)。空なら null(まだ入れていない)。
-/// 弱い要件(よく使われるもの / 同じ字の繰り返し / ハンドルと同じ)は [passwordWeaknesses] で別に見て、チップで出す (D-560)。
+/// 弱い要件(よく使われるもの / 同じ字の繰り返し / ハンドルと同じ)は [passwordWeaknesses] で別に見て、チップで出す (D-576)。
 String? rasqPasswordProblem(String p) {
   if (p.isEmpty) return null;
   if (p.characters.length < rasqPasswordMinChars) return appL10n.onboardingPasswordTooShort(rasqPasswordMinChars);

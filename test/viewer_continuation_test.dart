@@ -17,7 +17,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
 
-/// 第1回 全画面表示: 投稿をまたいでスワイプ (D-549) / 上下に引っ張って閉じる (D-550) / 投稿アクションバー付き FOW (D-553)。
+/// 第1回 全画面表示: 投稿をまたいでスワイプ (D-565) / 上下に引っ張って閉じる (D-566) / 投稿アクションバー付き FOW (D-569)。
 void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
   MediaItem image(String id) => MediaItem(id: id, type: MediaType.image, url: Uri.parse('https://example.test/$id.jpg'));
@@ -52,7 +52,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  group('並び (D-549)', () {
+  group('並び (D-565)', () {
     List<int> all(Post p) => [for (var i = 0; i < p.media.length; i++) i];
 
     test('開いた投稿の位置から、メディア付き投稿の添付を TL の順に並べる。メディアの無い投稿 / 重複は飛ばす', () {
@@ -140,7 +140,7 @@ void main() {
     expect(find.byType(MediaViewerScreen), findsOneWidget);
   });
 
-  group('上下に引っ張って閉じる (D-550)', () {
+  group('上下に引っ張って閉じる (D-566)', () {
     testWidgets('拡大していなければ、上へ引いても閉じる(短ければ戻る)', (tester) async {
       final c = await pump(tester);
       c.read(routerProvider).push(Routes.viewer, extra: (post: p3, index: 0));
@@ -207,7 +207,7 @@ void main() {
     });
   });
 
-  group('投稿アクションバー付き FOW (D-553)', () {
+  group('投稿アクションバー付き FOW (D-569)', () {
     test('全画面アクションバーの既定は、SNS の投稿まわりのアクションを外す(投稿のバーはそのまま)', () {
       final viewer = ActionBarConfigStore.defaultFor(ActionBarConfigStore.viewerKey(acc.key));
       for (final id in ['reply', 'renote', 'reaction', 'favorite', 'reblog', 'repost', 'quote', 'favourite', 'bookmark']) {

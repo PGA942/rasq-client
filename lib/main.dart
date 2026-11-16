@@ -16,7 +16,7 @@ const _probeHost = String.fromEnvironment('RASQ_PROBE');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // バグレポート (D-554): 起動ごとに最初の例外と直近の数件を端末に残す(前の受け手もそのまま呼ぶ = 動きは変えない)。
+  // バグレポート (D-570): 起動ごとに最初の例外と直近の数件を端末に残す(前の受け手もそのまま呼ぶ = 動きは変えない)。
   // ほかの初期化で落ちても残るように、いちばん先に。
   ErrorJournalRecorder.installDefault();
   // Web 版 (D-456): `#/…` でなく path の URL(Central が `/app/` の下を index.html に落とす、rasq-central S-092)。

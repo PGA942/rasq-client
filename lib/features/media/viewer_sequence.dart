@@ -6,7 +6,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/timeline_providers.dart';
 
-/// 全画面表示のスワイプを、投稿をまたいで続ける並び (第1回 全画面 / 台帳 D-549)。
+/// 全画面表示のスワイプを、投稿をまたいで続ける並び (第1回 全画面 / 台帳 D-565)。
 ///
 /// 添付の最後(最初)まで来たら止めずに、**見ていたタイムラインの並び順**で次(前)のメディア付き投稿へ移る。
 /// タイムラインの一覧([ViewerSequenceScope])がこれを渡し、`context.openViewer` が全画面へ持っていく。
