@@ -72,6 +72,9 @@ import '../features/settings/settings_screen.dart';
 import '../features/settings/backend_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/onboarding/onboarding_steps.dart';
+import '../features/onboarding/export_discover_screen.dart';
+import '../features/onboarding/history_discover_screen.dart';
+import '../features/onboarding/qr_discover_screen.dart';
 import '../features/onboarding/sns_discover_screen.dart';
 import '../features/onboarding/screen_glimpse.dart' show isValidGlimpseId;
 import '../features/onboarding/rasq_register_screen.dart';
@@ -142,6 +145,12 @@ abstract final class Routes {
   static const snsDiscoverBrowse = '/sns-discover/browse';
   static const snsDiscoverPeople = '/sns-discover/people';
   static const snsDiscoverAsk = '/sns-discover/ask';
+  static const snsDiscoverExport = '/sns-discover/export';
+  static const snsDiscoverQr = '/sns-discover/qr';
+  static const snsDiscoverHistory = '/sns-discover/history';
+
+  /// 探す画面の中から開く RASQ アカウントのページ (D-551): SNS にログインする前でも開ける(`/sns-discover/…` は入口の外)。
+  static String snsDiscoverAccount(String handle) => '/sns-discover/account/${Uri.encodeComponent(handle)}';
 
   /// 登録の前に読む文書(設定の「ヘルプ、法的表示」と同じページ)。オンボーディング中も開ける (D-405)。
   static const termsDoc = '/settings/dsl/about.terms';
@@ -167,6 +176,9 @@ abstract final class Routes {
   static const loginMisskey = '/login/misskey';
   static const loginMastodon = '/login/mastodon';
   static const loginBluesky = '/login/bluesky';
+
+  /// Bluesky のハンドルとアプリパスワードのページ (D-554)。[host] = 前のページで決めた PDS。
+  static String loginBlueskyHandle(String host) => '/login/bluesky/handle?host=${Uri.encodeQueryComponent(host)}';
   static const loginMixi2 = '/login/mixi2';
 
   /// ノードプログラミング画面 (D-090)。`/nodes/<scope>`。TL スコープの
@@ -605,6 +617,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                     glimpseResultId: s.uri.queryParameters['glimpse'] == 'done' && isValidGlimpseId(s.uri.queryParameters['id']) ? s.uri.queryParameters['id'] : null)),
             GoRoute(path: 'browse', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverBrowseScreen()),
             GoRoute(path: 'people', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverPeopleScreen()),
+            GoRoute(path: 'export', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverExportScreen()),
+            GoRoute(path: 'qr', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverQrScreen()),
+            GoRoute(path: 'history', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverHistoryScreen()),
+            GoRoute(path: 'account/:handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!)),
             GoRoute(path: 'ask', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverAskScreen()),
           ]),
           // RASQ の機能の紹介 (D-471)。
@@ -634,7 +650,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(path: 'misskey', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => MisskeyLoginScreen(host: s.uri.queryParameters['host'])),
               GoRoute(path: 'mastodon', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => MastodonLoginScreen(host: s.uri.queryParameters['host'])),
-              GoRoute(path: 'bluesky', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BlueskyLoginScreen()),
+              GoRoute(path: 'bluesky', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BlueskyLoginScreen(), routes: [
+                GoRoute(path: 'handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => BlueskyHandleScreen(host: s.uri.queryParameters['host'] ?? '')),
+              ]),
               GoRoute(path: 'mixi2', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const Mixi2LoginScreen()),
             ],
           ),

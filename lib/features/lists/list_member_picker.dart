@@ -12,6 +12,8 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account_page_api.dart' hide RasqNotice;
 import '../../backend/rasq_collections_api.dart';
 import '../../l10n/l10n.dart';
+import '../child_safe/child_gate.dart' show ChildGate;
+import '../child_safe/child_safe_providers.dart' show childGateProvider, childSafeSearchUsers, childSafeUserSearch, childUserSearchBlockReason;
 import '../vc/astell_models.dart';
 
 /// リストに人を足す (D-366): AsTell の作成 FOW の「フォロワーを招待」と同じ形。
@@ -197,12 +199,14 @@ class _PickerBodyState extends ConsumerState<_PickerBody> {
       }
       List<UserSummary> sns = const [];
       List<AstellFollowEntry> rasq = const [];
+      // 見守りでユーザーの検索を止めていれば、SNS も RASQ も探さない(呼ぶ直前と結果のあとに今の許可を見る。#24)。
+      ChildGate gate() => ref.read(childGateProvider);
       try {
-        sns = (await widget.session.searchUsers(text, limit: 12)).items;
+        sns = await childSafeSearchUsers(gate, widget.session, text, limit: 12);
       } catch (_) {}
       try {
         final api = _api;
-        if (api != null) rasq = [for (final a in await api.searchAccounts(text)) AstellFollowEntry(id: a.id, handle: a.handle, displayName: a.displayName, avatarUrl: a.avatarUrl)];
+        if (api != null) rasq = [for (final a in await childSafeUserSearch(gate, () => api.searchAccounts(text))) AstellFollowEntry(id: a.id, handle: a.handle, displayName: a.displayName, avatarUrl: a.avatarUrl)];
       } catch (_) {}
       if (mounted && _query.text.trim() == text) {
         setState(() {
@@ -293,15 +297,19 @@ class _PickerBodyState extends ConsumerState<_PickerBody> {
 
   @override
   Widget build(BuildContext context) {
-    final searching = _query.text.trim().isNotEmpty;
-    final count = widget.picked.value.length;
     final l10n = context.l10n;
+    // ユーザーの検索を止めているか (#24)。止めたら、出ている結果も出さない(フォロー中から選ぶのは検索ではないので残す)。
+    final searchBlocked = childUserSearchBlockReason(ref.watch(childGateProvider));
+    final searching = _query.text.trim().isNotEmpty && searchBlocked == null;
+    final count = widget.picked.value.length;
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: RasqSpacing.lg),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: RasqInput(key: const ValueKey('lists.members.search'), controller: _query, hintText: l10n.listsPickerSearchHint, onChanged: (v) {
+          child: searchBlocked != null
+              ? Text(searchBlocked, key: const ValueKey('lists.members.searchBlocked'), style: RasqTypography.bodySmall)
+              : RasqInput(key: const ValueKey('lists.members.search'), controller: _query, hintText: l10n.listsPickerSearchHint, onChanged: (v) {
             setState(() {});
             _search(v);
           }),

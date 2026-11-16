@@ -1,0 +1,13 @@
+{
+  "@@locale": "ja",
+  "onboardingHistoryTitle": "検索履歴を統合して探す",
+  "onboardingHistorySubtitle": "これまでに探した言葉をまとめて、RASQ の人とリストを探します",
+  "onboardingHistoryIntro": "「SNS サービスを探す」でこれまでに探した言葉です。選んだ言葉をまとめて、RASQ のユーザーと RASQ リストを探します。履歴はこの端末の中だけに残ります。",
+  "onboardingHistoryEmpty": "まだ履歴がありません。「好きな画像やコンテンツから探す」や「有力なユーザーから探す」で探すと、ここに言葉が並びます。",
+  "onboardingHistoryRemove": "この言葉を消す",
+  "onboardingHistoryClear": "履歴をすべて消す",
+  "onboardingHistorySearch": "選んだ {count} 個の言葉で探す",
+  "@onboardingHistorySearch": {"placeholders": {"count": {"type": "int"}}},
+  "onboardingHistoryTooMany": "一度に選べるのは {max} 個までです",
+  "@onboardingHistoryTooMany": {"placeholders": {"max": {"type": "int"}}}
+}

@@ -139,5 +139,9 @@
   "composeAttachmentRemove": "Remove",
   "composeAttachmentEdit": "Edit",
   "composeAttachmentUnsensitive": "Unmark sensitive",
-  "composeAttachmentSensitive": "Mark as sensitive"
+  "composeAttachmentSensitive": "Mark as sensitive",
+  "composeTargetUnavailable": "This account can't be used right now (blocked by your guardian)",
+  "composeVisibilityPublicOnlyTitle": "{sns} has no post visibility settings",
+  "composeVisibilityPublicOnlyBody": "This post will be public and visible to anyone. Send it publicly?",
+  "composeVisibilityPublicOnlySend": "Send publicly"
 }

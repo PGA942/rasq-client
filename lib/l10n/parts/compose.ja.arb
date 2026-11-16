@@ -208,5 +208,11 @@
   "composeAttachmentEdit": "加工",
   "@composeAttachmentEdit": {"description": "添付を加工するボタン"},
   "composeAttachmentUnsensitive": "センシティブ解除",
-  "composeAttachmentSensitive": "センシティブにする"
+  "composeAttachmentSensitive": "センシティブにする",
+  "composeTargetUnavailable": "投稿先のアカウントは今は使えません(保護者が止めています)",
+  "@composeTargetUnavailable": {"description": "送る直前に、投稿先の SNS が見守りで止められていた"},
+  "composeVisibilityPublicOnlyTitle": "{sns} では公開範囲を選べません",
+  "@composeVisibilityPublicOnlyTitle": {"description": "投稿先の SNS が公開範囲(ホーム / フォロワー限定)を持たないときの確認の見出し", "placeholders": {"sns": {"type": "String"}}},
+  "composeVisibilityPublicOnlyBody": "この投稿は公開になり、誰でも見られます。公開で送りますか?",
+  "composeVisibilityPublicOnlySend": "公開で送る"
 }

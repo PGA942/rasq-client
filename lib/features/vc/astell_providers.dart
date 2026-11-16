@@ -1004,6 +1004,15 @@ class AstellSession extends Notifier<AstellSessionState?> {
     }
   }
 
+  /// いまマイクを上げてよいか(押した向き = 最新の [AstellSessionState.micOn]、強制ミュートでない。#14)。
+  bool get _micAllowedNow {
+    final c = state;
+    return c != null && c.micOn && !c.forceMuted;
+  }
+
+  /// [s] と同じ部屋にまだ居るか(待ちのあいだに退出 / 別の部屋へ移っていない。#14)。
+  bool _sameRoom(AstellSessionState s) => state != null && state!.room.id == s.room.id;
+
   /// ホストの配信を始める(オーナー、D-317): カメラ / 画面 + マイクを LiveKit に上げ、`hostStream` を立てる。
   Future<void> startHostStream(String kind, {String? screenSourceId}) async {
     final s = state;
@@ -1013,7 +1022,11 @@ class AstellSession extends Notifier<AstellSessionState?> {
     }
     try {
       final st = await _ensureStream(publish: true);
-      await st.publish(kind, mic: s.micOn && !s.forceMuted, screenSourceId: screenSourceId);
+      // 繋ぐ待ちのあいだにミュート / 強制ミュート / 退出されていたら、その最新を使う (セキュリティ確認 2026-11-11 の #14)。
+      if (!_sameRoom(s)) return;
+      await st.publish(kind, mic: _micAllowedNow, screenSourceId: screenSourceId);
+      if (!_sameRoom(s)) return await st.unpublish();
+      await st.setMic(_micAllowedNow); // 上げる待ちのあいだに押された向き
       final room = await ref.read(astellClientProvider).updateRoom(s.room.id, {
         'hostStream': {'kind': kind == 'screen' ? 'screen' : 'video', 'title': s.room.title, 'startedAt': DateTime.now().toUtc().toIso8601String()},
       });
@@ -1153,7 +1166,11 @@ class AstellSession extends Notifier<AstellSessionState?> {
     }
     try {
       final st = await _ensureStream(publish: true);
-      await st.publish('screen', mic: s.micOn && !s.forceMuted, screenSourceId: screenSourceId);
+      // 繋ぐ待ちのあいだの最新のマイク / 退出を使う (#14)。
+      if (!_sameRoom(s)) return;
+      await st.publish('screen', mic: _micAllowedNow, screenSourceId: screenSourceId);
+      if (!_sameRoom(s)) return await st.unpublish();
+      await st.setMic(_micAllowedNow);
     } catch (e) {
       if (state != null) state = state!.copyWith(error: appL10n.vcScreenShareStartFailed(astellStreamErrorText(e)));
       return;

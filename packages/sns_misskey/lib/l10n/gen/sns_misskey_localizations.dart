@@ -48,6 +48,11 @@ abstract class SnsMisskeyLocalizations {
   /// ja: **"返信"**
   String get misskeyActionReply;
 
+  /// Misskey のサーバーの応答が上限を超えて、読むのをやめたとき。host はサーバー、maxBytes は上限のバイト数
+  ///
+  /// ja: **"{host} の応答が大きすぎます({maxBytes} bytes を超えています)"**
+  String misskeyApiResponseTooLarge(String host, int maxBytes);
+
   /// Misskey のサーバーにつなげなかった理由が「許可されていない」のとき、誤りの後ろに足す手がかり(頭に空白)
   ///
   /// ja: **" (アプリのネットワーク権限/サンドボックス設定を確認してください)"**
@@ -500,6 +505,9 @@ class SnsMisskeyLocalizationsJa extends SnsMisskeyLocalizations {
   String get misskeyActionReply => '返信';
 
   @override
+  String misskeyApiResponseTooLarge(String host, int maxBytes) => '${host} の応答が大きすぎます(${maxBytes} bytes を超えています)';
+
+  @override
   String get misskeyApiSandboxHint => ' (アプリのネットワーク権限/サンドボックス設定を確認してください)';
 
   @override
@@ -779,6 +787,9 @@ class SnsMisskeyLocalizationsEn extends SnsMisskeyLocalizationsJa {
 
   @override
   String get misskeyActionReply => 'Reply';
+
+  @override
+  String misskeyApiResponseTooLarge(String host, int maxBytes) => 'The response from ${host} is too large (over ${maxBytes} bytes)';
 
   @override
   String get misskeyApiSandboxHint => ' (check the app\'s network permission / sandbox settings)';
@@ -1062,6 +1073,9 @@ class SnsMisskeyLocalizationsKo extends SnsMisskeyLocalizationsJa {
   String get misskeyActionReply => '답글';
 
   @override
+  String misskeyApiResponseTooLarge(String host, int maxBytes) => '${host}의 응답이 너무 큽니다(${maxBytes} bytes 초과)';
+
+  @override
   String get misskeyApiSandboxHint => ' (앱의 네트워크 권한/샌드박스 설정을 확인해 주세요)';
 
   @override
@@ -1343,6 +1357,9 @@ class SnsMisskeyLocalizationsZh extends SnsMisskeyLocalizationsJa {
   String get misskeyActionReply => '回复';
 
   @override
+  String misskeyApiResponseTooLarge(String host, int maxBytes) => '${host} 的响应过大（超过 ${maxBytes} bytes）';
+
+  @override
   String get misskeyApiSandboxHint => '（请检查应用的网络权限/沙盒设置）';
 
   @override
@@ -1622,6 +1639,9 @@ class SnsMisskeyLocalizationsZhHant extends SnsMisskeyLocalizationsJa {
 
   @override
   String get misskeyActionReply => '回覆';
+
+  @override
+  String misskeyApiResponseTooLarge(String host, int maxBytes) => '${host} 的回應過大（超過 ${maxBytes} bytes）';
 
   @override
   String get misskeyApiSandboxHint => '（請檢查 App 的網路權限/沙箱設定）';

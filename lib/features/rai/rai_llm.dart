@@ -105,10 +105,9 @@ const raiModelSpecs = <RaiModelSpec>[
   ),
 ];
 
-/// クラウド(フォールアップ先)。サーバー側が無いので「未接続」。
+/// クラウド(フォールアップ先)。サーバー側が無いので「未接続」。実申請に合わせて (D-558): QA Max = Qwen 3.8 27B、CyLLM は外した。
 const raiCloudModelSpecs = <RaiModelSpec>[
-  RaiModelSpec(id: 'cloud-qwen3.9-33b-a3b', label: 'Qwen3.9 33B A3B', fileName: '', url: '', sizeMb: 0, family: 'qwen3', cloud: true, params: 33),
-  RaiModelSpec(id: 'cloud-cyllm-jp-150b', label: 'CyLLM-JP-150B', fileName: '', url: '', sizeMb: 0, family: 'general', cloud: true, params: 150),
+  RaiModelSpec(id: 'cloud-qwen3.8-27b', label: 'Qwen 3.8 27B', fileName: '', url: '', sizeMb: 0, family: 'qwen3', cloud: true, params: 27),
 ];
 
 RaiModelSpec raiModelSpecById(String? id) => raiModelSpecs.where((m) => m.id == id).firstOrNull ?? raiModelSpecs.first;

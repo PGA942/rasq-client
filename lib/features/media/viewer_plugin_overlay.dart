@@ -136,6 +136,7 @@ class ViewerPluginOverlays {
   /// dispose では ref を使えない(Riverpod 3)ので、使った登録簿と対象プラグインを覚えておく。
   SlotPluginsNotifier? _notifier;
   final Map<String, SlotPlugin> _used = {};
+  int _seq = 0;
 
   Future<void> ask(int i, Uri url) async {
     // 有効で、まだ渡していないプラグインだけ (D-205 / D-207: 後から有効にしたものにも渡す)。
@@ -144,10 +145,12 @@ class ViewerPluginOverlays {
     final plugins = [for (final p in ref.read(viewerOverlayPluginsProvider)) if (isOn(p.id) && !asked.containsKey(p.id)) p];
     if (plugins.isEmpty) return;
     _notifier ??= ref.read(slotPluginsProvider.notifier);
-    final token = 'viewer-${identityHashCode(this)}-$i';
+    // トークンはプラグインごとに分ける (セキュリティ確認 2026-11-11 の #4)。同じものを渡すと、あるプラグインが
+    // ほかのプラグインのトークンで重ねを書き換えられる(登録簿も (ランタイム, トークン) で引く)。
+    String tokenOf(SlotPlugin p) => asked[p.id]!;
     for (final p in plugins) {
       _used[p.id] = p;
-      asked[p.id] = token;
+      asked[p.id] = 'viewer-${identityHashCode(this)}-$i-${++_seq}';
       _setStatus(i, p.id, const ViewerPluginStatus(ViewerPluginPhase.asking));
     }
     void failAll(String why) {
@@ -176,7 +179,7 @@ class ViewerPluginOverlays {
     for (final p in plugins) {
       final (:root, :error) = await _notifier!.viewerOpen(
         p,
-        token: token,
+        token: tokenOf(p),
         url: url.toString(),
         mimeType: 'image/png',
         width: width,

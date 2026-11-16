@@ -82,8 +82,13 @@ class LiveKitAstellStreamer extends AstellStreamer {
 
   static void _log(String message) => debugPrint('astell stream: $message');
 
+  /// マイクの最新の希望 (セキュリティ確認 2026-11-11 の #14)。上げている最中([publish] の待ち)の [setMic] もここに残し、
+  /// 上げ終わったときに最新のものを当てる(古い向きで声を出さない)。
+  bool _micWant = false;
+
   @override
   Future<void> publish(String kind, {required bool mic, String? screenSourceId}) async {
+    _micWant = mic;
     final lp = _room?.localParticipant;
     if (lp == null || !_canPublish) throw StateError(appL10n.vcStreamNotConnected);
     if (kind == 'screen' && astellInsecureWebContext()) throw const AstellMediaException(AstellMediaIssue.insecureContext);
@@ -111,7 +116,12 @@ class LiveKitAstellStreamer extends AstellStreamer {
       if (lp.getTrackPublicationBySource(source) == null) {
         throw AstellMediaException(AstellMediaIssue.unsupported, appL10n.vcStreamPublishFailed);
       }
-      await lp.setMicrophoneEnabled(mic);
+      // マイクは最後に、その時点の最新の希望で(待ちのあいだに変わったら当て直す)。
+      bool? applied;
+      while (applied != _micWant) {
+        applied = _micWant;
+        await lp.setMicrophoneEnabled(applied);
+      }
     } catch (e) {
       await _stopScreenCapture();
       throw AstellMediaException.from(e);
@@ -161,6 +171,7 @@ class LiveKitAstellStreamer extends AstellStreamer {
 
   @override
   Future<void> setMic(bool on) async {
+    _micWant = on;
     final lp = _room?.localParticipant;
     if (lp == null || _publishing == null) return;
     await lp.setMicrophoneEnabled(on);

@@ -43,5 +43,6 @@
   "usersClipsHeader": "클립",
   "usersClipNoteCount": "{count, plural, other{{count}개}}",
   "usersClipSubtitleSeparator": " · ",
-  "usersNotFound": "이 사용자는 존재하지 않는 것 같습니다."
+  "usersNotFound": "이 사용자는 존재하지 않는 것 같습니다.",
+  "usersFieldMentionNotFound": "{handle}을(를) 찾지 못했습니다"
 }

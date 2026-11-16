@@ -146,7 +146,8 @@ void main() {
   // セキュリティ確認 2026-10-09 の [11]: 制限のある面では、プラグインが選んだ URL をリダイレクトの各ホップで確かめる読み方で読む。
   group('media redirects', () {
     final allowed = Uri.parse('https://cdn.allowed.example/a.png');
-    List<ImageProvider> images(WidgetTester tester) => [for (final i in tester.widgetList<Image>(find.byType(Image))) i.image];
+    // 表示の大きさでデコードする包み(ResizeImage、D-550)の中の、実際に取りに行く画像。
+    List<ImageProvider> images(WidgetTester tester) => [for (final i in tester.widgetList<Image>(find.byType(Image))) i.image is ResizeImage ? (i.image as ResizeImage).imageProvider : i.image];
     Widget all() => Column(children: [
           RasqAvatar(imageUrl: allowed),
           RasqCustomEmoji(url: allowed, fallbackText: ':a:', height: 20),

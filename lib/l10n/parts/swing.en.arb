@@ -107,5 +107,10 @@
   "swingAudienceNoLists": "Create a RASQ list to also reach the people in it",
   "swingPackageFetchFailed": "Couldn't get the plugin (HTTP {status})",
   "swingNotLoggedIn": "Not logged in to a RASQ account",
-  "swingUnreadable": "Couldn't read the Swing"
+  "swingUnreadable": "Couldn't read the Swing",
+  "swingErrorSendHeld": "You can't post Swings for a while because a reported Swing couldn't be confirmed (lifted after 72 hours)",
+  "swingP2pFetching": "Receiving from another device…",
+  "swingP2pUnavailable": "No one can deliver this right now. Wait a bit and open it again",
+  "swingP2pUnverified": "Not shown because the creator's signature could not be verified",
+  "swingP2pRetry": "Try again"
 }

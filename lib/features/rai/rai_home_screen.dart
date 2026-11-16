@@ -11,10 +11,8 @@ import '../../shell/headers.dart';
 import 'rai_chat.dart';
 import 'rai_diagnostics.dart';
 import 'rai_embedding_model.dart';
-import 'rai_layout.dart';
 import 'rai_llm.dart';
 import 'rai_mascot_3d.dart';
-import 'rai_motion.dart';
 import 'rai_overlay.dart';
 import 'rai_providers.dart';
 import 'rai_stats.dart';
@@ -200,21 +198,9 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
         ),
       ),
       body: Stack(children: [
-        // 大画面はコラム形式 (D-185): 入力ウィジェットと同じ幅の列を中央に。
-        Center(
-          child: SizedBox(
-            // チャット列の幅 (D-232): 600px 未満は全幅、以上は増えた分の 1/2 まで。
-            width: raiChatWidth(context),
-            child: LayoutBuilder(builder: (context, c) {
-              // チャット (D-218): 背景に RAi(層側が描く。ここは枠だけ報告)、その上に発言の履歴。
-              final standby = raiApproachSize.clamp(raiPointSize, math.max(raiPointSize, math.min(c.maxWidth * 0.75, screen.height * 0.45))).toDouble();
-              return Stack(children: [
-                Positioned.fill(child: IgnorePointer(child: Center(child: _StandbySlot(size: standby)))),
-                const RaiChatList(),
-              ]);
-            }),
-          ),
-        ),
+        // 大画面はコラム形式 (D-185)。ページの組みは「RAi に聞く」と共通 (D-558、[RaiChatFrame]):
+        // 背景に RAi(層側が描く。ここは枠だけ報告)、その上に発言の履歴。入力は層の RAi バー。
+        RaiChatFrame(background: (size) => _StandbySlot(size: size), list: const RaiChatList()),
         // サイドバー (D-214): 左からスライド。外側のタップで閉じる。
         if (s.sidebarOpen)
           Positioned.fill(

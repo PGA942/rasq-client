@@ -114,17 +114,20 @@ class _RaiMascotPainter extends CustomPainter {
   bool shouldRepaint(_RaiMascotPainter old) => old.pointing != pointing || old.outline != outline;
 }
 
-/// RAi の小さいアイコン(黄色い丸に RAi の頭、吹き出しの左)。
+/// RAi の小さいアイコン(丸い画像、吹き出しの左など)。
 class RaiIcon extends StatelessWidget {
   const RaiIcon({super.key, this.size = 40});
   final double size;
+
+  /// RAi のアイコンの画像 (D-559、ユーザーから 2026-11-11。上下左右 6px を削って円で切り抜いたもの)。
+  static const asset = 'assets/images/rai_icon.png';
+
+  /// RAi のアイコン (D-559): 前は黄色の丸に 2D の RAi を描いていた。いまは丸い画像(RAi ホームのサイドバーのボタン・
+  /// 発言の横・探す画面の入口などで同じ)。
   @override
-  Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: const BoxDecoration(color: RasqColors.yellow, shape: BoxShape.circle),
-        alignment: Alignment.center,
-        child: RaiMascot(size: size * 0.55, flat: true),
+  Widget build(BuildContext context) => SizedBox.square(
+        dimension: size,
+        child: Image.asset(asset, width: size, height: size, fit: BoxFit.contain, filterQuality: FilterQuality.medium, semanticLabel: 'RAi'),
       );
 }
 

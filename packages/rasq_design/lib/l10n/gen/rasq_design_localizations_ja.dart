@@ -248,6 +248,12 @@ class RasqDesignLocalizationsJa extends RasqDesignLocalizations {
   String get designErrorRetry => '見てみる';
 
   @override
+  String get designProfileCountPrivate => '非公開';
+
+  @override
+  String get designProfileCountFollowersOnly => 'フォロワーにだけ公開';
+
+  @override
   String get designOverlayCancel => 'キャンセル';
 
   @override

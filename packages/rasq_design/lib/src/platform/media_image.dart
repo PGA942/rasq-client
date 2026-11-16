@@ -13,7 +13,17 @@ import 'web_image.dart';
 ///   プラグインが選んだのではない)は、これまでどおり [NetworkImage](リダイレクトも追う)。
 /// - プラグインが選んだ URL(宣言した接続先で許したもの)は [RasqPolicyNetworkImage]: リダイレクトの各ホップで方針を
 ///   確かめ直す(Web 版は追わない)。宣言した接続先が転送しても、宣言の外へはホストが送らない。
-ImageProvider rasqMediaImage(BuildContext context, Uri url) => RasqMediaPolicyScope.of(context).imageFor(url);
+///
+/// [decodeWidth] / [decodeHeight](論理ピクセル)を渡すと、その大きさ × 端末の画素比でデコードする(rasq-client D-550:
+/// 前は 20〜40px の絵文字やアバターも元の大きさのまま全部の絵を展開していて、動く絵文字が多いとスクロールがカクついた)。
+/// 片方だけなら縦横比を保つ。Web 版は `<img>` で出すことがあるので縮めない。
+ImageProvider rasqMediaImage(BuildContext context, Uri url, {double? decodeWidth, double? decodeHeight}) {
+  final image = RasqMediaPolicyScope.of(context).imageFor(url);
+  if (kIsWeb || (decodeWidth == null && decodeHeight == null)) return image;
+  final dpr = MediaQuery.maybeDevicePixelRatioOf(context) ?? 2.0;
+  int? px(double? v) => v == null || !v.isFinite || v <= 0 ? null : (v * dpr).ceil();
+  return ResizeImage.resizeIfNeeded(px(decodeWidth), px(decodeHeight), image);
+}
 
 extension RasqMediaPolicyImage on RasqMediaPolicy {
   /// [url] を描く画像([rasqMediaImage])。

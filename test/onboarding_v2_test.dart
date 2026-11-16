@@ -25,7 +25,10 @@ import 'package:rasq_client/features/login/sns_login_screen.dart';
 import 'package:rasq_client/features/settings/developer_mode.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart' show settingsAreaProvider;
 import 'package:rasq_client/features/onboarding/discover_image_crop.dart';
+import 'package:rasq_client/features/onboarding/export_discover_screen.dart';
 import 'package:rasq_client/features/onboarding/onboarding_feed.dart';
+import 'package:rasq_client/features/onboarding/page_search_screen.dart';
+import 'package:rasq_client/features/onboarding/web_snapshot.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
 import 'package:rasq_client/features/onboarding/onboarding_steps.dart';
 import 'package:rasq_client/features/onboarding/region/region_picker.dart';
@@ -396,16 +399,20 @@ void main() {
       return c;
     }
 
-    testWidgets('入口は 4 つ。外部 SNS のエクスポートは準備中で押せない', (tester) async {
+    testWidgets('入口は 4 つ。外部 SNS のエクスポートは、書き出しを読む画面へ進む (D-551)', (tester) async {
       await openDiscover(tester, _FakeCentral());
       for (final k in ['discover.content', 'discover.people', 'discover.export', 'discover.ask']) {
         expect(find.byKey(ValueKey(k)), findsOneWidget, reason: k);
       }
       expect(find.text('外部 SNS のエクスポートデータから探す'), findsOneWidget);
-      expect(find.text('準備中'), findsOneWidget);
+      expect(find.text('準備中'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('discover.export')));
       await tester.pumpAndSettle();
-      expect(find.byType(SnsDiscoverScreen), findsOneWidget, reason: '押しても進まない');
+      expect(find.byType(DiscoverExportScreen), findsOneWidget);
+      expect(find.byKey(const ValueKey('discover.export.pick')), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(SnsDiscoverScreen), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('discover.content')));
       await tester.pumpAndSettle();
       expect(find.byType(DiscoverContentScreen), findsOneWidget);
@@ -439,6 +446,48 @@ void main() {
       expect(find.byKey(const ValueKey('discover.listHit.list-1')), findsOneWidget);
       expect(find.byKey(const ValueKey('discover.serverHit.misskey.io')), findsOneWidget);
       expect(find.byKey(const ValueKey('discover.dummy')), findsOneWidget);
+    });
+
+    testWidgets('アプリの中のブラウザの「この画面を探す」(D-552): ページの写しを開いて、囲んで探す画面へ', (tester) async {
+      final capturer = _FakeSnapCapturer();
+      await openDiscover(tester, _FakeCentral(), sub: Routes.snsDiscoverContent, overrides: [
+        discoverBrowserProvider.overrideWithValue((context, initial, attach) {
+          attach(capturer);
+          return Center(child: Text('fake browser: $initial'));
+        }),
+      ]);
+      await tester.tap(find.byKey(const ValueKey('discover.content.browse')));
+      await tester.pumpAndSettle();
+      // 「この画面から探す」(本文と URL)も残っている。
+      expect(find.byKey(const ValueKey('discover.browse.capture')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('discover.browse.pageSearch')));
+      await tester.pumpAndSettle();
+      expect(find.byType(DiscoverPageSelectScreen), findsOneWidget);
+      expect(find.byKey(const ValueKey('discover.page.length')), findsOneWidget);
+      // 囲んで、FOW で検索文字列を見る(アプリの FOW のホストの上に出る)。
+      final canvas = tester.getTopLeft(find.byKey(const ValueKey('discover.page.canvas')));
+      await tester.dragFrom(canvas + const Offset(10, 10), const Offset(300, 60));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('discover.page.region.0')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(find.byKey(const ValueKey('discover.page.region.query'))).controller!.text, 'ねこ写真まとめ');
+      await tester.tap(find.text('決定'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 か所を探す'), findsOneWidget);
+    });
+
+    testWidgets('写しを撮れないブラウザの口には「この画面を探す」を出さない', (tester) async {
+      final capturer = _FakeCapturer();
+      await openDiscover(tester, _FakeCentral(), sub: Routes.snsDiscoverContent, overrides: [
+        discoverBrowserProvider.overrideWithValue((context, initial, attach) {
+          attach(capturer);
+          return Center(child: Text('fake browser: $initial'));
+        }),
+      ]);
+      await tester.tap(find.byKey(const ValueKey('discover.content.browse')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('discover.browse.pageSearch')), findsNothing);
+      expect(find.byKey(const ValueKey('discover.browse.capture')), findsOneWidget);
     });
 
     testWidgets('アプリの中のブラウザで「この画面から探す」: 読み取った本文と URL だけを送る(画面の写しは送らない)', (tester) async {
@@ -1305,6 +1354,12 @@ class _FakeCapturer implements DiscoverPageCapturer {
   void load(Uri url) => loaded.add(url);
   @override
   Future<DiscoverCapture> capture() async => DiscoverCapture(text: 'ねこ写真まとめ\n茶トラの子猫', url: Uri.parse('https://example.com/cats'));
+}
+
+/// ページの写しも返す口(画像なし = 文字の位置だけ)。
+class _FakeSnapCapturer extends _FakeCapturer implements DiscoverPageSnapshotter {
+  @override
+  Future<PageSnapshot> snapshot() async => PageSnapshot(width: 400, height: 1600, viewportHeight: 800, url: Uri.parse('https://example.com/cats'), texts: const [PageTextItem(Rect.fromLTWH(20, 20, 200, 20), 'ねこ写真まとめ')]);
 }
 
 class _FakeJs implements WebJsRunner {

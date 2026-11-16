@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rasq_client/features/login/terms_sheet.dart' show termsAgreeKey;
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/features/settings/developer_mode.dart';
@@ -72,8 +73,8 @@ void main() {
     // ブラウザで認証 → 規約 → サーバー待ちの理由。
     await tester.tap(find.byKey(mixi2LoginBrowserKey));
     await tester.pumpAndSettle();
-    if (find.text('同意').evaluate().isNotEmpty) {
-      await tester.tap(find.text('同意'));
+    if (find.byKey(termsAgreeKey).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(termsAgreeKey));
       await tester.pumpAndSettle();
     }
     expect(plugin.hosts.last, 'mixi.social');
@@ -81,8 +82,8 @@ void main() {
     // ダミーで試す。
     await tester.tap(find.byKey(mixi2LoginDummyKey));
     await tester.pumpAndSettle();
-    if (find.text('同意').evaluate().isNotEmpty) {
-      await tester.tap(find.text('同意'));
+    if (find.byKey(termsAgreeKey).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(termsAgreeKey));
       await tester.pumpAndSettle();
     }
     expect(plugin.hosts.last, mixi2DummyHost);

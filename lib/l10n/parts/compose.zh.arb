@@ -139,5 +139,9 @@
   "composeAttachmentRemove": "删除",
   "composeAttachmentEdit": "编辑",
   "composeAttachmentUnsensitive": "取消敏感标记",
-  "composeAttachmentSensitive": "标记为敏感"
+  "composeAttachmentSensitive": "标记为敏感",
+  "composeTargetUnavailable": "目前无法使用此账号（已被监护人禁用）",
+  "composeVisibilityPublicOnlyTitle": "{sns} 无法选择公开范围",
+  "composeVisibilityPublicOnlyBody": "此帖子将公开，任何人都能看到。要公开发送吗？",
+  "composeVisibilityPublicOnlySend": "公开发送"
 }

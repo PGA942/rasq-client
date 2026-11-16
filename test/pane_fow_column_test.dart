@@ -131,9 +131,9 @@ void main() {
     expect(find.byType(TetheredPanel), findsNothing);
     expectFowInCol3(tester, 'ノートの表示');
     expectFooterFowInCol3(tester, 'ノートの表示');
-    expect(find.descendant(of: find.byType(FowFooter), matching: find.byKey(const ValueKey('user.tabView.reset'))), findsOneWidget);
-    // フッターの「閉じる」で閉じる。
-    await tester.tap(find.byKey(const ValueKey('user.tabView.close')));
+    expect(find.descendant(of: find.byType(FowFooter), matching: find.byKey(const ValueKey('user.tabView.count'))), findsWidgets);
+    // 見出しの「決定」で閉じる (D-557)。
+    await tester.tap(find.byKey(const ValueKey('user.tabView.confirm')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('user.tabView.panel')), findsNothing);
   });
