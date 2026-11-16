@@ -285,6 +285,119 @@ class AppLocalizationsJa extends AppLocalizations {
   String get bookmarksRemove => 'ブックマークを外す';
 
   @override
+  String get bugReportTitle => 'バグレポート';
+
+  @override
+  String get bugReportRowSubtitle => '不具合のときに端末に残った例外を見る・書き出す';
+
+  @override
+  String get bugReportIntro =>
+      '不具合が起きたときに、この端末に残った例外です。スクリーンショットで送るときは、この画面を上から 1〜2 枚撮ってください。';
+
+  @override
+  String get bugReportPrivacyNote =>
+      '投稿の本文・トークン・ハンドル・URL・端末の名前は入っていません(例外の文に混じったものも伏せています)。';
+
+  @override
+  String get bugReportDeviceHeader => '端末';
+
+  @override
+  String get bugReportAppVersion => 'アプリの版';
+
+  @override
+  String get bugReportOs => 'OS';
+
+  @override
+  String get bugReportDevice => '端末の型';
+
+  @override
+  String get bugReportScreen => '画面';
+
+  @override
+  String get bugReportLocale => '言語';
+
+  @override
+  String get bugReportNow => 'いまの時刻';
+
+  @override
+  String get bugReportFirstHeader => '最初の例外';
+
+  @override
+  String bugReportFirstCaption(String started, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '$started に起動した回の最初の例外(この回で $_temp0)';
+  }
+
+  @override
+  String get bugReportTime => '時刻';
+
+  @override
+  String get bugReportType => '種類';
+
+  @override
+  String get bugReportWhere => '場所';
+
+  @override
+  String get bugReportWidgetPath => '部品の経路(先頭)';
+
+  @override
+  String get bugReportStack => 'スタック(先頭)';
+
+  @override
+  String get bugReportRecentHeader => '直近の例外';
+
+  @override
+  String bugReportOlderLaunches(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ほかに $count 回の起動で例外がありました(全文に入っています)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bugReportEmpty => '記録された例外はありません';
+
+  @override
+  String get bugReportCopyButton => '全文をコピー';
+
+  @override
+  String get bugReportCopied => 'バグレポートの全文をコピーしました';
+
+  @override
+  String get bugReportSaveButton => 'ファイルに保存';
+
+  @override
+  String bugReportSaved(String where) {
+    return '$where に保存しました';
+  }
+
+  @override
+  String bugReportSaveFailed(String error) {
+    return '保存できませんでした: $error';
+  }
+
+  @override
+  String get bugReportClearButton => '消去';
+
+  @override
+  String get bugReportClearConfirmTitle => '記録した例外を消しますか?';
+
+  @override
+  String get bugReportClearConfirmMessage => '消すと元に戻せません。';
+
+  @override
+  String get bugReportCancel => 'キャンセル';
+
+  @override
+  String get bugReportCleared => '消去しました';
+
+  @override
   String get catalogTitle => 'コンポーネントカタログ';
 
   @override

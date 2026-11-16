@@ -13,6 +13,7 @@ import '../features/users/user_page_screen.dart';
 import '../shell/third_column.dart';
 import '../backend/rasq_account_page_api.dart';
 import 'router.dart';
+import '../features/media/viewer_sequence.dart';
 import '../features/plugins/media_plugin_panel.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
 import 'dart:typed_data';
@@ -116,7 +117,8 @@ extension RasqNavigation on BuildContext {
   }
   void pushFollowRequests() => push('${Routes.notifications}/requests');
   void pushMuteBlock() => push('${Routes.settings}/mute-block');
-  void openViewer(Post post, int index) => push(Routes.viewer, extra: (post: post, index: index));
+  /// 全画面表示。タイムラインの一覧([ViewerSequenceScope])の中から開いたら、その並びでスワイプを続ける (D-565)。
+  void openViewer(Post post, int index) => push(Routes.viewer, extra: MediaViewerArgs(post: post, index: index, sequence: ViewerSequenceScope.maybeOf(this)));
 
   /// プロフィールのアイコン / バナーを全画面で (D-177)。
   void openImage(Uri url, {String? title}) => push(Routes.imageViewer, extra: (url: url, title: title));

@@ -104,6 +104,8 @@ Map<String, SettingsSection> settingsSectionsOf(AppLocalizations l) => <String, 
   'about': SettingsSection(l.settingsSectionsAboutTitle, [
     SettingsRow(l.settingsSectionsAboutServerTitle, subtitle: l.settingsSectionsAboutServerSubtitle, detail: l.settingsSectionsAboutServerDetail, route: '/settings/server'),
     SettingsRow(l.settingsSectionsAboutHelpTitle, route: '/settings/dsl/about.help'),
+    // バグレポート (D-570): ヘルプのすぐ下(不具合のときに探す所)。
+    SettingsRow(l.bugReportTitle, subtitle: l.bugReportRowSubtitle, route: Routes.settingsBugReport),
     // RASQ の機能の紹介 (D-471) をもう一度。RAi の `help.tour` もここ(とヘルプのページ)を指す。
     SettingsRow(l.settingsSectionsAboutTourTitle, subtitle: l.settingsSectionsAboutTourSubtitle, route: '${Routes.featureTour}?again=1'),
     SettingsRow(l.settingsSectionsAboutSubscriptionTitle, route: '/settings/dsl/about.subscription'),

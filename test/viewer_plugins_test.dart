@@ -177,7 +177,7 @@ void main() {
     expect(viewerTogglePluginId(toggleId), 't.qr');
     expect(c.read(pluginActionsForProvider(ActionBarConfigStore.viewerKey(acc.key))).map((p) => p.id), [toggleId]);
     expect(c.read(pluginActionsForProvider(acc.key)), isEmpty); // 投稿バーには出ない
-    // ビューワー: トグルはアクションバーの一員として SNS のボタンの後ろ、「…」は右端。
+    // ビューワー: トグルはアクションバーの一員、「…」は右端。
     c.read(routerProvider).push(Routes.viewer, extra: (post: post, index: 0));
     await tester.pumpAndSettle();
     final menu = find.descendant(of: find.byType(MediaViewerScreen), matching: find.byTooltip('メニュー'));
@@ -186,7 +186,8 @@ void main() {
     final toggle = find.byKey(const ValueKey('viewer.plugin.t.qr'));
     expect(toggle, findsOneWidget);
     expect(tester.getRect(toggle).right, lessThan(tester.getRect(menu).left));
-    expect(tester.getRect(find.byKey(const ValueKey('viewer.action.reply'))).right, lessThan(tester.getRect(toggle).left)); // SNS のボタンの後ろ
+    // 投稿まわりの SNS のボタンは全画面アクションバーの既定には無い (D-569: 下側の投稿アクションバー付き FOW でする)。
+    expect(find.byKey(const ValueKey('viewer.action.reply')), findsNothing);
     expect(tester.getRect(find.byTooltip('戻る')).left, closeTo(RasqSpacing.sm, 3));
     await tester.tap(toggle);
     await tester.pumpAndSettle();

@@ -373,6 +373,153 @@
   "@bookmarksRemove": {
     "description": "投稿の下の、ブックマークを外すボタン"
   },
+  "bugReportTitle": "バグレポート",
+  "@bugReportTitle": {
+    "description": "設定 → RASQ について の行と、その画面の見出し"
+  },
+  "bugReportRowSubtitle": "不具合のときに端末に残った例外を見る・書き出す",
+  "@bugReportRowSubtitle": {
+    "description": "設定の行の説明"
+  },
+  "bugReportIntro": "不具合が起きたときに、この端末に残った例外です。スクリーンショットで送るときは、この画面を上から 1〜2 枚撮ってください。",
+  "@bugReportIntro": {
+    "description": "画面の先頭の説明"
+  },
+  "bugReportPrivacyNote": "投稿の本文・トークン・ハンドル・URL・端末の名前は入っていません(例外の文に混じったものも伏せています)。",
+  "@bugReportPrivacyNote": {
+    "description": "個人の情報を含めないことの説明"
+  },
+  "bugReportDeviceHeader": "端末",
+  "@bugReportDeviceHeader": {
+    "description": "端末の情報の見出し"
+  },
+  "bugReportAppVersion": "アプリの版",
+  "@bugReportAppVersion": {
+    "description": "項目名"
+  },
+  "bugReportOs": "OS",
+  "@bugReportOs": {
+    "description": "項目名"
+  },
+  "bugReportDevice": "端末の型",
+  "@bugReportDevice": {
+    "description": "項目名(iPad14,5 など。端末の名前ではない)"
+  },
+  "bugReportScreen": "画面",
+  "@bugReportScreen": {
+    "description": "項目名(画面の大きさ)"
+  },
+  "bugReportLocale": "言語",
+  "@bugReportLocale": {
+    "description": "項目名(表示の言語)"
+  },
+  "bugReportNow": "いまの時刻",
+  "@bugReportNow": {
+    "description": "項目名(スクリーンショットを撮った時刻)"
+  },
+  "bugReportFirstHeader": "最初の例外",
+  "@bugReportFirstHeader": {
+    "description": "見出し(いちばん新しい、例外のあった起動の最初の 1 件)"
+  },
+  "bugReportFirstCaption": "{started} に起動した回の最初の例外(この回で {count, plural, other{{count} 件}})",
+  "@bugReportFirstCaption": {
+    "description": "started は起動した時刻、count はその起動での例外の数",
+    "placeholders": {
+      "started": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bugReportTime": "時刻",
+  "@bugReportTime": {
+    "description": "項目名"
+  },
+  "bugReportType": "種類",
+  "@bugReportType": {
+    "description": "項目名(例外の型)"
+  },
+  "bugReportWhere": "場所",
+  "@bugReportWhere": {
+    "description": "項目名(building Foo など、どこで起きたか)"
+  },
+  "bugReportWidgetPath": "部品の経路(先頭)",
+  "@bugReportWidgetPath": {
+    "description": "失敗した部品の経路の見出し"
+  },
+  "bugReportStack": "スタック(先頭)",
+  "@bugReportStack": {
+    "description": "スタックの先頭の見出し"
+  },
+  "bugReportRecentHeader": "直近の例外",
+  "@bugReportRecentHeader": {
+    "description": "見出し(同じ起動の、新しい順)"
+  },
+  "bugReportOlderLaunches": "{count, plural, other{ほかに {count} 回の起動で例外がありました(全文に入っています)}}",
+  "@bugReportOlderLaunches": {
+    "description": "count は前の起動の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bugReportEmpty": "記録された例外はありません",
+  "@bugReportEmpty": {
+    "description": "何も記録されていないとき"
+  },
+  "bugReportCopyButton": "全文をコピー",
+  "@bugReportCopyButton": {
+    "description": "ボタン"
+  },
+  "bugReportCopied": "バグレポートの全文をコピーしました",
+  "@bugReportCopied": {
+    "description": "スナックバー"
+  },
+  "bugReportSaveButton": "ファイルに保存",
+  "@bugReportSaveButton": {
+    "description": "ボタン"
+  },
+  "bugReportSaved": "{where} に保存しました",
+  "@bugReportSaved": {
+    "description": "where は保存した場所",
+    "placeholders": {
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "bugReportSaveFailed": "保存できませんでした: {error}",
+  "@bugReportSaveFailed": {
+    "description": "error は理由",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "bugReportClearButton": "消去",
+  "@bugReportClearButton": {
+    "description": "ボタン(記録を消す)"
+  },
+  "bugReportClearConfirmTitle": "記録した例外を消しますか?",
+  "@bugReportClearConfirmTitle": {
+    "description": "確認の見出し"
+  },
+  "bugReportClearConfirmMessage": "消すと元に戻せません。",
+  "@bugReportClearConfirmMessage": {
+    "description": "確認の本文"
+  },
+  "bugReportCancel": "キャンセル",
+  "@bugReportCancel": {
+    "description": "確認のキャンセル"
+  },
+  "bugReportCleared": "消去しました",
+  "@bugReportCleared": {
+    "description": "スナックバー"
+  },
   "catalogTitle": "コンポーネントカタログ",
   "@catalogTitle": {
     "description": "開発用のコンポーネントカタログ(部品の見本を並べた画面)の見出し"

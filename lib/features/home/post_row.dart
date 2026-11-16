@@ -67,7 +67,7 @@ Uri? snsProfileUrlOf(UserSummary u) {
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText, this.onActAs, this.compactQuote = false, this.showAllMedia = false, this.hideMedia = false, this.menuPin, this.onAuthorTap});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText, this.onActAs, this.compactQuote = false, this.showAllMedia = false, this.hideMedia = false, this.menuPin, this.onAuthorTap, this.actionBarAbove});
 
   final Post post;
   final List<ActionDescriptor> actions;
@@ -109,6 +109,11 @@ class PostRow extends ConsumerStatefulWidget {
   /// アイコン / 名前のタップ。null = 作者のユーザーページを、**投稿を引いたアカウント**(`post.account`)で開く (D-469)。
   /// この端末にその SNS のアカウントが無い投稿(アカウントページ / RASQ リストの読むだけの投稿)は、ブラウザで開くなどに差し替える。
   final VoidCallback? onAuthorTap;
+
+  /// アクションバーをタイルの**上**に出す (D-569: 全画面の「投稿アクションバー付き FOW」)。渡すと、バー(リアクションのチップ込み、
+  /// 無ければ null)をこれで包んで投稿の上に置き、タイルの中には出さない。バーは複製ではなく**この投稿の実物のバー**なので、
+  /// ピッカー / バンドルはタイムラインと同じく押したボタンにつながって出る。
+  final Widget Function(Widget? bar)? actionBarAbove;
 
   /// リプライ元の添付サマリー(「N件の添付ファイル」「1件の添付リンク」)。
   static String? attachmentSummaryOf(Post p) {
@@ -322,21 +327,9 @@ class _PostRowState extends ConsumerState<PostRow> {
         },
     ];
 
-    final tile = RasqPostTile(
-      author: post.author,
-      createdAt: post.createdAt,
-      nameSpans: nameSpans,
-      repostedBy: post.repostedBy,
-      bannerIcon: widget.bannerIcon,
-      bannerText: widget.bannerText,
-      dense: widget.dense,
-      content: content,
-      media: !collapsible && !hasCw && !widget.hideMedia && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, revealed: revealed, onReveal: (id) => ref.read(mediaRevealProvider.notifier).reveal(post, id), maxVisible: widget.showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i]), onPlayTile: (i) => showVideoFow(ref, mediaItems[i], post: post, column: fowColumnOf(context))) : null,
-      poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
-      quote: !collapsible && !hasCw && post.quote != null ? (widget.compactQuote ? InlinePostFrame(post: post.quote!) : quoteTile(context, post.quote!, emojis: emojis, safety: safety)) : null,
-      actionBar: widget.actions.isEmpty && !showChips
-          ? null
-          : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+    final Widget? bar = widget.actions.isEmpty && !showChips
+        ? null
+        : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               // 投稿内のリアクション数表示 (D-040): アクションバーの上に
               // 角丸タイル(絵文字+数、自分のはハイライト、タップで同調/解除)。
               if (showChips)
@@ -370,7 +363,20 @@ class _PostRowState extends ConsumerState<PostRow> {
                 // 共有の FOW はふつうのフッター付きの FOW (D-521。D-513 ではボタンにつながった形だった)。
                 RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.homePostShare, onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context))),
               ]),
-            ]),
+            ]);
+    final tile = RasqPostTile(
+      author: post.author,
+      createdAt: post.createdAt,
+      nameSpans: nameSpans,
+      repostedBy: post.repostedBy,
+      bannerIcon: widget.bannerIcon,
+      bannerText: widget.bannerText,
+      dense: widget.dense,
+      content: content,
+      media: !collapsible && !hasCw && !widget.hideMedia && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, revealed: revealed, onReveal: (id) => ref.read(mediaRevealProvider.notifier).reveal(post, id), maxVisible: widget.showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i]), onPlayTile: (i) => showVideoFow(ref, mediaItems[i], post: post, column: fowColumnOf(context))) : null,
+      poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
+      quote: !collapsible && !hasCw && post.quote != null ? (widget.compactQuote ? InlinePostFrame(post: post.quote!) : quoteTile(context, post.quote!, emojis: emojis, safety: safety)) : null,
+      actionBar: widget.actionBarAbove != null ? null : bar,
       // ↓ で別アカウントを選んでいる間は、そのコピーで以降の画面を開く (D-155)。
       onTap: _actAs != null && widget.onActAs == null ? () => context.pushPost(_actAs!) : widget.onTap,
       // 作者の id は投稿を引いたサーバーのもの (D-469): 作者自身のアカウント(`post.author.account`)ではなく、
@@ -412,6 +418,14 @@ class _PostRowState extends ConsumerState<PostRow> {
     // 投稿をワイヤーフレーム p.5(DM ルームの「1件の添付リンク」)の形で
     // 上に出し、スレッド線で繋ぐ。タップで元投稿のスレッドへ。
     final parent = post.replyTo;
+    final above = widget.actionBarAbove;
+    if (above != null) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        above(bar),
+        if (parent != null && widget.showReplyParent) ReplyParentRow(post: parent),
+        tile,
+      ]);
+    }
     if (parent == null || !widget.showReplyParent) return tile;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
       ReplyParentRow(post: parent),

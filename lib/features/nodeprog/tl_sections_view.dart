@@ -29,6 +29,7 @@ import '../vc/vc_screen.dart' show searchAstellRooms;
 import 'node_tabs.dart';
 import 'tl_components.dart';
 import 'tl_config_store.dart';
+import '../media/viewer_sequence.dart';
 
 /// 画面の並び (D-442): TL のカスタマイズの「SNSタイムライン」の並びの順に、
 /// - **セクション**(見出し + 中のノードを入れた順に続けて。枠は無し、D-444)、
@@ -306,8 +307,14 @@ class TlPostsDisplay extends ConsumerWidget {
       TlDisplayMode.relational => _events(ref, shown),
       TlDisplayMode.users => _users(shown),
     };
-    if (scrollable) return ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.only(bottom: 80), children: children);
-    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
+    // ここから開いた全画面は、出している並びでスワイプを続ける (D-565)。枠 / 表示モードの並びは出している分だけ
+    // (TL 本体のように続きは読まない: 枠の中身は TL の provider と同じとは限らない)。
+    final listed = limit == null ? shown : shown.take(limit!).toList();
+    final sequence = ViewerSequence(posts: () => listed);
+    final Widget out = scrollable
+        ? ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.only(bottom: 80), children: children)
+        : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
+    return ViewerSequenceScope(sequence: sequence, child: out);
   }
 
   List<Widget> _posts(BuildContext context, WidgetRef ref, List<Post> shown) {

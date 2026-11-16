@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -152,7 +153,11 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
       // 旧形(プラグイン自身の FOW → replace)や即差し替え形: そのまま結果にする。
       onReplace: (bytes, mime, name) => _finish(MediaEditResult(bytes: bytes, mimeType: mime, name: name)),
     );
-    if (!mounted) return;
+    if (!mounted || _closing) {
+      // 開いている途中で × / 戻る: 返ってきたセッションは閉じておく(プラグイン側に残さない)。
+      if (s != null) unawaited(_slots.mediaCancel(s));
+      return;
+    }
     setState(() {
       _overlayRoot = null;
       _snapKeys.clear();
@@ -347,10 +352,14 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
     _finish(MediaEditResult(bytes: r.$1, mimeType: r.$2, name: r.$3));
   }
 
-  Future<void> _cancel() async {
+  /// キャンセル(× / 戻る)。**プラグインの返事を待たずに閉じる**: プラグインは専用 isolate で 1 つずつ呼びを処理するので、
+  /// 編集(`media.action` / プレビューの作り直し)の最中に `media.cancel` の返事を待つと、終わるまで × が効かなかった
+  /// (ユーザー報告 2026-11-16)。`media.cancel` は後ろで送り、プラグインの下付き FOW もすぐ閉じる([SlotPluginsNotifier.mediaCancel])。
+  void _cancel() {
+    if (_closing) return;
     final s = _session;
-    if (s != null) await _slots.mediaCancel(s);
     _finish(null);
+    if (s != null) unawaited(_slots.mediaCancel(s));
   }
 
   @override

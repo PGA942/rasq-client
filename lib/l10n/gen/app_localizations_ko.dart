@@ -286,6 +286,119 @@ class AppLocalizationsKo extends AppLocalizations {
   String get bookmarksRemove => '북마크 해제';
 
   @override
+  String get bugReportTitle => '버그 리포트';
+
+  @override
+  String get bugReportRowSubtitle => '문제가 생겼을 때 기기에 남은 예외를 보고 내보내기';
+
+  @override
+  String get bugReportIntro =>
+      '문제가 생겼을 때 이 기기에 남은 예외입니다. 스크린샷으로 보낼 때는 이 화면을 위에서부터 1~2장 찍어 주세요.';
+
+  @override
+  String get bugReportPrivacyNote =>
+      '게시물 본문, 토큰, 핸들, URL, 기기 이름은 포함되지 않습니다(예외 메시지에 섞인 것도 가립니다).';
+
+  @override
+  String get bugReportDeviceHeader => '기기';
+
+  @override
+  String get bugReportAppVersion => '앱 버전';
+
+  @override
+  String get bugReportOs => 'OS';
+
+  @override
+  String get bugReportDevice => '모델';
+
+  @override
+  String get bugReportScreen => '화면';
+
+  @override
+  String get bugReportLocale => '언어';
+
+  @override
+  String get bugReportNow => '현재 시각';
+
+  @override
+  String get bugReportFirstHeader => '첫 예외';
+
+  @override
+  String bugReportFirstCaption(String started, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count건',
+    );
+    return '$started에 시작한 실행의 첫 예외(이 실행에서 $_temp0)';
+  }
+
+  @override
+  String get bugReportTime => '시각';
+
+  @override
+  String get bugReportType => '종류';
+
+  @override
+  String get bugReportWhere => '위치';
+
+  @override
+  String get bugReportWidgetPath => '위젯 경로(앞부분)';
+
+  @override
+  String get bugReportStack => '스택(앞부분)';
+
+  @override
+  String get bugReportRecentHeader => '최근 예외';
+
+  @override
+  String bugReportOlderLaunches(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '그 밖에 $count번의 실행에서 예외가 있었습니다(전문에 들어 있습니다)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bugReportEmpty => '기록된 예외가 없습니다';
+
+  @override
+  String get bugReportCopyButton => '전문 복사';
+
+  @override
+  String get bugReportCopied => '버그 리포트 전문을 복사했습니다';
+
+  @override
+  String get bugReportSaveButton => '파일로 저장';
+
+  @override
+  String bugReportSaved(String where) {
+    return '$where에 저장했습니다';
+  }
+
+  @override
+  String bugReportSaveFailed(String error) {
+    return '저장하지 못했습니다: $error';
+  }
+
+  @override
+  String get bugReportClearButton => '지우기';
+
+  @override
+  String get bugReportClearConfirmTitle => '기록한 예외를 지울까요?';
+
+  @override
+  String get bugReportClearConfirmMessage => '지우면 되돌릴 수 없습니다.';
+
+  @override
+  String get bugReportCancel => '취소';
+
+  @override
+  String get bugReportCleared => '지웠습니다';
+
+  @override
   String get catalogTitle => '컴포넌트 카탈로그';
 
   @override
