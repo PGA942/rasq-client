@@ -39,16 +39,16 @@ import 'viewer_sequence.dart';
 /// センシティブ / 注釈(CW)のメディアは**1 枚ずつ**クッション (D-510): タイルで開いた 1 枚は開いたまま、スワイプした先の
 /// ほかの 1 枚は押すまでクッション(押すまでは自動再生も全画面表示プラグインへの受け渡しもしない)。セーフモード / 見守り中で
 /// タイルから取り除いたメディアは、外せないクッション。開いた記録はタイルと共有([mediaRevealProvider])。
-/// **投稿をまたいでスワイプ** (D-549): [sequence](開いたタイムラインの並び)があれば、添付の最後(最初)から次(前)の
+/// **投稿をまたいでスワイプ** (D-565): [sequence](開いたタイムラインの並び)があれば、添付の最後(最初)から次(前)の
 /// メディア付き投稿へそのまま移る。下の端に近づいたら続きを読み込む。上の端(新しい側)は止まる。
-/// **上下に引っ張って閉じる** (D-550): 拡大していなければ上下どちらへ引いても閉じる。拡大中はパンの限界(画像の上端 / 下端)に
+/// **上下に引っ張って閉じる** (D-566): 拡大していなければ上下どちらへ引いても閉じる。拡大中はパンの限界(画像の上端 / 下端)に
 /// 達してから、さらに同じ向きへ引いたぶんだけを数える(ピンチ / パンと取り合わない)。
 class MediaViewerScreen extends ConsumerStatefulWidget {
   const MediaViewerScreen({super.key, required this.post, this.initialIndex = 0, this.sequence});
   final Post post;
   final int initialIndex;
 
-  /// 投稿をまたいで続ける並び (D-549)。null = この投稿の添付だけ。
+  /// 投稿をまたいで続ける並び (D-565)。null = この投稿の添付だけ。
   final ViewerSequence? sequence;
   @override
   ConsumerState<MediaViewerScreen> createState() => _MediaViewerScreenState();
@@ -68,13 +68,13 @@ const viewerMinFreeSpace = 120.0;
 /// メディアを寄せる余白の枠(テストが読む)。
 const viewerMediaInsetKey = ValueKey('viewer.media.inset');
 
-/// 上下に引っ張って閉じる (D-326 → D-550): この距離を超えて離すか、この速さ以上で同じ向きへ払うと閉じる。
+/// 上下に引っ張って閉じる (D-326 → D-566): この距離を超えて離すか、この速さ以上で同じ向きへ払うと閉じる。
 /// 拡大中は、パンの限界を越えて引いたぶん(払う速さは見ない)がこの距離を超えたら閉じる。
 const viewerSwipeCloseDistance = 120.0;
 const viewerSwipeCloseVelocity = 700.0;
 
 class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
-  /// 全画面の並び (D-549): (投稿, 添付の番号)。開いた投稿のぶん + 並びのほかのメディア付き投稿。足すのは末尾だけ
+  /// 全画面の並び (D-565): (投稿, 添付の番号)。開いた投稿のぶん + 並びのほかのメディア付き投稿。足すのは末尾だけ
   /// (番号 = ページ = 下の表の鍵がずれない)。
   late List<ViewerSlide> _slides = _initialSlides();
   late final int _startPage = _slides.indexWhere((x) => x.post.key == widget.post.key && x.media == widget.initialIndex).clamp(0, math.max(0, _slides.length - 1));
@@ -100,7 +100,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   /// いま見ている 1 枚の投稿。
   Post get _post => _slide(_page.value).post;
 
-  // ── 続きの読み込み (D-549) ──
+  // ── 続きの読み込み (D-565) ──
   bool _extending = false;
 
   /// 読み込み済みの最後から [viewerLoadMoreAhead] 枚以内に来たら、並びの続きを足す。TL がもう読んでいればそれを、無ければ
@@ -231,7 +231,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     if (inset != _fowInset) setState(() => _fowInset = inset);
   }
 
-  // ── 上下に引っ張って閉じる (D-326 → D-550) ──
+  // ── 上下に引っ張って閉じる (D-326 → D-566) ──
 
   /// 面を指に付けて動かし、離したときの距離 / 速さで閉じるか戻すか。拡大中は縦ドラッグのジェスチャーを登録せず
   /// InteractiveViewer のパンに譲り、パンの限界を越えたぶんだけを [_onZoomedPointerMove] が数える。
@@ -274,7 +274,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     Navigator.of(context).maybePop();
   }
 
-  // 拡大中 (D-550): 指 1 本で動かしている間、パンが限界(画像の上端 / 下端)で止まっているのに同じ向きへ引いたぶんを数える。
+  // 拡大中 (D-566): 指 1 本で動かしている間、パンが限界(画像の上端 / 下端)で止まっているのに同じ向きへ引いたぶんを数える。
   // 2 本目の指(ピンチ)が来たら数えない。押してからタッチの遊び(kTouchSlop)ぶん動くまでは数えない(パンが始まる前)。
   final Set<int> _pointers = {};
   double _pointerTravel = 0;
@@ -570,14 +570,14 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOutCubic,
           padding: _fowInset,
-          // 上下に引っ張って閉じる (D-550): 面を指に付けて動かし、離すと閉じる / 戻る。
+          // 上下に引っ張って閉じる (D-566): 面を指に付けて動かし、離すと閉じる / 戻る。
           child: AnimatedContainer(
             duration: _swiping ? Duration.zero : const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
             transform: Matrix4.translationValues(0, _swipeDy, 0),
             transformAlignment: Alignment.center,
             child: Listener(
-              // 拡大中にパンの限界を越えて引いたぶん (D-550)。拡大していないときは下の縦ドラッグが受ける。
+              // 拡大中にパンの限界を越えて引いたぶん (D-566)。拡大していないときは下の縦ドラッグが受ける。
               onPointerDown: _onZoomedPointerDown,
               onPointerMove: _onZoomedPointerMove,
               onPointerUp: _onZoomedPointerUp,
@@ -612,7 +612,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                       final m = _mediaAt(i);
                       // 動画と音声は開くと自動再生 (D-326)。クッションの下では押すまで再生しない (D-510)。
                       if ((m.type == MediaType.video || isAudioMedia(m)) && _gate(i) == _ViewerGate.open) _session(i).play();
-                      // 読み込み済みの端に近づいたら続きを (D-549)。
+                      // 読み込み済みの端に近づいたら続きを (D-565)。
                       unawaited(_maybeExtend(i));
                     },
                     itemBuilder: (_, i) {
@@ -657,7 +657,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                 final barMax = math.max(0.0, c.maxWidth - fixed);
                 return Row(children: [
                   _Circle(child: RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, color: Colors.white, onPressed: () => Navigator.of(context).maybePop(), tooltip: context.l10n.mediaViewerBack)),
-                  // 枚数はいま見ている投稿の中で (D-549: 投稿をまたいでも、その投稿の何枚目か)。
+                  // 枚数はいま見ている投稿の中で (D-565: 投稿をまたいでも、その投稿の何枚目か)。
                   Expanded(child: post.media.length > 1 ? Text('${slide.media + 1} / ${post.media.length}', key: const ValueKey('viewer.count'), style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center) : const SizedBox.shrink()),
                   // 全画面アクションバー (D-212 → D-214): `viewer:<accountKey>` の構成。全画面表示プラグインの
                   // トグルもこのバーのボタン(編集画面で並べ替え / 削除 / 検索)。狭ければ横スクロール。
@@ -708,11 +708,11 @@ enum _ViewerGate {
   locked,
 }
 
-/// 下側の FOW の中身 (D-202 → D-553): **投稿アクションバー付き FOW**。上辺に**その投稿の実物のアクションバー**
+/// 下側の FOW の中身 (D-202 → D-569): **投稿アクションバー付き FOW**。上辺に**その投稿の実物のアクションバー**
 /// (タイムラインの投稿と同じ [PostRow] のバー。リアクションのピッカー / リノートのバンドルは押したボタンにつながって出る。
 /// 以前はバーの複製(押すと実行するだけのボタン列)を置いていた)/ [動画の操作] / [投稿のインライン表示(添付は無し)]。
 /// 折りたたみの段は上 2 つの実測高さに合わせる(AsTell のルーム FOW と同じ作法)。
-/// 投稿をまたいでスワイプしたら (D-549)、いま見ている 1 枚の投稿に替わる。
+/// 投稿をまたいでスワイプしたら (D-565)、いま見ている 1 枚の投稿に替わる。
 class _ViewerPanel extends ConsumerStatefulWidget {
   const _ViewerPanel({required this.slideAt, required this.page, required this.sessionOf, required this.isOpen, required this.spec});
   final ViewerSlide Function(int) slideAt;
@@ -794,7 +794,7 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
     final controls = m != null && (m.type == MediaType.video || isAudioMedia(m)) && widget.isOpen(i);
     // 折りたたみの段の実測前 / 過渡期に上のブロックが枠より高くてもはみ出さない(スクロールに逃がす)。
     return ListView(key: viewerPanelKey, padding: EdgeInsets.zero, children: [
-      // 投稿のインライン表示(添付はビューワー本体にあるので出さない)。バーは投稿の上 = FOW の上辺 (D-553)。
+      // 投稿のインライン表示(添付はビューワー本体にあるので出さない)。バーは投稿の上 = FOW の上辺 (D-569)。
       PostRow(
         key: ValueKey('viewer.post.${post.key}'),
         post: post,

@@ -16,7 +16,7 @@ import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 
-/// バグレポート (D-554): 端末に残った例外([ErrorJournalRecorder])を見せて、全文をコピー / ファイルに保存する。
+/// バグレポート (D-570): 端末に残った例外([ErrorJournalRecorder])を見せて、全文をコピー / ファイルに保存する。
 /// 設定 → RASQ について → バグレポート。
 ///
 /// 当面はベータ版の利用者に**スクリーンショットで送ってもらう**ので、画面は 1〜2 枚に要点が収まる形にする:

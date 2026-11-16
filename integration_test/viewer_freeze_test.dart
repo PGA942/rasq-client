@@ -8,7 +8,7 @@ import 'package:rasq_client/features/media/media_viewer_screen.dart';
 import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_design/rasq_design.dart';
 
-/// 全画面表示のフリーズの調査 (D-552、ユーザー報告 2026-11-16: 「全画面表示にしたらグレーアウトし、何か(サイドバーのアカウント関連?)を
+/// 全画面表示のフリーズの調査 (D-568、ユーザー報告 2026-11-16: 「全画面表示にしたらグレーアウトし、何か(サイドバーのアカウント関連?)を
 /// 操作するとフリーズ」)。実セッション(キーチェーン)+ 実ネットワーク + 入れてあるプラグインのまま、TL のメディアを全画面で開き、
 /// サイドバー / アカウントの操作 / 戻るを重ねる。例外と、開いている重ね(FOW / サイドバー / バリア)を集めて最後に出す。
 /// 報告は iPadOS 27.2(タッチ): `flutter test integration_test/viewer_freeze_test.dart -d <iPad の id>`(macOS なら `-d macos`)。
