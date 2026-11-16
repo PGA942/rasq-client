@@ -27,6 +27,8 @@ import '../ads/timeline_ads.dart';
 import '../nodeprog/tl_components.dart' show TlConfig, TlDisplayMode, defaultTlConfig;
 import '../nodeprog/tl_config_store.dart' show tlViewConfigProvider;
 import '../nodeprog/tl_sections_view.dart';
+import '../theme/tag_themes/atmos.dart';
+import '../theme/tag_themes/tag_themes.dart';
 
 /// トレンドTL(検索結果): ∨ノート / フォロー中 / ユーザー.
 /// ノート = 「フォロー中の反応」 + 「トレンド」(タグTL)。
@@ -110,6 +112,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     // 選ぶ一覧の印: このトレンドを出したアカウント (D-388)。
     final sources = ref.watch(sourcedTrendsProvider).value?.sources[trendKey(widget.tag)] ?? const <AccountId>[];
     final l10n = context.l10n;
+    final community = ref.watch(communityTagThemeProvider(widget.tag));
     final tabs = [RasqTabItem(l10n.trendTabNotes), RasqTabItem(l10n.trendTabFollowing), RasqTabItem(l10n.trendTabUsers)];
 
     // チャイルドセーフ (D-307): 検索結果も TL と同じ絞り込み。
@@ -134,7 +137,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
       child: Scaffold(
         // ＋ (D-381): ホームと同じ動き。投稿はこのワードのハッシュタグを入れて開く。
         floatingActionButton: RadialCreateFab(scope: 'trend', heroTag: 'fab.trend', postText: '#${widget.tag.replaceFirst(RegExp(r'^#'), '')} '),
-        body: SafeArea(
+        body: _withCommunityTheme(community, SafeArea(
           bottom: false,
           child: Column(children: [
           // ← でトレンドホームへ戻る。入力欄は編集可能で、そのまま次の検索を
@@ -170,6 +173,8 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
               ),
             ]),
           ),
+          // コミュハッシュタグのテーマ (D-583、既定は無効): このタグのページだけ。
+          if (community != null) TagThemeBanner(entry: community, caption: l10n.communityTagPageCaption),
           Row(children: [
             Expanded(
               child: RasqTabs(
@@ -248,8 +253,11 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
             ]),
           ),
         ]),
-        ),
+        )),
       ),
     );
   }
 }
+
+/// コミュハッシュタグのテーマ (D-583) を付けたページ(無ければそのまま)。
+Widget _withCommunityTheme(TagThemeEntry? community, Widget child) => community == null ? child : TagThemeSurface(key: ValueKey('community.page.${community.tag}'), spec: community.spec, child: child);

@@ -777,7 +777,7 @@ void main() {
         expect(j.share.writes, writes, reason: '手元の SNS のトークンを K\' で上げ直さない');
         expect(j.share.body, body);
         expect(j.neu.c.read(snsShareProvider).problem, SnsShareProblem.keyReplaced);
-        expect(SnsShareProblem.keyReplaced.message, contains('共有の鍵が差し替えられた可能性がある'));
+        expect(SnsShareProblem.keyReplaced.message, contains('共有鍵が変更された可能性がある'));
         expect((await SnsShareStore(j.neu.storage).problem('acc-a'))!.kind, SnsShareProblem.keyReplaced, reason: '再起動しても止めたまま');
 
         // 直す: 持ち主の端末で共有をオフ → オン(新しい世代)→ この端末が求め直して承認される。

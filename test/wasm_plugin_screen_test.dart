@@ -280,7 +280,7 @@ void main() {
       final gate = NotifierProvider<_Gate, ChildGate>(() => _Gate(_kidGate()));
       await pumpScreen(tester, gate);
       expect(find.byType(WasmPluginView), findsNothing);
-      expect(find.textContaining('保護者が選んだプラグインだけ動かせます'), findsOneWidget);
+      expect(find.textContaining('保護者が許可したプラグインのみ実行できます'), findsOneWidget);
       expect(find.byKey(const ValueKey('wasm.dev.mode')), findsNothing);
     });
 
@@ -298,7 +298,7 @@ void main() {
       c.read(gate.notifier).set(_kidGate());
       await tester.pump();
       expect(find.byType(WasmPluginView), findsNothing);
-      expect(find.textContaining('保護者が選んだプラグインだけ動かせます'), findsOneWidget);
+      expect(find.textContaining('保護者が許可したプラグインのみ実行できます'), findsOneWidget);
     });
   });
 }

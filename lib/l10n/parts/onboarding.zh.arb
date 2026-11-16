@@ -104,7 +104,6 @@
   "onboardingGenreNature": "季节与自然",
   "onboardingPasswordTooShort": "至少需要 {min} 个字符",
   "onboardingPasswordTooLong": "最多 256 个字符",
-  "onboardingPasswordRepeated": "不能使用重复的同一个字符",
   "onboardingTermsOutdated": "使用条款已更新。请更新应用后重新注册",
   "onboardingNoServer": "尚未设置 RASQ 服务器的连接地址",
   "onboardingHandleTaken": "此用户名已被使用",

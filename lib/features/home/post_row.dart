@@ -12,6 +12,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../profile/rasq_post_tile.dart';
 import '../theme/icon_theme/icon_theme_reader.dart' show iconThemeProvider;
+import '../theme/tag_themes/atmos.dart';
+import '../theme/tag_themes/tag_themes.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/third_column.dart';
@@ -254,6 +256,8 @@ class _PostRowState extends ConsumerState<PostRow> {
     // 隠した重複コピー (D-110): あれば ↓(アカウント選択)を出す。
     // 自分の投稿の分だけを見る (D-550: 表全体を見ると、どれか 1 つの投稿の重複が替わるたびに全部の行が作り直される)。
     final alternates = ref.watch(postAlternatesProvider.select((m) => m[widget.post.key])) ?? const <Post>[];
+    // RASQ Atmos (D-584、既定は無効): 本文のハッシュタグに付いた SVG のアイコンと、アクションのアニメーション。
+    _atmos = ref.watchAtmos(post);
 
     // 省略表示: 既読かつ長文の投稿は先頭数行 + 「展開する」(Store 状態 → props).
     final lineCount = '\n'.allMatches(post.body).length + 1;
@@ -393,7 +397,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       // アカウント選択 (D-110/D-111): 複数アカウントに流れてきた同一投稿は
       // 1 枚に畳まれる — ヘッダー右上(… の左)の ↓ でどのアカウントとして
       // 見る/反応するかを選ぶ(アクションバーはずらさない)。
-      headerAction: alternates.isEmpty
+      headerAction: _withAtmosBadge(alternates.isEmpty
           ? null
           : Builder(builder: (ctx) {
               return RasqIconButton(
@@ -419,7 +423,7 @@ class _PostRowState extends ConsumerState<PostRow> {
                   }
                 },
               );
-            }),
+            })),
     );
     // リプライ元の省略タイル (D-069): TL に流れてきたリプライは、1 つ前の
     // 投稿をワイヤーフレーム p.5(DM ルームの「1件の添付リンク」)の形で
@@ -438,6 +442,27 @@ class _PostRowState extends ConsumerState<PostRow> {
       ReplyParentRow(post: parent),
       tile,
     ]);
+  }
+
+  /// この投稿に付いた Atmos (D-584)。build のたびに読み直す(無効なら null)。
+  TagThemeEntry? _atmos;
+
+  /// 名前の行の右に Atmos の SVG アイコン(↓ のボタンがあればその左)。
+  Widget? _withAtmosBadge(Widget? action) {
+    final atmos = _atmos;
+    if (atmos == null || atmos.badge == null) return action;
+    final badge = AtmosBadge(entry: atmos);
+    return action == null ? badge : Row(mainAxisSize: MainAxisSize.min, children: [badge, action]);
+  }
+
+  /// アクションのボタンを押したら、そのアクションに付いた Atmos のアニメーションも再生する(実行は待たない・変えない)。
+  ValueChanged<Rect> _withAtmosAnimation(ActionDescriptor a, ValueChanged<Rect> run) {
+    final trigger = _atmos?.animationFor(a);
+    if (trigger == null) return run;
+    return (anchor) {
+      playAtmosAnimation(context, trigger, anchor);
+      run(anchor);
+    };
   }
 
   /// ActionDescriptor + ActionState (Store) → ActionBar props.
@@ -498,7 +523,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       // Repost はデフォルトの**アクションバンドル**(D-039): タップで
       // リノート / 引用ノートのドロップダウン(ユーザー編集のリスト化とは
       // 別で、(+) の編集導線には出ない組み込みバンドル)。
-      onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : (anchor) => _performReactionAware(a, st, anchor, reactionMode, glyph: glyph),
+      onAnchorTap: _withAtmosAnimation(a, isRepost ? (anchor) => _repostBundle(a, st, anchor) : (anchor) => _performReactionAware(a, st, anchor, reactionMode, glyph: glyph)),
       // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行。
       // ピッカーは**実物のリアクションボタンにアンカー**する (D-065:
       // 基本下付き・余白不足で上付き。D-055 の複製バーは置かない)。

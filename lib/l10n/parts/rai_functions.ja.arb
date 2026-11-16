@@ -38,7 +38,7 @@
   "@raiFunctionsReferenceMissing": {"placeholders": {"id": {"type": "String"}}},
   "raiFunctionsActionMissing": "アクション {id} はありません",
   "@raiFunctionsActionMissing": {"placeholders": {"id": {"type": "String"}}},
-  "raiFunctionsActionNotAllowed": "「{label}」は自動化が許可されていません(RAi からは実行しません)。代わりに案内(この手順で案内)で進めるか、ユーザーが押してください",
+  "raiFunctionsActionNotAllowed": "「{label}」は自動化できないため RAi からは実行しません。「この手順で案内」を使うか、手動で操作してください",
   "@raiFunctionsActionNotAllowed": {"placeholders": {"label": {"type": "String"}}},
   "raiFunctionsActionDone": "{label} を実行しました({state})",
   "@raiFunctionsActionDone": {"description": "state は「済」か「未」", "placeholders": {"label": {"type": "String"}, "state": {"type": "String"}}},

@@ -45,7 +45,7 @@
   "@devUrlHint": {"description": "試験の画面の URL の入力欄の薄い文字"},
   "devUrlLoad": "URL から読む",
   "@devUrlLoad": {"description": "試験の画面: URL から読むボタン"},
-  "devOpenedFromLink": "リンクから開きました。出どころを確かめてから「URL から読む」を押してください(審査中の版は制限モードで動きます)。",
+  "devOpenedFromLink": "リンクから開きました。提供元を確認して「URL から読む」を押してください(審査中の版は制限モードで動作)。",
   "@devOpenedFromLink": {"description": "試験の画面: 審査のリンクから開いたときの案内。「URL から読む」はボタンの名前(devUrlLoad)と揃える"},
   "devParentInstalled": "親(土台)のプラグイン: {id} {version}(入っています)",
   "@devParentInstalled": {"description": "試験の画面: 読み込んだ配布物が要る親のプラグインの行(入っているとき)。id / version は親のプラグイン", "placeholders": {"id": {"type": "String"}, "version": {"type": "String"}}},

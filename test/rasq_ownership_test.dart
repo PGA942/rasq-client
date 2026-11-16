@@ -96,7 +96,7 @@ void main() {
       expect(rasqVerifyWhere('mastodon', ['bio', 'fields']), contains('補足情報'));
       expect(rasqVerifyWhere('bluesky', ['bio']), contains('自己紹介'));
       expect(rasqVerifyWhere('bluesky', ['bio']), isNot(contains('項目')));
-      expect(rasqVerifyMessage(ex('409', 'the code was not found in the public profile (bio or profile fields)')), contains('見つかりませんでした'));
+      expect(rasqVerifyMessage(ex('409', 'the code was not found in the public profile (bio or profile fields)')), contains('見つかりません'));
       expect(rasqVerifyMessage(ex('409', 'no verification in progress; call verify/start first')), contains('確認の文を作る'));
       expect(rasqVerifyMessage(ex('409', 'the public profile of that sns account was not found')), contains('公開のプロフィールが見つかりません'));
       expect(rasqVerifyMessage(ex('409', 'could not read the public profile: timed out')), contains('読めませんでした'));
@@ -106,7 +106,7 @@ void main() {
       expect(rasqKeybaseMessage(ex('400', 'the signed text is not the statement; sign exactly the statement')), contains('文が違います'));
       expect(rasqKeybaseMessage(ex('400', 'the signature was not made with a current key of keybase user x')), contains('鍵で署名されていません'));
       expect(rasqKeybaseMessage(ex('409', 'that keybase account is linked to another rasq account')), contains('別の RASQ アカウント'));
-      expect(rasqKeybaseMessage(ex('B03', 'keybase: HTTP 500')), contains('Keybase に繋がりませんでした'));
+      expect(rasqKeybaseMessage(ex('B03', 'keybase: HTTP 500')), contains('Keybase に接続できませんでした'));
     });
   });
 
@@ -162,7 +162,7 @@ void main() {
     await tapIn(tester, RasqSnsVerifyScreen, 'snsVerify.check');
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('snsVerify.error')), findsOneWidget);
-    expect(find.textContaining('確認の文が見つかりませんでした'), findsOneWidget);
+    expect(find.textContaining('確認用の文が見つかりません'), findsOneWidget);
 
     // 貼った → 確認済み。文は消してよい、と出す。
     pasted = true;

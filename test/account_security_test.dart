@@ -61,7 +61,7 @@ void main() {
 
   test('エラーの言い換え', () {
     OrgateException e(String code, String m) => OrgateException(ErrorCode.tryParse(code)!, m);
-    expect(accountSecurityMessage(e('429', 'too many attempts; retry in 60 seconds')), contains('試行が多すぎます'));
+    expect(accountSecurityMessage(e('429', 'too many attempts; retry in 60 seconds')), contains('試行回数が多すぎます'));
     expect(accountSecurityMessage(e('400', 'invalid or expired code')), contains('コードが違う'));
     // D-576: 「脆弱なパスワードです」+ 当たった要件(サーバーは最初の 1 つを文で返す)。
     expect(accountSecurityMessage(e('400', 'password is too weak: it is a commonly used password')), '脆弱なパスワードです(よく使われるもの)');
@@ -228,8 +228,8 @@ void main() {
 
     // サーバーの 403(確認が要る)も、日本語で伝える。
     OrgateException e(String m) => OrgateException(ErrorCode.tryParse('403')!, m);
-    expect(accountSecurityMessage(e('confirmation required: request a code with POST /me/confirm {"action":"email.change"} and pass it as code')), contains('確認コードが要ります'));
-    expect(accountSecurityMessage(e('this account has no password: confirm with the mailed code instead')), contains('パスワードがありません'));
+    expect(accountSecurityMessage(e('confirmation required: request a code with POST /me/confirm {"action":"email.change"} and pass it as code')), contains('確認コードが必要です'));
+    expect(accountSecurityMessage(e('this account has no password: confirm with the mailed code instead')), contains('パスワード未設定のアカウントです'));
   });
 
   testWidgets('パスワードのあるアカウントの初めてのメール (ORGATE O-009、D-408): いまのパスワードの欄が出て、添えて送る。無ければ送らない', (tester) async {
@@ -388,7 +388,8 @@ void main() {
     expect(find.byKey(const ValueKey('login.noPasswordHint')), findsOneWidget);
     await typeLogin(tester, 'hanako', 'nope nope nope');
     expect(find.byKey(const ValueKey('login.problem')), findsOneWidget);
-    expect(find.textContaining('パスワードを設定していない RASQ アカウントには、ほかの端末からはログインできません'), findsOneWidget);
+    // 校正で、入口の注記(login.noPasswordHint)と同じ一文になったので、エラーの欄の中だけを見る。
+    expect(find.descendant(of: find.byKey(const ValueKey('login.problem')), matching: find.textContaining('パスワード未設定のアカウントは他端末からログインできません')), findsOneWidget);
     // 2 段階目の無いアカウント: パスワードだけで入る。トークンは添えない(401 の取り直しで送り直さない)。
     await typeLogin(tester, 'hanako', 'correct horse battery');
     // この端末で開いていた SNS アカウントを持ち込むかを聞く (D-461)。既定は何も選ばれていない。「加えない」。

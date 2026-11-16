@@ -17,7 +17,7 @@ void main() {
     expect(r, isNot(contains('SECRET123')));
     expect(r, contains('http://192.168.32.161:8080/api/v1/astell/rooms/r1/ws?…'));
     expect(redactSecrets('token=abc Bearer eyJhbGciOi.x.y i=zzz'), 'token=… Bearer … i=…');
-    expect(wsConnectErrorMessage(Exception(raw)), 'ルームに入れませんでした(ルームが閉じているか、見つかりません)');
+    expect(wsConnectErrorMessage(Exception(raw)), 'ルームに入れません');
     expect(wsConnectErrorMessage(Exception('boom ws://h/ws?token=SECRET')), isNot(contains('SECRET')));
   });
 

@@ -15,7 +15,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'support/fakes.dart';
 
 /// D-409: RASQ アカウントからログアウト / 削除したとき、その SNS アカウントは「SNS アカウントもログアウトする」(既定)か
-/// 「この端末のみ に移す」。どちらでも、ほかの Central の RASQ アカウントへは入らない。
+/// 「「この端末のみ」に移す」。どちらでも、ほかの Central の RASQ アカウントへは入らない。
 void main() {
   AccountId sns(String h) => AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: h);
   final s0 = sns('local_only'), s1 = sns('a_one'), s2 = sns('a_two'), s3 = sns('b_only');
@@ -70,7 +70,7 @@ void main() {
       expect(view.sessions.map((s) => s.account), [s0]);
     });
 
-    test('「この端末のみ に移す」: A の SNS は「この端末のみ」へ。B には入らない', () async {
+    test('「「この端末のみ」に移す」: A の SNS は「この端末のみ」へ。B には入らない', () async {
       final st = storage(local: [s0]);
       final c = await container(st);
       await releaseRasqAccount(c.read, 'central-a', sns: RasqLogoutSns.moveToLocal);
@@ -173,7 +173,7 @@ void main() {
       final f = askRasqLogoutSns(c.read, id: 'test.logout', title: 'RASQ アカウントからログアウト', message: 'この端末から RASQ アカウントを外します。', confirmText: 'ログアウト');
       await tester.pumpAndSettle();
       expect(find.text('SNS アカウントもログアウトする'), findsOneWidget);
-      expect(find.text('この端末のみ に移す'), findsOneWidget);
+      expect(find.text('「この端末のみ」に移す'), findsOneWidget);
       await act();
       await tester.pumpAndSettle();
       return f;

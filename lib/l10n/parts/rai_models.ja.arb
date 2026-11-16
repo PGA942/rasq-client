@@ -101,7 +101,7 @@
   "raiModelsOnlyThinking": "端末内モデルから返事がありませんでした(思考だけで終わった可能性)",
   "raiModelsGenerateFailed": "生成に失敗しました: {error}",
   "@raiModelsGenerateFailed": {"placeholders": {"error": {"type": "String"}}},
-  "raiModelsHintSystemPolicy": "「system policy」= サンドボックス / ライブラリ検証で拒否。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください",
+  "raiModelsHintSystemPolicy": "「system policy」はサンドボックス / ライブラリ検証による拒否です。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください",
   "@raiModelsHintSystemPolicy": {"description": "macOS で llama.cpp を読めないときに添える案内(前に改行が入る)"},
   "raiModelsHintGatekeeper": "Gatekeeper に止められた場合: 「システム設定 > プライバシーとセキュリティ」で許可するか、Application Support/llama_cpp の dylib に xattr -dr com.apple.quarantine を実行してください",
   "@raiModelsHintGatekeeper": {"description": "macOS で llama.cpp を読めないときに添える案内(前に改行が入る)"},

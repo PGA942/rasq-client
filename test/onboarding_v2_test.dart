@@ -350,7 +350,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(central.region, 'GB');
       expect(find.byType(RegionUnavailableScreen), findsOneWidget);
-      expect(find.text('RASQ はいま、提供する地域を限っています。イギリス では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。'), findsOneWidget);
+      expect(find.text('現在、イギリス では RASQ アカウントを作成できません(提供地域は今後変わる場合があります)。'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('region.unavailable.back')));
       await tester.pumpAndSettle();
       expect(find.byType(OnboardingTermsScreen), findsNothing);
@@ -1244,7 +1244,7 @@ void main() {
       expect(find.byKey(const ValueKey('discover.content.glimpse.armed')), findsOneWidget);
       await nativeEvent(tester, {'type': 'stopped', 'reason': 'system'});
       expect(find.byKey(const ValueKey('discover.content.glimpse.armed')), findsNothing);
-      expect(find.textContaining('画面の読み取りが止められました'), findsOneWidget);
+      expect(find.textContaining('画面の読み取りが中断されました'), findsOneWidget);
       expect(t.central.lastContent, isNull);
     });
 

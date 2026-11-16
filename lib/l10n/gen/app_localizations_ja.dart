@@ -10,21 +10,20 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
-  String get admissionBannerText => '審査中です。自分の SNS はこのまま使えます。公開の機能は審査が通ると使えます';
+  String get admissionBannerText => '審査中です。公開機能のみ制限中です。';
 
   @override
-  String get admissionRejectedMessage =>
-      'この RASQ アカウントの登録は承認されませんでした。公開の機能は使えません';
+  String get admissionRejectedMessage => '登録が承認されませんでした。公開機能は使えません';
 
   @override
   String get admissionBannerClose => '閉じる';
 
   @override
-  String get admissionWaitCapacity => '登録の枠が埋まっているため、順番を待っています';
+  String get admissionWaitCapacity => '登録枠が埋まっているため順番待ちです';
 
   @override
   String admissionWaitCapacityPosition(int position) {
-    return '登録の枠が埋まっているため、順番を待っています(目安: $position 番目)';
+    return '登録枠が埋まっているため順番待ちです(目安: $position 番目)';
   }
 
   @override
@@ -40,16 +39,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get admissionCodeAccepted => '招待コードを受け付けました。審査が通るまでお待ちください';
 
   @override
-  String get admissionCodeUnknown => 'この招待コードは見つかりません。入力を確かめてください';
+  String get admissionCodeUnknown => '招待コードが見つかりません。';
 
   @override
   String get admissionCodeExpired => 'この招待コードは期限が切れています';
 
   @override
-  String get admissionCodeUsedUp => 'この招待コードは使える人数に達しています';
+  String get admissionCodeUsedUp => 'この招待コードは利用上限に達しています';
 
   @override
-  String get admissionCodeRevoked => 'この招待コードは使えなくなっています';
+  String get admissionCodeRevoked => 'この招待コードは無効です';
 
   @override
   String admissionCodeFailed(String error) {
@@ -110,6 +109,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get appNavShortcutLoginHint => 'SNS アカウントにログインすると使えます';
 
   @override
+  String get atmosThreadCaption => 'プロモーション · このスレッドだけのテーマ';
+
+  @override
   String get backendOauthNoToken => 'アクセストークンを取得できませんでした';
 
   @override
@@ -130,13 +132,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get backendSecurityPasswordlessRemoved =>
-      'メールのコードだけのログインは終わりました。ハンドル(またはメール)とパスワードでログインしてください';
+      'メールコードのみのログインは終了しました。ハンドル(またはメール)とパスワードでログインしてください';
 
   @override
   String get backendSecuritySecondFactor => 'メールに届いた確認コードを入れてください';
 
   @override
-  String get backendSecurityTooMany => '試行が多すぎます。しばらく待ってから、やり直してください';
+  String get backendSecurityTooMany => '試行回数が多すぎます。しばらくしてからお試しください';
 
   @override
   String get backendSecurityNoMail => 'このサーバーは、メールを送れる設定になっていません';
@@ -151,10 +153,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get backendSecurityBadCode => 'コードが違うか、期限が切れています';
 
   @override
-  String get backendSecurityWeakPassword =>
-      'このパスワードは弱すぎます(よく使われるもの / 同じ字の繰り返し / ハンドルやメールと同じもの は使えません)';
-
-  @override
   String get backendSecurityShortPassword => 'パスワードは 8 文字以上にしてください';
 
   @override
@@ -165,17 +163,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get backendSecurityNoPassword =>
-      'このアカウントにはパスワードがありません。いまのメールに届く確認コードで確かめてください';
+      'パスワード未設定のアカウントです。メールに届く確認コードで認証してください';
 
   @override
-  String get backendSecurityConfirmRequired =>
-      'この操作には、いまのパスワードか、いまのメールに届く確認コードが要ります';
+  String get backendSecurityConfirmRequired => '現在のパスワードかメールの確認コードが必要です';
 
   @override
-  String get backendRoomClosed => 'ルームに入れませんでした(ルームが閉じているか、見つかりません)';
+  String get backendRoomClosed => 'ルームに入れません';
 
   @override
-  String get backendRoomForbidden => 'ルームに入れませんでした(このアカウントでは参加できません)';
+  String get backendRoomForbidden => 'このアカウントではルームに参加できません';
 
   @override
   String backendRoomConnectFailed(String error) {
@@ -251,7 +248,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get bookmarksEmptyNoSnsHint =>
-      'このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます';
+      'このサービスにブックマークはありません。投稿の 🔖 長押しで RASQ クリップに追加できます';
 
   @override
   String get bookmarksClips => 'クリップ';
@@ -512,17 +509,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get childSafeErrorHandleTaken => 'そのハンドルは使われています';
 
   @override
-  String get childSafeErrorAlreadyLinked => 'もう見守られている(か、だれかを見守っている)アカウントです';
+  String get childSafeErrorAlreadyLinked => 'すでに見守られているか、見守り中のアカウントです';
 
   @override
-  String get childSafeErrorCodeGone =>
-      'コードの期限が切れたか、もう使われています。保護者に出し直してもらってください';
+  String get childSafeErrorCodeGone => 'コードが期限切れか使用済みです。保護者に再発行してもらってください';
 
   @override
   String get childSafeErrorDevice => 'この端末ではログインできません';
 
   @override
-  String get childSafeErrorTooMany => '試行が多すぎます。しばらく待ってから、やり直してください';
+  String get childSafeErrorTooMany => '試行回数が多すぎます。しばらくしてからお試しください';
 
   @override
   String get childSafeNoServer => 'RASQ サーバーの接続先が未設定です';
@@ -624,12 +620,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String childSafeComposeTopicsOnly(String topics) {
-    return '保護者の設定により、決められた話題($topics)の投稿だけ送れます。話題に合うように書いてください';
+    return '保護者の設定により、許可された話題($topics)のみ投稿できます';
   }
 
   @override
   String childSafeComposeTopicDenied(String topic) {
-    return '保護者の設定により、「$topic」の話題の投稿は送れません。書き換えてください';
+    return '保護者の設定により、「$topic」の話題は投稿できません';
   }
 
   @override
@@ -639,7 +635,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String childSafeComposeStimulus(String level, String word) {
-    return '保護者の設定($level)により、この表現$wordは送れません。言い換えてください';
+    return '保護者の設定($level)により、この表現$wordは使えません';
   }
 
   @override
@@ -647,7 +643,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeDevPreviewUnknown =>
-      '保護者が選んだプラグインだけ動かせます(この読み込み方では、どのプラグインか確かめられません)';
+      '保護者が許可したプラグインのみ実行できます(この方法では特定できません)';
 
   @override
   String get childSafeBlockedInstall => '保護者がプラグインのインストールを止めています';
@@ -662,11 +658,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get childSafeInstallExamplesOnly => '保護者が選んだプラグインと、許す例に近いものだけ入れられます';
 
   @override
-  String get childSafeCacheUnverified => '控えた制限の署名を確かめられません。オンラインで取り直してください';
+  String get childSafeCacheUnverified => '制限の署名を検証できません。オンラインで再取得してください';
 
   @override
-  String get childSafeNewSettingsUnverified =>
-      '保護者の新しい設定の署名を確かめられませんでした(前の設定のまま)';
+  String get childSafeNewSettingsUnverified => '新しい設定の署名を検証できませんでした(前の設定を維持)';
 
   @override
   String get childSafeComposeLocked => '保護者が設定を決めるまで送れません';
@@ -676,7 +671,7 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '今日はもう $count 件送りました(保護者が決めた 1 日の数)。また明日',
+      other: '今日の投稿上限($count 件)に達しました',
     );
     return '$_temp0';
   }
@@ -795,7 +790,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String childSafeGuardianNewLoginCodeTitle(String handle) {
-    return '@$handle のログインのコード(子の端末の「保護者からのコードでログイン」に入れるか、子の端末のカメラで QR を読む)';
+    return '@$handle のログインコード(子の端末で入力するか QR を読み取ります)';
   }
 
   @override
@@ -803,15 +798,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeGuardianPairSubtitle =>
-      '子がもう持っている RASQ アカウントを、子の端末の「チャイルドモード」でつなぎます(10 分・1 回だけ)';
+      '既存の RASQ アカウントを子の端末の「チャイルドモード」で連携(10 分・1 回限り)';
 
   @override
   String get childSafeGuardianPairCodeTitle =>
-      'つなぐコード(子の端末の「チャイルドモード」に入れるか、子の端末のカメラで QR を読む)';
+      '連携コード(子の端末の「チャイルドモード」で入力するか QR を読み取ります)';
 
   @override
   String childSafeGuardianCodeExpires(String time) {
-    return '$time まで。この画面を閉じると、もう出せません(出し直すと前のコードは使えなくなります)。';
+    return '$time まで有効。閉じると再表示できません(再発行で前のコードは無効)。';
   }
 
   @override
@@ -907,7 +902,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String childSafeGuardianEndMessage(String handle) {
-    return '@$handle の制限をすべて外します。子の端末は、次につながったときに外れます。元に戻すには、もう一度つなぎます。';
+    return '@$handle の制限をすべて解除します(次回接続時に反映)。元に戻すには再連携が必要です。';
   }
 
   @override
@@ -932,7 +927,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeGuardianReissueSubtitle =>
-      '子の端末の「保護者からのコードでログイン」に入れるコード(10 分・1 回だけ。前のコードは使えなくなります)';
+      '子の端末で入力するログインコード(10 分・1 回限り。前のコードは無効)';
 
   @override
   String childSafeGuardianLoginCodeTitle(String handle) {
@@ -947,7 +942,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String childSafeGuardianPresetCaption(String band) {
-    return '強さを選ぶと、タイムラインと投稿の判定の強さがそろいます。右の丸いボタンで、$band の既定やほかの子の設定を読み込めます。';
+    return '強さを選ぶと TL と投稿の判定レベルがそろいます。右のボタンから $band の既定値やほかの子の設定を読み込めます。';
   }
 
   @override
@@ -956,7 +951,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeGuardianSummaryCaption =>
-      '送った数 / 止めた数 / 止めた種類だけです(投稿の本文や話題は届きません。送る前の判定はお子さんの端末で行います)。';
+      '送信数・ブロック数・種別のみ届きます(本文や話題は送信せず、判定も子の端末内で行います)。';
 
   @override
   String childSafeGuardianSummaryDay(int posts, int blocked, String trips) {
@@ -1036,7 +1031,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeGuardianInstallCaption =>
-      '子が自分で入れられる範囲。プラグインは増えていくので、ひとつずつではなく、下の「例」で大まかに決めます。';
+      '子が追加できる範囲です。プラグインは増えるため、下の「例」で大まかに指定します。';
 
   @override
   String get childSafeGuardianNamedSection => '名前で許しているプラグイン';
@@ -1062,7 +1057,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeGuardianSnsCaption =>
-      '子が使ってよい SNS の種類とサーバー(あなたのバンドルから)。サーバーを選ばなければ、その種類ならどこでも。保護者の SNS のログインは貸しません。';
+      '子が使える SNS とサーバー(未指定ならその SNS 全般を許可)。保護者のログイン情報は共有しません。';
 
   @override
   String get childSafeGuardianSnsAdd => '子が SNS アカウントを足せる';
@@ -1085,7 +1080,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeGuardianTimeLegacyNote =>
-      'いまの設定は、以前の形の「その間は何も流さない」です。この形は新しく保存できないので、流す話題を入れるか、ブラックリストにしてから保存してください。';
+      '旧設定「その間は何も流さない」のままです。新規保存できないため、許可する話題を入れるかブラックリストに切り替えて保存してください。';
 
   @override
   String get childSafeGuardianTimeTopics => 'その間の話題';
@@ -1139,11 +1134,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeGuardianExamplesCaptionPlugins =>
-      '「こういうプラグインは許す / 止める」を例で選びます。子の端末は、プラグインの名前・説明が例に近いかで決めます。止める例に近いものは「自由」でも使えません。「例に近いもの」にすると、名前で許したものと、許す例に近いものを使えます。';
+      '許す / 止めるプラグインを例で選びます。名前や説明が例に近いかで判定し、止める例に近いものは「自由」でも使えません。「例に近いもの」では個別許可と許す例に近いものだけ使えます。';
 
   @override
   String get childSafeGuardianExamplesCaptionTl =>
-      '「こういうものは許す / 止める」を、あなたの最近のアクション / クリップ / リストから選びます。子のクリップ / リストのうち、中身が止める例に近いものは、一覧にもタイムラインにも出ません。';
+      '許す / 止める基準を最近のアクション・クリップ・リストから選びます。止める例に近いものは一覧にも TL にも出ません。';
 
   @override
   String get childSafeGuardianPickPlugins => '例を選ぶ(プラグイン / ストア)';
@@ -1174,11 +1169,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeGuardianPickIntroPlugins =>
-      '中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、新しいプラグインを例との近さで分けます。';
+      '「許す例」「止める例」を選びます(左右スワイプ可)。新しいプラグインは例との近さで判定されます。';
 
   @override
   String get childSafeGuardianPickIntroTl =>
-      '中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、クリップ / リストを例との近さで分けます。';
+      '「許す例」「止める例」を選びます(左右スワイプ可)。クリップやリストは例との近さで判定されます。';
 
   @override
   String get childSafeScreensBadge => '見守り中';
@@ -1401,7 +1396,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String childSafeScreensFromLink(String action) {
-    return 'リンク(QR)からコードを入れました。自分の保護者から受け取ったものか確かめてから「$action」を押してください。知らない人のリンクなら、押さずに閉じてください。';
+    return 'リンク(QR)からコードを読み込みました。保護者からのものか確認して「$action」を押してください(不審なリンクは閉じてください)。';
   }
 
   @override
@@ -1409,14 +1404,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeScreensPairNotLoggedIn =>
-      'RASQ アカウントにログインしていません。保護者が作ったアカウントなら、保護者からのコードでログインします。';
+      'RASQ アカウントに未ログインです。保護者作成のアカウントは受け取ったコードでログインしてください。';
 
   @override
   String get childSafeScreensPairExistingLogin => '既存の RASQ アカウントにログイン';
 
   @override
   String childSafeScreensPairIntro(String handle) {
-    return '@$handle を保護者の見守りにつなぎます。保護者の画面に出ているコード(8 字)を入れてください。つないだら、保護者が設定を決めるまで使えません。';
+    return '@$handle を保護者の見守りに連携します。8 文字コードを入力してください(設定完了まで利用不可)。';
   }
 
   @override
@@ -1452,7 +1447,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get childSafeScreensLoginIntro =>
-      '保護者がアプリで子のアカウントを作ると、1 度だけ使えるコードが出ます。そのコードを入れると、この端末がそのアカウントになります。この端末の SNS アカウントは引き継ぎません。';
+      '保護者から受け取った 1 回限りのコードでログインできます(この端末の SNS アカウントは引き継ぎません)。';
 
   @override
   String get childSafeScreensLoginCodeHint => 'ログインのコード';
@@ -2014,6 +2009,183 @@ class AppLocalizationsJa extends AppLocalizations {
   String collectionsAlreadyIn(String name) {
     return 'すでに「$name」に入っています';
   }
+
+  @override
+  String get communityTagTitle => 'コミュニティのハッシュタグ';
+
+  @override
+  String get communityTagRowSubtitle => '自分のコミュニティのタグにテーマを付ける';
+
+  @override
+  String get communityTagPageCaption => 'コミュニティのテーマ';
+
+  @override
+  String get communityTagIntro =>
+      '自分のコミュニティのハッシュタグにテーマを付けられます。タグのページを開いた人に、そのページだけテーマで表示されます。';
+
+  @override
+  String get communityTagRequirements => '申請の条件';
+
+  @override
+  String get communityTagReqSubscription => 'サブスクに入っている';
+
+  @override
+  String get communityTagSubscribed => '加入しています';
+
+  @override
+  String communityTagSubscribedPlan(String plan) {
+    return '加入しています($plan)';
+  }
+
+  @override
+  String get communityTagNotSubscribed => '加入していません';
+
+  @override
+  String get communityTagSeeSubscription => 'サブスクを見る';
+
+  @override
+  String get communityTagReqPromo => 'タグを宣伝した投稿';
+
+  @override
+  String get communityTagReqPromoHint => '自分の公開の投稿で、そのタグを含むものを 1 つ選んで添えます';
+
+  @override
+  String get communityTagMine => '自分の申請';
+
+  @override
+  String get communityTagNone => 'まだ申請していません';
+
+  @override
+  String get communityTagApply => '申請する';
+
+  @override
+  String get communityTagNeedSubscription => '申請するにはサブスクへの加入が必要です';
+
+  @override
+  String communityTagLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '同時に申請できるタグは $count つまでです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get communityTagStatePending => '審査中';
+
+  @override
+  String get communityTagStateApproved => '配信中';
+
+  @override
+  String get communityTagStateRejected => '承認されませんでした';
+
+  @override
+  String get communityTagStateSuspended => '停止中';
+
+  @override
+  String get communityTagStateWithdrawn => '取り下げ済み';
+
+  @override
+  String get communityTagReasonPromoMissing => '宣伝の投稿が見つかりません';
+
+  @override
+  String get communityTagReasonTagTaken => 'このタグはほかのコミュニティが使っています';
+
+  @override
+  String get communityTagReasonSubscription => 'サブスクが有効ではありません';
+
+  @override
+  String get communityTagReasonTheme => 'テーマが基準に合いませんでした';
+
+  @override
+  String get communityTagReasonPolicy => 'ガイドラインに合いませんでした';
+
+  @override
+  String get communityTagWithdraw => '取り下げる';
+
+  @override
+  String communityTagWithdrawConfirmTitle(String tag) {
+    return '#$tag の申請を取り下げますか?';
+  }
+
+  @override
+  String get communityTagWithdrawConfirmMessage => '配信中のテーマも止まります';
+
+  @override
+  String get communityTagCancel => 'やめる';
+
+  @override
+  String get communityTagLoadFailed => '読み込めませんでした';
+
+  @override
+  String get communityTagUnavailable => 'この機能はいま使えません';
+
+  @override
+  String get communityTagSendFailed => '送れませんでした。時間をおいてもう一度お試しください';
+
+  @override
+  String get communityTagSent => '申請しました。結果はこの画面に出ます';
+
+  @override
+  String get communityTagApplyTitle => 'ハッシュタグのテーマを申請';
+
+  @override
+  String get communityTagStepTag => '1. ハッシュタグ';
+
+  @override
+  String get communityTagTagHint => 'コミュニティのタグ';
+
+  @override
+  String get communityTagTagInvalid => '空白や記号を含まない 64 字までのタグにしてください';
+
+  @override
+  String get communityTagStepTheme => '2. テーマ';
+
+  @override
+  String get communityTagPresetNight => '夜空';
+
+  @override
+  String get communityTagPresetSakura => '桜';
+
+  @override
+  String get communityTagPresetSea => '海';
+
+  @override
+  String get communityTagPresetRing => 'シンプル';
+
+  @override
+  String get communityTagAccent => '強調色';
+
+  @override
+  String get communityTagPreview => 'プレビュー';
+
+  @override
+  String get communityTagPreviewBody => 'タグのページの投稿は、このように表示されます。';
+
+  @override
+  String communityTagThemeNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '背景の飾りは $count つまで。テーマは審査のあとで配信されます',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get communityTagStepPromo => '3. 宣伝の投稿';
+
+  @override
+  String get communityTagFindPromo => '自分の投稿から探す';
+
+  @override
+  String communityTagNoPromo(String tag) {
+    return '#$tag を含む公開の投稿が見つかりません。先にタグを宣伝する投稿をしてください';
+  }
+
+  @override
+  String get communityTagSubmit => '申請する';
 
   @override
   String get composeTargetNormalTitle => 'ノートの作成';
@@ -2988,17 +3160,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String composePolicyBlockedMediaUnmeasured(String who) {
-    return '$whoにより、画像・動画は送れません(この端末では添付の確認ができません)。添付を外してください';
+    return '$whoにより画像・動画は送れません(添付を確認できません)。添付を外してください';
   }
 
   @override
   String composePolicyBlockedUnmeasured(String who, String label) {
-    return '$whoにより、いまは送れません(この端末では「$label」の確認ができません)';
+    return '$whoにより送信できません(「$label」を確認できません)';
   }
 
   @override
   String composePolicyBlocked(String who, String label) {
-    return '$whoにより、「$label」に当たる内容は送れません。書き換えてください';
+    return '$whoにより、「$label」に該当する内容は送れません';
   }
 
   @override
@@ -3112,7 +3284,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get customInviteErrorVersionNotAvailable =>
-      'このプラグインは、つないでいる RASQ サーバーのストアで配られていません(審査を通った版がありません)。アプリに入っているサンプルのままでは、みんなで使えません';
+      '接続中のストアに審査済みの版がないため、同梱サンプルのままでは共有できません';
 
   @override
   String get customInviteErrorNotShared => 'みんなで使うプラグインではありません';
@@ -3436,7 +3608,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String customAstellApproveMessage(String name) {
-    return '$name さんからの提案です。承認すると、参加している全員が開けるようになります(インストールしていない人は、開くときに一時的に読み込みます)。';
+    return '$name さんからの提案です。承認すると全員が開けます(未導入の人は一時読み込みします)。';
   }
 
   @override
@@ -3576,7 +3748,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get devOpenedFromLink =>
-      'リンクから開きました。出どころを確かめてから「URL から読む」を押してください(審査中の版は制限モードで動きます)。';
+      'リンクから開きました。提供元を確認して「URL から読む」を押してください(審査中の版は制限モードで動作)。';
 
   @override
   String devParentInstalled(String id, String version) {
@@ -3745,7 +3917,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String homeFabEditorHelp(int count, int max) {
-    return '下のボタンを枠へドラッグすると入ります(枠どうしは入れ替え、下の列へ戻すと外れます)。内側に 3 つ、外側に 4 つまで ・ $count / $max';
+    return '下のボタンを枠へドラッグで配置(枠内は入替、下へ戻すと解除)。内側 3 つ・外側 4 つまで ・ $count / $max';
   }
 
   @override
@@ -4801,7 +4973,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'RASQ リストは「取り込む」でホームのタイムラインへ(リストをフォローします)。取り込めるのは、リスト内の人の情報を取れるリストだけです。';
 
   @override
-  String get listsImportGenericHelp => 'リストを検索して一括操作を行うことができます。';
+  String get listsImportGenericHelp => 'リストを検索して一括操作できます。';
 
   @override
   String get listsImportLocal => 'ローカルからインポート';
@@ -4972,8 +5144,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loginTitle => 'SNSにログイン';
 
   @override
-  String get loginPluginLoadNote =>
-      '初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。';
+  String get loginPluginLoadNote => '初回ログイン前にプラグインを読み込みます。通信環境の良い場所で行ってください。';
 
   @override
   String get loginChildSafeBlocked => '保護者が SNS アカウントの追加を止めています';
@@ -5005,12 +5176,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String loginShareMailSent(String to) {
-    return '$to に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください';
+    return '$to に承認リンクを送りました(30 分有効)。ブラウザで開き、RASQ アカウントでログインして承認してください';
   }
 
   @override
   String get loginShareMailSentVerified =>
-      '確認済みのメールアドレス に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください';
+      '確認済みのメールアドレスに承認リンクを送りました(30 分有効)。ブラウザで開き、RASQ アカウントでログインして承認してください';
 
   @override
   String get loginShareMailNoVerified =>
@@ -5029,13 +5200,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get loginShareWaiting =>
-      '元の端末で共有を承認すると、SNS アカウントに一斉ログインします。確認済みのメールに届いたリンクからも承認できます';
+      '元の端末で共有を承認すると SNS に一斉ログインします。確認済みメールのリンクからも承認できます';
 
   @override
   String get loginShareMailButton => 'メールで承認する(リンクを送る)';
 
   @override
-  String get loginBundleTitleThis => 'この RASQ アカウント の SNS アカウント';
+  String get loginBundleTitleThis => 'この RASQ アカウントの SNS アカウント';
 
   @override
   String loginBundleTitle(String handle) {
@@ -5107,7 +5278,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get loginMixi2SignupHint =>
-      'mixi2 のアカウントは、ブラウザ(または mixi2 のアプリ)で作ります。作れたら、この画面に戻って「ブラウザで認証」でログインしてください。';
+      'ブラウザか公式アプリで mixi2 のアカウントを作成し、「ブラウザで認証」からログインしてください。';
 
   @override
   String get loginPluginMissingBluesky => 'Bluesky プラグインが見つかりません';
@@ -5129,14 +5300,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get loginBlueskyPasswordNote =>
-      'Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」で作ったパスワードを使ってください。本パスワードは入れないでください。';
+      'Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」で作成したパスワードを入力してください(本パスワード不可)。';
 
   @override
   String get loginButton => 'ログイン';
 
   @override
   String get loginBlueskySignupHint =>
-      'ブラウザの Bluesky で「アカウントを作成」から登録してください。登録できたら、Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」でパスワードを作り、上のハンドルとアプリパスワードでログインします。';
+      'Bluesky で登録後、「設定 → プライバシーとセキュリティ → アプリパスワード」で発行したパスワードとハンドルでログインしてください。';
 
   @override
   String get loginServerUnreachable => 'サーバーに接続できませんでした';
@@ -5457,8 +5628,7 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       frames,
       locale: localeName,
-      other:
-          '今の再生位置のフレーム。決定で動画を書き出し直します($frames フレーム)。ペイントやテキストなど、ここまでの編集は消えます。',
+      other: '決定で動画を書き出し直します($frames フレーム)。ここまでの編集は消えます。',
     );
     return '$_temp0';
   }
@@ -5468,8 +5638,7 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       frames,
       locale: localeName,
-      other:
-          '今の再生位置のフレーム。決定で動画を書き出し直します($frames フレーム、長いので ${fps}fps に下げます)。ペイントやテキストなど、ここまでの編集は消えます。',
+      other: '決定で動画を書き出し直します($frames フレーム、${fps}fps に調整)。ここまでの編集は消えます。',
     );
     return '$_temp0';
   }
@@ -7585,7 +7754,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String notificationsActionPollEnded(String names) {
-    return '$namesが投票が終了しました';
+    return '$namesの投票が終了しました';
   }
 
   @override
@@ -7688,7 +7857,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingAccountDescription =>
-      'RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。入れたプラグイン・設定・アカウントのまとまりを、ほかの端末でも使えます。';
+      'RASQ アカウントは複数の SNS を束ねる本体です。プラグインや設定を他の端末でも引き継げます。';
 
   @override
   String get onboardingHandleLabel => 'ユーザー名(@ のあとの名前)';
@@ -7758,7 +7927,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String onboardingChildSafeNote(String age) {
-    return '$ageの人は、保護者の同意が必要です。保護者の RASQ アカウントとつなぐと、保護者が使い方(見られる投稿の強さ・時間・使える機能)を決められます(設定 → チャイルドセーフ → チャイルドモード)。';
+    return '$ageは保護者の同意が必要です。連携すると保護者が利用範囲を設定できます(設定 → チャイルドセーフ → チャイルドモード)。';
   }
 
   @override
@@ -7805,7 +7974,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingSnsDescription =>
-      'RASQ アカウントができました。使っている SNS のアカウントでログインしてください。まだ SNS を使っていなければ、「SNS サービスを探す」から合うサーバーやリストを探せます。';
+      'RASQ アカウントを作成しました。お使いの SNS にログインしてください。未登録なら「SNS サービスを探す」から探せます。';
 
   @override
   String onboardingSnsLoginWith(String service) {
@@ -7814,7 +7983,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingSnsPluginLoadNote =>
-      '初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。';
+      '初回ログイン前にプラグインを読み込みます。通信環境の良い場所で行ってください。';
 
   @override
   String onboardingSignupGuideClosed(String name) {
@@ -7828,7 +7997,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingSignupGuideMastodonForm =>
-      '表示名・ユーザー名・メールアドレス・パスワードを入れます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。';
+      '表示名・ユーザー名・メール・パスワードを入力します。ユーザー名は後から変更できません。';
 
   @override
   String get onboardingSignupGuideMastodonMail =>
@@ -7840,8 +8009,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get onboardingSignupGuideForm =>
-      'ユーザー名とパスワードを決めます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。';
+  String get onboardingSignupGuideForm => 'ユーザー名とパスワードを決めます。ユーザー名は後から変更できません。';
 
   @override
   String get onboardingSignupGuideChecks =>
@@ -7852,8 +8020,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'サーバーのルール(利用規約)を読んで同意します。メールの確認を求められたら、届いたメールのリンクを開いてください。';
 
   @override
-  String get onboardingSignupGuideDone =>
-      '登録が終わったら、下の「登録できた」を押してください。RASQ からこのサーバーにログインします。';
+  String get onboardingSignupGuideDone => '登録後、下の「登録できた」を押すとログインします。';
 
   @override
   String get onboardingSignupGuideThenPost => 'ログインできたら、さっきの投稿を開きます。';
@@ -7889,7 +8056,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingSignupNoWebView =>
-      'この端末では、アプリの中で登録ページを開けません。ブラウザで開いて登録し、終わったらこの画面に戻ってください。';
+      'アプリ内で登録ページを開けません。ブラウザで登録してから戻ってください。';
 
   @override
   String get onboardingSignupOpenBrowser => 'ブラウザで登録ページを開く';
@@ -7945,11 +8112,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingEntryCreateBody =>
-      'RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。作成すると、導入したプラグイン・設定・アカウントの束ね方が RASQ Central に保存され、別の端末からも同じ状態で使えます。';
+      'RASQ アカウントは複数の SNS を束ねる本体です。プラグイン・設定・アカウント構成を RASQ Central に保存し、他端末でも同じ状態で使えます。';
 
   @override
   String get onboardingEntryWebNote =>
-      'Web 版では、SNS のログイン情報を RASQ のサーバーの保管庫に預けます(サーバーの鍵で暗号化し、RASQ のサーバーは復号できます)。SNS だけで使うこともできますが、そのときはこのタブを閉じるとログインが消えます。';
+      'Web 版では SNS のログイン情報を RASQ サーバーに暗号化保存します(サーバー側で復号可)。SNS のみでも使えますが、タブを閉じるとログインが消えます。';
 
   @override
   String get onboardingEntrySnsOnlyNote =>
@@ -8044,9 +8211,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get onboardingPasswordTooLong => '256 文字までです';
 
   @override
-  String get onboardingPasswordRepeated => '同じ字の繰り返しは使えません';
-
-  @override
   String get onboardingTermsOutdated =>
       '利用規約が新しくなっています。アプリを更新してから、もう一度登録してください';
 
@@ -8079,7 +8243,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingNudgeMessage =>
-      'RASQ アカウントがあると、入れたプラグインや設定・SNS のアカウントのまとまりを、ほかの端末でも使えます。Swing や RASQ リストも RASQ アカウントから使います。あとからサイドバーの … でも作れます。';
+      'RASQ アカウントがあると、プラグイン・設定・SNS のまとまりを他端末でも使え、Swing や RASQ リストも利用できます(サイドバーの … からも作成可)。';
 
   @override
   String get onboardingNudgeCreate => '作る';
@@ -8114,7 +8278,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingInviteCaption =>
-      '招待コードをお持ちなら入れてください。無くても作れます。審査があるときは、通るまで公開の機能が使えません(自分の SNS はそのまま使えます)';
+      '招待コードがあれば入力してください(なくても作成可)。審査中は公開機能のみ制限されます。';
 
   @override
   String get onboardingInviteLabel => '招待コード';
@@ -8219,7 +8383,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingDiscoverGlimpseStoppedSystem =>
-      '画面の読み取りが止められました(端末の「共有を停止」や画面のロック)。もう一度「いつものブラウザで見て探す」から始めてください';
+      '画面の読み取りが中断されました。「いつものブラウザで見て探す」からやり直してください';
 
   @override
   String get onboardingDiscoverGlimpseStoppedShort =>
@@ -8242,15 +8406,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingDiscoverGlimpseBroadcastDenied =>
-      '画面の配信が始まりませんでした。読み取るには、もう一度押して「ブロードキャストを開始」を選んでください(読み取るのは配信を止める直前の 3 秒だけです)';
+      '画面配信を開始できませんでした。もう一度押し「ブロードキャストを開始」を選んでください(停止直前の 3 秒のみ読み取ります)';
 
   @override
   String get onboardingDiscoverGlimpseDenied =>
-      '画面の読み取りが許可されませんでした。読み取るには、もう一度押して「開始」を選んでください(読み取るのはボタンを押したあとの 3 秒だけです)';
+      '画面の読み取りが許可されませんでした。もう一度押し「開始」を選んでください(押下後の 3 秒のみ読み取ります)';
 
   @override
   String get onboardingDiscoverGlimpseNotificationsDenied =>
-      '通知を出せませんでした。読み取りのボタンは通知に出るので、端末の設定で RASQ の通知を許可してください';
+      '通知を出せませんでした。端末の設定で RASQ の通知を許可してください';
 
   @override
   String get onboardingDiscoverGlimpseUnavailable =>
@@ -8322,7 +8486,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingDiscoverContentIntro =>
-      '好きな画像を選んで、探したい部分を囲むと、探す言葉を RAi が作ります。画像はサーバーに保存しません(探し終えたら捨てます)。';
+      '画像を選んで探したい部分を囲むと、RAi が検索語を作ります。画像はサーバーに保存しません(探し終えたら破棄します)。';
 
   @override
   String onboardingDiscoverPicksCount(int count, int max) {
@@ -8539,11 +8703,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingDiscoverGlimpseArmedBroadcast =>
-      '画面の配信を始めました。ブラウザで探したい画面を開いたら、画面上部の赤い表示(またはコントロールセンター)から配信を止めてください。止める直前の 3 秒だけを読み取り、RASQ に戻ると結果が出ます。';
+      '画面配信を開始しました。ブラウザで対象を開いたあと、画面上部の赤い表示などから配信を止めてください。直前 3 秒を読み取り、RASQ に戻ると結果が出ます。';
 
   @override
   String get onboardingDiscoverGlimpseArmedNotification =>
-      '通知を出しました。ブラウザで探したい画面を開いてから、通知をタップしてください。タップすると、その画面を 3 秒だけ読み取ります。';
+      '通知を出しました。ブラウザで対象を開いて通知をタップすると、その画面を 3 秒だけ読み取ります。';
 
   @override
   String get onboardingDiscoverGlimpseNotificationTitle => 'RASQ で探す';
@@ -8941,7 +9105,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingTourPageTrendBody =>
-      'いま話題の言葉と投稿を、トレンドと Today で見られます。はじめは恐れ・嫌悪・怒りを 45% までに抑えているので、強い怒りや嫌悪の投稿は、おすすめ / トレンド / Today / 関連 TL で下がるか、出なくなります。';
+      '話題の言葉と投稿をトレンドや Today で見られます。初期設定では恐れ・嫌悪・怒りを 45% 以下に抑え、刺激の強い投稿を控えめに表示します。';
 
   @override
   String get onboardingTourPageTrendNoteSupervised =>
@@ -9720,7 +9884,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pluginsPaintNibMili => 'ミリペン';
 
   @override
-  String get pluginsPaintNibKabura => 'カプラペン';
+  String get pluginsPaintNibKabura => 'カブラペン';
 
   @override
   String get pluginsPaintNibBrush => 'ブラシニブ';
@@ -10192,7 +10356,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String profileEditSnsPostsBlueskyConsentMessage(String account) {
-    return '$account の投稿を、RASQ のサーバーが Bluesky の公開の API から読み、**RASQ のアカウントページで誰でも見られる状態**にします。\n\n・Bluesky の投稿は、もともと誰でも読めます。返信とリポストは取り込みません。\n・**ログインの鍵(アプリパスワード / セッション)は預けません**。サーバーに渡すのは、このアカウントの DID とハンドルだけです。\n・使えるのは、持ち主の確認が済んだアカウントだけです(他人のアカウントの投稿を出せないように)。\n・このスイッチを切ると、取ってきた投稿は、すぐに消えます。';
+    return '$account の投稿を Bluesky の公開 API から取得し、**RASQ のアカウントページで誰でも見られる状態**にします。\n\n・返信とリポストは取り込みません。\n・**ログインの鍵(アプリパスワード等)は預けません**。サーバーに渡すのは DID とハンドルのみです。\n・持ち主確認済みのアカウントのみ利用できます。\n・スイッチを切ると、取得した投稿はすぐ削除されます。';
   }
 
   @override
@@ -10206,7 +10370,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String profileEditSnsPostsTokenConsentMessage(String account) {
-    return '$account の投稿をアカウントページに出すために、この SNS の**ログインの鍵(アクセストークン)を RASQ のサーバーに預けます**。\n\n・あなたの「公開」と「ホーム(未収載)」の投稿が、**RASQ のアカウントページで誰でも見られる状態**になります。「ホーム」はフォロワー限定ではありません。\n・フォロワー限定 / 指名・DM / ローカルのみ / 公開範囲が分からない投稿は、取り込みません。\n・鍵は、あなたの投稿を読むためだけに使います。投稿・フォローなどの操作や、ほかの目的には使いません。\n・鍵はサーバーの鍵で暗号化して保存します(RASQ のサーバーは復号できます)。アプリにも他の人にも返しません。\n・このスイッチを切ると、預けた鍵と取ってきた投稿は、すぐに消えます。\n\nこの鍵があれば、そのアカウントを操作できます。心配なときは、預けたあとでも SNS 側の設定からこの鍵(トークン)を無効にできます。';
+    return '$account の投稿を表示するため、この SNS の**アクセストークンを RASQ サーバーに預けます**。\n\n・「公開」と「ホーム(未収載)」の投稿が **RASQ のアカウントページで誰でも見られる状態**になります(「ホーム」もフォロワー限定ではありません。フォロワー限定・DM・ローカルのみ等は対象外)。\n・トークンは投稿の取得にのみ使い、投稿やフォロー等の操作には使いません。\n・トークンはサーバー側で暗号化して保存します(RASQ サーバーは復号できます)。外部へは返しません。\n・スイッチを切ると、トークンと取得済み投稿はすぐ削除されます。\n\n※アカウント操作権限が含まれるため、必要に応じて SNS 側の設定からいつでも無効化できます。';
   }
 
   @override
@@ -10281,7 +10445,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileEditSnsPostsCollectionsConsentMessage =>
-      '投稿の表示のために預けた鍵を、別の目的にも使います。\n\n・RASQ リストやクリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせます(見られるかの確認)。\n・リストの人の公開 / ホームの投稿を、この鍵で取りに行きます。\n・投稿・フォローなどの操作には使いません。\n・このスイッチを切ると、すぐに使わなくなります。';
+      '預けたアクセストークンを、以下の用途にも使います。\n\n・RASQ リストやクリップを開いた際のフォロー状況の確認\n・リスト内の人の公開・ホーム投稿の取得\n\n投稿やフォロー等の操作には使いません。スイッチを切るとすぐ停止します。';
 
   @override
   String get profileEditSnsPostsCollectionsAgree => '同意して使う';
@@ -10316,15 +10480,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileOwnershipErrorUnsupported => 'この SNS は、まだ持ち主の確認に対応していません';
 
   @override
-  String get profileOwnershipErrorTooMany => '試す回数が多すぎます。しばらく待ってから、もう一度お試しください';
+  String get profileOwnershipErrorTooMany => '試行回数が多すぎます。しばらくしてからお試しください';
 
   @override
   String get profileOwnershipErrorNotStarted =>
-      'まだ確認の文を作っていないか、期限が切れています。「確認の文を作る」からやり直してください';
+      '確認用の文が未作成か期限切れです。「確認の文を作る」からやり直してください';
 
   @override
   String get profileOwnershipErrorCodeNotFound =>
-      'プロフィールに確認の文が見つかりませんでした。保存したか、公開のプロフィールに出ているかを確かめてください(反映まで少しかかることがあります)';
+      'プロフィールに確認用の文が見つかりません。保存済みか公開設定を確かめてください(反映に少し時間がかかる場合があります)';
 
   @override
   String get profileOwnershipErrorProfileNotFound =>
@@ -10332,7 +10496,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileOwnershipErrorReadFailed =>
-      'その SNS のプロフィールを読めませんでした。少し待ってから、もう一度お試しください';
+      'プロフィールを読めませんでした。しばらくしてからお試しください';
 
   @override
   String profileOwnershipErrorFailed(String message) {
@@ -10345,7 +10509,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileOwnershipKeybaseErrorSignature =>
-      '署名を読めませんでした。BEGIN KEYBASE SALTPACK SIGNED MESSAGE から END KEYBASE SALTPACK SIGNED MESSAGE. までを、そのまま貼ってください';
+      '署名を読めませんでした。BEGIN KEYBASE SALTPACK SIGNED MESSAGE から END KEYBASE SALTPACK SIGNED MESSAGE. までをそのまま貼り付けてください';
 
   @override
   String get profileOwnershipKeybaseErrorStatement =>
@@ -10364,11 +10528,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileOwnershipKeybaseErrorExpired =>
-      '文の期限が切れたか、まだ作っていません。「署名する文を作る」からやり直してください';
+      '文の期限切れか未作成です。「署名する文を作る」からやり直してください';
 
   @override
   String get profileOwnershipKeybaseErrorUnreachable =>
-      'Keybase に繋がりませんでした。少し待ってから、もう一度お試しください';
+      'Keybase に接続できませんでした。しばらくしてからお試しください';
 
   @override
   String profileOwnershipKeybaseErrorFailed(String message) {
@@ -10986,7 +11150,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get quickPickSettingsCaption =>
-      'リアクションのボタンやコンポーザーの絵文字のボタンを長押しすると、ボタンにつながったパネルにここの絵文字と最近使った絵文字が並びます。指を離さずに滑らせて、離したところの絵文字を付けます(入れます)。滑らせずに離すと、パネルは開いたままでタップで選べます。';
+      'リアクションや絵文字ボタンを長押しすると、登録済みと最近使った絵文字が並びます。そのまま指を滑らせて離すと選択でき、動かさずに離すとパネルが開いたままタップで選べます。';
 
   @override
   String get quickPickSettingsAdd => '絵文字を追加';
@@ -11653,7 +11817,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String raiFunctionsActionNotAllowed(String label) {
-    return '「$label」は自動化が許可されていません(RAi からは実行しません)。代わりに案内(この手順で案内)で進めるか、ユーザーが押してください';
+    return '「$label」は自動化できないため RAi からは実行しません。「この手順で案内」を使うか、手動で操作してください';
   }
 
   @override
@@ -12439,7 +12603,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get raiModelsHintSystemPolicy =>
-      '「system policy」= サンドボックス / ライブラリ検証で拒否。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください';
+      '「system policy」はサンドボックス / ライブラリ検証による拒否です。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください';
 
   @override
   String get raiModelsHintGatekeeper =>
@@ -12546,11 +12710,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get regionUnavailableBody =>
-      'RASQ はいま、提供する地域を限っています。お住まいの地域では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。';
+      '現在、お住まいの地域では RASQ アカウントを作成できません(提供地域は今後変わる場合があります)。';
 
   @override
   String regionUnavailableBodyWith(String region) {
-    return 'RASQ はいま、提供する地域を限っています。$region では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。';
+    return '現在、$region では RASQ アカウントを作成できません(提供地域は今後変わる場合があります)。';
   }
 
   @override
@@ -12930,21 +13094,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String sessionShareAskFirstMessage(String devices) {
-    return '新しい端末($devices)で、この RASQ アカウント にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。';
+    return '新しい端末($devices)でこの RASQ アカウントにログインがありました。「はい」を選ぶと、SNS のアクセストークンを端末間で暗号化(E2E)して共有し、新しい端末も SNS にログインします。RASQ サーバーは中身を読めません。あとから「アカウントのセキュリティ」で変更できます。';
   }
 
   @override
   String sessionShareAskFirstMessageHandle(String devices, String handle) {
-    return '新しい端末($devices)で、RASQ アカウント @$handle にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。';
+    return '新しい端末($devices)で RASQ アカウント @$handle にログインがありました。「はい」を選ぶと、SNS のアクセストークンを端末間で暗号化(E2E)して共有し、新しい端末も SNS にログインします。RASQ サーバーは中身を読めません。あとから「アカウントのセキュリティ」で変更できます。';
   }
 
   @override
   String get sessionShareAskDeviceMessage =>
-      'この RASQ アカウント に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。';
+      'この RASQ アカウントに新しい端末からログインがありました。心当たりがなければ「いいえ」を選び、「アカウントのセキュリティ」でその端末をログアウトさせてください。';
 
   @override
   String sessionShareAskDeviceMessageHandle(String handle) {
-    return 'RASQ アカウント @$handle に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。';
+    return 'RASQ アカウント @$handle に新しい端末からログインがありました。心当たりがなければ「いいえ」を選び、「アカウントのセキュリティ」でその端末をログアウトさせてください。';
   }
 
   @override
@@ -12973,11 +13137,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get sessionShareKeyReplaced =>
-      '共有の鍵が差し替えられた可能性があるため、この端末での SNS のアクセストークンの共有を止めました。共有している端末で、共有をいったんオフにしてからオンにし直してください';
+      '共有鍵が変更された可能性があるため、トークン共有を停止しました。共有中の端末で共有をオフ→オンにし直してください';
 
   @override
   String get sessionShareBodyUnreadable =>
-      '共有されている SNS のアクセストークンをこの端末の鍵で開けないため、この端末での共有を止めました(確認が要ります)。共有している端末で、共有をいったんオフにしてからオンにし直してください';
+      '共有されたトークンを復号できないため、共有を停止しました。共有中の端末で共有をオフ→オンにし直してください';
 
   @override
   String get sessionLoginFailed => 'ログインに失敗しました';
@@ -12999,7 +13163,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get sessionSanctionCategoryAdmissionHelp =>
-      '登録の審査で通らなかったため、RASQ の公開の機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます';
+      '登録の審査で通らなかったため、RASQ の公開機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます';
 
   @override
   String get sessionSanctionNone => '制限なし';
@@ -13057,7 +13221,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sessionLogoutSnsLogoutSubtitle => 'この端末から SNS のログインを消します';
 
   @override
-  String get sessionLogoutSnsMoveToLocal => 'この端末のみ に移す';
+  String get sessionLogoutSnsMoveToLocal => '「この端末のみ」に移す';
 
   @override
   String get sessionLogoutSnsMoveToLocalSubtitle => '「この端末のみ」のアカウントで、そのまま使えます';
@@ -13092,7 +13256,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String sessionCarryMessage(String account) {
-    return '加えたアカウントは $account の SNS アカウントになり、ほかの端末や Web コンソールにも並びます。加えなかったアカウントは「この端末のみ」に残ります(あとからでも、$account で SNS にログインすれば加わります)。';
+    return '追加したアカウントは $account に紐づき、他端末や Web コンソールでも使えます。追加しないものは「この端末のみ」に残ります(後から追加も可)。';
   }
 
   @override
@@ -13548,7 +13712,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsEmomIntro =>
-      'EmoM は、投稿やトレンドの気持ちの強さ・刺激の強さを見積もる RASQ のモデルです(準備中)。いまはこの閾値を、RASQ の運営が通報を確かめてトレンドを制限するときの目安にだけ使います。';
+      'EmoM は投稿やトレンドの刺激の強さを見積もるモデルです(準備中)。現在この閾値は、運営がトレンドを制限する際の目安にのみ使います。';
 
   @override
   String get settingsEmomThresholdLabel => '閾値';
@@ -13561,7 +13725,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String settingsEmomExplanation(String defaultValue) {
-    return '閾値が高いほど、刺激の強い話題も受け入れる設定です。運営が制限したトレンドが隠れにくくなります。低いほど、制限されたトレンドを早めに隠します。既定は $defaultValue です。';
+    return '閾値が高いほど制限されたトレンドが隠れにくくなり、低いほど早めに隠れます(既定: $defaultValue)。';
   }
 
   @override
@@ -13569,11 +13733,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsEmomDiscloseSubtitle =>
-      '値だけを RASQ のサーバーに送ります。運営は、公開された値をまとめた分布(どの値の人が何人いるか)だけを使い、あなたの値を個別に見ることはありません。オフにすると、送った値を消します。';
+      '値のみをサーバーに送り、運営は全体の分布だけを参照します(個人の値は見ません)。オフにすると送信済みの値を削除します。';
 
   @override
   String get settingsEmomRestrictionExplanation =>
-      '運営がトレンドを「N%」で制限すると、公開された閾値の低いほうから N% ほどの人に、そのトレンドが出なくなります。公開していなくても、この端末の閾値で同じように判定します(閾値はこの端末に保存されます)。「全員に非表示」にされたトレンドは、閾値に関係なく出ません。隠れたトレンドは、検索のトレンドの一覧に並ばなくなるだけです。';
+      '運営がトレンドを「N%」で制限すると、閾値の低い N% 相当のユーザーに表示されなくなります(非公開でも端末の閾値で同様に判定。閾値はこの端末に保存)。「全員に非表示」は閾値に関係なく隠れます。';
 
   @override
   String get settingsHomeTitle => '全ての設定';
@@ -13700,7 +13864,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsInvitesCaption =>
-      'コードを渡された人は、RASQ アカウントを作るときに入れると審査に進めます。コードは出したときにだけ表示されるので、その場でコピーして渡してください';
+      '招待コードを受け取った人は、登録時に入力すると審査に進めます。コードは発行時のみ表示されるため、その場でコピーしてください';
 
   @override
   String settingsInvitesRemaining(int count) {
@@ -15707,7 +15871,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsSecurityPasswordNoneCaption =>
-      'パスワードが無いと、ほかの端末からはログインできません(この端末でだけ使えます)。付けると、別の端末からハンドル(かメール)とパスワードで同じアカウントに入れます。';
+      'パスワード未設定だと他端末からログインできません。設定すると別の端末からも入れます。';
 
   @override
   String get settingsSecurityPasswordNewHint => '新しいパスワード(8 文字以上)';
@@ -15898,7 +16062,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsSecurityLoginFailedHelp =>
-      'ハンドル(メール)かパスワードが違います。\nパスワードを設定していない RASQ アカウントには、ほかの端末からはログインできません。そのアカウントを作った端末(いまもログインしている端末)で「設定 → アカウントのセキュリティ」からパスワードを設定してから、もう一度ログインしてください。';
+      'ハンドル(メール)またはパスワードが違います。\nパスワード未設定のアカウントは他端末からログインできません。元の端末の「設定 → アカウントのセキュリティ」でパスワードを設定してからお試しください。';
 
   @override
   String get settingsSecurityServerNotConfiguredError => 'RASQ サーバーの接続先が未設定です';
@@ -15943,7 +16107,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsSecurityLoginNoPasswordHint =>
-      'パスワードを設定していないアカウントは、ほかの端末からはログインできません(作った端末でだけ使えます)。その端末の「設定 → アカウントのセキュリティ」でパスワードを設定してください。';
+      'パスワード未設定のアカウントは他端末からログインできません。元の端末の「設定 → アカウントのセキュリティ」でパスワードを設定してください。';
 
   @override
   String get settingsSecurityLoginCodeHeader => '確認コード';
@@ -16015,7 +16179,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsSecurityResetCaption =>
-      '確認済みのメールアドレスへ確認コード(10 分有効、1 回きり)を送り、新しいパスワードを決めます。ほかの端末はすべてログアウトになります。';
+      '確認済みメールへ確認コード(10 分有効・1 回限り)を送り、パスワードを再設定します。他の端末はすべてログアウトされます。';
 
   @override
   String get settingsSecurityResetNoEmailWarning =>
@@ -16429,7 +16593,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get shellAccountDeleteMessage =>
-      'サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、ASTell のルームと共有、通知トークン、同意の記録を削除します。「アルゴリズムとコミュニティへの貢献」に同意していた場合は、提供の停止と提供済みデータの削除も同時に始まります。\n元に戻せません。各 SNS 上のアカウントと投稿は消えません。';
+      'サーバー上のプロフィール、アカウントバンドル、同期設定、レビュー・ブックマーク、ASTell のルームと共有、通知トークン、同意記録を削除します(学習データの提供に同意していた場合は提供停止と削除も同時に開始)。\n元に戻せません。各 SNS 上のアカウントと投稿は残ります。';
 
   @override
   String get shellAccountDeleteConfirmButton => '削除する';
@@ -17663,7 +17827,7 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count人が役に立ったと考えました。',
+      other: '$count人が参考になったと評価しました',
     );
     return '$_temp0';
   }
@@ -17727,7 +17891,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get storeReviewNeedsInstallServer =>
-      'インストールしたプラグインにだけレビューを書けます。ログインした状態でインストール(または更新)し直すと書けるようになります';
+      '導入済みのプラグインにのみレビューを書けます。ログイン状態で再インストール(または更新)してください';
 
   @override
   String get storeSafetyNoPermissions => '必要な権限: なし';
@@ -19241,7 +19405,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String trendExamplesIntro(String allowLabel, String denyLabel) {
-    return '中身を見て、下の「$allowLabel」/「$denyLabel」(右 / 左スワイプでも)で例にします。新しいものは、例との近さで分けます。';
+    return '内容を見て「$allowLabel」「$denyLabel」を選びます(左右スワイプ可)。新しい項目は例との近さで判定します。';
   }
 
   @override
@@ -19457,7 +19621,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get trendProfileEchoChamberWarning =>
-      'トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。';
+      'トレンドの指向性・刺激性を強くすると、エコーチェンバーに陥りやすくなります。';
 
   @override
   String get trendProfileStimulusEstimate => '刺激性は、いまは言葉の傾向から推定しています。';
@@ -19521,7 +19685,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get trendProfilePickIntro =>
-      '最近のアクションを話題ごとに出しています。カードを選んで「好き」/「好きではない」へ(右/左スワイプでも)。';
+      '最近のアクションを話題ごとに表示しています。カードを「好き」「好きではない」に振り分けてください(左右スワイプ可)。';
 
   @override
   String trendProfilePickIntroDetail(int perPage) {
@@ -20269,8 +20433,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vcKickedLocked => '運営により新しい入室が止められているため、このルームに入れません';
 
   @override
-  String get vcKickedUnavailable =>
-      '入室の条件を確かめられなかったため、ルームに入れませんでした。しばらくしてからもう一度お試しください';
+  String get vcKickedUnavailable => '入室条件を確認できないためルームに入れませんでした。しばらくしてからお試しください';
 
   @override
   String get vcClosedBeforeJoin => 'このルームは終了しています';
@@ -20576,7 +20739,8 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get vcRoomDeviceSettingsCaption => 'ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。';
+  String get vcRoomDeviceSettingsCaption =>
+      'ルームの設定は、参加後にルームの歯車から変更できます(オーナーのみ)。';
 
   @override
   String get vcRoomDeviceSettingsCaptionDetail =>

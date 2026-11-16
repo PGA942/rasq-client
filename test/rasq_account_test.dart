@@ -350,8 +350,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('RASQ アカウントを削除'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('「アルゴリズムとコミュニティへの貢献」に同意していた場合は'), findsOneWidget);
-    // SNS アカウントをどうするか (D-409): 既定は「SNS もログアウト」。ここでは「この端末のみ に移す」を選ぶ。
+    expect(find.textContaining('学習データの提供に同意していた場合は'), findsOneWidget);
+    // SNS アカウントをどうするか (D-409): 既定は「SNS もログアウト」。ここでは「「この端末のみ」に移す」を選ぶ。
     await tester.tap(find.byKey(const ValueKey('rasq.account.delete.sns.moveToLocal')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除する'));
@@ -403,7 +403,7 @@ void main() {
     await tester.tap(find.text('ログアウト'));
     await tester.pumpAndSettle();
     expect(find.text('SNS アカウントもログアウトする'), findsOneWidget);
-    expect(find.text('この端末のみ に移す'), findsOneWidget);
+    expect(find.text('「この端末のみ」に移す'), findsOneWidget);
     return (container: container, storage: storage);
   }
 
@@ -425,7 +425,7 @@ void main() {
     expect(find.byType(OnboardingScreen), findsOneWidget);
   });
 
-  testWidgets('RASQ アカウントからログアウト (D-409): 「この端末のみ に移す」なら SNS は「この端末のみ」へ。ほかの RASQ アカウントには入らない', (tester) async {
+  testWidgets('RASQ アカウントからログアウト (D-409): 「「この端末のみ」に移す」なら SNS は「この端末のみ」へ。ほかの RASQ アカウントには入らない', (tester) async {
     final (:container, :storage) = await pumpSignedIn(tester);
     await tester.tap(find.byKey(const ValueKey('rasq.account.logout.sns.moveToLocal')));
     await tester.pumpAndSettle();
@@ -605,7 +605,7 @@ void main() {
     await tester.tap(find.byTooltip('RASQ アカウント'));
     await tester.pumpAndSettle();
     expect(find.byKey(rasqSanctionBannerKey), findsOneWidget);
-    const help = '登録の審査で通らなかったため、RASQ の公開の機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます';
+    const help = '登録の審査で通らなかったため、RASQ の公開機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます';
     expect(find.text(help), findsOneWidget);
     expect(find.textContaining('admission'), findsNothing, reason: '分類はサーバーの語ではなく名前で');
     await tester.tap(find.textContaining('解除を申請(登録の審査'));

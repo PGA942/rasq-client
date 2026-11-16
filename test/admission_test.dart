@@ -25,7 +25,7 @@ import 'support/fakes.dart';
 /// D-548 (Central S-120 / ORGATE O-022 / Judge J-024): 入場の審査。審査待ちでも自分の SNS は使え、帯で案内する。
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  const pendingText = '審査中です。自分の SNS はこのまま使えます。公開の機能は審査が通ると使えます';
+  const pendingText = '審査中です。公開機能のみ制限中です。';
 
   http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
 
@@ -188,7 +188,7 @@ void main() {
         ..a.waitReason = 'capacity'
         ..a.position = 7;
       await pump(tester, f.mock);
-      expect(find.text('登録の枠が埋まっているため、順番を待っています(目安: 7 番目)'), findsOneWidget);
+      expect(find.text('登録枠が埋まっているため順番待ちです(目安: 7 番目)'), findsOneWidget);
       expect(find.text(pendingText), findsOneWidget);
       expect(find.byKey(const ValueKey('admission.code')), findsNothing);
     });
@@ -207,10 +207,10 @@ void main() {
       }
 
       for (final (code, text) in [
-        ('NOPE000000', 'この招待コードは見つかりません。入力を確かめてください'),
+        ('NOPE000000', '招待コードが見つかりません。'),
         ('OLD0000000', 'この招待コードは期限が切れています'),
-        ('FULL000000', 'この招待コードは使える人数に達しています'),
-        ('STOP000000', 'この招待コードは使えなくなっています'),
+        ('FULL000000', 'この招待コードは利用上限に達しています'),
+        ('STOP000000', 'この招待コードは無効です'),
       ]) {
         await submit(code);
         expect(find.text(text), findsOneWidget, reason: code);

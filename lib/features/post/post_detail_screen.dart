@@ -25,6 +25,9 @@ import 'reactions_screen.dart';
 import 'thread_section.dart';
 import 'thread_section_bar.dart';
 import '../ads/timeline_ads.dart';
+import '../theme/icon_theme/rasq_theme_spec.dart' show RasqThemeScope;
+import '../theme/tag_themes/atmos.dart';
+import '../theme/tag_themes/tag_themes.dart';
 
 /// スレッド展開画面: ancestors → 対象投稿 → 「∨ 返信 / リアクションを表示 >」→
 /// replies (thread line) → さらに表示 → 返信バー(コンポーザーは次段階).
@@ -271,7 +274,11 @@ class _ThreadBody extends ConsumerWidget {
     // notes/children は引用リノートも混ざって返る — 引用は「共有(引用
     // ノート)」欄で見るので、ここでは replyTo を持つものに絞る。
     final replies = sortThreadPosts([for (final d in descendants) if (d.replyToId != null || d.replyTo != null) d], order, post);
-    return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
+    // RASQ Atmos (D-584、既定は無効): スレッドの根(無ければ表示中の投稿)のハッシュタグに、スレッドだけのテーマが配られていれば、
+    // この画面の表示だけに付ける(ほかの画面・TL には付けない)。
+    final atmos = [ref.watchAtmos(ancestors.isEmpty ? post : ancestors.first), if (ancestors.isNotEmpty) ref.watchAtmos(post)].nonNulls.where((e) => e.thread).firstOrNull;
+    final list = ListView(padding: const EdgeInsets.only(bottom: 24), children: [
+      if (atmos != null) TagThemeBanner(entry: atmos, caption: context.l10n.atmosThreadCaption),
       // 1 つ前の投稿(ancestors)は省略タイル (D-069: ワイヤーフレーム p.5
       // 「1件の添付リンク」の形)でスレッド線を繋ぐ。タップでそのスレッドへ。
       for (final a in ancestors) ReplyParentRow(post: a),
@@ -302,6 +309,8 @@ class _ThreadBody extends ConsumerWidget {
       ] else
         _ModeSection(mode: mode, post: post, order: order, actions: actions),
     ]);
+    if (atmos == null) return list;
+    return TagThemeSurface(key: ValueKey('atmos.thread.${atmos.tag}'), spec: atmos.spec.copyWith(scope: RasqThemeScope.thread(post.key)), child: list);
   }
 }
 

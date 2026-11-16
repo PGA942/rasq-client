@@ -12,7 +12,6 @@
   "backendSecurityEmailUsed": "This email address is used by another account",
   "backendSecurityBadCredentials": "Incorrect handle (email) or password",
   "backendSecurityBadCode": "The code is wrong or has expired",
-  "backendSecurityWeakPassword": "This password is too weak (common passwords, repeated characters, or ones matching your handle or email can't be used)",
   "backendSecurityShortPassword": "Password must be at least 8 characters",
   "backendSecurityBadEmail": "Invalid email address format",
   "backendSecurityWrongPassword": "Your current password is incorrect",

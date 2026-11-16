@@ -106,13 +106,13 @@ abstract class AppLocalizations {
   /// 入場の審査を通っていないときの帯の文。止められた機能を使おうとしたとき(403 admission_pending)の案内にも使う
   ///
   /// In ja, this message translates to:
-  /// **'審査中です。自分の SNS はこのまま使えます。公開の機能は審査が通ると使えます'**
+  /// **'審査中です。公開機能のみ制限中です。'**
   String get admissionBannerText;
 
   /// 入場の審査で断られたアカウントが、止められた機能を使おうとしたときの案内
   ///
   /// In ja, this message translates to:
-  /// **'この RASQ アカウントの登録は承認されませんでした。公開の機能は使えません'**
+  /// **'登録が承認されませんでした。公開機能は使えません'**
   String get admissionRejectedMessage;
 
   /// ホームの審査の帯を閉じるボタン(この起動のあいだ)
@@ -124,13 +124,13 @@ abstract class AppLocalizations {
   /// 枠待ち(人数の枠が埋まっている)のときの帯の見出し
   ///
   /// In ja, this message translates to:
-  /// **'登録の枠が埋まっているため、順番を待っています'**
+  /// **'登録枠が埋まっているため順番待ちです'**
   String get admissionWaitCapacity;
 
   /// 枠待ちの帯の見出し。position は順番の目安
   ///
   /// In ja, this message translates to:
-  /// **'登録の枠が埋まっているため、順番を待っています(目安: {position} 番目)'**
+  /// **'登録枠が埋まっているため順番待ちです(目安: {position} 番目)'**
   String admissionWaitCapacityPosition(int position);
 
   /// 招待コード待ちのときの帯の見出し
@@ -160,7 +160,7 @@ abstract class AppLocalizations {
   /// 招待コードが効かない: 見つからない (reason = unknown)
   ///
   /// In ja, this message translates to:
-  /// **'この招待コードは見つかりません。入力を確かめてください'**
+  /// **'招待コードが見つかりません。'**
   String get admissionCodeUnknown;
 
   /// 招待コードが効かない: 期限切れ (reason = expired)
@@ -172,13 +172,13 @@ abstract class AppLocalizations {
   /// 招待コードが効かない: 使い切った (reason = used_up)
   ///
   /// In ja, this message translates to:
-  /// **'この招待コードは使える人数に達しています'**
+  /// **'この招待コードは利用上限に達しています'**
   String get admissionCodeUsedUp;
 
   /// 招待コードが効かない: 止められた (reason = revoked)
   ///
   /// In ja, this message translates to:
-  /// **'この招待コードは使えなくなっています'**
+  /// **'この招待コードは無効です'**
   String get admissionCodeRevoked;
 
   /// 招待コードを送れなかった(つながらない など)。error はサーバーの文
@@ -289,6 +289,12 @@ abstract class AppLocalizations {
   /// **'SNS アカウントにログインすると使えます'**
   String get appNavShortcutLoginHint;
 
+  /// RASQ Atmos のスレッドの上の帯の一言(広告であることを示す)
+  ///
+  /// In ja, this message translates to:
+  /// **'プロモーション · このスレッドだけのテーマ'**
+  String get atmosThreadCaption;
+
   /// SNS のブラウザでの認証のあと、アクセストークンが返らなかったときの誤り
   ///
   /// In ja, this message translates to:
@@ -322,7 +328,7 @@ abstract class AppLocalizations {
   /// RASQ アカウントのログイン: メールのコードだけのログインが廃止されたとき
   ///
   /// In ja, this message translates to:
-  /// **'メールのコードだけのログインは終わりました。ハンドル(またはメール)とパスワードでログインしてください'**
+  /// **'メールコードのみのログインは終了しました。ハンドル(またはメール)とパスワードでログインしてください'**
   String get backendSecurityPasswordlessRemoved;
 
   /// RASQ アカウントのログイン: 2 段階目の確認コードが要るとき
@@ -334,7 +340,7 @@ abstract class AppLocalizations {
   /// RASQ アカウントの操作: 試しすぎたとき
   ///
   /// In ja, this message translates to:
-  /// **'試行が多すぎます。しばらく待ってから、やり直してください'**
+  /// **'試行回数が多すぎます。しばらくしてからお試しください'**
   String get backendSecurityTooMany;
 
   /// RASQ アカウントの操作: サーバーがメールを送れないとき
@@ -361,12 +367,6 @@ abstract class AppLocalizations {
   /// **'コードが違うか、期限が切れています'**
   String get backendSecurityBadCode;
 
-  /// RASQ アカウントの操作: パスワードが弱いとき
-  ///
-  /// In ja, this message translates to:
-  /// **'このパスワードは弱すぎます(よく使われるもの / 同じ字の繰り返し / ハンドルやメールと同じもの は使えません)'**
-  String get backendSecurityWeakPassword;
-
   /// RASQ アカウントの操作: パスワードが短いとき
   ///
   /// In ja, this message translates to:
@@ -388,25 +388,25 @@ abstract class AppLocalizations {
   /// RASQ アカウントの操作: パスワードの無いアカウントで、パスワードでの確かめを求めたとき
   ///
   /// In ja, this message translates to:
-  /// **'このアカウントにはパスワードがありません。いまのメールに届く確認コードで確かめてください'**
+  /// **'パスワード未設定のアカウントです。メールに届く確認コードで認証してください'**
   String get backendSecurityNoPassword;
 
   /// RASQ アカウントの操作: 本人の確かめが要るとき
   ///
   /// In ja, this message translates to:
-  /// **'この操作には、いまのパスワードか、いまのメールに届く確認コードが要ります'**
+  /// **'現在のパスワードかメールの確認コードが必要です'**
   String get backendSecurityConfirmRequired;
 
   /// ASTell のルームにつなげなかったとき(ルームが無い)
   ///
   /// In ja, this message translates to:
-  /// **'ルームに入れませんでした(ルームが閉じているか、見つかりません)'**
+  /// **'ルームに入れません'**
   String get backendRoomClosed;
 
   /// ASTell のルームにつなげなかったとき(参加できない)
   ///
   /// In ja, this message translates to:
-  /// **'ルームに入れませんでした(このアカウントでは参加できません)'**
+  /// **'このアカウントではルームに参加できません'**
   String get backendRoomForbidden;
 
   /// ASTell のルームにつなげなかったとき。error は理由(秘密は伏せてある)
@@ -544,7 +544,7 @@ abstract class AppLocalizations {
   /// ブックマークが空で、いまの SNS にブックマークの機能が無いときの補足
   ///
   /// In ja, this message translates to:
-  /// **'このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます'**
+  /// **'このサービスにブックマークはありません。投稿の 🔖 長押しで RASQ クリップに追加できます'**
   String get bookmarksEmptyNoSnsHint;
 
   /// ブックマークの画面の節の見出し(自分のクリップ)
@@ -1006,13 +1006,13 @@ abstract class AppLocalizations {
   /// つなげないアカウント(サーバーの 409)
   ///
   /// In ja, this message translates to:
-  /// **'もう見守られている(か、だれかを見守っている)アカウントです'**
+  /// **'すでに見守られているか、見守り中のアカウントです'**
   String get childSafeErrorAlreadyLinked;
 
   /// コードが使えない(サーバーの 410)
   ///
   /// In ja, this message translates to:
-  /// **'コードの期限が切れたか、もう使われています。保護者に出し直してもらってください'**
+  /// **'コードが期限切れか使用済みです。保護者に再発行してもらってください'**
   String get childSafeErrorCodeGone;
 
   /// 子のログインを端末の理由で断られた
@@ -1024,7 +1024,7 @@ abstract class AppLocalizations {
   /// 試行の回数の上限(サーバーの 429)
   ///
   /// In ja, this message translates to:
-  /// **'試行が多すぎます。しばらく待ってから、やり直してください'**
+  /// **'試行回数が多すぎます。しばらくしてからお試しください'**
   String get childSafeErrorTooMany;
 
   /// RASQ サーバー(Central)の接続先が無いときの誤り
@@ -1180,13 +1180,13 @@ abstract class AppLocalizations {
   /// 投稿の話題のホワイトリストに当たらない。topics は話題(5 つまで)
   ///
   /// In ja, this message translates to:
-  /// **'保護者の設定により、決められた話題({topics})の投稿だけ送れます。話題に合うように書いてください'**
+  /// **'保護者の設定により、許可された話題({topics})のみ投稿できます'**
   String childSafeComposeTopicsOnly(String topics);
 
   /// 投稿の話題のブラックリストに当たった。topic は当たった話題
   ///
   /// In ja, this message translates to:
-  /// **'保護者の設定により、「{topic}」の話題の投稿は送れません。書き換えてください'**
+  /// **'保護者の設定により、「{topic}」の話題は投稿できません'**
   String childSafeComposeTopicDenied(String topic);
 
   /// 本文から引いた語
@@ -1198,7 +1198,7 @@ abstract class AppLocalizations {
   /// 強い言葉で止めた。level は判定の強さ、word は当たった語(「…」の形。無ければ空)
   ///
   /// In ja, this message translates to:
-  /// **'保護者の設定({level})により、この表現{word}は送れません。言い換えてください'**
+  /// **'保護者の設定({level})により、この表現{word}は使えません'**
   String childSafeComposeStimulus(String level, String word);
 
   /// No description provided for @childSafeBlockedThisPlugin.
@@ -1210,7 +1210,7 @@ abstract class AppLocalizations {
   /// どのプラグインか分からない読み込み方(素の .wasm など)で動かそうとした
   ///
   /// In ja, this message translates to:
-  /// **'保護者が選んだプラグインだけ動かせます(この読み込み方では、どのプラグインか確かめられません)'**
+  /// **'保護者が許可したプラグインのみ実行できます(この方法では特定できません)'**
   String get childSafeDevPreviewUnknown;
 
   /// No description provided for @childSafeBlockedInstall.
@@ -1240,13 +1240,13 @@ abstract class AppLocalizations {
   /// 端末に控えた保護者の設定の署名が合わない
   ///
   /// In ja, this message translates to:
-  /// **'控えた制限の署名を確かめられません。オンラインで取り直してください'**
+  /// **'制限の署名を検証できません。オンラインで再取得してください'**
   String get childSafeCacheUnverified;
 
   /// No description provided for @childSafeNewSettingsUnverified.
   ///
   /// In ja, this message translates to:
-  /// **'保護者の新しい設定の署名を確かめられませんでした(前の設定のまま)'**
+  /// **'新しい設定の署名を検証できませんでした(前の設定を維持)'**
   String get childSafeNewSettingsUnverified;
 
   /// No description provided for @childSafeComposeLocked.
@@ -1258,7 +1258,7 @@ abstract class AppLocalizations {
   /// 1 日に送れる投稿の数に達した。count はその数
   ///
   /// In ja, this message translates to:
-  /// **'{count, plural, other{今日はもう {count} 件送りました(保護者が決めた 1 日の数)。また明日}}'**
+  /// **'{count, plural, other{今日の投稿上限({count} 件)に達しました}}'**
   String childSafeComposeDailyLimit(int count);
 
   /// 送る前の加工(テキスト加工プラグイン)のあとの本文で止めた。message は止めた理由
@@ -1450,7 +1450,7 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeGuardianNewLoginCodeTitle.
   ///
   /// In ja, this message translates to:
-  /// **'@{handle} のログインのコード(子の端末の「保護者からのコードでログイン」に入れるか、子の端末のカメラで QR を読む)'**
+  /// **'@{handle} のログインコード(子の端末で入力するか QR を読み取ります)'**
   String childSafeGuardianNewLoginCodeTitle(String handle);
 
   /// No description provided for @childSafeGuardianPair.
@@ -1462,19 +1462,19 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeGuardianPairSubtitle.
   ///
   /// In ja, this message translates to:
-  /// **'子がもう持っている RASQ アカウントを、子の端末の「チャイルドモード」でつなぎます(10 分・1 回だけ)'**
+  /// **'既存の RASQ アカウントを子の端末の「チャイルドモード」で連携(10 分・1 回限り)'**
   String get childSafeGuardianPairSubtitle;
 
   /// No description provided for @childSafeGuardianPairCodeTitle.
   ///
   /// In ja, this message translates to:
-  /// **'つなぐコード(子の端末の「チャイルドモード」に入れるか、子の端末のカメラで QR を読む)'**
+  /// **'連携コード(子の端末の「チャイルドモード」で入力するか QR を読み取ります)'**
   String get childSafeGuardianPairCodeTitle;
 
   /// time はコードの期限(月/日 時:分)
   ///
   /// In ja, this message translates to:
-  /// **'{time} まで。この画面を閉じると、もう出せません(出し直すと前のコードは使えなくなります)。'**
+  /// **'{time} まで有効。閉じると再表示できません(再発行で前のコードは無効)。'**
   String childSafeGuardianCodeExpires(String time);
 
   /// No description provided for @childSafeGuardianCodeQr.
@@ -1630,7 +1630,7 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeGuardianEndMessage.
   ///
   /// In ja, this message translates to:
-  /// **'@{handle} の制限をすべて外します。子の端末は、次につながったときに外れます。元に戻すには、もう一度つなぎます。'**
+  /// **'@{handle} の制限をすべて解除します(次回接続時に反映)。元に戻すには再連携が必要です。'**
   String childSafeGuardianEndMessage(String handle);
 
   /// No description provided for @childSafeGuardianEndMessageDetail.
@@ -1672,7 +1672,7 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeGuardianReissueSubtitle.
   ///
   /// In ja, this message translates to:
-  /// **'子の端末の「保護者からのコードでログイン」に入れるコード(10 分・1 回だけ。前のコードは使えなくなります)'**
+  /// **'子の端末で入力するログインコード(10 分・1 回限り。前のコードは無効)'**
   String get childSafeGuardianReissueSubtitle;
 
   /// No description provided for @childSafeGuardianLoginCodeTitle.
@@ -1696,7 +1696,7 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeGuardianPresetCaption.
   ///
   /// In ja, this message translates to:
-  /// **'強さを選ぶと、タイムラインと投稿の判定の強さがそろいます。右の丸いボタンで、{band} の既定やほかの子の設定を読み込めます。'**
+  /// **'強さを選ぶと TL と投稿の判定レベルがそろいます。右のボタンから {band} の既定値やほかの子の設定を読み込めます。'**
   String childSafeGuardianPresetCaption(String band);
 
   /// No description provided for @childSafeGuardianSummaryEmpty.
@@ -1708,7 +1708,7 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeGuardianSummaryCaption.
   ///
   /// In ja, this message translates to:
-  /// **'送った数 / 止めた数 / 止めた種類だけです(投稿の本文や話題は届きません。送る前の判定はお子さんの端末で行います)。'**
+  /// **'送信数・ブロック数・種別のみ届きます(本文や話題は送信せず、判定も子の端末内で行います)。'**
   String get childSafeGuardianSummaryCaption;
 
   /// 1 日の要約。trips は止めた種類ごとの数の注記(無ければ空)
@@ -1846,7 +1846,7 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeGuardianInstallCaption.
   ///
   /// In ja, this message translates to:
-  /// **'子が自分で入れられる範囲。プラグインは増えていくので、ひとつずつではなく、下の「例」で大まかに決めます。'**
+  /// **'子が追加できる範囲です。プラグインは増えるため、下の「例」で大まかに指定します。'**
   String get childSafeGuardianInstallCaption;
 
   /// No description provided for @childSafeGuardianNamedSection.
@@ -1894,7 +1894,7 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeGuardianSnsCaption.
   ///
   /// In ja, this message translates to:
-  /// **'子が使ってよい SNS の種類とサーバー(あなたのバンドルから)。サーバーを選ばなければ、その種類ならどこでも。保護者の SNS のログインは貸しません。'**
+  /// **'子が使える SNS とサーバー(未指定ならその SNS 全般を許可)。保護者のログイン情報は共有しません。'**
   String get childSafeGuardianSnsCaption;
 
   /// No description provided for @childSafeGuardianSnsAdd.
@@ -1936,7 +1936,7 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeGuardianTimeLegacyNote.
   ///
   /// In ja, this message translates to:
-  /// **'いまの設定は、以前の形の「その間は何も流さない」です。この形は新しく保存できないので、流す話題を入れるか、ブラックリストにしてから保存してください。'**
+  /// **'旧設定「その間は何も流さない」のままです。新規保存できないため、許可する話題を入れるかブラックリストに切り替えて保存してください。'**
   String get childSafeGuardianTimeLegacyNote;
 
   /// No description provided for @childSafeGuardianTimeTopics.
@@ -2038,13 +2038,13 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeGuardianExamplesCaptionPlugins.
   ///
   /// In ja, this message translates to:
-  /// **'「こういうプラグインは許す / 止める」を例で選びます。子の端末は、プラグインの名前・説明が例に近いかで決めます。止める例に近いものは「自由」でも使えません。「例に近いもの」にすると、名前で許したものと、許す例に近いものを使えます。'**
+  /// **'許す / 止めるプラグインを例で選びます。名前や説明が例に近いかで判定し、止める例に近いものは「自由」でも使えません。「例に近いもの」では個別許可と許す例に近いものだけ使えます。'**
   String get childSafeGuardianExamplesCaptionPlugins;
 
   /// No description provided for @childSafeGuardianExamplesCaptionTl.
   ///
   /// In ja, this message translates to:
-  /// **'「こういうものは許す / 止める」を、あなたの最近のアクション / クリップ / リストから選びます。子のクリップ / リストのうち、中身が止める例に近いものは、一覧にもタイムラインにも出ません。'**
+  /// **'許す / 止める基準を最近のアクション・クリップ・リストから選びます。止める例に近いものは一覧にも TL にも出ません。'**
   String get childSafeGuardianExamplesCaptionTl;
 
   /// No description provided for @childSafeGuardianPickPlugins.
@@ -2092,13 +2092,13 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeGuardianPickIntroPlugins.
   ///
   /// In ja, this message translates to:
-  /// **'中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、新しいプラグインを例との近さで分けます。'**
+  /// **'「許す例」「止める例」を選びます(左右スワイプ可)。新しいプラグインは例との近さで判定されます。'**
   String get childSafeGuardianPickIntroPlugins;
 
   /// No description provided for @childSafeGuardianPickIntroTl.
   ///
   /// In ja, this message translates to:
-  /// **'中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、クリップ / リストを例との近さで分けます。'**
+  /// **'「許す例」「止める例」を選びます(左右スワイプ可)。クリップやリストは例との近さで判定されます。'**
   String get childSafeGuardianPickIntroTl;
 
   /// 見守られているアカウントの印
@@ -2410,7 +2410,7 @@ abstract class AppLocalizations {
   /// リンクから開いたときの注意。action は押すボタンの名前
   ///
   /// In ja, this message translates to:
-  /// **'リンク(QR)からコードを入れました。自分の保護者から受け取ったものか確かめてから「{action}」を押してください。知らない人のリンクなら、押さずに閉じてください。'**
+  /// **'リンク(QR)からコードを読み込みました。保護者からのものか確認して「{action}」を押してください(不審なリンクは閉じてください)。'**
   String childSafeScreensFromLink(String action);
 
   /// No description provided for @childSafeScreensPaired.
@@ -2422,7 +2422,7 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeScreensPairNotLoggedIn.
   ///
   /// In ja, this message translates to:
-  /// **'RASQ アカウントにログインしていません。保護者が作ったアカウントなら、保護者からのコードでログインします。'**
+  /// **'RASQ アカウントに未ログインです。保護者作成のアカウントは受け取ったコードでログインしてください。'**
   String get childSafeScreensPairNotLoggedIn;
 
   /// No description provided for @childSafeScreensPairExistingLogin.
@@ -2434,7 +2434,7 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeScreensPairIntro.
   ///
   /// In ja, this message translates to:
-  /// **'@{handle} を保護者の見守りにつなぎます。保護者の画面に出ているコード(8 字)を入れてください。つないだら、保護者が設定を決めるまで使えません。'**
+  /// **'@{handle} を保護者の見守りに連携します。8 文字コードを入力してください(設定完了まで利用不可)。'**
   String childSafeScreensPairIntro(String handle);
 
   /// No description provided for @childSafeScreensPairIntroDetail.
@@ -2488,7 +2488,7 @@ abstract class AppLocalizations {
   /// No description provided for @childSafeScreensLoginIntro.
   ///
   /// In ja, this message translates to:
-  /// **'保護者がアプリで子のアカウントを作ると、1 度だけ使えるコードが出ます。そのコードを入れると、この端末がそのアカウントになります。この端末の SNS アカウントは引き継ぎません。'**
+  /// **'保護者から受け取った 1 回限りのコードでログインできます(この端末の SNS アカウントは引き継ぎません)。'**
   String get childSafeScreensLoginIntro;
 
   /// No description provided for @childSafeScreensLoginCodeHint.
@@ -3336,6 +3336,318 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'すでに「{name}」に入っています'**
   String collectionsAlreadyIn(String name);
+
+  /// 設定 → アプリの外観の行と画面の見出し(機能が有効なときだけ)
+  ///
+  /// In ja, this message translates to:
+  /// **'コミュニティのハッシュタグ'**
+  String get communityTagTitle;
+
+  /// 設定の行の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'自分のコミュニティのタグにテーマを付ける'**
+  String get communityTagRowSubtitle;
+
+  /// タグのページの上の帯の一言
+  ///
+  /// In ja, this message translates to:
+  /// **'コミュニティのテーマ'**
+  String get communityTagPageCaption;
+
+  /// 申請の画面の最初の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'自分のコミュニティのハッシュタグにテーマを付けられます。タグのページを開いた人に、そのページだけテーマで表示されます。'**
+  String get communityTagIntro;
+
+  /// 条件の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'申請の条件'**
+  String get communityTagRequirements;
+
+  /// 条件 1
+  ///
+  /// In ja, this message translates to:
+  /// **'サブスクに入っている'**
+  String get communityTagReqSubscription;
+
+  /// サブスクに入っているとき
+  ///
+  /// In ja, this message translates to:
+  /// **'加入しています'**
+  String get communityTagSubscribed;
+
+  /// サブスクに入っているとき。plan = プランの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'加入しています({plan})'**
+  String communityTagSubscribedPlan(String plan);
+
+  /// サブスクに入っていないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'加入していません'**
+  String get communityTagNotSubscribed;
+
+  /// サブスクの説明のページを開くボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'サブスクを見る'**
+  String get communityTagSeeSubscription;
+
+  /// 条件 2
+  ///
+  /// In ja, this message translates to:
+  /// **'タグを宣伝した投稿'**
+  String get communityTagReqPromo;
+
+  /// 条件 2 の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の公開の投稿で、そのタグを含むものを 1 つ選んで添えます'**
+  String get communityTagReqPromoHint;
+
+  /// 申請の一覧の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の申請'**
+  String get communityTagMine;
+
+  /// 申請が無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ申請していません'**
+  String get communityTagNone;
+
+  /// 申請の画面を開くボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'申請する'**
+  String get communityTagApply;
+
+  /// 申請できない理由(サブスク)
+  ///
+  /// In ja, this message translates to:
+  /// **'申請するにはサブスクへの加入が必要です'**
+  String get communityTagNeedSubscription;
+
+  /// 申請できない理由(数の上限)
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{同時に申請できるタグは {count} つまでです}}'**
+  String communityTagLimitReached(int count);
+
+  /// 申請の状態
+  ///
+  /// In ja, this message translates to:
+  /// **'審査中'**
+  String get communityTagStatePending;
+
+  /// 申請の状態: 通って配信している
+  ///
+  /// In ja, this message translates to:
+  /// **'配信中'**
+  String get communityTagStateApproved;
+
+  /// 申請の状態
+  ///
+  /// In ja, this message translates to:
+  /// **'承認されませんでした'**
+  String get communityTagStateRejected;
+
+  /// 申請の状態: サブスクが切れた / 投稿が消えたなどで止まっている
+  ///
+  /// In ja, this message translates to:
+  /// **'停止中'**
+  String get communityTagStateSuspended;
+
+  /// 申請の状態
+  ///
+  /// In ja, this message translates to:
+  /// **'取り下げ済み'**
+  String get communityTagStateWithdrawn;
+
+  /// サーバーの理由 promo_missing
+  ///
+  /// In ja, this message translates to:
+  /// **'宣伝の投稿が見つかりません'**
+  String get communityTagReasonPromoMissing;
+
+  /// サーバーの理由 tag_taken
+  ///
+  /// In ja, this message translates to:
+  /// **'このタグはほかのコミュニティが使っています'**
+  String get communityTagReasonTagTaken;
+
+  /// サーバーの理由 subscription_inactive
+  ///
+  /// In ja, this message translates to:
+  /// **'サブスクが有効ではありません'**
+  String get communityTagReasonSubscription;
+
+  /// サーバーの理由 theme_rejected
+  ///
+  /// In ja, this message translates to:
+  /// **'テーマが基準に合いませんでした'**
+  String get communityTagReasonTheme;
+
+  /// サーバーの理由 policy
+  ///
+  /// In ja, this message translates to:
+  /// **'ガイドラインに合いませんでした'**
+  String get communityTagReasonPolicy;
+
+  /// 申請を取り下げるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'取り下げる'**
+  String get communityTagWithdraw;
+
+  /// 取り下げの確認の見出し。tag = ハッシュタグ(# なし)
+  ///
+  /// In ja, this message translates to:
+  /// **'#{tag} の申請を取り下げますか?'**
+  String communityTagWithdrawConfirmTitle(String tag);
+
+  /// 取り下げの確認の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'配信中のテーマも止まります'**
+  String get communityTagWithdrawConfirmMessage;
+
+  /// 確認を閉じるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'やめる'**
+  String get communityTagCancel;
+
+  /// 状態を読めなかったとき
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした'**
+  String get communityTagLoadFailed;
+
+  /// 機能が無効 / サーバーが無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'この機能はいま使えません'**
+  String get communityTagUnavailable;
+
+  /// 申請 / 取り下げが失敗したとき
+  ///
+  /// In ja, this message translates to:
+  /// **'送れませんでした。時間をおいてもう一度お試しください'**
+  String get communityTagSendFailed;
+
+  /// 申請を送ったときの知らせ
+  ///
+  /// In ja, this message translates to:
+  /// **'申請しました。結果はこの画面に出ます'**
+  String get communityTagSent;
+
+  /// 申請の画面の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'ハッシュタグのテーマを申請'**
+  String get communityTagApplyTitle;
+
+  /// 段の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'1. ハッシュタグ'**
+  String get communityTagStepTag;
+
+  /// タグの入力欄
+  ///
+  /// In ja, this message translates to:
+  /// **'コミュニティのタグ'**
+  String get communityTagTagHint;
+
+  /// タグの形が違うとき
+  ///
+  /// In ja, this message translates to:
+  /// **'空白や記号を含まない 64 字までのタグにしてください'**
+  String get communityTagTagInvalid;
+
+  /// 段の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'2. テーマ'**
+  String get communityTagStepTheme;
+
+  /// テーマの見本の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'夜空'**
+  String get communityTagPresetNight;
+
+  /// テーマの見本の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'桜'**
+  String get communityTagPresetSakura;
+
+  /// テーマの見本の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'海'**
+  String get communityTagPresetSea;
+
+  /// テーマの見本の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'シンプル'**
+  String get communityTagPresetRing;
+
+  /// 強調色の見本の前のラベル
+  ///
+  /// In ja, this message translates to:
+  /// **'強調色'**
+  String get communityTagAccent;
+
+  /// プレビューの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'プレビュー'**
+  String get communityTagPreview;
+
+  /// プレビューの中の見本の文
+  ///
+  /// In ja, this message translates to:
+  /// **'タグのページの投稿は、このように表示されます。'**
+  String get communityTagPreviewBody;
+
+  /// テーマの段の注記。count = 枠の上限
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{背景の飾りは {count} つまで。テーマは審査のあとで配信されます}}'**
+  String communityTagThemeNote(int count);
+
+  /// 段の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'3. 宣伝の投稿'**
+  String get communityTagStepPromo;
+
+  /// 宣伝の投稿を探すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の投稿から探す'**
+  String get communityTagFindPromo;
+
+  /// 候補が無いとき。tag = ハッシュタグ(# なし)
+  ///
+  /// In ja, this message translates to:
+  /// **'#{tag} を含む公開の投稿が見つかりません。先にタグを宣伝する投稿をしてください'**
+  String communityTagNoPromo(String tag);
+
+  /// 申請を送るボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'申請する'**
+  String get communityTagSubmit;
 
   /// コンポーザーの題(新しい投稿)
   ///
@@ -5014,19 +5326,19 @@ abstract class AppLocalizations {
   /// who は「保護者の設定」/「アカウントの制限」
   ///
   /// In ja, this message translates to:
-  /// **'{who}により、画像・動画は送れません(この端末では添付の確認ができません)。添付を外してください'**
+  /// **'{who}により画像・動画は送れません(添付を確認できません)。添付を外してください'**
   String composePolicyBlockedMediaUnmeasured(String who);
 
   /// who は「保護者の設定」/「アカウントの制限」、label は種類の名前
   ///
   /// In ja, this message translates to:
-  /// **'{who}により、いまは送れません(この端末では「{label}」の確認ができません)'**
+  /// **'{who}により送信できません(「{label}」を確認できません)'**
   String composePolicyBlockedUnmeasured(String who, String label);
 
   /// who は「保護者の設定」/「アカウントの制限」、label は種類の名前
   ///
   /// In ja, this message translates to:
-  /// **'{who}により、「{label}」に当たる内容は送れません。書き換えてください'**
+  /// **'{who}により、「{label}」に該当する内容は送れません'**
   String composePolicyBlocked(String who, String label);
 
   /// who は「保護者の設定」/「アカウントの制限」、label は種類の名前
@@ -5182,7 +5494,7 @@ abstract class AppLocalizations {
   /// No description provided for @customInviteErrorVersionNotAvailable.
   ///
   /// In ja, this message translates to:
-  /// **'このプラグインは、つないでいる RASQ サーバーのストアで配られていません(審査を通った版がありません)。アプリに入っているサンプルのままでは、みんなで使えません'**
+  /// **'接続中のストアに審査済みの版がないため、同梱サンプルのままでは共有できません'**
   String get customInviteErrorVersionNotAvailable;
 
   /// No description provided for @customInviteErrorNotShared.
@@ -5740,7 +6052,7 @@ abstract class AppLocalizations {
   /// name は提案した人の表示名
   ///
   /// In ja, this message translates to:
-  /// **'{name} さんからの提案です。承認すると、参加している全員が開けるようになります(インストールしていない人は、開くときに一時的に読み込みます)。'**
+  /// **'{name} さんからの提案です。承認すると全員が開けます(未導入の人は一時読み込みします)。'**
   String customAstellApproveMessage(String name);
 
   /// No description provided for @customAstellApprove.
@@ -5949,7 +6261,7 @@ abstract class AppLocalizations {
   /// 試験の画面: 審査のリンクから開いたときの案内。「URL から読む」はボタンの名前(devUrlLoad)と揃える
   ///
   /// In ja, this message translates to:
-  /// **'リンクから開きました。出どころを確かめてから「URL から読む」を押してください(審査中の版は制限モードで動きます)。'**
+  /// **'リンクから開きました。提供元を確認して「URL から読む」を押してください(審査中の版は制限モードで動作)。'**
   String get devOpenedFromLink;
 
   /// 試験の画面: 読み込んだ配布物が要る親のプラグインの行(入っているとき)。id / version は親のプラグイン
@@ -6231,7 +6543,7 @@ abstract class AppLocalizations {
   /// count は置いている数、max は置ける数
   ///
   /// In ja, this message translates to:
-  /// **'下のボタンを枠へドラッグすると入ります(枠どうしは入れ替え、下の列へ戻すと外れます)。内側に 3 つ、外側に 4 つまで ・ {count} / {max}'**
+  /// **'下のボタンを枠へドラッグで配置(枠内は入替、下へ戻すと解除)。内側 3 つ・外側 4 つまで ・ {count} / {max}'**
   String homeFabEditorHelp(int count, int max);
 
   /// No description provided for @homeHeaderCollapse.
@@ -8084,7 +8396,7 @@ abstract class AppLocalizations {
   /// リストのインポートの画面の説明(フィードも RASQ リストも探せないとき)
   ///
   /// In ja, this message translates to:
-  /// **'リストを検索して一括操作を行うことができます。'**
+  /// **'リストを検索して一括操作できます。'**
   String get listsImportGenericHelp;
 
   /// リストのインポートの画面のリンクと、押すと出る知らせの見出し(ファイルから読み込む)
@@ -8330,7 +8642,7 @@ abstract class AppLocalizations {
   /// SNS にログインする画面の上の案内。初めてログインする前に、その SNS のプラグインを読み込む
   ///
   /// In ja, this message translates to:
-  /// **'初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。'**
+  /// **'初回ログイン前にプラグインを読み込みます。通信環境の良い場所で行ってください。'**
   String get loginPluginLoadNote;
 
   /// チャイルドセーフ: 保護者が SNS アカウントを足せないようにしているときの案内
@@ -8390,13 +8702,13 @@ abstract class AppLocalizations {
   /// 承認のリンクをメールで送ったときの知らせ。to は送り先のメールアドレス
   ///
   /// In ja, this message translates to:
-  /// **'{to} に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください'**
+  /// **'{to} に承認リンクを送りました(30 分有効)。ブラウザで開き、RASQ アカウントでログインして承認してください'**
   String loginShareMailSent(String to);
 
   /// 承認のリンクをメールで送ったときの知らせ(送り先のアドレスが分からないとき。「確認済みのメールアドレス」に送った)
   ///
   /// In ja, this message translates to:
-  /// **'確認済みのメールアドレス に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください'**
+  /// **'確認済みのメールアドレスに承認リンクを送りました(30 分有効)。ブラウザで開き、RASQ アカウントでログインして承認してください'**
   String get loginShareMailSentVerified;
 
   /// 承認のメールを送れない(確認済みのメールアドレスが無い)とき
@@ -8426,7 +8738,7 @@ abstract class AppLocalizations {
   /// 別の端末の承認を待っている間の案内
   ///
   /// In ja, this message translates to:
-  /// **'元の端末で共有を承認すると、SNS アカウントに一斉ログインします。確認済みのメールに届いたリンクからも承認できます'**
+  /// **'元の端末で共有を承認すると SNS に一斉ログインします。確認済みメールのリンクからも承認できます'**
   String get loginShareWaiting;
 
   /// 承認のリンクをメールで送るボタン
@@ -8438,7 +8750,7 @@ abstract class AppLocalizations {
   /// RASQ アカウントに結び付いた SNS アカウントのうち、この端末でまだ入っていないものの欄の見出し(RASQ アカウントのハンドルが無いとき)
   ///
   /// In ja, this message translates to:
-  /// **'この RASQ アカウント の SNS アカウント'**
+  /// **'この RASQ アカウントの SNS アカウント'**
   String get loginBundleTitleThis;
 
   /// RASQ アカウントに結び付いた SNS アカウントのうち、この端末でまだ入っていないものの欄の見出し。handle は RASQ アカウントのハンドル(@ は付けない)
@@ -8552,7 +8864,7 @@ abstract class AppLocalizations {
   /// mixi2 の登録ページを開いたあとの案内。「ブラウザで認証」はボタンの名前と揃える
   ///
   /// In ja, this message translates to:
-  /// **'mixi2 のアカウントは、ブラウザ(または mixi2 のアプリ)で作ります。作れたら、この画面に戻って「ブラウザで認証」でログインしてください。'**
+  /// **'ブラウザか公式アプリで mixi2 のアカウントを作成し、「ブラウザで認証」からログインしてください。'**
   String get loginMixi2SignupHint;
 
   /// Bluesky のプラグインが入っていないときの誤り
@@ -8594,7 +8906,7 @@ abstract class AppLocalizations {
   /// Bluesky のアプリパスワードの説明。「」の中は Bluesky の画面の名前(Bluesky のその言語の表記に合わせる)
   ///
   /// In ja, this message translates to:
-  /// **'Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」で作ったパスワードを使ってください。本パスワードは入れないでください。'**
+  /// **'Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」で作成したパスワードを入力してください(本パスワード不可)。'**
   String get loginBlueskyPasswordNote;
 
   /// ログインのボタン
@@ -8606,7 +8918,7 @@ abstract class AppLocalizations {
   /// Bluesky の登録ページを開いたあとの案内。「」の中は Bluesky の画面の名前
   ///
   /// In ja, this message translates to:
-  /// **'ブラウザの Bluesky で「アカウントを作成」から登録してください。登録できたら、Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」でパスワードを作り、上のハンドルとアプリパスワードでログインします。'**
+  /// **'Bluesky で登録後、「設定 → プライバシーとセキュリティ → アプリパスワード」で発行したパスワードとハンドルでログインしてください。'**
   String get loginBlueskySignupHint;
 
   /// サーバーを確かめられなかったときの誤り(理由が無いとき)
@@ -9164,13 +9476,13 @@ abstract class AppLocalizations {
   /// Visualizer の設定の窓の上の注意の詳しい説明(上のプレビューは今の再生位置のフレーム)。frames は書き出すフレームの数
   ///
   /// In ja, this message translates to:
-  /// **'{frames, plural, other{今の再生位置のフレーム。決定で動画を書き出し直します({frames} フレーム)。ペイントやテキストなど、ここまでの編集は消えます。}}'**
+  /// **'{frames, plural, other{決定で動画を書き出し直します({frames} フレーム)。ここまでの編集は消えます。}}'**
   String mediaVizRebuildDetail(int frames);
 
   /// mediaVizRebuildDetail と同じ説明で、音声が長いのでフレームレートを下げるとき。frames は書き出すフレームの数、fps は下げた後のフレームレート(小数 1 桁まで書式済み)
   ///
   /// In ja, this message translates to:
-  /// **'{frames, plural, other{今の再生位置のフレーム。決定で動画を書き出し直します({frames} フレーム、長いので {fps}fps に下げます)。ペイントやテキストなど、ここまでの編集は消えます。}}'**
+  /// **'{frames, plural, other{決定で動画を書き出し直します({frames} フレーム、{fps}fps に調整)。ここまでの編集は消えます。}}'**
   String mediaVizRebuildDetailReducedFps(int frames, String fps);
 
   /// Visualizer の設定の節の見出し。波形の形
@@ -12702,7 +13014,7 @@ abstract class AppLocalizations {
   /// 投票が締め切られた通知の文。names は投票を作った人などの呼び名(太字で出る。空のこともある)
   ///
   /// In ja, this message translates to:
-  /// **'{names}が投票が終了しました'**
+  /// **'{names}の投票が終了しました'**
   String notificationsActionPollEnded(String names);
 
   /// 種類の分からない通知の文。names は通知をした人の呼び名(太字で出る。空のこともある)
@@ -12882,7 +13194,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingAccountDescription.
   ///
   /// In ja, this message translates to:
-  /// **'RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。入れたプラグイン・設定・アカウントのまとまりを、ほかの端末でも使えます。'**
+  /// **'RASQ アカウントは複数の SNS を束ねる本体です。プラグインや設定を他の端末でも引き継げます。'**
   String get onboardingAccountDescription;
 
   /// No description provided for @onboardingHandleLabel.
@@ -13008,7 +13320,7 @@ abstract class AppLocalizations {
   /// age = 年齢の区分の名前(例: 13〜15 歳)
   ///
   /// In ja, this message translates to:
-  /// **'{age}の人は、保護者の同意が必要です。保護者の RASQ アカウントとつなぐと、保護者が使い方(見られる投稿の強さ・時間・使える機能)を決められます(設定 → チャイルドセーフ → チャイルドモード)。'**
+  /// **'{age}は保護者の同意が必要です。連携すると保護者が利用範囲を設定できます(設定 → チャイルドセーフ → チャイルドモード)。'**
   String onboardingChildSafeNote(String age);
 
   /// No description provided for @onboardingGuardianConsent.
@@ -13080,7 +13392,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingSnsDescription.
   ///
   /// In ja, this message translates to:
-  /// **'RASQ アカウントができました。使っている SNS のアカウントでログインしてください。まだ SNS を使っていなければ、「SNS サービスを探す」から合うサーバーやリストを探せます。'**
+  /// **'RASQ アカウントを作成しました。お使いの SNS にログインしてください。未登録なら「SNS サービスを探す」から探せます。'**
   String get onboardingSnsDescription;
 
   /// service = SNS の名前(Bluesky / Misskey / mixi2 / Mastodon)
@@ -13092,7 +13404,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingSnsPluginLoadNote.
   ///
   /// In ja, this message translates to:
-  /// **'初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。'**
+  /// **'初回ログイン前にプラグインを読み込みます。通信環境の良い場所で行ってください。'**
   String get onboardingSnsPluginLoadNote;
 
   /// RAi の登録の案内。name = サーバーの名前
@@ -13110,7 +13422,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingSignupGuideMastodonForm.
   ///
   /// In ja, this message translates to:
-  /// **'表示名・ユーザー名・メールアドレス・パスワードを入れます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。'**
+  /// **'表示名・ユーザー名・メール・パスワードを入力します。ユーザー名は後から変更できません。'**
   String get onboardingSignupGuideMastodonForm;
 
   /// No description provided for @onboardingSignupGuideMastodonMail.
@@ -13128,7 +13440,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingSignupGuideForm.
   ///
   /// In ja, this message translates to:
-  /// **'ユーザー名とパスワードを決めます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。'**
+  /// **'ユーザー名とパスワードを決めます。ユーザー名は後から変更できません。'**
   String get onboardingSignupGuideForm;
 
   /// No description provided for @onboardingSignupGuideChecks.
@@ -13146,7 +13458,7 @@ abstract class AppLocalizations {
   /// 最後の手順。このあとに onboardingSignupGuideThen… などの文が続けて並ぶ
   ///
   /// In ja, this message translates to:
-  /// **'登録が終わったら、下の「登録できた」を押してください。RASQ からこのサーバーにログインします。'**
+  /// **'登録後、下の「登録できた」を押すとログインします。'**
   String get onboardingSignupGuideDone;
 
   /// No description provided for @onboardingSignupGuideThenPost.
@@ -13206,7 +13518,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingSignupNoWebView.
   ///
   /// In ja, this message translates to:
-  /// **'この端末では、アプリの中で登録ページを開けません。ブラウザで開いて登録し、終わったらこの画面に戻ってください。'**
+  /// **'アプリ内で登録ページを開けません。ブラウザで登録してから戻ってください。'**
   String get onboardingSignupNoWebView;
 
   /// No description provided for @onboardingSignupOpenBrowser.
@@ -13302,13 +13614,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingEntryCreateBody.
   ///
   /// In ja, this message translates to:
-  /// **'RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。作成すると、導入したプラグイン・設定・アカウントの束ね方が RASQ Central に保存され、別の端末からも同じ状態で使えます。'**
+  /// **'RASQ アカウントは複数の SNS を束ねる本体です。プラグイン・設定・アカウント構成を RASQ Central に保存し、他端末でも同じ状態で使えます。'**
   String get onboardingEntryCreateBody;
 
   /// No description provided for @onboardingEntryWebNote.
   ///
   /// In ja, this message translates to:
-  /// **'Web 版では、SNS のログイン情報を RASQ のサーバーの保管庫に預けます(サーバーの鍵で暗号化し、RASQ のサーバーは復号できます)。SNS だけで使うこともできますが、そのときはこのタブを閉じるとログインが消えます。'**
+  /// **'Web 版では SNS のログイン情報を RASQ サーバーに暗号化保存します(サーバー側で復号可)。SNS のみでも使えますが、タブを閉じるとログインが消えます。'**
   String get onboardingEntryWebNote;
 
   /// No description provided for @onboardingEntrySnsOnlyNote.
@@ -13467,12 +13779,6 @@ abstract class AppLocalizations {
   /// **'256 文字までです'**
   String get onboardingPasswordTooLong;
 
-  /// No description provided for @onboardingPasswordRepeated.
-  ///
-  /// In ja, this message translates to:
-  /// **'同じ字の繰り返しは使えません'**
-  String get onboardingPasswordRepeated;
-
   /// No description provided for @onboardingTermsOutdated.
   ///
   /// In ja, this message translates to:
@@ -13524,7 +13830,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingNudgeMessage.
   ///
   /// In ja, this message translates to:
-  /// **'RASQ アカウントがあると、入れたプラグインや設定・SNS のアカウントのまとまりを、ほかの端末でも使えます。Swing や RASQ リストも RASQ アカウントから使います。あとからサイドバーの … でも作れます。'**
+  /// **'RASQ アカウントがあると、プラグイン・設定・SNS のまとまりを他端末でも使え、Swing や RASQ リストも利用できます(サイドバーの … からも作成可)。'**
   String get onboardingNudgeMessage;
 
   /// No description provided for @onboardingNudgeCreate.
@@ -13584,7 +13890,7 @@ abstract class AppLocalizations {
   /// ① の招待コードの説明
   ///
   /// In ja, this message translates to:
-  /// **'招待コードをお持ちなら入れてください。無くても作れます。審査があるときは、通るまで公開の機能が使えません(自分の SNS はそのまま使えます)'**
+  /// **'招待コードがあれば入力してください(なくても作成可)。審査中は公開機能のみ制限されます。'**
   String get onboardingInviteCaption;
 
   /// ① の招待コードの欄
@@ -13758,7 +14064,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingDiscoverGlimpseStoppedSystem.
   ///
   /// In ja, this message translates to:
-  /// **'画面の読み取りが止められました(端末の「共有を停止」や画面のロック)。もう一度「いつものブラウザで見て探す」から始めてください'**
+  /// **'画面の読み取りが中断されました。「いつものブラウザで見て探す」からやり直してください'**
   String get onboardingDiscoverGlimpseStoppedSystem;
 
   /// No description provided for @onboardingDiscoverGlimpseStoppedShort.
@@ -13794,19 +14100,19 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingDiscoverGlimpseBroadcastDenied.
   ///
   /// In ja, this message translates to:
-  /// **'画面の配信が始まりませんでした。読み取るには、もう一度押して「ブロードキャストを開始」を選んでください(読み取るのは配信を止める直前の 3 秒だけです)'**
+  /// **'画面配信を開始できませんでした。もう一度押し「ブロードキャストを開始」を選んでください(停止直前の 3 秒のみ読み取ります)'**
   String get onboardingDiscoverGlimpseBroadcastDenied;
 
   /// No description provided for @onboardingDiscoverGlimpseDenied.
   ///
   /// In ja, this message translates to:
-  /// **'画面の読み取りが許可されませんでした。読み取るには、もう一度押して「開始」を選んでください(読み取るのはボタンを押したあとの 3 秒だけです)'**
+  /// **'画面の読み取りが許可されませんでした。もう一度押し「開始」を選んでください(押下後の 3 秒のみ読み取ります)'**
   String get onboardingDiscoverGlimpseDenied;
 
   /// No description provided for @onboardingDiscoverGlimpseNotificationsDenied.
   ///
   /// In ja, this message translates to:
-  /// **'通知を出せませんでした。読み取りのボタンは通知に出るので、端末の設定で RASQ の通知を許可してください'**
+  /// **'通知を出せませんでした。端末の設定で RASQ の通知を許可してください'**
   String get onboardingDiscoverGlimpseNotificationsDenied;
 
   /// No description provided for @onboardingDiscoverGlimpseUnavailable.
@@ -13884,7 +14190,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingDiscoverContentIntro.
   ///
   /// In ja, this message translates to:
-  /// **'好きな画像を選んで、探したい部分を囲むと、探す言葉を RAi が作ります。画像はサーバーに保存しません(探し終えたら捨てます)。'**
+  /// **'画像を選んで探したい部分を囲むと、RAi が検索語を作ります。画像はサーバーに保存しません(探し終えたら破棄します)。'**
   String get onboardingDiscoverContentIntro;
 
   /// No description provided for @onboardingDiscoverPicksCount.
@@ -14226,13 +14532,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingDiscoverGlimpseArmedBroadcast.
   ///
   /// In ja, this message translates to:
-  /// **'画面の配信を始めました。ブラウザで探したい画面を開いたら、画面上部の赤い表示(またはコントロールセンター)から配信を止めてください。止める直前の 3 秒だけを読み取り、RASQ に戻ると結果が出ます。'**
+  /// **'画面配信を開始しました。ブラウザで対象を開いたあと、画面上部の赤い表示などから配信を止めてください。直前 3 秒を読み取り、RASQ に戻ると結果が出ます。'**
   String get onboardingDiscoverGlimpseArmedBroadcast;
 
   /// No description provided for @onboardingDiscoverGlimpseArmedNotification.
   ///
   /// In ja, this message translates to:
-  /// **'通知を出しました。ブラウザで探したい画面を開いてから、通知をタップしてください。タップすると、その画面を 3 秒だけ読み取ります。'**
+  /// **'通知を出しました。ブラウザで対象を開いて通知をタップすると、その画面を 3 秒だけ読み取ります。'**
   String get onboardingDiscoverGlimpseArmedNotification;
 
   /// 画面の読み取りの通知の見出し
@@ -14897,7 +15203,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingTourPageTrendBody.
   ///
   /// In ja, this message translates to:
-  /// **'いま話題の言葉と投稿を、トレンドと Today で見られます。はじめは恐れ・嫌悪・怒りを 45% までに抑えているので、強い怒りや嫌悪の投稿は、おすすめ / トレンド / Today / 関連 TL で下がるか、出なくなります。'**
+  /// **'話題の言葉と投稿をトレンドや Today で見られます。初期設定では恐れ・嫌悪・怒りを 45% 以下に抑え、刺激の強い投稿を控えめに表示します。'**
   String get onboardingTourPageTrendBody;
 
   /// No description provided for @onboardingTourPageTrendNoteSupervised.
@@ -16259,7 +16565,7 @@ abstract class AppLocalizations {
   /// No description provided for @pluginsPaintNibKabura.
   ///
   /// In ja, this message translates to:
-  /// **'カプラペン'**
+  /// **'カブラペン'**
   String get pluginsPaintNibKabura;
 
   /// No description provided for @pluginsPaintNibBrush.
@@ -17105,7 +17411,7 @@ abstract class AppLocalizations {
   /// Bluesky の投稿をアカウントページに出す前の確認(** は太字)。account はアカウントの表記
   ///
   /// In ja, this message translates to:
-  /// **'{account} の投稿を、RASQ のサーバーが Bluesky の公開の API から読み、**RASQ のアカウントページで誰でも見られる状態**にします。\n\n・Bluesky の投稿は、もともと誰でも読めます。返信とリポストは取り込みません。\n・**ログインの鍵(アプリパスワード / セッション)は預けません**。サーバーに渡すのは、このアカウントの DID とハンドルだけです。\n・使えるのは、持ち主の確認が済んだアカウントだけです(他人のアカウントの投稿を出せないように)。\n・このスイッチを切ると、取ってきた投稿は、すぐに消えます。'**
+  /// **'{account} の投稿を Bluesky の公開 API から取得し、**RASQ のアカウントページで誰でも見られる状態**にします。\n\n・返信とリポストは取り込みません。\n・**ログインの鍵(アプリパスワード等)は預けません**。サーバーに渡すのは DID とハンドルのみです。\n・持ち主確認済みのアカウントのみ利用できます。\n・スイッチを切ると、取得した投稿はすぐ削除されます。'**
   String profileEditSnsPostsBlueskyConsentMessage(String account);
 
   /// No description provided for @profileEditSnsPostsAgreeShow.
@@ -17129,7 +17435,7 @@ abstract class AppLocalizations {
   /// SNS のアクセストークンを預ける前の確認(** は太字)。account はアカウントの表記
   ///
   /// In ja, this message translates to:
-  /// **'{account} の投稿をアカウントページに出すために、この SNS の**ログインの鍵(アクセストークン)を RASQ のサーバーに預けます**。\n\n・あなたの「公開」と「ホーム(未収載)」の投稿が、**RASQ のアカウントページで誰でも見られる状態**になります。「ホーム」はフォロワー限定ではありません。\n・フォロワー限定 / 指名・DM / ローカルのみ / 公開範囲が分からない投稿は、取り込みません。\n・鍵は、あなたの投稿を読むためだけに使います。投稿・フォローなどの操作や、ほかの目的には使いません。\n・鍵はサーバーの鍵で暗号化して保存します(RASQ のサーバーは復号できます)。アプリにも他の人にも返しません。\n・このスイッチを切ると、預けた鍵と取ってきた投稿は、すぐに消えます。\n\nこの鍵があれば、そのアカウントを操作できます。心配なときは、預けたあとでも SNS 側の設定からこの鍵(トークン)を無効にできます。'**
+  /// **'{account} の投稿を表示するため、この SNS の**アクセストークンを RASQ サーバーに預けます**。\n\n・「公開」と「ホーム(未収載)」の投稿が **RASQ のアカウントページで誰でも見られる状態**になります(「ホーム」もフォロワー限定ではありません。フォロワー限定・DM・ローカルのみ等は対象外)。\n・トークンは投稿の取得にのみ使い、投稿やフォロー等の操作には使いません。\n・トークンはサーバー側で暗号化して保存します(RASQ サーバーは復号できます)。外部へは返しません。\n・スイッチを切ると、トークンと取得済み投稿はすぐ削除されます。\n\n※アカウント操作権限が含まれるため、必要に応じて SNS 側の設定からいつでも無効化できます。'**
   String profileEditSnsPostsTokenConsentMessage(String account);
 
   /// No description provided for @profileEditSnsPostsAgreeDeposit.
@@ -17225,7 +17531,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileEditSnsPostsCollectionsConsentMessage.
   ///
   /// In ja, this message translates to:
-  /// **'投稿の表示のために預けた鍵を、別の目的にも使います。\n\n・RASQ リストやクリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせます(見られるかの確認)。\n・リストの人の公開 / ホームの投稿を、この鍵で取りに行きます。\n・投稿・フォローなどの操作には使いません。\n・このスイッチを切ると、すぐに使わなくなります。'**
+  /// **'預けたアクセストークンを、以下の用途にも使います。\n\n・RASQ リストやクリップを開いた際のフォロー状況の確認\n・リスト内の人の公開・ホーム投稿の取得\n\n投稿やフォロー等の操作には使いません。スイッチを切るとすぐ停止します。'**
   String get profileEditSnsPostsCollectionsConsentMessage;
 
   /// No description provided for @profileEditSnsPostsCollectionsAgree.
@@ -17285,19 +17591,19 @@ abstract class AppLocalizations {
   /// No description provided for @profileOwnershipErrorTooMany.
   ///
   /// In ja, this message translates to:
-  /// **'試す回数が多すぎます。しばらく待ってから、もう一度お試しください'**
+  /// **'試行回数が多すぎます。しばらくしてからお試しください'**
   String get profileOwnershipErrorTooMany;
 
   /// No description provided for @profileOwnershipErrorNotStarted.
   ///
   /// In ja, this message translates to:
-  /// **'まだ確認の文を作っていないか、期限が切れています。「確認の文を作る」からやり直してください'**
+  /// **'確認用の文が未作成か期限切れです。「確認の文を作る」からやり直してください'**
   String get profileOwnershipErrorNotStarted;
 
   /// No description provided for @profileOwnershipErrorCodeNotFound.
   ///
   /// In ja, this message translates to:
-  /// **'プロフィールに確認の文が見つかりませんでした。保存したか、公開のプロフィールに出ているかを確かめてください(反映まで少しかかることがあります)'**
+  /// **'プロフィールに確認用の文が見つかりません。保存済みか公開設定を確かめてください(反映に少し時間がかかる場合があります)'**
   String get profileOwnershipErrorCodeNotFound;
 
   /// No description provided for @profileOwnershipErrorProfileNotFound.
@@ -17309,7 +17615,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileOwnershipErrorReadFailed.
   ///
   /// In ja, this message translates to:
-  /// **'その SNS のプロフィールを読めませんでした。少し待ってから、もう一度お試しください'**
+  /// **'プロフィールを読めませんでした。しばらくしてからお試しください'**
   String get profileOwnershipErrorReadFailed;
 
   /// message はサーバーの誤りの文
@@ -17327,7 +17633,7 @@ abstract class AppLocalizations {
   /// BEGIN … / END … は Keybase の署名の区切りの行(訳さない)
   ///
   /// In ja, this message translates to:
-  /// **'署名を読めませんでした。BEGIN KEYBASE SALTPACK SIGNED MESSAGE から END KEYBASE SALTPACK SIGNED MESSAGE. までを、そのまま貼ってください'**
+  /// **'署名を読めませんでした。BEGIN KEYBASE SALTPACK SIGNED MESSAGE から END KEYBASE SALTPACK SIGNED MESSAGE. までをそのまま貼り付けてください'**
   String get profileOwnershipKeybaseErrorSignature;
 
   /// No description provided for @profileOwnershipKeybaseErrorStatement.
@@ -17357,13 +17663,13 @@ abstract class AppLocalizations {
   /// No description provided for @profileOwnershipKeybaseErrorExpired.
   ///
   /// In ja, this message translates to:
-  /// **'文の期限が切れたか、まだ作っていません。「署名する文を作る」からやり直してください'**
+  /// **'文の期限切れか未作成です。「署名する文を作る」からやり直してください'**
   String get profileOwnershipKeybaseErrorExpired;
 
   /// No description provided for @profileOwnershipKeybaseErrorUnreachable.
   ///
   /// In ja, this message translates to:
-  /// **'Keybase に繋がりませんでした。少し待ってから、もう一度お試しください'**
+  /// **'Keybase に接続できませんでした。しばらくしてからお試しください'**
   String get profileOwnershipKeybaseErrorUnreachable;
 
   /// message はサーバーの誤りの文
@@ -18389,7 +18695,7 @@ abstract class AppLocalizations {
   /// No description provided for @quickPickSettingsCaption.
   ///
   /// In ja, this message translates to:
-  /// **'リアクションのボタンやコンポーザーの絵文字のボタンを長押しすると、ボタンにつながったパネルにここの絵文字と最近使った絵文字が並びます。指を離さずに滑らせて、離したところの絵文字を付けます(入れます)。滑らせずに離すと、パネルは開いたままでタップで選べます。'**
+  /// **'リアクションや絵文字ボタンを長押しすると、登録済みと最近使った絵文字が並びます。そのまま指を滑らせて離すと選択でき、動かさずに離すとパネルが開いたままタップで選べます。'**
   String get quickPickSettingsCaption;
 
   /// No description provided for @quickPickSettingsAdd.
@@ -19361,7 +19667,7 @@ abstract class AppLocalizations {
   /// No description provided for @raiFunctionsActionNotAllowed.
   ///
   /// In ja, this message translates to:
-  /// **'「{label}」は自動化が許可されていません(RAi からは実行しません)。代わりに案内(この手順で案内)で進めるか、ユーザーが押してください'**
+  /// **'「{label}」は自動化できないため RAi からは実行しません。「この手順で案内」を使うか、手動で操作してください'**
   String raiFunctionsActionNotAllowed(String label);
 
   /// state は「済」か「未」
@@ -20567,7 +20873,7 @@ abstract class AppLocalizations {
   /// macOS で llama.cpp を読めないときに添える案内(前に改行が入る)
   ///
   /// In ja, this message translates to:
-  /// **'「system policy」= サンドボックス / ライブラリ検証で拒否。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください'**
+  /// **'「system policy」はサンドボックス / ライブラリ検証による拒否です。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください'**
   String get raiModelsHintSystemPolicy;
 
   /// macOS で llama.cpp を読めないときに添える案内(前に改行が入る)
@@ -20753,13 +21059,13 @@ abstract class AppLocalizations {
   /// No description provided for @regionUnavailableBody.
   ///
   /// In ja, this message translates to:
-  /// **'RASQ はいま、提供する地域を限っています。お住まいの地域では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。'**
+  /// **'現在、お住まいの地域では RASQ アカウントを作成できません(提供地域は今後変わる場合があります)。'**
   String get regionUnavailableBody;
 
   /// 提供していない地域を選んだときの説明。理由(法律など)には触れない。{region} = 選んだ地域の名前。
   ///
   /// In ja, this message translates to:
-  /// **'RASQ はいま、提供する地域を限っています。{region} では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。'**
+  /// **'現在、{region} では RASQ アカウントを作成できません(提供地域は今後変わる場合があります)。'**
   String regionUnavailableBodyWith(String region);
 
   /// No description provided for @regionUnavailableBack.
@@ -21311,25 +21617,25 @@ abstract class AppLocalizations {
   /// 初めての問いの本文(RASQ アカウントのハンドルが分からないとき)。devices は端末の名前の並び(sessionDeviceListSeparator でつなぐ)。「はい」は下のボタン、「アカウントのセキュリティ」は設定の画面の名前
   ///
   /// In ja, this message translates to:
-  /// **'新しい端末({devices})で、この RASQ アカウント にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。'**
+  /// **'新しい端末({devices})でこの RASQ アカウントにログインがありました。「はい」を選ぶと、SNS のアクセストークンを端末間で暗号化(E2E)して共有し、新しい端末も SNS にログインします。RASQ サーバーは中身を読めません。あとから「アカウントのセキュリティ」で変更できます。'**
   String sessionShareAskFirstMessage(String devices);
 
   /// 初めての問いの本文。devices は端末の名前の並び、handle は RASQ アカウントのハンドル(@ は付けない)
   ///
   /// In ja, this message translates to:
-  /// **'新しい端末({devices})で、RASQ アカウント @{handle} にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。'**
+  /// **'新しい端末({devices})で RASQ アカウント @{handle} にログインがありました。「はい」を選ぶと、SNS のアクセストークンを端末間で暗号化(E2E)して共有し、新しい端末も SNS にログインします。RASQ サーバーは中身を読めません。あとから「アカウントのセキュリティ」で変更できます。'**
   String sessionShareAskFirstMessageHandle(String devices, String handle);
 
   /// 共有を始めたあとの問いの本文(ハンドルが分からないとき)。「いいえ」は下のボタン
   ///
   /// In ja, this message translates to:
-  /// **'この RASQ アカウント に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。'**
+  /// **'この RASQ アカウントに新しい端末からログインがありました。心当たりがなければ「いいえ」を選び、「アカウントのセキュリティ」でその端末をログアウトさせてください。'**
   String get sessionShareAskDeviceMessage;
 
   /// 共有を始めたあとの問いの本文。handle は RASQ アカウントのハンドル(@ は付けない)
   ///
   /// In ja, this message translates to:
-  /// **'RASQ アカウント @{handle} に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。'**
+  /// **'RASQ アカウント @{handle} に新しい端末からログインがありました。心当たりがなければ「いいえ」を選び、「アカウントのセキュリティ」でその端末をログアウトさせてください。'**
   String sessionShareAskDeviceMessageHandle(String handle);
 
   /// 端末の名前を並べるときの区切り
@@ -21365,13 +21671,13 @@ abstract class AppLocalizations {
   /// 同じ世代なのに共有の鍵が替わった包みが届いて、この端末で共有を止めたときの知らせ(D-547)
   ///
   /// In ja, this message translates to:
-  /// **'共有の鍵が差し替えられた可能性があるため、この端末での SNS のアクセストークンの共有を止めました。共有している端末で、共有をいったんオフにしてからオンにし直してください'**
+  /// **'共有鍵が変更された可能性があるため、トークン共有を停止しました。共有中の端末で共有をオフ→オンにし直してください'**
   String get sessionShareKeyReplaced;
 
   /// 今の世代の共有の本体が受け取った鍵で開けず、この端末で共有を止めたときの知らせ(D-547)
   ///
   /// In ja, this message translates to:
-  /// **'共有されている SNS のアクセストークンをこの端末の鍵で開けないため、この端末での共有を止めました(確認が要ります)。共有している端末で、共有をいったんオフにしてからオンにし直してください'**
+  /// **'共有されたトークンを復号できないため、共有を停止しました。共有中の端末で共有をオフ→オンにし直してください'**
   String get sessionShareBodyUnreadable;
 
   /// SNS のプラグインがログインの失敗の理由を返さなかったときの文
@@ -21413,7 +21719,7 @@ abstract class AppLocalizations {
   /// 処置の分類 admission(入場の審査で断られた、D-548)の本人向けの説明。処置の案内と解除申請のシートに出る
   ///
   /// In ja, this message translates to:
-  /// **'登録の審査で通らなかったため、RASQ の公開の機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます'**
+  /// **'登録の審査で通らなかったため、RASQ の公開機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます'**
   String get sessionSanctionCategoryAdmissionHelp;
 
   /// アカウントの処置が無いとき
@@ -21521,7 +21827,7 @@ abstract class AppLocalizations {
   /// 上の選択肢: SNS アカウントを「この端末のみ」(RASQ アカウントに属さない)へ移す
   ///
   /// In ja, this message translates to:
-  /// **'この端末のみ に移す'**
+  /// **'「この端末のみ」に移す'**
   String get sessionLogoutSnsMoveToLocal;
 
   /// 上の選択肢の補足。「この端末のみ」は sessionAccountKindLocal と揃える
@@ -21575,7 +21881,7 @@ abstract class AppLocalizations {
   /// 上の問いの本文。account は「@ハンドル」か「この RASQ アカウント」
   ///
   /// In ja, this message translates to:
-  /// **'加えたアカウントは {account} の SNS アカウントになり、ほかの端末や Web コンソールにも並びます。加えなかったアカウントは「この端末のみ」に残ります(あとからでも、{account} で SNS にログインすれば加わります)。'**
+  /// **'追加したアカウントは {account} に紐づき、他端末や Web コンソールでも使えます。追加しないものは「この端末のみ」に残ります(後から追加も可)。'**
   String sessionCarryMessage(String account);
 
   /// 上の問いの、アカウントの行の補足の後ろに付ける印
@@ -22293,7 +22599,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsEmomIntro.
   ///
   /// In ja, this message translates to:
-  /// **'EmoM は、投稿やトレンドの気持ちの強さ・刺激の強さを見積もる RASQ のモデルです(準備中)。いまはこの閾値を、RASQ の運営が通報を確かめてトレンドを制限するときの目安にだけ使います。'**
+  /// **'EmoM は投稿やトレンドの刺激の強さを見積もるモデルです(準備中)。現在この閾値は、運営がトレンドを制限する際の目安にのみ使います。'**
   String get settingsEmomIntro;
 
   /// No description provided for @settingsEmomThresholdLabel.
@@ -22317,7 +22623,7 @@ abstract class AppLocalizations {
   /// {defaultValue} = 閾値の既定値(整数)。
   ///
   /// In ja, this message translates to:
-  /// **'閾値が高いほど、刺激の強い話題も受け入れる設定です。運営が制限したトレンドが隠れにくくなります。低いほど、制限されたトレンドを早めに隠します。既定は {defaultValue} です。'**
+  /// **'閾値が高いほど制限されたトレンドが隠れにくくなり、低いほど早めに隠れます(既定: {defaultValue})。'**
   String settingsEmomExplanation(String defaultValue);
 
   /// No description provided for @settingsEmomDiscloseTitle.
@@ -22329,13 +22635,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsEmomDiscloseSubtitle.
   ///
   /// In ja, this message translates to:
-  /// **'値だけを RASQ のサーバーに送ります。運営は、公開された値をまとめた分布(どの値の人が何人いるか)だけを使い、あなたの値を個別に見ることはありません。オフにすると、送った値を消します。'**
+  /// **'値のみをサーバーに送り、運営は全体の分布だけを参照します(個人の値は見ません)。オフにすると送信済みの値を削除します。'**
   String get settingsEmomDiscloseSubtitle;
 
   /// No description provided for @settingsEmomRestrictionExplanation.
   ///
   /// In ja, this message translates to:
-  /// **'運営がトレンドを「N%」で制限すると、公開された閾値の低いほうから N% ほどの人に、そのトレンドが出なくなります。公開していなくても、この端末の閾値で同じように判定します(閾値はこの端末に保存されます)。「全員に非表示」にされたトレンドは、閾値に関係なく出ません。隠れたトレンドは、検索のトレンドの一覧に並ばなくなるだけです。'**
+  /// **'運営がトレンドを「N%」で制限すると、閾値の低い N% 相当のユーザーに表示されなくなります(非公開でも端末の閾値で同様に判定。閾値はこの端末に保存)。「全員に非表示」は閾値に関係なく隠れます。'**
   String get settingsEmomRestrictionExplanation;
 
   /// No description provided for @settingsHomeTitle.
@@ -22569,7 +22875,7 @@ abstract class AppLocalizations {
   /// 招待コードの画面の説明
   ///
   /// In ja, this message translates to:
-  /// **'コードを渡された人は、RASQ アカウントを作るときに入れると審査に進めます。コードは出したときにだけ表示されるので、その場でコピーして渡してください'**
+  /// **'招待コードを受け取った人は、登録時に入力すると審査に進めます。コードは発行時のみ表示されるため、その場でコピーしてください'**
   String get settingsInvitesCaption;
 
   /// 出せる残りの数
@@ -26042,7 +26348,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSecurityPasswordNoneCaption.
   ///
   /// In ja, this message translates to:
-  /// **'パスワードが無いと、ほかの端末からはログインできません(この端末でだけ使えます)。付けると、別の端末からハンドル(かメール)とパスワードで同じアカウントに入れます。'**
+  /// **'パスワード未設定だと他端末からログインできません。設定すると別の端末からも入れます。'**
   String get settingsSecurityPasswordNoneCaption;
 
   /// No description provided for @settingsSecurityPasswordNewHint.
@@ -26372,7 +26678,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSecurityLoginFailedHelp.
   ///
   /// In ja, this message translates to:
-  /// **'ハンドル(メール)かパスワードが違います。\nパスワードを設定していない RASQ アカウントには、ほかの端末からはログインできません。そのアカウントを作った端末(いまもログインしている端末)で「設定 → アカウントのセキュリティ」からパスワードを設定してから、もう一度ログインしてください。'**
+  /// **'ハンドル(メール)またはパスワードが違います。\nパスワード未設定のアカウントは他端末からログインできません。元の端末の「設定 → アカウントのセキュリティ」でパスワードを設定してからお試しください。'**
   String get settingsSecurityLoginFailedHelp;
 
   /// No description provided for @settingsSecurityServerNotConfiguredError.
@@ -26450,7 +26756,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSecurityLoginNoPasswordHint.
   ///
   /// In ja, this message translates to:
-  /// **'パスワードを設定していないアカウントは、ほかの端末からはログインできません(作った端末でだけ使えます)。その端末の「設定 → アカウントのセキュリティ」でパスワードを設定してください。'**
+  /// **'パスワード未設定のアカウントは他端末からログインできません。元の端末の「設定 → アカウントのセキュリティ」でパスワードを設定してください。'**
   String get settingsSecurityLoginNoPasswordHint;
 
   /// No description provided for @settingsSecurityLoginCodeHeader.
@@ -26546,7 +26852,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSecurityResetCaption.
   ///
   /// In ja, this message translates to:
-  /// **'確認済みのメールアドレスへ確認コード(10 分有効、1 回きり)を送り、新しいパスワードを決めます。ほかの端末はすべてログアウトになります。'**
+  /// **'確認済みメールへ確認コード(10 分有効・1 回限り)を送り、パスワードを再設定します。他の端末はすべてログアウトされます。'**
   String get settingsSecurityResetCaption;
 
   /// No description provided for @settingsSecurityResetNoEmailWarning.
@@ -27302,7 +27608,7 @@ abstract class AppLocalizations {
   /// No description provided for @shellAccountDeleteMessage.
   ///
   /// In ja, this message translates to:
-  /// **'サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、ASTell のルームと共有、通知トークン、同意の記録を削除します。「アルゴリズムとコミュニティへの貢献」に同意していた場合は、提供の停止と提供済みデータの削除も同時に始まります。\n元に戻せません。各 SNS 上のアカウントと投稿は消えません。'**
+  /// **'サーバー上のプロフィール、アカウントバンドル、同期設定、レビュー・ブックマーク、ASTell のルームと共有、通知トークン、同意記録を削除します(学習データの提供に同意していた場合は提供停止と削除も同時に開始)。\n元に戻せません。各 SNS 上のアカウントと投稿は残ります。'**
   String get shellAccountDeleteMessage;
 
   /// No description provided for @shellAccountDeleteConfirmButton.
@@ -29240,7 +29546,7 @@ abstract class AppLocalizations {
   /// No description provided for @storeReviewHelpfulCount.
   ///
   /// In ja, this message translates to:
-  /// **'{count, plural, other{{count}人が役に立ったと考えました。}}'**
+  /// **'{count, plural, other{{count}人が参考になったと評価しました}}'**
   String storeReviewHelpfulCount(int count);
 
   /// No description provided for @storeShare.
@@ -29348,7 +29654,7 @@ abstract class AppLocalizations {
   /// 端末には入っているが、サーバーにインストールの記録が無い(ログインせずに入れた など)とき (review_requires_install、D-515)
   ///
   /// In ja, this message translates to:
-  /// **'インストールしたプラグインにだけレビューを書けます。ログインした状態でインストール(または更新)し直すと書けるようになります'**
+  /// **'導入済みのプラグインにのみレビューを書けます。ログイン状態で再インストール(または更新)してください'**
   String get storeReviewNeedsInstallServer;
 
   /// No description provided for @storeSafetyNoPermissions.
@@ -31752,7 +32058,7 @@ abstract class AppLocalizations {
   /// No description provided for @trendExamplesIntro.
   ///
   /// In ja, this message translates to:
-  /// **'中身を見て、下の「{allowLabel}」/「{denyLabel}」(右 / 左スワイプでも)で例にします。新しいものは、例との近さで分けます。'**
+  /// **'内容を見て「{allowLabel}」「{denyLabel}」を選びます(左右スワイプ可)。新しい項目は例との近さで判定します。'**
   String trendExamplesIntro(String allowLabel, String denyLabel);
 
   /// intro は説明の文(trendExamplesIntro など)
@@ -32113,7 +32419,7 @@ abstract class AppLocalizations {
   /// No description provided for @trendProfileEchoChamberWarning.
   ///
   /// In ja, this message translates to:
-  /// **'トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。'**
+  /// **'トレンドの指向性・刺激性を強くすると、エコーチェンバーに陥りやすくなります。'**
   String get trendProfileEchoChamberWarning;
 
   /// No description provided for @trendProfileStimulusEstimate.
@@ -32227,7 +32533,7 @@ abstract class AppLocalizations {
   /// No description provided for @trendProfilePickIntro.
   ///
   /// In ja, this message translates to:
-  /// **'最近のアクションを話題ごとに出しています。カードを選んで「好き」/「好きではない」へ(右/左スワイプでも)。'**
+  /// **'最近のアクションを話題ごとに表示しています。カードを「好き」「好きではない」に振り分けてください(左右スワイプ可)。'**
   String get trendProfilePickIntro;
 
   /// 開発者モードの詳しい説明。perPage は 1 ページのカードの数
@@ -33529,7 +33835,7 @@ abstract class AppLocalizations {
   /// 入室の直前の確かめ直しで断られたときの案内(サーバーが条件を確かめられなかった)
   ///
   /// In ja, this message translates to:
-  /// **'入室の条件を確かめられなかったため、ルームに入れませんでした。しばらくしてからもう一度お試しください'**
+  /// **'入室条件を確認できないためルームに入れませんでした。しばらくしてからお試しください'**
   String get vcKickedUnavailable;
 
   /// 入室の直前にルームが閉じられていたときの案内(ホストか運営かは分からない)
@@ -34003,7 +34309,7 @@ abstract class AppLocalizations {
   /// 参加前の設定のシートの注記
   ///
   /// In ja, this message translates to:
-  /// **'ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。'**
+  /// **'ルームの設定は、参加後にルームの歯車から変更できます(オーナーのみ)。'**
   String get vcRoomDeviceSettingsCaption;
 
   /// 参加前の設定のシートの注記(開発者モードの詳しい説明)

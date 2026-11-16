@@ -3,7 +3,7 @@
   "@settingsInvitesTitle": {"description": "招待コードの画面の見出し / 設定の入口"},
   "settingsInvitesEntrySubtitle": "RASQ に人を招くコードを出す",
   "@settingsInvitesEntrySubtitle": {"description": "設定の入口の説明"},
-  "settingsInvitesCaption": "コードを渡された人は、RASQ アカウントを作るときに入れると審査に進めます。コードは出したときにだけ表示されるので、その場でコピーして渡してください",
+  "settingsInvitesCaption": "招待コードを受け取った人は、登録時に入力すると審査に進めます。コードは発行時のみ表示されるため、その場でコピーしてください",
   "@settingsInvitesCaption": {"description": "招待コードの画面の説明"},
   "settingsInvitesRemaining": "{count, plural, other{あと {count} 個出せます}}",
   "@settingsInvitesRemaining": {"description": "出せる残りの数", "placeholders": {"count": {"type": "int"}}},

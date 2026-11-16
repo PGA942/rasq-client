@@ -41,4 +41,4 @@ GET /api/v1/theme-svgs/{id}
   `circle` `ellipse` と形・描き方の属性だけ。`script` / `foreignObject` / `image` / `use` / `style` / `href` / `on*` / 外部参照は
   捨てる)。16 KiB・要素 400・数 8,000 を超えるものは登録させない。アプリは受け取ったあとにもう一度消毒し、上限を超えれば描かない。
 - 変わらない ID の中身は変えない(`Cache-Control: public, max-age=31536000, immutable`)。中身を変えるときは新しい ID にする。
-- 登録(コミュハッシュタグ / Atmos の申請と一緒に)は第4回で決める。
+- 登録(コミュハッシュタグ / Atmos)と、ハッシュタグのテーマの配信・申請の口は docs/TAG_THEMES.md(D-582〜D-584)。

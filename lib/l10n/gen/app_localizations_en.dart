@@ -117,6 +117,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appNavShortcutLoginHint => 'Log in to an SNS account to use this';
 
   @override
+  String get atmosThreadCaption => 'Promoted · Theme for this thread only';
+
+  @override
   String get backendOauthNoToken => 'Couldn\'t get an access token';
 
   @override
@@ -161,10 +164,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backendSecurityBadCode => 'The code is wrong or has expired';
-
-  @override
-  String get backendSecurityWeakPassword =>
-      'This password is too weak (common passwords, repeated characters, or ones matching your handle or email can\'t be used)';
 
   @override
   String get backendSecurityShortPassword =>
@@ -2124,6 +2123,195 @@ class AppLocalizationsEn extends AppLocalizations {
   String collectionsAlreadyIn(String name) {
     return 'Already in \"$name\"';
   }
+
+  @override
+  String get communityTagTitle => 'Community hashtag';
+
+  @override
+  String get communityTagRowSubtitle => 'Add a theme to your community\'s tag';
+
+  @override
+  String get communityTagPageCaption => 'Community theme';
+
+  @override
+  String get communityTagIntro =>
+      'You can add a theme to your community\'s hashtag. People who open the tag\'s page see it with the theme.';
+
+  @override
+  String get communityTagRequirements => 'Requirements';
+
+  @override
+  String get communityTagReqSubscription => 'Active subscription';
+
+  @override
+  String get communityTagSubscribed => 'Subscribed';
+
+  @override
+  String communityTagSubscribedPlan(String plan) {
+    return 'Subscribed ($plan)';
+  }
+
+  @override
+  String get communityTagNotSubscribed => 'Not subscribed';
+
+  @override
+  String get communityTagSeeSubscription => 'View plans';
+
+  @override
+  String get communityTagReqPromo => 'A post promoting the tag';
+
+  @override
+  String get communityTagReqPromoHint =>
+      'Attach one of your public posts that contains the tag';
+
+  @override
+  String get communityTagMine => 'Your applications';
+
+  @override
+  String get communityTagNone => 'No applications yet';
+
+  @override
+  String get communityTagApply => 'Apply';
+
+  @override
+  String get communityTagNeedSubscription =>
+      'A subscription is required to apply';
+
+  @override
+  String communityTagLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'You can have up to $count tags at a time',
+      one: 'You can have up to $count tag at a time',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get communityTagStatePending => 'Under review';
+
+  @override
+  String get communityTagStateApproved => 'Live';
+
+  @override
+  String get communityTagStateRejected => 'Not approved';
+
+  @override
+  String get communityTagStateSuspended => 'Paused';
+
+  @override
+  String get communityTagStateWithdrawn => 'Withdrawn';
+
+  @override
+  String get communityTagReasonPromoMissing =>
+      'The promotion post wasn\'t found';
+
+  @override
+  String get communityTagReasonTagTaken =>
+      'Another community already uses this tag';
+
+  @override
+  String get communityTagReasonSubscription =>
+      'Your subscription isn\'t active';
+
+  @override
+  String get communityTagReasonTheme => 'The theme didn\'t meet the guidelines';
+
+  @override
+  String get communityTagReasonPolicy => 'This didn\'t meet the guidelines';
+
+  @override
+  String get communityTagWithdraw => 'Withdraw';
+
+  @override
+  String communityTagWithdrawConfirmTitle(String tag) {
+    return 'Withdraw the application for #$tag?';
+  }
+
+  @override
+  String get communityTagWithdrawConfirmMessage =>
+      'A live theme will also stop';
+
+  @override
+  String get communityTagCancel => 'Cancel';
+
+  @override
+  String get communityTagLoadFailed => 'Couldn\'t load';
+
+  @override
+  String get communityTagUnavailable =>
+      'This feature isn\'t available right now';
+
+  @override
+  String get communityTagSendFailed => 'Couldn\'t send. Please try again later';
+
+  @override
+  String get communityTagSent =>
+      'Applied. The result will appear on this screen';
+
+  @override
+  String get communityTagApplyTitle => 'Apply for a hashtag theme';
+
+  @override
+  String get communityTagStepTag => '1. Hashtag';
+
+  @override
+  String get communityTagTagHint => 'Your community\'s tag';
+
+  @override
+  String get communityTagTagInvalid =>
+      'Use up to 64 characters without spaces or symbols';
+
+  @override
+  String get communityTagStepTheme => '2. Theme';
+
+  @override
+  String get communityTagPresetNight => 'Night sky';
+
+  @override
+  String get communityTagPresetSakura => 'Sakura';
+
+  @override
+  String get communityTagPresetSea => 'Sea';
+
+  @override
+  String get communityTagPresetRing => 'Simple';
+
+  @override
+  String get communityTagAccent => 'Accent';
+
+  @override
+  String get communityTagPreview => 'Preview';
+
+  @override
+  String get communityTagPreviewBody =>
+      'Posts on the tag\'s page look like this.';
+
+  @override
+  String communityTagThemeNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Up to $count decorations. The theme goes live after review',
+      one: 'Up to $count decoration. The theme goes live after review',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get communityTagStepPromo => '3. Promotion post';
+
+  @override
+  String get communityTagFindPromo => 'Find in your posts';
+
+  @override
+  String communityTagNoPromo(String tag) {
+    return 'No public post with #$tag was found. Post one promoting the tag first';
+  }
+
+  @override
+  String get communityTagSubmit => 'Submit';
 
   @override
   String get composeTargetNormalTitle => 'New note';
@@ -8372,10 +8560,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingPasswordTooLong => 'Up to 256 characters';
-
-  @override
-  String get onboardingPasswordRepeated =>
-      'Can\'t be the same character repeated';
 
   @override
   String get onboardingTermsOutdated =>

@@ -47,7 +47,7 @@
   "@vcRoomHoldMusicVolume": {"description": "設定のスライダー"},
   "vcRoomHoldMusicVolumeValue": "{percent}%",
   "@vcRoomHoldMusicVolumeValue": {"description": "保留音の音量の表示。percent は 0〜100", "placeholders": {"percent": {"type": "int"}}},
-  "vcRoomDeviceSettingsCaption": "ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。",
+  "vcRoomDeviceSettingsCaption": "ルームの設定は、参加後にルームの歯車から変更できます(オーナーのみ)。",
   "@vcRoomDeviceSettingsCaption": {"description": "参加前の設定のシートの注記"},
   "vcRoomDeviceSettingsCaptionDetail": "ルームごとの設定(参加できる人・読み上げなど)は、参加してからルームの歯車で変えられます(オーナー)。",
   "@vcRoomDeviceSettingsCaptionDetail": {"description": "参加前の設定のシートの注記(開発者モードの詳しい説明)"},

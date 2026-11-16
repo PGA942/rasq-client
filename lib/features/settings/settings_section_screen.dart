@@ -16,6 +16,7 @@ import '../trend/tendency_fows.dart';
 import 'settings_dsl.dart' show settingsRowVisible;
 import 'settings_sections.dart';
 import '../../l10n/l10n.dart';
+import '../../app/feature_flags.dart';
 
 /// Generic first-level settings page driven by [settingsSections].
 /// アプリの外観 has live controls (テーマ); everything else is a labelled placeholder.
@@ -26,7 +27,7 @@ class SettingsSectionScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l10n;
-    final section = settingsSectionsOf(l)[sectionId];
+    final section = settingsSectionsOf(l, flags: ref.watch(featureFlagsProvider))[sectionId];
     if (section == null) return Scaffold(appBar: RasqPageHeader(title: l.settingsHomeGenericTitle), body: RasqEmptyView(title: l.settingsHomeUnknownSection));
     final mode = ref.watch(themeModeProvider);
     return Scaffold(

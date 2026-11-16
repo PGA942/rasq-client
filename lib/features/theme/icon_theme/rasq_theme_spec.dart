@@ -146,12 +146,12 @@ class RasqThemeFrameRef {
   int get hashCode => Object.hash(svgId, x, y, size, opacity, rotation);
 }
 
-/// Atmos のきっかけ(第4回で使う)。
+/// Atmos のきっかけ (D-578 / D-584)。
 @immutable
 class RasqThemeTrigger {
-  const RasqThemeTrigger.hashtagBadge({required String this.hashtag, required this.svgId}) : kind = 'hashtagBadge', actionId = null;
-  const RasqThemeTrigger.actionAnimation({required String this.actionId, required this.svgId}) : kind = 'actionAnimation', hashtag = null;
-  const RasqThemeTrigger._(this.kind, this.svgId, this.hashtag, this.actionId);
+  const RasqThemeTrigger.hashtagBadge({required String this.hashtag, required this.svgId}) : kind = 'hashtagBadge', actionId = null, motion = RasqThemeMotion.pop;
+  const RasqThemeTrigger.actionAnimation({required String this.actionId, required this.svgId, this.motion = RasqThemeMotion.pop}) : kind = 'actionAnimation', hashtag = null;
+  const RasqThemeTrigger._(this.kind, this.svgId, this.hashtag, this.actionId, this.motion);
 
   /// `hashtagBadge` = そのハッシュタグの投稿に SVG のアイコンを付ける / `actionAnimation` = そのアクションのボタンで SVG の
   /// アニメーションを再生する。
@@ -160,24 +160,46 @@ class RasqThemeTrigger {
   /// 置き場の SVG の ID。
   final String svgId;
   final String? hashtag;
+
+  /// アクションの ID(`reaction` / `renote` / `like` …)か、アクションの種類(`Reaction` / `Repost` …、大文字小文字は見ない)。
   final String? actionId;
 
-  Map<String, Object?> toJson() => {'kind': kind, 'svg': svgId, if (hashtag != null) 'hashtag': hashtag, if (actionId != null) 'action': actionId};
+  /// アニメーションの動き (D-584)。**SVG の中の `<animate>` やスクリプトは使わない**(消毒で捨てる)。静止した SVG を、アプリが
+  /// 決まった動き(拡大して消える / 回る / 浮かぶ / 散らばる)で動かす。知らない名前は [RasqThemeMotion.pop]。
+  final RasqThemeMotion motion;
+
+  Map<String, Object?> toJson() => {'kind': kind, 'svg': svgId, if (hashtag != null) 'hashtag': hashtag, if (actionId != null) 'action': actionId, if (actionId != null && motion != RasqThemeMotion.pop) 'motion': motion.name};
   static RasqThemeTrigger? fromJson(Object? j) {
     if (j is! Map) return null;
     final svg = j['svg'];
     if (svg is! String || !RasqThemeFrameRef.idPattern.hasMatch(svg)) return null;
+    final motion = RasqThemeMotion.values.where((m) => m.name == j['motion']).firstOrNull ?? RasqThemeMotion.pop;
     return switch (j['kind']) {
-      'hashtagBadge' when j['hashtag'] is String => RasqThemeTrigger._('hashtagBadge', svg, j['hashtag'] as String, null),
-      'actionAnimation' when j['action'] is String => RasqThemeTrigger._('actionAnimation', svg, null, j['action'] as String),
+      'hashtagBadge' when j['hashtag'] is String && (j['hashtag'] as String).isNotEmpty => RasqThemeTrigger._('hashtagBadge', svg, j['hashtag'] as String, null, RasqThemeMotion.pop),
+      'actionAnimation' when j['action'] is String && (j['action'] as String).isNotEmpty => RasqThemeTrigger._('actionAnimation', svg, null, j['action'] as String, motion),
       _ => null,
     };
   }
 
   @override
-  bool operator ==(Object other) => other is RasqThemeTrigger && other.kind == kind && other.svgId == svgId && other.hashtag == hashtag && other.actionId == actionId;
+  bool operator ==(Object other) => other is RasqThemeTrigger && other.kind == kind && other.svgId == svgId && other.hashtag == hashtag && other.actionId == actionId && other.motion == motion;
   @override
-  int get hashCode => Object.hash(kind, svgId, hashtag, actionId);
+  int get hashCode => Object.hash(kind, svgId, hashtag, actionId, motion);
+}
+
+/// アクションのアニメーションの動き (D-584)。
+enum RasqThemeMotion {
+  /// 大きくなりながら消える。
+  pop,
+
+  /// 回りながら消える。
+  spin,
+
+  /// 上へ浮かんで消える。
+  float,
+
+  /// 6 つに分かれて散らばる。
+  burst,
 }
 
 IconThemeBasic? _basicFromJson(Object? j) {

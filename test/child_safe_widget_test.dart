@@ -203,7 +203,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '送信'));
     await tester.pumpAndSettle();
     expect(session.lastDraft, isNull);
-    expect(find.textContaining('保護者の設定により、「個人情報」に当たる内容は送れません'), findsOneWidget);
+    expect(find.textContaining('保護者の設定により、「個人情報」に該当する内容は送れません'), findsOneWidget);
     expect(tester.widget<TextField>(find.byType(TextField).last).controller!.selection, const TextSelection(baseOffset: 6, extentOffset: 19));
     // 届くのは種類 / モード / 面だけ。本文はどの口にも出ない。
     expect(trips, [

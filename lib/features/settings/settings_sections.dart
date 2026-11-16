@@ -1,3 +1,4 @@
+import '../../app/feature_flags.dart';
 import '../../app/router.dart';
 import '../../l10n/l10n.dart';
 
@@ -28,7 +29,8 @@ class SettingsSection {
 }
 
 /// 設定第一階層の節 (D-484: 文言は [AppLocalizations] から)。画面は `settingsSectionsOf(context.l10n)`。
-Map<String, SettingsSection> settingsSectionsOf(AppLocalizations l) => <String, SettingsSection>{
+/// [flags] (D-582) = 無効の機能の行は出さない(既定はすべて無効)。
+Map<String, SettingsSection> settingsSectionsOf(AppLocalizations l, {RasqFeatureFlags flags = const RasqFeatureFlags()}) => <String, SettingsSection>{
   'plugins': SettingsSection(l.settingsSectionsPluginsTitle, [
     SettingsRow(l.settingsSectionsPluginsProxyTitle, subtitle: l.settingsSectionsPluginsProxySubtitle, detail: l.settingsSectionsPluginsProxyDetail, route: '/settings/dsl/plugins.proxy'),
     SettingsRow(l.settingsSectionsPluginsActionBarTitle, subtitle: l.settingsSectionsPluginsActionBarSubtitle, detail: l.settingsSectionsPluginsActionBarDetail, route: Routes.actionBarPlugins),
@@ -61,6 +63,8 @@ Map<String, SettingsSection> settingsSectionsOf(AppLocalizations l) => <String, 
   'appearance': SettingsSection(l.settingsSectionsAppearanceTitle, [
     SettingsRow(l.settingsSectionsAppearanceDisplayTitle, route: '/settings/dsl/appearance.display'),
     SettingsRow(l.settingsSectionsAppearanceThemeTitle, subtitle: l.settingsSectionsAppearanceThemeSubtitle, route: Routes.settingsTheme),
+    // コミュハッシュタグのテーマ (D-583): フラグが立っているときだけ。
+    if (flags.communityTagThemes) SettingsRow(l.communityTagTitle, subtitle: l.communityTagRowSubtitle, route: Routes.settingsCommunityTags),
     SettingsRow(l.settingsSectionsAppearanceColumnsTitle, subtitle: l.settingsSectionsAppearanceColumnsSubtitle, detail: l.settingsSectionsAppearanceColumnsDetail, route: Routes.settingsColumns),
     SettingsRow(l.settingsSectionsAppearanceMotionTitle, route: '/settings/dsl/appearance.motion'),
     SettingsRow(l.settingsSectionsAppearanceTimelineTitle, subtitle: l.settingsSectionsAppearanceTimelineSubtitle, detail: l.settingsSectionsAppearanceTimelineDetail, route: '/settings/dsl/appearance.timeline'),

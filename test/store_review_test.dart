@@ -127,7 +127,7 @@ void main() {
     expect(find.text('wasm でここまで動く'), findsOneWidget); // 関連性 1 位が先頭フレーム
     // フレームにはアクションバーを置かず、人数だけ中央揃え(投票は TL 側)。
     expect(find.descendant(of: find.byType(StoreReviewFrame), matching: find.byType(ReviewActionBar)), findsNothing);
-    final summary = tester.widget<Text>(find.descendant(of: find.byType(StoreReviewFrame).first, matching: find.text('12人が役に立ったと考えました。')));
+    final summary = tester.widget<Text>(find.descendant(of: find.byType(StoreReviewFrame).first, matching: find.text('12人が参考になったと評価しました')));
     expect(summary.textAlign, TextAlign.center);
 
     await reveal(tester, find.text('プライバシーと必要な権限'));
@@ -160,19 +160,19 @@ void main() {
     expect(find.text('タロ・ヤマダ'), findsOneWidget);
     expect(find.text('@taro_yamada'), findsOneWidget);
     expect(find.descendant(of: find.byType(StoreReviewTile).first, matching: find.byType(RasqPostTile)), findsOneWidget);
-    expect(find.text('12人が役に立ったと考えました。'), findsOneWidget);
+    expect(find.text('12人が参考になったと評価しました'), findsOneWidget);
     expect(find.byIcon(Icons.shortcut), findsWidgets);
 
     final firstTile = find.byType(StoreReviewTile).first;
     await tester.tap(find.descendant(of: firstTile, matching: find.byIcon(Icons.thumb_up_outlined)));
     await tester.pumpAndSettle();
-    expect(find.text('13人が役に立ったと考えました。'), findsOneWidget);
+    expect(find.text('13人が参考になったと評価しました'), findsOneWidget);
     expect(container.read(reviewVotesProvider)['$storeSamplePluginId/r1'], ReviewVote.up);
 
     // 👎 に切り替えると 👍 は外れる。
     await tester.tap(find.descendant(of: firstTile, matching: find.byIcon(Icons.thumb_down_outlined)));
     await tester.pumpAndSettle();
-    expect(find.text('12人が役に立ったと考えました。'), findsOneWidget);
+    expect(find.text('12人が参考になったと評価しました'), findsOneWidget);
     expect(container.read(reviewVotesProvider)['$storeSamplePluginId/r1'], ReviewVote.down);
 
     // 最新タブ: 一番新しい 0.6 系のレビュー(9/4 以前で最新 = 9/3)が先頭。
@@ -266,7 +266,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('送信'));
     await tester.pumpAndSettle();
-    expect(find.text('インストールしたプラグインにだけレビューを書けます。ログインした状態でインストール(または更新)し直すと書けるようになります'), findsOneWidget);
+    expect(find.text('導入済みのプラグインにのみレビューを書けます。ログイン状態で再インストール(または更新)してください'), findsOneWidget);
   });
 }
 

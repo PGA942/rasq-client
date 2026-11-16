@@ -40,7 +40,7 @@
   "trendProfileStimulusTitle": "トレンドの刺激性",
   "trendProfileStimulusCaption": "各感情の上限。中心に寄せるほど抑えます",
   "trendProfileStimulusReset": "刺激性をリセット",
-  "trendProfileEchoChamberWarning": "トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。",
+  "trendProfileEchoChamberWarning": "トレンドの指向性・刺激性を強くすると、エコーチェンバーに陥りやすくなります。",
   "trendProfileStimulusEstimate": "刺激性は、いまは言葉の傾向から推定しています。",
   "trendProfileStimulusEstimateDetail": "刺激性は語彙ルールで推定しています。",
   "@trendProfileStimulusEstimateDetail": {"description": "開発者モードの詳しい説明"},
@@ -63,7 +63,7 @@
   "trendProfileDislikedTapToRemove": "好きではない(タップで外す)",
   "trendProfileGenresSaved": "好きなジャンル/方向性を保存しました",
   "trendProfilePickTitle": "アクションからジャンルを選択",
-  "trendProfilePickIntro": "最近のアクションを話題ごとに出しています。カードを選んで「好き」/「好きではない」へ(右/左スワイプでも)。",
+  "trendProfilePickIntro": "最近のアクションを話題ごとに表示しています。カードを「好き」「好きではない」に振り分けてください(左右スワイプ可)。",
   "trendProfilePickIntroDetail": "最近のアクションを類似した話題でまとめ、話題性の強いものから {perPage, plural, other{{perPage} 件}}ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。",
   "@trendProfilePickIntroDetail": {"description": "開発者モードの詳しい説明。perPage は 1 ページのカードの数", "placeholders": {"perPage": {"type": "int"}}}
 }
