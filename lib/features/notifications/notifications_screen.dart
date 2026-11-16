@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,6 +28,7 @@ import '../vc/astell_actions.dart';
 import '../vc/astell_bookmarks.dart';
 import '../vc/astell_links.dart';
 import 'notification_prefs.dart';
+import 'notification_seen.dart';
 
 final notificationsProvider = FutureProvider<Page<NotificationItem>>((ref) async {
   ref.watch(currentAccountProvider);
@@ -36,29 +39,72 @@ final notificationsProvider = FutureProvider<Page<NotificationItem>>((ref) async
   final gate = ref.watch(childGateProvider);
   final page = await s.notifications(limit: 40);
   await ref.read(userListHelperProvider).primeRelationships(page.items.expand((n) => n.actors.map((a) => a.id)));
+  // 名前の絵文字 (D-560): 閲覧中のサーバーの絵文字を取りに行く(リモートの人の絵文字は UserSummary.emojis)。
+  ref.read(emojiCacheProvider.notifier).request({for (final n in page.items) for (final a in n.actors) ...InlineSpans.emojiShortcodes(a.displayName)});
   return gate.supervised ? Page(items: gate.filterNotifications(page.items), nextCursor: page.nextCursor) : page;
 });
 
 /// 未読の通知数(現在の SNS アカウント分)。RASQ アカウント FOW の左端バッジ
-/// (D-138)が使う。取得前・未ログインは 0。
-final unreadNotificationCountProvider = Provider<int>((ref) => ref.watch(notificationsProvider).value?.items.where((n) => !n.read).length ?? 0);
+/// (D-138)が使う。取得前・未ログインは 0。未読 = SNS が既読と言っていなくて、見たところより新しい (D-557)。
+final unreadNotificationCountProvider = Provider<int>((ref) {
+  final seen = ref.watch(notificationSeenProvider);
+  return ref.watch(notificationsProvider).value?.items.where((n) => isNotificationUnread(n, seen.of(n.account.key))).length ?? 0;
+});
 
 /// 通知 (すべて / フォロー中). 4 tile types (アクション系 / フォロー系 / 投稿タイル系 / タイマー系),
 /// 長押しドロップダウン(一括既読・通知オフ)は下ナビ側、⚙ = 通知プロファイル設定.
-class NotificationsScreen extends ConsumerWidget {
+///
+/// 青いハイライト (D-557): 読み込んだ通知のうち、**読み込む前に見たところより新しいもの**だけ。画面に出したら見たところを
+/// いちばん新しい通知まで進めるので、次に読み直したときには消える(前は Misskey が既読を返さず、ずっと青いままだった)。
+class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key, this.headerTrailing});
 
   /// ヘッダー右端の ↑(まだ押せない)の代わりに置く部品。第3カラムに出すときは第3カラムの設定ボタン (D-397)。
   final Widget? headerTrailing;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  /// ハイライトを決めた読み込み(同じ読み込みの間は変えない)と、そのときの「見たところ」(アカウントごと)。
+  Page<NotificationItem>? _page;
+  Map<String, DateTime> _since = const {};
+
+  /// 新しく読み込んだら、そのときの見たところを覚えてから、見たところをいちばん新しい通知まで進める。
+  void _onPage(Page<NotificationItem> page, NotificationSeenState seen) {
+    if (identical(page, _page) || !seen.ready) return;
+    _page = page;
+    _since = seen.byAccount;
+    final newest = <String, DateTime>{};
+    for (final n in page.items) {
+      final k = n.account.key;
+      if (newest[k] == null || n.createdAt.isAfter(newest[k]!)) newest[k] = n.createdAt;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      for (final e in newest.entries) {
+        unawaited(ref.read(notificationSeenProvider.notifier).markSeen(e.key, e.value));
+      }
+    });
+  }
+
+  bool _highlight(NotificationItem n) => isNotificationUnread(n, _since[n.account.key]);
+
+  @override
+  Widget build(BuildContext context) {
+    final headerTrailing = widget.headerTrailing;
     final me = ref.watch(currentUserProvider);
     // RASQ の通知 (D-285): メンション / 返信 / 引用 / AsTell での引用。RASQ アカウントにログインしているときだけタブが出る。
     final rasq = ref.watch(orgateAccountProvider).value != null;
     final l10n = context.l10n;
     final tabs = [RasqTabItem(l10n.notificationsTabAll), RasqTabItem(l10n.notificationsTabFollowing), if (rasq) const RasqTabItem('RASQ')];
     final items = ref.watch(notificationsProvider);
+    final seen = ref.watch(notificationSeenProvider);
+    final page = items.value;
+    if (page != null) _onPage(page, seen);
+    // 見たところを読み終える前は、ハイライトしない(読み終えたら、その時点の見たところで決める)。
+    final highlight = seen.ready ? _highlight : (NotificationItem _) => false;
     final prefs = ref.watch(notificationPrefsProvider);
     final viewer = ref.watch(currentAccountProvider);
     final follows = ref.watch(followStateProvider);
@@ -81,8 +127,8 @@ class NotificationsScreen extends ConsumerWidget {
           if (showReminders) const _AstellReminders(),
           Expanded(
             child: TabBarView(children: [
-              _List(memoryId: 'notifications.all', items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future)),
-              _List(memoryId: 'notifications.following', items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind) && n.actors.any(isFollowed)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future), emptyTitle: l10n.notificationsEmptyFollowing),
+              _List(memoryId: 'notifications.all', items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind)).toList()), highlight: highlight, onRefresh: () => ref.refresh(notificationsProvider.future)),
+              _List(memoryId: 'notifications.following', items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind) && n.actors.any(isFollowed)).toList()), highlight: highlight, onRefresh: () => ref.refresh(notificationsProvider.future), emptyTitle: l10n.notificationsEmptyFollowing),
               if (rasq) const _RasqNotices(),
             ]),
           ),
@@ -138,6 +184,12 @@ Future<void> showNotificationQuickMenu(WidgetRef ref, Rect anchor) async {
   switch (pick) {
     case 'readAll' || 'readFollowing':
       await ref.read(currentSnsSessionProvider)?.markNotificationsRead();
+      // 端末の「見たところ」も、いま読み込んでいる通知のいちばん新しいものまで進める (D-557)。
+      final items = ref.read(notificationsProvider).value?.items ?? const <NotificationItem>[];
+      for (final key in {for (final n in items) n.account.key}) {
+        final at = newestNotificationAt(items.where((n) => n.account.key == key));
+        if (at != null) await ref.read(notificationSeenProvider.notifier).markSeen(key, at);
+      }
       ref.invalidate(notificationsProvider);
     case 'off':
       ref.read(notificationPrefsProvider.notifier).setEnabled(false);
@@ -145,7 +197,10 @@ Future<void> showNotificationQuickMenu(WidgetRef ref, Rect anchor) async {
 }
 
 class _List extends StatelessWidget {
-  const _List({required this.memoryId, required this.items, required this.onRefresh, this.emptyTitle});
+  const _List({required this.memoryId, required this.items, required this.onRefresh, this.emptyTitle, this.highlight});
+
+  /// 青く出す通知 (D-557)。null なら SNS の既読だけで決める。
+  final bool Function(NotificationItem)? highlight;
 
   /// 位置を覚える一覧の名前 (D-504): タブを切り替えて戻っても / 第3カラムで作り直されても、前の位置から。
   final String memoryId;
@@ -169,7 +224,7 @@ class _List extends StatelessWidget {
                     physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: list.length,
                     separatorBuilder: (_, _) => const Divider(),
-                    itemBuilder: (context, i) => NotificationTile(item: list[i]),
+                    itemBuilder: (context, i) => NotificationTile(item: list[i], unread: highlight?.call(list[i])),
                   ),
                 ),
         ),
@@ -215,13 +270,16 @@ class _AstellReminders extends ConsumerWidget {
 
 /// 通知アイテム(4種) — 原典: UI_Elements「通知アイテム（4種）」.
 class NotificationTile extends ConsumerWidget {
-  const NotificationTile({super.key, required this.item});
+  const NotificationTile({super.key, required this.item, this.unread});
   final NotificationItem item;
+
+  /// 青く出すか (D-557)。null なら SNS の既読(`item.read`)で決める。
+  final bool? unread;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final bg = item.read ? null : scheme.primaryContainer.withValues(alpha: 0.25);
+    final bg = (unread ?? !item.read) ? scheme.primaryContainer.withValues(alpha: 0.25) : null;
     final child = switch (item.kind.tile) {
       NotificationTileType.action => _ActionTile(item: item),
       NotificationTileType.follow => _FollowTile(item: item),
@@ -279,23 +337,42 @@ Future<void> openNotificationActor(BuildContext context, WidgetRef ref, List<Use
   if (pick != null && context.mounted) context.pushUser(actors[pick], account: account);
 }
 
-String _names(AppLocalizations l, List<UserSummary> actors) => switch (actors) {
+String _names(AppLocalizations l, List<String> names, int count) => switch (names) {
       [] => '',
-      [final a] => l.notificationsActorsOne(a.displayName),
-      [final a, final b] => l.notificationsActorsTwo(a.displayName, b.displayName),
-      [final a, final b, ...] => l.notificationsActorsMore(a.displayName, b.displayName, actors.length - 2),
+      [final a] => l.notificationsActorsOne(a),
+      [final a, final b] => l.notificationsActorsTwo(a, b),
+      [final a, final b, ...] => l.notificationsActorsMore(a, b, count - 2),
     };
 
-/// 文の中の [name] だけを太字にする (D-484)。[sentence] は名前の位置に渡した印を入れた文を返す。
-List<RasqSpan> _boldNameSpans(String Function(String name) sentence, String name) {
+/// 文の中の名前だけを太字にする (D-484)。名前の絵文字も描く (D-560、閲覧中のサーバーの絵文字 + その人が持ってきた絵文字)。
+/// [sentence] は名前の位置に渡した印を入れた文を返す。何人もいれば「A、B ほか n 人」の A / B をそれぞれ絵文字つきに。
+List<RasqSpan> _boldNameSpans(AppLocalizations l, String Function(String name) sentence, List<UserSummary> actors, Map<String, Uri?> emojis) {
   const mark = '\u0000';
+  // 人ごとの印(\u0001, \u0002)で「名前たち」の文を作り、あとで絵文字つきの名前に差し替える。
+  final shown = actors.take(2).toList();
+  final names = _names(l, [for (var i = 0; i < shown.length; i++) String.fromCharCode(1 + i)], actors.length);
+  final out = <RasqSpan>[];
   final parts = sentence(mark).split(mark);
-  return [
-    for (var i = 0; i < parts.length; i++) ...[
-      if (parts[i].isNotEmpty) RasqTextSpan(parts[i]),
-      if (i < parts.length - 1) RasqTextSpan(name, bold: true),
-    ],
-  ];
+  for (var i = 0; i < parts.length; i++) {
+    if (parts[i].isNotEmpty) out.add(RasqTextSpan(parts[i]));
+    if (i == parts.length - 1) break;
+    final buf = StringBuffer();
+    void flush() {
+      if (buf.isNotEmpty) out.add(RasqTextSpan(buf.toString(), bold: true));
+      buf.clear();
+    }
+
+    for (final ch in names.runes) {
+      if (ch >= 1 && ch <= shown.length) {
+        flush();
+        out.addAll(InlineSpans.name(shown[ch - 1], emojis: emojis, bold: true));
+      } else {
+        buf.writeCharCode(ch);
+      }
+    }
+    flush();
+  }
+  return out;
 }
 
 /// アクション系: アイコンリスト(グループアバター) + 本文(DSL) + 投稿の省略.
@@ -335,11 +412,12 @@ class _ActionTile extends ConsumerWidget {
       Padding(
         padding: const EdgeInsets.only(left: 24 + RasqSpacing.md, top: 4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          RasqRichText(_boldNameSpans(sentence, _names(l10n, item.actors)), style: RasqTypography.bodySmall),
+          RasqRichText(_boldNameSpans(l10n, sentence, item.actors, emojis), style: RasqTypography.bodySmall),
           if (item.reactionsByActor.isNotEmpty || item.reaction != null)
             Padding(
               padding: const EdgeInsets.only(top: 2),
-              child: Wrap(spacing: 4, children: [for (final r in (item.reactionsByActor.isNotEmpty ? item.reactionsByActor.values : [item.reaction!]).toSet()) _Reaction(r, emojis)]),
+              // リアクションの絵文字 (D-560): リモートの絵文字(`:name@host:`)は、その投稿の reactionEmojis から。
+              child: Wrap(spacing: 4, children: [for (final r in (item.reactionsByActor.isNotEmpty ? item.reactionsByActor.values : [item.reaction!]).toSet()) _Reaction(r, emojis, remote: item.post?.reactionEmojis ?? const {})]),
             ),
           if (item.post != null) Padding(padding: const EdgeInsets.only(top: 2), child: RasqRichText(InlineSpans.parse(item.post!.body, emojis: emojis), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis)),
         ]),
@@ -349,13 +427,17 @@ class _ActionTile extends ConsumerWidget {
 }
 
 class _Reaction extends StatelessWidget {
-  const _Reaction(this.r, this.emojis);
+  const _Reaction(this.r, this.emojis, {this.remote = const {}});
   final String r;
   final Map<String, Uri?> emojis;
+
+  /// その投稿のリアクションの絵文字(`name@host` → URL、D-560)。
+  final Map<String, Uri> remote;
   @override
   Widget build(BuildContext context) {
-    if (r.startsWith(':')) {
-      final url = emojis[r.substring(1, r.length - 1).replaceAll('@.', '')];
+    if (r.startsWith(':') && r.endsWith(':') && r.length > 2) {
+      final code = r.substring(1, r.length - 1);
+      final url = remote[code] ?? remote[code.replaceAll('@.', '')] ?? emojis[code.replaceAll('@.', '')];
       return url == null ? Text(r, style: RasqTypography.caption) : Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), height: 18, errorBuilder: (_, _, _) => Text(r, style: RasqTypography.caption));
     }
     return Text(r, style: const TextStyle(fontSize: 16));
@@ -384,7 +466,7 @@ class _FollowTile extends ConsumerWidget {
       const SizedBox(width: RasqSpacing.md),
       if (u != null) RasqAvatar(key: ValueKey('notif.avatar.${item.id}'), imageUrl: u.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: u.displayName, onTap: () => context.pushUser(u, account: item.account.key)),
       const SizedBox(width: RasqSpacing.sm),
-      Expanded(child: RasqRichText(_boldNameSpans(sentence, u?.displayName ?? ''), style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
+      Expanded(child: RasqRichText(_boldNameSpans(l10n, sentence, [?u], ref.watch(emojiCacheProvider)), style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
       if (u != null && item.kind != NotificationKind.followRequest) RasqTogglePillButton(label: l10n.notificationsFollowButton, activeLabel: l10n.notificationsFollowingButton, active: st.following, onPressed: () => ref.read(userListHelperProvider).toggleFollow(u)),
       if (item.kind == NotificationKind.followRequest) const Icon(Icons.chevron_right),
     ]);

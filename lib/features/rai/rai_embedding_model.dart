@@ -86,7 +86,7 @@ class RaiEmbeddingSpec {
 /// アセットが無いビルドは従来どおり Central から取る。
 const raiEmbeddingSpec = RaiEmbeddingSpec(
   id: 'rasq-minilm-text-int8',
-  label: 'RASQ MiniLM(文)', // l10n-ignore
+  label: 'RAM pico txt', // l10n-ignore(申請の名前、D-558。もとは RASQ MiniLM)
   fileName: 'text_tower_uint8.onnx',
   url: '',
   centralPath: 'minilm-mobilenet/onnx/text_tower_uint8.onnx',
@@ -112,14 +112,18 @@ const raiMiniLmL12EmbeddingSpec = RaiEmbeddingSpec(
   maxLen: 128,
 );
 
-/// 投稿の画像 (D-390): RASQ の MobileNet(画像の塔、int8 32 MB)。[raiEmbeddingSpec] と同じ 384 次元の空間。
-/// 関連 TL / TL のアルゴリズム(似ている投稿)で、投稿の画像も本文と一緒に比べる。RASQ Central が配る。
+/// 投稿の画像 (D-390): RASQ の MobileNet(画像の塔、int8 32 MB。表示名は RAM pico img、D-558)。[raiEmbeddingSpec] と同じ 384 次元の空間。
+/// 関連 TL / TL のアルゴリズム(似ている投稿)で、投稿の画像も本文と一緒に比べる。
+/// **アプリに同梱する** (D-558、文の塔の D-522 と同じ作り): `assets/rai_embedding/image_tower_uint8.onnx`(`tool/fetch_embedding_model.sh` で置く)。
+/// アセットが無いビルドは従来どおり RASQ Central から取る。
 const postVisionEmbeddingSpec = RaiEmbeddingSpec(
   id: 'rasq-mobilenet-vision-int8',
-  label: 'RASQ MobileNet(投稿の画像)', // l10n-ignore
+  label: 'RAM pico img', // l10n-ignore(申請の名前、D-558。もとは RASQ MobileNet)
   fileName: 'image_tower_uint8.onnx',
   url: '',
   centralPath: 'minilm-mobilenet/onnx/image_tower_uint8.onnx',
+  bundledAsset: '$raiBundledEmbeddingDir/image_tower_uint8.onnx',
+  // sha256: tool/fetch_embedding_model.sh が出す値を書く。未記入の間は長さだけ確かめる。
   sizeMb: 32,
   tokenizerAsset: '',
   dims: 384,
@@ -130,7 +134,7 @@ const postVisionEmbeddingSpec = RaiEmbeddingSpec(
 /// SigLIP2 テキスト塔 (D-190)。計測では言い換えに弱かったので既定から外した(差し替え可)。
 const raiSiglip2EmbeddingSpec = RaiEmbeddingSpec(
   id: 'siglip2-base-text-int8',
-  label: 'SigLIP2 base(テキスト塔・int8)', // l10n-ignore
+  label: 'SIG pico txt', // l10n-ignore
   fileName: 'text_model_int8.onnx',
   url: 'https://huggingface.co/onnx-community/siglip2-base-patch16-224-ONNX/resolve/main/onnx/text_model_int8.onnx',
   sizeMb: 283,
@@ -212,7 +216,7 @@ class RaiEmbeddingException implements Exception {
 /// SigLIP2 の画像側 (D-293)。int8。絵文字の絵を、SigLIP2 のテキスト側と同じ空間に埋め込む。
 const emojiVisionEmbeddingSpec = RaiEmbeddingSpec(
   id: 'siglip2-base-vision-int8',
-  label: 'SigLIP2 base(画像側・int8)', // l10n-ignore
+  label: 'SIG pico img', // l10n-ignore
   fileName: 'vision_model_int8.onnx',
   url: 'https://huggingface.co/onnx-community/siglip2-base-patch16-224-ONNX/resolve/main/onnx/vision_model_int8.onnx',
   sizeMb: 95,

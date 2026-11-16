@@ -1,7 +1,9 @@
 {
   "userPageViewTitle": "{tab}の表示",
   "@userPageViewTitle": {"description": "ユーザーページのタブの並べ替え・絞り込みのパネル(選んでいるタブをもう一度押すと開く)の見出し。tab はタブの名前(ノート / 返信 など)", "placeholders": {"tab": {"type": "String"}}},
-  "userPageViewClose": "閉じる",
+  "userPageViewCancel": "キャンセル",
+  "userPageViewConfirm": "決定",
+  "@userPageViewConfirm": {"description": "パネルの見出しの右: いまの並べ替え・絞り込みで確定して閉じる。左の「キャンセル」は開いたときの状態へ戻して閉じる (D-557)"},
   "userPageViewSearchHint": "この人の{tab}から探す",
   "@userPageViewSearchHint": {"description": "パネルの検索欄の薄い字。読み込んだ投稿の本文を探す。tab はタブの名前", "placeholders": {"tab": {"type": "String"}}},
   "userPageViewSortLabel": "並べ替え",

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rasq_client/features/login/terms_sheet.dart' show termsAgreeKey;
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
@@ -66,15 +67,21 @@ void main() {
     await tester.tap(find.text('Blueskyでログイン'));
     await tester.pumpAndSettle();
     expect(find.byType(BlueskyLoginScreen), findsOneWidget);
+    // 1 ページ目 (D-554): PDS の欄は空で始まる。URL を入れて「次へ」→ ハンドルのページ。
+    expect(tester.widget<EditableText>(find.descendant(of: find.byKey(blueskyLoginHostKey), matching: find.byType(EditableText))).controller.text, isEmpty);
+    expect(find.byKey(blueskyLoginIdKey), findsNothing);
     await tester.enterText(find.byKey(blueskyLoginHostKey), 'https://bsky.social/');
+    await tester.tap(find.byKey(blueskyLoginNextKey));
+    await tester.pumpAndSettle();
+    expect(find.byType(BlueskyHandleScreen), findsOneWidget);
     await tester.enterText(find.byKey(blueskyLoginIdKey), 'alice.bsky.social');
     await tester.enterText(find.byKey(blueskyLoginPasswordKey), 'wrong');
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(blueskyLoginButtonKey));
     await tester.pumpAndSettle();
     // 利用規約シート → 同意。
-    if (find.text('同意').evaluate().isNotEmpty) {
-      await tester.tap(find.text('同意'));
+    if (find.byKey(termsAgreeKey).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(termsAgreeKey));
       await tester.pumpAndSettle();
     }
     expect(plugin.calls.last, ('bsky.social', 'alice.bsky.social', 'wrong'));
@@ -83,8 +90,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(blueskyLoginButtonKey));
     await tester.pumpAndSettle();
-    if (find.text('同意').evaluate().isNotEmpty) {
-      await tester.tap(find.text('同意'));
+    if (find.byKey(termsAgreeKey).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(termsAgreeKey));
       await tester.pumpAndSettle();
     }
     final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
@@ -92,5 +99,45 @@ void main() {
     expect(sessions.map((s) => s.account.key), contains('bluesky:bsky.social:alice.bsky.social'));
     expect(c.read(routerProvider).routerDelegate.currentConfiguration.uri.toString(), startsWith(Routes.home));
     expect(find.byType(BlueskyLoginScreen), findsNothing);
+  });
+
+  test('ハンドルの補完 (D-554): 名前だけなら .<PDS> を補う。ハンドル / メール / DID はそのまま', () {
+    expect(blueskyIdentifierFor('alice', 'bsky.social'), 'alice.bsky.social');
+    expect(blueskyIdentifierFor(' @alice ', 'pds.example.com'), 'alice.pds.example.com');
+    expect(blueskyIdentifierFor('alice.example.com', 'bsky.social'), 'alice.example.com');
+    expect(blueskyIdentifierFor('alice@example.com', 'bsky.social'), 'alice@example.com');
+    expect(blueskyIdentifierFor('did:plc:abc', 'bsky.social'), 'did:plc:abc');
+    expect(blueskyIdentifierFor('', 'bsky.social'), '');
+  });
+
+  testWidgets('「サーバーの検索」のタイルを押すと、その PDS でハンドルのページへ。名前だけ入れてログインすると .<PDS> が補われる', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final plugin = _FakeBlueskyPlugin();
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sessionStorageProvider.overrideWithValue(MemorySessionStorage({})), pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(plugin))],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(routerProvider).go(Routes.login);
+    await tester.pumpAndSettle();
+    c.read(routerProvider).push(Routes.loginBluesky);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('login.server.bsky.social')));
+    await tester.pumpAndSettle();
+    expect(find.byType(BlueskyHandleScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('login.bluesky.completeNote')), findsOneWidget);
+    await tester.enterText(find.byKey(blueskyLoginIdKey), 'alice');
+    await tester.enterText(find.byKey(blueskyLoginPasswordKey), 'app-pass');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(blueskyLoginButtonKey));
+    await tester.pumpAndSettle();
+    if (find.byKey(termsAgreeKey).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(termsAgreeKey));
+      await tester.pumpAndSettle();
+    }
+    expect(plugin.calls.last, ('bsky.social', 'alice.bsky.social', 'app-pass'));
   });
 }

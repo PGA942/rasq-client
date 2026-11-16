@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -65,6 +66,48 @@ void main() {
     test('遅い応答は全体の期限で切る', () async {
       final slow = MockClient.streaming((req, _) async => http.StreamedResponse(Stream<List<int>>.periodic(const Duration(milliseconds: 50), (_) => [1]), 200));
       await expectLater(getLimited(url, maxBytes: 1 << 20, timeout: const Duration(milliseconds: 200), client: slow), throwsA(anything));
+    });
+  });
+
+  group('getLimitedToFile(セキュリティ確認 2026-11-11 の #6 / #21)', () {
+    final url = Uri.parse('https://big.test/v.mp4');
+    late Directory dir;
+    setUp(() => dir = Directory.systemTemp.createTempSync('limited-file'));
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    for (final length in [null, 10]) {
+      test('Content-Length が ${length ?? '無い'} の巨大な応答: 上限で止め、途中のファイルを消す', () async {
+        final e = endless(contentLength: length);
+        final f = File('${dir.path}/v.mp4');
+        await expectLater(getLimitedToFile(url, f, maxBytes: 4 * chunk, timeout: const Duration(seconds: 10), client: e.client), throwsA(isA<ResponseTooLargeException>()));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(e.cancelled(), isTrue);
+        expect(e.sent(), lessThanOrEqualTo(6));
+        expect(f.existsSync(), isFalse);
+      });
+    }
+
+    test('取り消す(画面を閉じる)と通信をやめ、途中のファイルを消す', () async {
+      final e = endless();
+      final f = File('${dir.path}/v.mp4');
+      var closed = false;
+      final run = getLimitedToFile(url, f, maxBytes: 1 << 40, timeout: const Duration(seconds: 10), client: e.client, cancelled: () => closed);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      closed = true;
+      await expectLater(run, throwsA(isA<RequestCancelledException>()));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(e.cancelled(), isTrue);
+      expect(f.existsSync(), isFalse);
+    });
+
+    test('頭が来ない応答も期限で切る。ふつうの大きさは書ける', () async {
+      final hang = MockClient.streaming((req, _) => Completer<http.StreamedResponse>().future);
+      final f = File('${dir.path}/v.mp4');
+      await expectLater(getLimitedToFile(url, f, maxBytes: 1 << 20, timeout: const Duration(milliseconds: 300), client: hang), throwsA(isA<TimeoutException>()));
+      expect(f.existsSync(), isFalse);
+      final ok = MockClient((req) async => http.Response.bytes(Uint8List(3 * chunk), 200));
+      await getLimitedToFile(url, f, maxBytes: 4 * chunk, timeout: const Duration(seconds: 10), client: ok);
+      expect(f.lengthSync(), 3 * chunk);
     });
   });
 

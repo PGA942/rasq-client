@@ -16,6 +16,7 @@ class RasqServerInfo {
     this.description,
     this.iconUrl,
     this.bannerUrl,
+    this.backgroundImageUrl,
     this.themeColor,
     this.users,
     this.posts,
@@ -34,6 +35,9 @@ class RasqServerInfo {
   final String? description;
   final Uri? iconUrl;
   final Uri? bannerUrl;
+
+  /// サーバーの背景の画像(Misskey の `backgroundImageUrl`、Central S-130)。ほかのソフトは null。
+  final Uri? backgroundImageUrl;
 
   /// `#RRGGBB`(Misskey の themeColor など)。
   final String? themeColor;
@@ -58,6 +62,7 @@ class RasqServerInfo {
         description: j['description'] as String?,
         iconUrl: _httpUri(j['iconUrl']),
         bannerUrl: _httpUri(j['bannerUrl']),
+        backgroundImageUrl: _httpUri(j['backgroundImageUrl']),
         themeColor: j['themeColor'] as String?,
         users: (j['users'] as num?)?.toInt(),
         posts: (j['posts'] as num?)?.toInt(),

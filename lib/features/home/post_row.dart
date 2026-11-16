@@ -150,6 +150,9 @@ class _PostRowState extends ConsumerState<PostRow> {
   /// Ephemeral: user expanded a collapsed (既読) post in this session.
   bool _expanded = false;
 
+  /// 本文と名前の解析の使い回し (D-550): 本文・名前・絵文字の表が同じ間は、作り直しのたびに MFM を解析し直さない。
+  ({String body, String name, Map<String, Uri?> emojis, List<RasqSpan> spans, List<RasqSpan> nameSpans})? _parsed;
+
   /// アカウント選択 (D-110): ↓ で選んだ別アカウントのコピー。表示と
   /// アクションがこのコピーに切り替わる。
   Post? _actAs;
@@ -248,14 +251,25 @@ class _PostRowState extends ConsumerState<PostRow> {
     final isRead = ref.watch(isReadProvider(post.key));
     final safety = ref.watch(safetySettingsProvider);
     // 隠した重複コピー (D-110): あれば ↓(アカウント選択)を出す。
-    final alternates = ref.watch(postAlternatesProvider)[widget.post.key] ?? const <Post>[];
+    // 自分の投稿の分だけを見る (D-550: 表全体を見ると、どれか 1 つの投稿の重複が替わるたびに全部の行が作り直される)。
+    final alternates = ref.watch(postAlternatesProvider.select((m) => m[widget.post.key])) ?? const <Post>[];
 
     // 省略表示: 既読かつ長文の投稿は先頭数行 + 「展開する」(Store 状態 → props).
     final lineCount = '\n'.allMatches(post.body).length + 1;
     final collapsible = isRead && !_expanded && (lineCount > _collapseLines || post.body.length > 140);
 
-    final spans = InlineSpans.parse(post.body, emojis: emojis, onLink: (u) => launchUrl(u, mode: LaunchMode.externalApplication), onHashtag: (t) => context.pushTrend(t));
-    final nameSpans = InlineSpans.parse(post.author.displayName, emojis: emojis);
+    final memo = _parsed;
+    final parsed = memo != null && memo.body == post.body && memo.name == post.author.displayName && identical(memo.emojis, emojis)
+        ? memo
+        : _parsed = (
+            body: post.body,
+            name: post.author.displayName,
+            emojis: emojis,
+            spans: InlineSpans.parse(post.body, emojis: emojis, onLink: (u) => launchUrl(u, mode: LaunchMode.externalApplication), onHashtag: (t) => context.pushTrend(t)),
+            nameSpans: InlineSpans.name(post.author, emojis: emojis),
+          );
+    final spans = parsed.spans;
+    final nameSpans = parsed.nameSpans;
 
     // content slot
     final Widget content;
@@ -648,7 +662,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       variant: RasqPostTileVariant.embedded,
       author: q.author,
       createdAt: q.createdAt,
-      nameSpans: InlineSpans.parse(q.author.displayName, emojis: emojis),
+      nameSpans: InlineSpans.name(q.author, emojis: emojis),
       content: q.body.isNotEmpty ? RasqRichText(InlineSpans.parse(q.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis) : const SizedBox.shrink(),
       media: mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems) : null,
       onTap: () => context.pushPost(q),
@@ -677,7 +691,7 @@ class InlinePostFrame extends ConsumerWidget {
     final thumbs = <Uri>[for (final m in mediaItems) if (m.type == MediaType.image || m.type == MediaType.video || m.type == MediaType.gif) m.thumbnailUrl ?? m.url];
     return RasqInlinePostCard(
       author: post.author,
-      nameSpans: InlineSpans.parse(post.author.displayName, emojis: emojis),
+      nameSpans: InlineSpans.name(post.author, emojis: emojis),
       content: body.isNotEmpty
           ? RasqRichText(InlineSpans.parse(body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: maxLines, overflow: TextOverflow.ellipsis)
           : Text(mediaItems.isNotEmpty ? context.l10n.homePostAttachments(mediaItems.length) : '', style: RasqTypography.caption),

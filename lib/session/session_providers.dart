@@ -525,6 +525,7 @@ class EmojiCache extends Notifier<Map<String, Uri?>> {
   Map<String, Uri?> build() {
     ref.watch(currentAccountProvider); // reset per account
     _inflight.clear();
+    _pending.clear();
     return const {};
   }
 
@@ -534,14 +535,25 @@ class EmojiCache extends Notifier<Map<String, Uri?>> {
     for (final code in shortcodes) {
       if (state.containsKey(code) || _inflight.contains(code)) continue;
       _inflight.add(code);
-      session.emojiUrl(code).then((u) {
-        _inflight.remove(code);
-        state = {...state, code: u};
-      }).catchError((_) {
-        _inflight.remove(code);
-        state = {...state, code: null};
-      });
+      session.emojiUrl(code).then((u) => _resolved(code, u)).catchError((_) => _resolved(code, null));
     }
+  }
+
+  /// 解けた分をまとめて 1 回で入れる(D-550: 前は 1 つ解けるごとに state を替え、表示中の行が全部その数だけ作り直されていた)。
+  final Map<String, Uri?> _pending = {};
+  bool _flushQueued = false;
+
+  void _resolved(String code, Uri? url) {
+    _inflight.remove(code);
+    _pending[code] = url;
+    if (_flushQueued) return;
+    _flushQueued = true;
+    scheduleMicrotask(() {
+      _flushQueued = false;
+      if (_pending.isEmpty) return;
+      state = {...state, ..._pending};
+      _pending.clear();
+    });
   }
 }
 

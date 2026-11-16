@@ -1,7 +1,8 @@
 {
   "@@locale": "zh_Hant",
   "userPageViewTitle": "{tab}的顯示",
-  "userPageViewClose": "關閉",
+  "userPageViewCancel": "取消",
+  "userPageViewConfirm": "確定",
   "userPageViewSearchHint": "在此使用者的{tab}中搜尋",
   "userPageViewSortLabel": "排序",
   "userPageViewSortNewest": "最新優先",

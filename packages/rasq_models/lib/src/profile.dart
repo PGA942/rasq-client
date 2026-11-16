@@ -32,6 +32,8 @@ class UserProfile {
     this.isSuspended = false,
     this.pinnedPosts = const [],
     this.profileUrl,
+    this.followingVisibility,
+    this.followersVisibility,
   });
 
   final UserSummary summary;
@@ -52,4 +54,23 @@ class UserProfile {
 
   /// Profile web URL (リンクをコピー).
   final Uri? profileUrl;
+
+  /// フォロー / フォロワーの一覧の公開範囲 (D-560、Misskey の `followingVisibility` / `followersVisibility`)。
+  /// 分からなければ null(公開として扱う)。公開していなくて人数が来ない(null)とき、人数の代わりに印を出す。
+  final FollowListVisibility? followingVisibility;
+  final FollowListVisibility? followersVisibility;
+}
+
+/// フォロー / フォロワーの一覧の公開範囲 (D-560)。
+enum FollowListVisibility {
+  public,
+
+  /// フォロワーにだけ(フォローしていなければ見えない)。
+  followers,
+
+  /// 本人だけ。
+  private;
+
+  /// `public` / `followers` / `private`(Misskey の値)。ほかは null。
+  static FollowListVisibility? parse(Object? v) => switch (v) { 'public' => public, 'followers' => followers, 'private' => private, _ => null };
 }

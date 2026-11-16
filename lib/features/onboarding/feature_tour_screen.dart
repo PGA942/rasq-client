@@ -297,13 +297,8 @@ class _TourPicture extends ConsumerWidget {
           decoration: BoxDecoration(color: scheme.surfaceContainerHighest.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(RasqSizes.radiusLg), border: Border.all(color: scheme.outlineVariant)),
           child: child,
         );
-    Widget dot(SnsKind k) => Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(color: RasqSnsPill.colorOf(k), shape: BoxShape.circle),
-          alignment: Alignment.center,
-          child: Text(k.label.characters.first, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
-        );
+    // SNS の印はログインのボタンと同じ (D-555)。
+    Widget dot(SnsKind k) => RasqSnsMark(kind: k, size: 40);
     Widget node(String label, IconData icon, {bool accent = false}) => Container(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: RasqSpacing.sm),
           decoration: BoxDecoration(

@@ -74,7 +74,7 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
   void _resolve() {
     final url = widget.url;
     if (url == null) return;
-    final stream = rasqMediaImage(context, url).resolve(ImageConfiguration.empty);
+    final stream = rasqMediaImage(context, url, decodeHeight: widget.height).resolve(ImageConfiguration.empty);
     final listener = ImageStreamListener((info, _) {
       // Web 版で `<img>` として読めた絵 (D-298) は、`image` を持たない(触ると例外)。そのときは実寸なしのまま(高さ固定で出る)。
       try {
@@ -112,7 +112,7 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
       emoji = ConstrainedBox(
         constraints: BoxConstraints(maxWidth: widget.height * 3, maxHeight: widget.height),
         child: Image(
-          image: rasqMediaImage(context, url),
+          image: rasqMediaImage(context, url, decodeHeight: widget.height),
           height: widget.height,
           fit: BoxFit.fitHeight,
           semanticLabel: widget.semanticLabel ?? widget.name,
@@ -124,7 +124,7 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
         width: RasqCustomEmoji.displayWidth(_aspect!, widget.height),
         height: widget.height,
         child: Image(
-          image: rasqMediaImage(context, url),
+          image: rasqMediaImage(context, url, decodeHeight: widget.height),
           fit: BoxFit.contain,
           semanticLabel: widget.semanticLabel ?? widget.name,
           errorBuilder: (_, _, _) => FittedBox(child: Text(widget.fallbackText)),

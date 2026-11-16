@@ -1,0 +1,17 @@
+{
+  "@@locale": "ja",
+  "onboardingQrTitle": "友だちの QR から探す",
+  "onboardingQrSubtitle": "RASQ アカウントの QR を撮るか、画像から読みます",
+  "onboardingQrIntro": "友だちの RASQ アカウントの QR を読んで、その人を探します。QR はこの端末の中で読み、画像はどこにも送りません。",
+  "onboardingQrReadHeading": "友だちの QR を読む",
+  "onboardingQrCamera": "QR を撮る",
+  "onboardingQrImage": "画像から読む",
+  "onboardingQrNotFound": "画像の中に QR が見つかりませんでした。QR が大きく写るように撮り直してください",
+  "onboardingQrNotRasq": "RASQ アカウントの QR ではありません",
+  "onboardingQrNoAccount": "@{handle} は見つかりませんでした",
+  "@onboardingQrNoAccount": {"placeholders": {"handle": {"type": "String"}}},
+  "onboardingQrReadFailed": "QR を読めませんでした",
+  "onboardingQrMineHeading": "自分の QR",
+  "onboardingQrMineNone": "RASQ アカウントにログインすると、自分の QR を出せます",
+  "onboardingQrMineHint": "友だちにこの QR を読んでもらうと、あなたのページが開きます"
+}

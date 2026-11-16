@@ -86,6 +86,11 @@ class Swing {
     this.sensitive = false,
     this._adSafe,
     this.notified,
+    this.delivery = 'server',
+    this.manifest,
+    this.manifestSha256,
+    this.signature,
+    this.signingKey,
   });
 
   final String id;
@@ -120,6 +125,27 @@ class Swing {
   /// 作ったときの応答にだけ: RASQ の通知を積んだ人数(Central S-079)。
   final int? notified;
 
+  /// 配り方 (D-549 / Central S-128): `server` = [mediaUrl] から取る / `p2p` = 実体は端末どうしで受け取る。
+  final String delivery;
+
+  /// P2P の目録・その SHA-256・作者の署名・作ったときの公開鍵(Central S-128)。見る側は `SwingSigner.verify` と
+  /// 実体の SHA-256 を確かめてから出す。
+  final Map<String, Object?>? manifest;
+  final String? manifestSha256;
+  final String? signature;
+  final String? signingKey;
+
+  bool get isP2p => delivery == 'p2p' && manifest != null && signature != null && signingKey != null;
+
+  /// P2P の実体(目録の `media`)。文だけ / サーバーの Swing では null。
+  ({String sha256, int size, String contentType})? get p2pMedia {
+    final m = manifest?['media'];
+    if (!isP2p || m is! Map) return null;
+    final sha = m['sha256'], size = m['size'], type = m['contentType'];
+    if (sha is! String || size is! int || type is! String) return null;
+    return (sha256: sha, size: size, contentType: type);
+  }
+
   /// 広告の隣に置いてよいか (D-395)。Central の `adSafe`(通報 / 運営の止め / 作った人の処置も入る)。
   /// 古い Central で無ければ手元で: センシティブでなく、CW が無く、未審査のプラグインでない。
   bool get adSafe => _adSafe ?? (!sensitive && cw == null && !(plugin?.unreviewed ?? false));
@@ -129,7 +155,10 @@ class Swing {
 
   String get authorAccountId => author.id.replaceFirst('rasq:', '');
 
-  Swing copyWith({bool? seen, bool? adSafe}) => Swing(id: id, author: author, kind: kind, text: text, mediaUrl: mediaUrl, mediaType: mediaType, plugin: plugin, createdAt: createdAt, expiresAt: expiresAt, seen: seen ?? this.seen, audience: audience, viewCount: viewCount, postId: postId, replyCount: replyCount, cw: cw, sensitive: sensitive, adSafe: adSafe ?? _adSafe);
+  Swing copyWith({bool? seen, bool? adSafe}) => Swing(id: id, author: author, kind: kind, text: text, mediaUrl: mediaUrl, mediaType: mediaType, plugin: plugin, createdAt: createdAt, expiresAt: expiresAt, seen: seen ?? this.seen, audience: audience, viewCount: viewCount, postId: postId, replyCount: replyCount, cw: cw, sensitive: sensitive, adSafe: adSafe ?? _adSafe, notified: notified, delivery: delivery, manifest: manifest, manifestSha256: manifestSha256, signature: signature, signingKey: signingKey);
+
+  /// 実体の場所を差し替えた写し(P2P の動画を手元のファイルから再生する、D-549)。
+  Swing withMediaUrl(Uri url) => Swing(id: id, author: author, kind: kind, text: text, mediaUrl: url, mediaType: mediaType, plugin: plugin, createdAt: createdAt, expiresAt: expiresAt, seen: seen, audience: audience, viewCount: viewCount, postId: postId, replyCount: replyCount, cw: cw, sensitive: sensitive, adSafe: _adSafe, notified: notified, delivery: delivery, manifest: manifest, manifestSha256: manifestSha256, signature: signature, signingKey: signingKey);
 
   Duration remaining(DateTime now) {
     final d = expiresAt.difference(now);
@@ -180,6 +209,11 @@ class Swing {
       sensitive: j['sensitive'] == true,
       adSafe: j['adSafe'] is bool ? j['adSafe'] as bool : null,
       notified: (j['notified'] as num?)?.toInt(),
+      delivery: j['delivery'] is String ? j['delivery'] as String : 'server',
+      manifest: j['manifest'] is Map ? (j['manifest'] as Map).cast<String, Object?>() : null,
+      manifestSha256: j['manifestSha256'] as String?,
+      signature: j['signature'] as String?,
+      signingKey: j['signingKey'] as String?,
     );
   }
 }

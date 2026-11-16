@@ -1,7 +1,8 @@
 {
   "@@locale": "en",
   "userPageViewTitle": "{tab} view",
-  "userPageViewClose": "Close",
+  "userPageViewCancel": "Cancel",
+  "userPageViewConfirm": "Done",
   "userPageViewSearchHint": "Search this user's {tab}",
   "userPageViewSortLabel": "Sort",
   "userPageViewSortNewest": "Newest first",

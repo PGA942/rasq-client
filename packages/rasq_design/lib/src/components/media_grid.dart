@@ -136,10 +136,15 @@ class _MediaTile extends StatelessWidget {
     Widget content = switch (item.type) {
       MediaType.image || MediaType.gif || MediaType.video when !rasqMediaAllowed(context, thumb) =>
         ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.broken_image_outlined, color: scheme.onSurfaceVariant)),
-      MediaType.image || MediaType.gif || MediaType.video => Image(
-          image: rasqMediaImage(context, thumb),
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.broken_image_outlined, color: scheme.onSurfaceVariant)),
+      // タイルの幅の 2 倍でデコードする(D-550)。覆って敷くので、横長の絵(16:9 まで)でも高さが足りるように 2 倍にする。
+      MediaType.image || MediaType.gif || MediaType.video => LayoutBuilder(
+          builder: (context, c) => Image(
+            // 隠しているあいだは、ごく小さくデコードして引き伸ばす(それだけでぼける。背面のぼかしをタイルごとに掛けない、D-550)。
+            image: rasqMediaImage(context, thumb, decodeWidth: hidden ? 12 : c.hasBoundedWidth ? c.maxWidth * 2 : null),
+            fit: BoxFit.cover,
+            filterQuality: hidden ? FilterQuality.medium : FilterQuality.low,
+            errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.broken_image_outlined, color: scheme.onSurfaceVariant)),
+          ),
         ),
       MediaType.file => ColoredBox(
           color: scheme.surfaceContainer,
@@ -183,7 +188,7 @@ class _MediaTile extends StatelessWidget {
       ));
     }
 
-    if (hidden) overlays.add(Positioned.fill(child: RasqSensitiveCushion(key: ValueKey('media.cushion.${item.id}'), onReveal: onReveal)));
+    if (hidden) overlays.add(Positioned.fill(child: RasqSensitiveCushion(key: ValueKey('media.cushion.${item.id}'), onReveal: onReveal, backdropBlur: false)));
 
     return Semantics(
       label: item.alt ?? (item.type == MediaType.file ? item.fileName : null),
@@ -208,8 +213,12 @@ class _MediaTile extends StatelessWidget {
 /// タイル(RasqMediaGrid)と全画面表示で同じもの。メディアの上に `Positioned.fill` で重ねる(背面をぼかす)。
 /// [onReveal] が null なら外せない面(セーフモード / 見守り中で出さないメディア): 文言だけで、ボタンは無い。
 class RasqSensitiveCushion extends StatelessWidget {
-  const RasqSensitiveCushion({super.key, this.onReveal, this.large = false});
+  const RasqSensitiveCushion({super.key, this.onReveal, this.large = false, this.backdropBlur = true});
   final VoidCallback? onReveal;
+
+  /// 背面をぼかすか。タイムラインのタイルは false(下の絵をもともとぼけた小さいデコードで出す。背面のぼかしは
+  /// スクロール中に重い、D-550)。全画面表示は true。
+  final bool backdropBlur;
 
   /// 全画面表示向け(文字とボタンを大きく)。
   final bool large;
@@ -219,10 +228,10 @@ class RasqSensitiveCushion extends StatelessWidget {
     final tokens = RasqTokens.of(context);
     final l = context.designL10n;
     final locked = onReveal == null;
+    Widget blur(Widget child) => backdropBlur ? BackdropFilter(filter: ImageFilter.blur(sigmaX: large ? 32 : 16, sigmaY: large ? 32 : 16), child: child) : child;
     final cushion = ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: large ? 32 : 16, sigmaY: large ? 32 : 16),
-        child: ColoredBox(
+      child: blur(
+        ColoredBox(
           color: tokens.sensitiveOverlay,
           child: Stack(children: [
             Center(

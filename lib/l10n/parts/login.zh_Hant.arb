@@ -26,7 +26,6 @@
   "loginBundleUse": "使用",
   "loginBundleLogin": "登入",
   "loginTermsTitle": "外掛條款",
-  "loginTermsAgree": "同意",
   "loginTermsBullet": "• {text}",
   "loginSignupDivider": "沒有 {service} 帳號",
   "loginSignupButton": "註冊",
@@ -64,5 +63,15 @@
   "loginSnsReopenBrowser": "再次開啟瀏覽器",
   "loginMisskeyAuthButton": "在瀏覽器中驗證 (MiAuth)",
   "loginMastodonAuthButton": "在瀏覽器中驗證 (OAuth)",
-  "loginMastodonHostHint": "輸入站台 URL（例：mastodon.social）"
+  "loginMastodonHostHint": "輸入站台 URL（例：mastodon.social）",
+  "loginServerSearchHint": "依名稱或主機篩選",
+  "loginServerSearchEmpty": "清單中找不到。請在上方輸入伺服器的 URL",
+  "loginServerMore": "此伺服器的選單",
+  "loginServerOpenInBrowser": "在瀏覽器中開啟伺服器",
+  "loginBlueskyNext": "使用此 PDS 繼續",
+  "loginBlueskyHandleCompleteNote": "只輸入名稱時,登入時會補上「.{host}」",
+  "loginTermsAgreeLogin": "同意並登入",
+  "loginTermsAgreeSignup": "同意並註冊",
+  "loginTermsCancel": "取消",
+  "loginTermsClose": "關閉"
 }

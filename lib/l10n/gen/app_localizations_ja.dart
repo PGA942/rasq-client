@@ -2537,6 +2537,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get composeAttachmentSensitive => 'センシティブにする';
 
   @override
+  String get composeTargetUnavailable => '投稿先のアカウントは今は使えません(保護者が止めています)';
+
+  @override
+  String composeVisibilityPublicOnlyTitle(String sns) {
+    return '$sns では公開範囲を選べません';
+  }
+
+  @override
+  String get composeVisibilityPublicOnlyBody => 'この投稿は公開になり、誰でも見られます。公開で送りますか?';
+
+  @override
+  String get composeVisibilityPublicOnlySend => '公開で送る';
+
+  @override
   String get composeMediaPickTypeLabel => '動画 / 音声';
 
   @override
@@ -3675,6 +3689,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dmMediaPlaceholder => '[メディア]';
 
   @override
+  String get dmLastMessageHidden => 'このメッセージは表示できません';
+
+  @override
   String get homeCreateMissingAccount => '(いないアカウント)';
 
   @override
@@ -4594,9 +4611,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loginTermsTitle => 'プラグインの規約';
 
   @override
-  String get loginTermsAgree => '同意';
-
-  @override
   String loginTermsBullet(String text) {
     return '・$text';
   }
@@ -4734,6 +4748,38 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get loginMastodonHostHint => 'インスタンスのURLを入力 (例: mastodon.social)';
+
+  @override
+  String get loginServerSearchHint => '名前かホストで絞り込む';
+
+  @override
+  String get loginServerSearchEmpty => '一覧に見つかりません。上の欄にサーバーの URL を入れてください';
+
+  @override
+  String get loginServerMore => 'このサーバーのメニュー';
+
+  @override
+  String get loginServerOpenInBrowser => 'サーバーをブラウザで開く';
+
+  @override
+  String get loginBlueskyNext => 'この PDS で次へ';
+
+  @override
+  String loginBlueskyHandleCompleteNote(String host) {
+    return '名前だけ入れると、ログインのときに「.$host」を補います';
+  }
+
+  @override
+  String get loginTermsAgreeLogin => '同意してログイン';
+
+  @override
+  String get loginTermsAgreeSignup => '同意して新規登録';
+
+  @override
+  String get loginTermsCancel => 'キャンセル';
+
+  @override
+  String get loginTermsClose => '閉じる';
 
   @override
   String get mediaVizStyleMirror => '上下対称のバー';
@@ -7652,7 +7698,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get onboardingDiscoverExportTitle => '外部 SNS のエクスポートデータから探す';
 
   @override
-  String get onboardingDiscoverExportSubtitle => '準備中';
+  String get onboardingDiscoverExportSubtitle =>
+      'フォロー / フォロワーの書き出しから、RASQ にいる人を探します';
 
   @override
   String get onboardingDiscoverAskTitle => 'RAi に聞く';
@@ -8091,6 +8138,334 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingDiscoverApiEmpty => '画像・本文・URL のどれかが要ります';
+
+  @override
+  String get onboardingExportFileTypeLabel => 'SNS の書き出し';
+
+  @override
+  String get onboardingExportIntro =>
+      'ほかの SNS から書き出した(エクスポートした)データを読み、そこに出てくるフォロー / フォロワーの中から、RASQ にいる人を探します。書き出しはこの端末の中で読み、サーバーへは送りません。';
+
+  @override
+  String get onboardingExportFormats =>
+      '読める形: X(Twitter)の zip / Mastodon・Misskey のフォローの CSV / Instagram・Threads の zip / Bluesky の repo.car。zip の中のファイルだけを選んでもかまいません。';
+
+  @override
+  String get onboardingExportPick => '書き出しのファイルを選ぶ';
+
+  @override
+  String get onboardingExportPickAgain => 'ほかのファイルを選ぶ';
+
+  @override
+  String get onboardingExportPickFailed => 'ファイルを選べませんでした';
+
+  @override
+  String get onboardingExportReadFailed => 'ファイルを読めませんでした';
+
+  @override
+  String get onboardingExportNothingFound =>
+      'このファイルからは、フォロー / フォロワーを読み取れませんでした。対応している書き出しか確かめてください。';
+
+  @override
+  String get onboardingExportFoundHeading => '読み取ったアカウント';
+
+  @override
+  String onboardingExportFoundLine(
+    String service,
+    int following,
+    int followers,
+    int mentions,
+  ) {
+    return '$service: フォロー $following / フォロワー $followers / やりとり $mentions';
+  }
+
+  @override
+  String onboardingExportXIdNote(int count) {
+    return 'X の書き出しのフォロー / フォロワーは内部 ID だけです。ID で照合し、ツイートのメンションからハンドルも分かった $count 人はハンドルでも照合します。';
+  }
+
+  @override
+  String onboardingExportSkipped(int count) {
+    return '大きすぎるファイルを $count 個読みませんでした';
+  }
+
+  @override
+  String get onboardingExportXAuthTitle => 'X の書き出しを使うには、X で認証します';
+
+  @override
+  String get onboardingExportXAuthDone => 'X で認証しました(試作)';
+
+  @override
+  String get onboardingExportXAuthDummyNote =>
+      'いまは試作のため、X には確かめに行きません(ボタンを押すだけで通ります)。';
+
+  @override
+  String get onboardingExportXAuthButton => 'X で認証(試作)';
+
+  @override
+  String onboardingExportXSelfTitle(String handle) {
+    return '自分の X(@$handle)をプロフィールに登録する';
+  }
+
+  @override
+  String get onboardingExportXSelfBody =>
+      '登録すると、あなたをフォローしている人が、自分の X の書き出しからあなたを見つけられます。X には確かめに行かないので、確認済みの印は付きません(試作)。';
+
+  @override
+  String get onboardingExportXSelfRegister => '登録する';
+
+  @override
+  String get onboardingExportXSelfDone => '登録しました';
+
+  @override
+  String get onboardingExportXRegisterFailed => 'X のアカウントを登録できませんでした';
+
+  @override
+  String onboardingExportSearch(int count) {
+    return 'この $count 人から RASQ のユーザーを探す';
+  }
+
+  @override
+  String get onboardingExportHashNote =>
+      'サーバーへ送るのは、アカウントごとのハッシュとサービス名だけです。サーバーは保存しません。';
+
+  @override
+  String onboardingExportProgress(int done, int total) {
+    return '照合しています($done / $total)';
+  }
+
+  @override
+  String get onboardingExportBusy => '混み合っています。少し待ってからもう一度お試しください';
+
+  @override
+  String get onboardingExportMatchFailed => '照合できませんでした';
+
+  @override
+  String get onboardingExportNoMatches =>
+      'RASQ にいる人は見つかりませんでした。相手がプロフィールにその SNS のリンクを載せているか、SNS アカウントをつないでいると見つかります。';
+
+  @override
+  String onboardingExportMatchesHeading(int count) {
+    return 'RASQ にいる人($count)';
+  }
+
+  @override
+  String get onboardingExportRelationFollowing => 'フォロー';
+
+  @override
+  String get onboardingExportRelationFollower => 'フォロワー';
+
+  @override
+  String get onboardingExportRelationMention => 'やりとり';
+
+  @override
+  String onboardingExportVia(String service, String relation, String name) {
+    return '$service の$relation: $name';
+  }
+
+  @override
+  String get onboardingExportUnverified => '本人の確認はまだ(プロフィールでそう名乗っています)';
+
+  @override
+  String get onboardingExportXIdentityTitle => 'X アカウント(X で認証・試作)';
+
+  @override
+  String get onboardingExportXIdentityBody =>
+      'X のハンドルを登録すると、ほかの人が X の書き出しからあなたを見つけられます。いまは試作のため X には確かめに行かず、確認済みの印は付きません。';
+
+  @override
+  String get onboardingExportXIdentityNone => '未登録';
+
+  @override
+  String onboardingExportXIdentityCurrent(String handle) {
+    return '@$handle(試作・未確認)';
+  }
+
+  @override
+  String get onboardingExportXIdentityHandleLabel => 'X のハンドル(@ の後ろ)';
+
+  @override
+  String get onboardingExportXIdentityIdLabel => 'X の内部 ID(数字、任意)';
+
+  @override
+  String get onboardingExportXIdentityIdHelp =>
+      'X の書き出しの account.js にある accountId。入れると、ハンドルの分からないフォロワーの書き出しからも見つかります。';
+
+  @override
+  String get onboardingExportXIdentitySave => 'X で認証(試作)';
+
+  @override
+  String get onboardingExportXIdentityRemove => '登録を消す';
+
+  @override
+  String get onboardingExportXIdentityInvalid =>
+      'ハンドルは英数字と _ の 15 文字まで、ID は数字で入れてください';
+
+  @override
+  String get onboardingExportXIdentityFailed => 'X のアカウントを保存できませんでした';
+
+  @override
+  String get onboardingHistoryTitle => '検索履歴を統合して探す';
+
+  @override
+  String get onboardingHistorySubtitle => 'これまでに探した言葉をまとめて、RASQ の人とリストを探します';
+
+  @override
+  String get onboardingHistoryIntro =>
+      '「SNS サービスを探す」でこれまでに探した言葉です。選んだ言葉をまとめて、RASQ のユーザーと RASQ リストを探します。履歴はこの端末の中だけに残ります。';
+
+  @override
+  String get onboardingHistoryEmpty =>
+      'まだ履歴がありません。「好きな画像やコンテンツから探す」や「有力なユーザーから探す」で探すと、ここに言葉が並びます。';
+
+  @override
+  String get onboardingHistoryRemove => 'この言葉を消す';
+
+  @override
+  String get onboardingHistoryClear => '履歴をすべて消す';
+
+  @override
+  String onboardingHistorySearch(int count) {
+    return '選んだ $count 個の言葉で探す';
+  }
+
+  @override
+  String onboardingHistoryTooMany(int max) {
+    return '一度に選べるのは $max 個までです';
+  }
+
+  @override
+  String get onboardingPageSearchBrowseButton => 'この画面を探す';
+
+  @override
+  String get onboardingPageSearchCaptureFailed => 'このページを写せませんでした';
+
+  @override
+  String get onboardingPageSearchTitle => 'この画面を探す';
+
+  @override
+  String get onboardingPageSearchLengthLabel => '長さ';
+
+  @override
+  String get onboardingPageSearchModeDraw => '囲む';
+
+  @override
+  String get onboardingPageSearchModeScroll => 'スクロール';
+
+  @override
+  String get onboardingPageSearchHint =>
+      '探したい部分をドラッグで囲みます(いくつでも)。囲みをタップすると、検索文字列を直したり、画像で探すようにできます。';
+
+  @override
+  String get onboardingPageSearchSketchNote =>
+      'この端末ではページの写しを撮れないため、文字の位置だけを出しています。囲んで文字で探せます(画像では探せません)。';
+
+  @override
+  String onboardingPageSearchButton(int count) {
+    return '$count か所を探す';
+  }
+
+  @override
+  String onboardingPageSearchRegionsFull(int max) {
+    return '囲めるのは $max か所までです';
+  }
+
+  @override
+  String onboardingPageSearchTooManyImages(int max) {
+    return '画像で探せるのは、1 回に $max か所までです';
+  }
+
+  @override
+  String onboardingPageSearchRegionTitle(int index) {
+    return '囲み $index';
+  }
+
+  @override
+  String get onboardingPageSearchRegionCancel => 'キャンセル';
+
+  @override
+  String get onboardingPageSearchRegionConfirm => '決定';
+
+  @override
+  String get onboardingPageSearchByText => '文字で探す';
+
+  @override
+  String get onboardingPageSearchByImage => '画像で探す';
+
+  @override
+  String get onboardingPageSearchQueryLabel => '検索文字列';
+
+  @override
+  String get onboardingPageSearchQueryHint => '名前、@ハンドル、言葉など';
+
+  @override
+  String get onboardingPageSearchOpenEditor => '画像エディターで開く';
+
+  @override
+  String get onboardingPageSearchEdited => '画像エディターで直した画像で探します';
+
+  @override
+  String get onboardingPageSearchDelete => 'この囲みを消す';
+
+  @override
+  String get onboardingPageSearchResultsTitle => '見つかったもの';
+
+  @override
+  String get onboardingPageSearchTermsHeading => '探した言葉';
+
+  @override
+  String get onboardingPageSearchUsersHeading => 'RASQ のユーザー';
+
+  @override
+  String get onboardingPageSearchPostsHeading => 'RASQ の投稿';
+
+  @override
+  String onboardingPageSearchImagesFailed(int count) {
+    return '画像 $count 枚は、言葉にできませんでした(混み合っているか、読み取れませんでした)';
+  }
+
+  @override
+  String get onboardingQrTitle => '友だちの QR から探す';
+
+  @override
+  String get onboardingQrSubtitle => 'RASQ アカウントの QR を撮るか、画像から読みます';
+
+  @override
+  String get onboardingQrIntro =>
+      '友だちの RASQ アカウントの QR を読んで、その人を探します。QR はこの端末の中で読み、画像はどこにも送りません。';
+
+  @override
+  String get onboardingQrReadHeading => '友だちの QR を読む';
+
+  @override
+  String get onboardingQrCamera => 'QR を撮る';
+
+  @override
+  String get onboardingQrImage => '画像から読む';
+
+  @override
+  String get onboardingQrNotFound =>
+      '画像の中に QR が見つかりませんでした。QR が大きく写るように撮り直してください';
+
+  @override
+  String get onboardingQrNotRasq => 'RASQ アカウントの QR ではありません';
+
+  @override
+  String onboardingQrNoAccount(String handle) {
+    return '@$handle は見つかりませんでした';
+  }
+
+  @override
+  String get onboardingQrReadFailed => 'QR を読めませんでした';
+
+  @override
+  String get onboardingQrMineHeading => '自分の QR';
+
+  @override
+  String get onboardingQrMineNone => 'RASQ アカウントにログインすると、自分の QR を出せます';
+
+  @override
+  String get onboardingQrMineHint => '友だちにこの QR を読んでもらうと、あなたのページが開きます';
 
   @override
   String get onboardingTourPageSnsTitle => 'いくつもの SNS を、ひとつの場所で';
@@ -11620,19 +11995,19 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get raiModelsEmbeddingRasqText => 'RASQ MiniLM(文)';
+  String get raiModelsEmbeddingRasqText => 'RAM pico txt';
 
   @override
   String get raiModelsEmbeddingMiniLmL12 => 'MiniLM-L12 多言語(paraphrase, int8)';
 
   @override
-  String get raiModelsEmbeddingRasqVision => 'RASQ MobileNet(投稿の画像)';
+  String get raiModelsEmbeddingRasqVision => 'RAM pico img';
 
   @override
-  String get raiModelsEmbeddingSiglipText => 'SigLIP2 base(テキスト塔・int8)';
+  String get raiModelsEmbeddingSiglipText => 'SIG pico txt';
 
   @override
-  String get raiModelsEmbeddingSiglipVision => 'SigLIP2 base(画像側・int8)';
+  String get raiModelsEmbeddingSiglipVision => 'SIG pico img';
 
   @override
   String raiModelsEmbeddingFailed(String message) {
@@ -18125,6 +18500,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get swingUnreadable => 'Swing を読めませんでした';
 
   @override
+  String get swingErrorSendHeld =>
+      '通報された Swing の確認ができなかったため、しばらく Swing を出せません(72 時間で解除されます)';
+
+  @override
+  String get swingP2pFetching => '相手の端末から受け取っています…';
+
+  @override
+  String get swingP2pUnavailable => 'いま届けられる人がいません。少し待ってからもう一度開いてください';
+
+  @override
+  String get swingP2pUnverified => '作った人の署名を確かめられないため、表示しません';
+
+  @override
+  String get swingP2pRetry => 'もう一度';
+
+  @override
   String themeNotAThemePack(String id) {
     return '着せ替えパックではありません: $id';
   }
@@ -18687,7 +19078,10 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get userPageViewClose => '閉じる';
+  String get userPageViewCancel => 'キャンセル';
+
+  @override
+  String get userPageViewConfirm => '決定';
 
   @override
   String userPageViewSearchHint(String tab) {
@@ -18897,6 +19291,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get usersNotFound => 'このユーザーは存在しないようです。';
+
+  @override
+  String usersFieldMentionNotFound(String handle) {
+    return '$handle は見つかりませんでした';
+  }
 
   @override
   String get vcSectionInvited => '招待';
