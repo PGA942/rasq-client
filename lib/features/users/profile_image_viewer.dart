@@ -1,9 +1,13 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import '../../l10n/l10n.dart';
 
 import '../home/plugin_actions.dart';
+import '../theme/icon_theme/icon_theme_backdrop.dart' show IconThemeBackdrop, themeColor;
+import '../theme/icon_theme/icon_theme_reader.dart' show iconThemeProvider;
 import '../media/viewer_plugin_overlay.dart';
 
 /// プロフィールのアイコン / バナーの全画面表示 (D-177)。黒背景 + ピンチズーム、
@@ -39,9 +43,36 @@ class _ProfileImageViewerScreenState extends ConsumerState<ProfileImageViewerScr
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(children: [
+    // アイコンに埋め込まれたテーマ (D-564): 読めたら黒の代わりにテーマの背景・パーティクル・枠を敷き、アイコンはテーマの
+    // フレーム(予約ビット: 角丸 / 丸)で、文字はテーマの文字色で。読めない画像はこれまでどおり。
+    final spec = ref.watch(iconThemeProvider(widget.url.toString())).value;
+    final fg = spec == null ? Colors.white : themeColor(spec.basic.text);
+    Widget picture = Image.network(webHtmlElementStrategy: rasqWebImageStrategy, widget.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => Icon(Icons.broken_image_outlined, color: fg, size: 48));
+    if (spec != null) {
+      final rounded = spec.basic.hints?.roundedFrame ?? true;
+      final image = picture;
+      picture = LayoutBuilder(builder: (context, c) {
+        final side = math.min(280.0, c.biggest.shortestSide * 0.62);
+        return Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            key: const ValueKey('profileImage.themed'),
+            width: side,
+            height: side,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(rounded ? side * 0.2 : side / 2), boxShadow: const [BoxShadow(color: Color(0x59000000), blurRadius: 40, offset: Offset(0, 10))]),
+            child: ClipRRect(borderRadius: BorderRadius.circular(rounded ? side * 0.2 : side / 2), child: SizedBox.expand(child: FittedBox(fit: BoxFit.cover, child: image))),
+          ),
+          if (spec.ext?.url case final url?)
+            Padding(
+              padding: const EdgeInsets.only(top: RasqSpacing.md),
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), borderRadius: BorderRadius.circular(8)),
+                child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), child: Text(context.l10n.iconThemePluginUrlNote(url), key: const ValueKey('profileImage.pluginNote'), style: RasqTypography.caption.copyWith(color: Colors.white))),
+              ),
+            ),
+        ]);
+      });
+    }
+    final content = Stack(children: [
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => setState(() => _chrome = !_chrome),
@@ -49,7 +80,7 @@ class _ProfileImageViewerScreenState extends ConsumerState<ProfileImageViewerScr
             minScale: 1,
             maxScale: 5,
             child: Center(
-              child: _overlays.wrap(0, Image.network(webHtmlElementStrategy: rasqWebImageStrategy, widget.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
+              child: _overlays.wrap(0, picture),
             ),
           ),
         ),
@@ -63,7 +94,7 @@ class _ProfileImageViewerScreenState extends ConsumerState<ProfileImageViewerScr
                   child: RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, color: Colors.white, onPressed: () => Navigator.of(context).maybePop(), tooltip: context.l10n.usersImageViewerBack),
                 ),
                 const SizedBox(width: RasqSpacing.sm),
-                Expanded(child: Text(widget.title ?? '', style: RasqTypography.title.copyWith(color: Colors.white), overflow: TextOverflow.ellipsis)),
+                Expanded(child: Text(widget.title ?? '', style: RasqTypography.title.copyWith(color: fg), overflow: TextOverflow.ellipsis)),
                 // 全画面アクションバー (D-246): 全画面表示プラグインのトグル。狭ければ横スクロール(右寄せ)。
                 Flexible(
                   child: SingleChildScrollView(
@@ -90,7 +121,11 @@ class _ProfileImageViewerScreenState extends ConsumerState<ProfileImageViewerScr
               ]),
             ),
           ),
-      ]),
+      ]);
+    return Scaffold(
+      backgroundColor: spec == null ? Colors.black : Colors.transparent,
+      // テーマの背景は全体の下。押す / なぞるとパーティクルが出る(ヘッダーの切り替えもそのまま)。
+      body: spec == null ? content : IconThemeBackdrop(key: const ValueKey('profileImage.backdrop'), spec: spec, child: content),
     );
   }
 }

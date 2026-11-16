@@ -136,6 +136,8 @@ flutter:
     # システムの絵文字の名前 (D-558): @misskey-dev/emoji-data 17.0.3 の日本語 / 英語の索引(tool/build_unicode_emoji_names.py、
     # gzip で 87KB。ライセンスは LICENSES.txt)。絵文字ピッカーで初めて探したときに読む。
     - assets/emoji/
+    # テーマフレームの同梱の SVG (D-563): テーマのデータは ID だけを持ち、ここ(と外の置き場)から引く。どれも SvgLite で消毒して描く。
+    - assets/theme_frames/
     - assets/audio/alarm.wav
     # RAi の 3D モデル (D-181: Google Drive で受領した glb。リグ arm_1..4 L/R / ear / head / cone / koma、
     # アニメ idle / run_* / accident。描画は後段 — 今はアセットとして保持)。

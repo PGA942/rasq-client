@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../backend/rasq_account_page_api.dart';
 import '../profile/rasq_post_tile.dart';
+import '../theme/icon_theme/icon_theme_reader.dart' show iconThemeProvider;
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/third_column.dart';
@@ -350,16 +351,22 @@ class _PostRowState extends ConsumerState<PostRow> {
                 RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.homePostShare, onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context))),
               ]),
             ]);
+    // 作者のアイコンに埋め込まれたテーマの予約 3 ビット (D-564): アイコンの枠(角丸 / 丸)と添付の並び(横 / 縦・詰める)。
+    // 読めないうち / 読めないアイコンは今までどおり。
+    final authorAvatar = post.author.avatarUrl;
+    final hints = authorAvatar == null ? null : ref.watch(iconThemeProvider(authorAvatar.toString())).value?.basic.hints;
+    final arrangement = hints == null ? RasqMediaArrangement.auto : RasqMediaArrangement.of(vertical: hints.verticalMedia, packed: hints.packMedia);
     final tile = RasqPostTile(
       author: post.author,
       createdAt: post.createdAt,
       nameSpans: nameSpans,
+      avatarRounded: hints?.roundedFrame ?? false,
       repostedBy: post.repostedBy,
       bannerIcon: widget.bannerIcon,
       bannerText: widget.bannerText,
       dense: widget.dense,
       content: content,
-      media: !collapsible && !hasCw && !widget.hideMedia && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, revealed: revealed, onReveal: (id) => ref.read(mediaRevealProvider.notifier).reveal(post, id), maxVisible: widget.showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i]), onPlayTile: (i) => showVideoFow(ref, mediaItems[i], post: post, column: fowColumnOf(context))) : null,
+      media: !collapsible && !hasCw && !widget.hideMedia && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, revealed: revealed, onReveal: (id) => ref.read(mediaRevealProvider.notifier).reveal(post, id), maxVisible: widget.showAllMedia ? mediaItems.length : 4, arrangement: arrangement, onTapTile: (i) => context.openViewer(post, mediaIndex[i]), onPlayTile: (i) => showVideoFow(ref, mediaItems[i], post: post, column: fowColumnOf(context))) : null,
       poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
       quote: !collapsible && !hasCw && post.quote != null ? (widget.compactQuote ? InlinePostFrame(post: post.quote!) : quoteTile(context, post.quote!, emojis: emojis, safety: safety)) : null,
       actionBar: widget.actionBarAbove != null ? null : bar,

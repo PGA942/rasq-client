@@ -12,6 +12,7 @@ import '../../shell/headers.dart';
 import '../settings/settings_dsl.dart';
 import '../store/rasqpkg.dart';
 import '../store/store_providers.dart';
+import 'icon_theme/icon_theme_reader.dart' show iconThemesEnabledProvider, iconThemesSettingKey;
 import 'theme_packs.dart';
 import '../../l10n/l10n.dart';
 
@@ -139,6 +140,16 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
             child: Text(_error!, style: RasqTypography.caption.copyWith(color: RasqColors.danger)),
           ),
         const Divider(height: RasqSpacing.lg),
+        // アイコンに埋め込まれたテーマを読む (D-564)。止めると、アイコンを取り直さない(枠・添付の並び・拡大したときの背景は既定)。
+        // 埋め込むほうは、プロフィールの編集のアイコン / ヘッダーの 🎨 から(D-565)。
+        RasqSwitchListTile(
+          key: const ValueKey('theme.iconThemes'),
+          title: context.l10n.iconThemeSettingsRead,
+          subtitle: context.l10n.iconThemeSettingsReadSubtitle,
+          leading: const Icon(Icons.palette_outlined),
+          value: ref.watch(iconThemesEnabledProvider),
+          onChanged: (v) => ref.read(settingsAreaProvider(themeSettingsArea).notifier).set(iconThemesSettingKey, v),
+        ),
         RasqListTile(key: const ValueKey('theme.store'), title: context.l10n.themeFindInStore, leading: const Icon(Icons.storefront_outlined), onTap: () => context.push(Routes.store)),
         RasqListTile(
           key: const ValueKey('theme.import'),

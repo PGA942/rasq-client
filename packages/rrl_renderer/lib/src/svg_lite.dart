@@ -45,6 +45,14 @@ class SvgLite {
   /// SVG の文字列を読む。根が `svg` でない / 読めない / 64 KiB を超える → null。
   static SvgLite? parse(String source) => parseWithLimits(source);
 
+  /// [parse] を、もっと厳しい上限で読む(テーマフレームの SVG など、D-563)。上限は [maxBytes] / [maxElements] / [maxNumbers] より
+  /// 大きくはできない(大きい値は既定の上限に切り詰める)。超えた入力は null、要素 / 数はそこで読むのをやめる。
+  static SvgLite? parseStrict(String source, {int maxBytes = maxBytes, int maxElements = maxElements, int maxNumbers = maxNumbers}) {
+    final bytes = maxBytes.clamp(0, SvgLite.maxBytes);
+    if (source.length > bytes || utf8.encode(source).length > bytes) return null;
+    return parseWithLimits(source, maxElements: maxElements.clamp(0, SvgLite.maxElements), maxNumbers: maxNumbers.clamp(0, SvgLite.maxNumbers));
+  }
+
   /// [parse] の上限を小さくして試す(テスト用。64 KiB の中では数 40,000 個にはほぼ届かないため)。
   @visibleForTesting
   static SvgLite? parseWithLimits(String source, {int maxElements = maxElements, int maxNumbers = maxNumbers}) {

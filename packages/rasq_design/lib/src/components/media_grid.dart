@@ -31,6 +31,7 @@ class RasqMediaGrid extends StatefulWidget {
     this.borderRadius = RasqSizes.radiusMd,
     this.singleAspectRatio = 16 / 9,
     this.gridAspectRatio = 1,
+    this.arrangement = RasqMediaArrangement.auto,
   });
 
   final List<MediaItem> items;
@@ -50,6 +51,10 @@ class RasqMediaGrid extends StatefulWidget {
   final double borderRadius;
   final double singleAspectRatio;
   final double gridAspectRatio;
+
+  /// 並べ方 (D-564)。既定は枚数で決める今の並び。投稿者のアイコンのテーマの予約 3 ビット(並び 横 / 縦・隙間 そのまま / 詰める)で
+  /// 替えるときに渡す。
+  final RasqMediaArrangement arrangement;
 
   @override
   State<RasqMediaGrid> createState() => _RasqMediaGridState();
@@ -79,6 +84,9 @@ class _RasqMediaGridState extends State<RasqMediaGrid> {
         );
 
     const gap = SizedBox.square(dimension: RasqSpacing.mediaGap);
+    if (widget.arrangement != RasqMediaArrangement.auto && visible > 1) {
+      return ClipRRect(borderRadius: radius, child: _arranged(widget.arrangement, items, visible, tile));
+    }
     final Widget body = switch (visible) {
       1 => AspectRatio(aspectRatio: items.first.aspectRatio?.clamp(0.6, 2.2) ?? widget.singleAspectRatio, child: tile(0)),
       2 => AspectRatio(
@@ -113,6 +121,108 @@ class _RasqMediaGridState extends State<RasqMediaGrid> {
         ]),
     };
     return ClipRRect(borderRadius: radius, child: body);
+  }
+}
+
+/// 添付メディアの並べ方 (D-564、アイコンのテーマの予約 3 ビット。仮組みの「閲覧する」の見本と同じ)。
+enum RasqMediaArrangement {
+  /// 枚数で決める(今までどおり)。
+  auto,
+
+  /// 横・そのまま: 1 行に同じ高さで、形はそのまま。横に送る。
+  horizontal,
+
+  /// 横・詰める: 4:3 の窓に 2 + 2 + 1 の列、横に送る。
+  horizontalPacked,
+
+  /// 縦・そのまま: 2 列の 4:3 の枠に、形を保って真ん中に。
+  vertical,
+
+  /// 縦・詰める: 2 列に隙間なく積む(形はそのまま)。
+  verticalPacked;
+
+  /// 予約 3 ビットの「縦」「詰める」から。
+  static RasqMediaArrangement of({required bool vertical, required bool packed}) =>
+      vertical ? (packed ? verticalPacked : RasqMediaArrangement.vertical) : (packed ? horizontalPacked : horizontal);
+}
+
+Widget _arranged(RasqMediaArrangement a, List<MediaItem> items, int visible, Widget Function(int) tile) {
+  const g = RasqSpacing.mediaGap;
+  double ratio(int i) => (items[i].aspectRatio ?? 1).clamp(0.4, 2.5);
+  switch (a) {
+    case RasqMediaArrangement.horizontal:
+      return SizedBox(
+        key: const ValueKey('media.arranged.horizontal'),
+        height: 160,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: visible,
+          separatorBuilder: (_, _) => const SizedBox(width: g),
+          itemBuilder: (_, i) => SizedBox(width: 160 * ratio(i), child: tile(i)),
+        ),
+      );
+    case RasqMediaArrangement.horizontalPacked:
+      return AspectRatio(
+        key: const ValueKey('media.arranged.horizontalPacked'),
+        aspectRatio: 4 / 3,
+        child: LayoutBuilder(builder: (context, c) {
+          final colW = (c.maxWidth - g) / 2;
+          final cols = (visible + 1) ~/ 2;
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: cols,
+            separatorBuilder: (_, _) => const SizedBox(width: g),
+            itemBuilder: (_, col) {
+              final a = col * 2, b = a + 1;
+              return SizedBox(
+                width: colW,
+                // 最後の 1 枚(奇数のとき)は列の高さいっぱい。
+                child: b < visible ? Column(children: [Expanded(child: tile(a)), const SizedBox(height: g), Expanded(child: tile(b))]) : tile(a),
+              );
+            },
+          );
+        }),
+      );
+    case RasqMediaArrangement.vertical:
+      return Column(key: const ValueKey('media.arranged.vertical'), children: [
+        for (var r = 0; r * 2 < visible; r++) ...[
+          if (r > 0) const SizedBox(height: g),
+          Row(children: [
+            for (final i in [r * 2, r * 2 + 1]) ...[
+              if (i == r * 2 + 1) const SizedBox(width: g),
+              Expanded(
+                child: AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: i < visible ? Center(child: AspectRatio(aspectRatio: ratio(i), child: tile(i))) : const SizedBox.shrink(),
+                ),
+              ),
+            ],
+          ]),
+        ],
+      ]);
+    case RasqMediaArrangement.verticalPacked:
+    case RasqMediaArrangement.auto:
+      // 2 列に、短い方の列へ順に積む(石垣)。
+      final cols = [<int>[], <int>[]];
+      final heights = [0.0, 0.0];
+      for (var i = 0; i < visible; i++) {
+        final c = heights[0] <= heights[1] ? 0 : 1;
+        cols[c].add(i);
+        heights[c] += 1 / ratio(i);
+      }
+      return Row(key: const ValueKey('media.arranged.verticalPacked'), crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (final (k, col) in cols.indexed) ...[
+          if (k == 1) const SizedBox(width: g),
+          Expanded(
+            child: Column(children: [
+              for (final (j, i) in col.indexed) ...[
+                if (j > 0) const SizedBox(height: g),
+                AspectRatio(aspectRatio: ratio(i), child: tile(i)),
+              ],
+            ]),
+          ),
+        ],
+      ]);
   }
 }
 

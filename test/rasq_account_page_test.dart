@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:rasq_client/features/theme/icon_theme/icon_theme_editor_screen.dart' show IconThemeEditorScreen;
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/navigation.dart';
 import 'package:rasq_client/app/providers.dart';
@@ -315,6 +316,14 @@ void main() {
 
     // 編集 → タイルの出し分け: 鍵アカウントは「自動(非表示)」→「表示」にすると出る。
     await tester.tap(find.byKey(const ValueKey('rasqPage.edit')));
+    await tester.pumpAndSettle();
+    expect(find.byType(RasqProfileEditScreen), findsOneWidget);
+    // アイコン / ヘッダーの 🎨 からテーマ編集へ (D-565)。戻ればそのまま。
+    expect(find.byKey(const ValueKey('rasqProfile.banner.theme')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rasqProfile.avatar.theme')));
+    await tester.pumpAndSettle();
+    expect(find.byType(IconThemeEditorScreen), findsOneWidget);
+    tester.state<NavigatorState>(find.ancestor(of: find.byType(IconThemeEditorScreen), matching: find.byType(Navigator)).first).pop();
     await tester.pumpAndSettle();
     expect(find.byType(RasqProfileEditScreen), findsOneWidget);
     final seg = find.byKey(const ValueKey('rasqProfile.sns.misskey:mk.example:kagi'));
