@@ -4177,6 +4177,30 @@ abstract class AppLocalizations {
   /// **'センシティブにする'**
   String get composeAttachmentSensitive;
 
+  /// 送る直前に、投稿先の SNS が見守りで止められていた
+  ///
+  /// In ja, this message translates to:
+  /// **'投稿先のアカウントは今は使えません(保護者が止めています)'**
+  String get composeTargetUnavailable;
+
+  /// 投稿先の SNS が公開範囲(ホーム / フォロワー限定)を持たないときの確認の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'{sns} では公開範囲を選べません'**
+  String composeVisibilityPublicOnlyTitle(String sns);
+
+  /// No description provided for @composeVisibilityPublicOnlyBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'この投稿は公開になり、誰でも見られます。公開で送りますか?'**
+  String get composeVisibilityPublicOnlyBody;
+
+  /// No description provided for @composeVisibilityPublicOnlySend.
+  ///
+  /// In ja, this message translates to:
+  /// **'公開で送る'**
+  String get composeVisibilityPublicOnlySend;
+
   /// コンポーザーの上にメディアをドラッグしている間に出す案内。{count} = あと何件付けられるか。
   ///
   /// In ja, this message translates to:
@@ -6144,6 +6168,12 @@ abstract class AppLocalizations {
   /// **'[メディア]'**
   String get dmMediaPlaceholder;
 
+  /// DM 一覧の最新の 1 行: 見守りで見せない本文の代わり
+  ///
+  /// In ja, this message translates to:
+  /// **'このメッセージは表示できません'**
+  String get dmLastMessageHidden;
+
   /// ＋ のボタンに置いた投稿のアカウントが、もうログインしていないとき
   ///
   /// In ja, this message translates to:
@@ -7674,12 +7704,6 @@ abstract class AppLocalizations {
   /// **'プラグインの規約'**
   String get loginTermsTitle;
 
-  /// プラグインの規約のシートの、同意して進むボタン
-  ///
-  /// In ja, this message translates to:
-  /// **'同意'**
-  String get loginTermsAgree;
-
   /// プラグインの規約の箇条書きの 1 行。text は規約の文(プラグインの中身)
   ///
   /// In ja, this message translates to:
@@ -7907,6 +7931,66 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'インスタンスのURLを入力 (例: mastodon.social)'**
   String get loginMastodonHostHint;
+
+  /// No description provided for @loginServerSearchHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'名前かホストで絞り込む'**
+  String get loginServerSearchHint;
+
+  /// No description provided for @loginServerSearchEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'一覧に見つかりません。上の欄にサーバーの URL を入れてください'**
+  String get loginServerSearchEmpty;
+
+  /// No description provided for @loginServerMore.
+  ///
+  /// In ja, this message translates to:
+  /// **'このサーバーのメニュー'**
+  String get loginServerMore;
+
+  /// No description provided for @loginServerOpenInBrowser.
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーをブラウザで開く'**
+  String get loginServerOpenInBrowser;
+
+  /// No description provided for @loginBlueskyNext.
+  ///
+  /// In ja, this message translates to:
+  /// **'この PDS で次へ'**
+  String get loginBlueskyNext;
+
+  /// No description provided for @loginBlueskyHandleCompleteNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'名前だけ入れると、ログインのときに「.{host}」を補います'**
+  String loginBlueskyHandleCompleteNote(String host);
+
+  /// SNS のプラグインの規約の FOW の、下のボタン (D-557)
+  ///
+  /// In ja, this message translates to:
+  /// **'同意してログイン'**
+  String get loginTermsAgreeLogin;
+
+  /// SNS のプラグインの規約の FOW の、下のボタン (D-557)
+  ///
+  /// In ja, this message translates to:
+  /// **'同意して新規登録'**
+  String get loginTermsAgreeSignup;
+
+  /// SNS のプラグインの規約の FOW の、下のボタン (D-557)
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get loginTermsCancel;
+
+  /// SNS のプラグインの規約の FOW の、下のボタン (D-557)
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get loginTermsClose;
 
   /// 音声を動画にするときの波形の形の選択肢(Visualizer の設定)。中央から上下に伸びるバー
   ///
@@ -12787,7 +12871,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingDiscoverExportSubtitle.
   ///
   /// In ja, this message translates to:
-  /// **'準備中'**
+  /// **'フォロー / フォロワーの書き出しから、RASQ にいる人を探します'**
   String get onboardingDiscoverExportSubtitle;
 
   /// 探す画面の入口・見出し・人から探すで見つからなかったときのボタン
@@ -13443,6 +13527,557 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'画像・本文・URL のどれかが要ります'**
   String get onboardingDiscoverApiEmpty;
+
+  /// No description provided for @onboardingExportFileTypeLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS の書き出し'**
+  String get onboardingExportFileTypeLabel;
+
+  /// No description provided for @onboardingExportIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかの SNS から書き出した(エクスポートした)データを読み、そこに出てくるフォロー / フォロワーの中から、RASQ にいる人を探します。書き出しはこの端末の中で読み、サーバーへは送りません。'**
+  String get onboardingExportIntro;
+
+  /// No description provided for @onboardingExportFormats.
+  ///
+  /// In ja, this message translates to:
+  /// **'読める形: X(Twitter)の zip / Mastodon・Misskey のフォローの CSV / Instagram・Threads の zip / Bluesky の repo.car。zip の中のファイルだけを選んでもかまいません。'**
+  String get onboardingExportFormats;
+
+  /// No description provided for @onboardingExportPick.
+  ///
+  /// In ja, this message translates to:
+  /// **'書き出しのファイルを選ぶ'**
+  String get onboardingExportPick;
+
+  /// No description provided for @onboardingExportPickAgain.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかのファイルを選ぶ'**
+  String get onboardingExportPickAgain;
+
+  /// No description provided for @onboardingExportPickFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルを選べませんでした'**
+  String get onboardingExportPickFailed;
+
+  /// No description provided for @onboardingExportReadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルを読めませんでした'**
+  String get onboardingExportReadFailed;
+
+  /// No description provided for @onboardingExportNothingFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'このファイルからは、フォロー / フォロワーを読み取れませんでした。対応している書き出しか確かめてください。'**
+  String get onboardingExportNothingFound;
+
+  /// No description provided for @onboardingExportFoundHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み取ったアカウント'**
+  String get onboardingExportFoundHeading;
+
+  /// No description provided for @onboardingExportFoundLine.
+  ///
+  /// In ja, this message translates to:
+  /// **'{service}: フォロー {following} / フォロワー {followers} / やりとり {mentions}'**
+  String onboardingExportFoundLine(
+    String service,
+    int following,
+    int followers,
+    int mentions,
+  );
+
+  /// No description provided for @onboardingExportXIdNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'X の書き出しのフォロー / フォロワーは内部 ID だけです。ID で照合し、ツイートのメンションからハンドルも分かった {count} 人はハンドルでも照合します。'**
+  String onboardingExportXIdNote(int count);
+
+  /// No description provided for @onboardingExportSkipped.
+  ///
+  /// In ja, this message translates to:
+  /// **'大きすぎるファイルを {count} 個読みませんでした'**
+  String onboardingExportSkipped(int count);
+
+  /// No description provided for @onboardingExportXAuthTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'X の書き出しを使うには、X で認証します'**
+  String get onboardingExportXAuthTitle;
+
+  /// No description provided for @onboardingExportXAuthDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'X で認証しました(試作)'**
+  String get onboardingExportXAuthDone;
+
+  /// No description provided for @onboardingExportXAuthDummyNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'いまは試作のため、X には確かめに行きません(ボタンを押すだけで通ります)。'**
+  String get onboardingExportXAuthDummyNote;
+
+  /// No description provided for @onboardingExportXAuthButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'X で認証(試作)'**
+  String get onboardingExportXAuthButton;
+
+  /// No description provided for @onboardingExportXSelfTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の X(@{handle})をプロフィールに登録する'**
+  String onboardingExportXSelfTitle(String handle);
+
+  /// No description provided for @onboardingExportXSelfBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録すると、あなたをフォローしている人が、自分の X の書き出しからあなたを見つけられます。X には確かめに行かないので、確認済みの印は付きません(試作)。'**
+  String get onboardingExportXSelfBody;
+
+  /// No description provided for @onboardingExportXSelfRegister.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録する'**
+  String get onboardingExportXSelfRegister;
+
+  /// No description provided for @onboardingExportXSelfDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録しました'**
+  String get onboardingExportXSelfDone;
+
+  /// No description provided for @onboardingExportXRegisterFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'X のアカウントを登録できませんでした'**
+  String get onboardingExportXRegisterFailed;
+
+  /// No description provided for @onboardingExportSearch.
+  ///
+  /// In ja, this message translates to:
+  /// **'この {count} 人から RASQ のユーザーを探す'**
+  String onboardingExportSearch(int count);
+
+  /// No description provided for @onboardingExportHashNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'サーバーへ送るのは、アカウントごとのハッシュとサービス名だけです。サーバーは保存しません。'**
+  String get onboardingExportHashNote;
+
+  /// No description provided for @onboardingExportProgress.
+  ///
+  /// In ja, this message translates to:
+  /// **'照合しています({done} / {total})'**
+  String onboardingExportProgress(int done, int total);
+
+  /// No description provided for @onboardingExportBusy.
+  ///
+  /// In ja, this message translates to:
+  /// **'混み合っています。少し待ってからもう一度お試しください'**
+  String get onboardingExportBusy;
+
+  /// No description provided for @onboardingExportMatchFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'照合できませんでした'**
+  String get onboardingExportMatchFailed;
+
+  /// No description provided for @onboardingExportNoMatches.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ にいる人は見つかりませんでした。相手がプロフィールにその SNS のリンクを載せているか、SNS アカウントをつないでいると見つかります。'**
+  String get onboardingExportNoMatches;
+
+  /// No description provided for @onboardingExportMatchesHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ にいる人({count})'**
+  String onboardingExportMatchesHeading(int count);
+
+  /// No description provided for @onboardingExportRelationFollowing.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー'**
+  String get onboardingExportRelationFollowing;
+
+  /// No description provided for @onboardingExportRelationFollower.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロワー'**
+  String get onboardingExportRelationFollower;
+
+  /// No description provided for @onboardingExportRelationMention.
+  ///
+  /// In ja, this message translates to:
+  /// **'やりとり'**
+  String get onboardingExportRelationMention;
+
+  /// No description provided for @onboardingExportVia.
+  ///
+  /// In ja, this message translates to:
+  /// **'{service} の{relation}: {name}'**
+  String onboardingExportVia(String service, String relation, String name);
+
+  /// No description provided for @onboardingExportUnverified.
+  ///
+  /// In ja, this message translates to:
+  /// **'本人の確認はまだ(プロフィールでそう名乗っています)'**
+  String get onboardingExportUnverified;
+
+  /// No description provided for @onboardingExportXIdentityTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'X アカウント(X で認証・試作)'**
+  String get onboardingExportXIdentityTitle;
+
+  /// No description provided for @onboardingExportXIdentityBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'X のハンドルを登録すると、ほかの人が X の書き出しからあなたを見つけられます。いまは試作のため X には確かめに行かず、確認済みの印は付きません。'**
+  String get onboardingExportXIdentityBody;
+
+  /// No description provided for @onboardingExportXIdentityNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'未登録'**
+  String get onboardingExportXIdentityNone;
+
+  /// No description provided for @onboardingExportXIdentityCurrent.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle}(試作・未確認)'**
+  String onboardingExportXIdentityCurrent(String handle);
+
+  /// No description provided for @onboardingExportXIdentityHandleLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'X のハンドル(@ の後ろ)'**
+  String get onboardingExportXIdentityHandleLabel;
+
+  /// No description provided for @onboardingExportXIdentityIdLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'X の内部 ID(数字、任意)'**
+  String get onboardingExportXIdentityIdLabel;
+
+  /// No description provided for @onboardingExportXIdentityIdHelp.
+  ///
+  /// In ja, this message translates to:
+  /// **'X の書き出しの account.js にある accountId。入れると、ハンドルの分からないフォロワーの書き出しからも見つかります。'**
+  String get onboardingExportXIdentityIdHelp;
+
+  /// No description provided for @onboardingExportXIdentitySave.
+  ///
+  /// In ja, this message translates to:
+  /// **'X で認証(試作)'**
+  String get onboardingExportXIdentitySave;
+
+  /// No description provided for @onboardingExportXIdentityRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録を消す'**
+  String get onboardingExportXIdentityRemove;
+
+  /// No description provided for @onboardingExportXIdentityInvalid.
+  ///
+  /// In ja, this message translates to:
+  /// **'ハンドルは英数字と _ の 15 文字まで、ID は数字で入れてください'**
+  String get onboardingExportXIdentityInvalid;
+
+  /// No description provided for @onboardingExportXIdentityFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'X のアカウントを保存できませんでした'**
+  String get onboardingExportXIdentityFailed;
+
+  /// No description provided for @onboardingHistoryTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索履歴を統合して探す'**
+  String get onboardingHistoryTitle;
+
+  /// No description provided for @onboardingHistorySubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'これまでに探した言葉をまとめて、RASQ の人とリストを探します'**
+  String get onboardingHistorySubtitle;
+
+  /// No description provided for @onboardingHistoryIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'「SNS サービスを探す」でこれまでに探した言葉です。選んだ言葉をまとめて、RASQ のユーザーと RASQ リストを探します。履歴はこの端末の中だけに残ります。'**
+  String get onboardingHistoryIntro;
+
+  /// No description provided for @onboardingHistoryEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ履歴がありません。「好きな画像やコンテンツから探す」や「有力なユーザーから探す」で探すと、ここに言葉が並びます。'**
+  String get onboardingHistoryEmpty;
+
+  /// No description provided for @onboardingHistoryRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'この言葉を消す'**
+  String get onboardingHistoryRemove;
+
+  /// No description provided for @onboardingHistoryClear.
+  ///
+  /// In ja, this message translates to:
+  /// **'履歴をすべて消す'**
+  String get onboardingHistoryClear;
+
+  /// No description provided for @onboardingHistorySearch.
+  ///
+  /// In ja, this message translates to:
+  /// **'選んだ {count} 個の言葉で探す'**
+  String onboardingHistorySearch(int count);
+
+  /// No description provided for @onboardingHistoryTooMany.
+  ///
+  /// In ja, this message translates to:
+  /// **'一度に選べるのは {max} 個までです'**
+  String onboardingHistoryTooMany(int max);
+
+  /// No description provided for @onboardingPageSearchBrowseButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'この画面を探す'**
+  String get onboardingPageSearchBrowseButton;
+
+  /// No description provided for @onboardingPageSearchCaptureFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'このページを写せませんでした'**
+  String get onboardingPageSearchCaptureFailed;
+
+  /// No description provided for @onboardingPageSearchTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'この画面を探す'**
+  String get onboardingPageSearchTitle;
+
+  /// No description provided for @onboardingPageSearchLengthLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'長さ'**
+  String get onboardingPageSearchLengthLabel;
+
+  /// No description provided for @onboardingPageSearchModeDraw.
+  ///
+  /// In ja, this message translates to:
+  /// **'囲む'**
+  String get onboardingPageSearchModeDraw;
+
+  /// No description provided for @onboardingPageSearchModeScroll.
+  ///
+  /// In ja, this message translates to:
+  /// **'スクロール'**
+  String get onboardingPageSearchModeScroll;
+
+  /// No description provided for @onboardingPageSearchHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'探したい部分をドラッグで囲みます(いくつでも)。囲みをタップすると、検索文字列を直したり、画像で探すようにできます。'**
+  String get onboardingPageSearchHint;
+
+  /// No description provided for @onboardingPageSearchSketchNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末ではページの写しを撮れないため、文字の位置だけを出しています。囲んで文字で探せます(画像では探せません)。'**
+  String get onboardingPageSearchSketchNote;
+
+  /// No description provided for @onboardingPageSearchButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count} か所を探す'**
+  String onboardingPageSearchButton(int count);
+
+  /// No description provided for @onboardingPageSearchRegionsFull.
+  ///
+  /// In ja, this message translates to:
+  /// **'囲めるのは {max} か所までです'**
+  String onboardingPageSearchRegionsFull(int max);
+
+  /// No description provided for @onboardingPageSearchTooManyImages.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像で探せるのは、1 回に {max} か所までです'**
+  String onboardingPageSearchTooManyImages(int max);
+
+  /// No description provided for @onboardingPageSearchRegionTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'囲み {index}'**
+  String onboardingPageSearchRegionTitle(int index);
+
+  /// No description provided for @onboardingPageSearchRegionCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get onboardingPageSearchRegionCancel;
+
+  /// No description provided for @onboardingPageSearchRegionConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get onboardingPageSearchRegionConfirm;
+
+  /// No description provided for @onboardingPageSearchByText.
+  ///
+  /// In ja, this message translates to:
+  /// **'文字で探す'**
+  String get onboardingPageSearchByText;
+
+  /// No description provided for @onboardingPageSearchByImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像で探す'**
+  String get onboardingPageSearchByImage;
+
+  /// No description provided for @onboardingPageSearchQueryLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索文字列'**
+  String get onboardingPageSearchQueryLabel;
+
+  /// No description provided for @onboardingPageSearchQueryHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'名前、@ハンドル、言葉など'**
+  String get onboardingPageSearchQueryHint;
+
+  /// No description provided for @onboardingPageSearchOpenEditor.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像エディターで開く'**
+  String get onboardingPageSearchOpenEditor;
+
+  /// No description provided for @onboardingPageSearchEdited.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像エディターで直した画像で探します'**
+  String get onboardingPageSearchEdited;
+
+  /// No description provided for @onboardingPageSearchDelete.
+  ///
+  /// In ja, this message translates to:
+  /// **'この囲みを消す'**
+  String get onboardingPageSearchDelete;
+
+  /// No description provided for @onboardingPageSearchResultsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'見つかったもの'**
+  String get onboardingPageSearchResultsTitle;
+
+  /// No description provided for @onboardingPageSearchTermsHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'探した言葉'**
+  String get onboardingPageSearchTermsHeading;
+
+  /// No description provided for @onboardingPageSearchUsersHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のユーザー'**
+  String get onboardingPageSearchUsersHeading;
+
+  /// No description provided for @onboardingPageSearchPostsHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の投稿'**
+  String get onboardingPageSearchPostsHeading;
+
+  /// No description provided for @onboardingPageSearchImagesFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像 {count} 枚は、言葉にできませんでした(混み合っているか、読み取れませんでした)'**
+  String onboardingPageSearchImagesFailed(int count);
+
+  /// No description provided for @onboardingQrTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'友だちの QR から探す'**
+  String get onboardingQrTitle;
+
+  /// No description provided for @onboardingQrSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントの QR を撮るか、画像から読みます'**
+  String get onboardingQrSubtitle;
+
+  /// No description provided for @onboardingQrIntro.
+  ///
+  /// In ja, this message translates to:
+  /// **'友だちの RASQ アカウントの QR を読んで、その人を探します。QR はこの端末の中で読み、画像はどこにも送りません。'**
+  String get onboardingQrIntro;
+
+  /// No description provided for @onboardingQrReadHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'友だちの QR を読む'**
+  String get onboardingQrReadHeading;
+
+  /// No description provided for @onboardingQrCamera.
+  ///
+  /// In ja, this message translates to:
+  /// **'QR を撮る'**
+  String get onboardingQrCamera;
+
+  /// No description provided for @onboardingQrImage.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像から読む'**
+  String get onboardingQrImage;
+
+  /// No description provided for @onboardingQrNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'画像の中に QR が見つかりませんでした。QR が大きく写るように撮り直してください'**
+  String get onboardingQrNotFound;
+
+  /// No description provided for @onboardingQrNotRasq.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントの QR ではありません'**
+  String get onboardingQrNotRasq;
+
+  /// No description provided for @onboardingQrNoAccount.
+  ///
+  /// In ja, this message translates to:
+  /// **'@{handle} は見つかりませんでした'**
+  String onboardingQrNoAccount(String handle);
+
+  /// No description provided for @onboardingQrReadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'QR を読めませんでした'**
+  String get onboardingQrReadFailed;
+
+  /// No description provided for @onboardingQrMineHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の QR'**
+  String get onboardingQrMineHeading;
+
+  /// No description provided for @onboardingQrMineNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ アカウントにログインすると、自分の QR を出せます'**
+  String get onboardingQrMineNone;
+
+  /// No description provided for @onboardingQrMineHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'友だちにこの QR を読んでもらうと、あなたのページが開きます'**
+  String get onboardingQrMineHint;
 
   /// No description provided for @onboardingTourPageSnsTitle.
   ///
@@ -18838,7 +19473,7 @@ abstract class AppLocalizations {
   /// **'準備完了'**
   String get raiModelsPhaseReady;
 
-  /// アプリに同梱した埋め込みモデル(RASQ MiniLM)を使っているときの状態
+  /// アプリに同梱した埋め込みモデル(RAM pico txt / RAM pico img)を使っているときの状態
   ///
   /// In ja, this message translates to:
   /// **'準備完了(同梱)'**
@@ -19189,7 +19824,7 @@ abstract class AppLocalizations {
   /// 埋め込みモデルの名前
   ///
   /// In ja, this message translates to:
-  /// **'RASQ MiniLM(文)'**
+  /// **'RAM pico txt'**
   String get raiModelsEmbeddingRasqText;
 
   /// No description provided for @raiModelsEmbeddingMiniLmL12.
@@ -19201,19 +19836,19 @@ abstract class AppLocalizations {
   /// No description provided for @raiModelsEmbeddingRasqVision.
   ///
   /// In ja, this message translates to:
-  /// **'RASQ MobileNet(投稿の画像)'**
+  /// **'RAM pico img'**
   String get raiModelsEmbeddingRasqVision;
 
   /// No description provided for @raiModelsEmbeddingSiglipText.
   ///
   /// In ja, this message translates to:
-  /// **'SigLIP2 base(テキスト塔・int8)'**
+  /// **'SIG pico txt'**
   String get raiModelsEmbeddingSiglipText;
 
   /// No description provided for @raiModelsEmbeddingSiglipVision.
   ///
   /// In ja, this message translates to:
-  /// **'SigLIP2 base(画像側・int8)'**
+  /// **'SIG pico img'**
   String get raiModelsEmbeddingSiglipVision;
 
   /// No description provided for @raiModelsEmbeddingFailed.
@@ -29856,6 +30491,36 @@ abstract class AppLocalizations {
   /// **'Swing を読めませんでした'**
   String get swingUnreadable;
 
+  /// No description provided for @swingErrorSendHeld.
+  ///
+  /// In ja, this message translates to:
+  /// **'通報された Swing の確認ができなかったため、しばらく Swing を出せません(72 時間で解除されます)'**
+  String get swingErrorSendHeld;
+
+  /// No description provided for @swingP2pFetching.
+  ///
+  /// In ja, this message translates to:
+  /// **'相手の端末から受け取っています…'**
+  String get swingP2pFetching;
+
+  /// No description provided for @swingP2pUnavailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'いま届けられる人がいません。少し待ってからもう一度開いてください'**
+  String get swingP2pUnavailable;
+
+  /// No description provided for @swingP2pUnverified.
+  ///
+  /// In ja, this message translates to:
+  /// **'作った人の署名を確かめられないため、表示しません'**
+  String get swingP2pUnverified;
+
+  /// No description provided for @swingP2pRetry.
+  ///
+  /// In ja, this message translates to:
+  /// **'もう一度'**
+  String get swingP2pRetry;
+
   /// 着せ替えとして入れようとしたパッケージが着せ替えではないときの誤り。id はパッケージの id
   ///
   /// In ja, this message translates to:
@@ -30810,11 +31475,17 @@ abstract class AppLocalizations {
   /// **'{tab}の表示'**
   String userPageViewTitle(String tab);
 
-  /// No description provided for @userPageViewClose.
+  /// No description provided for @userPageViewCancel.
   ///
   /// In ja, this message translates to:
-  /// **'閉じる'**
-  String get userPageViewClose;
+  /// **'キャンセル'**
+  String get userPageViewCancel;
+
+  /// パネルの見出しの右: いまの並べ替え・絞り込みで確定して閉じる。左の「キャンセル」は開いたときの状態へ戻して閉じる (D-557)
+  ///
+  /// In ja, this message translates to:
+  /// **'決定'**
+  String get userPageViewConfirm;
 
   /// パネルの検索欄の薄い字。読み込んだ投稿の本文を探す。tab はタブの名前
   ///
@@ -31193,6 +31864,12 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'このユーザーは存在しないようです。'**
   String get usersNotFound;
+
+  /// プロフィールの項目の @ハンドルを押して、その人が見つからなかったとき (D-560)
+  ///
+  /// In ja, this message translates to:
+  /// **'{handle} は見つかりませんでした'**
+  String usersFieldMentionNotFound(String handle);
 
   /// VC ホームの節の見出し / 検索の節のチップ(招待されているルーム)
   ///

@@ -178,13 +178,15 @@ class AstellTileStrip extends StatefulWidget {
   final double height;
   final String? emptyHint;
 
+  /// タイル 1 枚の最大幅 (D-142)。タブレットで横に伸びすぎないように。ログインのサーバーのカードも同じ (D-560)。
+  static const maxTileWidth = 600.0;
+
   @override
   State<AstellTileStrip> createState() => _AstellTileStripState();
 }
 
 class _AstellTileStripState extends State<AstellTileStrip> {
-  /// タイル 1 枚の最大幅 (D-142)。タブレットで横に伸びすぎないように。
-  static const maxTileWidth = 600.0;
+  static const maxTileWidth = AstellTileStrip.maxTileWidth;
   PageController? _controller;
   double _fraction = 0.54;
 

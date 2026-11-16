@@ -52,5 +52,7 @@
   "designTimeMinutesAgo": "{count, plural, other{{count}분 전}}",
   "designTimeHoursAgo": "{count, plural, other{{count}시간 전}}",
   "designTimeDaysAgo": "{count, plural, other{{count}일 전}}",
-  "designErrorRetry": "다시 시도"
+  "designErrorRetry": "다시 시도",
+  "designProfileCountPrivate": "비공개",
+  "designProfileCountFollowersOnly": "팔로워에게만 공개"
 }

@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rasq_models/rasq_models.dart' show UserSummary;
+import 'package:rasq_plugin_api/rasq_plugin_api.dart' show SnsSession;
 
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
@@ -414,7 +416,7 @@ Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDai
     {required String text, bool dm = false, bool direct = false, bool media = false, List<String> sentTexts = const []}) async {
   if (!gate.supervised) return null;
   ChildComposeVerdict? v;
-  final feature = (dm || direct ? gate.blockedMessage('dm') : null) ?? (!dm && media ? gate.blockedMessage('post.media') : null);
+  final feature = childComposeFeatureBlock(gate, dm: dm, direct: direct, media: media);
   if (gate.locked) {
     v = ChildComposeVerdict(appL10n.childSafeComposeLocked);
   } else if (feature != null) {
@@ -433,6 +435,14 @@ Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDai
   return v;
 }
 
+/// 送る前の機能の判定(セキュリティ確認 2026-11-11 の #9): 見守りで止めた機能なら理由、通れば null。数えない。
+/// 投稿は `post`、DM は `dm`。公開範囲がダイレクトの投稿 [direct] は `post` と `dm` の両方を見る。添付があれば `post.media` も。
+/// 送る直前(アップロードなどの待ちのあと)の確かめ直しにも使う(待ちのあいだに保護者が止めたら送らない)。
+String? childComposeFeatureBlock(ChildGate gate, {bool dm = false, bool direct = false, bool media = false}) {
+  if (!gate.supervised) return null;
+  return (dm || direct ? gate.blockedMessage('dm') : null) ?? (!dm ? gate.blockedMessage('post') : null) ?? (!dm && media ? gate.blockedMessage('post.media') : null);
+}
+
 /// [childComposeVerdictFor] の画面用。
 Future<ChildComposeVerdict?> childComposeVerdict(WidgetRef ref, {required String text, bool dm = false, bool direct = false, bool media = false, List<String> sentTexts = const []}) =>
     childComposeVerdictFor(ref.read(childGateProvider), ref.read(childSafeDailyProvider), ref.read(childSafeNowProvider)(),
@@ -449,3 +459,28 @@ Future<void> childComposeBlocked(WidgetRef ref) async {
   if (!ref.read(childGateProvider).supervised) return;
   await ref.read(childSafeDailyProvider).recordBlocked(now: ref.read(childSafeNowProvider)());
 }
+
+/// 見守りでユーザーの検索を止めている (セキュリティ確認 2026-11-11 の #24)。[message] は画面に出す案内。
+class ChildSafeUserSearchBlocked implements Exception {
+  const ChildSafeUserSearchBlocked(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
+/// ユーザーの検索を止めているときの案内(止めていなければ null)。検索画面のユーザー欄と同じ `search.users`。
+String? childUserSearchBlockReason(ChildGate gate) => gate.searchAllowed('users') ? null : appL10n.trendUsersBlocked;
+
+/// ユーザーを探す共通の口 (#24): DM の相手選び / リストのメンバー追加 / 投稿の @ 補完 は、SNS の `searchUsers` を
+/// 直接呼ばずにここを通る。呼ぶ直前と結果を受け取ったあと(待ちのあいだに保護者が止めたら)の今の許可を見て、
+/// 止めていれば [ChildSafeUserSearchBlocked] を投げる(結果は返さない)。[gate] は呼ぶたびに今の値を読む関数。
+Future<T> childSafeUserSearch<T>(ChildGate Function() gate, Future<T> Function() search) async {
+  if (childUserSearchBlockReason(gate()) case final why?) throw ChildSafeUserSearchBlocked(why);
+  final r = await search();
+  if (childUserSearchBlockReason(gate()) case final why?) throw ChildSafeUserSearchBlocked(why);
+  return r;
+}
+
+/// [childSafeUserSearch] で SNS のユーザーを探す。
+Future<List<UserSummary>> childSafeSearchUsers(ChildGate Function() gate, SnsSession session, String q, {int limit = 20}) =>
+    childSafeUserSearch(gate, () async => (await session.searchUsers(q, limit: limit)).items);

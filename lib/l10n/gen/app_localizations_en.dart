@@ -2668,6 +2668,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get composeAttachmentSensitive => 'Mark as sensitive';
 
   @override
+  String get composeTargetUnavailable =>
+      'This account can\'t be used right now (blocked by your guardian)';
+
+  @override
+  String composeVisibilityPublicOnlyTitle(String sns) {
+    return '$sns has no post visibility settings';
+  }
+
+  @override
+  String get composeVisibilityPublicOnlyBody =>
+      'This post will be public and visible to anyone. Send it publicly?';
+
+  @override
+  String get composeVisibilityPublicOnlySend => 'Send publicly';
+
+  @override
   String composeDropHint(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -3883,6 +3899,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dmMediaPlaceholder => '[Media]';
 
   @override
+  String get dmLastMessageHidden => 'This message can\'t be shown';
+
+  @override
   String get homeCreateMissingAccount => '(missing account)';
 
   @override
@@ -4829,9 +4848,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginTermsTitle => 'Plugin terms';
 
   @override
-  String get loginTermsAgree => 'Agree';
-
-  @override
   String loginTermsBullet(String text) {
     return '• $text';
   }
@@ -4970,6 +4986,39 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get loginMastodonHostHint =>
       'Enter instance URL (e.g. mastodon.social)';
+
+  @override
+  String get loginServerSearchHint => 'Filter by name or host';
+
+  @override
+  String get loginServerSearchEmpty =>
+      'Not in the list. Enter the server\'s URL in the field above';
+
+  @override
+  String get loginServerMore => 'Server menu';
+
+  @override
+  String get loginServerOpenInBrowser => 'Open the server in the browser';
+
+  @override
+  String get loginBlueskyNext => 'Continue with this PDS';
+
+  @override
+  String loginBlueskyHandleCompleteNote(String host) {
+    return 'If you enter just a name, “.$host” is added when you sign in';
+  }
+
+  @override
+  String get loginTermsAgreeLogin => 'Agree and sign in';
+
+  @override
+  String get loginTermsAgreeSignup => 'Agree and sign up';
+
+  @override
+  String get loginTermsCancel => 'Cancel';
+
+  @override
+  String get loginTermsClose => 'Close';
 
   @override
   String get mediaVizStyleMirror => 'Mirrored bars';
@@ -8005,7 +8054,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Find from data exported from other networks';
 
   @override
-  String get onboardingDiscoverExportSubtitle => 'Coming soon';
+  String get onboardingDiscoverExportSubtitle =>
+      'Find people on RASQ from your exported follows and followers';
 
   @override
   String get onboardingDiscoverAskTitle => 'Ask RAi';
@@ -8476,6 +8526,343 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingDiscoverApiEmpty => 'An image, text or URL is required';
+
+  @override
+  String get onboardingExportFileTypeLabel => 'Social network exports';
+
+  @override
+  String get onboardingExportIntro =>
+      'Reads data you exported from another social network and looks for the people you follow, or who follow you, who are on RASQ. The export is read on this device and is never sent to the server.';
+
+  @override
+  String get onboardingExportFormats =>
+      'Supported: the X (Twitter) zip, Mastodon / Misskey follow CSVs, the Instagram / Threads zip, and Bluesky\'s repo.car. You can also pick just the files from inside a zip.';
+
+  @override
+  String get onboardingExportPick => 'Choose export files';
+
+  @override
+  String get onboardingExportPickAgain => 'Choose other files';
+
+  @override
+  String get onboardingExportPickFailed => 'Couldn\'t choose files';
+
+  @override
+  String get onboardingExportReadFailed => 'Couldn\'t read the files';
+
+  @override
+  String get onboardingExportNothingFound =>
+      'No follows or followers could be read from these files. Check that it\'s a supported export.';
+
+  @override
+  String get onboardingExportFoundHeading => 'Accounts found in the export';
+
+  @override
+  String onboardingExportFoundLine(
+    String service,
+    int following,
+    int followers,
+    int mentions,
+  ) {
+    return '$service: following $following / followers $followers / mentioned $mentions';
+  }
+
+  @override
+  String onboardingExportXIdNote(int count) {
+    return 'X exports list follows and followers by internal ID only. They are matched by ID, and the $count whose handle appears in your tweet mentions are matched by handle too.';
+  }
+
+  @override
+  String onboardingExportSkipped(int count) {
+    return 'Skipped $count file(s) that were too large';
+  }
+
+  @override
+  String get onboardingExportXAuthTitle => 'Sign in with X to use an X export';
+
+  @override
+  String get onboardingExportXAuthDone => 'Signed in with X (prototype)';
+
+  @override
+  String get onboardingExportXAuthDummyNote =>
+      'This is a prototype for now: nothing is checked with X (pressing the button is enough).';
+
+  @override
+  String get onboardingExportXAuthButton => 'Sign in with X (prototype)';
+
+  @override
+  String onboardingExportXSelfTitle(String handle) {
+    return 'Add your X account (@$handle) to your profile';
+  }
+
+  @override
+  String get onboardingExportXSelfBody =>
+      'Once added, people who follow you can find you from their own X export. Nothing is checked with X, so no verified mark is shown (prototype).';
+
+  @override
+  String get onboardingExportXSelfRegister => 'Add';
+
+  @override
+  String get onboardingExportXSelfDone => 'Added';
+
+  @override
+  String get onboardingExportXRegisterFailed => 'Couldn\'t add the X account';
+
+  @override
+  String onboardingExportSearch(int count) {
+    return 'Find RASQ users among these $count';
+  }
+
+  @override
+  String get onboardingExportHashNote =>
+      'Only a hash per account and the service name are sent to the server, and the server doesn\'t keep them.';
+
+  @override
+  String onboardingExportProgress(int done, int total) {
+    return 'Matching ($done / $total)';
+  }
+
+  @override
+  String get onboardingExportBusy =>
+      'The server is busy. Please wait a moment and try again';
+
+  @override
+  String get onboardingExportMatchFailed => 'Couldn\'t match the accounts';
+
+  @override
+  String get onboardingExportNoMatches =>
+      'No one on RASQ was found. People can be found when they list that network on their profile or have linked the account.';
+
+  @override
+  String onboardingExportMatchesHeading(int count) {
+    return 'On RASQ ($count)';
+  }
+
+  @override
+  String get onboardingExportRelationFollowing => 'following';
+
+  @override
+  String get onboardingExportRelationFollower => 'follower';
+
+  @override
+  String get onboardingExportRelationMention => 'mentioned';
+
+  @override
+  String onboardingExportVia(String service, String relation, String name) {
+    return '$service $relation: $name';
+  }
+
+  @override
+  String get onboardingExportUnverified =>
+      'Not verified (claimed on their profile)';
+
+  @override
+  String get onboardingExportXIdentityTitle =>
+      'X account (Sign in with X, prototype)';
+
+  @override
+  String get onboardingExportXIdentityBody =>
+      'Add your X handle so others can find you from their X export. This is a prototype: nothing is checked with X and no verified mark is shown.';
+
+  @override
+  String get onboardingExportXIdentityNone => 'Not added';
+
+  @override
+  String onboardingExportXIdentityCurrent(String handle) {
+    return '@$handle (prototype, not verified)';
+  }
+
+  @override
+  String get onboardingExportXIdentityHandleLabel => 'X handle (after the @)';
+
+  @override
+  String get onboardingExportXIdentityIdLabel =>
+      'X internal ID (digits, optional)';
+
+  @override
+  String get onboardingExportXIdentityIdHelp =>
+      'The accountId in account.js of your X export. With it, you can be found from exports that only list IDs.';
+
+  @override
+  String get onboardingExportXIdentitySave => 'Sign in with X (prototype)';
+
+  @override
+  String get onboardingExportXIdentityRemove => 'Remove';
+
+  @override
+  String get onboardingExportXIdentityInvalid =>
+      'Handles are up to 15 letters, digits or underscores; the ID must be digits';
+
+  @override
+  String get onboardingExportXIdentityFailed => 'Couldn\'t save the X account';
+
+  @override
+  String get onboardingHistoryTitle => 'Find from your search history';
+
+  @override
+  String get onboardingHistorySubtitle =>
+      'Combine the words you\'ve searched for to find RASQ people and lists';
+
+  @override
+  String get onboardingHistoryIntro =>
+      'These are the words you\'ve searched for in “Find SNS services”. The ones you select are combined to find RASQ users and RASQ lists. The history stays on this device only.';
+
+  @override
+  String get onboardingHistoryEmpty =>
+      'No history yet. Words appear here after you search from images, content or popular users.';
+
+  @override
+  String get onboardingHistoryRemove => 'Remove this word';
+
+  @override
+  String get onboardingHistoryClear => 'Clear history';
+
+  @override
+  String onboardingHistorySearch(int count) {
+    return 'Search with the $count selected word(s)';
+  }
+
+  @override
+  String onboardingHistoryTooMany(int max) {
+    return 'You can select up to $max at a time';
+  }
+
+  @override
+  String get onboardingPageSearchBrowseButton => 'Search this page';
+
+  @override
+  String get onboardingPageSearchCaptureFailed => 'Couldn\'t capture this page';
+
+  @override
+  String get onboardingPageSearchTitle => 'Search this page';
+
+  @override
+  String get onboardingPageSearchLengthLabel => 'Length';
+
+  @override
+  String get onboardingPageSearchModeDraw => 'Select';
+
+  @override
+  String get onboardingPageSearchModeScroll => 'Scroll';
+
+  @override
+  String get onboardingPageSearchHint =>
+      'Drag to select the parts you want to search (as many as you like). Tap a selection to edit its search text or search by image.';
+
+  @override
+  String get onboardingPageSearchSketchNote =>
+      'This device can\'t capture the page, so only the positions of its text are shown. You can select and search by text (not by image).';
+
+  @override
+  String onboardingPageSearchButton(int count) {
+    return 'Search $count selection(s)';
+  }
+
+  @override
+  String onboardingPageSearchRegionsFull(int max) {
+    return 'You can select up to $max parts';
+  }
+
+  @override
+  String onboardingPageSearchTooManyImages(int max) {
+    return 'Up to $max selections can be searched by image at a time';
+  }
+
+  @override
+  String onboardingPageSearchRegionTitle(int index) {
+    return 'Selection $index';
+  }
+
+  @override
+  String get onboardingPageSearchRegionCancel => 'Cancel';
+
+  @override
+  String get onboardingPageSearchRegionConfirm => 'Done';
+
+  @override
+  String get onboardingPageSearchByText => 'By text';
+
+  @override
+  String get onboardingPageSearchByImage => 'By image';
+
+  @override
+  String get onboardingPageSearchQueryLabel => 'Search text';
+
+  @override
+  String get onboardingPageSearchQueryHint => 'A name, @handle, or words';
+
+  @override
+  String get onboardingPageSearchOpenEditor => 'Open in image editor';
+
+  @override
+  String get onboardingPageSearchEdited =>
+      'The image you edited will be used for the search';
+
+  @override
+  String get onboardingPageSearchDelete => 'Remove this selection';
+
+  @override
+  String get onboardingPageSearchResultsTitle => 'Results';
+
+  @override
+  String get onboardingPageSearchTermsHeading => 'Searched for';
+
+  @override
+  String get onboardingPageSearchUsersHeading => 'RASQ users';
+
+  @override
+  String get onboardingPageSearchPostsHeading => 'RASQ posts';
+
+  @override
+  String onboardingPageSearchImagesFailed(int count) {
+    return '$count image(s) couldn\'t be turned into words (the server is busy or couldn\'t read them)';
+  }
+
+  @override
+  String get onboardingQrTitle => 'Find from a friend\'s QR code';
+
+  @override
+  String get onboardingQrSubtitle =>
+      'Take a photo of a RASQ account QR code, or read it from an image';
+
+  @override
+  String get onboardingQrIntro =>
+      'Read a friend\'s RASQ account QR code to find them. The code is read on this device and the image isn\'t sent anywhere.';
+
+  @override
+  String get onboardingQrReadHeading => 'Read a friend\'s QR code';
+
+  @override
+  String get onboardingQrCamera => 'Take a photo';
+
+  @override
+  String get onboardingQrImage => 'Read from an image';
+
+  @override
+  String get onboardingQrNotFound =>
+      'No QR code was found in the image. Try again with the code filling more of the picture';
+
+  @override
+  String get onboardingQrNotRasq => 'This isn\'t a RASQ account QR code';
+
+  @override
+  String onboardingQrNoAccount(String handle) {
+    return '@$handle wasn\'t found';
+  }
+
+  @override
+  String get onboardingQrReadFailed => 'Couldn\'t read the QR code';
+
+  @override
+  String get onboardingQrMineHeading => 'Your QR code';
+
+  @override
+  String get onboardingQrMineNone =>
+      'Sign in to your RASQ account to show your QR code';
+
+  @override
+  String get onboardingQrMineHint =>
+      'When a friend reads this code, your page opens';
 
   @override
   String get onboardingTourPageSnsTitle => 'Many social networks, one place';
@@ -12135,21 +12522,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get raiModelsEmbeddingRasqText => 'RASQ MiniLM (text)';
+  String get raiModelsEmbeddingRasqText => 'RAM pico txt';
 
   @override
   String get raiModelsEmbeddingMiniLmL12 =>
       'MiniLM-L12 multilingual (paraphrase, int8)';
 
   @override
-  String get raiModelsEmbeddingRasqVision => 'RASQ MobileNet (post images)';
+  String get raiModelsEmbeddingRasqVision => 'RAM pico img';
 
   @override
-  String get raiModelsEmbeddingSiglipText => 'SigLIP2 base (text tower, int8)';
+  String get raiModelsEmbeddingSiglipText => 'SIG pico txt';
 
   @override
-  String get raiModelsEmbeddingSiglipVision =>
-      'SigLIP2 base (image side, int8)';
+  String get raiModelsEmbeddingSiglipVision => 'SIG pico img';
 
   @override
   String raiModelsEmbeddingFailed(String message) {
@@ -18958,6 +19344,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get swingUnreadable => 'Couldn\'t read the Swing';
 
   @override
+  String get swingErrorSendHeld =>
+      'You can\'t post Swings for a while because a reported Swing couldn\'t be confirmed (lifted after 72 hours)';
+
+  @override
+  String get swingP2pFetching => 'Receiving from another device…';
+
+  @override
+  String get swingP2pUnavailable =>
+      'No one can deliver this right now. Wait a bit and open it again';
+
+  @override
+  String get swingP2pUnverified =>
+      'Not shown because the creator\'s signature could not be verified';
+
+  @override
+  String get swingP2pRetry => 'Try again';
+
+  @override
   String themeNotAThemePack(String id) {
     return 'Not a theme pack: $id';
   }
@@ -19545,7 +19949,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get userPageViewClose => 'Close';
+  String get userPageViewCancel => 'Cancel';
+
+  @override
+  String get userPageViewConfirm => 'Done';
 
   @override
   String userPageViewSearchHint(String tab) {
@@ -19762,6 +20169,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get usersNotFound => 'This user doesn\'t seem to exist.';
+
+  @override
+  String usersFieldMentionNotFound(String handle) {
+    return '$handle wasn\'t found';
+  }
 
   @override
   String get vcSectionInvited => 'Invited';

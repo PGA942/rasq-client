@@ -14,5 +14,6 @@
   "dmEmptyTitle": "沒有私訊",
   "dmEmptyHint": "私訊貼文（限定公開）會顯示在這裡",
   "dmYouPrefix": "你：",
-  "dmMediaPlaceholder": "[媒體]"
+  "dmMediaPlaceholder": "[媒體]",
+  "dmLastMessageHidden": "無法顯示此訊息"
 }

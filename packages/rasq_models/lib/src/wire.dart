@@ -26,7 +26,26 @@ abstract final class SnsWire {
         'displayName': u.displayName,
         'avatarUrl': ?u.avatarUrl?.toString(),
         'bio': ?u.bio,
+        // 名前の絵文字 (D-560)。無ければ載せない。
+        if (u.emojis.isNotEmpty) 'emojis': {for (final e in u.emojis.entries) e.key: e.value.toString()},
       };
+
+  /// 名前の絵文字: `{shortcode: url}` か `[{shortcode|name, url}]`(Mastodon の形)。http(s) だけ。
+  static Map<String, Uri> emojisFrom(Object? v) {
+    Uri? http(Object? s) {
+      final u = s is String ? Uri.tryParse(s) : null;
+      return u != null && (u.scheme == 'https' || u.scheme == 'http') && u.host.isNotEmpty ? u : null;
+    }
+
+    return {
+      if (v is Map)
+        for (final e in v.entries)
+          if (http(e.value) != null) '${e.key}': http(e.value)!,
+      if (v is List)
+        for (final e in v)
+          if (e is Map && (e['shortcode'] ?? e['name']) is String && http(e['url']) != null) '${e['shortcode'] ?? e['name']}': http(e['url'])!,
+    };
+  }
 
   static UserSummary userFrom(Map<String, Object?> j) => UserSummary(
         id: '${j['id']}',
@@ -38,6 +57,7 @@ abstract final class SnsWire {
         displayName: '${j['displayName'] ?? j['handle'] ?? '?'}',
         avatarUrl: j['avatarUrl'] is String ? Uri.tryParse(j['avatarUrl'] as String) : null,
         bio: j['bio'] as String?,
+        emojis: emojisFrom(j['emojis']),
       );
 
   static Map<String, Object?> media(MediaItem m) => {
@@ -200,6 +220,8 @@ abstract final class SnsWire {
         isSuspended: j['isSuspended'] == true,
         pinnedPosts: [for (final p in (j['pinnedPosts'] as List? ?? const [])) postFrom((p as Map).cast<String, Object?>(), account: account)],
         profileUrl: j['profileUrl'] is String ? Uri.tryParse(j['profileUrl'] as String) : null,
+        followingVisibility: FollowListVisibility.parse(j['followingVisibility']),
+        followersVisibility: FollowListVisibility.parse(j['followersVisibility']),
       );
 
   static ReactionEntry reactionEntryFrom(Map<String, Object?> j) => ReactionEntry(

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show PathMetric;
 
 import 'package:flutter/foundation.dart' show immutable;
 import 'package:flutter/painting.dart';
@@ -321,16 +322,37 @@ class PaintPath extends PaintItem {
   (String?, String) get svgParts => (style.attrs, '<path d="${segmentsToD(segments)}"/>');
 }
 
+/// 1 つの形から取る点の上限 (セキュリティ確認 2026-11-11 の #22)。
+const maxPathSamples = 2048;
+
 /// Path の上に [step] 単位ごとに点を散らす(投げ輪の判定用)。点が取れなければ外接矩形の真ん中。
-List<Offset> samplePath(Path path, {double step = 3}) {
+/// 点は [maxSamples] まで (#22): 巨大な座標 / とても長い曲線でも、点の数と計算は上限のまま(長いほど間隔を広げる)。
+/// 長さが有限でない形は、外接矩形の真ん中 1 点だけ。
+List<Offset> samplePath(Path path, {double step = 3, int maxSamples = maxPathSamples}) {
   final out = <Offset>[];
+  final metrics = <PathMetric>[];
+  var total = 0.0;
   for (final m in path.computeMetrics()) {
-    for (var d = 0.0; d <= m.length; d += step) {
-      final t = m.getTangentForOffset(d);
-      if (t != null) out.add(t.position);
+    if (metrics.length >= maxSamples) break; // 輪郭が多すぎても、1 輪郭 1 点で上限まで
+    metrics.add(m);
+    total += m.length;
+  }
+  if (total.isFinite && metrics.isNotEmpty) {
+    // 間隔: 少なくとも [step]。全体の長さを上限の点数で割ったものより狭くしない。
+    final each = total / (maxSamples - metrics.length).clamp(1, maxSamples);
+    final gap = each > step ? each : step;
+    for (final m in metrics) {
+      for (var d = 0.0; d <= m.length && out.length < maxSamples; d += gap) {
+        final t = m.getTangentForOffset(d);
+        if (t != null) out.add(t.position);
+      }
+      if (out.length >= maxSamples) break;
     }
   }
-  if (out.isEmpty) out.add(path.getBounds().center);
+  if (out.isEmpty) {
+    final c = path.getBounds().center;
+    out.add(c.dx.isFinite && c.dy.isFinite ? c : Offset.zero);
+  }
   return out;
 }
 

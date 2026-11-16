@@ -15,6 +15,8 @@ import '../../shell/headers.dart';
 import '../../shell/scroll_memory.dart';
 import '../../shell/rasq_shell.dart';
 import '../../text/inline_spans.dart';
+import '../child_safe/child_safe_providers.dart' show ChildSafeUserSearchBlocked, childGateProvider, childSafeSearchUsers, childUserSearchBlockReason;
+import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import 'dm_providers.dart';
 import '../../l10n/l10n.dart';
 
@@ -90,17 +92,22 @@ class _UserPickSheetState extends ConsumerState<_UserPickSheet> {
   String _q = '';
   Future<List<UserSummary>>? _results;
 
+  // 見守りでユーザーの検索を止めていれば探さない(呼ぶ直前と結果のあとに今の許可を見る。#24)。
   void _search(String q) {
     final session = ref.read(currentSnsSessionProvider);
     setState(() {
       _q = q.trim();
-      _results = _q.isEmpty || session == null ? null : session.searchUsers(_q, limit: 20).then((p) => p.items);
+      _results = _q.isEmpty || session == null ? null : childSafeSearchUsers(() => ref.read(childGateProvider), session, _q, limit: 20);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // 開いているあいだに止めたら、出ている結果も消す (#24)。
+    if (childUserSearchBlockReason(ref.watch(childGateProvider)) case final why?) {
+      return Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: ChildSafeBlockedView(key: const ValueKey('dm.userSearch.blocked'), message: why));
+    }
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
@@ -113,6 +120,7 @@ class _UserPickSheetState extends ConsumerState<_UserPickSheet> {
                 future: _results,
                 builder: (context, snap) {
                   if (!snap.hasData && snap.error == null) return const RasqLoading();
+                  if (snap.error case final ChildSafeUserSearchBlocked e) return ChildSafeBlockedView(message: e.message);
                   final users = snap.data ?? const <UserSummary>[];
                   if (users.isEmpty) return RasqEmptyView(title: context.l10n.dmUserNotFound);
                   return ListView(shrinkWrap: true, children: [
@@ -160,16 +168,18 @@ class _RoomList extends StatelessWidget {
 }
 
 /// アイテム行コンポーネント (DM・フォロワー一覧・ミュート一覧・通知で共用予定).
-class _RoomRow extends StatelessWidget {
+class _RoomRow extends ConsumerWidget {
   const _RoomRow({required this.room, required this.onTap});
   final DmRoom room;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final last = room.lastPost;
     final mine = last != null && last.author.id != room.peer.id;
+    // 見守り (#23): 部屋の中で見せない本文は、一覧の最新の 1 行にも出さない(今の制限を watch して、変われば判定し直す)。
+    final hidden = last != null && ref.watch(childGateProvider).postHidden(last);
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -185,7 +195,9 @@ class _RoomRow extends StatelessWidget {
                 if (room.kind == DmRoomKind.chat) const Padding(padding: EdgeInsets.only(left: 6), child: RasqPill(label: 'Chat', outlined: true)),
               ]),
               const SizedBox(height: 2),
-              if (last != null)
+              if (hidden)
+                Text(context.l10n.dmLastMessageHidden, key: const ValueKey('dm.lastHidden'), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant, fontStyle: FontStyle.italic), maxLines: 1, overflow: TextOverflow.ellipsis)
+              else if (last != null)
                 RasqRichText(
                   [if (mine) RasqTextSpan(context.l10n.dmYouPrefix, bold: true), ...InlineSpans.parse(last.body.isEmpty ? (last.media.isNotEmpty ? context.l10n.dmMediaPlaceholder : '') : last.body)],
                   style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),

@@ -1,0 +1,11 @@
+{
+  "@@locale": "zh",
+  "onboardingHistoryTitle": "整合搜索记录来查找",
+  "onboardingHistorySubtitle": "汇总之前搜索过的词语,查找 RASQ 的用户和列表",
+  "onboardingHistoryIntro": "这些是你在“查找 SNS 服务”中搜索过的词语。将汇总所选词语来查找 RASQ 用户和 RASQ 列表。记录仅保存在本设备上。",
+  "onboardingHistoryEmpty": "还没有记录。通过图片、内容或热门用户查找后,词语会显示在这里。",
+  "onboardingHistoryRemove": "删除此词语",
+  "onboardingHistoryClear": "清除全部记录",
+  "onboardingHistorySearch": "用所选的 {count} 个词语查找",
+  "onboardingHistoryTooMany": "一次最多可选 {max} 个"
+}

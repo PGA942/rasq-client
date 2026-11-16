@@ -4,11 +4,11 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:http/http.dart' as http;
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../../backend/limited_http.dart';
 import '../../l10n/l10n.dart';
 
 /// 投稿タイルの動画化 (D-260): 「ノート画像の追加」で選んだ投稿が**動く / 鳴る**なら、静止画ではなく動画(mp4)にできる。
@@ -148,12 +148,14 @@ Future<T> _stage<T>(String what, Future<T> Function() run) async {
   }
 }
 
-Future<File> _download(Uri url, File out) async {
-  final res = await http.get(url).timeout(const Duration(seconds: 60));
-  if (res.statusCode != 200) throw HttpException('HTTP ${res.statusCode}', uri: url);
-  await out.writeAsBytes(res.bodyBytes, flush: true);
-  return out;
-}
+/// 動画化の元のメディアを取るときの上限 (セキュリティ確認 2026-11-11 の #21)。
+const postVideoMaxSourceBytes = 200 * 1024 * 1024;
+const postVideoSourceTimeout = Duration(minutes: 2);
+
+/// 上限つきで、ファイルへ順に書く (#21): 全部をメモリに貯めない。上限 / 期限 / 画面を閉じた([cancelled])ら通信を
+/// 取り消し、途中のファイルも消す。
+Future<File> _download(Uri url, File out, {bool Function()? cancelled}) =>
+    getLimitedToFile(url, out, maxBytes: postVideoMaxSourceBytes, timeout: postVideoSourceTimeout, cancelled: cancelled);
 
 Duration _cap(Duration d) => d > postVideoMaxDuration ? postVideoMaxDuration : (d < const Duration(seconds: 1) ? const Duration(seconds: 1) : d);
 
@@ -196,7 +198,7 @@ Future<File> buildPostVideo({required Post post, required PostMotion motion, req
     if (still == null) throw StateError(appL10n.composeMediaPostNotOnScreen);
     onProgress?.call(0.1);
     final named = (item.fileName ?? item.url.path).split('.').last.toLowerCase();
-    var source = await _stage(appL10n.composeMediaSourceFetchFailed, () => _download(item.url, File('${dir.path}/source.bin')));
+    var source = await _stage(appL10n.composeMediaSourceFetchFailed, () => _download(item.url, File('${dir.path}/source.bin'), cancelled: cancelled));
     // 拡張子は中身から決める(無ければ名前、それも無ければ mp4 / m4a)。
     final head = await source.openRead(0, 16).fold<List<int>>([], (a, c) => a..addAll(c));
     final ext = mediaContainerExt(head) ?? (RegExp(r'^[a-z0-9]{1,5}$').hasMatch(named) ? named : (motion == PostMotion.video ? 'mp4' : 'm4a'));

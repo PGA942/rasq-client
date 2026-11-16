@@ -53,6 +53,8 @@
   "designTimeHoursAgo": "{count, plural, other{{count} 小时前}}",
   "designTimeDaysAgo": "{count, plural, other{{count} 天前}}",
   "designErrorRetry": "重试",
+  "designProfileCountPrivate": "不公开",
+  "designProfileCountFollowersOnly": "仅对粉丝公开",
   "designOverlayCancel": "取消",
   "designOverlayClose": "关闭",
   "designOverlaySwitcher": "切换 FOW",

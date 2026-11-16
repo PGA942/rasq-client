@@ -364,6 +364,19 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
 
   /// 土台を作れたか (D-516: 作るときに投げたら破棄もしない)。
   bool _created = false;
+
+  /// 描くのを止めているか (D-550): 見えない(不透明度 0)/ アプリが裏にあるあいだは、three_js の描画ループを止める。
+  /// 前は隠しても全画面のテクスチャを毎 vsync(120Hz)描き続けていた。消えた姿を 1 回描いてから止める([_clearPending])。
+  bool _appActive = true;
+  bool _clearPending = false;
+  AppLifecycleListener? _life;
+
+  void _updateRendering() {
+    if (!_created) return;
+    try {
+      _three.isVisibleOnScreen = _appActive && (_ctrl.opacity > 0.001 || _clearPending);
+    } catch (_) {}
+  }
   three.AnimationMixer? _mixer;
   three.Group? _root;
 
@@ -429,6 +442,10 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
   @override
   void initState() {
     super.initState();
+    _life = AppLifecycleListener(onStateChange: (s) {
+      _appActive = s == AppLifecycleState.resumed;
+      _updateRendering();
+    });
     if (kIsWeb && !webGlBindingsLoaded()) {
       // 念のため (D-303): 橋渡しの JS が無い Web で直に作られても、アプリを道連れにしない(場所だけ空ける)。
       _failed = true;
@@ -511,6 +528,7 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
       return;
     }
     liveInstances--;
+    _life?.dispose();
     _watchdog?.cancel();
     _oneShotTimer?.cancel();
     _ctrl.removeListener(_sync);
@@ -655,6 +673,11 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
         }
         // 見えているあいだは Flutter にも 1 フレーム描かせる (D-215)。
         if (widget.isScene && _ready && _ctrl.opacity > 0) _frame.value++;
+        // 消えた姿を描き終えたら、描画ループを止める (D-550)。
+        if (_clearPending) {
+          _clearPending = false;
+          _updateRendering();
+        }
       });
       _sync();
       _stages.mark('setup done');
@@ -691,6 +714,9 @@ class _RaiMascot3dState extends ConsumerState<RaiMascot3d> {
     if (widget.isScene && (_ctrl.opacity - _shownOpacity).abs() > 1e-6) {
       _shownOpacity = _ctrl.opacity;
       _applyOpacity(_ctrl.opacity);
+      // 隠したら 1 回だけ描いて(消えた姿)止める / 出したら描き直す (D-550)。
+      _clearPending = _ctrl.opacity <= 0.001;
+      _updateRendering();
     }
     if (_ctrl.face != _shownFace) _applyFace(_ctrl.face);
     final mixer = _mixer;

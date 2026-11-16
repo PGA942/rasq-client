@@ -1,0 +1,11 @@
+{
+  "@@locale": "ko",
+  "onboardingHistoryTitle": "검색 기록을 모아서 찾기",
+  "onboardingHistorySubtitle": "지금까지 찾은 단어를 모아 RASQ의 사람과 리스트를 찾습니다",
+  "onboardingHistoryIntro": "'SNS 서비스 찾기'에서 지금까지 찾은 단어입니다. 선택한 단어를 모아 RASQ 사용자와 RASQ 리스트를 찾습니다. 기록은 이 기기에만 남습니다.",
+  "onboardingHistoryEmpty": "아직 기록이 없습니다. 이미지・콘텐츠나 인기 사용자로 찾으면 여기에 단어가 나열됩니다.",
+  "onboardingHistoryRemove": "이 단어 삭제",
+  "onboardingHistoryClear": "기록 모두 삭제",
+  "onboardingHistorySearch": "선택한 단어 {count}개로 찾기",
+  "onboardingHistoryTooMany": "한 번에 {max}개까지 선택할 수 있습니다"
+}

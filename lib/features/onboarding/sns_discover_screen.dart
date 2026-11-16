@@ -22,25 +22,30 @@ import '../../shell/headers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../collections/rasq_list_picker.dart' show importRasqListToHomeWith;
-import '../login/login_screen.dart' show popOr;
-import '../rai/rai_chat.dart' show RaiChatUserRow, RaiReplyRow;
-import '../rai/rai_widgets.dart' show RaiIcon, RaiPromptBar;
+import '../login/login_screen.dart' show SnsServiceButton, popOr;
+import '../rai/rai_chat.dart' show RaiChatEmptyView, RaiChatFrame, RaiChatUserRow, RaiReplyRow;
+import '../rai/rai_widgets.dart' show RaiIcon, RaiMascot, RaiPromptBar;
 import '../settings/developer_mode.dart';
 import '../settings/settings_dsl.dart' show settingsAreaProvider;
 import 'discover_circle_editor.dart';
+import 'discover_history.dart';
 import 'discover_image_crop.dart';
 import 'onboarding_previews.dart' show signupFromList;
+import 'page_search_screen.dart';
 import 'screen_glimpse.dart';
 import 'server_signup.dart';
+import 'web_snapshot.dart';
 
 /// SNS サービスを探す画面 (D-414)。オンボーディングの ③ と、SNS のログインの「サービスを探してログイン」から開く。
 ///
-/// 入口は 4 つ(Central の口は CONTRACT §2〜§6、どれも匿名で呼べる):
+/// 入口は 6 つ(Central の口は CONTRACT §2〜§6、どれも匿名で呼べる):
 /// - **好きな画像やコンテンツから探す** — 画像を選ぶ(端末の画像の選択、6 枚まで。1 枚ずつ「囲って検索」で探したい部分を囲み、
 ///   端末で切り抜いて `frames` + `source: picker` で送る、D-418)/ いつものブラウザで見て、通知のタップで画面を 3 秒だけ読み取る
 ///   (D-415、[ScreenGlimpse]。iOS は開発者モードの「画面の読み取りを試す(iOS)」のときだけ)/ アプリの中のブラウザで見て「この画面から探す」(本文 + URL)→ §2
 /// - **有力なユーザー / インフルエンサーから探す** — 名前や分野 → §3(まず RASQ リストの中、Brave は最終手段で既定は無効)
-/// - **外部 SNS のエクスポートデータから探す** — 準備中(押せない)
+/// - **外部 SNS のエクスポートデータから探す** — 書き出しを端末で読み、ハッシュで RASQ のユーザーを照合する(D-551、`export_discover_screen.dart`)
+/// - **友だちの QR から探す** — 自分の QR と、友だちの QR を撮って / 画像から読む(D-553、`qr_discover_screen.dart`)
+/// - **検索履歴を統合して探す** — これまでに探した言葉をまとめて RASQ の人とリストを探す(D-553、`history_discover_screen.dart`)
 /// - **RAi に聞く** — クラウドの RAi との会話 → §5(端末に RAi のデータが無くてよい)
 /// 結果のサーバー → D-412 の登録(WebView + RAi の案内 → ログイン)/ ログイン、RASQ リスト → SNS アカウントがあれば開いて取り込む
 /// (D-347)、無ければリストの人がいるサーバーへ登録してから。RASQ アカウントは ①② で作ってあるので、D-413 のポップアップは頼まない。
@@ -167,50 +172,34 @@ class SnsDiscoverScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final raiOk = ref.watch(childGateProvider).raiEnabled;
+    // 「SNS でログイン」と同じ形 (D-554): ロゴ → 案内 → 丸いアイコンつきのボタンを縦に。
     return Scaffold(
       // 戻る (D-422): 戻る先が無ければ(リンクから開いた)入口へ(ログイン済みならルーターがホームへ回す)。
-      appBar: RasqPageHeader(title: context.l10n.onboardingDiscoverTitle, showMore: false, onBack: () => popOr(context, Routes.onboarding)),
+      appBar: RasqPageHeader(title: l10n.onboardingDiscoverTitle, showMore: false, onBack: () => popOr(context, Routes.onboarding)),
       body: SafeArea(
         top: false,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
-            child: ListView(key: const ValueKey('discover.list'), children: [
+            child: ListView(key: const ValueKey('discover.list'), padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl), children: [
+              const Padding(padding: EdgeInsets.only(top: RasqSpacing.xl, bottom: RasqSpacing.sm), child: Center(child: RasqLogo(height: 44))),
               Padding(
-                padding: const EdgeInsets.all(RasqSpacing.page),
-                child: Text(context.l10n.onboardingDiscoverIntro, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+                padding: const EdgeInsets.symmetric(vertical: RasqSpacing.md),
+                child: Text(l10n.onboardingDiscoverIntro, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
               ),
-              RasqListTile(
-                key: const ValueKey('discover.content'),
-                leading: const Icon(Icons.image_search),
-                title: context.l10n.onboardingDiscoverContentTitle,
-                subtitle: context.l10n.onboardingDiscoverContentSubtitle,
-                onTap: () => context.push(Routes.snsDiscoverContent),
-              ),
-              RasqListTile(
-                key: const ValueKey('discover.people'),
-                leading: const Icon(Icons.person_search),
-                title: context.l10n.onboardingDiscoverPeopleTitle,
-                subtitle: context.l10n.onboardingDiscoverPeopleSubtitle,
-                onTap: () => context.push(Routes.snsDiscoverPeople),
-              ),
-              RasqListTile(
-                key: const ValueKey('discover.export'),
-                leading: const Icon(Icons.file_open_outlined),
-                title: context.l10n.onboardingDiscoverExportTitle,
-                subtitle: context.l10n.onboardingDiscoverExportSubtitle,
-                enabled: false,
-                chevron: false,
-              ),
-              RasqListTile(
-                key: const ValueKey('discover.ask'),
-                leading: const RaiIcon(size: 24),
-                title: context.l10n.onboardingDiscoverAskTitle,
-                subtitle: raiOk ? context.l10n.onboardingDiscoverAskSubtitle : context.l10n.onboardingDiscoverRaiBlocked,
-                enabled: raiOk,
-                onTap: raiOk ? () => context.push(Routes.snsDiscoverAsk) : null,
-              ),
+              const SizedBox(height: RasqSpacing.sm),
+              SnsServiceButton(key: const ValueKey('discover.content'), icon: Icons.image_search, label: l10n.onboardingDiscoverContentTitle, onTap: () => context.push(Routes.snsDiscoverContent)),
+              SnsServiceButton(key: const ValueKey('discover.people'), icon: Icons.person_search, label: l10n.onboardingDiscoverPeopleTitle, onTap: () => context.push(Routes.snsDiscoverPeople)),
+              SnsServiceButton(key: const ValueKey('discover.export'), icon: Icons.file_open_outlined, label: l10n.onboardingDiscoverExportTitle, onTap: () => context.push(Routes.snsDiscoverExport)),
+              // 友だちの QR から探す / 検索履歴を統合して探す (D-553)。
+              SnsServiceButton(key: const ValueKey('discover.qr'), icon: Icons.qr_code_scanner, label: l10n.onboardingQrTitle, onTap: () => context.push(Routes.snsDiscoverQr)),
+              SnsServiceButton(key: const ValueKey('discover.history'), icon: Icons.manage_search, label: l10n.onboardingHistoryTitle, onTap: () => context.push(Routes.snsDiscoverHistory)),
+              SnsServiceButton(key: const ValueKey('discover.ask'), leading: const RaiIcon(size: 28), label: l10n.onboardingDiscoverAskTitle, onTap: raiOk ? () => context.push(Routes.snsDiscoverAsk) : null),
+              // 保護者が RAi を止めているときは、押せない理由をボタンの下に。
+              if (!raiOk) Text(l10n.onboardingDiscoverRaiBlocked, key: const ValueKey('discover.ask.blockedNote'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
+              const SizedBox(height: RasqSpacing.lg),
             ]),
           ),
         ),
@@ -733,6 +722,8 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
     try {
       if (api == null) throw ArgumentError(context.l10n.onboardingDiscoverNoCentral);
       final r = await api.content(image: c.image, frames: c.frames, source: c.source, capturedAt: c.capturedAt, text: c.text, url: c.url);
+      // 探した言葉を控える (D-553)。見本の結果(外のサービスが未設定)の言葉は控えない。
+      if (r.mode != 'dummy') unawaited(ref.read(discoverHistoryProvider.notifier).record(r.query.keywords.take(5), DiscoverHistorySource.content));
       if (mounted) {
         setState(() => _result = r);
         if (c.pictureCount > 1) _showFrame(discoverInitialFrame(r.query.crops, c.pictureCount, preferFirst: c.source == 'picker'));
@@ -1077,11 +1068,16 @@ abstract interface class DiscoverPageCapturer {
   Future<DiscoverCapture> capture();
 }
 
+/// ページの写しも撮れる口 (D-552「この画面を探す」)。アプリの中のブラウザが持つ。
+abstract interface class DiscoverPageSnapshotter {
+  Future<PageSnapshot> snapshot();
+}
+
 /// ブラウザの部分(テストで差し替える)。[attach] = 読み取りの口ができた。
 typedef DiscoverBrowserBuilder = Widget Function(BuildContext context, Uri initial, ValueChanged<DiscoverPageCapturer> attach);
 
 final discoverBrowserProvider = Provider<DiscoverBrowserBuilder>(
-  (ref) => (context, initial, attach) => inAppSignupWebViewSupported ? _InAppDiscoverBrowser(initial: initial, attach: attach) : const _ManualCapturePanel(),
+  (ref) => (context, initial, attach) => inAppSignupWebViewSupported ? _InAppDiscoverBrowser(initial: initial, attach: attach, shot: ref.watch(webViewShotProvider)) : const _ManualCapturePanel(),
 );
 
 /// 最初に開くページ(検索)。
@@ -1127,6 +1123,26 @@ class _DiscoverBrowseScreenState extends ConsumerState<DiscoverBrowseScreen> {
     super.dispose();
   }
 
+  /// 「この画面を探す」(D-552): ページの写し → 囲んで探す画面。
+  Future<void> _searchThisPage() async {
+    final c = _capturer;
+    if (c is! DiscoverPageSnapshotter) return;
+    setState(() => _busy = true);
+    PageSnapshot? snap;
+    try {
+      snap = await (c as DiscoverPageSnapshotter).snapshot();
+    } catch (e) {
+      debugPrint('discover page snapshot: $e');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.onboardingPageSearchCaptureFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (snap == null) return;
+    if (mounted) await openDiscoverPageSearch(context, snap);
+    // 写しは、囲む画面を閉じたら捨てる。
+    snap.image?.dispose();
+  }
+
   Future<void> _captureAndReturn() async {
     final c = _capturer;
     if (c == null) return;
@@ -1170,13 +1186,38 @@ class _DiscoverBrowseScreenState extends ConsumerState<DiscoverBrowseScreen> {
           if (_capturer != null)
             Padding(
               padding: const EdgeInsets.all(RasqSpacing.sm),
-              child: FilledButton.icon(
-                key: const ValueKey('discover.browse.capture'),
-                onPressed: _busy ? null : _captureAndReturn,
-                icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.center_focus_strong, size: 18),
-                label: Text(context.l10n.onboardingDiscoverBrowseCapture),
-                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-              ),
+              child: Row(children: [
+                // 「この画面を探す」(D-552): 写しを囲んで、RASQ の人・投稿とサービス / リストを探す。
+                if (_capturer is DiscoverPageSnapshotter) ...[
+                  Expanded(
+                    child: FilledButton.icon(
+                      key: const ValueKey('discover.browse.pageSearch'),
+                      onPressed: _busy ? null : _searchThisPage,
+                      icon: const Icon(Icons.crop_free, size: 18),
+                      label: Text(context.l10n.onboardingPageSearchBrowseButton),
+                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                    ),
+                  ),
+                  const SizedBox(width: RasqSpacing.xs),
+                ],
+                Expanded(
+                  child: _capturer is DiscoverPageSnapshotter
+                      ? OutlinedButton.icon(
+                          key: const ValueKey('discover.browse.capture'),
+                          onPressed: _busy ? null : _captureAndReturn,
+                          icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.center_focus_strong, size: 18),
+                          label: Text(context.l10n.onboardingDiscoverBrowseCapture),
+                          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                        )
+                      : FilledButton.icon(
+                          key: const ValueKey('discover.browse.capture'),
+                          onPressed: _busy ? null : _captureAndReturn,
+                          icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.center_focus_strong, size: 18),
+                          label: Text(context.l10n.onboardingDiscoverBrowseCapture),
+                          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                        ),
+                ),
+              ]),
             ),
         ]),
       ),
@@ -1185,16 +1226,19 @@ class _DiscoverBrowseScreenState extends ConsumerState<DiscoverBrowseScreen> {
 }
 
 /// アプリの中のブラウザ(Android / iOS / macOS)。「この画面から探す」= **本文 + URL だけ**(CONTRACT §2 の text / url)。
-/// 画面の写しは送らない (D-415): 画像は端末の画像の選択だけ、画面は「いつものブラウザで見て探す」の通知から読み取る([ScreenGlimpse])。
+/// 「この画面を探す」(D-552、D-415 の「画面の写しは送らない」を改めた)= ページの写しを端末で撮り、囲んだ部分だけを文字 / 画像で探す。
 class _InAppDiscoverBrowser extends StatefulWidget {
-  const _InAppDiscoverBrowser({required this.initial, required this.attach});
+  const _InAppDiscoverBrowser({required this.initial, required this.attach, required this.shot});
   final Uri initial;
   final ValueChanged<DiscoverPageCapturer> attach;
+
+  /// 見えている範囲を撮る口 (D-552)。
+  final WebViewShot shot;
   @override
   State<_InAppDiscoverBrowser> createState() => _InAppDiscoverBrowserState();
 }
 
-class _InAppDiscoverBrowserState extends State<_InAppDiscoverBrowser> implements DiscoverPageCapturer {
+class _InAppDiscoverBrowserState extends State<_InAppDiscoverBrowser> implements DiscoverPageCapturer, DiscoverPageSnapshotter {
   late final WebViewController _controller = WebViewController()
     ..setJavaScriptMode(JavaScriptMode.unrestricted)
     ..setNavigationDelegate(NavigationDelegate(
@@ -1224,6 +1268,10 @@ class _InAppDiscoverBrowserState extends State<_InAppDiscoverBrowser> implements
     } catch (_) {}
     return DiscoverCapture(text: text, url: url);
   }
+
+  /// ページの上から数画面ぶんの写し (D-552)。写しは端末の中だけで使い、送るのは囲んで「探す」を押した部分だけ。
+  @override
+  Future<PageSnapshot> snapshot() => capturePageSnapshot(_controller, widget.shot);
 
   @override
   Widget build(BuildContext context) => WebViewWidget(key: const ValueKey('discover.webview'), controller: _controller);
@@ -1314,6 +1362,7 @@ class _DiscoverPeopleScreenState extends ConsumerState<DiscoverPeopleScreen> {
     try {
       if (api == null) throw ArgumentError(context.l10n.onboardingDiscoverNoCentral);
       final r = await api.people(q);
+      unawaited(ref.read(discoverHistoryProvider.notifier).record([q], DiscoverHistorySource.people));
       if (mounted) setState(() => _result = r);
     } catch (e) {
       debugPrint('discover people: $e');
@@ -1495,8 +1544,9 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
     // 見守り ([13]): 開いたあとに保護者が RAi を止めたら、入力の代わりに案内を出す(送る口は [_send] でも止める)。
     final raiOk = ref.watch(childGateProvider).raiEnabled;
-    // 見た目は RAi ホームのチャットと同じ (D-427): 質問は右の吹き出し、返事は RAi のアイコン + 枠なしの文 + 時刻、
-    // 候補のタイルは返事の下。新しいものが下。入力は RAi バーと同じ形(案内やモードの切り替えは無い)。
+    // 見た目は RAi ホームのチャットと同じ (D-427 → D-558 でページの組みも共通の部品 [RaiChatFrame]): 列の幅・奥の薄い RAi・
+    // 空のときの見出し。質問は右の吹き出し、返事は RAi のアイコン + 枠なしの文 + 時刻、候補のタイルは返事の下。新しいものが下。
+    // 入力は RAi バーと同じ形(案内やモードの切り替えは無い)。
     final rows = <Widget>[
       for (final (i, t) in _turns.indexed)
         if (t.fromUser)
@@ -1516,30 +1566,24 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
       appBar: RasqPageHeader(title: context.l10n.onboardingDiscoverAskTitle, showMore: false),
       body: SafeArea(
         top: false,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Expanded(
-                child: rows.isEmpty
-                    // 空のとき (RAi ホームの「マクロとか、お任せください！」と同じ形)。
-                    ? ListView(key: const ValueKey('discover.ask.list'), padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xl, RasqSpacing.page, RasqSpacing.md), children: [
-                        const Center(child: RaiIcon(size: 48)),
-                        const SizedBox(height: RasqSpacing.sm),
-                        Text(context.l10n.onboardingDiscoverAskEmptyTitle, textAlign: TextAlign.center, style: RasqTypography.title),
-                        const SizedBox(height: RasqSpacing.xs),
-                        Text(context.l10n.onboardingDiscoverAskEmptyBody, textAlign: TextAlign.center, style: caption),
-                        const SizedBox(height: RasqSpacing.xs),
-                        Text(context.l10n.onboardingDiscoverAskEmptyCloud, textAlign: TextAlign.center, style: caption),
-                      ])
-                    : ListView(
-                        key: const ValueKey('discover.ask.list'),
-                        reverse: true,
-                        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, RasqSpacing.md),
-                        children: rows.reversed.toList(),
-                      ),
-              ),
-              Padding(
+        child: RaiChatFrame(
+          // 奥の RAi: RAi ホームと同じ大きさ・薄さ(ここは RAi の層を出さないので、その場に置く。3D が使えれば 3D)。
+          background: (size) => RaiMascot(key: const ValueKey('discover.ask.mascot'), size: size, opacity: 0.35),
+          list: rows.isEmpty
+              // 空のとき (RAi ホームの「マクロとか、お任せください！」と同じ部品)。
+              ? RaiChatEmptyView(
+                  key: const ValueKey('discover.ask.list'),
+                  bottomPadding: RasqSpacing.md,
+                  title: context.l10n.onboardingDiscoverAskEmptyTitle,
+                  body: [context.l10n.onboardingDiscoverAskEmptyBody, context.l10n.onboardingDiscoverAskEmptyCloud],
+                )
+              : ListView(
+                  key: const ValueKey('discover.ask.list'),
+                  reverse: true,
+                  padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, RasqSpacing.md),
+                  children: rows.reversed.toList(),
+                ),
+          input: Padding(
                 padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.sm),
                 child: !raiOk
                     ? Text(context.l10n.onboardingDiscoverRaiBlocked, key: const ValueKey('discover.ask.blocked'), textAlign: TextAlign.center, style: caption)
@@ -1555,8 +1599,6 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
                       onChanged: (_) => setState(() {}),
                       onSubmit: _send,
                     ),
-              ),
-            ]),
           ),
         ),
       ),

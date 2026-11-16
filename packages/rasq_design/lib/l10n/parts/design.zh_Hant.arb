@@ -52,5 +52,7 @@
   "designTimeMinutesAgo": "{count, plural, other{{count} 分鐘前}}",
   "designTimeHoursAgo": "{count, plural, other{{count} 小時前}}",
   "designTimeDaysAgo": "{count, plural, other{{count} 天前}}",
-  "designErrorRetry": "重試"
+  "designErrorRetry": "重試",
+  "designProfileCountPrivate": "不公開",
+  "designProfileCountFollowersOnly": "僅對粉絲公開"
 }

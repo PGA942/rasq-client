@@ -65,7 +65,7 @@ class RasqAvatar extends StatelessWidget {
                 ),
               )
             : Image(
-                image: rasqMediaImage(context, imageUrl!),
+                image: rasqMediaImage(context, imageUrl!, decodeWidth: size),
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest),
               ),

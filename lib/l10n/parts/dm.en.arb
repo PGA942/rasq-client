@@ -14,5 +14,6 @@
   "dmEmptyTitle": "No DMs",
   "dmEmptyHint": "Direct posts (limited visibility) appear here",
   "dmYouPrefix": "You: ",
-  "dmMediaPlaceholder": "[Media]"
+  "dmMediaPlaceholder": "[Media]",
+  "dmLastMessageHidden": "This message can't be shown"
 }
