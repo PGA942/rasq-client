@@ -3,6 +3,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../../text/inline_spans.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'user_list.dart';
 
@@ -15,6 +16,8 @@ final userProfileProvider = FutureProvider.autoDispose.family<UserProfile, UserK
   if (s == null) throw StateError('not logged in');
   final p = await s.user(k.id);
   await ref.read(userListHelperProvider).primeRelationships([k.id], account: k.account);
+  // 名前と自己紹介の絵文字 (D-560): 閲覧中のサーバーの絵文字を取りに行く(その人が持ってきた絵文字は p.summary.emojis)。
+  ref.read(emojiCacheProvider.notifier).request({...InlineSpans.emojiShortcodes(p.summary.displayName), ...InlineSpans.emojiShortcodes(p.description ?? '')});
   return p;
 });
 

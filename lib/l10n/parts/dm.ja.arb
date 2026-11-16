@@ -28,5 +28,7 @@
   "dmYouPrefix": "あなた: ",
   "@dmYouPrefix": {"description": "DM の一覧の行で、最後のメッセージが自分のものなら本文の前に太字で付ける印(後ろの空白も含む)"},
   "dmMediaPlaceholder": "[メディア]",
-  "@dmMediaPlaceholder": {"description": "DM の一覧の行で、最後のメッセージが本文の無いメディアだけのときに出す文"}
+  "@dmMediaPlaceholder": {"description": "DM の一覧の行で、最後のメッセージが本文の無いメディアだけのときに出す文"},
+  "dmLastMessageHidden": "このメッセージは表示できません",
+  "@dmLastMessageHidden": {"description": "DM 一覧の最新の 1 行: 見守りで見せない本文の代わり"}
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -193,7 +195,11 @@ Future<void> saveUserTabView(WidgetRef ref, UserPostsFilter tab, UserTabView v) 
 
 const userTabViewPanelId = 'user.tabView';
 
-/// 並べ替え・絞り込みのパネル (D-514)。変えたらすぐ一覧に効く(保存もすぐ)。閉じる / タブのもう一度のタップ / 別の画面へ移ると閉じる。
+/// 並べ替え・絞り込みのパネル (D-514)。変えたらすぐ一覧に効く(保存もすぐ)。
+///
+/// 閉じ方 (D-557、絵文字ピッカーの作法): 見出しの**「決定」= そのまま確定**、**「キャンセル」= 開いたときの状態へ巻き戻す**
+/// (並べ替え・表示・指向性 / 刺激性・検索の語)。タブのもう一度のタップ / 別の画面へ移って閉じたときも、キャンセルと同じ。
+/// 「リセット」は検索欄の横(既定に戻すだけで、閉じない)。下のフッターは件数だけ。
 /// [column] = 開いたカラム(D-481、[fowColumnOf])。[query] = このページのこのタブの検索の語。
 /// [chartHeld] = 指が指向性 / 刺激性の欄に触れている間 true(ページはその間、横のスワイプと戻るジェスチャーを止める)。
 ///
@@ -201,7 +207,7 @@ const userTabViewPanelId = 'user.tabView';
 /// タブにつながった形([showTetheredPanel])だった。後ろの一覧は触れたまま(絞り込みの結果を見ながら変えられる)。
 ///
 /// 見た目 (D-517 / D-518): 見出し(タイトル)→ 検索欄(検索画面と同じ丸い枠)→ 太い下線の節(並べ替え / 表示 / 指向性・刺激性)。
-/// 下は FOW の標準のフッター([FowFooter]: 件数 + リセット / 閉じる)。カラムが広ければ指向性 / 刺激性を横に並べる。
+/// 下は FOW の標準のフッター([FowFooter]: 件数)。カラムが広ければ指向性 / 刺激性を横に並べる。
 Future<void> showUserTabViewPanel(
   BuildContext ctx,
   WidgetRef ref, {
@@ -218,6 +224,10 @@ Future<void> showUserTabViewPanel(
     manager.close(userTabViewPanelId);
     return;
   }
+  // キャンセルで巻き戻す先(開いたときの状態)。巻き戻しはページが閉じたあとでも書けるよう、container から。
+  final container = ProviderScope.containerOf(ctx, listen: false);
+  final initialView = UserTabView.fromJson(container.read(settingsAreaProvider(userPageTabsKvArea)).value?[tab.name]);
+  final initialQuery = query.value;
   final search = TextEditingController(text: query.value);
   void onText() => query.value = search.text;
   search.addListener(onText);
@@ -225,18 +235,31 @@ Future<void> showUserTabViewPanel(
   final router = ref.read(routerProvider);
   void onNavigate() => manager.close(userTabViewPanelId);
   router.routerDelegate.addListener(onNavigate);
+  final scheme = Theme.of(ctx).colorScheme;
+  bool? confirmed;
   try {
-    await manager.showFow<void>(
+    confirmed = await manager.showFow<bool>(
       id: userTabViewPanelId,
       spec: FowSpec(
         type: FowPanelType.widget,
         title: ctx.l10n.userPageViewTitle(tabLabel),
+        // 見出し: キャンセル / 題 / 決定(D-557)。
+        headerLeading: TextButton(
+          key: const ValueKey('user.tabView.cancel'),
+          onPressed: () => manager.close(userTabViewPanelId, reason: OverlayCloseReason.discard),
+          child: Text(ctx.l10n.userPageViewCancel, style: TextStyle(color: scheme.onSurfaceVariant)),
+        ),
+        headerTrailing: TextButton(
+          key: const ValueKey('user.tabView.confirm'),
+          onPressed: () => manager.close(userTabViewPanelId, result: true),
+          child: Text(ctx.l10n.userPageViewConfirm, style: TextStyle(color: scheme.primary, fontWeight: FontWeight.w700)),
+        ),
         initialHeightFactor: 0.6,
         minHeightFactor: 0.3,
         maxHeightFactor: 0.92,
         dockAboveFooter: true,
         columnIndex: column,
-        footer: UserTabViewPanelFooter(tab: tab, search: search, query: query, postsKey: postsKey, onClose: () => manager.close(userTabViewPanelId)),
+        footer: UserTabViewPanelFooter(tab: tab, query: query, postsKey: postsKey),
       ),
       builder: (_, _) => SingleChildScrollView(
         key: const ValueKey('user.tabView.panel'),
@@ -248,6 +271,21 @@ Future<void> showUserTabViewPanel(
     chartHeld.value = false;
     search.removeListener(onText);
     search.dispose();
+    // 決定でなければ、開いたときの状態へ巻き戻す(検索の語も)。変わっていたときだけ書く。アプリごと閉じた
+    // (container が捨てられた)ときは、巻き戻す先も無いので何もしない。
+    if (confirmed != true) {
+      try {
+        query.value = initialQuery;
+      } catch (_) {}
+      try {
+        final now = UserTabView.fromJson(container.read(settingsAreaProvider(userPageTabsKvArea)).value?[tab.name]);
+        if (jsonEncode(now.toJson()) != jsonEncode(initialView.toJson())) {
+          await container.read(settingsAreaProvider(userPageTabsKvArea).notifier).set(tab.name, initialView.isDefault ? null : initialView.toJson());
+        }
+      } on StateError catch (e) {
+        debugPrint('user tab view rollback: $e');
+      }
+    }
   }
 }
 
@@ -279,8 +317,10 @@ class UserTabViewPanelBody extends ConsumerWidget {
     final border = OutlineInputBorder(borderRadius: BorderRadius.circular(RasqSizes.searchBarHeight), borderSide: BorderSide(color: scheme.onSurface, width: 1.2));
     return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.xs),
-        child: SizedBox(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.xs, RasqSpacing.xs),
+        child: Row(children: [
+          Expanded(
+            child: SizedBox(
           height: RasqSizes.searchBarHeight,
           child: TextField(
             key: const ValueKey('user.tabView.search'),
@@ -302,7 +342,23 @@ class UserTabViewPanelBody extends ConsumerWidget {
               focusedBorder: border.copyWith(borderSide: BorderSide(color: scheme.primary, width: 1.5)),
             ),
           ),
-        ),
+            ),
+          ),
+          // リセット (D-557、前はフッター): 既定に戻し、検索の語も消す。閉じない(確定は「決定」)。
+          ValueListenableBuilder<String>(
+            valueListenable: query,
+            builder: (_, q, _) => TextButton(
+              key: const ValueKey('user.tabView.reset'),
+              onPressed: v.isDefault && q.isEmpty
+                  ? null
+                  : () {
+                      search.clear();
+                      set(UserTabView.defaults);
+                    },
+              child: Text(l.userPageViewReset),
+            ),
+          ),
+        ]),
       ),
       RasqSectionHeader(title: l.userPageViewSortLabel, topMargin: RasqSpacing.xs),
       chips([
@@ -339,14 +395,13 @@ class UserTabViewPanelBody extends ConsumerWidget {
   }
 }
 
-/// パネルのフッター (D-517): 件数(読み込んだうち表示している数)+ リセット / 閉じる。FOW の標準のフッター([FowFooter])。
+/// パネルのフッター (D-517): 件数(読み込んだうち表示している数)。FOW の標準のフッター([FowFooter])。
+/// リセットは検索欄の横、閉じる(決定 / キャンセル)は見出しへ移した (D-557)。
 class UserTabViewPanelFooter extends ConsumerWidget {
-  const UserTabViewPanelFooter({super.key, required this.tab, required this.search, required this.query, required this.postsKey, required this.onClose});
+  const UserTabViewPanelFooter({super.key, required this.tab, required this.query, required this.postsKey});
   final UserPostsFilter tab;
-  final TextEditingController search;
   final ValueNotifier<String> query;
   final ({String id, UserPostsFilter filter, String? account}) postsKey;
-  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -358,19 +413,6 @@ class UserTabViewPanelFooter extends ConsumerWidget {
       valueListenable: query,
       builder: (_, q, _) => FowFooter(
         leading: posts == null ? null : Text(l.userPageViewCount(applyUserTabView(posts, v, query: q, base: base, sorted: false).length, posts.length), key: const ValueKey('user.tabView.count')),
-        actions: [
-          TextButton(
-            key: const ValueKey('user.tabView.reset'),
-            onPressed: v.isDefault && q.isEmpty
-                ? null
-                : () {
-                    search.clear();
-                    saveUserTabView(ref, tab, UserTabView.defaults);
-                  },
-            child: Text(l.userPageViewReset),
-          ),
-          TextButton(key: const ValueKey('user.tabView.close'), onPressed: onClose, child: Text(l.userPageViewClose, style: const TextStyle(fontWeight: FontWeight.w700))),
-        ],
       ),
     );
   }

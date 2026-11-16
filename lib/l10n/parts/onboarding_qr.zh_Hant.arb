@@ -1,0 +1,16 @@
+{
+  "@@locale": "zh_Hant",
+  "onboardingQrTitle": "透過朋友的 QR 碼尋找",
+  "onboardingQrSubtitle": "拍攝 RASQ 帳號的 QR 碼,或從圖片讀取",
+  "onboardingQrIntro": "讀取朋友的 RASQ 帳號 QR 碼來找到對方。QR 碼在本裝置上讀取,圖片不會傳送到任何地方。",
+  "onboardingQrReadHeading": "讀取朋友的 QR 碼",
+  "onboardingQrCamera": "拍攝 QR 碼",
+  "onboardingQrImage": "從圖片讀取",
+  "onboardingQrNotFound": "圖片中找不到 QR 碼。請讓 QR 碼更大一些後重拍",
+  "onboardingQrNotRasq": "這不是 RASQ 帳號的 QR 碼",
+  "onboardingQrNoAccount": "找不到 @{handle}",
+  "onboardingQrReadFailed": "無法讀取 QR 碼",
+  "onboardingQrMineHeading": "我的 QR 碼",
+  "onboardingQrMineNone": "登入 RASQ 帳號後可顯示自己的 QR 碼",
+  "onboardingQrMineHint": "朋友讀取此 QR 碼後會開啟你的頁面"
+}

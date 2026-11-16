@@ -1,0 +1,11 @@
+{
+  "@@locale": "zh_Hant",
+  "onboardingHistoryTitle": "整合搜尋紀錄來尋找",
+  "onboardingHistorySubtitle": "彙整之前搜尋過的詞語,尋找 RASQ 的使用者和清單",
+  "onboardingHistoryIntro": "這些是你在「尋找 SNS 服務」中搜尋過的詞語。將彙整所選詞語來尋找 RASQ 使用者和 RASQ 清單。紀錄僅保存在本裝置上。",
+  "onboardingHistoryEmpty": "還沒有紀錄。透過圖片、內容或熱門使用者尋找後,詞語會顯示在這裡。",
+  "onboardingHistoryRemove": "刪除此詞語",
+  "onboardingHistoryClear": "清除全部紀錄",
+  "onboardingHistorySearch": "用所選的 {count} 個詞語尋找",
+  "onboardingHistoryTooMany": "一次最多可選 {max} 個"
+}

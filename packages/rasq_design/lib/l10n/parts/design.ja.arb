@@ -179,5 +179,9 @@
       }
     }
   },
-  "designErrorRetry": "見てみる"
+  "designErrorRetry": "見てみる",
+  "designProfileCountPrivate": "非公開",
+  "@designProfileCountPrivate": {"description": "プロフィールのフォロー / フォロワーの人数が非公開(本人だけ)のときの説明。人数の代わりに 🔒 を出す (D-560)"},
+  "designProfileCountFollowersOnly": "フォロワーにだけ公開",
+  "@designProfileCountFollowersOnly": {"description": "人数がフォロワーにだけ公開で見えないときの説明。人数の代わりに ? を出す (D-560)"}
 }

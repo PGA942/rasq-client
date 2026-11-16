@@ -97,6 +97,25 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
     super.dispose();
   }
 
+  /// プロフィールの項目の @ハンドルを押した (D-560): そのサーバーの人を引いて、その人のページへ。見つからなければそう出す。
+  Future<void> _openFieldMention(String handle, String host, String? account) async {
+    final session = ref.read(sessionForAccountProvider(account));
+    final messenger = ScaffoldMessenger.of(context);
+    final notFound = context.l10n.usersFieldMentionNotFound('@$handle@$host');
+    UserProfile? p;
+    try {
+      p = await session?.userByHandle(handle, host: host == session.account.instance ? null : host);
+    } catch (e) {
+      debugPrint('field mention: $e');
+    }
+    if (!mounted) return;
+    if (p == null) {
+      messenger.showSnackBar(SnackBar(content: Text(notFound)));
+      return;
+    }
+    context.pushUser(p.summary, account: account);
+  }
+
   /// 選んでいるタブをもう一度押した (D-514)。一覧が下へ進んでいれば、まずいちばん上へ(下のナビの D-505 と同じ「押し直すと上へ」)。
   /// いちばん上なら、並べ替え・絞り込みの FOW を開く(開いていれば閉じる)。D-521: ふつうのフッター付きの FOW(カラムの下に
   /// ドック)なので、タブにつながった形のときのようにヘッダーを畳んでタブを上に留めることはしない。
@@ -194,6 +213,10 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
                 onFollowingTap: () => context.pushFollows(p.summary, followers: false, account: acct),
                 onFollowersTap: () => context.pushFollows(p.summary, followers: true, account: acct),
                 onLinkTap: (u) => launchUrl(u, mode: LaunchMode.externalApplication),
+                // 名前の絵文字 (D-560): 閲覧中のサーバーの絵文字 + その人が持ってきた絵文字(認証マークなど)。
+                nameSpans: InlineSpans.name(p.summary, emojis: ref.watch(emojiCacheProvider)),
+                // 項目の @ハンドル (D-560): その人のページへ。ホストが無ければ、このプロフィールの人のサーバーの人。
+                onMentionTap: (handle, host) => _openFieldMention(handle, host ?? p.summary.account.instance, acct),
               ),
               // この人の RASQ アカウントと、ほかにつないでいるアカウント (D-312)。制限中 / 凍結中は出さない。
               if (!restricted && !p.isSuspended) RasqLinksOnSnsProfile(profile: p),

@@ -2689,6 +2689,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get composeAttachmentSensitive => '标记为敏感';
 
   @override
+  String get composeTargetUnavailable => '目前无法使用此账号（已被监护人禁用）';
+
+  @override
+  String composeVisibilityPublicOnlyTitle(String sns) {
+    return '$sns 无法选择公开范围';
+  }
+
+  @override
+  String get composeVisibilityPublicOnlyBody => '此帖子将公开，任何人都能看到。要公开发送吗？';
+
+  @override
+  String get composeVisibilityPublicOnlySend => '公开发送';
+
+  @override
   String composeDropHint(int count) {
     return '松开即可添加(还可添加 $count 个)';
   }
@@ -3841,6 +3855,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dmMediaPlaceholder => '[媒体]';
+
+  @override
+  String get dmLastMessageHidden => '无法显示此消息';
 
   @override
   String get homeCreateMissingAccount => '（不存在的账号）';
@@ -5172,9 +5189,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get loginTermsTitle => '插件条款';
 
   @override
-  String get loginTermsAgree => '同意';
-
-  @override
   String loginTermsBullet(String text) {
     return '• $text';
   }
@@ -5312,6 +5326,38 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get loginMastodonHostHint => '输入实例 URL（例：mastodon.social）';
+
+  @override
+  String get loginServerSearchHint => '按名称或主机筛选';
+
+  @override
+  String get loginServerSearchEmpty => '列表中未找到。请在上方输入服务器的 URL';
+
+  @override
+  String get loginServerMore => '此服务器的菜单';
+
+  @override
+  String get loginServerOpenInBrowser => '在浏览器中打开服务器';
+
+  @override
+  String get loginBlueskyNext => '使用此 PDS 继续';
+
+  @override
+  String loginBlueskyHandleCompleteNote(String host) {
+    return '只输入名称时,登录时会补上“.$host”';
+  }
+
+  @override
+  String get loginTermsAgreeLogin => '同意并登录';
+
+  @override
+  String get loginTermsAgreeSignup => '同意并注册';
+
+  @override
+  String get loginTermsCancel => '取消';
+
+  @override
+  String get loginTermsClose => '关闭';
 
   @override
   String get mediaVizStyleMirror => '上下对称条形';
@@ -8179,7 +8225,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingDiscoverExportTitle => '从其他社交网络的导出数据中寻找';
 
   @override
-  String get onboardingDiscoverExportSubtitle => '即将推出';
+  String get onboardingDiscoverExportSubtitle => '从导出的关注 / 粉丝中查找在 RASQ 上的人';
 
   @override
   String get onboardingDiscoverAskTitle => '问问 RAi';
@@ -8608,6 +8654,329 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get onboardingDiscoverApiEmpty => '需要图片、正文或 URL 中的任意一项';
+
+  @override
+  String get onboardingExportFileTypeLabel => '社交网络的导出数据';
+
+  @override
+  String get onboardingExportIntro =>
+      '读取你从其他社交网络导出的数据,从其中的关注 / 粉丝里查找已在 RASQ 上的人。导出数据只在本设备上读取,不会发送到服务器。';
+
+  @override
+  String get onboardingExportFormats =>
+      '支持:X(Twitter)的 zip、Mastodon / Misskey 的关注 CSV、Instagram / Threads 的 zip、Bluesky 的 repo.car。也可以只选择 zip 里的文件。';
+
+  @override
+  String get onboardingExportPick => '选择导出文件';
+
+  @override
+  String get onboardingExportPickAgain => '选择其他文件';
+
+  @override
+  String get onboardingExportPickFailed => '无法选择文件';
+
+  @override
+  String get onboardingExportReadFailed => '无法读取文件';
+
+  @override
+  String get onboardingExportNothingFound => '无法从这些文件中读取关注 / 粉丝。请确认是否为支持的导出数据。';
+
+  @override
+  String get onboardingExportFoundHeading => '读取到的账号';
+
+  @override
+  String onboardingExportFoundLine(
+    String service,
+    int following,
+    int followers,
+    int mentions,
+  ) {
+    return '$service:关注 $following / 粉丝 $followers / 互动 $mentions';
+  }
+
+  @override
+  String onboardingExportXIdNote(int count) {
+    return 'X 导出数据中的关注 / 粉丝只有内部 ID。将按 ID 匹配,其中 $count 人可从推文的提及中得知用户名,也会按用户名匹配。';
+  }
+
+  @override
+  String onboardingExportSkipped(int count) {
+    return '有 $count 个文件过大,未读取';
+  }
+
+  @override
+  String get onboardingExportXAuthTitle => '使用 X 的导出数据前,需通过 X 认证';
+
+  @override
+  String get onboardingExportXAuthDone => '已通过 X 认证(试作)';
+
+  @override
+  String get onboardingExportXAuthDummyNote => '目前为试作,不会向 X 进行确认(按下按钮即可通过)。';
+
+  @override
+  String get onboardingExportXAuthButton => '通过 X 认证(试作)';
+
+  @override
+  String onboardingExportXSelfTitle(String handle) {
+    return '将自己的 X(@$handle)登记到个人资料';
+  }
+
+  @override
+  String get onboardingExportXSelfBody =>
+      '登记后,关注你的人可以通过自己的 X 导出数据找到你。不会向 X 确认,因此不会显示已确认标记(试作)。';
+
+  @override
+  String get onboardingExportXSelfRegister => '登记';
+
+  @override
+  String get onboardingExportXSelfDone => '已登记';
+
+  @override
+  String get onboardingExportXRegisterFailed => '无法登记 X 账号';
+
+  @override
+  String onboardingExportSearch(int count) {
+    return '从这 $count 人中查找 RASQ 用户';
+  }
+
+  @override
+  String get onboardingExportHashNote => '发送到服务器的只有每个账号的哈希值和服务名,服务器不会保存。';
+
+  @override
+  String onboardingExportProgress(int done, int total) {
+    return '正在匹配($done / $total)';
+  }
+
+  @override
+  String get onboardingExportBusy => '服务器繁忙,请稍后再试';
+
+  @override
+  String get onboardingExportMatchFailed => '无法匹配';
+
+  @override
+  String get onboardingExportNoMatches =>
+      '没有找到在 RASQ 上的人。对方在个人资料中填写了该社交网络的链接或已关联账号时才能找到。';
+
+  @override
+  String onboardingExportMatchesHeading(int count) {
+    return '在 RASQ 上的人($count)';
+  }
+
+  @override
+  String get onboardingExportRelationFollowing => '关注';
+
+  @override
+  String get onboardingExportRelationFollower => '粉丝';
+
+  @override
+  String get onboardingExportRelationMention => '互动';
+
+  @override
+  String onboardingExportVia(String service, String relation, String name) {
+    return '$service 的$relation:$name';
+  }
+
+  @override
+  String get onboardingExportUnverified => '尚未确认本人(对方在个人资料中自称)';
+
+  @override
+  String get onboardingExportXIdentityTitle => 'X 账号(通过 X 认证・试作)';
+
+  @override
+  String get onboardingExportXIdentityBody =>
+      '登记 X 用户名后,其他人可以通过 X 导出数据找到你。目前为试作,不会向 X 确认,也不会显示已确认标记。';
+
+  @override
+  String get onboardingExportXIdentityNone => '未登记';
+
+  @override
+  String onboardingExportXIdentityCurrent(String handle) {
+    return '@$handle(试作・未确认)';
+  }
+
+  @override
+  String get onboardingExportXIdentityHandleLabel => 'X 用户名(@ 之后)';
+
+  @override
+  String get onboardingExportXIdentityIdLabel => 'X 内部 ID(数字,可选)';
+
+  @override
+  String get onboardingExportXIdentityIdHelp =>
+      'X 导出数据 account.js 中的 accountId。填写后,只含 ID 的导出数据也能找到你。';
+
+  @override
+  String get onboardingExportXIdentitySave => '通过 X 认证(试作)';
+
+  @override
+  String get onboardingExportXIdentityRemove => '删除登记';
+
+  @override
+  String get onboardingExportXIdentityInvalid =>
+      '用户名为最多 15 个字母、数字或下划线,ID 请填写数字';
+
+  @override
+  String get onboardingExportXIdentityFailed => '无法保存 X 账号';
+
+  @override
+  String get onboardingHistoryTitle => '整合搜索记录来查找';
+
+  @override
+  String get onboardingHistorySubtitle => '汇总之前搜索过的词语,查找 RASQ 的用户和列表';
+
+  @override
+  String get onboardingHistoryIntro =>
+      '这些是你在“查找 SNS 服务”中搜索过的词语。将汇总所选词语来查找 RASQ 用户和 RASQ 列表。记录仅保存在本设备上。';
+
+  @override
+  String get onboardingHistoryEmpty => '还没有记录。通过图片、内容或热门用户查找后,词语会显示在这里。';
+
+  @override
+  String get onboardingHistoryRemove => '删除此词语';
+
+  @override
+  String get onboardingHistoryClear => '清除全部记录';
+
+  @override
+  String onboardingHistorySearch(int count) {
+    return '用所选的 $count 个词语查找';
+  }
+
+  @override
+  String onboardingHistoryTooMany(int max) {
+    return '一次最多可选 $max 个';
+  }
+
+  @override
+  String get onboardingPageSearchBrowseButton => '搜索此页面';
+
+  @override
+  String get onboardingPageSearchCaptureFailed => '无法截取此页面';
+
+  @override
+  String get onboardingPageSearchTitle => '搜索此页面';
+
+  @override
+  String get onboardingPageSearchLengthLabel => '长度';
+
+  @override
+  String get onboardingPageSearchModeDraw => '框选';
+
+  @override
+  String get onboardingPageSearchModeScroll => '滚动';
+
+  @override
+  String get onboardingPageSearchHint =>
+      '拖动框选想搜索的部分(可多个)。点按选框可修改搜索文字,或改为按图片搜索。';
+
+  @override
+  String get onboardingPageSearchSketchNote =>
+      '此设备无法截取页面,因此只显示文字的位置。可以框选并按文字搜索(不能按图片搜索)。';
+
+  @override
+  String onboardingPageSearchButton(int count) {
+    return '搜索 $count 处';
+  }
+
+  @override
+  String onboardingPageSearchRegionsFull(int max) {
+    return '最多可框选 $max 处';
+  }
+
+  @override
+  String onboardingPageSearchTooManyImages(int max) {
+    return '每次最多可按图片搜索 $max 处';
+  }
+
+  @override
+  String onboardingPageSearchRegionTitle(int index) {
+    return '选框 $index';
+  }
+
+  @override
+  String get onboardingPageSearchRegionCancel => '取消';
+
+  @override
+  String get onboardingPageSearchRegionConfirm => '确定';
+
+  @override
+  String get onboardingPageSearchByText => '按文字';
+
+  @override
+  String get onboardingPageSearchByImage => '按图片';
+
+  @override
+  String get onboardingPageSearchQueryLabel => '搜索文字';
+
+  @override
+  String get onboardingPageSearchQueryHint => '名字、@用户名、词语等';
+
+  @override
+  String get onboardingPageSearchOpenEditor => '在图片编辑器中打开';
+
+  @override
+  String get onboardingPageSearchEdited => '将使用在图片编辑器中修改的图片搜索';
+
+  @override
+  String get onboardingPageSearchDelete => '删除此选框';
+
+  @override
+  String get onboardingPageSearchResultsTitle => '搜索结果';
+
+  @override
+  String get onboardingPageSearchTermsHeading => '搜索的词语';
+
+  @override
+  String get onboardingPageSearchUsersHeading => 'RASQ 用户';
+
+  @override
+  String get onboardingPageSearchPostsHeading => 'RASQ 帖子';
+
+  @override
+  String onboardingPageSearchImagesFailed(int count) {
+    return '有 $count 张图片无法转换为词语(服务器繁忙或无法识别)';
+  }
+
+  @override
+  String get onboardingQrTitle => '通过朋友的二维码查找';
+
+  @override
+  String get onboardingQrSubtitle => '拍摄 RASQ 账号的二维码,或从图片读取';
+
+  @override
+  String get onboardingQrIntro =>
+      '读取朋友的 RASQ 账号二维码来找到对方。二维码在本设备上读取,图片不会发送到任何地方。';
+
+  @override
+  String get onboardingQrReadHeading => '读取朋友的二维码';
+
+  @override
+  String get onboardingQrCamera => '拍摄二维码';
+
+  @override
+  String get onboardingQrImage => '从图片读取';
+
+  @override
+  String get onboardingQrNotFound => '图片中未找到二维码。请让二维码更大一些后重拍';
+
+  @override
+  String get onboardingQrNotRasq => '这不是 RASQ 账号的二维码';
+
+  @override
+  String onboardingQrNoAccount(String handle) {
+    return '未找到 @$handle';
+  }
+
+  @override
+  String get onboardingQrReadFailed => '无法读取二维码';
+
+  @override
+  String get onboardingQrMineHeading => '我的二维码';
+
+  @override
+  String get onboardingQrMineNone => '登录 RASQ 账号后可显示自己的二维码';
+
+  @override
+  String get onboardingQrMineHint => '朋友读取此二维码后会打开你的页面';
 
   @override
   String get onboardingTourPageSnsTitle => '多个 SNS，集中在一处';
@@ -12124,19 +12493,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get raiModelsEmbeddingRasqText => 'RASQ MiniLM（文本）';
+  String get raiModelsEmbeddingRasqText => 'RAM pico txt';
 
   @override
   String get raiModelsEmbeddingMiniLmL12 => 'MiniLM-L12 多语言（paraphrase, int8）';
 
   @override
-  String get raiModelsEmbeddingRasqVision => 'RASQ MobileNet（帖子图片）';
+  String get raiModelsEmbeddingRasqVision => 'RAM pico img';
 
   @override
-  String get raiModelsEmbeddingSiglipText => 'SigLIP2 base（文本塔 · int8）';
+  String get raiModelsEmbeddingSiglipText => 'SIG pico txt';
 
   @override
-  String get raiModelsEmbeddingSiglipVision => 'SigLIP2 base（图像端 · int8）';
+  String get raiModelsEmbeddingSiglipVision => 'SIG pico img';
 
   @override
   String raiModelsEmbeddingFailed(String message) {
@@ -18542,6 +18911,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get swingUnreadable => '无法读取 Swing';
 
   @override
+  String get swingErrorSendHeld => '由于被举报的 Swing 无法确认，暂时无法发布 Swing(72 小时后解除)';
+
+  @override
+  String get swingP2pFetching => '正在从对方的设备接收…';
+
+  @override
+  String get swingP2pUnavailable => '目前没有人可以传送。请稍后再打开';
+
+  @override
+  String get swingP2pUnverified => '无法验证创建者的签名，因此不显示';
+
+  @override
+  String get swingP2pRetry => '重试';
+
+  @override
   String themeNotAThemePack(String id) {
     return '不是主题包：$id';
   }
@@ -19100,7 +19484,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get userPageViewClose => '关闭';
+  String get userPageViewCancel => '取消';
+
+  @override
+  String get userPageViewConfirm => '确定';
 
   @override
   String userPageViewSearchHint(String tab) {
@@ -19310,6 +19697,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get usersNotFound => '该用户似乎不存在。';
+
+  @override
+  String usersFieldMentionNotFound(String handle) {
+    return '未找到 $handle';
+  }
 
   @override
   String get vcSectionInvited => '邀请';
@@ -23174,6 +23566,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get composeAttachmentSensitive => '標記為敏感';
 
   @override
+  String get composeTargetUnavailable => '目前無法使用此帳號（已被監護人停用）';
+
+  @override
+  String composeVisibilityPublicOnlyTitle(String sns) {
+    return '$sns 無法選擇公開範圍';
+  }
+
+  @override
+  String get composeVisibilityPublicOnlyBody => '此貼文將公開，任何人都能看到。要公開傳送嗎？';
+
+  @override
+  String get composeVisibilityPublicOnlySend => '公開傳送';
+
+  @override
   String composeDropHint(int count) {
     return '放開即可加入(還可加入 $count 個)';
   }
@@ -24328,6 +24734,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get dmMediaPlaceholder => '[媒體]';
 
   @override
+  String get dmLastMessageHidden => '無法顯示此訊息';
+
+  @override
   String get homeCreateMissingAccount => '（不存在的帳號）';
 
   @override
@@ -25238,9 +25647,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get loginTermsTitle => '外掛條款';
 
   @override
-  String get loginTermsAgree => '同意';
-
-  @override
   String loginTermsBullet(String text) {
     return '• $text';
   }
@@ -25378,6 +25784,38 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get loginMastodonHostHint => '輸入站台 URL（例：mastodon.social）';
+
+  @override
+  String get loginServerSearchHint => '依名稱或主機篩選';
+
+  @override
+  String get loginServerSearchEmpty => '清單中找不到。請在上方輸入伺服器的 URL';
+
+  @override
+  String get loginServerMore => '此伺服器的選單';
+
+  @override
+  String get loginServerOpenInBrowser => '在瀏覽器中開啟伺服器';
+
+  @override
+  String get loginBlueskyNext => '使用此 PDS 繼續';
+
+  @override
+  String loginBlueskyHandleCompleteNote(String host) {
+    return '只輸入名稱時,登入時會補上「.$host」';
+  }
+
+  @override
+  String get loginTermsAgreeLogin => '同意並登入';
+
+  @override
+  String get loginTermsAgreeSignup => '同意並註冊';
+
+  @override
+  String get loginTermsCancel => '取消';
+
+  @override
+  String get loginTermsClose => '關閉';
 
   @override
   String get mediaVizStyleMirror => '上下對稱長條';
@@ -28244,7 +28682,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get onboardingDiscoverExportTitle => '從其他社群網路的匯出資料中尋找';
 
   @override
-  String get onboardingDiscoverExportSubtitle => '即將推出';
+  String get onboardingDiscoverExportSubtitle => '從匯出的追蹤 / 粉絲中尋找在 RASQ 上的人';
 
   @override
   String get onboardingDiscoverAskTitle => '問問 RAi';
@@ -28673,6 +29111,329 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get onboardingDiscoverApiEmpty => '需要圖片、內文或 URL 中的任一項';
+
+  @override
+  String get onboardingExportFileTypeLabel => '社群網路的匯出資料';
+
+  @override
+  String get onboardingExportIntro =>
+      '讀取你從其他社群網路匯出的資料,從其中的追蹤 / 粉絲裡尋找已在 RASQ 上的人。匯出資料只在本裝置上讀取,不會傳送到伺服器。';
+
+  @override
+  String get onboardingExportFormats =>
+      '支援:X(Twitter)的 zip、Mastodon / Misskey 的追蹤 CSV、Instagram / Threads 的 zip、Bluesky 的 repo.car。也可以只選擇 zip 裡的檔案。';
+
+  @override
+  String get onboardingExportPick => '選擇匯出檔案';
+
+  @override
+  String get onboardingExportPickAgain => '選擇其他檔案';
+
+  @override
+  String get onboardingExportPickFailed => '無法選擇檔案';
+
+  @override
+  String get onboardingExportReadFailed => '無法讀取檔案';
+
+  @override
+  String get onboardingExportNothingFound => '無法從這些檔案中讀取追蹤 / 粉絲。請確認是否為支援的匯出資料。';
+
+  @override
+  String get onboardingExportFoundHeading => '讀取到的帳號';
+
+  @override
+  String onboardingExportFoundLine(
+    String service,
+    int following,
+    int followers,
+    int mentions,
+  ) {
+    return '$service:追蹤 $following / 粉絲 $followers / 互動 $mentions';
+  }
+
+  @override
+  String onboardingExportXIdNote(int count) {
+    return 'X 匯出資料中的追蹤 / 粉絲只有內部 ID。將依 ID 比對,其中 $count 人可從推文的提及得知使用者名稱,也會依使用者名稱比對。';
+  }
+
+  @override
+  String onboardingExportSkipped(int count) {
+    return '有 $count 個檔案過大,未讀取';
+  }
+
+  @override
+  String get onboardingExportXAuthTitle => '使用 X 的匯出資料前,需透過 X 認證';
+
+  @override
+  String get onboardingExportXAuthDone => '已透過 X 認證(試作)';
+
+  @override
+  String get onboardingExportXAuthDummyNote => '目前為試作,不會向 X 進行確認(按下按鈕即可通過)。';
+
+  @override
+  String get onboardingExportXAuthButton => '透過 X 認證(試作)';
+
+  @override
+  String onboardingExportXSelfTitle(String handle) {
+    return '將自己的 X(@$handle)登記到個人檔案';
+  }
+
+  @override
+  String get onboardingExportXSelfBody =>
+      '登記後,追蹤你的人可以透過自己的 X 匯出資料找到你。不會向 X 確認,因此不會顯示已確認標記(試作)。';
+
+  @override
+  String get onboardingExportXSelfRegister => '登記';
+
+  @override
+  String get onboardingExportXSelfDone => '已登記';
+
+  @override
+  String get onboardingExportXRegisterFailed => '無法登記 X 帳號';
+
+  @override
+  String onboardingExportSearch(int count) {
+    return '從這 $count 人中尋找 RASQ 使用者';
+  }
+
+  @override
+  String get onboardingExportHashNote => '傳送到伺服器的只有每個帳號的雜湊值和服務名稱,伺服器不會保存。';
+
+  @override
+  String onboardingExportProgress(int done, int total) {
+    return '正在比對($done / $total)';
+  }
+
+  @override
+  String get onboardingExportBusy => '伺服器忙碌,請稍後再試';
+
+  @override
+  String get onboardingExportMatchFailed => '無法比對';
+
+  @override
+  String get onboardingExportNoMatches =>
+      '沒有找到在 RASQ 上的人。對方在個人檔案中填寫了該社群網路的連結或已連結帳號時才能找到。';
+
+  @override
+  String onboardingExportMatchesHeading(int count) {
+    return '在 RASQ 上的人($count)';
+  }
+
+  @override
+  String get onboardingExportRelationFollowing => '追蹤';
+
+  @override
+  String get onboardingExportRelationFollower => '粉絲';
+
+  @override
+  String get onboardingExportRelationMention => '互動';
+
+  @override
+  String onboardingExportVia(String service, String relation, String name) {
+    return '$service 的$relation:$name';
+  }
+
+  @override
+  String get onboardingExportUnverified => '尚未確認本人(對方在個人檔案中自稱)';
+
+  @override
+  String get onboardingExportXIdentityTitle => 'X 帳號(透過 X 認證・試作)';
+
+  @override
+  String get onboardingExportXIdentityBody =>
+      '登記 X 使用者名稱後,其他人可以透過 X 匯出資料找到你。目前為試作,不會向 X 確認,也不會顯示已確認標記。';
+
+  @override
+  String get onboardingExportXIdentityNone => '未登記';
+
+  @override
+  String onboardingExportXIdentityCurrent(String handle) {
+    return '@$handle(試作・未確認)';
+  }
+
+  @override
+  String get onboardingExportXIdentityHandleLabel => 'X 使用者名稱(@ 之後)';
+
+  @override
+  String get onboardingExportXIdentityIdLabel => 'X 內部 ID(數字,選填)';
+
+  @override
+  String get onboardingExportXIdentityIdHelp =>
+      'X 匯出資料 account.js 中的 accountId。填寫後,只含 ID 的匯出資料也能找到你。';
+
+  @override
+  String get onboardingExportXIdentitySave => '透過 X 認證(試作)';
+
+  @override
+  String get onboardingExportXIdentityRemove => '刪除登記';
+
+  @override
+  String get onboardingExportXIdentityInvalid =>
+      '使用者名稱為最多 15 個字母、數字或底線,ID 請填寫數字';
+
+  @override
+  String get onboardingExportXIdentityFailed => '無法儲存 X 帳號';
+
+  @override
+  String get onboardingHistoryTitle => '整合搜尋紀錄來尋找';
+
+  @override
+  String get onboardingHistorySubtitle => '彙整之前搜尋過的詞語,尋找 RASQ 的使用者和清單';
+
+  @override
+  String get onboardingHistoryIntro =>
+      '這些是你在「尋找 SNS 服務」中搜尋過的詞語。將彙整所選詞語來尋找 RASQ 使用者和 RASQ 清單。紀錄僅保存在本裝置上。';
+
+  @override
+  String get onboardingHistoryEmpty => '還沒有紀錄。透過圖片、內容或熱門使用者尋找後,詞語會顯示在這裡。';
+
+  @override
+  String get onboardingHistoryRemove => '刪除此詞語';
+
+  @override
+  String get onboardingHistoryClear => '清除全部紀錄';
+
+  @override
+  String onboardingHistorySearch(int count) {
+    return '用所選的 $count 個詞語尋找';
+  }
+
+  @override
+  String onboardingHistoryTooMany(int max) {
+    return '一次最多可選 $max 個';
+  }
+
+  @override
+  String get onboardingPageSearchBrowseButton => '搜尋此頁面';
+
+  @override
+  String get onboardingPageSearchCaptureFailed => '無法擷取此頁面';
+
+  @override
+  String get onboardingPageSearchTitle => '搜尋此頁面';
+
+  @override
+  String get onboardingPageSearchLengthLabel => '長度';
+
+  @override
+  String get onboardingPageSearchModeDraw => '框選';
+
+  @override
+  String get onboardingPageSearchModeScroll => '捲動';
+
+  @override
+  String get onboardingPageSearchHint =>
+      '拖曳框選想搜尋的部分(可多個)。點按選框可修改搜尋文字,或改為以圖片搜尋。';
+
+  @override
+  String get onboardingPageSearchSketchNote =>
+      '此裝置無法擷取頁面,因此只顯示文字的位置。可以框選並以文字搜尋(不能以圖片搜尋)。';
+
+  @override
+  String onboardingPageSearchButton(int count) {
+    return '搜尋 $count 處';
+  }
+
+  @override
+  String onboardingPageSearchRegionsFull(int max) {
+    return '最多可框選 $max 處';
+  }
+
+  @override
+  String onboardingPageSearchTooManyImages(int max) {
+    return '每次最多可用圖片搜尋 $max 處';
+  }
+
+  @override
+  String onboardingPageSearchRegionTitle(int index) {
+    return '選框 $index';
+  }
+
+  @override
+  String get onboardingPageSearchRegionCancel => '取消';
+
+  @override
+  String get onboardingPageSearchRegionConfirm => '確定';
+
+  @override
+  String get onboardingPageSearchByText => '以文字';
+
+  @override
+  String get onboardingPageSearchByImage => '以圖片';
+
+  @override
+  String get onboardingPageSearchQueryLabel => '搜尋文字';
+
+  @override
+  String get onboardingPageSearchQueryHint => '名字、@使用者名稱、詞語等';
+
+  @override
+  String get onboardingPageSearchOpenEditor => '在圖片編輯器中開啟';
+
+  @override
+  String get onboardingPageSearchEdited => '將使用在圖片編輯器中修改的圖片搜尋';
+
+  @override
+  String get onboardingPageSearchDelete => '刪除此選框';
+
+  @override
+  String get onboardingPageSearchResultsTitle => '搜尋結果';
+
+  @override
+  String get onboardingPageSearchTermsHeading => '搜尋的詞語';
+
+  @override
+  String get onboardingPageSearchUsersHeading => 'RASQ 使用者';
+
+  @override
+  String get onboardingPageSearchPostsHeading => 'RASQ 貼文';
+
+  @override
+  String onboardingPageSearchImagesFailed(int count) {
+    return '有 $count 張圖片無法轉換為詞語(伺服器忙碌或無法辨識)';
+  }
+
+  @override
+  String get onboardingQrTitle => '透過朋友的 QR 碼尋找';
+
+  @override
+  String get onboardingQrSubtitle => '拍攝 RASQ 帳號的 QR 碼,或從圖片讀取';
+
+  @override
+  String get onboardingQrIntro =>
+      '讀取朋友的 RASQ 帳號 QR 碼來找到對方。QR 碼在本裝置上讀取,圖片不會傳送到任何地方。';
+
+  @override
+  String get onboardingQrReadHeading => '讀取朋友的 QR 碼';
+
+  @override
+  String get onboardingQrCamera => '拍攝 QR 碼';
+
+  @override
+  String get onboardingQrImage => '從圖片讀取';
+
+  @override
+  String get onboardingQrNotFound => '圖片中找不到 QR 碼。請讓 QR 碼更大一些後重拍';
+
+  @override
+  String get onboardingQrNotRasq => '這不是 RASQ 帳號的 QR 碼';
+
+  @override
+  String onboardingQrNoAccount(String handle) {
+    return '找不到 @$handle';
+  }
+
+  @override
+  String get onboardingQrReadFailed => '無法讀取 QR 碼';
+
+  @override
+  String get onboardingQrMineHeading => '我的 QR 碼';
+
+  @override
+  String get onboardingQrMineNone => '登入 RASQ 帳號後可顯示自己的 QR 碼';
+
+  @override
+  String get onboardingQrMineHint => '朋友讀取此 QR 碼後會開啟你的頁面';
 
   @override
   String get onboardingTourPageSnsTitle => '多個 SNS，集中在一處';
@@ -32188,19 +32949,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get raiModelsEmbeddingRasqText => 'RASQ MiniLM（文字）';
+  String get raiModelsEmbeddingRasqText => 'RAM pico txt';
 
   @override
   String get raiModelsEmbeddingMiniLmL12 => 'MiniLM-L12 多語言（paraphrase, int8）';
 
   @override
-  String get raiModelsEmbeddingRasqVision => 'RASQ MobileNet（貼文圖片）';
+  String get raiModelsEmbeddingRasqVision => 'RAM pico img';
 
   @override
-  String get raiModelsEmbeddingSiglipText => 'SigLIP2 base（文字塔 · int8）';
+  String get raiModelsEmbeddingSiglipText => 'SIG pico txt';
 
   @override
-  String get raiModelsEmbeddingSiglipVision => 'SigLIP2 base（圖像端 · int8）';
+  String get raiModelsEmbeddingSiglipVision => 'SIG pico img';
 
   @override
   String raiModelsEmbeddingFailed(String message) {
@@ -38610,6 +39371,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get swingUnreadable => '無法讀取 Swing';
 
   @override
+  String get swingErrorSendHeld => '由於被檢舉的 Swing 無法確認，暫時無法發布 Swing(72 小時後解除)';
+
+  @override
+  String get swingP2pFetching => '正在從對方的裝置接收…';
+
+  @override
+  String get swingP2pUnavailable => '目前沒有人可以傳送。請稍後再開啟';
+
+  @override
+  String get swingP2pUnverified => '無法驗證建立者的簽章，因此不顯示';
+
+  @override
+  String get swingP2pRetry => '重試';
+
+  @override
   String themeNotAThemePack(String id) {
     return '不是主題包：$id';
   }
@@ -39168,7 +39944,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get userPageViewClose => '關閉';
+  String get userPageViewCancel => '取消';
+
+  @override
+  String get userPageViewConfirm => '確定';
 
   @override
   String userPageViewSearchHint(String tab) {
@@ -39378,6 +40157,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get usersNotFound => '該使用者似乎不存在。';
+
+  @override
+  String usersFieldMentionNotFound(String handle) {
+    return '找不到 $handle';
+  }
 
   @override
   String get vcSectionInvited => '邀請';

@@ -248,6 +248,12 @@ class RasqDesignLocalizationsZh extends RasqDesignLocalizations {
   String get designErrorRetry => '重试';
 
   @override
+  String get designProfileCountPrivate => '不公开';
+
+  @override
+  String get designProfileCountFollowersOnly => '仅对粉丝公开';
+
+  @override
   String get designOverlayCancel => '取消';
 
   @override
@@ -514,6 +520,12 @@ class RasqDesignLocalizationsZhHant extends RasqDesignLocalizationsZh {
 
   @override
   String get designErrorRetry => '重試';
+
+  @override
+  String get designProfileCountPrivate => '不公開';
+
+  @override
+  String get designProfileCountFollowersOnly => '僅對粉絲公開';
 
   @override
   String get designOverlayCancel => '取消';

@@ -43,5 +43,6 @@
   "usersClipsHeader": "便签",
   "usersClipNoteCount": "{count, plural, other{{count} 条}}",
   "usersClipSubtitleSeparator": " · ",
-  "usersNotFound": "该用户似乎不存在。"
+  "usersNotFound": "该用户似乎不存在。",
+  "usersFieldMentionNotFound": "未找到 {handle}"
 }

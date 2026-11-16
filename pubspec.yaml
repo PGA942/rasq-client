@@ -35,10 +35,13 @@ dependencies:
   url_launcher: ^6.3.0
   # サーバーの登録ページをアプリの中で開く (D-412)。Android / iOS / macOS だけ(Linux / Windows / Web は外部のブラウザ)。
   webview_flutter: ^4.14.1
+  # 「この画面を探す」(D-552): WebView の番号(webViewIdentifier)を取って、ネイティブで写しを撮る。
+  webview_flutter_android: ^4.14.1
+  webview_flutter_wkwebview: ^3.26.1
   crypto: ^3.0.3
   # ストア配布物の ed25519 署名検証 (D-034)。純 Dart 実装で全プラットフォーム同一。
   cryptography: ^2.9.0
-  http: ^1.2.0
+  http: ^1.5.0
   http_parser: ^4.0.2
   # Web 版 (D-295): 安全でないコンテキスト(開発用の http)での保存先に localStorage を使う。
   web: ^1.1.1
@@ -116,6 +119,7 @@ dependencies:
   firebase_messaging: ^16.7.0
   # ホーム画面のアプリのショートカット (D-483、flutter.dev): iOS は Info.plist の静的な項目(SF Symbols)、Android は動的な項目。
   quick_actions: ^1.1.1
+  zxing2: ^0.2.4
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -147,9 +151,10 @@ flutter:
     - assets/models/siglip2_tokenizer.model
     # MiniLM(XLM-R Unigram)の語彙 (D-193: id 順 piece \t score、7.7 MB)。ONNX 本体はダウンロード。
     - assets/models/minilm_unigram.tsv
-    # 同梱の RASQ MiniLM(文の塔、D-522)。LLM が無くても RAi の検索 / 投稿の埋め込みなどに要るので、端末のアプリに入れる。
-    # `tool/fetch_embedding_model.sh` で text_tower_uint8.onnx を置く(無いビルドは従来どおり Central から取る)。
-    # Web 版には入れない(onnxruntime-web で従来どおり取りに行く。35 MB を配信物に載せない)。
+    # 同梱の埋め込みモデル 2 つ(D-522 / D-558): RAM pico txt(文の塔、もと RASQ MiniLM)と RAM pico img(画像の塔、もと RASQ MobileNet)。
+    # LLM が無くても RAi の検索 / 投稿の埋め込みなどに要るので、端末のアプリに入れる(プリインストール)。
+    # `tool/fetch_embedding_model.sh` で text_tower_uint8.onnx / image_tower_uint8.onnx を置く(無いビルドは従来どおり Central から取る)。
+    # Web 版には入れない(onnxruntime-web で従来どおり取りに行く。67 MB を配信物に載せない)。
     - path: assets/rai_embedding/
       platforms: [android, ios, linux, macos, windows]
     - assets/rai/functions.jsonl

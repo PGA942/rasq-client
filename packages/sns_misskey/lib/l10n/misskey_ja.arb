@@ -399,5 +399,17 @@
   "misskeyActionFavorite": "お気に入り",
   "@misskeyActionFavorite": {
     "description": "投稿のアクションの名前: お気に入り"
+  },
+  "misskeyApiResponseTooLarge": "{host} の応答が大きすぎます({maxBytes} bytes を超えています)",
+  "@misskeyApiResponseTooLarge": {
+    "description": "Misskey のサーバーの応答が上限を超えて、読むのをやめたとき。host はサーバー、maxBytes は上限のバイト数",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "maxBytes": {
+        "type": "int"
+      }
+    }
   }
 }

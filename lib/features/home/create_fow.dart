@@ -99,16 +99,19 @@ List<String> normalizeFabSlots(List<String> ids) {
 
 Future<void> setFabSlots(WidgetRef ref, String scope, List<String> slots) => ref.read(settingsAreaProvider(fabSettingsArea).notifier).set('${scope}Slots', normalizeFabSlots(slots));
 
-AccountSession? _sessionOf(WidgetRef ref, String key) => ref.read(sessionsProvider).value?.sessions.where((s) => s.account.key == key).firstOrNull;
+/// 今使ってよいセッションから引く(見守りで止めた SNS は出さない。セキュリティ確認 2026-11-11 の #10)。
+AccountSession? _sessionOf(WidgetRef ref, String key) => ref.read(usableSessionsProvider).where((s) => s.account.key == key).firstOrNull;
 
 /// アクションの見た目と、使えるか。
 ({IconData icon, String label, AccountSession? account, bool available}) createActionInfo(WidgetRef ref, String id) {
+  // 見守りで投稿を止めていれば、投稿の入口も閉じる (#9)。
+  final postAllowed = ref.read(childGateProvider).blockedMessage('post') == null;
   if (id.startsWith('post:')) {
     final s = _sessionOf(ref, id.substring(5));
-    return (icon: Icons.edit_outlined, label: s == null ? appL10n.homeCreateMissingAccount : (s.displayName?.isNotEmpty == true ? s.displayName! : '@${s.account.handle}'), account: s, available: s != null);
+    return (icon: Icons.edit_outlined, label: s == null ? appL10n.homeCreateMissingAccount : (s.displayName?.isNotEmpty == true ? s.displayName! : '@${s.account.handle}'), account: s, available: s != null && postAllowed);
   }
   return switch (id) {
-    'post' => (icon: Icons.edit_outlined, label: appL10n.homeCreatePost, account: null, available: true),
+    'post' => (icon: Icons.edit_outlined, label: appL10n.homeCreatePost, account: null, available: postAllowed),
     'rasq' => (icon: Icons.person_pin_outlined, label: 'RASQ', account: null, available: ref.read(orgateAccountProvider).value != null),
     'astell' => (icon: Icons.graphic_eq, label: 'ASTell', account: null, available: ref.read(childGateProvider).featureAllowed('astell.join')),
     'swing' => (icon: Icons.bolt_outlined, label: 'Swing', account: null, available: ref.read(swingApiProvider) != null),
@@ -151,6 +154,8 @@ Future<void> runCreateAction(BuildContext context, WidgetRef ref, String id, {St
     final why = switch (id) {
       'rasq' || 'swing' => context.l10n.homeCreateNeedsRasqAccount(info.label),
       'astell' => context.l10n.homeCreateAstellBlocked,
+      'post' => ref.read(childGateProvider).blockedMessage('post') ?? context.l10n.homeCreateAccountGone,
+      _ when id.startsWith('post:') && ref.read(childGateProvider).blockedMessage('post') != null => ref.read(childGateProvider).blockedMessage('post')!,
       _ => context.l10n.homeCreateAccountGone,
     };
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(why)));

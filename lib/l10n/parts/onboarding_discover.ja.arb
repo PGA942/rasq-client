@@ -8,7 +8,7 @@
   "@onboardingDiscoverPeopleTitle": {"description": "探す画面の入口と、その画面の見出し"},
   "onboardingDiscoverPeopleSubtitle": "好きな人の名前や分野から",
   "onboardingDiscoverExportTitle": "外部 SNS のエクスポートデータから探す",
-  "onboardingDiscoverExportSubtitle": "準備中",
+  "onboardingDiscoverExportSubtitle": "フォロー / フォロワーの書き出しから、RASQ にいる人を探します",
   "onboardingDiscoverAskTitle": "RAi に聞く",
   "@onboardingDiscoverAskTitle": {"description": "探す画面の入口・見出し・人から探すで見つからなかったときのボタン"},
   "onboardingDiscoverAskSubtitle": "どんな SNS が合うか、話しながら探します",

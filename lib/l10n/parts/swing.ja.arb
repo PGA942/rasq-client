@@ -137,5 +137,10 @@
   "swingPackageFetchFailed": "プラグインを取れませんでした(HTTP {status})",
   "@swingPackageFetchFailed": {"description": "status は HTTP の状態の番号", "placeholders": {"status": {"type": "int"}}},
   "swingNotLoggedIn": "RASQ アカウントにログインしていません",
-  "swingUnreadable": "Swing を読めませんでした"
+  "swingUnreadable": "Swing を読めませんでした",
+  "swingErrorSendHeld": "通報された Swing の確認ができなかったため、しばらく Swing を出せません(72 時間で解除されます)",
+  "swingP2pFetching": "相手の端末から受け取っています…",
+  "swingP2pUnavailable": "いま届けられる人がいません。少し待ってからもう一度開いてください",
+  "swingP2pUnverified": "作った人の署名を確かめられないため、表示しません",
+  "swingP2pRetry": "もう一度"
 }

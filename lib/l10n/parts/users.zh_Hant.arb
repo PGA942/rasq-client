@@ -43,5 +43,6 @@
   "usersClipsHeader": "便籤",
   "usersClipNoteCount": "{count, plural, other{{count} 則}}",
   "usersClipSubtitleSeparator": " · ",
-  "usersNotFound": "該使用者似乎不存在。"
+  "usersNotFound": "該使用者似乎不存在。",
+  "usersFieldMentionNotFound": "找不到 {handle}"
 }

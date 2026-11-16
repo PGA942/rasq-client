@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -13,8 +15,83 @@ import 'rai_llm.dart' show raiSettingsArea;
 import '../settings/settings_dsl.dart';
 import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
+import 'rai_layout.dart' show raiChatWidth;
+import 'rai_motion.dart' show raiApproachSize, raiPointSize;
 import 'rai_widgets.dart';
 import '../../l10n/l10n.dart';
+
+/// RAi のチャットのページの組み (D-558)。**RAi ホーム(アシスタント)とオンボーディングの「RAi に聞く」で同じもの**:
+/// 列の幅は [raiChatWidth](600px 未満は全幅、それ以上は増えた分の 1/2 まで)、列の中央の奥に薄い RAi([background]、
+/// 大きさは列の幅の 3/4 か画面の高さの 45% の小さい方)、その上に発言の一覧([list])、列の下に入力([input]、RAi ホームは
+/// RAi バーを層で出すので無し)。
+class RaiChatFrame extends StatelessWidget {
+  const RaiChatFrame({super.key, required this.list, required this.background, this.input});
+
+  /// 発言の一覧(空のときは [RaiChatEmptyView])。
+  final Widget list;
+
+  /// 奥の RAi。引数は大きさ(幅)。RAi ホームは枠だけを報告して層に描かせ、「RAi に聞く」はその場に薄い RAi を置く。
+  final Widget Function(double size) background;
+
+  /// 列の下の入力。
+  final Widget? input;
+
+  /// 奥の RAi の大きさ。
+  static double standbySizeOf(double columnWidth, Size screen) =>
+      raiApproachSize.clamp(raiPointSize, math.max(raiPointSize, math.min(columnWidth * 0.75, screen.height * 0.45))).toDouble();
+
+  @override
+  Widget build(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    return Center(
+      child: SizedBox(
+        width: raiChatWidth(context),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Expanded(
+            child: LayoutBuilder(builder: (context, c) {
+              return Stack(children: [
+                Positioned.fill(child: IgnorePointer(child: Center(child: background(standbySizeOf(c.maxWidth, screen))))),
+                list,
+              ]);
+            }),
+          ),
+          ?input,
+        ]),
+      ),
+    );
+  }
+}
+
+/// チャットが空のとき (D-558、RAi ホームの「マクロとか、お任せください！」と同じ形): 見出し・説明・その下に足すもの。
+/// RAi ホームと「RAi に聞く」で同じ。
+class RaiChatEmptyView extends StatelessWidget {
+  const RaiChatEmptyView({super.key, required this.title, required this.body, this.top = const [], this.below = const [], this.bottomPadding = 0});
+  final String title;
+
+  /// 説明(小さい灰色の字。複数なら順に)。
+  final List<String> body;
+
+  /// 見出しの上(一時停止した案内など)。
+  final List<Widget> top;
+
+  /// 説明の下(最近の質問など)。
+  final List<Widget> below;
+  final double bottomPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListView(padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xl, RasqSpacing.page, bottomPadding), children: [
+      ...top,
+      Text(title, textAlign: TextAlign.center, style: RasqTypography.title),
+      for (final b in body) ...[
+        const SizedBox(height: RasqSpacing.xs),
+        Text(b, textAlign: TextAlign.center, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      ],
+      ...below,
+    ]);
+  }
+}
 
 /// RAi ホームのチャット (D-218): 発言の履歴を AI チャットボットの形式で並べる。背景は RAi(層側で描く)。
 ///
@@ -52,25 +129,25 @@ class RaiChatList extends ConsumerWidget {
             ]),
           );
     if (log.isEmpty && !live) {
-      return ListView(key: const ValueKey('rai.chat.empty'), padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xl, RasqSpacing.page, bottomPadding), children: [
-        ?suspended,
-        Text(context.l10n.raiChatHeadline, textAlign: TextAlign.center, style: RasqTypography.title),
-        const SizedBox(height: RasqSpacing.xs),
-        Text(
-            rasqDetail(context, context.l10n.raiChatIntro, context.l10n.raiChatIntroDetail),
-            textAlign: TextAlign.center,
-            style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-        if (s.history.isNotEmpty) ...[
-          RasqSectionHeader(title: context.l10n.raiChatRecent, topMargin: RasqSpacing.xl),
-          for (final h in s.history)
-            RasqListTile(
-              title: h,
-              leading: Icon(Icons.history, size: 20, color: scheme.onSurfaceVariant),
-              chevron: false,
-              onTap: () => n.ask(h),
-            ),
+      return RaiChatEmptyView(
+        key: const ValueKey('rai.chat.empty'),
+        bottomPadding: bottomPadding,
+        top: [?suspended],
+        title: context.l10n.raiChatHeadline,
+        body: [rasqDetail(context, context.l10n.raiChatIntro, context.l10n.raiChatIntroDetail)],
+        below: [
+          if (s.history.isNotEmpty) ...[
+            RasqSectionHeader(title: context.l10n.raiChatRecent, topMargin: RasqSpacing.xl),
+            for (final h in s.history)
+              RasqListTile(
+                title: h,
+                leading: Icon(Icons.history, size: 20, color: scheme.onSurfaceVariant),
+                chevron: false,
+                onTap: () => n.ask(h),
+              ),
+          ],
         ],
-      ]);
+      );
     }
     final rows = <Widget>[];
     String? lastQuery;

@@ -63,6 +63,19 @@ class ComposeOptionsStore extends Notifier<ComposeOptions> {
 
 final composeOptionsProvider = NotifierProvider<ComposeOptionsStore, ComposeOptions>(ComposeOptionsStore.new);
 
+/// 投稿の公開範囲(コンポーザーの選択肢の並び)。
+const composeAllVisibilities = ['public', 'home', 'followers'];
+
+/// SNS ごとに選べる公開範囲(セキュリティ確認 2026-11-11 の #8)。null = RASQ / 分からない(全部)。
+/// Bluesky の投稿は誰でも見られる記録なので、公開だけ(「ホーム」「フォロワー限定」は出さない)。
+List<String> composeVisibilitiesFor(SnsKind? kind) => switch (kind) {
+      SnsKind.bluesky => const ['public'],
+      _ => composeAllVisibilities,
+    };
+
+/// [kind] の SNS が、公開範囲 [visibility] で送れるか(null = 指定なし = 公開)。
+bool composeVisibilitySupported(SnsKind? kind, String? visibility) => composeVisibilitiesFor(kind).contains(visibility ?? 'public');
+
 /// コンポーザーの下書き (D-051)。ターゲット毎(通常/返信先/引用先/DM ルーム)
 /// に 1 件、アプリ起動中はメモリに保持する。閉じるときに保存され、同じ
 /// ターゲットのコンポーザーを開くと復元される(送信で消える)。

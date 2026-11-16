@@ -43,5 +43,6 @@
   "usersClipsHeader": "Clips",
   "usersClipNoteCount": "{count, plural, =1{1 note} other{{count} notes}}",
   "usersClipSubtitleSeparator": " · ",
-  "usersNotFound": "This user doesn't seem to exist."
+  "usersNotFound": "This user doesn't seem to exist.",
+  "usersFieldMentionNotFound": "{handle} wasn't found"
 }
