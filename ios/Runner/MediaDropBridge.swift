@@ -2,7 +2,7 @@ import Flutter
 import UIKit
 import UniformTypeIdentifiers
 
-/// 他のアプリから落としたメディアを受ける (D-555) の iPadOS 側。
+/// 他のアプリから落としたメディアを受ける (D-571) の iPadOS 側。
 ///
 /// Dart は desktop_drop(0.8)の `DropTarget` で受けるが、desktop_drop の iOS 版は 0.9 から(Flutter 3.47.7 以上が要る)なので、
 /// それまではこのクラスが**同じ口**(チャンネル `desktop_drop`、`entered` / `updated` / `exited` / `performOperation`)で話す。

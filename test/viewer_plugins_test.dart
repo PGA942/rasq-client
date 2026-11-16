@@ -186,7 +186,7 @@ void main() {
     final toggle = find.byKey(const ValueKey('viewer.plugin.t.qr'));
     expect(toggle, findsOneWidget);
     expect(tester.getRect(toggle).right, lessThan(tester.getRect(menu).left));
-    // 投稿まわりの SNS のボタンは全画面アクションバーの既定には無い (D-553: 下側の投稿アクションバー付き FOW でする)。
+    // 投稿まわりの SNS のボタンは全画面アクションバーの既定には無い (D-569: 下側の投稿アクションバー付き FOW でする)。
     expect(find.byKey(const ValueKey('viewer.action.reply')), findsNothing);
     expect(tester.getRect(find.byTooltip('戻る')).left, closeTo(RasqSpacing.sm, 3));
     await tester.tap(toggle);

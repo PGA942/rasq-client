@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:rasq_client/features/theme/icon_theme/icon_theme_codec.dart';
 
-/// アイコンに埋め込むテーマのコーデック (D-561)。仮組み(theme_mock_icon_embed.html の JS)と同じ入出力か、再圧縮 / リサイズで
+/// アイコンに埋め込むテーマのコーデック (D-577)。仮組み(theme_mock_icon_embed.html の JS)と同じ入出力か、再圧縮 / リサイズで
 /// 読み戻せるか。基準の値は test/fixtures/icon_theme/gen_js_vectors.js(仮組みの Codec を node で動かす)で作った。
 void main() {
   final js = jsonDecode(File('test/fixtures/icon_theme/js_vectors.json').readAsStringSync()) as Map<String, dynamic>;

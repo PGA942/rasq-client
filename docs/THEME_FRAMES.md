@@ -1,10 +1,10 @@
-# テーマのデータとテーマフレームの置き場(D-562 / D-563、Central への提案)
+# テーマのデータとテーマフレームの置き場(D-578 / D-579、Central への提案)
 
 rasq-central には手を入れていない。クライアントは同梱の SVG 5 枚と、テストの偽の置き場(`themeSvgRemoteProvider`)で動く。
 
 ## テーマのデータ(`RasqThemeSpec`、`lib/features/theme/icon_theme/rasq_theme_spec.dart`)
 
-アイコンに埋め込むテーマ(D-561)・コミュハッシュタグのテーマ・RASQ Atmos のスレッド限定テーマ(第4回)が同じ JSON を使う。
+アイコンに埋め込むテーマ(D-577)・コミュハッシュタグのテーマ・RASQ Atmos のスレッド限定テーマ(第4回)が同じ JSON を使う。
 
 ```json
 {

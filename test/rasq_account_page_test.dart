@@ -318,7 +318,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rasqPage.edit')));
     await tester.pumpAndSettle();
     expect(find.byType(RasqProfileEditScreen), findsOneWidget);
-    // アイコン / ヘッダーの 🎨 からテーマ編集へ (D-565)。戻ればそのまま。
+    // アイコン / ヘッダーの 🎨 からテーマ編集へ (D-581)。戻ればそのまま。
     expect(find.byKey(const ValueKey('rasqProfile.banner.theme')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('rasqProfile.avatar.theme')));
     await tester.pumpAndSettle();

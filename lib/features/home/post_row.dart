@@ -111,7 +111,7 @@ class PostRow extends ConsumerStatefulWidget {
   /// この端末にその SNS のアカウントが無い投稿(アカウントページ / RASQ リストの読むだけの投稿)は、ブラウザで開くなどに差し替える。
   final VoidCallback? onAuthorTap;
 
-  /// アクションバーをタイルの**上**に出す (D-553: 全画面の「投稿アクションバー付き FOW」)。渡すと、バー(リアクションのチップ込み、
+  /// アクションバーをタイルの**上**に出す (D-569: 全画面の「投稿アクションバー付き FOW」)。渡すと、バー(リアクションのチップ込み、
   /// 無ければ null)をこれで包んで投稿の上に置き、タイルの中には出さない。バーは複製ではなく**この投稿の実物のバー**なので、
   /// ピッカー / バンドルはタイムラインと同じく押したボタンにつながって出る。
   final Widget Function(Widget? bar)? actionBarAbove;
@@ -351,7 +351,7 @@ class _PostRowState extends ConsumerState<PostRow> {
                 RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.homePostShare, onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context))),
               ]),
             ]);
-    // 作者のアイコンに埋め込まれたテーマの予約 3 ビット (D-564): アイコンの枠(角丸 / 丸)と添付の並び(横 / 縦・詰める)。
+    // 作者のアイコンに埋め込まれたテーマの予約 3 ビット (D-580): アイコンの枠(角丸 / 丸)と添付の並び(横 / 縦・詰める)。
     // 読めないうち / 読めないアイコンは今までどおり。
     final authorAvatar = post.author.avatarUrl;
     final hints = authorAvatar == null ? null : ref.watch(iconThemeProvider(authorAvatar.toString())).value?.basic.hints;

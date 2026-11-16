@@ -2,13 +2,13 @@ import 'package:flutter/foundation.dart';
 
 import 'icon_theme_codec.dart';
 
-/// テーマのデータの形 (D-562)。アイコンに埋め込んだテーマ(アイコンチップ、D-561)だけでなく、第4回の
+/// テーマのデータの形 (D-578)。アイコンに埋め込んだテーマ(アイコンチップ、D-577)だけでなく、第4回の
 /// **コミュハッシュタグのテーマ**と **RASQ Atmos**(ハッシュタグがきっかけの SVG アイコン / アクションボタンで再生する SVG
 /// アニメーション / そのスレッドの表示だけに効くテーマ)も、この 1 つの形を使い回す。
 ///
 /// - 見た目の中身は [basic](背景・文字色・強調色・パーティクル・予約 3 ビット)と [ext](ベクターの形・軌道・スロット、
 ///   またはプラグインの配信 URL)= アイコンの四隅に入るものと同じ。アイコンに入らない分は JSON で配る(Central など)。
-/// - [frames] = 背景に置く SVG(**ID で置き場から引く**、D-563)。
+/// - [frames] = 背景に置く SVG(**ID で置き場から引く**、D-579)。
 /// - [scope] = どこに効くか(プロフィール / スレッド / ハッシュタグ)。[triggers] = Atmos のきっかけ(ハッシュタグで
 ///   アイコンを付ける / アクションで SVG アニメーション)。
 /// - JSON の `v` は形の版(今は 1)。知らない項目は読み飛ばす。
@@ -74,7 +74,7 @@ class RasqThemeSpec {
 
 /// テーマの出どころ。
 enum RasqThemeSource {
-  /// アイコンの四隅(D-561)。
+  /// アイコンの四隅(D-577)。
   iconEmbed,
 
   /// コミュハッシュタグのテーマ(第4回、フラグで無効)。
@@ -114,7 +114,7 @@ class RasqThemeScope {
   int get hashCode => Object.hash(kind, key);
 }
 
-/// 背景に置く SVG 1 つ(D-563)。[svgId] で置き場から引く(中身は持たない)。位置は画面に対する割合(0〜1)。
+/// 背景に置く SVG 1 つ(D-579)。[svgId] で置き場から引く(中身は持たない)。位置は画面に対する割合(0〜1)。
 @immutable
 class RasqThemeFrameRef {
   const RasqThemeFrameRef({required this.svgId, this.x = 0.5, this.y = 0.5, this.size = 0.3, this.opacity = 0.6, this.rotation = 0});

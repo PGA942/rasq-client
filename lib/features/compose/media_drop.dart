@@ -7,7 +7,7 @@ import 'package:rasq_design/rasq_design.dart';
 import '../../l10n/l10n.dart';
 import 'media_file_pick.dart';
 
-/// 他のアプリからコンポーザーへメディアを落とす (D-555)。
+/// 他のアプリからコンポーザーへメディアを落とす (D-571)。
 ///
 /// - 受け口は desktop_drop の [DropTarget](macOS / Web / Windows / Linux / Android)。iPadOS は ios/Runner/MediaDropBridge.swift が
 ///   同じ口で話す(desktop_drop 0.8 には iOS が無い)。
@@ -138,7 +138,7 @@ class _ComposerMediaDropTargetState extends State<ComposerMediaDropTarget> {
         name: item.name,
         mimeType: item.mimeType,
         read: () async {
-          // macOS の砂場 (D-555): アプリの外から落としたファイルは、ブックマークで読む許しを取ってから読む。
+          // macOS の砂場 (D-571): アプリの外から落としたファイルは、ブックマークで読む許しを取ってから読む。
           final scoped = !kIsWeb && bookmark != null && bookmark.isNotEmpty && await DesktopDrop.instance.startAccessingSecurityScopedResource(bookmark: bookmark);
           try {
             return await item.readAsBytes();

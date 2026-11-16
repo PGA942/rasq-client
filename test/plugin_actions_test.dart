@@ -232,7 +232,7 @@ void main() {
     expect(find.byKey(const ValueKey('actionbar.account')), findsOneWidget);
     expect(find.text('全画面アクションバー'), findsOneWidget);
     expect(find.text('投稿アクションバー'), findsOneWidget);
-    // 全画面バーの既定に投稿まわりの SNS のボタンは無い (D-553)。外したボタンとして (+) の候補に出る(足せばバーに並ぶ)。
+    // 全画面バーの既定に投稿まわりの SNS のボタンは無い (D-569)。外したボタンとして (+) の候補に出る(足せばバーに並ぶ)。
     expect(find.byKey(const ValueKey('actionbar.tile.reply.viewer')), findsNothing);
     expect(c.read(actionBarConfigProvider(ActionBarConfigStore.viewerKey(accountKey))).hidden, contains('reply'));
     expect(find.byKey(const ValueKey('actionbar.tile.reply')), findsOneWidget);
@@ -339,7 +339,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.read(actionBarConfigProvider(accountKey)).hidden, {'favorite', 'renote'}); // お気に入りは既定で外している (D-447)
     expect(find.byKey(const ValueKey('actionbar.tile.renote')), findsNothing);
-    // 全画面バーは別構成: 投稿バーで外しても全画面バーの構成は動かない(全画面バーは既定で投稿まわりを外している、D-553)。
+    // 全画面バーは別構成: 投稿バーで外しても全画面バーの構成は動かない(全画面バーは既定で投稿まわりを外している、D-569)。
     expect(c.read(actionBarConfigProvider(ActionBarConfigStore.viewerKey(accountKey))).hidden, viewerDefaultHiddenActions);
     await tester.ensureVisible(find.byKey(const ValueKey('actionbar.plugins.open')));
     await tester.pumpAndSettle();
@@ -505,7 +505,7 @@ void main() {
 
   test('既定の構成 (D-447): RASQ の全画面アクションバー(Swing)は空、SNS のバーは Misskey の「お気に入り」を初めは外す', () {
     expect(ActionBarConfigStore.defaultFor(rasqViewerConfigKey).hidden, containsAll(['rasq.reply', 'rasq.rebroad', 'rasq.queue']));
-    // SNS の全画面アクションバーは投稿まわりのアクションを初めは外す (D-553)。
+    // SNS の全画面アクションバーは投稿まわりのアクションを初めは外す (D-569)。
     expect(ActionBarConfigStore.defaultFor(ActionBarConfigStore.viewerKey('@a@m.example')).hidden, viewerDefaultHiddenActions);
     expect(ActionBarConfigStore.defaultFor('@a@m.example').hidden, {'favorite'});
     expect(ActionBarConfigStore.defaultFor(rasqPostConfigKey).hidden, isEmpty);

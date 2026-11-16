@@ -1649,7 +1649,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
   }
 
-  /// 落としたメディアを添付に入れる (D-555)。上限・種類はボタンから選ぶときと同じ(上限を超えた分 / メディアでないものは入れずに知らせる)。
+  /// 落としたメディアを添付に入れる (D-571)。上限・種類はボタンから選ぶときと同じ(上限を超えた分 / メディアでないものは入れずに知らせる)。
   Future<void> _addDropped(List<DroppedMediaFile> dropped) async {
     if (_busy || _rasqTextOnlyReply || !mounted) return;
     final plan = planMediaDrop(dropped, current: _files.length, max: _maxFiles);
@@ -2049,7 +2049,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final over = count > _max;
     _scheduleStickFit(); // 高さ段階の実測 (D-049/D-051: 全ターゲット共通)
 
-    // 他のアプリからメディアを落とす (D-555): コンポーザー全体が受け口。ホバー中は枠と「あと n 件」の案内。
+    // 他のアプリからメディアを落とす (D-571): コンポーザー全体が受け口。ホバー中は枠と「あと n 件」の案内。
     return ComposerMediaDropTarget(
       enabled: !_busy,
       remaining: _maxFiles - _files.length,
@@ -2161,7 +2161,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
             if (_files.isNotEmpty)
               SizedBox(
                 height: 88,
-                // 並べ替え (D-556): 添付をドラッグして順を変える(送る順 = 投稿のメディアの順)。マウスはそのまま掴んで、
+                // 並べ替え (D-572): 添付をドラッグして順を変える(送る順 = 投稿のメディアの順)。マウスはそのまま掴んで、
                 // タッチは長押ししてから(横のスクロールと取り合わないように)。左右の端へ持っていくと一覧がスクロールする。
                 child: ReorderableListView.builder(
                   key: const ValueKey('composer.attachments'),
@@ -2354,7 +2354,7 @@ class _AttachmentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => TooltipTheme(
-        // 並べ替え (D-556): タッチの端末では、タイルの隅のボタン(当たりが 48×48 でタイルのほぼ全面を覆う)のツールチップを
+        // 並べ替え (D-572): タッチの端末では、タイルの隅のボタン(当たりが 48×48 でタイルのほぼ全面を覆う)のツールチップを
         // 長押しで出さない(出すと並べ替えの長押しを取られる)。読み上げのラベルはそのまま。マウスはホバーで出る。
         data: attachmentsDragWithMouse ? TooltipTheme.of(context) : TooltipTheme.of(context).copyWith(triggerMode: TooltipTriggerMode.manual),
         child: Stack(children: [
@@ -2418,7 +2418,7 @@ enum _CloseChoice { overwrite, saveNew, discard }
 /// 連動の計画の中で、RASQ アカウントを表す仮のセッションの pluginId (D-286)。
 const rasqLinkPluginId = 'rasq.central';
 
-/// 添付の並べ替え (D-556): [ReorderableListView.onReorderItem] の (from, to) で [list] の中を動かす(to は動かしたあとの位置)。
+/// 添付の並べ替え (D-572): [ReorderableListView.onReorderItem] の (from, to) で [list] の中を動かす(to は動かしたあとの位置)。
 void moveAttachment<T>(List<T> list, int from, int to) {
   if (from < 0 || from >= list.length) return;
   final target = to.clamp(0, list.length - 1);
@@ -2429,7 +2429,7 @@ void moveAttachment<T>(List<T> list, int from, int to) {
 /// 添付をマウスで並べ替える端末か(デスクトップ / Web)。それ以外はタッチ(長押しから)。
 bool get attachmentsDragWithMouse => kIsWeb || const {TargetPlatform.macOS, TargetPlatform.windows, TargetPlatform.linux}.contains(defaultTargetPlatform);
 
-/// 並べ替えの掴み方 (D-556): マウス(デスクトップ / Web)はそのまま掴んで動かす。タッチの端末は長押しから(横のスクロールと、
+/// 並べ替えの掴み方 (D-572): マウス(デスクトップ / Web)はそのまま掴んで動かす。タッチの端末は長押しから(横のスクロールと、
 /// 添付の上のボタンのタップを邪魔しない)。
 Widget reorderDragListener({required Key key, required int index, required Widget child}) {
   return attachmentsDragWithMouse ? ReorderableDragStartListener(key: key, index: index, child: child) : ReorderableDelayedDragStartListener(key: key, index: index, child: child);

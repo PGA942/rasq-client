@@ -14,7 +14,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
 
-/// コンポーザーへのメディアのドロップ (D-555) と添付の並べ替え (D-556)。
+/// コンポーザーへのメディアのドロップ (D-571) と添付の並べ替え (D-572)。
 void main() {
   // 1×1 の PNG。
   final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');

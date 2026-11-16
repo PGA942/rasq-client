@@ -59,7 +59,7 @@ class _RegionPickerScreenState extends ConsumerState<RegionPickerScreen> {
       final q = _query.text;
       final List<Widget> tiles;
       if (country == null) {
-        // ローマ字・英語の名前・国の中の地名でも引ける (D-557)。地名に当たったときは、当たった地名を添える(「日本 / 渋谷区」)。
+        // ローマ字・英語の名前・国の中の地名でも引ける (D-573)。地名に当たったときは、当たった地名を添える(「日本 / 渋谷区」)。
         final matches = <String, RegionMatch>{for (final c in r.countries) c.code: ?regionMatch(c.code, q)};
         final list = r.countries.where((c) => matches.containsKey(c.code)).toList()..sort((a, b) => regionSortKey(a.code).compareTo(regionSortKey(b.code)));
         tiles = [

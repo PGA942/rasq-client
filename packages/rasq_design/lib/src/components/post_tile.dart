@@ -88,7 +88,7 @@ class RasqPostTile extends StatelessWidget {
   /// avatar slot override.
   final Widget? avatar;
 
-  /// 既定のアイコンを角丸の枠に(作者のアイコンに埋め込まれたテーマの予約ビット、D-564)。
+  /// 既定のアイコンを角丸の枠に(作者のアイコンに埋め込まれたテーマの予約ビット、D-580)。
   final bool avatarRounded;
 
   /// content slot: body text (already parsed into a widget by the host).

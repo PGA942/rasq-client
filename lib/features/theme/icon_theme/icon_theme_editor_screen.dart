@@ -22,11 +22,11 @@ final iconThemeImagePickerProvider = Provider<Future<Uint8List?> Function()>((re
       return x?.readAsBytes();
     });
 
-/// テーマ編集 (D-565) を開く。[initial] = 選んである画像(無ければ見本から)。「このアイコンを使う」で、テーマを書き込んだ PNG を返す。
+/// テーマ編集 (D-581) を開く。[initial] = 選んである画像(無ければ見本から)。「このアイコンを使う」で、テーマを書き込んだ PNG を返す。
 Future<Uint8List?> openIconThemeEditor(BuildContext context, {Uint8List? initial}) =>
     Navigator.of(context).push<Uint8List>(MaterialPageRoute(builder: (_) => IconThemeEditorScreen(initial: initial)));
 
-/// アイコンにテーマを埋め込む画面 (D-565)。ユーザーの仮組み(theme_mock_icon_embed.html)の 01〜04 をそのまま 1 画面に:
+/// アイコンにテーマを埋め込む画面 (D-581)。ユーザーの仮組み(theme_mock_icon_embed.html)の 01〜04 をそのまま 1 画面に:
 /// 01 アイコンを選ぶ → 02 変換する(基本テーマ・拡張領域・予約 3 ビット)→ 03 アップロード(見本の再圧縮 / リサイズ、または
 /// 実際の SNS から保存した画像)→ 04 閲覧する(投稿のアイコンと添付の並び、拡大したプロフィール)。どの段も実際の画素を通す。
 class IconThemeEditorScreen extends ConsumerStatefulWidget {

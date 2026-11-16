@@ -21,7 +21,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
-/// アイコンのテーマの、データの形 (D-562)・テーマフレーム (D-563)・閲覧 (D-564)・編集 (D-565)。
+/// アイコンのテーマの、データの形 (D-578)・テーマフレーム (D-579)・閲覧 (D-580)・編集 (D-581)。
 void main() {
   const theme = IconThemeBasic(bgMode: IconThemeBg.gradient, gradient: 2, bg: [17, 34, 68], text: [255, 255, 255], accent: [0, 204, 255], particle: 3, amount: 10, speed: 5, hint: 5);
   final ext = iconThemeExtFromDrafts([IconThemeSlotDraft(trigger: IconThemeTrigger.always, shape: 3, orbit: 'fall'), IconThemeSlotDraft(trigger: IconThemeTrigger.tap, shape: 4, orbit: 'rise')]);
@@ -38,7 +38,7 @@ void main() {
         child: MaterialApp(theme: RasqTheme.light(), locale: const Locale('ja'), localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, home: home),
       );
 
-  group('データの形 (D-562)', () {
+  group('データの形 (D-578)', () {
     test('アイコン / コミュハッシュタグ / Atmos の形が JSON で往復する', () {
       final spec = RasqThemeSpec(
         basic: theme,
@@ -71,7 +71,7 @@ void main() {
     });
   });
 
-  group('テーマフレーム (D-563)', () {
+  group('テーマフレーム (D-579)', () {
     test('消毒: script・イベント属性・外部参照・style を捨て、形だけ残す。上限を超えるものは使わない', () {
       const evil = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" onload="alert(1)"><script>alert(1)</script>'
           '<image href="https://evil.example/x.png"/><foreignObject><div>x</div></foreignObject><use href="#a"/>'
@@ -112,7 +112,7 @@ void main() {
     });
   });
 
-  group('閲覧 (D-564)', () {
+  group('閲覧 (D-580)', () {
     test('アイコンのバイト列から読む。正方形でない / テーマの無い画像は null', () {
       final d = decodeIconThemeBytes(themedJpeg());
       expect(d?.theme, theme);
@@ -243,7 +243,7 @@ void main() {
     });
   });
 
-  group('テーマ編集 (D-565)', () {
+  group('テーマ編集 (D-581)', () {
     Future<void> settle(WidgetTester tester, bool Function() done) async {
       for (var i = 0; i < 200 && !done(); i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));

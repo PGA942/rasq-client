@@ -79,7 +79,7 @@ void main() {
       await tester.enterText(find.byKey(const ValueKey('onb.password')), 'aaaaaaaaaa');
       await tester.enterText(find.byKey(const ValueKey('onb.passwordConfirm')), 'aaaaaaaaaa');
       await tester.pumpAndSettle();
-      // 弱いパスワード (D-560): 「脆弱なパスワードです」+ 当たった要件のチップ。
+      // 弱いパスワード (D-576): 「脆弱なパスワードです」+ 当たった要件のチップ。
       expect(find.text('脆弱なパスワードです'), findsOneWidget);
       expect(find.byKey(const ValueKey('password.weak.repeated')), findsOneWidget);
       expect(next(tester).onPressed, isNull);
@@ -93,7 +93,7 @@ void main() {
       expect(central.calls, isNot(contains('POST /auth/device')));
     });
 
-    testWidgets('D-559: ① の左上の言語ボタンで表示の言語をその場で変えられる(設定 → 言語と同じ保存)。「システムに合わせる」で戻る', (tester) async {
+    testWidgets('D-575: ① の左上の言語ボタンで表示の言語をその場で変えられる(設定 → 言語と同じ保存)。「システムに合わせる」で戻る', (tester) async {
       final central = _FakeCentral();
       await _pump(tester, central);
       final button = find.byKey(const ValueKey('language.quick'));

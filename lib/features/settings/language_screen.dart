@@ -50,7 +50,7 @@ class LanguageSettingsScreen extends ConsumerWidget {
   }
 }
 
-/// 表示の言語をその場で変えるボタン (D-559)。新規登録(オンボーディング)の画面の左上に置く(設定を開く前の人が、読めない言語の
+/// 表示の言語をその場で変えるボタン (D-575)。新規登録(オンボーディング)の画面の左上に置く(設定を開く前の人が、読めない言語の
 /// まま進まなくてよいように)。中身は設定 → 言語([LanguageSettingsScreen])と同じ: 「システムに合わせる」か対応する言語を選び、
 /// 端末に保存してすぐ反映する。ボタンには地球のアイコンと、いまの言語の名前(その言語で)を出す。
 class LanguageQuickButton extends ConsumerWidget {

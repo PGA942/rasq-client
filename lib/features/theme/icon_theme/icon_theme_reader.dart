@@ -13,7 +13,7 @@ import 'icon_theme_codec.dart';
 import 'icon_theme_library.dart' show iconThemeFramesFor;
 import 'rasq_theme_spec.dart';
 
-/// アイコンに埋め込まれたテーマを読む (D-564)。
+/// アイコンに埋め込まれたテーマを読む (D-580)。
 ///
 /// - タイムラインのアイコン(予約 3 ビット = フレームと添付の並び)と、プロフィールのアイコンの拡大(背景・文字色・強調色・
 ///   パーティクル・枠)で使う。**読めない画像では何もしない**(null)。

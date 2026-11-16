@@ -187,7 +187,7 @@ String accountSecurityMessage(OrgateException e) {
     '409' when e.message.contains('already used') => l.backendSecurityEmailUsed,
     '401' => l.backendSecurityBadCredentials,
     '400' when e.message.contains('code') => l.backendSecurityBadCode,
-    // 弱すぎる (D-560): 当たった要件を添える(今のサーバーは最初の 1 つだけを文で返す。一覧を返せばそれを全部)。
+    // 弱すぎる (D-576): 当たった要件を添える(今のサーバーは最初の 1 つだけを文で返す。一覧を返せばそれを全部)。
     '400' when _weakness(e) != null => _weakness(e)!.isEmpty ? l.passwordStrengthWeakTitle : l.passwordStrengthWeakWith(_weakness(e)!.map((w) => w.label).join('・')),
     '400' when e.message.contains('8-256') => l.backendSecurityShortPassword,
     '400' when e.message.contains('email') => l.backendSecurityBadEmail,

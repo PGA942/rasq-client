@@ -7,7 +7,7 @@ import 'package:rasq_client/features/onboarding/region/region_picker.dart';
 import 'package:rasq_client/l10n/gen/app_localizations.dart';
 import 'package:rasq_models/rasq_models.dart';
 
-/// 住んでいる地域のローマ字検索 (D-557)。
+/// 住んでいる地域のローマ字検索 (D-573)。
 void main() {
   group('ローマ字の鍵', () {
     void same(List<String> spellings) {
