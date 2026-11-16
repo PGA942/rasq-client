@@ -2557,6 +2557,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get composeEmojiSearchUnicodeSection => '絵文字';
+
+  @override
   String get composeMediaPickTypeLabel => '動画 / 音声';
 
   @override
@@ -8228,6 +8231,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingTourRaiBubble => 'TL にリストを足したい';
+
+  @override
+  String get passwordStrengthWeakTitle => '脆弱なパスワードです';
+
+  @override
+  String get passwordStrengthCommon => 'よく使われるもの';
+
+  @override
+  String get passwordStrengthRepeated => '同じ字の繰り返し';
+
+  @override
+  String get passwordStrengthSameAsIdentity => 'ハンドルやメールと同じ';
+
+  @override
+  String passwordStrengthWeakWith(String reasons) {
+    return '脆弱なパスワードです($reasons)';
+  }
 
   @override
   String get platformWebRuntimeLoadFailed =>

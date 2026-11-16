@@ -79,9 +79,41 @@ void main() {
       await tester.enterText(find.byKey(const ValueKey('onb.password')), 'aaaaaaaaaa');
       await tester.enterText(find.byKey(const ValueKey('onb.passwordConfirm')), 'aaaaaaaaaa');
       await tester.pumpAndSettle();
-      expect(find.text('同じ字の繰り返しは使えません'), findsOneWidget);
+      // 弱いパスワード (D-560): 「脆弱なパスワードです」+ 当たった要件のチップ。
+      expect(find.text('脆弱なパスワードです'), findsOneWidget);
+      expect(find.byKey(const ValueKey('password.weak.repeated')), findsOneWidget);
+      expect(next(tester).onPressed, isNull);
+      // ハンドルと同じ(大文字小文字は見ない)。
+      await tester.enterText(find.byKey(const ValueKey('onb.password')), 'Neko_Taro');
+      await tester.enterText(find.byKey(const ValueKey('onb.passwordConfirm')), 'Neko_Taro');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('password.weak.same_as_identity')), findsOneWidget);
+      expect(find.byKey(const ValueKey('password.weak.repeated')), findsNothing);
       expect(next(tester).onPressed, isNull);
       expect(central.calls, isNot(contains('POST /auth/device')));
+    });
+
+    testWidgets('D-559: ① の左上の言語ボタンで表示の言語をその場で変えられる(設定 → 言語と同じ保存)。「システムに合わせる」で戻る', (tester) async {
+      final central = _FakeCentral();
+      await _pump(tester, central);
+      final button = find.byKey(const ValueKey('language.quick'));
+      expect(button, findsOneWidget);
+      // 左上(「1 / 3」より左、ロゴの隣)。
+      expect(tester.getTopLeft(button).dx, lessThan(tester.getTopLeft(find.byKey(const ValueKey('onb.stepCount'))).dx));
+      expect(tester.getTopLeft(button).dy, lessThan(200));
+      expect(find.descendant(of: button, matching: find.text('日本語')), findsOneWidget);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(find.text('システムに合わせる'), findsOneWidget);
+      await tester.tap(find.text('English'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: button, matching: find.text('English')), findsOneWidget);
+      expect(find.text('日本語'), findsNothing);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Use system setting'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: button, matching: find.text('日本語')), findsOneWidget, reason: 'テストの端末の言語は日本語');
     });
 
     testWidgets('D-548: ① の招待コード(任意)を入れれば、作るときに inviteCode で送る。空なら送らない', (tester) async {

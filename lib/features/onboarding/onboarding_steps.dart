@@ -14,7 +14,9 @@ import '../../l10n/l10n.dart';
 import '../../shell/column_layout.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../login/login_screen.dart' show SnsServiceButton, popOr;
+import '../settings/language_screen.dart' show LanguageQuickButton;
 import 'onboarding_feed.dart';
+import 'password_strength.dart';
 import 'rasq_register_screen.dart';
 import 'region/region.dart';
 import 'region/region_picker.dart';
@@ -90,6 +92,9 @@ class OnboardingStepHeader extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           if (onBack != null) IconButton(key: const ValueKey('onb.back'), icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: context.l10n.onboardingBack, onPressed: onBack) else const RasqLogo(height: 28),
+          // 表示の言語 (D-559): 左上(戻る / ロゴの隣)。設定を開く前に読める言語へ変えられる。
+          const SizedBox(width: RasqSpacing.xs),
+          const LanguageQuickButton(),
           const Spacer(),
           Text('$step / $total', key: const ValueKey('onb.stepCount'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ]),
@@ -166,11 +171,15 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
     return null;
   }
 
+  /// 弱い要件 (D-560): サーバーと同じ規則で、当たったものを全部チップに。新規登録ではメールはまだ無い。
+  List<PasswordWeakness> get _passwordWeak => rasqPasswordProblem(_password.text) != null ? const [] : passwordWeaknesses(_password.text, handle: _handle.text);
+
   bool get _ready =>
       rasqHandlePattern.hasMatch(_handle.text) &&
       _handleRejected == null &&
       _password.text.isNotEmpty &&
       rasqPasswordProblem(_password.text) == null &&
+      _passwordWeak.isEmpty &&
       _confirm.text == _password.text &&
       _age != null &&
       _region != null;
@@ -242,6 +251,8 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
               decoration: InputDecoration(
                 labelText: context.l10n.onboardingPasswordLabel(rasqPasswordMinChars),
                 errorText: rasqPasswordProblem(_password.text),
+                // 「脆弱なパスワードです」+ 当たった要件のチップ (D-560)。
+                error: _passwordWeak.isEmpty ? null : WeakPasswordNotice(weaknesses: _passwordWeak),
                 suffixIcon: IconButton(icon: Icon(_show ? Icons.visibility_off : Icons.visibility), tooltip: _show ? context.l10n.onboardingPasswordHide : context.l10n.onboardingPasswordShow, onPressed: () => setState(() => _show = !_show)),
               ),
             ),

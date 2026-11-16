@@ -2700,6 +2700,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get composeEmojiSearchUnicodeSection => 'Emoji';
+
+  @override
   String get composeMediaPickTypeLabel => 'Video / audio';
 
   @override
@@ -8596,6 +8599,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingTourRaiBubble => 'I want to add a list to my TL';
+
+  @override
+  String get passwordStrengthWeakTitle => 'This password is too weak';
+
+  @override
+  String get passwordStrengthCommon => 'Commonly used';
+
+  @override
+  String get passwordStrengthRepeated => 'One character repeated';
+
+  @override
+  String get passwordStrengthSameAsIdentity => 'Same as your handle or email';
+
+  @override
+  String passwordStrengthWeakWith(String reasons) {
+    return 'This password is too weak ($reasons)';
+  }
 
   @override
   String get platformWebRuntimeLoadFailed =>

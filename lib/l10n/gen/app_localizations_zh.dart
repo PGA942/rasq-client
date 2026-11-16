@@ -2533,6 +2533,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get composeEmojiSearchUnicodeSection => '表情符号';
+
+  @override
   String get composeMediaPickTypeLabel => '视频 / 音频';
 
   @override
@@ -8128,6 +8131,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get onboardingTourRaiBubble => '我想在时间线中添加列表';
+
+  @override
+  String get passwordStrengthWeakTitle => '密码强度太弱';
+
+  @override
+  String get passwordStrengthCommon => '常用密码';
+
+  @override
+  String get passwordStrengthRepeated => '重复同一个字符';
+
+  @override
+  String get passwordStrengthSameAsIdentity => '与用户名或邮箱相同';
+
+  @override
+  String passwordStrengthWeakWith(String reasons) {
+    return '密码强度太弱($reasons)';
+  }
 
   @override
   String get platformWebRuntimeLoadFailed => '无法加载运行所需的文件（网络 / CDN）';
@@ -22584,6 +22604,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String get composeEmojiSearchUnicodeSection => '表情符號';
+
+  @override
   String get composeMediaPickTypeLabel => '影片 / 音訊';
 
   @override
@@ -28180,6 +28203,23 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get onboardingTourRaiBubble => '我想在時間軸中新增清單';
+
+  @override
+  String get passwordStrengthWeakTitle => '密碼強度太弱';
+
+  @override
+  String get passwordStrengthCommon => '常用密碼';
+
+  @override
+  String get passwordStrengthRepeated => '重複同一個字元';
+
+  @override
+  String get passwordStrengthSameAsIdentity => '與帳號名稱或電子郵件相同';
+
+  @override
+  String passwordStrengthWeakWith(String reasons) {
+    return '密碼強度太弱($reasons)';
+  }
 
   @override
   String get platformWebRuntimeLoadFailed => '無法載入執行所需的檔案（網路 / CDN）';

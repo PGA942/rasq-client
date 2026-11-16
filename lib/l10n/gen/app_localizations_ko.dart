@@ -2573,6 +2573,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get composeEmojiSearchUnicodeSection => '이모지';
+
+  @override
   String get composeMediaPickTypeLabel => '동영상 / 오디오';
 
   @override
@@ -8256,6 +8259,23 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get onboardingTourRaiBubble => 'TL에 리스트를 추가하고 싶어';
+
+  @override
+  String get passwordStrengthWeakTitle => '취약한 비밀번호입니다';
+
+  @override
+  String get passwordStrengthCommon => '자주 쓰이는 비밀번호';
+
+  @override
+  String get passwordStrengthRepeated => '같은 글자의 반복';
+
+  @override
+  String get passwordStrengthSameAsIdentity => '핸들이나 이메일과 같음';
+
+  @override
+  String passwordStrengthWeakWith(String reasons) {
+    return '취약한 비밀번호입니다($reasons)';
+  }
 
   @override
   String get platformWebRuntimeLoadFailed =>

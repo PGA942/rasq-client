@@ -12,6 +12,7 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
+import '../onboarding/password_strength.dart' show PasswordWeakness, WeakPasswordNotice, passwordWeaknesses;
 import '../onboarding/rasq_register_screen.dart' show rasqPasswordMinChars, rasqPasswordProblem;
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../../session/rasq_account_logout.dart';
@@ -218,6 +219,14 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
         )),
         if (account.hasPassword) pad(RasqInput(key: const ValueKey('security.password.current'), controller: _currentPassword, hintText: l.settingsSecurityCurrentPasswordHint, obscureText: true)),
         pad(RasqInput(key: const ValueKey('security.password.new'), controller: _password, hintText: account.hasPassword ? l.settingsSecurityPasswordNewHint : l.settingsSecurityPasswordHint, obscureText: true)),
+        // 弱いパスワード (D-560): 打っている間に、サーバーと同じ規則で当たった要件をチップで(メールは確認済みのものだけ = サーバーと同じ)。
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _password,
+          builder: (_, v, _) {
+            final weak = passwordWeaknesses(v.text, handle: account.handle, email: account.emailVerified ? account.email : null);
+            return weak.isEmpty ? const SizedBox.shrink() : pad(WeakPasswordNotice(weaknesses: weak));
+          },
+        ),
         if (account.hasPassword && _pending == ConfirmAction.passwordChange) pad(_CodeInput(key: const ValueKey('security.password.code'), controller: _passwordCode)),
         pad(Row(children: [
           Expanded(
@@ -740,7 +749,10 @@ class _AccountResetScreenState extends ConsumerState<AccountResetScreen> {
         _toast(appL10n.settingsSecurityResetCodeSent);
       });
 
-  bool get _ready => _sent && _code.text.trim().isNotEmpty && _password.text.isNotEmpty && rasqPasswordProblem(_password.text) == null && _confirm.text == _password.text;
+  /// 弱い要件 (D-560)。再設定ではサーバーも、まずメール(とその @ より前)とだけ比べる(ハンドルはコードを確かめたあと)。
+  List<PasswordWeakness> get _weak => rasqPasswordProblem(_password.text) != null ? const [] : passwordWeaknesses(_password.text, email: _email.text.trim());
+
+  bool get _ready => _sent && _code.text.trim().isNotEmpty && _password.text.isNotEmpty && rasqPasswordProblem(_password.text) == null && _weak.isEmpty && _confirm.text == _password.text;
 
   Future<void> _submit() => _run((api) async {
         final notifier = ref.read(orgateAccountProvider.notifier);
@@ -798,7 +810,7 @@ class _AccountResetScreenState extends ConsumerState<AccountResetScreen> {
             obscureText: true,
             autofillHints: const [AutofillHints.newPassword],
             onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(hintText: l.settingsSecurityResetNewPasswordHint(rasqPasswordMinChars), errorText: rasqPasswordProblem(_password.text)),
+            decoration: InputDecoration(hintText: l.settingsSecurityResetNewPasswordHint(rasqPasswordMinChars), errorText: rasqPasswordProblem(_password.text), error: _weak.isEmpty ? null : WeakPasswordNotice(weaknesses: _weak)),
           )),
           pad(TextField(
             key: const ValueKey('reset.passwordConfirm'),
