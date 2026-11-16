@@ -67,7 +67,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     setState(() => banner ? _banner = v : _avatar = v);
   }
 
-  /// アイコンにテーマを埋め込む (D-565)。選んである画像(無ければいまのアイコン)から。ヘッダーのボタンからも同じ。
+  /// アイコンにテーマを埋め込む (D-581)。選んである画像(無ければいまのアイコン)から。ヘッダーのボタンからも同じ。
   Future<void> _embedTheme(Uri? current) async {
     var initial = _avatar?.bytes;
     if (initial == null && current != null) initial = await ref.read(iconThemeFetcherProvider)(current);

@@ -173,7 +173,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
               ),
             ]),
           ),
-          // コミュハッシュタグのテーマ (D-567、既定は無効): このタグのページだけ。
+          // コミュハッシュタグのテーマ (D-583、既定は無効): このタグのページだけ。
           if (community != null) TagThemeBanner(entry: community, caption: l10n.communityTagPageCaption),
           Row(children: [
             Expanded(
@@ -259,5 +259,5 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
   }
 }
 
-/// コミュハッシュタグのテーマ (D-567) を付けたページ(無ければそのまま)。
+/// コミュハッシュタグのテーマ (D-583) を付けたページ(無ければそのまま)。
 Widget _withCommunityTheme(TagThemeEntry? community, Widget child) => community == null ? child : TagThemeSurface(key: ValueKey('community.page.${community.tag}'), spec: community.spec, child: child);

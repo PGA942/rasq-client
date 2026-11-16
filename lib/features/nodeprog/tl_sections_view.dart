@@ -307,7 +307,7 @@ class TlPostsDisplay extends ConsumerWidget {
       TlDisplayMode.relational => _events(ref, shown),
       TlDisplayMode.users => _users(shown),
     };
-    // ここから開いた全画面は、出している並びでスワイプを続ける (D-549)。枠 / 表示モードの並びは出している分だけ
+    // ここから開いた全画面は、出している並びでスワイプを続ける (D-565)。枠 / 表示モードの並びは出している分だけ
     // (TL 本体のように続きは読まない: 枠の中身は TL の provider と同じとは限らない)。
     final listed = limit == null ? shown : shown.take(limit!).toList();
     final sequence = ViewerSequence(posts: () => listed);

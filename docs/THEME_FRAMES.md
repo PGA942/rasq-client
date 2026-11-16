@@ -1,10 +1,10 @@
-# テーマのデータとテーマフレームの置き場(D-562 / D-563、Central への提案)
+# テーマのデータとテーマフレームの置き場(D-578 / D-579、Central への提案)
 
 rasq-central には手を入れていない。クライアントは同梱の SVG 5 枚と、テストの偽の置き場(`themeSvgRemoteProvider`)で動く。
 
 ## テーマのデータ(`RasqThemeSpec`、`lib/features/theme/icon_theme/rasq_theme_spec.dart`)
 
-アイコンに埋め込むテーマ(D-561)・コミュハッシュタグのテーマ・RASQ Atmos のスレッド限定テーマ(第4回)が同じ JSON を使う。
+アイコンに埋め込むテーマ(D-577)・コミュハッシュタグのテーマ・RASQ Atmos のスレッド限定テーマ(第4回)が同じ JSON を使う。
 
 ```json
 {
@@ -41,4 +41,4 @@ GET /api/v1/theme-svgs/{id}
   `circle` `ellipse` と形・描き方の属性だけ。`script` / `foreignObject` / `image` / `use` / `style` / `href` / `on*` / 外部参照は
   捨てる)。16 KiB・要素 400・数 8,000 を超えるものは登録させない。アプリは受け取ったあとにもう一度消毒し、上限を超えれば描かない。
 - 変わらない ID の中身は変えない(`Cache-Control: public, max-age=31536000, immutable`)。中身を変えるときは新しい ID にする。
-- 登録(コミュハッシュタグ / Atmos)と、ハッシュタグのテーマの配信・申請の口は docs/TAG_THEMES.md(D-566〜D-568)。
+- 登録(コミュハッシュタグ / Atmos)と、ハッシュタグのテーマの配信・申請の口は docs/TAG_THEMES.md(D-582〜D-584)。

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""システム絵文字の名前の索引 (D-558) を作る。
+"""システム絵文字の名前の索引 (D-574) を作る。
 
 元: npm の @misskey-dev/emoji-data 17.0.3(MFM の絵文字の正規表現 lib/text/mfm/emoji_regex.dart と同じ版)。
     built/emojilist.json(字・ショートコード・分類)と built/indexes/{ja-JP,ja-JP_hira,en-US}.json(名前と語)。

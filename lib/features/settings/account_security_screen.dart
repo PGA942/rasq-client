@@ -219,7 +219,7 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
         )),
         if (account.hasPassword) pad(RasqInput(key: const ValueKey('security.password.current'), controller: _currentPassword, hintText: l.settingsSecurityCurrentPasswordHint, obscureText: true)),
         pad(RasqInput(key: const ValueKey('security.password.new'), controller: _password, hintText: account.hasPassword ? l.settingsSecurityPasswordNewHint : l.settingsSecurityPasswordHint, obscureText: true)),
-        // 弱いパスワード (D-560): 打っている間に、サーバーと同じ規則で当たった要件をチップで(メールは確認済みのものだけ = サーバーと同じ)。
+        // 弱いパスワード (D-576): 打っている間に、サーバーと同じ規則で当たった要件をチップで(メールは確認済みのものだけ = サーバーと同じ)。
         ValueListenableBuilder<TextEditingValue>(
           valueListenable: _password,
           builder: (_, v, _) {
@@ -749,7 +749,7 @@ class _AccountResetScreenState extends ConsumerState<AccountResetScreen> {
         _toast(appL10n.settingsSecurityResetCodeSent);
       });
 
-  /// 弱い要件 (D-560)。再設定ではサーバーも、まずメール(とその @ より前)とだけ比べる(ハンドルはコードを確かめたあと)。
+  /// 弱い要件 (D-576)。再設定ではサーバーも、まずメール(とその @ より前)とだけ比べる(ハンドルはコードを確かめたあと)。
   List<PasswordWeakness> get _weak => rasqPasswordProblem(_password.text) != null ? const [] : passwordWeaknesses(_password.text, email: _email.text.trim());
 
   bool get _ready => _sent && _code.text.trim().isNotEmpty && _password.text.isNotEmpty && rasqPasswordProblem(_password.text) == null && _weak.isEmpty && _confirm.text == _password.text;

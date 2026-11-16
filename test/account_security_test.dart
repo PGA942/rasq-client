@@ -63,7 +63,7 @@ void main() {
     OrgateException e(String code, String m) => OrgateException(ErrorCode.tryParse(code)!, m);
     expect(accountSecurityMessage(e('429', 'too many attempts; retry in 60 seconds')), contains('試行回数が多すぎます'));
     expect(accountSecurityMessage(e('400', 'invalid or expired code')), contains('コードが違う'));
-    // D-560: 「脆弱なパスワードです」+ 当たった要件(サーバーは最初の 1 つを文で返す)。
+    // D-576: 「脆弱なパスワードです」+ 当たった要件(サーバーは最初の 1 つを文で返す)。
     expect(accountSecurityMessage(e('400', 'password is too weak: it is a commonly used password')), '脆弱なパスワードです(よく使われるもの)');
     expect(accountSecurityMessage(e('409', 'this email is already used by another account')), contains('ほかのアカウント'));
     expect(accountSecurityMessage(e('501', 'mail is not configured on this server')), contains('メールを送れる設定'));
@@ -139,7 +139,7 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('security.password.new')), 'Password123');
     await tester.ensureVisible(find.byKey(const ValueKey('security.password.save')));
     await tester.pumpAndSettle();
-    // 打った時点で、当たった要件のチップが出る (D-560)。
+    // 打った時点で、当たった要件のチップが出る (D-576)。
     expect(find.byKey(const ValueKey('password.weak.common')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('security.password.save')));
     await tester.pumpAndSettle();

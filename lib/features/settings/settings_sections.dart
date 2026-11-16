@@ -29,7 +29,7 @@ class SettingsSection {
 }
 
 /// 設定第一階層の節 (D-484: 文言は [AppLocalizations] から)。画面は `settingsSectionsOf(context.l10n)`。
-/// [flags] (D-566) = 無効の機能の行は出さない(既定はすべて無効)。
+/// [flags] (D-582) = 無効の機能の行は出さない(既定はすべて無効)。
 Map<String, SettingsSection> settingsSectionsOf(AppLocalizations l, {RasqFeatureFlags flags = const RasqFeatureFlags()}) => <String, SettingsSection>{
   'plugins': SettingsSection(l.settingsSectionsPluginsTitle, [
     SettingsRow(l.settingsSectionsPluginsProxyTitle, subtitle: l.settingsSectionsPluginsProxySubtitle, detail: l.settingsSectionsPluginsProxyDetail, route: '/settings/dsl/plugins.proxy'),
@@ -63,7 +63,7 @@ Map<String, SettingsSection> settingsSectionsOf(AppLocalizations l, {RasqFeature
   'appearance': SettingsSection(l.settingsSectionsAppearanceTitle, [
     SettingsRow(l.settingsSectionsAppearanceDisplayTitle, route: '/settings/dsl/appearance.display'),
     SettingsRow(l.settingsSectionsAppearanceThemeTitle, subtitle: l.settingsSectionsAppearanceThemeSubtitle, route: Routes.settingsTheme),
-    // コミュハッシュタグのテーマ (D-567): フラグが立っているときだけ。
+    // コミュハッシュタグのテーマ (D-583): フラグが立っているときだけ。
     if (flags.communityTagThemes) SettingsRow(l.communityTagTitle, subtitle: l.communityTagRowSubtitle, route: Routes.settingsCommunityTags),
     SettingsRow(l.settingsSectionsAppearanceColumnsTitle, subtitle: l.settingsSectionsAppearanceColumnsSubtitle, detail: l.settingsSectionsAppearanceColumnsDetail, route: Routes.settingsColumns),
     SettingsRow(l.settingsSectionsAppearanceMotionTitle, route: '/settings/dsl/appearance.motion'),
@@ -108,7 +108,7 @@ Map<String, SettingsSection> settingsSectionsOf(AppLocalizations l, {RasqFeature
   'about': SettingsSection(l.settingsSectionsAboutTitle, [
     SettingsRow(l.settingsSectionsAboutServerTitle, subtitle: l.settingsSectionsAboutServerSubtitle, detail: l.settingsSectionsAboutServerDetail, route: '/settings/server'),
     SettingsRow(l.settingsSectionsAboutHelpTitle, route: '/settings/dsl/about.help'),
-    // バグレポート (D-554): ヘルプのすぐ下(不具合のときに探す所)。
+    // バグレポート (D-570): ヘルプのすぐ下(不具合のときに探す所)。
     SettingsRow(l.bugReportTitle, subtitle: l.bugReportRowSubtitle, route: Routes.settingsBugReport),
     // RASQ の機能の紹介 (D-471) をもう一度。RAi の `help.tour` もここ(とヘルプのページ)を指す。
     SettingsRow(l.settingsSectionsAboutTourTitle, subtitle: l.settingsSectionsAboutTourSubtitle, route: '${Routes.featureTour}?again=1'),

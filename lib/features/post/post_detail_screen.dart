@@ -274,7 +274,7 @@ class _ThreadBody extends ConsumerWidget {
     // notes/children は引用リノートも混ざって返る — 引用は「共有(引用
     // ノート)」欄で見るので、ここでは replyTo を持つものに絞る。
     final replies = sortThreadPosts([for (final d in descendants) if (d.replyToId != null || d.replyTo != null) d], order, post);
-    // RASQ Atmos (D-568、既定は無効): スレッドの根(無ければ表示中の投稿)のハッシュタグに、スレッドだけのテーマが配られていれば、
+    // RASQ Atmos (D-584、既定は無効): スレッドの根(無ければ表示中の投稿)のハッシュタグに、スレッドだけのテーマが配られていれば、
     // この画面の表示だけに付ける(ほかの画面・TL には付けない)。
     final atmos = [ref.watchAtmos(ancestors.isEmpty ? post : ancestors.first), if (ancestors.isNotEmpty) ref.watchAtmos(post)].nonNulls.where((e) => e.thread).firstOrNull;
     final list = ListView(padding: const EdgeInsets.only(bottom: 24), children: [

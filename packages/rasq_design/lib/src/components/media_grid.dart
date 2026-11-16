@@ -52,7 +52,7 @@ class RasqMediaGrid extends StatefulWidget {
   final double singleAspectRatio;
   final double gridAspectRatio;
 
-  /// 並べ方 (D-564)。既定は枚数で決める今の並び。投稿者のアイコンのテーマの予約 3 ビット(並び 横 / 縦・隙間 そのまま / 詰める)で
+  /// 並べ方 (D-580)。既定は枚数で決める今の並び。投稿者のアイコンのテーマの予約 3 ビット(並び 横 / 縦・隙間 そのまま / 詰める)で
   /// 替えるときに渡す。
   final RasqMediaArrangement arrangement;
 
@@ -124,7 +124,7 @@ class _RasqMediaGridState extends State<RasqMediaGrid> {
   }
 }
 
-/// 添付メディアの並べ方 (D-564、アイコンのテーマの予約 3 ビット。仮組みの「閲覧する」の見本と同じ)。
+/// 添付メディアの並べ方 (D-580、アイコンのテーマの予約 3 ビット。仮組みの「閲覧する」の見本と同じ)。
 enum RasqMediaArrangement {
   /// 枚数で決める(今までどおり)。
   auto,

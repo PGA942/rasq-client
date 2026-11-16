@@ -6,7 +6,7 @@ import 'package:rasq_client/features/onboarding/password_strength.dart';
 import 'package:rasq_client/l10n/gen/app_localizations.dart';
 import 'package:rasq_models/rasq_models.dart';
 
-/// 弱いパスワードの要件のチップ (D-560)。判定は ORGATE の validate_password_for と同じ規則。
+/// 弱いパスワードの要件のチップ (D-576)。判定は ORGATE の validate_password_for と同じ規則。
 void main() {
   test('ORGATE のテストと同じ入力で同じ答え(src/auth/password.rs の tests)', () {
     expect(passwordWeaknesses('Password123', handle: 'taro'), [PasswordWeakness.common], reason: '小文字にしてから表と比べる');

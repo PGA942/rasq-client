@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// まだ出さない機能の切り替え (D-566)。**既定はすべて無効**で、無効の機能は入口(設定の行・画面の飾り)も出さず、
+/// まだ出さない機能の切り替え (D-582)。**既定はすべて無効**で、無効の機能は入口(設定の行・画面の飾り)も出さず、
 /// サーバーにも問い合わせない。
 ///
 /// - 開発中に試すときは `--dart-define=RASQ_FEATURES=communityTagThemes,atmos`(カンマ区切り)。
@@ -11,10 +11,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class RasqFeatureFlags {
   const RasqFeatureFlags({this.communityTagThemes = false, this.atmos = false});
 
-  /// コミュハッシュタグのテーマ (D-567): 自分のコミュニティのハッシュタグにテーマを付ける申請と、そのタグのページのテーマ。
+  /// コミュハッシュタグのテーマ (D-583): 自分のコミュニティのハッシュタグにテーマを付ける申請と、そのタグのページのテーマ。
   final bool communityTagThemes;
 
-  /// RASQ Atmos (D-568): ハッシュタグがきっかけの SVG アイコン / アクションのアニメーション / スレッドだけのテーマ。
+  /// RASQ Atmos (D-584): ハッシュタグがきっかけの SVG アイコン / アクションのアニメーション / スレッドだけのテーマ。
   /// 規模が大きくなるまで無効。
   final bool atmos;
 

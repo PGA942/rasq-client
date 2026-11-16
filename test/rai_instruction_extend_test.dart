@@ -20,7 +20,7 @@ import 'support/fake_rai_embedding_model.dart';
 import 'support/fake_rai_llm.dart';
 import 'support/fakes.dart';
 
-/// RAi のインストラクションの拡充 (D-569): 案内の無かった機能の操作リファレンス / 当たらなかったときに近い操作を添える。
+/// RAi のインストラクションの拡充 (D-585): 案内の無かった機能の操作リファレンス / 当たらなかったときに近い操作を添える。
 void main() {
   const added = ['bug-report', 'settings-language', 'onboarding-language', 'viewer-next-post', 'viewer-close', 'viewer-actions', 'attach-drop', 'attach-reorder', 'emoji-name-search', 'region-search', 'password-weak', 'icon-theme'];
 
@@ -52,7 +52,7 @@ void main() {
     });
   });
 
-  group('近い操作を添える文 (D-569)', () {
+  group('近い操作を添える文 (D-585)', () {
     for (final e in raiPromptCatalogs.entries) {
       test('表 ${e.key}', () {
         final p = e.value;

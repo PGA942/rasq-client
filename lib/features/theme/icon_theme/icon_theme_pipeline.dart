@@ -4,7 +4,7 @@ import 'package:image/image.dart' as img;
 
 import 'icon_theme_codec.dart';
 
-/// テーマ編集の画素の処理 (D-565)。どれも素の Dart で、別の isolate(`compute`)で動かす。
+/// テーマ編集の画素の処理 (D-581)。どれも素の Dart で、別の isolate(`compute`)で動かす。
 
 /// 選んだ画像 → 400×400 の RGBA(真ん中で正方形に切って縮める)。読めなければ null。
 Uint8List? iconThemePrepareSource(Uint8List bytes) {

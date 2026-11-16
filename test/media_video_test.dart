@@ -64,7 +64,7 @@ void main() {
     // 幅 360dp の小画面 → ボタン類はシークバーの下の行。
     expect(find.byKey(const ValueKey('video.controls.stacked')), findsOneWidget);
     expect(tester.getRect(find.byKey(const ValueKey('video.seek'))).bottom, lessThanOrEqualTo(tester.getRect(find.byKey(const ValueKey('video.play'))).top + 1));
-    // 投稿アクションバー付き FOW (D-553): 上辺は投稿の実物のアクションバー、操作はその下。
+    // 投稿アクションバー付き FOW (D-569): 上辺は投稿の実物のアクションバー、操作はその下。
     final bar = find.byKey(viewerPanelBarKey);
     expect(bar, findsOneWidget);
     expect(find.descendant(of: bar, matching: find.byTooltip('共有')), findsOneWidget);
@@ -88,7 +88,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RasqVideoView), findsOneWidget);
     expect(find.byKey(const ValueKey('video.controls')), findsOneWidget);
-    // 全画面アクションバー (D-212): ヘッダーの「…」の左に並ぶ。投稿まわりのボタンは既定では無い (D-553: 下の FOW の実物のバーで)。
+    // 全画面アクションバー (D-212): ヘッダーの「…」の左に並ぶ。投稿まわりのボタンは既定では無い (D-569: 下の FOW の実物のバーで)。
     expect(find.byKey(const ValueKey('viewer.action.reply')), findsNothing);
     final menuX = tester.getCenter(find.descendant(of: find.byType(MediaViewerScreen), matching: find.byTooltip('メニュー'))).dx;
     expect(tester.getCenter(find.byKey(const ValueKey('viewer.pip'))).dx, lessThan(menuX)); // 「…」が一番右

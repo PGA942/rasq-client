@@ -23,7 +23,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
 
-/// ハッシュタグのテーマ: 共通の形と一覧 (D-566)・コミュハッシュタグ (D-567)・RASQ Atmos (D-568)。
+/// ハッシュタグのテーマ: 共通の形と一覧 (D-582)・コミュハッシュタグ (D-583)・RASQ Atmos (D-584)。
 void main() {
   const basic = IconThemeBasic(bgMode: IconThemeBg.gradient, gradient: 2, bg: [17, 34, 68], text: [255, 255, 255], accent: [0, 204, 255], particle: 3);
   Map<String, Object?> theme({List<Map<String, Object?>> triggers = const [], Map<String, Object?>? scope}) => {
@@ -44,7 +44,7 @@ void main() {
       };
   Map<String, Object?> communityJson({String tag = 'RasqArt'}) => {'id': 'ct_1', 'kind': 'community', 'tag': tag, 'theme': theme()};
 
-  group('共通の形と一覧 (D-566)', () {
+  group('共通の形と一覧 (D-582)', () {
     test('1 件: タグは小文字・# なし、source / scope はアプリが決める、コミュハッシュタグはきっかけを持たない', () {
       final a = TagThemeEntry.fromJson({...atmosJson(tag: '#RasqFes'), 'theme': theme(scope: {'kind': 'profile'}, triggers: [
         {'kind': 'hashtagBadge', 'hashtag': 'ほかのタグ', 'svg': 'ring'},
@@ -143,7 +143,7 @@ void main() {
     });
   });
 
-  group('設定の入口 (D-567)', () {
+  group('設定の入口 (D-583)', () {
     test('無効なら設定の行も出さない', () {
       final l = AppLocalizationsJa();
       bool has(RasqFeatureFlags f) => settingsSectionsOf(l, flags: f)['appearance']!.rows.any((r) => r.route == Routes.settingsCommunityTags);
@@ -158,7 +158,7 @@ void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
   Post post(String id, String body) => Post(id: id, account: acc, visibility: 'public', author: UserSummary(id: 'u-$id', account: acc, displayName: '誰か'), createdAt: DateTime(2026, 11, 1), body: body);
 
-  group('RASQ Atmos (D-568)', () {
+  group('RASQ Atmos (D-584)', () {
     Future<void> pumpRow(WidgetTester tester, {required bool on}) async {
       final catalog = TagThemeCatalog.fromJson({'entries': [atmosJson()]});
       final storage = MemorySessionStorage({SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key})});
@@ -213,7 +213,7 @@ void main() {
     });
   });
 
-  group('スレッド / タグのページ (D-567 / D-568)', () {
+  group('スレッド / タグのページ (D-583 / D-584)', () {
     Future<ProviderContainer> pumpApp(WidgetTester tester, RasqFeatureFlags flags) async {
       // テーマの背景は動き続けるので、止めた 1 枚にする(pumpAndSettle のため)。
       tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(disableAnimations: true);
@@ -264,7 +264,7 @@ void main() {
     });
   });
 
-  group('コミュハッシュタグの申請 (D-567)', () {
+  group('コミュハッシュタグの申請 (D-583)', () {
     Map<String, Object?> status({bool subscribed = true, List<Map<String, Object?>> apps = const []}) => {
           'subscription': {'active': subscribed, 'plan': 'RASQ Plus'},
           'limit': 1,

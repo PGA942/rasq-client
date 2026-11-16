@@ -15,7 +15,7 @@ import '../icon_theme/theme_frames.dart';
 import 'atmos.dart';
 import 'tag_themes.dart';
 
-/// コミュハッシュタグのテーマの申請 (D-567、既定は無効)。
+/// コミュハッシュタグのテーマの申請 (D-583、既定は無効)。
 ///
 /// 条件は ① **サブスクに入っている**(サーバーが支払いで確かめる)② **自分のコミュニティのタグを宣伝した投稿**(自分の公開の投稿で、
 /// そのタグを含むもの)を添える。アプリは申請と状態の表示まで。審査・サブスクの確認・配信はサーバー(docs/TAG_THEMES.md)。
@@ -41,7 +41,7 @@ final communityTagPromoFinderProvider = Provider<Future<List<Post>> Function(Str
       ];
     });
 
-/// 申請の画面で選べるテーマの見本(色と枠を選ぶだけ。細かい形はアイコンのテーマ編集 D-565 と同じデータを JSON で送る)。
+/// 申請の画面で選べるテーマの見本(色と枠を選ぶだけ。細かい形はアイコンのテーマ編集 D-581 と同じデータを JSON で送る)。
 class CommunityTagPreset {
   const CommunityTagPreset(this.id, this.basic, this.frames);
   final String id;

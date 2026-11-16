@@ -12,7 +12,7 @@ import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 
-/// システムの絵文字を名前で探す (D-558)。
+/// システムの絵文字を名前で探す (D-574)。
 void main() {
   final names = UnicodeEmojiNames.fromGzip(File(unicodeEmojiNamesAsset).readAsBytesSync());
 

@@ -43,7 +43,7 @@ class _ProfileImageViewerScreenState extends ConsumerState<ProfileImageViewerScr
 
   @override
   Widget build(BuildContext context) {
-    // アイコンに埋め込まれたテーマ (D-564): 読めたら黒の代わりにテーマの背景・パーティクル・枠を敷き、アイコンはテーマの
+    // アイコンに埋め込まれたテーマ (D-580): 読めたら黒の代わりにテーマの背景・パーティクル・枠を敷き、アイコンはテーマの
     // フレーム(予約ビット: 角丸 / 丸)で、文字はテーマの文字色で。読めない画像はこれまでどおり。
     final spec = ref.watch(iconThemeProvider(widget.url.toString())).value;
     final fg = spec == null ? Colors.white : themeColor(spec.basic.text);

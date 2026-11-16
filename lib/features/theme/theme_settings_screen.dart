@@ -140,8 +140,8 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
             child: Text(_error!, style: RasqTypography.caption.copyWith(color: RasqColors.danger)),
           ),
         const Divider(height: RasqSpacing.lg),
-        // アイコンに埋め込まれたテーマを読む (D-564)。止めると、アイコンを取り直さない(枠・添付の並び・拡大したときの背景は既定)。
-        // 埋め込むほうは、プロフィールの編集のアイコン / ヘッダーの 🎨 から(D-565)。
+        // アイコンに埋め込まれたテーマを読む (D-580)。止めると、アイコンを取り直さない(枠・添付の並び・拡大したときの背景は既定)。
+        // 埋め込むほうは、プロフィールの編集のアイコン / ヘッダーの 🎨 から(D-581)。
         RasqSwitchListTile(
           key: const ValueKey('theme.iconThemes'),
           title: context.l10n.iconThemeSettingsRead,

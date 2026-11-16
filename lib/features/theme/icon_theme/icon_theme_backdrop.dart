@@ -7,7 +7,7 @@ import 'icon_theme_codec.dart';
 import 'rasq_theme_spec.dart';
 import 'theme_frames.dart';
 
-/// テーマの背景 (D-564): 背景の色 / グラデーション(拡張のアニメ)・テーマフレーム(SVG)・パーティクル(常時のスロットは
+/// テーマの背景 (D-580): 背景の色 / グラデーション(拡張のアニメ)・テーマフレーム(SVG)・パーティクル(常時のスロットは
 /// 流れ続け、クリック / スライドのスロットは押した / なぞった所から出る)。仮組みの「閲覧する」の描き方を写した。
 /// 「動きを減らす」(端末の設定)では、止めた 1 枚だけを描く。
 class IconThemeBackdrop extends StatefulWidget {

@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'icon_theme_codec.dart';
 import 'rasq_theme_spec.dart';
 
-/// テーマ編集の部品の表 (D-565)。形と軌道は仮組みの SHAPES / ORBITS と同じ(0〜31 の格子)。
+/// テーマ編集の部品の表 (D-581)。形と軌道は仮組みの SHAPES / ORBITS と同じ(0〜31 の格子)。
 /// 形を 2 つのスロットで使っても、拡張領域には 1 つだけ入る(表の番号で引く)。
 
 List<IconThemeCmd> _poly(int n, double ro, double ri) => [
@@ -67,7 +67,7 @@ IconThemeExt iconThemeExtFromDrafts(List<IconThemeSlotDraft> slots, {int angle =
   return IconThemeExt(shapes: [for (final i in shapeIds) iconThemeShapes[i]!.cmds], paths: [for (final k in orbitIds) iconThemeOrbits[k]!], angle: angle, anim: anim, animSpeed: animSpeed, slots: out);
 }
 
-/// アイコンのテーマの背景の枠 (D-563): アイコンには SVG の ID を入れる余地が無いので、**基本パーティクルの種類から**決まった
+/// アイコンのテーマの背景の枠 (D-579): アイコンには SVG の ID を入れる余地が無いので、**基本パーティクルの種類から**決まった
 /// 枠を置く(雪 → 輪、桜 → 桜、星 → 星ときらめき、ハート / 泡 → 輪)。JSON で配るテーマ(コミュハッシュタグ / Atmos)は
 /// [RasqThemeSpec.frames] に好きな ID を書ける。
 List<RasqThemeFrameRef> iconThemeFramesFor(IconThemeBasic t) => switch (t.particle) {

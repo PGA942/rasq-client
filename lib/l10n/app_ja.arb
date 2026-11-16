@@ -4524,199 +4524,199 @@
   "homeBarResetOrder": "既定の並びに戻す",
   "iconThemeEditorTitle": "アイコンにテーマを埋め込む",
   "@iconThemeEditorTitle": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeEditorIntro": "アイコンの四隅に色のブロックでテーマを書き込みます。SNS で縮められたり圧縮し直されたりしても RASQ で読み戻し、プロフィールのアイコンを拡大したときの背景・文字色・パーティクルになります。",
   "@iconThemeEditorIntro": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeStepPick": "アイコンを選ぶ",
   "@iconThemeStepPick": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeStepPickHint": "真ん中で正方形に切り抜いて 400px にします。",
   "@iconThemeStepPickHint": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemePickImage": "画像を選ぶ",
   "@iconThemePickImage": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeUseSample": "見本に戻す",
   "@iconThemeUseSample": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeLoadFailed": "画像を読み込めませんでした",
   "@iconThemeLoadFailed": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeStepEncode": "変換する",
   "@iconThemeStepEncode": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeShapeRaw": "そのまま",
   "@iconThemeShapeRaw": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeShapeRound": "角丸",
   "@iconThemeShapeRound": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeShapeCircle": "円形",
   "@iconThemeShapeCircle": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeShowZones": "境界線を表示(桃: 円形で表示したときの縁、青: 角丸で表示したときの縁)",
   "@iconThemeShowZones": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeBackground": "背景",
   "@iconThemeBackground": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeBgSolid": "単色",
   "@iconThemeBgSolid": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeBgGradient": "グラデ",
   "@iconThemeBgGradient": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeGradientKind": "グラデの種類",
   "@iconThemeGradientKind": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeGradient0": "縦に沈む",
   "@iconThemeGradient0": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeGradient1": "斜めに色相",
   "@iconThemeGradient1": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeGradient2": "中心から放射",
   "@iconThemeGradient2": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeGradient3": "オーロラ",
   "@iconThemeGradient3": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeBgColor": "背景色",
   "@iconThemeBgColor": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeTextColor": "文字色",
   "@iconThemeTextColor": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeAccentColor": "強調色",
   "@iconThemeAccentColor": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeParticle": "基本パーティクル",
   "@iconThemeParticle": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeParticle0": "なし",
   "@iconThemeParticle0": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeParticle1": "雪",
   "@iconThemeParticle1": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeParticle2": "桜",
   "@iconThemeParticle2": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeParticle3": "星",
   "@iconThemeParticle3": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeParticle4": "ハート",
   "@iconThemeParticle4": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeParticle5": "泡",
   "@iconThemeParticle5": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeAmount": "量",
   "@iconThemeAmount": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeSpeed": "速度",
   "@iconThemeSpeed": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeUseExt": "拡張領域も使う(角丸で表示したとき飾り枠として見えます。スロットの割り当てを入れ、基本パーティクルより優先します)",
   "@iconThemeUseExt": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeExtMode": "拡張領域の中身",
   "@iconThemeExtMode": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeExtModeSlots": "形とスロット",
   "@iconThemeExtModeSlots": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeExtModeUrl": "配信 URL",
   "@iconThemeExtModeUrl": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemePluginUrl": "プラグインの配信 URL(https:// は省いて入れます)",
   "@iconThemePluginUrl": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeMask": "飾り枠の色",
   "@iconThemeMask": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeMaskAccent": "強調色の濃淡",
   "@iconThemeMaskAccent": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeMaskBg": "背景色の濃淡",
   "@iconThemeMaskBg": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeMaskMono": "モノクロ",
   "@iconThemeMaskMono": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeAngle": "グラデの角度",
   "@iconThemeAngle": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeAnim": "背景のアニメ",
   "@iconThemeAnim": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeAnim0": "なし",
   "@iconThemeAnim0": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeAnim1": "角度が回る",
   "@iconThemeAnim1": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeAnim2": "色相がゆらぐ",
   "@iconThemeAnim2": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeAnim3": "明るさが脈打つ",
   "@iconThemeAnim3": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeAnimSpeed": "アニメの速さ",
   "@iconThemeAnimSpeed": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeSlotTitle": "スロット {n}",
   "@iconThemeSlotTitle": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "n": {
         "type": "int"
@@ -4725,15 +4725,15 @@
   },
   "iconThemeSlotRemove": "削除",
   "@iconThemeSlotRemove": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeSlotAdd": "スロットを追加",
   "@iconThemeSlotAdd": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeSlotShare": "形 {shapes} 種・軌道 {paths} 種を {slots} スロットで使い回し",
   "@iconThemeSlotShare": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "shapes": {
         "type": "int"
@@ -4748,123 +4748,123 @@
   },
   "iconThemeTriggerLabel": "きっかけ",
   "@iconThemeTriggerLabel": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeTriggerAlways": "常時",
   "@iconThemeTriggerAlways": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeTriggerTap": "クリック",
   "@iconThemeTriggerTap": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeTriggerSlide": "スライド",
   "@iconThemeTriggerSlide": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeShapeLabel": "形",
   "@iconThemeShapeLabel": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeOrbitLabel": "軌道",
   "@iconThemeOrbitLabel": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeOrbitFall": "まっすぐ落下",
   "@iconThemeOrbitFall": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeOrbitDrift": "斜めに舞う",
   "@iconThemeOrbitDrift": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeOrbitRise": "上昇",
   "@iconThemeOrbitRise": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeOrbitFlow": "横に流れる",
   "@iconThemeOrbitFlow": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeRand": "出現のばらつき",
   "@iconThemeRand": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeAngleRand": "角度のばらつき",
   "@iconThemeAngleRand": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeEaseA": "動き A",
   "@iconThemeEaseA": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeEaseB": "動き B",
   "@iconThemeEaseB": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeMix": "B の割合",
   "@iconThemeMix": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeEase0": "直線",
   "@iconThemeEase0": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeEase1": "イーズ",
   "@iconThemeEase1": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeEase2": "バネ",
   "@iconThemeEase2": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeEase3": "ガム",
   "@iconThemeEase3": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeUseHint": "RASQ 用の予約 3 ビットを入れる(アイコンのフレーム・添付メディアの並び・隙間)",
   "@iconThemeUseHint": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintFrame": "アイコンのフレーム",
   "@iconThemeHintFrame": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintFrameRound": "角丸",
   "@iconThemeHintFrameRound": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintFrameCircle": "丸",
   "@iconThemeHintFrameCircle": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintDir": "添付メディアの並び",
   "@iconThemeHintDir": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintDirHorizontal": "横",
   "@iconThemeHintDirHorizontal": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintDirVertical": "縦",
   "@iconThemeHintDirVertical": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintFill": "隙間",
   "@iconThemeHintFill": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintFillAsIs": "そのまま",
   "@iconThemeHintFillAsIs": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintFillPack": "詰める",
   "@iconThemeHintFillPack": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintSummary": "{bits} = {frame}・{dir}並び・{fill}",
   "@iconThemeHintSummary": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "bits": {
         "type": "String"
@@ -4882,7 +4882,7 @@
   },
   "iconThemePalStat": "外周のパレット: {blocks} ブロック(基準色 17 + 5 ビット × 31、うち訂正用 10)",
   "@iconThemePalStat": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "blocks": {
         "type": "int"
@@ -4891,7 +4891,7 @@
   },
   "iconThemeExtStat": "拡張領域: {blocks} ブロック、{used} / {capacity} バイト使用(訂正用の 30 バイトは別枠)",
   "@iconThemeExtStat": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "blocks": {
         "type": "int"
@@ -4906,11 +4906,11 @@
   },
   "iconThemeExtUnused": "拡張領域: 使わない(元の絵のまま)",
   "@iconThemeExtUnused": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeOverCapacity": "容量オーバー: {used} / {capacity} バイト。スロットを減らすか、同じ形・軌道を使い回してください。アイコンは直前のままです。",
   "@iconThemeOverCapacity": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "used": {
         "type": "int"
@@ -4922,7 +4922,7 @@
   },
   "iconThemeOverCapacityUrl": "容量オーバー: {used} / {capacity} バイト。URL を短くしてください。アイコンは直前のままです。",
   "@iconThemeOverCapacityUrl": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "used": {
         "type": "int"
@@ -4934,15 +4934,15 @@
   },
   "iconThemeStepUpload": "アップロード(見本)",
   "@iconThemeStepUpload": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeRecompress": "サーバーの再圧縮",
   "@iconThemeRecompress": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeQuality": "JPEG 品質 {quality}",
   "@iconThemeQuality": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "quality": {
         "type": "int"
@@ -4951,11 +4951,11 @@
   },
   "iconThemeResize": "サーバーのリサイズ",
   "@iconThemeResize": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeResizePx": "{px}px",
   "@iconThemeResizePx": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "px": {
         "type": "int"
@@ -4964,7 +4964,7 @@
   },
   "iconThemeServed": "返ってきた画像: {size}×{size}px、{kb}KB",
   "@iconThemeServed": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "size": {
         "type": "int"
@@ -4976,7 +4976,7 @@
   },
   "iconThemeDummyRoute": "{size}px にして JPEG 品質 {quality} で再圧縮",
   "@iconThemeDummyRoute": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "size": {
         "type": "int"
@@ -4988,59 +4988,59 @@
   },
   "iconThemeExternalRoute": "読み込んだ画像をそのまま使っています",
   "@iconThemeExternalRoute": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeTryExternal": "実際の SNS から保存した画像で試す",
   "@iconThemeTryExternal": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeBackToDummy": "見本の再圧縮に戻す",
   "@iconThemeBackToDummy": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeStepView": "閲覧する",
   "@iconThemeStepView": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeSamplePostName": "サンプル ユーザー",
   "@iconThemeSamplePostName": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeSamplePostBody": "アイコンにテーマを仕込んでみた。拡大すると背景と文字色が変わるはず。",
   "@iconThemeSamplePostBody": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeOpenPreview": "拡大してテーマを見る",
   "@iconThemeOpenPreview": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeResultBasic": "基本テーマ",
   "@iconThemeResultBasic": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeResultExt": "拡張(スロット)",
   "@iconThemeResultExt": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeResultHint": "予約 3 ビット",
   "@iconThemeResultHint": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeResultMatch": "送る前との比較",
   "@iconThemeResultMatch": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeRestored": "復元できた",
   "@iconThemeRestored": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeNotRestored": "復元できない",
   "@iconThemeNotRestored": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeCorrected": "{total} 個中 {n} 個を訂正",
   "@iconThemeCorrected": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "total": {
         "type": "int"
@@ -5052,15 +5052,15 @@
   },
   "iconThemeNotUsed": "使っていない",
   "@iconThemeNotUsed": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeNotFound": "見つからない",
   "@iconThemeNotFound": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeExtUrlNote": "配信 URL: https://{url}",
   "@iconThemeExtUrlNote": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "url": {
         "type": "String"
@@ -5069,7 +5069,7 @@
   },
   "iconThemeExtSlotsNote": "スロット: {triggers}",
   "@iconThemeExtSlotsNote": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "triggers": {
         "type": "String"
@@ -5078,47 +5078,47 @@
   },
   "iconThemeListSeparator": "、",
   "@iconThemeListSeparator": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintRead": "読めた",
   "@iconThemeHintRead": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeHintNone": "フラグなし(既定の並び)",
   "@iconThemeHintNone": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeDslMatch": "DSL が一致",
   "@iconThemeDslMatch": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeDslMismatch": "一致しない",
   "@iconThemeDslMismatch": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeExternalNoCompare": "外の画像なので比べない",
   "@iconThemeExternalNoCompare": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeDslUnreadable": "(読み戻せませんでした)",
   "@iconThemeDslUnreadable": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeUseIcon": "このアイコンを使う",
   "@iconThemeUseIcon": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemePreviewBio": "この背景・文字色・ボタンの色・パーティクルは、アイコンの四隅から読み戻した値だけで描いています。押したり、なぞったりしてみてください。",
   "@iconThemePreviewBio": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemePreviewFollow": "フォロー",
   "@iconThemePreviewFollow": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemePluginUrlNote": "プラグインは https://{url} から取る形です。まだ取得しないので、基本のテーマで表示しています。",
   "@iconThemePluginUrlNote": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)",
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)",
     "placeholders": {
       "url": {
         "type": "String"
@@ -5127,19 +5127,19 @@
   },
   "iconThemeEmbedTooltip": "アイコンにテーマを埋め込む",
   "@iconThemeEmbedTooltip": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeSettingsRead": "アイコンのテーマを読む",
   "@iconThemeSettingsRead": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeSettingsReadSubtitle": "アイコンに埋め込まれたテーマで、アイコンの枠・添付の並び・アイコンを拡大したときの背景を変えます(アイコンの画像を取り直します)",
   "@iconThemeSettingsReadSubtitle": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeSettingsEditorSubtitle": "いまのアイコンや好きな画像に、背景・文字色・パーティクルのテーマを書き込みます",
   "@iconThemeSettingsEditorSubtitle": {
-    "description": "テーマ編集 / アイコンのテーマ(D-561〜D-565)"
+    "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "languageSelfName": "日本語",
   "@languageSelfName": {

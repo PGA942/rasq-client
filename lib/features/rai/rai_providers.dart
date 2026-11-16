@@ -43,7 +43,7 @@ enum RaiMode {
 /// 取得した情報を注入した返事で保留した関数の承認タイルの id の頭 (D-407)。
 const raiHeldCallsPrefix = 'fn:';
 
-/// インストラクションで当たらなかったとき、LLM に参考として添える「近い操作」の下限 (D-569)。案内を始める閾値
+/// インストラクションで当たらなかったとき、LLM に参考として添える「近い操作」の下限 (D-585)。案内を始める閾値
 /// ([RaiReferenceIndex.threshold] 0.42)より低く、まったく関係の無いものは添えない。
 const raiInstructionNearThreshold = 0.3;
 
@@ -708,7 +708,7 @@ class RaiController extends Notifier<RaiState> {
     state = state.copyWith(hits: [for (final h in hits) (id: h.item.id, score: h.score)]);
     if (hits.isEmpty) {
       // 参照に無い質問は LLM へバイパス(端末内 → フォールアップ)。どちらも無ければ案内文。
-      // 閾値に届かないが近い操作を添え、画面に無いボタンを作らないよう頼む (D-569)。端末内のモデルにも同じ参考が届く。
+      // 閾値に届かないが近い操作を添え、画面に無いボタンを作らないよう頼む (D-585)。端末内のモデルにも同じ参考が届く。
       final near = index == null ? const <RaiHit<RaiOperation>>[] : await index.searchOperations(q, threshold: raiInstructionNearThreshold);
       if (seq != _answerSeq) return;
       final lines = [

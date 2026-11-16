@@ -12,9 +12,9 @@ import '../../../text/mfm/mfm_parser.dart';
 import '../icon_theme/rasq_theme_spec.dart';
 import '../icon_theme/theme_frames.dart';
 
-/// ハッシュタグに付くテーマ (D-566): **コミュハッシュタグのテーマ**(D-567)と **RASQ Atmos**(D-568)が同じ形を使う。
+/// ハッシュタグに付くテーマ (D-582): **コミュハッシュタグのテーマ**(D-583)と **RASQ Atmos**(D-584)が同じ形を使う。
 ///
-/// - 1 件 = [TagThemeEntry](ハッシュタグ → [RasqThemeSpec])。見た目の中身は第3回のテーマのデータ(D-562)そのもの。
+/// - 1 件 = [TagThemeEntry](ハッシュタグ → [RasqThemeSpec])。見た目の中身は第3回のテーマのデータ(D-578)そのもの。
 ///   テーマフレームの SVG は ID で置き場から引き、どこから来ても [sanitizeThemeSvg](`SvgLite.parseStrict` と上限)を通す。
 /// - 一覧は Central が配る(`GET /api/v1/tag-themes`、docs/TAG_THEMES.md)。**アプリはどのタグを見たかを送らない**:
 ///   有効な一覧をまるごと取り、手元で投稿のハッシュタグと突き合わせる。Atmos のインプレッションは、この一覧を

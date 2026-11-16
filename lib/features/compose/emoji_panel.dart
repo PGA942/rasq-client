@@ -167,7 +167,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
     );
   }
 
-  // システムの絵文字の検索結果 (D-558)。打ち直しのたびに 1915 個を見るので、同じ語なら使い回す。
+  // システムの絵文字の検索結果 (D-574)。打ち直しのたびに 1915 個を見るので、同じ語なら使い回す。
   String? _unicodeQuery;
   List<String> _unicodeResult = const [];
 
@@ -259,7 +259,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
           ));
       chunked([for (final e in EmojiPanel.unicode) _CellSpec(e, null)]);
     } else {
-      // システムの絵文字を名前で (D-558): 日本語(漢字 / カタカナ / ひらがな)・英語・ショートコード。索引は初めて探したときに読む。
+      // システムの絵文字を名前で (D-574): 日本語(漢字 / カタカナ / ひらがな)・英語・ショートコード。索引は初めて探したときに読む。
       final hits = _unicodeHits(q);
       if (hits.isNotEmpty) {
         label(context.l10n.composeEmojiSearchUnicodeSection);

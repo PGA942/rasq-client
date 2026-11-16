@@ -9,7 +9,7 @@ import '../icon_theme/rasq_theme_spec.dart';
 import '../icon_theme/theme_frames.dart';
 import 'tag_themes.dart';
 
-/// RASQ Atmos (D-568) とコミュハッシュタグのテーマ (D-567) の描き方。
+/// RASQ Atmos (D-584) とコミュハッシュタグのテーマ (D-583) の描き方。
 ///
 /// - SVG はどれも [themeSvgProvider](同梱 → 置き場、`SvgLite.parseStrict` と上限で消毒)から引く。読めなければ何も描かない。
 /// - アニメーションは**静止した SVG をアプリが動かす**([RasqThemeMotion])。SVG の中の `<animate>` / `<script>` / 外部参照は
@@ -130,7 +130,7 @@ class _AtmosBurstState extends ConsumerState<AtmosBurst> with SingleTickerProvid
   }
 }
 
-/// テーマを付けた面 (D-567 / D-568): 背景(色・フレーム・パーティクル)を薄く敷き、上の中身は読みやすいよう面の色を重ねる。
+/// テーマを付けた面 (D-583 / D-584): 背景(色・フレーム・パーティクル)を薄く敷き、上の中身は読みやすいよう面の色を重ねる。
 /// 強調色はテーマのものにする(ボタン・リンクの色)。中身の文字の色は変えない(投稿が読めなくならないように)。
 class TagThemeSurface extends StatelessWidget {
   const TagThemeSurface({super.key, required this.spec, required this.child, this.veil = 0.84});

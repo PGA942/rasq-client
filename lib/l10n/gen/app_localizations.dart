@@ -7212,493 +7212,493 @@ abstract class AppLocalizations {
   /// **'既定の並びに戻す'**
   String get homeBarResetOrder;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'アイコンにテーマを埋め込む'**
   String get iconThemeEditorTitle;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'アイコンの四隅に色のブロックでテーマを書き込みます。SNS で縮められたり圧縮し直されたりしても RASQ で読み戻し、プロフィールのアイコンを拡大したときの背景・文字色・パーティクルになります。'**
   String get iconThemeEditorIntro;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'アイコンを選ぶ'**
   String get iconThemeStepPick;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'真ん中で正方形に切り抜いて 400px にします。'**
   String get iconThemeStepPickHint;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'画像を選ぶ'**
   String get iconThemePickImage;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'見本に戻す'**
   String get iconThemeUseSample;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'画像を読み込めませんでした'**
   String get iconThemeLoadFailed;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'変換する'**
   String get iconThemeStepEncode;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'そのまま'**
   String get iconThemeShapeRaw;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'角丸'**
   String get iconThemeShapeRound;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'円形'**
   String get iconThemeShapeCircle;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'境界線を表示(桃: 円形で表示したときの縁、青: 角丸で表示したときの縁)'**
   String get iconThemeShowZones;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'背景'**
   String get iconThemeBackground;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'単色'**
   String get iconThemeBgSolid;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'グラデ'**
   String get iconThemeBgGradient;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'グラデの種類'**
   String get iconThemeGradientKind;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'縦に沈む'**
   String get iconThemeGradient0;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'斜めに色相'**
   String get iconThemeGradient1;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'中心から放射'**
   String get iconThemeGradient2;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'オーロラ'**
   String get iconThemeGradient3;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'背景色'**
   String get iconThemeBgColor;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'文字色'**
   String get iconThemeTextColor;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'強調色'**
   String get iconThemeAccentColor;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'基本パーティクル'**
   String get iconThemeParticle;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'なし'**
   String get iconThemeParticle0;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'雪'**
   String get iconThemeParticle1;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'桜'**
   String get iconThemeParticle2;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'星'**
   String get iconThemeParticle3;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'ハート'**
   String get iconThemeParticle4;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'泡'**
   String get iconThemeParticle5;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'量'**
   String get iconThemeAmount;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'速度'**
   String get iconThemeSpeed;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'拡張領域も使う(角丸で表示したとき飾り枠として見えます。スロットの割り当てを入れ、基本パーティクルより優先します)'**
   String get iconThemeUseExt;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'拡張領域の中身'**
   String get iconThemeExtMode;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'形とスロット'**
   String get iconThemeExtModeSlots;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'配信 URL'**
   String get iconThemeExtModeUrl;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'プラグインの配信 URL(https:// は省いて入れます)'**
   String get iconThemePluginUrl;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'飾り枠の色'**
   String get iconThemeMask;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'強調色の濃淡'**
   String get iconThemeMaskAccent;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'背景色の濃淡'**
   String get iconThemeMaskBg;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'モノクロ'**
   String get iconThemeMaskMono;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'グラデの角度'**
   String get iconThemeAngle;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'背景のアニメ'**
   String get iconThemeAnim;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'なし'**
   String get iconThemeAnim0;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'角度が回る'**
   String get iconThemeAnim1;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'色相がゆらぐ'**
   String get iconThemeAnim2;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'明るさが脈打つ'**
   String get iconThemeAnim3;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'アニメの速さ'**
   String get iconThemeAnimSpeed;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'スロット {n}'**
   String iconThemeSlotTitle(int n);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'削除'**
   String get iconThemeSlotRemove;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'スロットを追加'**
   String get iconThemeSlotAdd;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'形 {shapes} 種・軌道 {paths} 種を {slots} スロットで使い回し'**
   String iconThemeSlotShare(int shapes, int paths, int slots);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'きっかけ'**
   String get iconThemeTriggerLabel;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'常時'**
   String get iconThemeTriggerAlways;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'クリック'**
   String get iconThemeTriggerTap;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'スライド'**
   String get iconThemeTriggerSlide;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'形'**
   String get iconThemeShapeLabel;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'軌道'**
   String get iconThemeOrbitLabel;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'まっすぐ落下'**
   String get iconThemeOrbitFall;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'斜めに舞う'**
   String get iconThemeOrbitDrift;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'上昇'**
   String get iconThemeOrbitRise;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'横に流れる'**
   String get iconThemeOrbitFlow;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'出現のばらつき'**
   String get iconThemeRand;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'角度のばらつき'**
   String get iconThemeAngleRand;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'動き A'**
   String get iconThemeEaseA;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'動き B'**
   String get iconThemeEaseB;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'B の割合'**
   String get iconThemeMix;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'直線'**
   String get iconThemeEase0;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'イーズ'**
   String get iconThemeEase1;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'バネ'**
   String get iconThemeEase2;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'ガム'**
   String get iconThemeEase3;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'RASQ 用の予約 3 ビットを入れる(アイコンのフレーム・添付メディアの並び・隙間)'**
   String get iconThemeUseHint;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'アイコンのフレーム'**
   String get iconThemeHintFrame;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'角丸'**
   String get iconThemeHintFrameRound;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'丸'**
   String get iconThemeHintFrameCircle;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'添付メディアの並び'**
   String get iconThemeHintDir;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'横'**
   String get iconThemeHintDirHorizontal;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'縦'**
   String get iconThemeHintDirVertical;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'隙間'**
   String get iconThemeHintFill;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'そのまま'**
   String get iconThemeHintFillAsIs;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'詰める'**
   String get iconThemeHintFillPack;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'{bits} = {frame}・{dir}並び・{fill}'**
@@ -7709,271 +7709,271 @@ abstract class AppLocalizations {
     String fill,
   );
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'外周のパレット: {blocks} ブロック(基準色 17 + 5 ビット × 31、うち訂正用 10)'**
   String iconThemePalStat(int blocks);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'拡張領域: {blocks} ブロック、{used} / {capacity} バイト使用(訂正用の 30 バイトは別枠)'**
   String iconThemeExtStat(int blocks, int used, int capacity);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'拡張領域: 使わない(元の絵のまま)'**
   String get iconThemeExtUnused;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'容量オーバー: {used} / {capacity} バイト。スロットを減らすか、同じ形・軌道を使い回してください。アイコンは直前のままです。'**
   String iconThemeOverCapacity(int used, int capacity);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'容量オーバー: {used} / {capacity} バイト。URL を短くしてください。アイコンは直前のままです。'**
   String iconThemeOverCapacityUrl(int used, int capacity);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'アップロード(見本)'**
   String get iconThemeStepUpload;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'サーバーの再圧縮'**
   String get iconThemeRecompress;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'JPEG 品質 {quality}'**
   String iconThemeQuality(int quality);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'サーバーのリサイズ'**
   String get iconThemeResize;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'{px}px'**
   String iconThemeResizePx(int px);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'返ってきた画像: {size}×{size}px、{kb}KB'**
   String iconThemeServed(int size, String kb);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'{size}px にして JPEG 品質 {quality} で再圧縮'**
   String iconThemeDummyRoute(int size, int quality);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'読み込んだ画像をそのまま使っています'**
   String get iconThemeExternalRoute;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'実際の SNS から保存した画像で試す'**
   String get iconThemeTryExternal;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'見本の再圧縮に戻す'**
   String get iconThemeBackToDummy;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'閲覧する'**
   String get iconThemeStepView;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'サンプル ユーザー'**
   String get iconThemeSamplePostName;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'アイコンにテーマを仕込んでみた。拡大すると背景と文字色が変わるはず。'**
   String get iconThemeSamplePostBody;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'拡大してテーマを見る'**
   String get iconThemeOpenPreview;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'基本テーマ'**
   String get iconThemeResultBasic;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'拡張(スロット)'**
   String get iconThemeResultExt;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'予約 3 ビット'**
   String get iconThemeResultHint;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'送る前との比較'**
   String get iconThemeResultMatch;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'復元できた'**
   String get iconThemeRestored;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'復元できない'**
   String get iconThemeNotRestored;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'{total} 個中 {n} 個を訂正'**
   String iconThemeCorrected(int total, int n);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'使っていない'**
   String get iconThemeNotUsed;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'見つからない'**
   String get iconThemeNotFound;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'配信 URL: https://{url}'**
   String iconThemeExtUrlNote(String url);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'スロット: {triggers}'**
   String iconThemeExtSlotsNote(String triggers);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'、'**
   String get iconThemeListSeparator;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'読めた'**
   String get iconThemeHintRead;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'フラグなし(既定の並び)'**
   String get iconThemeHintNone;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'DSL が一致'**
   String get iconThemeDslMatch;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'一致しない'**
   String get iconThemeDslMismatch;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'外の画像なので比べない'**
   String get iconThemeExternalNoCompare;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'(読み戻せませんでした)'**
   String get iconThemeDslUnreadable;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'このアイコンを使う'**
   String get iconThemeUseIcon;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'この背景・文字色・ボタンの色・パーティクルは、アイコンの四隅から読み戻した値だけで描いています。押したり、なぞったりしてみてください。'**
   String get iconThemePreviewBio;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'フォロー'**
   String get iconThemePreviewFollow;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'プラグインは https://{url} から取る形です。まだ取得しないので、基本のテーマで表示しています。'**
   String iconThemePluginUrlNote(String url);
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'アイコンにテーマを埋め込む'**
   String get iconThemeEmbedTooltip;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'アイコンのテーマを読む'**
   String get iconThemeSettingsRead;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'アイコンに埋め込まれたテーマで、アイコンの枠・添付の並び・アイコンを拡大したときの背景を変えます(アイコンの画像を取り直します)'**
   String get iconThemeSettingsReadSubtitle;
 
-  /// テーマ編集 / アイコンのテーマ(D-561〜D-565)
+  /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
   /// **'いまのアイコンや好きな画像に、背景・文字色・パーティクルのテーマを書き込みます'**

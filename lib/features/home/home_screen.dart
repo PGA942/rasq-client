@@ -549,7 +549,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
     );
     // ヘッダー(タブの行)のすぐ下に浮かべる。出し入れで一覧を作り直さないよう、いつも Stack の 1 つ目に置く。
     return Stack(children: [
-      // この TL から開いた全画面は、TL の並びでスワイプを続ける (D-549)。
+      // この TL から開いた全画面は、TL の並びでスワイプを続ける (D-565)。
       Positioned.fill(child: ViewerSequenceScope(sequence: ViewerSequence.ofTimeline(context, widget.kind), child: body)),
       if (pillShown)
         Positioned(

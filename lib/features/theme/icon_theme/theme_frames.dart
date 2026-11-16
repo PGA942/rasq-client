@@ -5,7 +5,7 @@ import 'package:rrl_renderer/rrl_renderer.dart';
 
 import 'rasq_theme_spec.dart';
 
-/// テーマフレーム (D-563): テーマの背景に置く SVG。テーマのデータは SVG の中身を持たず、**ID で置き場から引く**
+/// テーマフレーム (D-579): テーマの背景に置く SVG。テーマのデータは SVG の中身を持たず、**ID で置き場から引く**
 /// ([RasqThemeFrameRef.svgId])。置き場は ① アプリに同梱の数個(`assets/theme_frames/<id>.svg`)② 外の置き場
 /// ([ThemeSvgRemote]。Central の口の案は docs/THEME_FRAMES.md。rasq-central には未実装なので、今は差し替えた偽物だけ)。
 ///

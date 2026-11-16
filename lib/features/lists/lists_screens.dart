@@ -680,7 +680,7 @@ class FeedTimelineScreen extends ConsumerWidget {
 class _ListTimelinePosts extends ConsumerStatefulWidget {
   const _ListTimelinePosts({required this.posts, required this.actions, required this.notifier, required this.kind, this.timelineId, required this.scope, required this.entries});
 
-  /// この並びの TL(全画面のスワイプの続きを読む先、D-549)。
+  /// この並びの TL(全画面のスワイプの続きを読む先、D-565)。
   final TimelineKind kind;
   final List<Post> posts;
 
@@ -728,7 +728,7 @@ class _ListTimelinePostsState extends ConsumerState<_ListTimelinePosts> {
         await WidgetsBinding.instance.endOfFrame;
       });
     });
-    // ここから開いた全画面は、この TL の並びでスワイプを続ける (D-549)。話題で絞っているときは、絞った並び(出している分だけ)。
+    // ここから開いた全画面は、この TL の並びでスワイプを続ける (D-565)。話題で絞っているときは、絞った並び(出している分だけ)。
     // (全画面の下に隠れている間はこの画面は組み立て直されないので、TL の並びは provider から読む = [ViewerSequence.ofTimeline]。)
     final sequence = selected == null ? ViewerSequence.ofTimeline(context, widget.kind) : ViewerSequence(posts: () => visible);
     return ViewerSequenceScope(sequence: sequence, child: RefreshIndicator(

@@ -38,7 +38,7 @@ class RasqAvatar extends StatelessWidget {
   final Alignment badgeAlignment;
   final String? semanticsLabel;
 
-  /// 角丸(一辺の 20%)の枠にする(false = 丸)。アイコンに埋め込まれたテーマの予約ビット(フレーム = 角丸)で使う (D-564)。
+  /// 角丸(一辺の 20%)の枠にする(false = 丸)。アイコンに埋め込まれたテーマの予約ビット(フレーム = 角丸)で使う (D-580)。
   final bool rounded;
 
   @override

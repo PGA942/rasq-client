@@ -2,13 +2,13 @@ import 'package:flutter/foundation.dart';
 
 import 'icon_theme_codec.dart';
 
-/// テーマのデータの形 (D-562)。アイコンに埋め込んだテーマ(アイコンチップ、D-561)だけでなく、第4回の
+/// テーマのデータの形 (D-578)。アイコンに埋め込んだテーマ(アイコンチップ、D-577)だけでなく、第4回の
 /// **コミュハッシュタグのテーマ**と **RASQ Atmos**(ハッシュタグがきっかけの SVG アイコン / アクションボタンで再生する SVG
 /// アニメーション / そのスレッドの表示だけに効くテーマ)も、この 1 つの形を使い回す。
 ///
 /// - 見た目の中身は [basic](背景・文字色・強調色・パーティクル・予約 3 ビット)と [ext](ベクターの形・軌道・スロット、
 ///   またはプラグインの配信 URL)= アイコンの四隅に入るものと同じ。アイコンに入らない分は JSON で配る(Central など)。
-/// - [frames] = 背景に置く SVG(**ID で置き場から引く**、D-563)。
+/// - [frames] = 背景に置く SVG(**ID で置き場から引く**、D-579)。
 /// - [scope] = どこに効くか(プロフィール / スレッド / ハッシュタグ)。[triggers] = Atmos のきっかけ(ハッシュタグで
 ///   アイコンを付ける / アクションで SVG アニメーション)。
 /// - JSON の `v` は形の版(今は 1)。知らない項目は読み飛ばす。
@@ -74,7 +74,7 @@ class RasqThemeSpec {
 
 /// テーマの出どころ。
 enum RasqThemeSource {
-  /// アイコンの四隅(D-561)。
+  /// アイコンの四隅(D-577)。
   iconEmbed,
 
   /// コミュハッシュタグのテーマ(第4回、フラグで無効)。
@@ -114,7 +114,7 @@ class RasqThemeScope {
   int get hashCode => Object.hash(kind, key);
 }
 
-/// 背景に置く SVG 1 つ(D-563)。[svgId] で置き場から引く(中身は持たない)。位置は画面に対する割合(0〜1)。
+/// 背景に置く SVG 1 つ(D-579)。[svgId] で置き場から引く(中身は持たない)。位置は画面に対する割合(0〜1)。
 @immutable
 class RasqThemeFrameRef {
   const RasqThemeFrameRef({required this.svgId, this.x = 0.5, this.y = 0.5, this.size = 0.3, this.opacity = 0.6, this.rotation = 0});
@@ -146,7 +146,7 @@ class RasqThemeFrameRef {
   int get hashCode => Object.hash(svgId, x, y, size, opacity, rotation);
 }
 
-/// Atmos のきっかけ (D-562 / D-568)。
+/// Atmos のきっかけ (D-578 / D-584)。
 @immutable
 class RasqThemeTrigger {
   const RasqThemeTrigger.hashtagBadge({required String this.hashtag, required this.svgId}) : kind = 'hashtagBadge', actionId = null, motion = RasqThemeMotion.pop;
@@ -164,7 +164,7 @@ class RasqThemeTrigger {
   /// アクションの ID(`reaction` / `renote` / `like` …)か、アクションの種類(`Reaction` / `Repost` …、大文字小文字は見ない)。
   final String? actionId;
 
-  /// アニメーションの動き (D-568)。**SVG の中の `<animate>` やスクリプトは使わない**(消毒で捨てる)。静止した SVG を、アプリが
+  /// アニメーションの動き (D-584)。**SVG の中の `<animate>` やスクリプトは使わない**(消毒で捨てる)。静止した SVG を、アプリが
   /// 決まった動き(拡大して消える / 回る / 浮かぶ / 散らばる)で動かす。知らない名前は [RasqThemeMotion.pop]。
   final RasqThemeMotion motion;
 
@@ -187,7 +187,7 @@ class RasqThemeTrigger {
   int get hashCode => Object.hash(kind, svgId, hashtag, actionId, motion);
 }
 
-/// アクションのアニメーションの動き (D-568)。
+/// アクションのアニメーションの動き (D-584)。
 enum RasqThemeMotion {
   /// 大きくなりながら消える。
   pop,

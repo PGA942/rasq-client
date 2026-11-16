@@ -186,10 +186,10 @@ abstract final class Routes {
   /// ヘルプ、法的表示 (D-238)。
   static const settingsLegal = '/settings/legal';
 
-  /// バグレポート (D-554): 端末に残った例外を見る / 書き出す。設定 → RASQ について。
+  /// バグレポート (D-570): 端末に残った例外を見る / 書き出す。設定 → RASQ について。
   static const settingsBugReport = '/settings/bug-report';
 
-  /// コミュハッシュタグのテーマの申請 (D-567、既定は無効。無効のときは「使えません」だけ)。
+  /// コミュハッシュタグのテーマの申請 (D-583、既定は無効。無効のときは「使えません」だけ)。
   static const settingsCommunityTags = '/settings/community-tags';
 
   /// 通知専用のアクセストークン (D-239)。
@@ -529,7 +529,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: Routes.viewer,
             parentNavigatorKey: _appNavigatorKey,
             pageBuilder: (_, s) {
-              // 並び付き (D-549: 投稿をまたいでスワイプ) / 投稿と番号だけ(これまでの形)。
+              // 並び付き (D-565: 投稿をまたいでスワイプ) / 投稿と番号だけ(これまでの形)。
               final x = switch (s.extra) {
                 MediaViewerArgs a => a,
                 ({Post post, int index}) r => MediaViewerArgs(post: r.post, index: r.index),

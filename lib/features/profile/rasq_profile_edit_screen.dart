@@ -139,7 +139,7 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
     });
   }
 
-  /// アイコンにテーマを埋め込む (D-565): 選んである画像(無ければいまのアイコン)からテーマ編集を開き、書き込んだ PNG を
+  /// アイコンにテーマを埋め込む (D-581): 選んである画像(無ければいまのアイコン)からテーマ編集を開き、書き込んだ PNG を
   /// 新しいアイコンにする。ヘッダーのボタンからも同じ(テーマはアイコンに入る)。
   Future<void> _embedTheme(Uri? current) async {
     var initial = _avatar?.bytes;
