@@ -1,0 +1,7 @@
+{
+  "@@locale": "ko",
+  "composeDropHint": "놓으면 첨부합니다(앞으로 {count}개)",
+  "composeDropFull": "첨부는 {max}개까지입니다",
+  "composeDropNotMedia": "미디어가 아니라서 첨부하지 않았습니다: {names}",
+  "composeDropOverLimit": "첨부는 {max}개까지라서 {count}개는 넣지 않았습니다"
+}

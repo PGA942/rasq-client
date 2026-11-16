@@ -11,6 +11,7 @@ import '../../l10n/l10n.dart';
 import '../home/reaction_history.dart';
 import '../emoji/emoji_index.dart';
 import '../emoji/emoji_index_providers.dart';
+import '../emoji/unicode_emoji_names.dart';
 import 'compose_providers.dart';
 import 'emoji_prediction.dart';
 
@@ -166,6 +167,20 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
     );
   }
 
+  // システムの絵文字の検索結果 (D-574)。打ち直しのたびに 1915 個を見るので、同じ語なら使い回す。
+  String? _unicodeQuery;
+  List<String> _unicodeResult = const [];
+
+  List<String> _unicodeHits(String q) {
+    final names = ref.watch(unicodeEmojiNamesProvider).value;
+    if (names == null) return const [];
+    if (_unicodeQuery != q) {
+      _unicodeQuery = q;
+      _unicodeResult = names.search(q);
+    }
+    return _unicodeResult;
+  }
+
   // 予測は毎ビルド再計算しない(カスタム絵文字数千件の走査になるため)。
   List<String>? _predicted;
   List<EmojiInfo>? _predictedFrom;
@@ -237,11 +252,20 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
         grid([for (final e in predicted) _CellSpec(e, _urlFor(e, custom.value))]);
       }
     }
-    rows.add(() => InkWell(
-          onLongPress: () => ref.read(overlayManagerProvider).showAlert(id: 'emoji.bundle', title: context.l10n.composeEmojiBundleEditTitle, message: context.l10n.composeEmojiBundleEditMessage, confirmText: 'OK'),
-          child: _label(context.l10n.composeEmojiSectionDefault),
-        ));
-    chunked([for (final e in EmojiPanel.unicode) _CellSpec(e, null)]);
+    if (q.isEmpty) {
+      rows.add(() => InkWell(
+            onLongPress: () => ref.read(overlayManagerProvider).showAlert(id: 'emoji.bundle', title: context.l10n.composeEmojiBundleEditTitle, message: context.l10n.composeEmojiBundleEditMessage, confirmText: 'OK'),
+            child: _label(context.l10n.composeEmojiSectionDefault),
+          ));
+      chunked([for (final e in EmojiPanel.unicode) _CellSpec(e, null)]);
+    } else {
+      // システムの絵文字を名前で (D-574): 日本語(漢字 / カタカナ / ひらがな)・英語・ショートコード。索引は初めて探したときに読む。
+      final hits = _unicodeHits(q);
+      if (hits.isNotEmpty) {
+        label(context.l10n.composeEmojiSearchUnicodeSection);
+        chunked([for (final e in hits) _CellSpec(e, null)]);
+      }
+    }
 
     // サーバー(独自の絵文字): ジャンル毎に省略表示 (D-043)。
     switch (custom) {

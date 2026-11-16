@@ -59,12 +59,15 @@ class _RegionPickerScreenState extends ConsumerState<RegionPickerScreen> {
       final q = _query.text;
       final List<Widget> tiles;
       if (country == null) {
-        final list = r.countries.where((c) => regionMatches(c.code, q)).toList()..sort((a, b) => regionSortKey(a.code).compareTo(regionSortKey(b.code)));
+        // ローマ字・英語の名前・国の中の地名でも引ける (D-573)。地名に当たったときは、当たった地名を添える(「日本 / 渋谷区」)。
+        final matches = <String, RegionMatch>{for (final c in r.countries) c.code: ?regionMatch(c.code, q)};
+        final list = r.countries.where((c) => matches.containsKey(c.code)).toList()..sort((a, b) => regionSortKey(a.code).compareTo(regionSortKey(b.code)));
         tiles = [
           for (final c in list)
             ListTile(
               key: ValueKey('region.country.${c.code}'),
               title: Text(regionName(c.code)),
+              subtitle: matches[c.code]?.via == null ? null : Text(matches[c.code]!.via!, key: ValueKey('region.via.${c.code}')),
               trailing: !r.isAvailable(c.code) ? badge : (c.code == regionSubdivided ? const Icon(Icons.chevron_right) : null),
               onTap: () => _choose(c),
             ),

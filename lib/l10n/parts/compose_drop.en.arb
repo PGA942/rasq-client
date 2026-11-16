@@ -1,0 +1,7 @@
+{
+  "@@locale": "en",
+  "composeDropHint": "Drop to attach ({count, plural, =1{1 more} other{{count} more}})",
+  "composeDropFull": "You can attach up to {max} files",
+  "composeDropNotMedia": "Not attached (not an image, video, or audio file): {names}",
+  "composeDropOverLimit": "You can attach up to {max} files, so {count, plural, =1{1 file was} other{{count} files were}} left out"
+}

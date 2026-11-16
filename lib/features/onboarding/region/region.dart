@@ -4,6 +4,8 @@ import 'package:rasq_models/rasq_models.dart' show RasqUiLocale;
 
 import '../../../backend/orgate_client.dart';
 import '../../../l10n/l10n.dart';
+import '../../compose/kana_romaji.dart' show kanaSearchKey, romajiSearchKey;
+import 'region_aliases_ja.dart';
 import 'region_names_en.dart';
 import 'region_names_ja.dart';
 import 'region_names_ko.dart';
@@ -149,15 +151,118 @@ String regionSortKey(String code) {
   return _katakana(readings[code] ?? countries[code] ?? states[code] ?? code);
 }
 
-/// 探す語に合うか(名前・読み・コード。大文字小文字とひらがな / カタカナは区別しない)。
-bool regionMatches(String code, String query) {
-  final q = _katakana(query.trim()).toLowerCase();
-  if (q.isEmpty) return true;
-  final (countries, states, readings) = _tables;
-  for (final s in [countries[code], states[code], readings[code], code]) {
-    if (s != null && _katakana(s).toLowerCase().contains(q)) return true;
+/// 探す語に合うか(名前・読み・コード。大文字小文字とひらがな / カタカナは区別しない)。[regionMatch] の結果があるか。
+bool regionMatches(String code, String query) => regionMatch(code, query) != null;
+
+/// 探す語に合ったときの結果。[via] = 名前ではなく、その中の地名(日本の都道府県・市・区 / アメリカの州)に当たったときの地名。
+@immutable
+class RegionMatch {
+  const RegionMatch({this.via});
+  final String? via;
+}
+
+/// 探す語 [query] が地域 [code] に合うか (D-542 → D-573)。合わなければ null。比べるもの:
+/// - いまの表示の言語の名前・読み・コード(大文字小文字、ひらがな / カタカナ、記号は見ない)
+/// - 英語の名前(どの表示の言語でも `japan` / `france` で引ける。アクセントは見ない)
+/// - **ローマ字**: 日本語の名前の読みをローマ字にしたもの([romajiSearchKey]。ヘボン式 / 訓令式・長音の有無を問わない。
+///   `nihon` / `furansu` / `amerika`)
+/// - 国の中の地名: 日本は都道府県・政令指定都市・東京 23 区([jpPlaceAliasesJa]。`tokyo` / `shibuya` / `sapporo` / `東京`)、
+///   国の一覧のアメリカは州の名前(`california` / `カリフォルニア`)。当たった地名は [RegionMatch.via]。
+RegionMatch? regionMatch(String code, String query) {
+  final q = _plainKey(query);
+  if (q.isEmpty) return const RegionMatch();
+  final qr = RegExp(r'[a-zA-Z]').hasMatch(query) ? romajiSearchKey(query) : '';
+  final index = _regionIndex();
+  final keys = index.keys[code] ?? _RegionKeys.of(code);
+  if (keys.matches(q, qr)) return const RegionMatch();
+  for (final a in index.aliases[code] ?? const <_RegionAlias>[]) {
+    if (a.matches(q, qr)) return RegionMatch(via: a.label);
   }
-  return false;
+  return null;
+}
+
+/// 比べる形: ひらがな → カタカナ、小文字、アクセントを外し、文字と数字だけ(空白・記号・「・」は落とす)。
+String _plainKey(String s) {
+  const accents = {'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a', 'ç': 'c', 'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e', 'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i', 'ñ': 'n', 'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o', 'ø': 'o', 'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u', 'ý': 'y', 'ÿ': 'y', 'ō': 'o', 'ū': 'u', 'ā': 'a'};
+  final lower = _katakana(s.trim()).toLowerCase();
+  final folded = lower.split('').map((c) => accents[c] ?? c).join();
+  return folded.replaceAll(RegExp(r'[^\p{L}\p{N}]', unicode: true), '');
+}
+
+/// ローマ字の鍵で比べる語の短さの下限(2 文字の `ka` / `to` などは、ほとんどの名前に当たる)。
+const _romajiMinChars = 3;
+
+/// 英語の名前の語(語の頭から比べる。`us` が Australia / Russia の途中に当たらないように)。
+List<String> _englishWords(String? name) {
+  if (name == null || name.isEmpty) return const [];
+  final whole = _plainKey(name);
+  return [whole, for (final w in name.split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))) if (w.isNotEmpty) _plainKey(w)];
+}
+
+/// 地域 1 つの比べる鍵。
+class _RegionKeys {
+  _RegionKeys(this.plain, this.english, this.romaji);
+
+  /// 表示の言語の名前・読み・コード(部分一致)。
+  final List<String> plain;
+
+  /// 英語の名前の語(語の頭から)。
+  final List<String> english;
+
+  /// 日本語の読みのローマ字の鍵(部分一致、[_romajiMinChars] 文字から)。
+  final List<String> romaji;
+
+  bool matches(String q, String qr) =>
+      plain.any((k) => k.contains(q)) || english.any((w) => w.startsWith(q)) || (qr.length >= _romajiMinChars && romaji.any((k) => k.contains(qr)));
+
+  factory _RegionKeys.of(String code) {
+    final (countries, states, readings) = _tables;
+    final plain = <String>{
+      for (final s in [countries[code], states[code], readings[code], code])
+        if (s != null && s.isNotEmpty) _plainKey(s),
+    };
+    final english = {..._englishWords(regionNamesEn[code]), ..._englishWords(usStateNamesEn[code])};
+    // ローマ字は日本語の名前から(読み → 名前のカタカナ)。表示の言語が日本語でなくても引ける。
+    final ja = regionReadingsJa[code] ?? regionNamesJa[code] ?? usStateNamesJa[code];
+    final romaji = <String>{if (ja != null) kanaSearchKey(ja)}..remove('');
+    return _RegionKeys(plain.toList(), english.toList(), romaji.toList());
+  }
+}
+
+/// 国の中の地名 1 つ。
+class _RegionAlias {
+  _RegionAlias(this.label, this.plain, this.english, this.romaji);
+  final String label;
+  final List<String> plain;
+  final List<String> english;
+  final String romaji;
+
+  bool matches(String q, String qr) =>
+      plain.any((k) => k.contains(q)) || english.any((w) => w.startsWith(q)) || (qr.length >= _romajiMinChars && romaji.contains(qr));
+}
+
+/// 表示の言語ごとの鍵の表(地域の数 × 数語なので、言語が変わったときだけ作り直す)。
+({String tag, Map<String, _RegionKeys> keys, Map<String, List<_RegionAlias>> aliases})? _index;
+
+({String tag, Map<String, _RegionKeys> keys, Map<String, List<_RegionAlias>> aliases}) _regionIndex() {
+  final tag = RasqUiLocale.tag;
+  final cached = _index;
+  if (cached != null && cached.tag == tag) return cached;
+  final (_, states, _) = _tables;
+  final keys = <String, _RegionKeys>{for (final c in {...regionNamesJa.keys, ...usStateNamesJa.keys}) c: _RegionKeys.of(c)};
+  final aliases = <String, List<_RegionAlias>>{
+    'JP': [for (final (name, reading) in jpPlaceAliasesJa) _RegionAlias(name, [_plainKey(name), _plainKey(reading)], const [], kanaSearchKey(reading))],
+    regionSubdivided: [
+      for (final s in usStateNamesJa.keys)
+        _RegionAlias(
+          states[s] ?? usStateNamesJa[s]!,
+          {_plainKey(states[s] ?? ''), _plainKey(usStateNamesJa[s]!)}.where((k) => k.isNotEmpty).toList(),
+          _englishWords(usStateNamesEn[s]),
+          kanaSearchKey(usStateNamesJa[s]!),
+        ),
+    ],
+  };
+  return _index = (tag: tag, keys: keys, aliases: aliases);
 }
 
 String _katakana(String s) => String.fromCharCodes(s.runes.map((r) => r >= 0x3041 && r <= 0x3096 ? r + 0x60 : r));

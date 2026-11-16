@@ -88,3 +88,48 @@ const _digraphs = {
   'うぃ': 'wi', 'うぇ': 'we', 'うぉ': 'wo', // l10n-ignore
   'ゔぁ': 'va', 'ゔぃ': 'vi', 'ゔぇ': 've', 'ゔぉ': 'vo', // l10n-ignore
 };
+
+/// ローマ字の揺れをそろえた、探すための鍵 (D-573)。打った語と、かなの名前をローマ字にしたもの([kanaToRomaji])の両方にかけて、
+/// 部分一致で比べる。そろえるもの:
+/// - ヘボン式 / 訓令式 / 日本式: `shi`・`si` → `si`、`chi`・`ti` → `ti`、`tsu`・`tu` → `tu`、`fu`・`hu` → `hu`、`ji`・`zi`・`di` → `zi`、
+///   `sha`・`sya` → `sya`、`cha`・`tya` → `tya`、`ja`・`jya`・`zya` → `zya`、`du` → `zu`。
+/// - 長音: `ou`・`oo`・`oh`(子音の前 / 語末)・`ō` → `o`、`uu` → `u`、`aa` / `ii` / `ee` → 1 つ(`toukyou` も `tokyo` も `tokyo`)。
+/// - 促音・撥音: 重ねた子音は 1 つ(`sapporo` = `saporo`、`tch` = `ch`)、`m` + `b` / `m` / `p` は `n`(`shimbashi` = `shinbashi`)。
+/// - 大文字小文字・空白・記号は見ない。
+/// 英字の無い語は空(かな / 漢字はこの鍵では比べない)。
+String romajiSearchKey(String input) {
+  var s = input.toLowerCase();
+  const macron = {'ā': 'aa', 'ī': 'ii', 'ū': 'uu', 'ē': 'ee', 'ō': 'oo', 'â': 'aa', 'î': 'ii', 'û': 'uu', 'ê': 'ee', 'ô': 'oo'};
+  s = s.replaceAllMapped(RegExp('[āīūēōâîûêô]'), (m) => macron[m[0]]!);
+  s = s.replaceAll(RegExp('[^a-z]'), '');
+  if (s.isEmpty) return '';
+  s = s
+      .replaceAll('cch', 'tch')
+      .replaceAll('jy', 'j')
+      .replaceAll('sh', 'sy')
+      .replaceAll('ch', 'ty')
+      .replaceAll('ts', 't')
+      .replaceAll('j', 'zy')
+      .replaceAll('f', 'h')
+      .replaceAll('di', 'zi')
+      .replaceAll('du', 'zu')
+      .replaceAll('syi', 'si')
+      .replaceAll('tyi', 'ti')
+      .replaceAll('zyi', 'zi')
+      .replaceAllMapped(RegExp('m([bmp])'), (m) => 'n${m[1]}')
+      // 重ねた子音(促音 / 「んな」の nn)は 1 つ。
+      .replaceAllMapped(RegExp('([bcdghjklmnpqrstvwxyz])\\1+'), (m) => m[1]!);
+  // 長音(重なりが続くこともあるので、変わらなくなるまで)。
+  String prev;
+  do {
+    prev = s;
+    s = s.replaceAll('ou', 'o').replaceAll('oo', 'o').replaceAll('uu', 'u').replaceAll('aa', 'a').replaceAll('ii', 'i').replaceAll('ee', 'e');
+  } while (s != prev);
+  return s.replaceAll(RegExp('oh(?![aiueoy])'), 'o');
+}
+
+/// かなの名前の、探すための鍵([kanaToRomaji] → [romajiSearchKey])。変換できるかなが無ければ空。
+String kanaSearchKey(String kana) {
+  final r = kanaToRomaji(kana);
+  return r == null ? '' : romajiSearchKey(r);
+}

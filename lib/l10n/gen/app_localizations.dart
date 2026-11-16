@@ -4201,6 +4201,36 @@ abstract class AppLocalizations {
   /// **'公開で送る'**
   String get composeVisibilityPublicOnlySend;
 
+  /// コンポーザーの上にメディアをドラッグしている間に出す案内。{count} = あと何件付けられるか。
+  ///
+  /// In ja, this message translates to:
+  /// **'離すと添付します(あと {count} 件)'**
+  String composeDropHint(int count);
+
+  /// 添付がもういっぱいのときにドラッグしてきたときの案内。{max} = 上限の件数。
+  ///
+  /// In ja, this message translates to:
+  /// **'添付は {max} 件までです'**
+  String composeDropFull(int max);
+
+  /// 画像 / 動画 / 音声ではないファイルを落としたとき。{names} = ファイル名(読点で区切る)。
+  ///
+  /// In ja, this message translates to:
+  /// **'メディアではないので添付しませんでした: {names}'**
+  String composeDropNotMedia(String names);
+
+  /// 上限を超えて落としたとき。{max} = 上限、{count} = 入れなかった数。
+  ///
+  /// In ja, this message translates to:
+  /// **'添付は {max} 件までなので、{count} 件は入れませんでした'**
+  String composeDropOverLimit(int max, int count);
+
+  /// 絵文字ピッカーで検索しているときの節の見出し: 名前で見つかった Unicode(システム)の絵文字。
+  ///
+  /// In ja, this message translates to:
+  /// **'絵文字'**
+  String get composeEmojiSearchUnicodeSection;
+
   /// ファイル選択ダイアログの種類の名前
   ///
   /// In ja, this message translates to:
@@ -14258,6 +14288,36 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'TL にリストを足したい'**
   String get onboardingTourRaiBubble;
+
+  /// パスワードの欄の下に出す見出し。下に当たった要件のチップが並ぶ。
+  ///
+  /// In ja, this message translates to:
+  /// **'脆弱なパスワードです'**
+  String get passwordStrengthWeakTitle;
+
+  /// 弱いパスワードの要件のチップ: よく使われるパスワードの表にある。
+  ///
+  /// In ja, this message translates to:
+  /// **'よく使われるもの'**
+  String get passwordStrengthCommon;
+
+  /// 弱いパスワードの要件のチップ: 1 種類の字だけでできている。
+  ///
+  /// In ja, this message translates to:
+  /// **'同じ字の繰り返し'**
+  String get passwordStrengthRepeated;
+
+  /// 弱いパスワードの要件のチップ: ハンドル / メールアドレス / メールの @ より前と同じ。
+  ///
+  /// In ja, this message translates to:
+  /// **'ハンドルやメールと同じ'**
+  String get passwordStrengthSameAsIdentity;
+
+  /// サーバーが弱すぎると断ったときの 1 行。{reasons} = 当たった要件(「・」で区切る)。
+  ///
+  /// In ja, this message translates to:
+  /// **'脆弱なパスワードです({reasons})'**
+  String passwordStrengthWeakWith(String reasons);
 
   /// Web 版: 端末の中でモデルを動かすための部品をブラウザに読み込めなかったときの誤り
   ///

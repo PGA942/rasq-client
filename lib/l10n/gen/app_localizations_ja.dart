@@ -2551,6 +2551,29 @@ class AppLocalizationsJa extends AppLocalizations {
   String get composeVisibilityPublicOnlySend => '公開で送る';
 
   @override
+  String composeDropHint(int count) {
+    return '離すと添付します(あと $count 件)';
+  }
+
+  @override
+  String composeDropFull(int max) {
+    return '添付は $max 件までです';
+  }
+
+  @override
+  String composeDropNotMedia(String names) {
+    return 'メディアではないので添付しませんでした: $names';
+  }
+
+  @override
+  String composeDropOverLimit(int max, int count) {
+    return '添付は $max 件までなので、$count 件は入れませんでした';
+  }
+
+  @override
+  String get composeEmojiSearchUnicodeSection => '絵文字';
+
+  @override
   String get composeMediaPickTypeLabel => '動画 / 音声';
 
   @override
@@ -8583,6 +8606,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboardingTourRaiBubble => 'TL にリストを足したい';
+
+  @override
+  String get passwordStrengthWeakTitle => '脆弱なパスワードです';
+
+  @override
+  String get passwordStrengthCommon => 'よく使われるもの';
+
+  @override
+  String get passwordStrengthRepeated => '同じ字の繰り返し';
+
+  @override
+  String get passwordStrengthSameAsIdentity => 'ハンドルやメールと同じ';
+
+  @override
+  String passwordStrengthWeakWith(String reasons) {
+    return '脆弱なパスワードです($reasons)';
+  }
 
   @override
   String get platformWebRuntimeLoadFailed =>

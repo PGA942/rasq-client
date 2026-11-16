@@ -9,6 +9,8 @@ import WebKit
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var screenGlimpse: ScreenGlimpseBridge?
+  // 他のアプリからのメディアのドロップ (D-571)。desktop_drop を 0.9(iOS 対応)に上げたら消す。
+  private var mediaDrop: MediaDropBridge?
   private var webSnapshot: WebSnapshotBridge?
 
   override func application(
@@ -22,6 +24,9 @@ import WebKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "ScreenGlimpseBridge") {
       screenGlimpse = ScreenGlimpseBridge(messenger: registrar.messenger())
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "MediaDropBridge") {
+      mediaDrop = MediaDropBridge(messenger: registrar.messenger())
     }
     // アプリの中のブラウザの「この画面を探す」(D-552): 見えている範囲の写し。
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "WebSnapshotBridge") {

@@ -9,6 +9,7 @@ import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart' show centralSignedInAccountIdsProvider, orgateAccountProvider;
 import '../../l10n/l10n.dart';
+import '../settings/language_screen.dart' show LanguageQuickButton;
 import 'onboarding_steps.dart';
 
 /// RASQ アカウントの入口 (D-138 → D-301): SNS のログインより先に出る。
@@ -179,7 +180,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     Widget content({required bool narrow}) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Padding(padding: EdgeInsets.only(top: RasqSpacing.xxl, bottom: RasqSpacing.md), child: Center(child: RasqLogo(height: 44))),
+            // 表示の言語 (D-575): 左上。
+            const Padding(padding: EdgeInsets.only(top: RasqSpacing.sm), child: Align(alignment: Alignment.centerLeft, child: LanguageQuickButton())),
+            const Padding(padding: EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.md), child: Center(child: RasqLogo(height: 44))),
             Text(returning ? context.l10n.onboardingEntryLoginQuestion : context.l10n.onboardingEntryCreateQuestion, style: RasqTypography.title, textAlign: TextAlign.center),
             const SizedBox(height: RasqSpacing.md),
             Text(

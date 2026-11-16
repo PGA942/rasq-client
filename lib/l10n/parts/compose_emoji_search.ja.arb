@@ -1,0 +1,6 @@
+{
+  "composeEmojiSearchUnicodeSection": "絵文字",
+  "@composeEmojiSearchUnicodeSection": {
+    "description": "絵文字ピッカーで検索しているときの節の見出し: 名前で見つかった Unicode(システム)の絵文字。"
+  }
+}
