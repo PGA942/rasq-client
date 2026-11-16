@@ -533,7 +533,12 @@ Future<Uint8List> renderAudioFramePng({required List<double> spectrum, required 
 }
 
 /// この端末で変換できるか(pro_video_editor の 音声の取り出し / StopMotion は Android / iOS / macOS)。
-bool get audioVideoSupported => Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+bool get audioVideoSupported => debugAudioVideoSupportedOverride ?? (Platform.isAndroid || Platform.isIOS || Platform.isMacOS);
+
+/// テストで [audioVideoSupported] を決め打ちにする(null = 動かしている OS で決める)。`flutter test` は開発の Mac でも
+/// CI の Linux でも動くが、OS で分かれると Mac では変換を始めようとして待ち続け、同じテストが Mac でだけ落ちる。
+@visibleForTesting
+bool? debugAudioVideoSupportedOverride;
 
 /// 音声ファイル → 標本(WAV ならそのまま読む。ほかは端末ネイティブで WAV に取り出す)。
 Future<AudioPcm> loadAudioPcm(File audio, Directory workDir) async {

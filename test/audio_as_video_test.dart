@@ -251,7 +251,11 @@ void main() {
     expect(mediaMimeFor('memo.txt'), isNull);
   });
 
-  testWidgets('コンポーザー: 動画ボタン →「ファイルから」で音声が添付になる。加工を開くと、この端末(テスト = Linux)では変換できない旨を出す', (tester) async {
+  testWidgets('コンポーザー: 動画ボタン →「ファイルから」で音声が添付になる。加工を開くと、変換できない端末ではその旨を出す', (tester) async {
+    // 変換できるかは OS で決まる(Android / iOS / macOS)。テストを Mac で回しても Linux(CI)で回しても同じになるよう、
+    // 「できない」に決め打ちする(Mac では変換を始めようとして待ち続け、pumpAndSettle が時間切れになっていた)。
+    debugAudioVideoSupportedOverride = false;
+    addTearDown(() => debugAudioVideoSupportedOverride = null);
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
