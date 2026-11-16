@@ -55,6 +55,9 @@ class RaiPromptsJa extends RaiPrompts {
   String learnabilityInput({required String bio, required String fields, required String posts}) => '自己紹介: $bio\n項目: $fields\n投稿: $posts';
 
   @override
+  String instructionNearBlock(List<String> operations) => operations.isEmpty ? '\nここに無いボタンや設定の名前を作らないでください。分からないときは、設定の上の検索欄で探すか、RAi をアシスタントに切り替えて聞くよう勧めてください。' : '\n参考(近い操作。質問に合うときだけ使う):\n${operations.join('\n')}\nここに無いボタンや設定の名前を作らないでください。分からないときは、設定の上の検索欄で探すか、RAi をアシスタントに切り替えて聞くよう勧めてください。';
+
+  @override
   String get referenceContextHeading => '参考(操作リファレンス、近い順):';
 
   @override

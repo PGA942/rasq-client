@@ -8,7 +8,7 @@
   "trendExamplesAllSeen": "全部見ました",
   "trendExamplesAllSeenHint": "{allowLabel} {allow} / {denyLabel} {deny}。決定で保存します",
   "@trendExamplesAllSeenHint": {"description": "allowLabel / denyLabel はボタンの名前(好き / 好きではない など)、allow / deny はその数", "placeholders": {"allowLabel": {"type": "String"}, "allow": {"type": "int"}, "denyLabel": {"type": "String"}, "deny": {"type": "int"}}},
-  "trendExamplesIntro": "中身を見て、下の「{allowLabel}」/「{denyLabel}」(右 / 左スワイプでも)で例にします。新しいものは、例との近さで分けます。",
+  "trendExamplesIntro": "内容を見て「{allowLabel}」「{denyLabel}」を選びます(左右スワイプ可)。新しい項目は例との近さで判定します。",
   "@trendExamplesIntro": {"placeholders": {"allowLabel": {"type": "String"}, "denyLabel": {"type": "String"}}},
   "trendExamplesSummary": "{intro}({allowLabel} {allow} / {denyLabel} {deny}・残り {remaining, plural, other{{remaining} 件}})",
   "@trendExamplesSummary": {"description": "intro は説明の文(trendExamplesIntro など)", "placeholders": {"intro": {"type": "String"}, "allowLabel": {"type": "String"}, "allow": {"type": "int"}, "denyLabel": {"type": "String"}, "deny": {"type": "int"}, "remaining": {"type": "int"}}},

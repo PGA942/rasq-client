@@ -61,7 +61,7 @@
   "@notificationsActionReacted": {"description": "リアクションの通知の文。names は通知をした人の呼び名(notificationsActors… の文。太字で出る)", "placeholders": {"names": {"type": "String"}}},
   "notificationsActionReposted": "{names}があなたの投稿をリノートしました",
   "@notificationsActionReposted": {"description": "リノートの通知の文。names は通知をした人の呼び名(太字で出る)", "placeholders": {"names": {"type": "String"}}},
-  "notificationsActionPollEnded": "{names}が投票が終了しました",
+  "notificationsActionPollEnded": "{names}の投票が終了しました",
   "@notificationsActionPollEnded": {"description": "投票が締め切られた通知の文。names は投票を作った人などの呼び名(太字で出る。空のこともある)", "placeholders": {"names": {"type": "String"}}},
   "notificationsActionOther": "{names}が通知",
   "@notificationsActionOther": {"description": "種類の分からない通知の文。names は通知をした人の呼び名(太字で出る。空のこともある)", "placeholders": {"names": {"type": "String"}}},

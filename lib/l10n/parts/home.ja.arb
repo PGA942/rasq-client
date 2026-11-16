@@ -10,7 +10,7 @@
   "homeCreate": "作成",
   "homeClose": "閉じる",
   "homeFabEditorTitle": "＋ のボタン",
-  "homeFabEditorHelp": "下のボタンを枠へドラッグすると入ります(枠どうしは入れ替え、下の列へ戻すと外れます)。内側に 3 つ、外側に 4 つまで ・ {count} / {max}",
+  "homeFabEditorHelp": "下のボタンを枠へドラッグで配置(枠内は入替、下へ戻すと解除)。内側 3 つ・外側 4 つまで ・ {count} / {max}",
   "@homeFabEditorHelp": {"description": "count は置いている数、max は置ける数", "placeholders": {"count": {"type": "int"}, "max": {"type": "int"}}},
   "homeHeaderCollapse": "ヘッダーをしまう",
   "homeTimelineTemp": "タイムラインを一時変更",

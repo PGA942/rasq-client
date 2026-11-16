@@ -30,6 +30,6 @@
   "pluginsPaintColorSemantics": "色 {color}",
   "@pluginsPaintColorSemantics": {"description": "color は #rrggbb の色の値", "placeholders": {"color": {"type": "String"}}},
   "pluginsPaintNibMili": "ミリペン",
-  "pluginsPaintNibKabura": "カプラペン",
+  "pluginsPaintNibKabura": "カブラペン",
   "pluginsPaintNibBrush": "ブラシニブ"
 }

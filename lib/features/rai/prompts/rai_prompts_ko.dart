@@ -54,6 +54,9 @@ class RaiPromptsKo extends RaiPrompts {
   String learnabilityInput({required String bio, required String fields, required String posts}) => '자기소개: $bio\n항목: $fields\n게시물: $posts';
 
   @override
+  String instructionNearBlock(List<String> operations) => operations.isEmpty ? '\n여기에 없는 버튼이나 설정 이름을 지어내지 마세요. 모를 때는 설정 위쪽의 검색창에서 찾거나, RAi 를 어시스턴트로 바꿔서 물어보도록 권해 주세요.' : '\n참고(가까운 조작. 질문에 맞을 때만 사용):\n${operations.join('\n')}\n여기에 없는 버튼이나 설정 이름을 지어내지 마세요. 모를 때는 설정 위쪽의 검색창에서 찾거나, RAi 를 어시스턴트로 바꿔서 물어보도록 권해 주세요.';
+
+  @override
   String get referenceContextHeading => '참고(조작 레퍼런스, 가까운 순):';
 
   @override

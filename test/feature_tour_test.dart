@@ -210,7 +210,7 @@ void main() {
       await next(tester);
       await next(tester);
       expect(find.byKey(const ValueKey('tour.title.trend')), findsOneWidget);
-      expect(find.textContaining('恐れ・嫌悪・怒りを 45% までに抑えている'), findsOneWidget);
+      expect(find.textContaining('恐れ・嫌悪・怒りを 45% 以下に抑え'), findsOneWidget);
       final radar = tester.widget<RasqRadarChart>(find.byKey(const ValueKey('tour.radar')));
       expect((radar.values['fear'], radar.values['disgust'], radar.values['anger'], radar.values['joy']), (0.45, 0.45, 0.45, 1.0));
       expect(radar.onChanged, isNull, reason: '絵なので触れない');

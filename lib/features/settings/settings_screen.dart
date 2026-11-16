@@ -19,6 +19,7 @@ import 'settings_search.dart';
 import 'settings_section_screen.dart' show openSettingsRow;
 import 'settings_sections.dart';
 import '../../l10n/l10n.dart';
+import '../../app/feature_flags.dart';
 
 /// 設定(ホーム) — 全ての設定 (ワイヤーフレーム P7). SNS plugin sections appear per
 /// installed SNS plugin; 第一階層は `settings/:section`.
@@ -103,7 +104,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onDropdownTap: () => setState(() => _toggled = !_toggled),
               onReset: _sections.isEmpty ? null : () => setState(_sections.clear),
               genreChips: [
-                for (final MapEntry(key: id, value: section) in settingsSectionsOf(l).entries)
+                for (final MapEntry(key: id, value: section) in settingsSectionsOf(l, flags: ref.watch(featureFlagsProvider)).entries)
                   RasqFilterChipItem(label: section.title, selected: _sections.contains(id), onTap: () => setState(() => _sections.contains(id) ? _sections.remove(id) : _sections.add(id))),
               ],
               barTrailing: _query.text.isEmpty ? null : RasqIconButton(key: const ValueKey('settings.search.clear'), icon: Icons.close, size: 18, tooltip: l.settingsHomeSearchClear, onPressed: _query.clear),

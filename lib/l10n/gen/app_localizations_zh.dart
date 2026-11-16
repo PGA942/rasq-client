@@ -109,6 +109,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appNavShortcutLoginHint => '登录 SNS 账号后即可使用';
 
   @override
+  String get atmosThreadCaption => 'プロモーション · このスレッドだけのテーマ';
+
+  @override
   String get backendOauthNoToken => '无法获取访问令牌';
 
   @override
@@ -148,10 +151,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backendSecurityBadCode => '验证码错误或已过期';
-
-  @override
-  String get backendSecurityWeakPassword =>
-      '此密码过于简单（不能使用常见密码、重复字符，或与用户名、邮箱相同的密码）';
 
   @override
   String get backendSecurityShortPassword => '密码至少需要 8 个字符';
@@ -1990,6 +1989,183 @@ class AppLocalizationsZh extends AppLocalizations {
   String collectionsAlreadyIn(String name) {
     return '已在“$name”中';
   }
+
+  @override
+  String get communityTagTitle => 'コミュニティのハッシュタグ';
+
+  @override
+  String get communityTagRowSubtitle => '自分のコミュニティのタグにテーマを付ける';
+
+  @override
+  String get communityTagPageCaption => 'コミュニティのテーマ';
+
+  @override
+  String get communityTagIntro =>
+      '自分のコミュニティのハッシュタグにテーマを付けられます。タグのページを開いた人に、そのページだけテーマで表示されます。';
+
+  @override
+  String get communityTagRequirements => '申請の条件';
+
+  @override
+  String get communityTagReqSubscription => 'サブスクに入っている';
+
+  @override
+  String get communityTagSubscribed => '加入しています';
+
+  @override
+  String communityTagSubscribedPlan(String plan) {
+    return '加入しています($plan)';
+  }
+
+  @override
+  String get communityTagNotSubscribed => '加入していません';
+
+  @override
+  String get communityTagSeeSubscription => 'サブスクを見る';
+
+  @override
+  String get communityTagReqPromo => 'タグを宣伝した投稿';
+
+  @override
+  String get communityTagReqPromoHint => '自分の公開の投稿で、そのタグを含むものを 1 つ選んで添えます';
+
+  @override
+  String get communityTagMine => '自分の申請';
+
+  @override
+  String get communityTagNone => 'まだ申請していません';
+
+  @override
+  String get communityTagApply => '申請する';
+
+  @override
+  String get communityTagNeedSubscription => '申請するにはサブスクへの加入が必要です';
+
+  @override
+  String communityTagLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '同時に申請できるタグは $count つまでです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get communityTagStatePending => '審査中';
+
+  @override
+  String get communityTagStateApproved => '配信中';
+
+  @override
+  String get communityTagStateRejected => '承認されませんでした';
+
+  @override
+  String get communityTagStateSuspended => '停止中';
+
+  @override
+  String get communityTagStateWithdrawn => '取り下げ済み';
+
+  @override
+  String get communityTagReasonPromoMissing => '宣伝の投稿が見つかりません';
+
+  @override
+  String get communityTagReasonTagTaken => 'このタグはほかのコミュニティが使っています';
+
+  @override
+  String get communityTagReasonSubscription => 'サブスクが有効ではありません';
+
+  @override
+  String get communityTagReasonTheme => 'テーマが基準に合いませんでした';
+
+  @override
+  String get communityTagReasonPolicy => 'ガイドラインに合いませんでした';
+
+  @override
+  String get communityTagWithdraw => '取り下げる';
+
+  @override
+  String communityTagWithdrawConfirmTitle(String tag) {
+    return '#$tag の申請を取り下げますか?';
+  }
+
+  @override
+  String get communityTagWithdrawConfirmMessage => '配信中のテーマも止まります';
+
+  @override
+  String get communityTagCancel => 'やめる';
+
+  @override
+  String get communityTagLoadFailed => '読み込めませんでした';
+
+  @override
+  String get communityTagUnavailable => 'この機能はいま使えません';
+
+  @override
+  String get communityTagSendFailed => '送れませんでした。時間をおいてもう一度お試しください';
+
+  @override
+  String get communityTagSent => '申請しました。結果はこの画面に出ます';
+
+  @override
+  String get communityTagApplyTitle => 'ハッシュタグのテーマを申請';
+
+  @override
+  String get communityTagStepTag => '1. ハッシュタグ';
+
+  @override
+  String get communityTagTagHint => 'コミュニティのタグ';
+
+  @override
+  String get communityTagTagInvalid => '空白や記号を含まない 64 字までのタグにしてください';
+
+  @override
+  String get communityTagStepTheme => '2. テーマ';
+
+  @override
+  String get communityTagPresetNight => '夜空';
+
+  @override
+  String get communityTagPresetSakura => '桜';
+
+  @override
+  String get communityTagPresetSea => '海';
+
+  @override
+  String get communityTagPresetRing => 'シンプル';
+
+  @override
+  String get communityTagAccent => '強調色';
+
+  @override
+  String get communityTagPreview => 'プレビュー';
+
+  @override
+  String get communityTagPreviewBody => 'タグのページの投稿は、このように表示されます。';
+
+  @override
+  String communityTagThemeNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '背景の飾りは $count つまで。テーマは審査のあとで配信されます',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get communityTagStepPromo => '3. 宣伝の投稿';
+
+  @override
+  String get communityTagFindPromo => '自分の投稿から探す';
+
+  @override
+  String communityTagNoPromo(String tag) {
+    return '#$tag を含む公開の投稿が見つかりません。先にタグを宣伝する投稿をしてください';
+  }
+
+  @override
+  String get communityTagSubmit => '申請する';
 
   @override
   String get composeTargetNormalTitle => '撰写帖子';
@@ -7907,9 +8083,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get onboardingPasswordTooLong => '最多 256 个字符';
-
-  @override
-  String get onboardingPasswordRepeated => '不能使用重复的同一个字符';
 
   @override
   String get onboardingTermsOutdated => '使用条款已更新。请更新应用后重新注册';
@@ -20642,10 +20815,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get backendSecurityBadCode => '驗證碼錯誤或已過期';
 
   @override
-  String get backendSecurityWeakPassword =>
-      '此密碼過於簡單（不能使用常見密碼、重複字元，或與帳號代稱、電子郵件相同的密碼）';
-
-  @override
   String get backendSecurityShortPassword => '密碼至少需要 8 個字元';
 
   @override
@@ -27979,9 +28148,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get onboardingPasswordTooLong => '最多 256 個字元';
-
-  @override
-  String get onboardingPasswordRepeated => '不能使用重複的同一個字元';
 
   @override
   String get onboardingTermsOutdated => '使用條款已更新。請更新 App 後重新註冊';

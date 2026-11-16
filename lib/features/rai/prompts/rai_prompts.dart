@@ -75,6 +75,10 @@ abstract class RaiPrompts {
   /// 推論サーバーへ添えるリファレンスの見出し (D-216)。
   String get referenceContextHeading;
 
+  /// インストラクションで操作リファレンスに当たらなかったとき (D-569): 閾値には届かないが近い操作を添え、**画面に無い
+  /// ボタン・設定を作らない**よう頼む。[operations] は `- 見出し: 手順 → 手順` の行(空なら近いものが無い)。先頭は改行。
+  String instructionNearBlock(List<String> operations);
+
   /// 関数の一覧(system に出す 1 行ずつ)。行の形と関数名・引数名は全言語で同じ。
   List<String> get functionUsage;
 

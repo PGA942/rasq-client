@@ -54,6 +54,9 @@ class RaiPromptsZhHant extends RaiPrompts {
   String learnabilityInput({required String bio, required String fields, required String posts}) => '自我介紹: $bio\n項目: $fields\n貼文: $posts';
 
   @override
+  String instructionNearBlock(List<String> operations) => operations.isEmpty ? '\n不要編造這裡沒有的按鈕或設定名稱。不確定時,請建議在設定頂部的搜尋框中查找,或將 RAi 切換為助理後再提問。' : '\n參考(相近的操作。僅在符合問題時使用):\n${operations.join('\n')}\n不要編造這裡沒有的按鈕或設定名稱。不確定時,請建議在設定頂部的搜尋框中查找,或將 RAi 切換為助理後再提問。';
+
+  @override
   String get referenceContextHeading => '參考(操作參考,依相關度排序):';
 
   @override

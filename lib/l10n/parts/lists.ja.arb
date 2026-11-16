@@ -111,7 +111,7 @@
   "@listsImportFeedsHelp": {"description": "リストのインポートの画面の説明(Bluesky のカスタムフィード)"},
   "listsImportRasqHelp": "RASQ リストは「取り込む」でホームのタイムラインへ(リストをフォローします)。取り込めるのは、リスト内の人の情報を取れるリストだけです。",
   "@listsImportRasqHelp": {"description": "リストのインポートの画面の説明(RASQ リスト)。「取り込む」は行の右のボタン"},
-  "listsImportGenericHelp": "リストを検索して一括操作を行うことができます。",
+  "listsImportGenericHelp": "リストを検索して一括操作できます。",
   "@listsImportGenericHelp": {"description": "リストのインポートの画面の説明(フィードも RASQ リストも探せないとき)"},
   "listsImportLocal": "ローカルからインポート",
   "@listsImportLocal": {"description": "リストのインポートの画面のリンクと、押すと出る知らせの見出し(ファイルから読み込む)"},

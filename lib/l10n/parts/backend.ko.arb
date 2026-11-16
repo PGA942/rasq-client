@@ -12,7 +12,6 @@
   "backendSecurityEmailUsed": "이 이메일 주소는 다른 계정에서 사용 중입니다",
   "backendSecurityBadCredentials": "핸들(이메일) 또는 비밀번호가 올바르지 않습니다",
   "backendSecurityBadCode": "코드가 올바르지 않거나 만료되었습니다",
-  "backendSecurityWeakPassword": "이 비밀번호는 너무 약합니다(자주 쓰이는 비밀번호, 같은 문자의 반복, 핸들이나 이메일과 같은 비밀번호는 사용할 수 없습니다)",
   "backendSecurityShortPassword": "비밀번호는 8자 이상이어야 합니다",
   "backendSecurityBadEmail": "이메일 주소 형식이 올바르지 않습니다",
   "backendSecurityWrongPassword": "현재 비밀번호가 올바르지 않습니다",

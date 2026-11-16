@@ -158,7 +158,7 @@ void main() {
     expect(find.text('EmoM の閾値'), findsWidgets);
     expect(tester.widget<Text>(find.byKey(const ValueKey('emom.value'))).data, '50');
     expect(find.text('閾値を公開する(制限の目安に使う)'), findsOneWidget);
-    expect(find.textContaining('あなたの値を個別に見ることはありません'), findsOneWidget);
+    expect(find.textContaining('個人の値は見ません'), findsOneWidget);
     expect(tester.widget<Switch>(find.descendant(of: find.byKey(const ValueKey('emom.disclose')), matching: find.byType(Switch))).value, isFalse);
     expect(find.text('公開していません'), findsOneWidget);
     expect(calls.where((x) => x.contains('emom')), isEmpty);

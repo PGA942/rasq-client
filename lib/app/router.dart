@@ -95,6 +95,7 @@ import '../shell/rasq_shell.dart';
 import '../shell/scroll_to_top.dart' show ScrollToTopScope;
 import 'providers.dart';
 import 'rasq_links.dart';
+import '../features/theme/tag_themes/community_tag_screen.dart';
 
 /// Route names (keep in sync with deep links: Push通知→投稿詳細, ブックマーク等).
 abstract final class Routes {
@@ -187,6 +188,9 @@ abstract final class Routes {
 
   /// バグレポート (D-554): 端末に残った例外を見る / 書き出す。設定 → RASQ について。
   static const settingsBugReport = '/settings/bug-report';
+
+  /// コミュハッシュタグのテーマの申請 (D-567、既定は無効。無効のときは「使えません」だけ)。
+  static const settingsCommunityTags = '/settings/community-tags';
 
   /// 通知専用のアクセストークン (D-239)。
   static const settingsNotifyToken = '/settings/notify-token';
@@ -463,6 +467,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'server', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BackendSettingsScreen()),
             GoRoute(path: 'legal', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LegalScreen()),
             GoRoute(path: 'bug-report', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BugReportScreen()),
+            GoRoute(path: 'community-tags', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const CommunityTagScreen()),
             GoRoute(path: 'notify-token', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const NotifyTokenScreen()),
             GoRoute(path: 'rasq-profile', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RasqProfileEditScreen()),
             GoRoute(path: 'rasq-verify/:key', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqSnsVerifyScreen(accountKey: s.pathParameters['key']!)),

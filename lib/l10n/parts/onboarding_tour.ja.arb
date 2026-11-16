@@ -9,7 +9,7 @@
   "onboardingTourPageTimelinePicture": "「SNS タイムライン」「トレンドを取得」「Today」のノードが縦に並んだ絵",
   "@onboardingTourPageTimelinePicture": {"description": "機能の紹介のページの絵の説明(読み上げ)"},
   "onboardingTourPageTrendTitle": "トレンドと Today",
-  "onboardingTourPageTrendBody": "いま話題の言葉と投稿を、トレンドと Today で見られます。はじめは恐れ・嫌悪・怒りを 45% までに抑えているので、強い怒りや嫌悪の投稿は、おすすめ / トレンド / Today / 関連 TL で下がるか、出なくなります。",
+  "onboardingTourPageTrendBody": "話題の言葉と投稿をトレンドや Today で見られます。初期設定では恐れ・嫌悪・怒りを 45% 以下に抑え、刺激の強い投稿を控えめに表示します。",
   "onboardingTourPageTrendNoteSupervised": "この上限はいつでも変えられます。見守り中は、保護者の設定でさらに抑えます。",
   "onboardingTourPageTrendNote": "この上限はいつでも変えられます。",
   "onboardingTourPageTrendPicture": "刺激性のレーダー",

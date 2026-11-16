@@ -20,8 +20,8 @@
     "description": "地域の一覧で、RASQ を提供していない地域の横に出す短い印。"
   },
   "regionUnavailableTitle": "お住まいの地域では、いまは RASQ を提供していません",
-  "regionUnavailableBody": "RASQ はいま、提供する地域を限っています。お住まいの地域では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。",
-  "regionUnavailableBodyWith": "RASQ はいま、提供する地域を限っています。{region} では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。",
+  "regionUnavailableBody": "現在、お住まいの地域では RASQ アカウントを作成できません(提供地域は今後変わる場合があります)。",
+  "regionUnavailableBodyWith": "現在、{region} では RASQ アカウントを作成できません(提供地域は今後変わる場合があります)。",
   "@regionUnavailableBodyWith": {
     "description": "提供していない地域を選んだときの説明。理由(法律など)には触れない。{region} = 選んだ地域の名前。",
     "placeholders": {

@@ -54,6 +54,9 @@ class RaiPromptsEn extends RaiPrompts {
   String learnabilityInput({required String bio, required String fields, required String posts}) => 'Bio: $bio\nFields: $fields\nPosts: $posts';
 
   @override
+  String instructionNearBlock(List<String> operations) => operations.isEmpty ? '\nDo not make up names of buttons or settings that are not listed here. If you are unsure, suggest searching with the box at the top of Settings, or switching RAi to the assistant to ask.' : '\nReference (closest operations; use only if they fit the question):\n${operations.join('\n')}\nDo not make up names of buttons or settings that are not listed here. If you are unsure, suggest searching with the box at the top of Settings, or switching RAi to the assistant to ask.';
+
+  @override
   String get referenceContextHeading => 'Reference (operation reference, closest first):';
 
   @override

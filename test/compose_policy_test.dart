@@ -84,7 +84,7 @@ void main() {
       final v = evaluateCompose(p, const ComposeInput(texts: ['お前バーカ', 'お前バーカ(加工)']));
       expect(v.blocked, isTrue);
       expect(v.first!.mode, 'child-safe');
-      expect(v.first!.message, '保護者の設定により、「暴言・嫌がらせ」に当たる内容は送れません。書き換えてください');
+      expect(v.first!.message, '保護者の設定により、「暴言・嫌がらせ」に該当する内容は送れません');
       expect(v.blockedTypes, [(type: 'harassment', mode: 'child-safe'), (type: 'harassment', mode: 'sanction')]);
       // 範囲は入力欄の本文(先頭)にだけ。
       expect((v.first!.start, v.first!.end), (2, 5));

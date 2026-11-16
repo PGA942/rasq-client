@@ -1,10 +1,10 @@
 {
   "@@locale": "ja",
-  "admissionBannerText": "審査中です。自分の SNS はこのまま使えます。公開の機能は審査が通ると使えます",
+  "admissionBannerText": "審査中です。公開機能のみ制限中です。",
   "@admissionBannerText": {
     "description": "入場の審査を通っていないときの帯の文。止められた機能を使おうとしたとき(403 admission_pending)の案内にも使う"
   },
-  "admissionRejectedMessage": "この RASQ アカウントの登録は承認されませんでした。公開の機能は使えません",
+  "admissionRejectedMessage": "登録が承認されませんでした。公開機能は使えません",
   "@admissionRejectedMessage": {
     "description": "入場の審査で断られたアカウントが、止められた機能を使おうとしたときの案内"
   },
@@ -12,11 +12,11 @@
   "@admissionBannerClose": {
     "description": "ホームの審査の帯を閉じるボタン(この起動のあいだ)"
   },
-  "admissionWaitCapacity": "登録の枠が埋まっているため、順番を待っています",
+  "admissionWaitCapacity": "登録枠が埋まっているため順番待ちです",
   "@admissionWaitCapacity": {
     "description": "枠待ち(人数の枠が埋まっている)のときの帯の見出し"
   },
-  "admissionWaitCapacityPosition": "登録の枠が埋まっているため、順番を待っています(目安: {position} 番目)",
+  "admissionWaitCapacityPosition": "登録枠が埋まっているため順番待ちです(目安: {position} 番目)",
   "@admissionWaitCapacityPosition": {
     "description": "枠待ちの帯の見出し。position は順番の目安",
     "placeholders": {
@@ -41,7 +41,7 @@
   "@admissionCodeAccepted": {
     "description": "招待コードを受け付けたときの知らせ"
   },
-  "admissionCodeUnknown": "この招待コードは見つかりません。入力を確かめてください",
+  "admissionCodeUnknown": "招待コードが見つかりません。",
   "@admissionCodeUnknown": {
     "description": "招待コードが効かない: 見つからない (reason = unknown)"
   },
@@ -49,11 +49,11 @@
   "@admissionCodeExpired": {
     "description": "招待コードが効かない: 期限切れ (reason = expired)"
   },
-  "admissionCodeUsedUp": "この招待コードは使える人数に達しています",
+  "admissionCodeUsedUp": "この招待コードは利用上限に達しています",
   "@admissionCodeUsedUp": {
     "description": "招待コードが効かない: 使い切った (reason = used_up)"
   },
-  "admissionCodeRevoked": "この招待コードは使えなくなっています",
+  "admissionCodeRevoked": "この招待コードは無効です",
   "@admissionCodeRevoked": {
     "description": "招待コードが効かない: 止められた (reason = revoked)"
   },
@@ -139,6 +139,10 @@
   "@appNavShortcutLoginHint": {
     "description": "ログインしていないときにショートカットを押した案内"
   },
+  "atmosThreadCaption": "プロモーション · このスレッドだけのテーマ",
+  "@atmosThreadCaption": {
+    "description": "RASQ Atmos のスレッドの上の帯の一言(広告であることを示す)"
+  },
   "backendOauthNoToken": "アクセストークンを取得できませんでした",
   "@backendOauthNoToken": {
     "description": "SNS のブラウザでの認証のあと、アクセストークンが返らなかったときの誤り"
@@ -169,7 +173,7 @@
       }
     }
   },
-  "backendSecurityPasswordlessRemoved": "メールのコードだけのログインは終わりました。ハンドル(またはメール)とパスワードでログインしてください",
+  "backendSecurityPasswordlessRemoved": "メールコードのみのログインは終了しました。ハンドル(またはメール)とパスワードでログインしてください",
   "@backendSecurityPasswordlessRemoved": {
     "description": "RASQ アカウントのログイン: メールのコードだけのログインが廃止されたとき"
   },
@@ -177,7 +181,7 @@
   "@backendSecuritySecondFactor": {
     "description": "RASQ アカウントのログイン: 2 段階目の確認コードが要るとき"
   },
-  "backendSecurityTooMany": "試行が多すぎます。しばらく待ってから、やり直してください",
+  "backendSecurityTooMany": "試行回数が多すぎます。しばらくしてからお試しください",
   "@backendSecurityTooMany": {
     "description": "RASQ アカウントの操作: 試しすぎたとき"
   },
@@ -197,10 +201,6 @@
   "@backendSecurityBadCode": {
     "description": "RASQ アカウントの操作: 確認コードが違うか古いとき"
   },
-  "backendSecurityWeakPassword": "このパスワードは弱すぎます(よく使われるもの / 同じ字の繰り返し / ハンドルやメールと同じもの は使えません)",
-  "@backendSecurityWeakPassword": {
-    "description": "RASQ アカウントの操作: パスワードが弱いとき"
-  },
   "backendSecurityShortPassword": "パスワードは 8 文字以上にしてください",
   "@backendSecurityShortPassword": {
     "description": "RASQ アカウントの操作: パスワードが短いとき"
@@ -213,19 +213,19 @@
   "@backendSecurityWrongPassword": {
     "description": "RASQ アカウントの操作: いまのパスワードが違うとき"
   },
-  "backendSecurityNoPassword": "このアカウントにはパスワードがありません。いまのメールに届く確認コードで確かめてください",
+  "backendSecurityNoPassword": "パスワード未設定のアカウントです。メールに届く確認コードで認証してください",
   "@backendSecurityNoPassword": {
     "description": "RASQ アカウントの操作: パスワードの無いアカウントで、パスワードでの確かめを求めたとき"
   },
-  "backendSecurityConfirmRequired": "この操作には、いまのパスワードか、いまのメールに届く確認コードが要ります",
+  "backendSecurityConfirmRequired": "現在のパスワードかメールの確認コードが必要です",
   "@backendSecurityConfirmRequired": {
     "description": "RASQ アカウントの操作: 本人の確かめが要るとき"
   },
-  "backendRoomClosed": "ルームに入れませんでした(ルームが閉じているか、見つかりません)",
+  "backendRoomClosed": "ルームに入れません",
   "@backendRoomClosed": {
     "description": "ASTell のルームにつなげなかったとき(ルームが無い)"
   },
-  "backendRoomForbidden": "ルームに入れませんでした(このアカウントでは参加できません)",
+  "backendRoomForbidden": "このアカウントではルームに参加できません",
   "@backendRoomForbidden": {
     "description": "ASTell のルームにつなげなかったとき(参加できない)"
   },
@@ -332,7 +332,7 @@
   "@bookmarksEmptyHint": {
     "description": "ブックマークが空のときの補足。🔖 は投稿のブックマークのボタン"
   },
-  "bookmarksEmptyNoSnsHint": "このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます",
+  "bookmarksEmptyNoSnsHint": "このサービスにブックマークはありません。投稿の 🔖 長押しで RASQ クリップに追加できます",
   "@bookmarksEmptyNoSnsHint": {
     "description": "ブックマークが空で、いまの SNS にブックマークの機能が無いときの補足"
   },
@@ -668,11 +668,11 @@
   "@childSafeErrorHandleTaken": {
     "description": "子のアカウントを作るときのハンドルの重複"
   },
-  "childSafeErrorAlreadyLinked": "もう見守られている(か、だれかを見守っている)アカウントです",
+  "childSafeErrorAlreadyLinked": "すでに見守られているか、見守り中のアカウントです",
   "@childSafeErrorAlreadyLinked": {
     "description": "つなげないアカウント(サーバーの 409)"
   },
-  "childSafeErrorCodeGone": "コードの期限が切れたか、もう使われています。保護者に出し直してもらってください",
+  "childSafeErrorCodeGone": "コードが期限切れか使用済みです。保護者に再発行してもらってください",
   "@childSafeErrorCodeGone": {
     "description": "コードが使えない(サーバーの 410)"
   },
@@ -680,7 +680,7 @@
   "@childSafeErrorDevice": {
     "description": "子のログインを端末の理由で断られた"
   },
-  "childSafeErrorTooMany": "試行が多すぎます。しばらく待ってから、やり直してください",
+  "childSafeErrorTooMany": "試行回数が多すぎます。しばらくしてからお試しください",
   "@childSafeErrorTooMany": {
     "description": "試行の回数の上限(サーバーの 429)"
   },
@@ -808,7 +808,7 @@
   "@childSafeComposeNoTopicsAllowed": {
     "description": "投稿の話題のホワイトリストが空のとき"
   },
-  "childSafeComposeTopicsOnly": "保護者の設定により、決められた話題({topics})の投稿だけ送れます。話題に合うように書いてください",
+  "childSafeComposeTopicsOnly": "保護者の設定により、許可された話題({topics})のみ投稿できます",
   "@childSafeComposeTopicsOnly": {
     "description": "投稿の話題のホワイトリストに当たらない。topics は話題(5 つまで)",
     "placeholders": {
@@ -817,7 +817,7 @@
       }
     }
   },
-  "childSafeComposeTopicDenied": "保護者の設定により、「{topic}」の話題の投稿は送れません。書き換えてください",
+  "childSafeComposeTopicDenied": "保護者の設定により、「{topic}」の話題は投稿できません",
   "@childSafeComposeTopicDenied": {
     "description": "投稿の話題のブラックリストに当たった。topic は当たった話題",
     "placeholders": {
@@ -835,7 +835,7 @@
       }
     }
   },
-  "childSafeComposeStimulus": "保護者の設定({level})により、この表現{word}は送れません。言い換えてください",
+  "childSafeComposeStimulus": "保護者の設定({level})により、この表現{word}は使えません",
   "@childSafeComposeStimulus": {
     "description": "強い言葉で止めた。level は判定の強さ、word は当たった語(「…」の形。無ければ空)",
     "placeholders": {
@@ -848,7 +848,7 @@
     }
   },
   "childSafeBlockedThisPlugin": "保護者がこのプラグインを止めています",
-  "childSafeDevPreviewUnknown": "保護者が選んだプラグインだけ動かせます(この読み込み方では、どのプラグインか確かめられません)",
+  "childSafeDevPreviewUnknown": "保護者が許可したプラグインのみ実行できます(この方法では特定できません)",
   "@childSafeDevPreviewUnknown": {
     "description": "どのプラグインか分からない読み込み方(素の .wasm など)で動かそうとした"
   },
@@ -856,13 +856,13 @@
   "childSafeNearDenyPlugin": "保護者が止めている例に近いプラグインです",
   "childSafeInstallListedOnly": "保護者が選んだプラグインだけ入れられます",
   "childSafeInstallExamplesOnly": "保護者が選んだプラグインと、許す例に近いものだけ入れられます",
-  "childSafeCacheUnverified": "控えた制限の署名を確かめられません。オンラインで取り直してください",
+  "childSafeCacheUnverified": "制限の署名を検証できません。オンラインで再取得してください",
   "@childSafeCacheUnverified": {
     "description": "端末に控えた保護者の設定の署名が合わない"
   },
-  "childSafeNewSettingsUnverified": "保護者の新しい設定の署名を確かめられませんでした(前の設定のまま)",
+  "childSafeNewSettingsUnverified": "新しい設定の署名を検証できませんでした(前の設定を維持)",
   "childSafeComposeLocked": "保護者が設定を決めるまで送れません",
-  "childSafeComposeDailyLimit": "{count, plural, other{今日はもう {count} 件送りました(保護者が決めた 1 日の数)。また明日}}",
+  "childSafeComposeDailyLimit": "{count, plural, other{今日の投稿上限({count} 件)に達しました}}",
   "@childSafeComposeDailyLimit": {
     "description": "1 日に送れる投稿の数に達した。count はその数",
     "placeholders": {
@@ -963,7 +963,7 @@
   "childSafeGuardianHandleHint": "ハンドル(英数字)",
   "childSafeGuardianNameHint": "表示名",
   "childSafeGuardianCreateButton": "作る",
-  "childSafeGuardianNewLoginCodeTitle": "@{handle} のログインのコード(子の端末の「保護者からのコードでログイン」に入れるか、子の端末のカメラで QR を読む)",
+  "childSafeGuardianNewLoginCodeTitle": "@{handle} のログインコード(子の端末で入力するか QR を読み取ります)",
   "@childSafeGuardianNewLoginCodeTitle": {
     "placeholders": {
       "handle": {
@@ -972,9 +972,9 @@
     }
   },
   "childSafeGuardianPair": "コードでつなぐ",
-  "childSafeGuardianPairSubtitle": "子がもう持っている RASQ アカウントを、子の端末の「チャイルドモード」でつなぎます(10 分・1 回だけ)",
-  "childSafeGuardianPairCodeTitle": "つなぐコード(子の端末の「チャイルドモード」に入れるか、子の端末のカメラで QR を読む)",
-  "childSafeGuardianCodeExpires": "{time} まで。この画面を閉じると、もう出せません(出し直すと前のコードは使えなくなります)。",
+  "childSafeGuardianPairSubtitle": "既存の RASQ アカウントを子の端末の「チャイルドモード」で連携(10 分・1 回限り)",
+  "childSafeGuardianPairCodeTitle": "連携コード(子の端末の「チャイルドモード」で入力するか QR を読み取ります)",
+  "childSafeGuardianCodeExpires": "{time} まで有効。閉じると再表示できません(再発行で前のコードは無効)。",
   "@childSafeGuardianCodeExpires": {
     "description": "time はコードの期限(月/日 時:分)",
     "placeholders": {
@@ -1069,7 +1069,7 @@
     }
   },
   "childSafeGuardianEnd": "見守りを終える",
-  "childSafeGuardianEndMessage": "@{handle} の制限をすべて外します。子の端末は、次につながったときに外れます。元に戻すには、もう一度つなぎます。",
+  "childSafeGuardianEndMessage": "@{handle} の制限をすべて解除します(次回接続時に反映)。元に戻すには再連携が必要です。",
   "@childSafeGuardianEndMessage": {
     "placeholders": {
       "handle": {
@@ -1090,7 +1090,7 @@
   "childSafeGuardianSummarySection": "最近の発信内容の要約(14 日)",
   "childSafeGuardianLoginSection": "子の端末のログイン",
   "childSafeGuardianReissue": "コードを出し直す",
-  "childSafeGuardianReissueSubtitle": "子の端末の「保護者からのコードでログイン」に入れるコード(10 分・1 回だけ。前のコードは使えなくなります)",
+  "childSafeGuardianReissueSubtitle": "子の端末で入力するログインコード(10 分・1 回限り。前のコードは無効)",
   "childSafeGuardianLoginCodeTitle": "@{handle} のログインのコード",
   "@childSafeGuardianLoginCodeTitle": {
     "placeholders": {
@@ -1101,7 +1101,7 @@
   },
   "childSafeGuardianSaveButton": "保存して子の端末へ送る",
   "childSafeGuardianImportTooltip": "設定をインポート",
-  "childSafeGuardianPresetCaption": "強さを選ぶと、タイムラインと投稿の判定の強さがそろいます。右の丸いボタンで、{band} の既定やほかの子の設定を読み込めます。",
+  "childSafeGuardianPresetCaption": "強さを選ぶと TL と投稿の判定レベルがそろいます。右のボタンから {band} の既定値やほかの子の設定を読み込めます。",
   "@childSafeGuardianPresetCaption": {
     "placeholders": {
       "band": {
@@ -1110,7 +1110,7 @@
     }
   },
   "childSafeGuardianSummaryEmpty": "まだ報告はありません(子の端末は、終わった日の数を 1 日 1 回送ります)。",
-  "childSafeGuardianSummaryCaption": "送った数 / 止めた数 / 止めた種類だけです(投稿の本文や話題は届きません。送る前の判定はお子さんの端末で行います)。",
+  "childSafeGuardianSummaryCaption": "送信数・ブロック数・種別のみ届きます(本文や話題は送信せず、判定も子の端末内で行います)。",
   "childSafeGuardianSummaryDay": "送った {posts}・止めた {blocked}{trips}",
   "@childSafeGuardianSummaryDay": {
     "description": "1 日の要約。trips は止めた種類ごとの数の注記(無ければ空)",
@@ -1154,7 +1154,7 @@
   "childSafeGuardianComposerDenyNote": "ブラックリスト: 当たる投稿は送れません(空 = 話題では止めません。DM には当てません)。",
   "childSafeGuardianAstellCaption": "ASTell(ルームの通話・チャット・共有)で、子ができること。",
   "childSafeGuardianInstallSection": "インストール",
-  "childSafeGuardianInstallCaption": "子が自分で入れられる範囲。プラグインは増えていくので、ひとつずつではなく、下の「例」で大まかに決めます。",
+  "childSafeGuardianInstallCaption": "子が追加できる範囲です。プラグインは増えるため、下の「例」で大まかに指定します。",
   "childSafeGuardianNamedSection": "名前で許しているプラグイン",
   "childSafeGuardianNamedNone": "ありません。",
   "childSafeGuardianNamedCaption": "ここにあるものは、止める例に近くても使えます(✕ で外す)。",
@@ -1162,14 +1162,14 @@
   "childSafeGuardianAddIdHint": "id で足す(例: jp.example.quiz)",
   "childSafeGuardianAddIdButton": "足す",
   "childSafeGuardianIdShapeError": "プラグインの id の形ではありません(英小文字・数字・「.」「_」「-」、例: jp.example.quiz)",
-  "childSafeGuardianSnsCaption": "子が使ってよい SNS の種類とサーバー(あなたのバンドルから)。サーバーを選ばなければ、その種類ならどこでも。保護者の SNS のログインは貸しません。",
+  "childSafeGuardianSnsCaption": "子が使える SNS とサーバー(未指定ならその SNS 全般を許可)。保護者のログイン情報は共有しません。",
   "childSafeGuardianSnsAdd": "子が SNS アカウントを足せる",
   "childSafeGuardianTimeEnabled": "見守りの時間",
   "childSafeGuardianTimeEnabledSubtitle": "その間は、1 本のタイムラインになります(子の端末の時計)",
   "childSafeGuardianTimeStartHint": "始まり 21:00",
   "childSafeGuardianTimeEndHint": "終わり 06:00",
   "childSafeGuardianTimeRangeSeparator": "〜",
-  "childSafeGuardianTimeLegacyNote": "いまの設定は、以前の形の「その間は何も流さない」です。この形は新しく保存できないので、流す話題を入れるか、ブラックリストにしてから保存してください。",
+  "childSafeGuardianTimeLegacyNote": "旧設定「その間は何も流さない」のままです。新規保存できないため、許可する話題を入れるかブラックリストに切り替えて保存してください。",
   "childSafeGuardianTimeTopics": "その間の話題",
   "childSafeGuardianTimeAllowHint": "その間に流す話題(語やタグを「,」で区切る)",
   "childSafeGuardianTimeDenyHint": "その間に流さない話題(語やタグを「,」で区切る)",
@@ -1189,8 +1189,8 @@
   "childSafeGuardianFeaturesSection": "機能",
   "childSafeGuardianExamplesTitlePlugins": "例で決める(プラグイン)",
   "childSafeGuardianExamplesTitleTl": "例で決める(クリップ / リスト)",
-  "childSafeGuardianExamplesCaptionPlugins": "「こういうプラグインは許す / 止める」を例で選びます。子の端末は、プラグインの名前・説明が例に近いかで決めます。止める例に近いものは「自由」でも使えません。「例に近いもの」にすると、名前で許したものと、許す例に近いものを使えます。",
-  "childSafeGuardianExamplesCaptionTl": "「こういうものは許す / 止める」を、あなたの最近のアクション / クリップ / リストから選びます。子のクリップ / リストのうち、中身が止める例に近いものは、一覧にもタイムラインにも出ません。",
+  "childSafeGuardianExamplesCaptionPlugins": "許す / 止めるプラグインを例で選びます。名前や説明が例に近いかで判定し、止める例に近いものは「自由」でも使えません。「例に近いもの」では個別許可と許す例に近いものだけ使えます。",
+  "childSafeGuardianExamplesCaptionTl": "許す / 止める基準を最近のアクション・クリップ・リストから選びます。止める例に近いものは一覧にも TL にも出ません。",
   "childSafeGuardianPickPlugins": "例を選ぶ(プラグイン / ストア)",
   "childSafeGuardianPickTl": "例を選ぶ(最近のアクション / クリップ / リスト)",
   "childSafeGuardianPickCounts": "許す例 {allow} / 止める例 {deny}",
@@ -1222,8 +1222,8 @@
   },
   "childSafeGuardianAllowLabel": "許す例",
   "childSafeGuardianDenyLabel": "止める例",
-  "childSafeGuardianPickIntroPlugins": "中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、新しいプラグインを例との近さで分けます。",
-  "childSafeGuardianPickIntroTl": "中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、クリップ / リストを例との近さで分けます。",
+  "childSafeGuardianPickIntroPlugins": "「許す例」「止める例」を選びます(左右スワイプ可)。新しいプラグインは例との近さで判定されます。",
+  "childSafeGuardianPickIntroTl": "「許す例」「止める例」を選びます(左右スワイプ可)。クリップやリストは例との近さで判定されます。",
   "childSafeScreensBadge": "見守り中",
   "@childSafeScreensBadge": {
     "description": "見守られているアカウントの印"
@@ -1453,7 +1453,7 @@
   },
   "childSafeScreensSummaryRaiNoAuto": "(自動化なし)",
   "childSafeScreensSummaryRaiOff": "RAi: 使えません",
-  "childSafeScreensFromLink": "リンク(QR)からコードを入れました。自分の保護者から受け取ったものか確かめてから「{action}」を押してください。知らない人のリンクなら、押さずに閉じてください。",
+  "childSafeScreensFromLink": "リンク(QR)からコードを読み込みました。保護者からのものか確認して「{action}」を押してください(不審なリンクは閉じてください)。",
   "@childSafeScreensFromLink": {
     "description": "リンクから開いたときの注意。action は押すボタンの名前",
     "placeholders": {
@@ -1463,9 +1463,9 @@
     }
   },
   "childSafeScreensPaired": "保護者とつなぎました。保護者が設定を決めるまで待ってください",
-  "childSafeScreensPairNotLoggedIn": "RASQ アカウントにログインしていません。保護者が作ったアカウントなら、保護者からのコードでログインします。",
+  "childSafeScreensPairNotLoggedIn": "RASQ アカウントに未ログインです。保護者作成のアカウントは受け取ったコードでログインしてください。",
   "childSafeScreensPairExistingLogin": "既存の RASQ アカウントにログイン",
-  "childSafeScreensPairIntro": "@{handle} を保護者の見守りにつなぎます。保護者の画面に出ているコード(8 字)を入れてください。つないだら、保護者が設定を決めるまで使えません。",
+  "childSafeScreensPairIntro": "@{handle} を保護者の見守りに連携します。8 文字コードを入力してください(設定完了まで利用不可)。",
   "@childSafeScreensPairIntro": {
     "placeholders": {
       "handle": {
@@ -1499,7 +1499,7 @@
       }
     }
   },
-  "childSafeScreensLoginIntro": "保護者がアプリで子のアカウントを作ると、1 度だけ使えるコードが出ます。そのコードを入れると、この端末がそのアカウントになります。この端末の SNS アカウントは引き継ぎません。",
+  "childSafeScreensLoginIntro": "保護者から受け取った 1 回限りのコードでログインできます(この端末の SNS アカウントは引き継ぎません)。",
   "childSafeScreensLoginCodeHint": "ログインのコード",
   "childSafeScreensLoginButton": "ログイン",
   "childSafeScreensPendingUnverifiedTitle": "保護者の設定を確かめられません",
@@ -2202,6 +2202,239 @@
         "type": "String"
       }
     }
+  },
+  "communityTagTitle": "コミュニティのハッシュタグ",
+  "@communityTagTitle": {
+    "description": "設定 → アプリの外観の行と画面の見出し(機能が有効なときだけ)"
+  },
+  "communityTagRowSubtitle": "自分のコミュニティのタグにテーマを付ける",
+  "@communityTagRowSubtitle": {
+    "description": "設定の行の説明"
+  },
+  "communityTagPageCaption": "コミュニティのテーマ",
+  "@communityTagPageCaption": {
+    "description": "タグのページの上の帯の一言"
+  },
+  "communityTagIntro": "自分のコミュニティのハッシュタグにテーマを付けられます。タグのページを開いた人に、そのページだけテーマで表示されます。",
+  "@communityTagIntro": {
+    "description": "申請の画面の最初の説明"
+  },
+  "communityTagRequirements": "申請の条件",
+  "@communityTagRequirements": {
+    "description": "条件の見出し"
+  },
+  "communityTagReqSubscription": "サブスクに入っている",
+  "@communityTagReqSubscription": {
+    "description": "条件 1"
+  },
+  "communityTagSubscribed": "加入しています",
+  "@communityTagSubscribed": {
+    "description": "サブスクに入っているとき"
+  },
+  "communityTagSubscribedPlan": "加入しています({plan})",
+  "@communityTagSubscribedPlan": {
+    "description": "サブスクに入っているとき。plan = プランの名前",
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      }
+    }
+  },
+  "communityTagNotSubscribed": "加入していません",
+  "@communityTagNotSubscribed": {
+    "description": "サブスクに入っていないとき"
+  },
+  "communityTagSeeSubscription": "サブスクを見る",
+  "@communityTagSeeSubscription": {
+    "description": "サブスクの説明のページを開くボタン"
+  },
+  "communityTagReqPromo": "タグを宣伝した投稿",
+  "@communityTagReqPromo": {
+    "description": "条件 2"
+  },
+  "communityTagReqPromoHint": "自分の公開の投稿で、そのタグを含むものを 1 つ選んで添えます",
+  "@communityTagReqPromoHint": {
+    "description": "条件 2 の説明"
+  },
+  "communityTagMine": "自分の申請",
+  "@communityTagMine": {
+    "description": "申請の一覧の見出し"
+  },
+  "communityTagNone": "まだ申請していません",
+  "@communityTagNone": {
+    "description": "申請が無いとき"
+  },
+  "communityTagApply": "申請する",
+  "@communityTagApply": {
+    "description": "申請の画面を開くボタン"
+  },
+  "communityTagNeedSubscription": "申請するにはサブスクへの加入が必要です",
+  "@communityTagNeedSubscription": {
+    "description": "申請できない理由(サブスク)"
+  },
+  "communityTagLimitReached": "{count, plural, other{同時に申請できるタグは {count} つまでです}}",
+  "@communityTagLimitReached": {
+    "description": "申請できない理由(数の上限)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityTagStatePending": "審査中",
+  "@communityTagStatePending": {
+    "description": "申請の状態"
+  },
+  "communityTagStateApproved": "配信中",
+  "@communityTagStateApproved": {
+    "description": "申請の状態: 通って配信している"
+  },
+  "communityTagStateRejected": "承認されませんでした",
+  "@communityTagStateRejected": {
+    "description": "申請の状態"
+  },
+  "communityTagStateSuspended": "停止中",
+  "@communityTagStateSuspended": {
+    "description": "申請の状態: サブスクが切れた / 投稿が消えたなどで止まっている"
+  },
+  "communityTagStateWithdrawn": "取り下げ済み",
+  "@communityTagStateWithdrawn": {
+    "description": "申請の状態"
+  },
+  "communityTagReasonPromoMissing": "宣伝の投稿が見つかりません",
+  "@communityTagReasonPromoMissing": {
+    "description": "サーバーの理由 promo_missing"
+  },
+  "communityTagReasonTagTaken": "このタグはほかのコミュニティが使っています",
+  "@communityTagReasonTagTaken": {
+    "description": "サーバーの理由 tag_taken"
+  },
+  "communityTagReasonSubscription": "サブスクが有効ではありません",
+  "@communityTagReasonSubscription": {
+    "description": "サーバーの理由 subscription_inactive"
+  },
+  "communityTagReasonTheme": "テーマが基準に合いませんでした",
+  "@communityTagReasonTheme": {
+    "description": "サーバーの理由 theme_rejected"
+  },
+  "communityTagReasonPolicy": "ガイドラインに合いませんでした",
+  "@communityTagReasonPolicy": {
+    "description": "サーバーの理由 policy"
+  },
+  "communityTagWithdraw": "取り下げる",
+  "@communityTagWithdraw": {
+    "description": "申請を取り下げるボタン"
+  },
+  "communityTagWithdrawConfirmTitle": "#{tag} の申請を取り下げますか?",
+  "@communityTagWithdrawConfirmTitle": {
+    "description": "取り下げの確認の見出し。tag = ハッシュタグ(# なし)",
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "communityTagWithdrawConfirmMessage": "配信中のテーマも止まります",
+  "@communityTagWithdrawConfirmMessage": {
+    "description": "取り下げの確認の説明"
+  },
+  "communityTagCancel": "やめる",
+  "@communityTagCancel": {
+    "description": "確認を閉じるボタン"
+  },
+  "communityTagLoadFailed": "読み込めませんでした",
+  "@communityTagLoadFailed": {
+    "description": "状態を読めなかったとき"
+  },
+  "communityTagUnavailable": "この機能はいま使えません",
+  "@communityTagUnavailable": {
+    "description": "機能が無効 / サーバーが無いとき"
+  },
+  "communityTagSendFailed": "送れませんでした。時間をおいてもう一度お試しください",
+  "@communityTagSendFailed": {
+    "description": "申請 / 取り下げが失敗したとき"
+  },
+  "communityTagSent": "申請しました。結果はこの画面に出ます",
+  "@communityTagSent": {
+    "description": "申請を送ったときの知らせ"
+  },
+  "communityTagApplyTitle": "ハッシュタグのテーマを申請",
+  "@communityTagApplyTitle": {
+    "description": "申請の画面の見出し"
+  },
+  "communityTagStepTag": "1. ハッシュタグ",
+  "@communityTagStepTag": {
+    "description": "段の見出し"
+  },
+  "communityTagTagHint": "コミュニティのタグ",
+  "@communityTagTagHint": {
+    "description": "タグの入力欄"
+  },
+  "communityTagTagInvalid": "空白や記号を含まない 64 字までのタグにしてください",
+  "@communityTagTagInvalid": {
+    "description": "タグの形が違うとき"
+  },
+  "communityTagStepTheme": "2. テーマ",
+  "@communityTagStepTheme": {
+    "description": "段の見出し"
+  },
+  "communityTagPresetNight": "夜空",
+  "@communityTagPresetNight": {
+    "description": "テーマの見本の名前"
+  },
+  "communityTagPresetSakura": "桜",
+  "@communityTagPresetSakura": {
+    "description": "テーマの見本の名前"
+  },
+  "communityTagPresetSea": "海",
+  "@communityTagPresetSea": {
+    "description": "テーマの見本の名前"
+  },
+  "communityTagPresetRing": "シンプル",
+  "@communityTagPresetRing": {
+    "description": "テーマの見本の名前"
+  },
+  "communityTagAccent": "強調色",
+  "@communityTagAccent": {
+    "description": "強調色の見本の前のラベル"
+  },
+  "communityTagPreview": "プレビュー",
+  "@communityTagPreview": {
+    "description": "プレビューの見出し"
+  },
+  "communityTagPreviewBody": "タグのページの投稿は、このように表示されます。",
+  "@communityTagPreviewBody": {
+    "description": "プレビューの中の見本の文"
+  },
+  "communityTagThemeNote": "{count, plural, other{背景の飾りは {count} つまで。テーマは審査のあとで配信されます}}",
+  "@communityTagThemeNote": {
+    "description": "テーマの段の注記。count = 枠の上限",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityTagStepPromo": "3. 宣伝の投稿",
+  "@communityTagStepPromo": {
+    "description": "段の見出し"
+  },
+  "communityTagFindPromo": "自分の投稿から探す",
+  "@communityTagFindPromo": {
+    "description": "宣伝の投稿を探すボタン"
+  },
+  "communityTagNoPromo": "#{tag} を含む公開の投稿が見つかりません。先にタグを宣伝する投稿をしてください",
+  "@communityTagNoPromo": {
+    "description": "候補が無いとき。tag = ハッシュタグ(# なし)",
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "communityTagSubmit": "申請する",
+  "@communityTagSubmit": {
+    "description": "申請を送るボタン"
   },
   "composeTargetNormalTitle": "ノートの作成",
   "@composeTargetNormalTitle": {
@@ -3245,7 +3478,7 @@
   "@composePolicyWhoSanction": {
     "description": "送れない理由の主語(アカウントの処置)"
   },
-  "composePolicyBlockedMediaUnmeasured": "{who}により、画像・動画は送れません(この端末では添付の確認ができません)。添付を外してください",
+  "composePolicyBlockedMediaUnmeasured": "{who}により画像・動画は送れません(添付を確認できません)。添付を外してください",
   "@composePolicyBlockedMediaUnmeasured": {
     "description": "who は「保護者の設定」/「アカウントの制限」",
     "placeholders": {
@@ -3254,7 +3487,7 @@
       }
     }
   },
-  "composePolicyBlockedUnmeasured": "{who}により、いまは送れません(この端末では「{label}」の確認ができません)",
+  "composePolicyBlockedUnmeasured": "{who}により送信できません(「{label}」を確認できません)",
   "@composePolicyBlockedUnmeasured": {
     "description": "who は「保護者の設定」/「アカウントの制限」、label は種類の名前",
     "placeholders": {
@@ -3266,7 +3499,7 @@
       }
     }
   },
-  "composePolicyBlocked": "{who}により、「{label}」に当たる内容は送れません。書き換えてください",
+  "composePolicyBlocked": "{who}により、「{label}」に該当する内容は送れません",
   "@composePolicyBlocked": {
     "description": "who は「保護者の設定」/「アカウントの制限」、label は種類の名前",
     "placeholders": {
@@ -3388,7 +3621,7 @@
     }
   },
   "customInviteSendWithNotify": "Swing で招待(通知も送る)",
-  "customInviteErrorVersionNotAvailable": "このプラグインは、つないでいる RASQ サーバーのストアで配られていません(審査を通った版がありません)。アプリに入っているサンプルのままでは、みんなで使えません",
+  "customInviteErrorVersionNotAvailable": "接続中のストアに審査済みの版がないため、同梱サンプルのままでは共有できません",
   "customInviteErrorNotShared": "みんなで使うプラグインではありません",
   "customInviteErrorSessionNotShareable": "このページのセッションは Swing では招待できません",
   "customInviteErrorSwingLimit": "同時に出しておける Swing は 20 個までです",
@@ -3619,7 +3852,7 @@
       }
     }
   },
-  "customAstellApproveMessage": "{name} さんからの提案です。承認すると、参加している全員が開けるようになります(インストールしていない人は、開くときに一時的に読み込みます)。",
+  "customAstellApproveMessage": "{name} さんからの提案です。承認すると全員が開けます(未導入の人は一時読み込みします)。",
   "@customAstellApproveMessage": {
     "description": "name は提案した人の表示名",
     "placeholders": {
@@ -3797,7 +4030,7 @@
   "@devUrlLoad": {
     "description": "試験の画面: URL から読むボタン"
   },
-  "devOpenedFromLink": "リンクから開きました。出どころを確かめてから「URL から読む」を押してください(審査中の版は制限モードで動きます)。",
+  "devOpenedFromLink": "リンクから開きました。提供元を確認して「URL から読む」を押してください(審査中の版は制限モードで動作)。",
   "@devOpenedFromLink": {
     "description": "試験の画面: 審査のリンクから開いたときの案内。「URL から読む」はボタンの名前(devUrlLoad)と揃える"
   },
@@ -4030,7 +4263,7 @@
   "homeCreate": "作成",
   "homeClose": "閉じる",
   "homeFabEditorTitle": "＋ のボタン",
-  "homeFabEditorHelp": "下のボタンを枠へドラッグすると入ります(枠どうしは入れ替え、下の列へ戻すと外れます)。内側に 3 つ、外側に 4 つまで ・ {count} / {max}",
+  "homeFabEditorHelp": "下のボタンを枠へドラッグで配置(枠内は入替、下へ戻すと解除)。内側 3 つ・外側 4 つまで ・ {count} / {max}",
   "@homeFabEditorHelp": {
     "description": "count は置いている数、max は置ける数",
     "placeholders": {
@@ -5202,7 +5435,7 @@
   "@listsImportRasqHelp": {
     "description": "リストのインポートの画面の説明(RASQ リスト)。「取り込む」は行の右のボタン"
   },
-  "listsImportGenericHelp": "リストを検索して一括操作を行うことができます。",
+  "listsImportGenericHelp": "リストを検索して一括操作できます。",
   "@listsImportGenericHelp": {
     "description": "リストのインポートの画面の説明(フィードも RASQ リストも探せないとき)"
   },
@@ -5437,7 +5670,7 @@
   "@loginTitle": {
     "description": "SNS のアカウントでログインする画面の見出し"
   },
-  "loginPluginLoadNote": "初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。",
+  "loginPluginLoadNote": "初回ログイン前にプラグインを読み込みます。通信環境の良い場所で行ってください。",
   "@loginPluginLoadNote": {
     "description": "SNS にログインする画面の上の案内。初めてログインする前に、その SNS のプラグインを読み込む"
   },
@@ -5477,7 +5710,7 @@
   "@loginShareMailUnavailable": {
     "description": "承認のメールを送れなかった(送る口が無い)ときの知らせ"
   },
-  "loginShareMailSent": "{to} に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください",
+  "loginShareMailSent": "{to} に承認リンクを送りました(30 分有効)。ブラウザで開き、RASQ アカウントでログインして承認してください",
   "@loginShareMailSent": {
     "description": "承認のリンクをメールで送ったときの知らせ。to は送り先のメールアドレス",
     "placeholders": {
@@ -5486,7 +5719,7 @@
       }
     }
   },
-  "loginShareMailSentVerified": "確認済みのメールアドレス に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください",
+  "loginShareMailSentVerified": "確認済みのメールアドレスに承認リンクを送りました(30 分有効)。ブラウザで開き、RASQ アカウントでログインして承認してください",
   "@loginShareMailSentVerified": {
     "description": "承認のリンクをメールで送ったときの知らせ(送り先のアドレスが分からないとき。「確認済みのメールアドレス」に送った)"
   },
@@ -5511,7 +5744,7 @@
       }
     }
   },
-  "loginShareWaiting": "元の端末で共有を承認すると、SNS アカウントに一斉ログインします。確認済みのメールに届いたリンクからも承認できます",
+  "loginShareWaiting": "元の端末で共有を承認すると SNS に一斉ログインします。確認済みメールのリンクからも承認できます",
   "@loginShareWaiting": {
     "description": "別の端末の承認を待っている間の案内"
   },
@@ -5519,7 +5752,7 @@
   "@loginShareMailButton": {
     "description": "承認のリンクをメールで送るボタン"
   },
-  "loginBundleTitleThis": "この RASQ アカウント の SNS アカウント",
+  "loginBundleTitleThis": "この RASQ アカウントの SNS アカウント",
   "@loginBundleTitleThis": {
     "description": "RASQ アカウントに結び付いた SNS アカウントのうち、この端末でまだ入っていないものの欄の見出し(RASQ アカウントのハンドルが無いとき)"
   },
@@ -5629,7 +5862,7 @@
   "@loginMixi2DummyNote": {
     "description": "開発者モードだけ: ダミーのアカウントの説明"
   },
-  "loginMixi2SignupHint": "mixi2 のアカウントは、ブラウザ(または mixi2 のアプリ)で作ります。作れたら、この画面に戻って「ブラウザで認証」でログインしてください。",
+  "loginMixi2SignupHint": "ブラウザか公式アプリで mixi2 のアカウントを作成し、「ブラウザで認証」からログインしてください。",
   "@loginMixi2SignupHint": {
     "description": "mixi2 の登録ページを開いたあとの案内。「ブラウザで認証」はボタンの名前と揃える"
   },
@@ -5657,7 +5890,7 @@
   "@loginPasswordShow": {
     "description": "パスワードを見せるボタンのツールチップ"
   },
-  "loginBlueskyPasswordNote": "Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」で作ったパスワードを使ってください。本パスワードは入れないでください。",
+  "loginBlueskyPasswordNote": "Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」で作成したパスワードを入力してください(本パスワード不可)。",
   "@loginBlueskyPasswordNote": {
     "description": "Bluesky のアプリパスワードの説明。「」の中は Bluesky の画面の名前(Bluesky のその言語の表記に合わせる)"
   },
@@ -5665,7 +5898,7 @@
   "@loginButton": {
     "description": "ログインのボタン"
   },
-  "loginBlueskySignupHint": "ブラウザの Bluesky で「アカウントを作成」から登録してください。登録できたら、Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」でパスワードを作り、上のハンドルとアプリパスワードでログインします。",
+  "loginBlueskySignupHint": "Bluesky で登録後、「設定 → プライバシーとセキュリティ → アプリパスワード」で発行したパスワードとハンドルでログインしてください。",
   "@loginBlueskySignupHint": {
     "description": "Bluesky の登録ページを開いたあとの案内。「」の中は Bluesky の画面の名前"
   },
@@ -6076,7 +6309,7 @@
   "@mediaVizRebuildWarning": {
     "description": "Visualizer の設定の窓の上の注意"
   },
-  "mediaVizRebuildDetail": "{frames, plural, other{今の再生位置のフレーム。決定で動画を書き出し直します({frames} フレーム)。ペイントやテキストなど、ここまでの編集は消えます。}}",
+  "mediaVizRebuildDetail": "{frames, plural, other{決定で動画を書き出し直します({frames} フレーム)。ここまでの編集は消えます。}}",
   "@mediaVizRebuildDetail": {
     "description": "Visualizer の設定の窓の上の注意の詳しい説明(上のプレビューは今の再生位置のフレーム)。frames は書き出すフレームの数",
     "placeholders": {
@@ -6085,7 +6318,7 @@
       }
     }
   },
-  "mediaVizRebuildDetailReducedFps": "{frames, plural, other{今の再生位置のフレーム。決定で動画を書き出し直します({frames} フレーム、長いので {fps}fps に下げます)。ペイントやテキストなど、ここまでの編集は消えます。}}",
+  "mediaVizRebuildDetailReducedFps": "{frames, plural, other{決定で動画を書き出し直します({frames} フレーム、{fps}fps に調整)。ここまでの編集は消えます。}}",
   "@mediaVizRebuildDetailReducedFps": {
     "description": "mediaVizRebuildDetail と同じ説明で、音声が長いのでフレームレートを下げるとき。frames は書き出すフレームの数、fps は下げた後のフレームレート(小数 1 桁まで書式済み)",
     "placeholders": {
@@ -8845,7 +9078,7 @@
       }
     }
   },
-  "notificationsActionPollEnded": "{names}が投票が終了しました",
+  "notificationsActionPollEnded": "{names}の投票が終了しました",
   "@notificationsActionPollEnded": {
     "description": "投票が締め切られた通知の文。names は投票を作った人などの呼び名(太字で出る。空のこともある)",
     "placeholders": {
@@ -8977,7 +9210,7 @@
   "onboardingHandleInvalid": "半角の英小文字・数字・_ だけ使えます",
   "onboardingAccountTitleNew": "新しい RASQ アカウントを作る",
   "onboardingAccountTitle": "RASQ アカウントを作る",
-  "onboardingAccountDescription": "RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。入れたプラグイン・設定・アカウントのまとまりを、ほかの端末でも使えます。",
+  "onboardingAccountDescription": "RASQ アカウントは複数の SNS を束ねる本体です。プラグインや設定を他の端末でも引き継げます。",
   "onboardingHandleLabel": "ユーザー名(@ のあとの名前)",
   "onboardingHandleHelper": "半角の英小文字・数字・_ で 3〜32 文字",
   "onboardingPasswordLabel": "パスワード({min} 文字以上)",
@@ -9012,7 +9245,7 @@
   "onboardingPrivacyRead": "プライバシーポリシーを読む",
   "onboardingAgree": "利用規約とプライバシーポリシーに同意する",
   "onboardingChildSafeHeading": "チャイルドセーフ(18 歳未満)",
-  "onboardingChildSafeNote": "{age}の人は、保護者の同意が必要です。保護者の RASQ アカウントとつなぐと、保護者が使い方(見られる投稿の強さ・時間・使える機能)を決められます(設定 → チャイルドセーフ → チャイルドモード)。",
+  "onboardingChildSafeNote": "{age}は保護者の同意が必要です。連携すると保護者が利用範囲を設定できます(設定 → チャイルドセーフ → チャイルドモード)。",
   "@onboardingChildSafeNote": {
     "description": "age = 年齢の区分の名前(例: 13〜15 歳)",
     "placeholders": {
@@ -9039,7 +9272,7 @@
   "onboardingTermsContributionNote": "「アルゴリズムとコミュニティへの貢献」は、この登録には含まれません(別の任意の同意で、既定は「提供しない」です)。RASQ アカウントはいつでも削除できます。",
   "onboardingRegister": "同意して登録する",
   "onboardingSnsTitle": "SNS アカウントでログイン",
-  "onboardingSnsDescription": "RASQ アカウントができました。使っている SNS のアカウントでログインしてください。まだ SNS を使っていなければ、「SNS サービスを探す」から合うサーバーやリストを探せます。",
+  "onboardingSnsDescription": "RASQ アカウントを作成しました。お使いの SNS にログインしてください。未登録なら「SNS サービスを探す」から探せます。",
   "onboardingSnsLoginWith": "{service}でログイン",
   "@onboardingSnsLoginWith": {
     "description": "service = SNS の名前(Bluesky / Misskey / mixi2 / Mastodon)",
@@ -9049,7 +9282,7 @@
       }
     }
   },
-  "onboardingSnsPluginLoadNote": "初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。",
+  "onboardingSnsPluginLoadNote": "初回ログイン前にプラグインを読み込みます。通信環境の良い場所で行ってください。",
   "onboardingSignupGuideClosed": "{name} はいま新しい登録を受け付けていないか、招待制です。招待のリンクを持っていなければ、別のサーバーを選んでください。",
   "@onboardingSignupGuideClosed": {
     "description": "RAi の登録の案内。name = サーバーの名前",
@@ -9067,7 +9300,7 @@
       }
     }
   },
-  "onboardingSignupGuideMastodonForm": "表示名・ユーザー名・メールアドレス・パスワードを入れます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。",
+  "onboardingSignupGuideMastodonForm": "表示名・ユーザー名・メール・パスワードを入力します。ユーザー名は後から変更できません。",
   "onboardingSignupGuideMastodonMail": "登録を押すと、確認のメールが届きます。メールのリンクを開いて、メールアドレスを確かめてください。",
   "onboardingSignupGuideOpened": "{name} のページを開きました。ページの「新規登録」を押してください。",
   "@onboardingSignupGuideOpened": {
@@ -9077,10 +9310,10 @@
       }
     }
   },
-  "onboardingSignupGuideForm": "ユーザー名とパスワードを決めます。ユーザー名はあとから変えられないので、気に入ったものを選んでください。",
+  "onboardingSignupGuideForm": "ユーザー名とパスワードを決めます。ユーザー名は後から変更できません。",
   "onboardingSignupGuideChecks": "サーバーによっては、メールアドレス・招待コード・ロボットでないことの確認を聞かれます。画面の案内のとおりに入れてください。",
   "onboardingSignupGuideRules": "サーバーのルール(利用規約)を読んで同意します。メールの確認を求められたら、届いたメールのリンクを開いてください。",
-  "onboardingSignupGuideDone": "登録が終わったら、下の「登録できた」を押してください。RASQ からこのサーバーにログインします。",
+  "onboardingSignupGuideDone": "登録後、下の「登録できた」を押すとログインします。",
   "@onboardingSignupGuideDone": {
     "description": "最後の手順。このあとに onboardingSignupGuideThen… などの文が続けて並ぶ"
   },
@@ -9107,7 +9340,7 @@
   },
   "onboardingSignupGuideHeading": "RAi の案内",
   "onboardingSignupGuidePrev": "前へ",
-  "onboardingSignupNoWebView": "この端末では、アプリの中で登録ページを開けません。ブラウザで開いて登録し、終わったらこの画面に戻ってください。",
+  "onboardingSignupNoWebView": "アプリ内で登録ページを開けません。ブラウザで登録してから戻ってください。",
   "onboardingSignupOpenBrowser": "ブラウザで登録ページを開く",
   "onboardingSignupPostNotFound": "{account} では、さっきの投稿を見つけられませんでした",
   "@onboardingSignupPostNotFound": {
@@ -9153,8 +9386,8 @@
   "onboardingEntryLoginQuestion": "RASQ アカウントにログインしますか?",
   "onboardingEntryCreateQuestion": "RASQ アカウントを作成しますか?",
   "onboardingEntryLoginBody": "RASQ アカウントに入ると、束ねた SNS アカウント・導入したプラグイン・設定が、この端末に戻ります。",
-  "onboardingEntryCreateBody": "RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。作成すると、導入したプラグイン・設定・アカウントの束ね方が RASQ Central に保存され、別の端末からも同じ状態で使えます。",
-  "onboardingEntryWebNote": "Web 版では、SNS のログイン情報を RASQ のサーバーの保管庫に預けます(サーバーの鍵で暗号化し、RASQ のサーバーは復号できます)。SNS だけで使うこともできますが、そのときはこのタブを閉じるとログインが消えます。",
+  "onboardingEntryCreateBody": "RASQ アカウントは複数の SNS を束ねる本体です。プラグイン・設定・アカウント構成を RASQ Central に保存し、他端末でも同じ状態で使えます。",
+  "onboardingEntryWebNote": "Web 版では SNS のログイン情報を RASQ サーバーに暗号化保存します(サーバー側で復号可)。SNS のみでも使えますが、タブを閉じるとログインが消えます。",
   "onboardingEntrySnsOnlyNote": "SNS アカウントだけで使うこともできます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます。",
   "onboardingEntrySkipNote": "スキップしても RASQ は使えます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます(あとからサイドバーの … で作成できます)。",
   "onboardingShowcaseTitle": "サーバーとリストを見てみる",
@@ -9210,7 +9443,6 @@
     }
   },
   "onboardingPasswordTooLong": "256 文字までです",
-  "onboardingPasswordRepeated": "同じ字の繰り返しは使えません",
   "onboardingTermsOutdated": "利用規約が新しくなっています。アプリを更新してから、もう一度登録してください",
   "onboardingNoServer": "RASQ サーバーの接続先が設定されていません",
   "onboardingHandleTaken": "このユーザー名はもう使われています",
@@ -9244,7 +9476,7 @@
   },
   "onboardingRestored": "この端末の RASQ アカウントへ戻りました",
   "onboardingNudgeTitle": "RASQ アカウントを作りますか?",
-  "onboardingNudgeMessage": "RASQ アカウントがあると、入れたプラグインや設定・SNS のアカウントのまとまりを、ほかの端末でも使えます。Swing や RASQ リストも RASQ アカウントから使います。あとからサイドバーの … でも作れます。",
+  "onboardingNudgeMessage": "RASQ アカウントがあると、プラグイン・設定・SNS のまとまりを他端末でも使え、Swing や RASQ リストも利用できます(サイドバーの … からも作成可)。",
   "onboardingNudgeCreate": "作る",
   "onboardingNudgeLogin": "ログイン(持っている人)",
   "onboardingNudgeLater": "あとで",
@@ -9271,7 +9503,7 @@
   "@onboardingInviteHeading": {
     "description": "① の招待コードの見出し"
   },
-  "onboardingInviteCaption": "招待コードをお持ちなら入れてください。無くても作れます。審査があるときは、通るまで公開の機能が使えません(自分の SNS はそのまま使えます)",
+  "onboardingInviteCaption": "招待コードがあれば入力してください(なくても作成可)。審査中は公開機能のみ制限されます。",
   "@onboardingInviteCaption": {
     "description": "① の招待コードの説明"
   },
@@ -9355,15 +9587,15 @@
   "onboardingDiscoverLoginButton": "ログイン",
   "onboardingDiscoverSignupButton": "登録する",
   "onboardingDiscoverSearchFailed": "うまく探せませんでした。時間をおいて、もう一度試してください",
-  "onboardingDiscoverGlimpseStoppedSystem": "画面の読み取りが止められました(端末の「共有を停止」や画面のロック)。もう一度「いつものブラウザで見て探す」から始めてください",
+  "onboardingDiscoverGlimpseStoppedSystem": "画面の読み取りが中断されました。「いつものブラウザで見て探す」からやり直してください",
   "onboardingDiscoverGlimpseStoppedShort": "配信がすぐに止まったので、読み取れませんでした。ブラウザで探したい画面を開いてから止めてください",
   "onboardingDiscoverGlimpseStoppedTimeout": "10 分たったので、画面の読み取りの準備を止めました",
   "onboardingDiscoverGlimpseStoppedKilled": "画面の読み取りが端末に止められました。もう一度始めてください",
   "onboardingDiscoverGlimpseStoppedEmpty": "画面を読み取れませんでした(写しが取れませんでした)",
   "onboardingDiscoverGlimpseFailed": "画面を読み取れませんでした",
-  "onboardingDiscoverGlimpseBroadcastDenied": "画面の配信が始まりませんでした。読み取るには、もう一度押して「ブロードキャストを開始」を選んでください(読み取るのは配信を止める直前の 3 秒だけです)",
-  "onboardingDiscoverGlimpseDenied": "画面の読み取りが許可されませんでした。読み取るには、もう一度押して「開始」を選んでください(読み取るのはボタンを押したあとの 3 秒だけです)",
-  "onboardingDiscoverGlimpseNotificationsDenied": "通知を出せませんでした。読み取りのボタンは通知に出るので、端末の設定で RASQ の通知を許可してください",
+  "onboardingDiscoverGlimpseBroadcastDenied": "画面配信を開始できませんでした。もう一度押し「ブロードキャストを開始」を選んでください(停止直前の 3 秒のみ読み取ります)",
+  "onboardingDiscoverGlimpseDenied": "画面の読み取りが許可されませんでした。もう一度押し「開始」を選んでください(押下後の 3 秒のみ読み取ります)",
+  "onboardingDiscoverGlimpseNotificationsDenied": "通知を出せませんでした。端末の設定で RASQ の通知を許可してください",
   "onboardingDiscoverGlimpseUnavailable": "この端末では画面を読み取れません。画像を選ぶか、アプリの中のブラウザで探してください",
   "onboardingDiscoverNotificationFailed": "通知を出せませんでした。端末の設定で RASQ の通知を許可してください",
   "onboardingDiscoverGlimpseResultMissing": "読み取った画面が見つかりませんでした(時間がたって消えたか、もう送りました)",
@@ -9413,7 +9645,7 @@
   "onboardingDiscoverImageFormat": "JPEG / PNG / WebP の画像を選んでください",
   "onboardingDiscoverImageFormatSize": "JPEG / PNG / WebP の 10 MiB までの画像を選んでください",
   "onboardingDiscoverNoCentral": "RASQ Central の接続先が未設定です",
-  "onboardingDiscoverContentIntro": "好きな画像を選んで、探したい部分を囲むと、探す言葉を RAi が作ります。画像はサーバーに保存しません(探し終えたら捨てます)。",
+  "onboardingDiscoverContentIntro": "画像を選んで探したい部分を囲むと、RAi が検索語を作ります。画像はサーバーに保存しません(探し終えたら破棄します)。",
   "onboardingDiscoverPicksCount": "{count, plural, other{{count} / {max} 枚。タップで囲み直し、長押しで並べ替えます}}",
   "@onboardingDiscoverPicksCount": {
     "placeholders": {
@@ -9553,8 +9785,8 @@
   "onboardingDiscoverEditorClear": "囲みを消す",
   "onboardingDiscoverEditorDoneWhole": "決定(画像全体)",
   "onboardingDiscoverEditorDone": "決定",
-  "onboardingDiscoverGlimpseArmedBroadcast": "画面の配信を始めました。ブラウザで探したい画面を開いたら、画面上部の赤い表示(またはコントロールセンター)から配信を止めてください。止める直前の 3 秒だけを読み取り、RASQ に戻ると結果が出ます。",
-  "onboardingDiscoverGlimpseArmedNotification": "通知を出しました。ブラウザで探したい画面を開いてから、通知をタップしてください。タップすると、その画面を 3 秒だけ読み取ります。",
+  "onboardingDiscoverGlimpseArmedBroadcast": "画面配信を開始しました。ブラウザで対象を開いたあと、画面上部の赤い表示などから配信を止めてください。直前 3 秒を読み取り、RASQ に戻ると結果が出ます。",
+  "onboardingDiscoverGlimpseArmedNotification": "通知を出しました。ブラウザで対象を開いて通知をタップすると、その画面を 3 秒だけ読み取ります。",
   "onboardingDiscoverGlimpseNotificationTitle": "RASQ で探す",
   "@onboardingDiscoverGlimpseNotificationTitle": {
     "description": "画面の読み取りの通知の見出し"
@@ -9592,7 +9824,7 @@
     "description": "機能の紹介のページの絵の説明(読み上げ)"
   },
   "onboardingTourPageTrendTitle": "トレンドと Today",
-  "onboardingTourPageTrendBody": "いま話題の言葉と投稿を、トレンドと Today で見られます。はじめは恐れ・嫌悪・怒りを 45% までに抑えているので、強い怒りや嫌悪の投稿は、おすすめ / トレンド / Today / 関連 TL で下がるか、出なくなります。",
+  "onboardingTourPageTrendBody": "話題の言葉と投稿をトレンドや Today で見られます。初期設定では恐れ・嫌悪・怒りを 45% 以下に抑え、刺激の強い投稿を控えめに表示します。",
   "onboardingTourPageTrendNoteSupervised": "この上限はいつでも変えられます。見守り中は、保護者の設定でさらに抑えます。",
   "onboardingTourPageTrendNote": "この上限はいつでも変えられます。",
   "onboardingTourPageTrendPicture": "刺激性のレーダー",
@@ -10211,7 +10443,7 @@
     }
   },
   "pluginsPaintNibMili": "ミリペン",
-  "pluginsPaintNibKabura": "カプラペン",
+  "pluginsPaintNibKabura": "カブラペン",
   "pluginsPaintNibBrush": "ブラシニブ",
   "postThreadSortRelevance": "関連順",
   "@postThreadSortRelevance": {
@@ -10711,7 +10943,7 @@
   "profileEditSnsPostsNoLogin": "この端末に、そのアカウントのログインがありません",
   "profileEditSnsPostsNoDid": "このアカウントの DID が分かりません。ログインし直してください",
   "profileEditSnsPostsBlueskyConsentTitle": "Bluesky の投稿をアカウントページに出します",
-  "profileEditSnsPostsBlueskyConsentMessage": "{account} の投稿を、RASQ のサーバーが Bluesky の公開の API から読み、**RASQ のアカウントページで誰でも見られる状態**にします。\n\n・Bluesky の投稿は、もともと誰でも読めます。返信とリポストは取り込みません。\n・**ログインの鍵(アプリパスワード / セッション)は預けません**。サーバーに渡すのは、このアカウントの DID とハンドルだけです。\n・使えるのは、持ち主の確認が済んだアカウントだけです(他人のアカウントの投稿を出せないように)。\n・このスイッチを切ると、取ってきた投稿は、すぐに消えます。",
+  "profileEditSnsPostsBlueskyConsentMessage": "{account} の投稿を Bluesky の公開 API から取得し、**RASQ のアカウントページで誰でも見られる状態**にします。\n\n・返信とリポストは取り込みません。\n・**ログインの鍵(アプリパスワード等)は預けません**。サーバーに渡すのは DID とハンドルのみです。\n・持ち主確認済みのアカウントのみ利用できます。\n・スイッチを切ると、取得した投稿はすぐ削除されます。",
   "@profileEditSnsPostsBlueskyConsentMessage": {
     "description": "Bluesky の投稿をアカウントページに出す前の確認(** は太字)。account はアカウントの表記",
     "placeholders": {
@@ -10723,7 +10955,7 @@
   "profileEditSnsPostsAgreeShow": "同意して出す",
   "profileEditCancel": "やめる",
   "profileEditSnsPostsTokenConsentTitle": "ログインの鍵を RASQ に預けます",
-  "profileEditSnsPostsTokenConsentMessage": "{account} の投稿をアカウントページに出すために、この SNS の**ログインの鍵(アクセストークン)を RASQ のサーバーに預けます**。\n\n・あなたの「公開」と「ホーム(未収載)」の投稿が、**RASQ のアカウントページで誰でも見られる状態**になります。「ホーム」はフォロワー限定ではありません。\n・フォロワー限定 / 指名・DM / ローカルのみ / 公開範囲が分からない投稿は、取り込みません。\n・鍵は、あなたの投稿を読むためだけに使います。投稿・フォローなどの操作や、ほかの目的には使いません。\n・鍵はサーバーの鍵で暗号化して保存します(RASQ のサーバーは復号できます)。アプリにも他の人にも返しません。\n・このスイッチを切ると、預けた鍵と取ってきた投稿は、すぐに消えます。\n\nこの鍵があれば、そのアカウントを操作できます。心配なときは、預けたあとでも SNS 側の設定からこの鍵(トークン)を無効にできます。",
+  "profileEditSnsPostsTokenConsentMessage": "{account} の投稿を表示するため、この SNS の**アクセストークンを RASQ サーバーに預けます**。\n\n・「公開」と「ホーム(未収載)」の投稿が **RASQ のアカウントページで誰でも見られる状態**になります(「ホーム」もフォロワー限定ではありません。フォロワー限定・DM・ローカルのみ等は対象外)。\n・トークンは投稿の取得にのみ使い、投稿やフォロー等の操作には使いません。\n・トークンはサーバー側で暗号化して保存します(RASQ サーバーは復号できます)。外部へは返しません。\n・スイッチを切ると、トークンと取得済み投稿はすぐ削除されます。\n\n※アカウント操作権限が含まれるため、必要に応じて SNS 側の設定からいつでも無効化できます。",
   "@profileEditSnsPostsTokenConsentMessage": {
     "description": "SNS のアクセストークンを預ける前の確認(** は太字)。account はアカウントの表記",
     "placeholders": {
@@ -10787,7 +11019,7 @@
     "description": "開発者モードの詳しい説明"
   },
   "profileEditSnsPostsCollectionsConsentTitle": "預けた鍵を RASQ リストにも使います",
-  "profileEditSnsPostsCollectionsConsentMessage": "投稿の表示のために預けた鍵を、別の目的にも使います。\n\n・RASQ リストやクリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせます(見られるかの確認)。\n・リストの人の公開 / ホームの投稿を、この鍵で取りに行きます。\n・投稿・フォローなどの操作には使いません。\n・このスイッチを切ると、すぐに使わなくなります。",
+  "profileEditSnsPostsCollectionsConsentMessage": "預けたアクセストークンを、以下の用途にも使います。\n\n・RASQ リストやクリップを開いた際のフォロー状況の確認\n・リスト内の人の公開・ホーム投稿の取得\n\n投稿やフォロー等の操作には使いません。スイッチを切るとすぐ停止します。",
   "profileEditSnsPostsCollectionsAgree": "同意して使う",
   "profileEditSnsPostsCollectionsFailed": "変えられませんでした: {message}",
   "@profileEditSnsPostsCollectionsFailed": {
@@ -10810,11 +11042,11 @@
   "profileOwnershipWhereBio": "自己紹介に貼って、保存してください。",
   "profileOwnershipErrorNotLinked": "この SNS アカウントは、RASQ アカウントにつながっていません",
   "profileOwnershipErrorUnsupported": "この SNS は、まだ持ち主の確認に対応していません",
-  "profileOwnershipErrorTooMany": "試す回数が多すぎます。しばらく待ってから、もう一度お試しください",
-  "profileOwnershipErrorNotStarted": "まだ確認の文を作っていないか、期限が切れています。「確認の文を作る」からやり直してください",
-  "profileOwnershipErrorCodeNotFound": "プロフィールに確認の文が見つかりませんでした。保存したか、公開のプロフィールに出ているかを確かめてください(反映まで少しかかることがあります)",
+  "profileOwnershipErrorTooMany": "試行回数が多すぎます。しばらくしてからお試しください",
+  "profileOwnershipErrorNotStarted": "確認用の文が未作成か期限切れです。「確認の文を作る」からやり直してください",
+  "profileOwnershipErrorCodeNotFound": "プロフィールに確認用の文が見つかりません。保存済みか公開設定を確かめてください(反映に少し時間がかかる場合があります)",
   "profileOwnershipErrorProfileNotFound": "その SNS アカウントの公開のプロフィールが見つかりませんでした",
-  "profileOwnershipErrorReadFailed": "その SNS のプロフィールを読めませんでした。少し待ってから、もう一度お試しください",
+  "profileOwnershipErrorReadFailed": "プロフィールを読めませんでした。しばらくしてからお試しください",
   "profileOwnershipErrorFailed": "確認できませんでした: {message}",
   "@profileOwnershipErrorFailed": {
     "description": "message はサーバーの誤りの文",
@@ -10825,7 +11057,7 @@
     }
   },
   "profileOwnershipKeybaseErrorUsername": "Keybase のユーザー名(英小文字・数字・_、2〜16 文字)を入れてください",
-  "profileOwnershipKeybaseErrorSignature": "署名を読めませんでした。BEGIN KEYBASE SALTPACK SIGNED MESSAGE から END KEYBASE SALTPACK SIGNED MESSAGE. までを、そのまま貼ってください",
+  "profileOwnershipKeybaseErrorSignature": "署名を読めませんでした。BEGIN KEYBASE SALTPACK SIGNED MESSAGE から END KEYBASE SALTPACK SIGNED MESSAGE. までをそのまま貼り付けてください",
   "@profileOwnershipKeybaseErrorSignature": {
     "description": "BEGIN … / END … は Keybase の署名の区切りの行(訳さない)"
   },
@@ -10833,8 +11065,8 @@
   "profileOwnershipKeybaseErrorKey": "その Keybase のユーザーの鍵で署名されていません",
   "profileOwnershipKeybaseErrorNoUser": "その Keybase のユーザーは見つかりませんでした",
   "profileOwnershipKeybaseErrorOtherAccount": "その Keybase は、別の RASQ アカウントにつながっています",
-  "profileOwnershipKeybaseErrorExpired": "文の期限が切れたか、まだ作っていません。「署名する文を作る」からやり直してください",
-  "profileOwnershipKeybaseErrorUnreachable": "Keybase に繋がりませんでした。少し待ってから、もう一度お試しください",
+  "profileOwnershipKeybaseErrorExpired": "文の期限切れか未作成です。「署名する文を作る」からやり直してください",
+  "profileOwnershipKeybaseErrorUnreachable": "Keybase に接続できませんでした。しばらくしてからお試しください",
   "profileOwnershipKeybaseErrorFailed": "確かめられませんでした: {message}",
   "@profileOwnershipKeybaseErrorFailed": {
     "description": "message はサーバーの誤りの文",
@@ -11256,7 +11488,7 @@
   "@quickPickEmojiMore": {
     "description": "すぐ選べる絵文字のパネルの最後のマス。絵文字ピッカー全体を開く"
   },
-  "quickPickSettingsCaption": "リアクションのボタンやコンポーザーの絵文字のボタンを長押しすると、ボタンにつながったパネルにここの絵文字と最近使った絵文字が並びます。指を離さずに滑らせて、離したところの絵文字を付けます(入れます)。滑らせずに離すと、パネルは開いたままでタップで選べます。",
+  "quickPickSettingsCaption": "リアクションや絵文字ボタンを長押しすると、登録済みと最近使った絵文字が並びます。そのまま指を滑らせて離すと選択でき、動かさずに離すとパネルが開いたままタップで選べます。",
   "quickPickSettingsAdd": "絵文字を追加",
   "quickPickSettingsReset": "既定に戻す",
   "quickPickSettingsRemove": "{name} を外す",
@@ -11991,7 +12223,7 @@
       }
     }
   },
-  "raiFunctionsActionNotAllowed": "「{label}」は自動化が許可されていません(RAi からは実行しません)。代わりに案内(この手順で案内)で進めるか、ユーザーが押してください",
+  "raiFunctionsActionNotAllowed": "「{label}」は自動化できないため RAi からは実行しません。「この手順で案内」を使うか、手動で操作してください",
   "@raiFunctionsActionNotAllowed": {
     "placeholders": {
       "label": {
@@ -12806,7 +13038,7 @@
       }
     }
   },
-  "raiModelsHintSystemPolicy": "「system policy」= サンドボックス / ライブラリ検証で拒否。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください",
+  "raiModelsHintSystemPolicy": "「system policy」はサンドボックス / ライブラリ検証による拒否です。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください",
   "@raiModelsHintSystemPolicy": {
     "description": "macOS で llama.cpp を読めないときに添える案内(前に改行が入る)"
   },
@@ -12910,8 +13142,8 @@
     "description": "地域の一覧で、RASQ を提供していない地域の横に出す短い印。"
   },
   "regionUnavailableTitle": "お住まいの地域では、いまは RASQ を提供していません",
-  "regionUnavailableBody": "RASQ はいま、提供する地域を限っています。お住まいの地域では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。",
-  "regionUnavailableBodyWith": "RASQ はいま、提供する地域を限っています。{region} では RASQ アカウントを作れません。提供する地域は、今後変わることがあります。",
+  "regionUnavailableBody": "現在、お住まいの地域では RASQ アカウントを作成できません(提供地域は今後変わる場合があります)。",
+  "regionUnavailableBodyWith": "現在、{region} では RASQ アカウントを作成できません(提供地域は今後変わる場合があります)。",
   "@regionUnavailableBodyWith": {
     "description": "提供していない地域を選んだときの説明。理由(法律など)には触れない。{region} = 選んだ地域の名前。",
     "placeholders": {
@@ -13399,7 +13631,7 @@
       }
     }
   },
-  "sessionShareAskFirstMessage": "新しい端末({devices})で、この RASQ アカウント にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。",
+  "sessionShareAskFirstMessage": "新しい端末({devices})でこの RASQ アカウントにログインがありました。「はい」を選ぶと、SNS のアクセストークンを端末間で暗号化(E2E)して共有し、新しい端末も SNS にログインします。RASQ サーバーは中身を読めません。あとから「アカウントのセキュリティ」で変更できます。",
   "@sessionShareAskFirstMessage": {
     "description": "初めての問いの本文(RASQ アカウントのハンドルが分からないとき)。devices は端末の名前の並び(sessionDeviceListSeparator でつなぐ)。「はい」は下のボタン、「アカウントのセキュリティ」は設定の画面の名前",
     "placeholders": {
@@ -13408,7 +13640,7 @@
       }
     }
   },
-  "sessionShareAskFirstMessageHandle": "新しい端末({devices})で、RASQ アカウント @{handle} にログインがありました。「はい」にすると、SNS のアクセストークンを端末のあいだで暗号化(E2E)して共有し、新しい端末も SNS アカウントにログインします。RASQ のサーバーは中身を読めません。あとから「アカウントのセキュリティ」で変えられます。",
+  "sessionShareAskFirstMessageHandle": "新しい端末({devices})で RASQ アカウント @{handle} にログインがありました。「はい」を選ぶと、SNS のアクセストークンを端末間で暗号化(E2E)して共有し、新しい端末も SNS にログインします。RASQ サーバーは中身を読めません。あとから「アカウントのセキュリティ」で変更できます。",
   "@sessionShareAskFirstMessageHandle": {
     "description": "初めての問いの本文。devices は端末の名前の並び、handle は RASQ アカウントのハンドル(@ は付けない)",
     "placeholders": {
@@ -13420,11 +13652,11 @@
       }
     }
   },
-  "sessionShareAskDeviceMessage": "この RASQ アカウント に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。",
+  "sessionShareAskDeviceMessage": "この RASQ アカウントに新しい端末からログインがありました。心当たりがなければ「いいえ」を選び、「アカウントのセキュリティ」でその端末をログアウトさせてください。",
   "@sessionShareAskDeviceMessage": {
     "description": "共有を始めたあとの問いの本文(ハンドルが分からないとき)。「いいえ」は下のボタン"
   },
-  "sessionShareAskDeviceMessageHandle": "RASQ アカウント @{handle} に、新しい端末からログインがありました。心当たりが無ければ「いいえ」にして、「アカウントのセキュリティ」でその端末をログアウトさせてください。",
+  "sessionShareAskDeviceMessageHandle": "RASQ アカウント @{handle} に新しい端末からログインがありました。心当たりがなければ「いいえ」を選び、「アカウントのセキュリティ」でその端末をログアウトさせてください。",
   "@sessionShareAskDeviceMessageHandle": {
     "description": "共有を始めたあとの問いの本文。handle は RASQ アカウントのハンドル(@ は付けない)",
     "placeholders": {
@@ -13463,11 +13695,11 @@
       }
     }
   },
-  "sessionShareKeyReplaced": "共有の鍵が差し替えられた可能性があるため、この端末での SNS のアクセストークンの共有を止めました。共有している端末で、共有をいったんオフにしてからオンにし直してください",
+  "sessionShareKeyReplaced": "共有鍵が変更された可能性があるため、トークン共有を停止しました。共有中の端末で共有をオフ→オンにし直してください",
   "@sessionShareKeyReplaced": {
     "description": "同じ世代なのに共有の鍵が替わった包みが届いて、この端末で共有を止めたときの知らせ(D-547)"
   },
-  "sessionShareBodyUnreadable": "共有されている SNS のアクセストークンをこの端末の鍵で開けないため、この端末での共有を止めました(確認が要ります)。共有している端末で、共有をいったんオフにしてからオンにし直してください",
+  "sessionShareBodyUnreadable": "共有されたトークンを復号できないため、共有を停止しました。共有中の端末で共有をオフ→オンにし直してください",
   "@sessionShareBodyUnreadable": {
     "description": "今の世代の共有の本体が受け取った鍵で開けず、この端末で共有を止めたときの知らせ(D-547)"
   },
@@ -13495,7 +13727,7 @@
   "@sessionSanctionCategoryAdmission": {
     "description": "アカウントの処置の分類: 入場の審査で断られた(D-548)。解除申請のボタンなどに出る"
   },
-  "sessionSanctionCategoryAdmissionHelp": "登録の審査で通らなかったため、RASQ の公開の機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます",
+  "sessionSanctionCategoryAdmissionHelp": "登録の審査で通らなかったため、RASQ の公開機能は使えません。理由に心当たりが無ければ、解除申請(異議申し立て)ができます",
   "@sessionSanctionCategoryAdmissionHelp": {
     "description": "処置の分類 admission(入場の審査で断られた、D-548)の本人向けの説明。処置の案内と解除申請のシートに出る"
   },
@@ -13580,7 +13812,7 @@
   "@sessionLogoutSnsLogoutSubtitle": {
     "description": "上の選択肢の補足"
   },
-  "sessionLogoutSnsMoveToLocal": "この端末のみ に移す",
+  "sessionLogoutSnsMoveToLocal": "「この端末のみ」に移す",
   "@sessionLogoutSnsMoveToLocal": {
     "description": "上の選択肢: SNS アカウントを「この端末のみ」(RASQ アカウントに属さない)へ移す"
   },
@@ -13624,7 +13856,7 @@
       }
     }
   },
-  "sessionCarryMessage": "加えたアカウントは {account} の SNS アカウントになり、ほかの端末や Web コンソールにも並びます。加えなかったアカウントは「この端末のみ」に残ります(あとからでも、{account} で SNS にログインすれば加わります)。",
+  "sessionCarryMessage": "追加したアカウントは {account} に紐づき、他端末や Web コンソールでも使えます。追加しないものは「この端末のみ」に残ります(後から追加も可)。",
   "@sessionCarryMessage": {
     "description": "上の問いの本文。account は「@ハンドル」か「この RASQ アカウント」",
     "placeholders": {
@@ -13984,11 +14216,11 @@
   },
   "settingsEmomStatusPending": "まだ届いていません",
   "settingsEmomStatusNotDisclosed": "公開していません",
-  "settingsEmomIntro": "EmoM は、投稿やトレンドの気持ちの強さ・刺激の強さを見積もる RASQ のモデルです(準備中)。いまはこの閾値を、RASQ の運営が通報を確かめてトレンドを制限するときの目安にだけ使います。",
+  "settingsEmomIntro": "EmoM は投稿やトレンドの刺激の強さを見積もるモデルです(準備中)。現在この閾値は、運営がトレンドを制限する際の目安にのみ使います。",
   "settingsEmomThresholdLabel": "閾値",
   "settingsEmomScaleLow": "低い(隠れやすい)",
   "settingsEmomScaleHigh": "高い(隠れにくい)",
-  "settingsEmomExplanation": "閾値が高いほど、刺激の強い話題も受け入れる設定です。運営が制限したトレンドが隠れにくくなります。低いほど、制限されたトレンドを早めに隠します。既定は {defaultValue} です。",
+  "settingsEmomExplanation": "閾値が高いほど制限されたトレンドが隠れにくくなり、低いほど早めに隠れます(既定: {defaultValue})。",
   "@settingsEmomExplanation": {
     "description": "{defaultValue} = 閾値の既定値(整数)。",
     "placeholders": {
@@ -13998,8 +14230,8 @@
     }
   },
   "settingsEmomDiscloseTitle": "閾値を公開する(制限の目安に使う)",
-  "settingsEmomDiscloseSubtitle": "値だけを RASQ のサーバーに送ります。運営は、公開された値をまとめた分布(どの値の人が何人いるか)だけを使い、あなたの値を個別に見ることはありません。オフにすると、送った値を消します。",
-  "settingsEmomRestrictionExplanation": "運営がトレンドを「N%」で制限すると、公開された閾値の低いほうから N% ほどの人に、そのトレンドが出なくなります。公開していなくても、この端末の閾値で同じように判定します(閾値はこの端末に保存されます)。「全員に非表示」にされたトレンドは、閾値に関係なく出ません。隠れたトレンドは、検索のトレンドの一覧に並ばなくなるだけです。",
+  "settingsEmomDiscloseSubtitle": "値のみをサーバーに送り、運営は全体の分布だけを参照します(個人の値は見ません)。オフにすると送信済みの値を削除します。",
+  "settingsEmomRestrictionExplanation": "運営がトレンドを「N%」で制限すると、閾値の低い N% 相当のユーザーに表示されなくなります(非公開でも端末の閾値で同様に判定。閾値はこの端末に保存)。「全員に非表示」は閾値に関係なく隠れます。",
   "settingsHomeTitle": "全ての設定",
   "settingsHomeSearchHint": "設定や操作を検索",
   "settingsHomeSearchClear": "消す",
@@ -14071,7 +14303,7 @@
   "@settingsInvitesEntrySubtitle": {
     "description": "設定の入口の説明"
   },
-  "settingsInvitesCaption": "コードを渡された人は、RASQ アカウントを作るときに入れると審査に進めます。コードは出したときにだけ表示されるので、その場でコピーして渡してください",
+  "settingsInvitesCaption": "招待コードを受け取った人は、登録時に入力すると審査に進めます。コードは発行時のみ表示されるため、その場でコピーしてください",
   "@settingsInvitesCaption": {
     "description": "招待コードの画面の説明"
   },
@@ -15649,7 +15881,7 @@
   "settingsSecurityEmailRemoveSubtitle": "確認コードが要ります",
   "settingsSecurityPasswordHeader": "パスワード",
   "settingsSecurityPasswordChangeCaption": "変えると、ほかの端末はログアウトになります。いまのパスワードか、メールの確認コードが要ります。",
-  "settingsSecurityPasswordNoneCaption": "パスワードが無いと、ほかの端末からはログインできません(この端末でだけ使えます)。付けると、別の端末からハンドル(かメール)とパスワードで同じアカウントに入れます。",
+  "settingsSecurityPasswordNoneCaption": "パスワード未設定だと他端末からログインできません。設定すると別の端末からも入れます。",
   "settingsSecurityPasswordNewHint": "新しいパスワード(8 文字以上)",
   "settingsSecurityPasswordHint": "パスワード(8 文字以上)",
   "settingsSecurityPasswordChanged": "パスワードを変えました",
@@ -15738,7 +15970,7 @@
   "settingsSecurityEmailRemoved": "メールアドレスを外しました",
   "settingsSecurityCodeHint": "確認コード(例 3mJr7-AoUXx)",
   "settingsSecurityCodeHelper": "メールのリンクを貼り付けても確認できます",
-  "settingsSecurityLoginFailedHelp": "ハンドル(メール)かパスワードが違います。\nパスワードを設定していない RASQ アカウントには、ほかの端末からはログインできません。そのアカウントを作った端末(いまもログインしている端末)で「設定 → アカウントのセキュリティ」からパスワードを設定してから、もう一度ログインしてください。",
+  "settingsSecurityLoginFailedHelp": "ハンドル(メール)またはパスワードが違います。\nパスワード未設定のアカウントは他端末からログインできません。元の端末の「設定 → アカウントのセキュリティ」でパスワードを設定してからお試しください。",
   "settingsSecurityServerNotConfiguredError": "RASQ サーバーの接続先が未設定です",
   "settingsSecurityLoginFailed": "ログインできませんでした",
   "settingsSecurityLoggedInAs": "@{handle} にログインしました",
@@ -15759,7 +15991,7 @@
   "settingsSecurityLoginPasswordHint": "パスワード",
   "settingsSecurityLoginButton": "ログイン",
   "settingsSecurityLoginForgotButton": "パスワードを忘れた",
-  "settingsSecurityLoginNoPasswordHint": "パスワードを設定していないアカウントは、ほかの端末からはログインできません(作った端末でだけ使えます)。その端末の「設定 → アカウントのセキュリティ」でパスワードを設定してください。",
+  "settingsSecurityLoginNoPasswordHint": "パスワード未設定のアカウントは他端末からログインできません。元の端末の「設定 → アカウントのセキュリティ」でパスワードを設定してください。",
   "settingsSecurityLoginCodeHeader": "確認コード",
   "settingsSecurityLoginChallengeCaption": "{email} に確認コードを送りました({minutes, plural, other{{minutes} 分有効}}、1 回きり)。届いたコードを入れてください。",
   "@settingsSecurityLoginChallengeCaption": {
@@ -15802,7 +16034,7 @@
     }
   },
   "settingsSecurityResetTitle": "パスワードの再設定",
-  "settingsSecurityResetCaption": "確認済みのメールアドレスへ確認コード(10 分有効、1 回きり)を送り、新しいパスワードを決めます。ほかの端末はすべてログアウトになります。",
+  "settingsSecurityResetCaption": "確認済みメールへ確認コード(10 分有効・1 回限り)を送り、パスワードを再設定します。他の端末はすべてログアウトされます。",
   "settingsSecurityResetNoEmailWarning": "メールアドレスを確認していないアカウントは、パスワードを再設定できません。",
   "settingsSecurityResetNoEmailDetail": "そのアカウントを作った端末(いまもログインしている端末)で「設定 → アカウントのセキュリティ」から新しいパスワードを設定してください。その端末も無いときは、アカウントに戻る方法はありません。",
   "settingsSecurityResetEmailHint": "確認済みのメールアドレス",
@@ -15995,7 +16227,7 @@
   "shellAccountDeleteReloginRequiredError": "このアカウントに、もう一度ログインしてから削除してください",
   "shellAccountDeleteNeedsEmailCodeSnack": "削除には、メールの確認コードが要ります。「アカウントの削除」から進めてください",
   "shellAccountDeleteTitle": "RASQ アカウントを削除",
-  "shellAccountDeleteMessage": "サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、ASTell のルームと共有、通知トークン、同意の記録を削除します。「アルゴリズムとコミュニティへの貢献」に同意していた場合は、提供の停止と提供済みデータの削除も同時に始まります。\n元に戻せません。各 SNS 上のアカウントと投稿は消えません。",
+  "shellAccountDeleteMessage": "サーバー上のプロフィール、アカウントバンドル、同期設定、レビュー・ブックマーク、ASTell のルームと共有、通知トークン、同意記録を削除します(学習データの提供に同意していた場合は提供停止と削除も同時に開始)。\n元に戻せません。各 SNS 上のアカウントと投稿は残ります。",
   "shellAccountDeleteConfirmButton": "削除する",
   "shellAccountDeletedSnack": "RASQ アカウントを削除しました",
   "shellAccountDeleteFailedError": "削除できませんでした: {error}",
@@ -17068,7 +17300,7 @@
     }
   },
   "storeReviewNoVotes": "まだ評価がありません",
-  "storeReviewHelpfulCount": "{count, plural, other{{count}人が役に立ったと考えました。}}",
+  "storeReviewHelpfulCount": "{count, plural, other{{count}人が参考になったと評価しました}}",
   "@storeReviewHelpfulCount": {
     "placeholders": {
       "count": {
@@ -17117,7 +17349,7 @@
   "@storeReviewNeedsInstall": {
     "description": "インストールしていないプラグインのストアのページ / レビュー TL に出す案内。レビューを書く欄の代わり (D-515)"
   },
-  "storeReviewNeedsInstallServer": "インストールしたプラグインにだけレビューを書けます。ログインした状態でインストール(または更新)し直すと書けるようになります",
+  "storeReviewNeedsInstallServer": "導入済みのプラグインにのみレビューを書けます。ログイン状態で再インストール(または更新)してください",
   "@storeReviewNeedsInstallServer": {
     "description": "端末には入っているが、サーバーにインストールの記録が無い(ログインせずに入れた など)とき (review_requires_install、D-515)"
   },
@@ -18420,7 +18652,7 @@
       }
     }
   },
-  "trendExamplesIntro": "中身を見て、下の「{allowLabel}」/「{denyLabel}」(右 / 左スワイプでも)で例にします。新しいものは、例との近さで分けます。",
+  "trendExamplesIntro": "内容を見て「{allowLabel}」「{denyLabel}」を選びます(左右スワイプ可)。新しい項目は例との近さで判定します。",
   "@trendExamplesIntro": {
     "placeholders": {
       "allowLabel": {
@@ -18561,7 +18793,7 @@
   "trendProfileStimulusTitle": "トレンドの刺激性",
   "trendProfileStimulusCaption": "各感情の上限。中心に寄せるほど抑えます",
   "trendProfileStimulusReset": "刺激性をリセット",
-  "trendProfileEchoChamberWarning": "トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。",
+  "trendProfileEchoChamberWarning": "トレンドの指向性・刺激性を強くすると、エコーチェンバーに陥りやすくなります。",
   "trendProfileStimulusEstimate": "刺激性は、いまは言葉の傾向から推定しています。",
   "trendProfileStimulusEstimateDetail": "刺激性は語彙ルールで推定しています。",
   "@trendProfileStimulusEstimateDetail": {
@@ -18610,7 +18842,7 @@
   "trendProfileDislikedTapToRemove": "好きではない(タップで外す)",
   "trendProfileGenresSaved": "好きなジャンル/方向性を保存しました",
   "trendProfilePickTitle": "アクションからジャンルを選択",
-  "trendProfilePickIntro": "最近のアクションを話題ごとに出しています。カードを選んで「好き」/「好きではない」へ(右/左スワイプでも)。",
+  "trendProfilePickIntro": "最近のアクションを話題ごとに表示しています。カードを「好き」「好きではない」に振り分けてください(左右スワイプ可)。",
   "trendProfilePickIntroDetail": "最近のアクションを類似した話題でまとめ、話題性の強いものから {perPage, plural, other{{perPage} 件}}ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。",
   "@trendProfilePickIntroDetail": {
     "description": "開発者モードの詳しい説明。perPage は 1 ページのカードの数",
@@ -19615,7 +19847,7 @@
   "@vcKickedLocked": {
     "description": "入室の直前の確かめ直しで断られたときの案内(新規入室の停止)"
   },
-  "vcKickedUnavailable": "入室の条件を確かめられなかったため、ルームに入れませんでした。しばらくしてからもう一度お試しください",
+  "vcKickedUnavailable": "入室条件を確認できないためルームに入れませんでした。しばらくしてからお試しください",
   "@vcKickedUnavailable": {
     "description": "入室の直前の確かめ直しで断られたときの案内(サーバーが条件を確かめられなかった)"
   },
@@ -20034,7 +20266,7 @@
       }
     }
   },
-  "vcRoomDeviceSettingsCaption": "ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。",
+  "vcRoomDeviceSettingsCaption": "ルームの設定は、参加後にルームの歯車から変更できます(オーナーのみ)。",
   "@vcRoomDeviceSettingsCaption": {
     "description": "参加前の設定のシートの注記"
   },

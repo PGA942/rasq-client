@@ -10,6 +10,7 @@ import 'settings_sections.dart';
 import '../../l10n/asset_strings.dart';
 import '../../l10n/l10n.dart';
 import '../../l10n/ui_locale.dart' show uiLocaleProvider, uiLocaleTagProvider;
+import '../../app/feature_flags.dart';
 
 /// 設定の検索 (D-385)。「全ての設定」の検索欄から、設定の行と、設定ページ(DSL)の中の項目を探す。
 ///
@@ -65,11 +66,11 @@ List<String> settingsPageLabels(Object? node) {
 
 /// 索引を組む。[loadPage] = 設定ページの JSON を読む(テストで差し替える。読めなければ null)。
 /// [l10n] = 名前の言語(省略するといまの表示の言語)。
-Future<List<SettingsSearchEntry>> buildSettingsSearchIndex(Future<String?> Function(String area) loadPage, {AppLocalizations? l10n}) async {
+Future<List<SettingsSearchEntry>> buildSettingsSearchIndex(Future<String?> Function(String area) loadPage, {AppLocalizations? l10n, RasqFeatureFlags flags = const RasqFeatureFlags()}) async {
   final l = l10n ?? appL10n;
   final out = <SettingsSearchEntry>[];
   final pages = <String, Future<String?>>{};
-  for (final MapEntry(key: id, value: section) in settingsSectionsOf(l).entries) {
+  for (final MapEntry(key: id, value: section) in settingsSectionsOf(l, flags: flags).entries) {
     out.add(SettingsSearchEntry(title: section.title, sectionId: id));
     for (final r in section.rows) {
       out.add(SettingsSearchEntry(title: r.title, sectionId: id, path: [section.title], row: r, keys: [?r.subtitle, ?r.detail]));
@@ -117,7 +118,7 @@ final settingsSearchIndexProvider = FutureProvider<List<SettingsSearchEntry>>((r
   // 表示の言語が変わったら組み直す (D-484)。
   final l = appL10nFor(ref.watch(uiLocaleProvider));
   final tag = ref.watch(uiLocaleTagProvider);
-  return buildSettingsSearchIndex(l10n: l, (area) async {
+  return buildSettingsSearchIndex(l10n: l, flags: ref.watch(featureFlagsProvider), (area) async {
     try {
       // 長い文書ページも同じ道で読む。表示の言語の文書があればそれ (D-535)。
       return await loadSettingsPageJson(area, localeTag: tag);

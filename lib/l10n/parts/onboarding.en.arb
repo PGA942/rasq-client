@@ -104,7 +104,6 @@
   "onboardingGenreNature": "Seasons & nature",
   "onboardingPasswordTooShort": "Use at least {min} characters",
   "onboardingPasswordTooLong": "Up to 256 characters",
-  "onboardingPasswordRepeated": "Can't be the same character repeated",
   "onboardingTermsOutdated": "The Terms of Service have been updated. Update the app and try registering again",
   "onboardingNoServer": "No RASQ server is set",
   "onboardingHandleTaken": "This username is already taken",

@@ -463,7 +463,7 @@ void main() {
       final s2 = await sync(t2.c);
       expect(s2.locked, isFalse);
       expect(s2.revision, 2);
-      expect(s2.error, contains('前の設定のまま'));
+      expect(s2.error, contains('前の設定を維持'));
     });
 
     test('設定待ち = 鍵。一度見守られた端末はオフラインでも制限を外さない。終わりはオンラインで確かめてから', () async {

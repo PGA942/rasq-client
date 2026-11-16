@@ -11,7 +11,7 @@
   "@bookmarksEmptyTitle": {"description": "ブックマークが空のとき"},
   "bookmarksEmptyHint": "投稿の 🔖、クリップに追加、ASTell のしおりで集められます",
   "@bookmarksEmptyHint": {"description": "ブックマークが空のときの補足。🔖 は投稿のブックマークのボタン"},
-  "bookmarksEmptyNoSnsHint": "このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます",
+  "bookmarksEmptyNoSnsHint": "このサービスにブックマークはありません。投稿の 🔖 長押しで RASQ クリップに追加できます",
   "@bookmarksEmptyNoSnsHint": {"description": "ブックマークが空で、いまの SNS にブックマークの機能が無いときの補足"},
   "bookmarksClips": "クリップ",
   "@bookmarksClips": {"description": "ブックマークの画面の節の見出し(自分のクリップ)"},
