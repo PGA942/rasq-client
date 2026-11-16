@@ -4168,6 +4168,427 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeBarResetOrder => '기본 순서로 되돌리기';
 
   @override
+  String get iconThemeEditorTitle => 'アイコンにテーマを埋め込む';
+
+  @override
+  String get iconThemeEditorIntro =>
+      'アイコンの四隅に色のブロックでテーマを書き込みます。SNS で縮められたり圧縮し直されたりしても RASQ で読み戻し、プロフィールのアイコンを拡大したときの背景・文字色・パーティクルになります。';
+
+  @override
+  String get iconThemeStepPick => 'アイコンを選ぶ';
+
+  @override
+  String get iconThemeStepPickHint => '真ん中で正方形に切り抜いて 400px にします。';
+
+  @override
+  String get iconThemePickImage => '画像を選ぶ';
+
+  @override
+  String get iconThemeUseSample => '見本に戻す';
+
+  @override
+  String get iconThemeLoadFailed => '画像を読み込めませんでした';
+
+  @override
+  String get iconThemeStepEncode => '変換する';
+
+  @override
+  String get iconThemeShapeRaw => 'そのまま';
+
+  @override
+  String get iconThemeShapeRound => '角丸';
+
+  @override
+  String get iconThemeShapeCircle => '円形';
+
+  @override
+  String get iconThemeShowZones => '境界線を表示(桃: 円形で表示したときの縁、青: 角丸で表示したときの縁)';
+
+  @override
+  String get iconThemeBackground => '背景';
+
+  @override
+  String get iconThemeBgSolid => '単色';
+
+  @override
+  String get iconThemeBgGradient => 'グラデ';
+
+  @override
+  String get iconThemeGradientKind => 'グラデの種類';
+
+  @override
+  String get iconThemeGradient0 => '縦に沈む';
+
+  @override
+  String get iconThemeGradient1 => '斜めに色相';
+
+  @override
+  String get iconThemeGradient2 => '中心から放射';
+
+  @override
+  String get iconThemeGradient3 => 'オーロラ';
+
+  @override
+  String get iconThemeBgColor => '背景色';
+
+  @override
+  String get iconThemeTextColor => '文字色';
+
+  @override
+  String get iconThemeAccentColor => '強調色';
+
+  @override
+  String get iconThemeParticle => '基本パーティクル';
+
+  @override
+  String get iconThemeParticle0 => 'なし';
+
+  @override
+  String get iconThemeParticle1 => '雪';
+
+  @override
+  String get iconThemeParticle2 => '桜';
+
+  @override
+  String get iconThemeParticle3 => '星';
+
+  @override
+  String get iconThemeParticle4 => 'ハート';
+
+  @override
+  String get iconThemeParticle5 => '泡';
+
+  @override
+  String get iconThemeAmount => '量';
+
+  @override
+  String get iconThemeSpeed => '速度';
+
+  @override
+  String get iconThemeUseExt =>
+      '拡張領域も使う(角丸で表示したとき飾り枠として見えます。スロットの割り当てを入れ、基本パーティクルより優先します)';
+
+  @override
+  String get iconThemeExtMode => '拡張領域の中身';
+
+  @override
+  String get iconThemeExtModeSlots => '形とスロット';
+
+  @override
+  String get iconThemeExtModeUrl => '配信 URL';
+
+  @override
+  String get iconThemePluginUrl => 'プラグインの配信 URL(https:// は省いて入れます)';
+
+  @override
+  String get iconThemeMask => '飾り枠の色';
+
+  @override
+  String get iconThemeMaskAccent => '強調色の濃淡';
+
+  @override
+  String get iconThemeMaskBg => '背景色の濃淡';
+
+  @override
+  String get iconThemeMaskMono => 'モノクロ';
+
+  @override
+  String get iconThemeAngle => 'グラデの角度';
+
+  @override
+  String get iconThemeAnim => '背景のアニメ';
+
+  @override
+  String get iconThemeAnim0 => 'なし';
+
+  @override
+  String get iconThemeAnim1 => '角度が回る';
+
+  @override
+  String get iconThemeAnim2 => '色相がゆらぐ';
+
+  @override
+  String get iconThemeAnim3 => '明るさが脈打つ';
+
+  @override
+  String get iconThemeAnimSpeed => 'アニメの速さ';
+
+  @override
+  String iconThemeSlotTitle(int n) {
+    return 'スロット $n';
+  }
+
+  @override
+  String get iconThemeSlotRemove => '削除';
+
+  @override
+  String get iconThemeSlotAdd => 'スロットを追加';
+
+  @override
+  String iconThemeSlotShare(int shapes, int paths, int slots) {
+    return '形 $shapes 種・軌道 $paths 種を $slots スロットで使い回し';
+  }
+
+  @override
+  String get iconThemeTriggerLabel => 'きっかけ';
+
+  @override
+  String get iconThemeTriggerAlways => '常時';
+
+  @override
+  String get iconThemeTriggerTap => 'クリック';
+
+  @override
+  String get iconThemeTriggerSlide => 'スライド';
+
+  @override
+  String get iconThemeShapeLabel => '形';
+
+  @override
+  String get iconThemeOrbitLabel => '軌道';
+
+  @override
+  String get iconThemeOrbitFall => 'まっすぐ落下';
+
+  @override
+  String get iconThemeOrbitDrift => '斜めに舞う';
+
+  @override
+  String get iconThemeOrbitRise => '上昇';
+
+  @override
+  String get iconThemeOrbitFlow => '横に流れる';
+
+  @override
+  String get iconThemeRand => '出現のばらつき';
+
+  @override
+  String get iconThemeAngleRand => '角度のばらつき';
+
+  @override
+  String get iconThemeEaseA => '動き A';
+
+  @override
+  String get iconThemeEaseB => '動き B';
+
+  @override
+  String get iconThemeMix => 'B の割合';
+
+  @override
+  String get iconThemeEase0 => '直線';
+
+  @override
+  String get iconThemeEase1 => 'イーズ';
+
+  @override
+  String get iconThemeEase2 => 'バネ';
+
+  @override
+  String get iconThemeEase3 => 'ガム';
+
+  @override
+  String get iconThemeUseHint => 'RASQ 用の予約 3 ビットを入れる(アイコンのフレーム・添付メディアの並び・隙間)';
+
+  @override
+  String get iconThemeHintFrame => 'アイコンのフレーム';
+
+  @override
+  String get iconThemeHintFrameRound => '角丸';
+
+  @override
+  String get iconThemeHintFrameCircle => '丸';
+
+  @override
+  String get iconThemeHintDir => '添付メディアの並び';
+
+  @override
+  String get iconThemeHintDirHorizontal => '横';
+
+  @override
+  String get iconThemeHintDirVertical => '縦';
+
+  @override
+  String get iconThemeHintFill => '隙間';
+
+  @override
+  String get iconThemeHintFillAsIs => 'そのまま';
+
+  @override
+  String get iconThemeHintFillPack => '詰める';
+
+  @override
+  String iconThemeHintSummary(
+    String bits,
+    String frame,
+    String dir,
+    String fill,
+  ) {
+    return '$bits = $frame・$dir並び・$fill';
+  }
+
+  @override
+  String iconThemePalStat(int blocks) {
+    return '外周のパレット: $blocks ブロック(基準色 17 + 5 ビット × 31、うち訂正用 10)';
+  }
+
+  @override
+  String iconThemeExtStat(int blocks, int used, int capacity) {
+    return '拡張領域: $blocks ブロック、$used / $capacity バイト使用(訂正用の 30 バイトは別枠)';
+  }
+
+  @override
+  String get iconThemeExtUnused => '拡張領域: 使わない(元の絵のまま)';
+
+  @override
+  String iconThemeOverCapacity(int used, int capacity) {
+    return '容量オーバー: $used / $capacity バイト。スロットを減らすか、同じ形・軌道を使い回してください。アイコンは直前のままです。';
+  }
+
+  @override
+  String iconThemeOverCapacityUrl(int used, int capacity) {
+    return '容量オーバー: $used / $capacity バイト。URL を短くしてください。アイコンは直前のままです。';
+  }
+
+  @override
+  String get iconThemeStepUpload => 'アップロード(見本)';
+
+  @override
+  String get iconThemeRecompress => 'サーバーの再圧縮';
+
+  @override
+  String iconThemeQuality(int quality) {
+    return 'JPEG 品質 $quality';
+  }
+
+  @override
+  String get iconThemeResize => 'サーバーのリサイズ';
+
+  @override
+  String iconThemeResizePx(int px) {
+    return '${px}px';
+  }
+
+  @override
+  String iconThemeServed(int size, String kb) {
+    return '返ってきた画像: $size×${size}px、${kb}KB';
+  }
+
+  @override
+  String iconThemeDummyRoute(int size, int quality) {
+    return '${size}px にして JPEG 品質 $quality で再圧縮';
+  }
+
+  @override
+  String get iconThemeExternalRoute => '読み込んだ画像をそのまま使っています';
+
+  @override
+  String get iconThemeTryExternal => '実際の SNS から保存した画像で試す';
+
+  @override
+  String get iconThemeBackToDummy => '見本の再圧縮に戻す';
+
+  @override
+  String get iconThemeStepView => '閲覧する';
+
+  @override
+  String get iconThemeSamplePostName => 'サンプル ユーザー';
+
+  @override
+  String get iconThemeSamplePostBody => 'アイコンにテーマを仕込んでみた。拡大すると背景と文字色が変わるはず。';
+
+  @override
+  String get iconThemeOpenPreview => '拡大してテーマを見る';
+
+  @override
+  String get iconThemeResultBasic => '基本テーマ';
+
+  @override
+  String get iconThemeResultExt => '拡張(スロット)';
+
+  @override
+  String get iconThemeResultHint => '予約 3 ビット';
+
+  @override
+  String get iconThemeResultMatch => '送る前との比較';
+
+  @override
+  String get iconThemeRestored => '復元できた';
+
+  @override
+  String get iconThemeNotRestored => '復元できない';
+
+  @override
+  String iconThemeCorrected(int total, int n) {
+    return '$total 個中 $n 個を訂正';
+  }
+
+  @override
+  String get iconThemeNotUsed => '使っていない';
+
+  @override
+  String get iconThemeNotFound => '見つからない';
+
+  @override
+  String iconThemeExtUrlNote(String url) {
+    return '配信 URL: https://$url';
+  }
+
+  @override
+  String iconThemeExtSlotsNote(String triggers) {
+    return 'スロット: $triggers';
+  }
+
+  @override
+  String get iconThemeListSeparator => '、';
+
+  @override
+  String get iconThemeHintRead => '読めた';
+
+  @override
+  String get iconThemeHintNone => 'フラグなし(既定の並び)';
+
+  @override
+  String get iconThemeDslMatch => 'DSL が一致';
+
+  @override
+  String get iconThemeDslMismatch => '一致しない';
+
+  @override
+  String get iconThemeExternalNoCompare => '外の画像なので比べない';
+
+  @override
+  String get iconThemeDslUnreadable => '(読み戻せませんでした)';
+
+  @override
+  String get iconThemeUseIcon => 'このアイコンを使う';
+
+  @override
+  String get iconThemePreviewBio =>
+      'この背景・文字色・ボタンの色・パーティクルは、アイコンの四隅から読み戻した値だけで描いています。押したり、なぞったりしてみてください。';
+
+  @override
+  String get iconThemePreviewFollow => 'フォロー';
+
+  @override
+  String iconThemePluginUrlNote(String url) {
+    return 'プラグインは https://$url から取る形です。まだ取得しないので、基本のテーマで表示しています。';
+  }
+
+  @override
+  String get iconThemeEmbedTooltip => 'アイコンにテーマを埋め込む';
+
+  @override
+  String get iconThemeSettingsRead => 'アイコンのテーマを読む';
+
+  @override
+  String get iconThemeSettingsReadSubtitle =>
+      'アイコンに埋め込まれたテーマで、アイコンの枠・添付の並び・アイコンを拡大したときの背景を変えます(アイコンの画像を取り直します)';
+
+  @override
+  String get iconThemeSettingsEditorSubtitle =>
+      'いまのアイコンや好きな画像に、背景・文字色・パーティクルのテーマを書き込みます';
+
+  @override
   String get languageSelfName => '한국어';
 
   @override

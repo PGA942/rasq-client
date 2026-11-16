@@ -4340,6 +4340,432 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeBarResetOrder => 'Reset to default order';
 
   @override
+  String get iconThemeEditorTitle => 'Embed a theme in your icon';
+
+  @override
+  String get iconThemeEditorIntro =>
+      'Writes a theme into the four corners of your icon as colour blocks. Even after a social network shrinks or recompresses it, RASQ reads it back and uses it for the background, text colour and particles when someone enlarges your icon.';
+
+  @override
+  String get iconThemeStepPick => 'Choose an icon';
+
+  @override
+  String get iconThemeStepPickHint =>
+      'Cropped to a centred square and resized to 400px.';
+
+  @override
+  String get iconThemePickImage => 'Choose image';
+
+  @override
+  String get iconThemeUseSample => 'Use the sample';
+
+  @override
+  String get iconThemeLoadFailed => 'Couldn\'t load the image';
+
+  @override
+  String get iconThemeStepEncode => 'Convert';
+
+  @override
+  String get iconThemeShapeRaw => 'As is';
+
+  @override
+  String get iconThemeShapeRound => 'Rounded';
+
+  @override
+  String get iconThemeShapeCircle => 'Circle';
+
+  @override
+  String get iconThemeShowZones =>
+      'Show edges (pink: circle display, blue: rounded display)';
+
+  @override
+  String get iconThemeBackground => 'Background';
+
+  @override
+  String get iconThemeBgSolid => 'Solid';
+
+  @override
+  String get iconThemeBgGradient => 'Gradient';
+
+  @override
+  String get iconThemeGradientKind => 'Gradient type';
+
+  @override
+  String get iconThemeGradient0 => 'Sinking down';
+
+  @override
+  String get iconThemeGradient1 => 'Diagonal hue';
+
+  @override
+  String get iconThemeGradient2 => 'Radial';
+
+  @override
+  String get iconThemeGradient3 => 'Aurora';
+
+  @override
+  String get iconThemeBgColor => 'Background';
+
+  @override
+  String get iconThemeTextColor => 'Text';
+
+  @override
+  String get iconThemeAccentColor => 'Accent';
+
+  @override
+  String get iconThemeParticle => 'Basic particles';
+
+  @override
+  String get iconThemeParticle0 => 'None';
+
+  @override
+  String get iconThemeParticle1 => 'Snow';
+
+  @override
+  String get iconThemeParticle2 => 'Sakura';
+
+  @override
+  String get iconThemeParticle3 => 'Stars';
+
+  @override
+  String get iconThemeParticle4 => 'Hearts';
+
+  @override
+  String get iconThemeParticle5 => 'Bubbles';
+
+  @override
+  String get iconThemeAmount => 'Amount';
+
+  @override
+  String get iconThemeSpeed => 'Speed';
+
+  @override
+  String get iconThemeUseExt =>
+      'Also use the extension area (visible as a decorative frame in rounded display; holds slot assignments and overrides the basic particles)';
+
+  @override
+  String get iconThemeExtMode => 'Extension content';
+
+  @override
+  String get iconThemeExtModeSlots => 'Shapes and slots';
+
+  @override
+  String get iconThemeExtModeUrl => 'Delivery URL';
+
+  @override
+  String get iconThemePluginUrl => 'Plugin delivery URL (without https://)';
+
+  @override
+  String get iconThemeMask => 'Frame colour';
+
+  @override
+  String get iconThemeMaskAccent => 'Accent shades';
+
+  @override
+  String get iconThemeMaskBg => 'Background shades';
+
+  @override
+  String get iconThemeMaskMono => 'Monochrome';
+
+  @override
+  String get iconThemeAngle => 'Gradient angle';
+
+  @override
+  String get iconThemeAnim => 'Background animation';
+
+  @override
+  String get iconThemeAnim0 => 'None';
+
+  @override
+  String get iconThemeAnim1 => 'Rotating angle';
+
+  @override
+  String get iconThemeAnim2 => 'Shifting hue';
+
+  @override
+  String get iconThemeAnim3 => 'Pulsing light';
+
+  @override
+  String get iconThemeAnimSpeed => 'Animation speed';
+
+  @override
+  String iconThemeSlotTitle(int n) {
+    return 'Slot $n';
+  }
+
+  @override
+  String get iconThemeSlotRemove => 'Remove';
+
+  @override
+  String get iconThemeSlotAdd => 'Add slot';
+
+  @override
+  String iconThemeSlotShare(int shapes, int paths, int slots) {
+    return '$shapes shapes and $paths paths shared by $slots slots';
+  }
+
+  @override
+  String get iconThemeTriggerLabel => 'Trigger';
+
+  @override
+  String get iconThemeTriggerAlways => 'Always';
+
+  @override
+  String get iconThemeTriggerTap => 'Click';
+
+  @override
+  String get iconThemeTriggerSlide => 'Slide';
+
+  @override
+  String get iconThemeShapeLabel => 'Shape';
+
+  @override
+  String get iconThemeOrbitLabel => 'Path';
+
+  @override
+  String get iconThemeOrbitFall => 'Straight down';
+
+  @override
+  String get iconThemeOrbitDrift => 'Drifting';
+
+  @override
+  String get iconThemeOrbitRise => 'Rising';
+
+  @override
+  String get iconThemeOrbitFlow => 'Sideways';
+
+  @override
+  String get iconThemeRand => 'Spawn spread';
+
+  @override
+  String get iconThemeAngleRand => 'Angle spread';
+
+  @override
+  String get iconThemeEaseA => 'Motion A';
+
+  @override
+  String get iconThemeEaseB => 'Motion B';
+
+  @override
+  String get iconThemeMix => 'Share of B';
+
+  @override
+  String get iconThemeEase0 => 'Linear';
+
+  @override
+  String get iconThemeEase1 => 'Ease';
+
+  @override
+  String get iconThemeEase2 => 'Spring';
+
+  @override
+  String get iconThemeEase3 => 'Gum';
+
+  @override
+  String get iconThemeUseHint =>
+      'Include the 3 RASQ bits (icon frame, media layout, gaps)';
+
+  @override
+  String get iconThemeHintFrame => 'Icon frame';
+
+  @override
+  String get iconThemeHintFrameRound => 'Rounded';
+
+  @override
+  String get iconThemeHintFrameCircle => 'Circle';
+
+  @override
+  String get iconThemeHintDir => 'Attached media';
+
+  @override
+  String get iconThemeHintDirHorizontal => 'Horizontal';
+
+  @override
+  String get iconThemeHintDirVertical => 'Vertical';
+
+  @override
+  String get iconThemeHintFill => 'Gaps';
+
+  @override
+  String get iconThemeHintFillAsIs => 'As is';
+
+  @override
+  String get iconThemeHintFillPack => 'Packed';
+
+  @override
+  String iconThemeHintSummary(
+    String bits,
+    String frame,
+    String dir,
+    String fill,
+  ) {
+    return '$bits = $frame, $dir, $fill';
+  }
+
+  @override
+  String iconThemePalStat(int blocks) {
+    return 'Outer palette: $blocks blocks (17 reference + 31 × 5 bits, 10 for correction)';
+  }
+
+  @override
+  String iconThemeExtStat(int blocks, int used, int capacity) {
+    return 'Extension area: $blocks blocks, $used / $capacity bytes used (30 correction bytes on top)';
+  }
+
+  @override
+  String get iconThemeExtUnused =>
+      'Extension area: not used (picture unchanged)';
+
+  @override
+  String iconThemeOverCapacity(int used, int capacity) {
+    return 'Over capacity: $used / $capacity bytes. Remove slots or reuse the same shapes and paths. The icon stays as it was.';
+  }
+
+  @override
+  String iconThemeOverCapacityUrl(int used, int capacity) {
+    return 'Over capacity: $used / $capacity bytes. Shorten the URL. The icon stays as it was.';
+  }
+
+  @override
+  String get iconThemeStepUpload => 'Upload (simulated)';
+
+  @override
+  String get iconThemeRecompress => 'Server recompression';
+
+  @override
+  String iconThemeQuality(int quality) {
+    return 'JPEG quality $quality';
+  }
+
+  @override
+  String get iconThemeResize => 'Server resize';
+
+  @override
+  String iconThemeResizePx(int px) {
+    return '${px}px';
+  }
+
+  @override
+  String iconThemeServed(int size, String kb) {
+    return 'Returned image: $size×${size}px, ${kb}KB';
+  }
+
+  @override
+  String iconThemeDummyRoute(int size, int quality) {
+    return 'Resized to ${size}px and recompressed at JPEG quality $quality';
+  }
+
+  @override
+  String get iconThemeExternalRoute => 'Using the loaded image as is';
+
+  @override
+  String get iconThemeTryExternal => 'Try an image saved from a real network';
+
+  @override
+  String get iconThemeBackToDummy => 'Back to simulated recompression';
+
+  @override
+  String get iconThemeStepView => 'View';
+
+  @override
+  String get iconThemeSamplePostName => 'Sample User';
+
+  @override
+  String get iconThemeSamplePostBody =>
+      'I hid a theme in my icon. Enlarge it and the background and text colour should change.';
+
+  @override
+  String get iconThemeOpenPreview => 'Enlarge to see the theme';
+
+  @override
+  String get iconThemeResultBasic => 'Basic theme';
+
+  @override
+  String get iconThemeResultExt => 'Extension (slots)';
+
+  @override
+  String get iconThemeResultHint => '3 RASQ bits';
+
+  @override
+  String get iconThemeResultMatch => 'Compared with original';
+
+  @override
+  String get iconThemeRestored => 'Recovered';
+
+  @override
+  String get iconThemeNotRestored => 'Not recovered';
+
+  @override
+  String iconThemeCorrected(int total, int n) {
+    return '$n of $total corrected';
+  }
+
+  @override
+  String get iconThemeNotUsed => 'Not used';
+
+  @override
+  String get iconThemeNotFound => 'Not found';
+
+  @override
+  String iconThemeExtUrlNote(String url) {
+    return 'Delivery URL: https://$url';
+  }
+
+  @override
+  String iconThemeExtSlotsNote(String triggers) {
+    return 'Slots: $triggers';
+  }
+
+  @override
+  String get iconThemeListSeparator => ', ';
+
+  @override
+  String get iconThemeHintRead => 'Read';
+
+  @override
+  String get iconThemeHintNone => 'No flags (default layout)';
+
+  @override
+  String get iconThemeDslMatch => 'DSL matches';
+
+  @override
+  String get iconThemeDslMismatch => 'Doesn\'t match';
+
+  @override
+  String get iconThemeExternalNoCompare => 'External image, not compared';
+
+  @override
+  String get iconThemeDslUnreadable => '(Couldn\'t read back)';
+
+  @override
+  String get iconThemeUseIcon => 'Use this icon';
+
+  @override
+  String get iconThemePreviewBio =>
+      'This background, text colour, button colour and the particles are drawn only from values read back from the icon\'s corners. Try tapping or swiping.';
+
+  @override
+  String get iconThemePreviewFollow => 'Follow';
+
+  @override
+  String iconThemePluginUrlNote(String url) {
+    return 'The plugin would come from https://$url. It isn\'t fetched yet, so the basic theme is shown.';
+  }
+
+  @override
+  String get iconThemeEmbedTooltip => 'Embed a theme in your icon';
+
+  @override
+  String get iconThemeSettingsRead => 'Read icon themes';
+
+  @override
+  String get iconThemeSettingsReadSubtitle =>
+      'Uses themes embedded in icons to change avatar frames, media layout and the background of enlarged icons (downloads the icon image again)';
+
+  @override
+  String get iconThemeSettingsEditorSubtitle =>
+      'Write a background, text colour and particle theme into your current icon or any image';
+
+  @override
   String get languageSelfName => 'English';
 
   @override

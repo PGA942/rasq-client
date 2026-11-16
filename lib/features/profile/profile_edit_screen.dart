@@ -9,6 +9,8 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../theme/icon_theme/icon_theme_editor_screen.dart' show openIconThemeEditor;
+import '../theme/icon_theme/icon_theme_reader.dart' show iconThemeFetcherProvider;
 import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../users/user_providers.dart';
@@ -63,6 +65,16 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     if (x == null) return;
     final v = (bytes: await x.readAsBytes(), name: x.name, mime: x.mimeType);
     setState(() => banner ? _banner = v : _avatar = v);
+  }
+
+  /// アイコンにテーマを埋め込む (D-581)。選んである画像(無ければいまのアイコン)から。ヘッダーのボタンからも同じ。
+  Future<void> _embedTheme(Uri? current) async {
+    var initial = _avatar?.bytes;
+    if (initial == null && current != null) initial = await ref.read(iconThemeFetcherProvider)(current);
+    if (!mounted) return;
+    final png = await openIconThemeEditor(context, initial: initial);
+    if (png == null || !mounted) return;
+    setState(() => _avatar = (bytes: png, name: 'icon_theme.png', mime: 'image/png'));
   }
 
   Future<void> _save() async {
@@ -127,7 +139,11 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                   ? Image.memory(_banner!.bytes, fit: BoxFit.cover)
                   : (p.bannerUrl == null ? ColoredBox(color: scheme.surfaceContainerHighest) : Image.network(webHtmlElementStrategy: rasqWebImageStrategy, p.bannerUrl.toString(), fit: BoxFit.cover)),
             ),
-            Positioned(right: 8, bottom: 8, child: _PickButton(onTap: () => _pick(true))),
+            Positioned(right: 8, bottom: 8, child: Row(children: [
+              _PickButton(key: const ValueKey('profileEdit.banner.theme'), icon: Icons.palette_outlined, tooltip: l10n.iconThemeEmbedTooltip, onTap: () => _embedTheme(p.summary.avatarUrl)),
+              const SizedBox(width: 6),
+              _PickButton(onTap: () => _pick(true)),
+            ])),
           ]),
           Padding(
             padding: const EdgeInsets.all(RasqSpacing.page),
@@ -135,6 +151,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               Stack(children: [
                 _avatar != null ? ClipOval(child: Image.memory(_avatar!.bytes, width: 64, height: 64, fit: BoxFit.cover)) : RasqAvatar(imageUrl: p.summary.avatarUrl, size: 64, fallbackLabel: p.summary.displayName),
                 Positioned(right: -4, bottom: -4, child: _PickButton(onTap: () => _pick(false))),
+                Positioned(right: -4, top: -4, child: _PickButton(key: const ValueKey('profileEdit.avatar.theme'), icon: Icons.palette_outlined, tooltip: l10n.iconThemeEmbedTooltip, onTap: () => _embedTheme(p.summary.avatarUrl))),
               ]),
               const SizedBox(width: RasqSpacing.md),
               Expanded(
@@ -199,12 +216,14 @@ class _Labeled extends StatelessWidget {
 }
 
 class _PickButton extends StatelessWidget {
-  const _PickButton({required this.onTap});
+  const _PickButton({super.key, required this.onTap, this.icon = Icons.add_photo_alternate_outlined, this.tooltip});
   final VoidCallback onTap;
+  final IconData icon;
+  final String? tooltip;
   @override
   Widget build(BuildContext context) => Material(
         color: Theme.of(context).colorScheme.surface,
         shape: const CircleBorder(),
-        child: IconButton(icon: const Icon(Icons.add_photo_alternate_outlined, size: 18), onPressed: onTap, tooltip: context.l10n.profileEditPickImage, constraints: const BoxConstraints(minWidth: 36, minHeight: 36)),
+        child: IconButton(icon: Icon(icon, size: 18), onPressed: onTap, tooltip: tooltip ?? context.l10n.profileEditPickImage, constraints: const BoxConstraints(minWidth: 36, minHeight: 36)),
       );
 }

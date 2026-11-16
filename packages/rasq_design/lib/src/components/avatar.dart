@@ -22,6 +22,7 @@ class RasqAvatar extends StatelessWidget {
     this.badge,
     this.badgeAlignment = Alignment.bottomRight,
     this.semanticsLabel,
+    this.rounded = false,
   });
 
   final Uri? imageUrl;
@@ -37,6 +38,9 @@ class RasqAvatar extends StatelessWidget {
   final Alignment badgeAlignment;
   final String? semanticsLabel;
 
+  /// 角丸(一辺の 20%)の枠にする(false = 丸)。アイコンに埋め込まれたテーマの予約ビット(フレーム = 角丸)で使う (D-580)。
+  final bool rounded;
+
   @override
   Widget build(BuildContext context) {
     final tokens = RasqTokens.of(context);
@@ -47,7 +51,8 @@ class RasqAvatar extends StatelessWidget {
       UserPresence.none => null,
     };
 
-    Widget circle = ClipOval(
+    Widget clip({required Widget child}) => rounded ? ClipRRect(borderRadius: BorderRadius.circular(size * 0.2), child: child) : ClipOval(child: child);
+    Widget circle = clip(
       child: SizedBox(
         width: size,
         height: size,
@@ -75,7 +80,9 @@ class RasqAvatar extends StatelessWidget {
     if (ringColor != null) {
       circle = Container(
         padding: EdgeInsets.all(size * 0.06),
-        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ringColor, width: size * 0.06)),
+        decoration: rounded
+            ? BoxDecoration(borderRadius: BorderRadius.circular(size * 0.26), border: Border.all(color: ringColor, width: size * 0.06))
+            : BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ringColor, width: size * 0.06)),
         child: circle,
       );
     }

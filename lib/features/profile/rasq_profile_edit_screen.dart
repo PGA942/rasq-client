@@ -14,6 +14,8 @@ import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart' hide RasqNotice;
+import '../theme/icon_theme/icon_theme_editor_screen.dart' show openIconThemeEditor;
+import '../theme/icon_theme/icon_theme_reader.dart' show iconThemeFetcherProvider;
 import '../../l10n/l10n.dart';
 import 'rasq_account_page_screen.dart' show RasqSnsTileChip;
 import 'rasq_ownership_screens.dart' show rasqVerifiableKinds;
@@ -138,6 +140,20 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
     });
   }
 
+  /// アイコンにテーマを埋め込む (D-581): 選んである画像(無ければいまのアイコン)からテーマ編集を開き、書き込んだ PNG を
+  /// 新しいアイコンにする。ヘッダーのボタンからも同じ(テーマはアイコンに入る)。
+  Future<void> _embedTheme(Uri? current) async {
+    var initial = _avatar?.bytes;
+    if (initial == null && current != null && !_removeAvatar) initial = await ref.read(iconThemeFetcherProvider)(current);
+    if (!mounted) return;
+    final png = await openIconThemeEditor(context, initial: initial);
+    if (png == null || !mounted) return;
+    setState(() {
+      _avatar = (bytes: png, contentType: 'image/png');
+      _removeAvatar = false;
+    });
+  }
+
   Future<void> _save() async {
     final before = _loaded;
     if (before == null || _busy) return;
@@ -216,6 +232,8 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                             _removeBanner = true;
                           })),
                     const SizedBox(width: 6),
+                    _RoundButton(key: const ValueKey('rasqProfile.banner.theme'), icon: Icons.palette_outlined, tooltip: l10n.iconThemeEmbedTooltip, onTap: () => _embedTheme(a.avatarUrl)),
+                    const SizedBox(width: 6),
                     _RoundButton(key: const ValueKey('rasqProfile.banner.pick'), icon: Icons.add, tooltip: l10n.profileEditBannerPick, onTap: () => _pick(true)),
                   ]),
                 ),
@@ -228,6 +246,7 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                         ? ClipOval(child: Image.memory(_avatar!.bytes, width: 64, height: 64, fit: BoxFit.cover))
                         : RasqAvatar(imageUrl: _removeAvatar ? null : a.avatarUrl, size: 64, fallbackLabel: a.displayName.isEmpty ? a.handle : a.displayName),
                     Positioned(right: -4, bottom: -4, child: _RoundButton(key: const ValueKey('rasqProfile.avatar.pick'), icon: Icons.add, tooltip: l10n.profileEditAvatarPick, onTap: () => _pick(false))),
+                    Positioned(right: -4, top: -4, child: _RoundButton(key: const ValueKey('rasqProfile.avatar.theme'), icon: Icons.palette_outlined, tooltip: l10n.iconThemeEmbedTooltip, onTap: () => _embedTheme(a.avatarUrl))),
                     if (_avatar != null || (a.avatarUrl != null && !_removeAvatar))
                       Positioned(left: -4, bottom: -4, child: _RoundButton(key: const ValueKey('rasqProfile.avatar.remove'), icon: Icons.delete_outline, tooltip: l10n.profileEditAvatarRemove, onTap: () => setState(() {
                             _avatar = null;

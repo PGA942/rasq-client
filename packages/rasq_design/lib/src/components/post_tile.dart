@@ -56,6 +56,7 @@ class RasqPostTile extends StatelessWidget {
     this.bannerIcon,
     this.bannerText,
     this.avatar,
+    this.avatarRounded = false,
     this.media,
     this.poll,
     this.quote,
@@ -86,6 +87,9 @@ class RasqPostTile extends StatelessWidget {
 
   /// avatar slot override.
   final Widget? avatar;
+
+  /// 既定のアイコンを角丸の枠に(作者のアイコンに埋め込まれたテーマの予約ビット、D-580)。
+  final bool avatarRounded;
 
   /// content slot: body text (already parsed into a widget by the host).
   final Widget content;
@@ -172,7 +176,7 @@ class RasqPostTile extends StatelessWidget {
         ),
     ]);
 
-    final avatarWidget = avatar ?? RasqAvatar(imageUrl: author.avatarUrl, size: avatarSize, presence: author.presence, fallbackLabel: author.displayName, onTap: onAuthorTap);
+    final avatarWidget = avatar ?? RasqAvatar(imageUrl: author.avatarUrl, size: avatarSize, presence: author.presence, fallbackLabel: author.displayName, onTap: onAuthorTap, rounded: avatarRounded);
 
     // 上付きバナー行(RT の「♻︎ 〇〇がリノートしました」と同スタイル)。
     // D-085: TL プラグインもアイコン名 + 表示テキストで同じ行を出せる。
