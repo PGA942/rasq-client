@@ -4287,6 +4287,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeBarResetOrder => '恢复默认排列';
 
   @override
+  String get homeMediaLimitOffTooltip => '添付を 4 枚までにする(いまは全部を横に送る。長押しでメニュー)';
+
+  @override
+  String get homeMediaLimitOnTooltip => '添付を全部見せる(いまは 4 枚まで。長押しでメニュー)';
+
+  @override
+  String get homeMediaLimitMenuLimit => '添付を 4 枚までにする';
+
+  @override
+  String get homeMediaLimitMenuAll => '添付を全部横に送る';
+
+  @override
+  String get homeMediaLimitMenuEditBar => 'アクションバーを編集';
+
+  @override
   String get iconThemeEditorTitle => 'アイコンにテーマを埋め込む';
 
   @override
@@ -13296,6 +13311,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsActionBarEditButton => '编辑操作栏';
 
   @override
+  String get settingsActionBarAppButtonsHeader => 'アプリのボタン';
+
+  @override
+  String get settingsActionBarMediaLimitButtonTitle => '添付の「4 枚まで」の切り替え';
+
+  @override
+  String get settingsActionBarMediaLimitButtonSubtitle =>
+      '横に並べる添付が 5 枚以上の投稿のバーに出す';
+
+  @override
+  String get settingsActionBarMediaLimitFourTitle => '横に並べるときも 4 枚まで';
+
+  @override
+  String get settingsActionBarMediaLimitFourSubtitle =>
+      'オフ(既定)なら全部を横に送る。縦の並びはいつも 4 枚まで';
+
+  @override
+  String settingsActionBarOpenPluginPage(String name) {
+    return '$name のページを開く';
+  }
+
+  @override
   String get settingsBackendTitle => 'RASQ 服务器';
 
   @override
@@ -15190,6 +15227,18 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get settingsPagesTrendCdnText1Detail =>
       '从 CDN（缓存网络）读取趋势获取结果的机制，将与 RASQ 服务器的分发平台同时推出。目前直接从各 SNS 获取。缓存网络：未提供。';
+
+  @override
+  String get settingsPagesAppearanceTimelineMediaLimitFourTitle =>
+      '添付を横に並べるときも 4 枚まで';
+
+  @override
+  String get settingsPagesAppearanceTimelineMediaLimitFourSubtitle =>
+      'オフ(既定)なら、横に並べる添付は全部を横に送る';
+
+  @override
+  String get settingsPagesAppearanceTimelineMediaLimitFourDetail =>
+      '添付の既定の並びは横(5 枚以上は 4:3 の窓に 2 枚ずつの列を横に送る)。オンにすると 4 枚目に「+N」。縦の並び(作者のアイコンのテーマ)はいつも 4 枚まで、スレッドの展開はいつも全部。投稿のバーの切り替え(長押しでアクションバーの編集へ)と同じ設定です';
 
   @override
   String get settingsSectionsPluginsTitle => '插件配置';
