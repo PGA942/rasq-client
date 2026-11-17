@@ -1,5 +1,5 @@
 import 'package:meta/meta.dart';
-import 'package:rasq_models/rasq_models.dart' show RasqUiLocale;
+import 'package:rasq_models/rasq_models.dart' show RasqLangOverride, RasqUiLocale;
 
 /// マニフェストの文の言語 (D-484 / 契約 v0.24、rasq-sdk-sample PROTOCOL.md §4.6)。
 ///
@@ -18,6 +18,12 @@ class ManifestLocales {
   final Map<String, Map<String, Object?>> byTag;
 
   static const none = ManifestLocales();
+
+  /// 言語パック (D-592) のマニフェストの文: 領域 `plugin:<pluginId>` のキー `manifest.<path>`(`name` / `description` /
+  /// `pageTitle` / `actions.<id>.label` / `assets.<id>.label`)。マニフェストの `locales` より先に引く。無ければ null。
+  /// 規約(`termsOfService`)は言語パックでは差し替えない(正本は日本語の文書)。
+  static String? packText(String pluginId, String path, [String? tag]) =>
+      pluginId.isEmpty ? null : RasqLangOverride.text(tag ?? RasqUiLocale.tag, 'plugin:$pluginId', 'manifest.$path');
 
   bool get isEmpty => byTag.isEmpty;
 

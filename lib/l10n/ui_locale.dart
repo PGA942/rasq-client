@@ -4,10 +4,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show Intl;
 import 'package:rasq_design/rasq_design.dart' show rasqLocaleFromTag;
-import 'package:rasq_models/rasq_models.dart' show RasqUiLocale;
+import 'package:rasq_models/rasq_models.dart' show RasqLangOverride, RasqUiLocale;
 
 import '../features/settings/settings_dsl.dart' show settingsAreaProvider;
 import 'l10n.dart';
+import 'langpack/lang_pack_store.dart';
 
 /// 表示の言語 (D-484)。
 ///
@@ -25,8 +26,14 @@ const languageSettingsArea = 'appearance.language';
 /// 設定の値「システムに合わせる」。
 const systemLocaleSetting = 'system';
 
-/// 選べる言語(gen-l10n が作った一覧の順)。
-List<Locale> get supportedUiLocales => AppLocalizations.supportedLocales;
+/// 選べる言語(gen-l10n が作った一覧の順)。言語パック (D-592) が足した言語(同梱に無い言語)は後ろに足す。
+List<Locale> get supportedUiLocales => [
+      ...AppLocalizations.supportedLocales,
+      ...langPackAddedLocales.where((l) => !AppLocalizations.supportedLocales.contains(l)),
+    ];
+
+/// 言語パックが足した言語(同梱に無い言語)。
+List<Locale> get langPackAddedLocales => [for (final l in ActiveLangPack.current?.addedLocales ?? const <LangPackLocale>[]) rasqLocaleFromTag(l.tag)];
 
 /// 設定 [setting](BCP-47 / `system` / null)と端末の言語 [system] から、表示の言語を決める。
 /// 設定が対応する言語ならそれ。そうでなければ端末の言語を順に見て、言語・文字・地域まで同じもの → 言語が同じもの。
@@ -110,6 +117,8 @@ final systemLocalesProvider = NotifierProvider<SystemLocalesNotifier, List<Local
 
 /// いまの表示の言語。決まるたびに [RasqUiLocale] と intl の既定にも写す。
 final uiLocaleProvider = Provider<Locale>((ref) {
+  // 言語パックが足した言語も選べるように、パックが変わったら決め直す。
+  ref.watch(langPackProvider);
   final locale = resolveUiLocale(ref.watch(uiLocaleSettingProvider), ref.watch(systemLocalesProvider));
   final tag = locale.toLanguageTag();
   RasqUiLocale.tag = tag;
@@ -119,3 +128,11 @@ final uiLocaleProvider = Provider<Locale>((ref) {
 
 /// いまの表示の言語の BCP-47(`Accept-Language` / ORGATE の `locale` / プラグインの `locale` に送る値)。
 final uiLocaleTagProvider = Provider<String>((ref) => ref.watch(uiLocaleProvider).toLanguageTag());
+
+/// 文言の版: 表示の言語 + 言語パック (D-592)。文言を持っておく所(設定のページ・プラグインの答え)は、これを見て言語や
+/// パックが変わったら読み直す。
+final uiTextsKeyProvider = Provider<String>((ref) {
+  final tag = ref.watch(uiLocaleTagProvider);
+  final pack = ref.watch(langPackProvider).value;
+  return pack == null ? tag : '$tag|${pack.id}@${pack.version}#${RasqLangOverride.revision}';
+});

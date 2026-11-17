@@ -111,6 +111,7 @@ class WasmSnsPlugin extends SnsPlugin {
           fetchHosts: network.hosts.toSet(), instanceAllowed: network.instance,
           // gpu.compute (D-081): 審査済み (`verified`) のマニフェストだけ。`gpu_ml` の宣言は env が重ねて見る。
           gpuCompute: manifest.verified,
+          pluginId: manifest.id,
         );
         await c.load();
         final hook = onFetchShape;

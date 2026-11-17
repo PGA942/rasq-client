@@ -9,7 +9,7 @@ import 'settings_dsl.dart' show loadSettingsPageJson;
 import 'settings_sections.dart';
 import '../../l10n/asset_strings.dart';
 import '../../l10n/l10n.dart';
-import '../../l10n/ui_locale.dart' show uiLocaleProvider, uiLocaleTagProvider;
+import '../../l10n/ui_locale.dart' show uiLocaleProvider, uiLocaleTagProvider, uiTextsKeyProvider;
 import '../../app/feature_flags.dart';
 
 /// 設定の検索 (D-385)。「全ての設定」の検索欄から、設定の行と、設定ページ(DSL)の中の項目を探す。
@@ -118,6 +118,7 @@ final settingsSearchIndexProvider = FutureProvider<List<SettingsSearchEntry>>((r
   // 表示の言語が変わったら組み直す (D-484)。
   final l = appL10nFor(ref.watch(uiLocaleProvider));
   final tag = ref.watch(uiLocaleTagProvider);
+  ref.watch(uiTextsKeyProvider); // 言語パック (D-592)
   return buildSettingsSearchIndex(l10n: l, flags: ref.watch(featureFlagsProvider), (area) async {
     try {
       // 長い文書ページも同じ道で読む。表示の言語の文書があればそれ (D-535)。

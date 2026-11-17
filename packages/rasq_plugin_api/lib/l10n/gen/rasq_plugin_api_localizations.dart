@@ -1,6 +1,8 @@
 // tool/l10n_merge.dart が lib/l10n/parts/*.arb から作る(手で直さない)。Flutter に依らない部品の文言 (D-533、docs/I18N.md)。
 // ignore_for_file: type=lint
 
+import 'package:rasq_models/rasq_models.dart' show RasqLangOverride;
+
 /// 文言(言語ごとの実装は [lookupRasqPluginApiLocalizations])。
 abstract class RasqPluginApiLocalizations {
   const RasqPluginApiLocalizations(this.localeName);
@@ -195,4 +197,48 @@ RasqPluginApiLocalizations lookupRasqPluginApiLocalizations(String tag) {
     }
   }
   return const RasqPluginApiLocalizationsJa();
+}
+
+/// 言語パック (D-592) の上書きを先に引く [RasqPluginApiLocalizations]。上書きの無いキー・壊れていて捨てたキーは [base](同梱)の文言。
+/// 引く先は `RasqLangOverride.text(localeName, 'rasq_plugin_api', キー, 引数)`。
+class RasqPluginApiLocalizationsOverlay extends RasqPluginApiLocalizations {
+  RasqPluginApiLocalizationsOverlay(this.base, [String? localeName]) : super(localeName ?? base.localeName);
+
+  /// 同梱の文言(上書きが無いときに使う)。
+  final RasqPluginApiLocalizations base;
+
+  /// 言語パックの中の領域の名前。
+  static const domain = 'rasq_plugin_api';
+
+  /// キー → 使えるプレースホルダ(言語パックを読み込むときの検証に使う)。
+  static const placeholders = <String, List<String>>{
+    'pluginApiTimelineBundle': [],
+    'pluginApiTimelineGlobal': [],
+    'pluginApiTimelineHome': [],
+    'pluginApiTimelineLocal': [],
+    'pluginApiTimelineRecommended': [],
+    'pluginApiTimelineRelational': [],
+    'pluginApiTimelineSocial': [],
+  };
+
+  @override
+  String get pluginApiTimelineBundle => RasqLangOverride.text(localeName, domain, 'pluginApiTimelineBundle') ?? base.pluginApiTimelineBundle;
+
+  @override
+  String get pluginApiTimelineGlobal => RasqLangOverride.text(localeName, domain, 'pluginApiTimelineGlobal') ?? base.pluginApiTimelineGlobal;
+
+  @override
+  String get pluginApiTimelineHome => RasqLangOverride.text(localeName, domain, 'pluginApiTimelineHome') ?? base.pluginApiTimelineHome;
+
+  @override
+  String get pluginApiTimelineLocal => RasqLangOverride.text(localeName, domain, 'pluginApiTimelineLocal') ?? base.pluginApiTimelineLocal;
+
+  @override
+  String get pluginApiTimelineRecommended => RasqLangOverride.text(localeName, domain, 'pluginApiTimelineRecommended') ?? base.pluginApiTimelineRecommended;
+
+  @override
+  String get pluginApiTimelineRelational => RasqLangOverride.text(localeName, domain, 'pluginApiTimelineRelational') ?? base.pluginApiTimelineRelational;
+
+  @override
+  String get pluginApiTimelineSocial => RasqLangOverride.text(localeName, domain, 'pluginApiTimelineSocial') ?? base.pluginApiTimelineSocial;
 }

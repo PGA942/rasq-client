@@ -15,10 +15,14 @@ import 'wasm_worker.dart';
 /// (専用 isolate)で動かし、UI isolate をブロックしない。
 /// `net.fetch`(ランタイム内蔵)や重い snapshot 生成中も画面が止まらない。
 class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin implements WasmPluginViewModel {
-  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}, Set<String> fowPermissions = const {'widget'}, Set<String> appFns = const {}, Set<String> permissions = const {}, int? fuelPerCall, Set<String> fetchHosts = const {}, bool instanceAllowed = false, bool gpuCompute = false})
+  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}, Set<String> fowPermissions = const {'widget'}, Set<String> appFns = const {}, Set<String> permissions = const {}, int? fuelPerCall, Set<String> fetchHosts = const {}, bool instanceAllowed = false, bool gpuCompute = false, this.pluginId})
       : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall, fetchHosts: fetchHosts, instanceAllowed: instanceAllowed, gpuCompute: gpuCompute);
 
   final WasmWorkerConfig _config;
+
+  /// プラグインの id(言語パックのそのプラグインの文を `args.localeStrings` で渡すのに使う。D-592)。読み込んだあとで
+  /// マニフェストから分かる場合(スロットのプラグイン)は後から入れる。
+  String? pluginId;
 
   /// アプリ向けホスト関数の中継先 (D-167)。ワーカーからの `{fn, args}` を受ける。
   AppFnRelay? onAppFn;
@@ -111,7 +115,7 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
 
   Future<Map<String, dynamic>> invoke(String fn, [Map<String, Object?> args = const {}]) async {
     final worker = _require();
-    final result = (jsonDecode(await worker.call(fn: fn, argsJson: jsonEncode(withHostCallArgs(args)), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
+    final result = (jsonDecode(await worker.call(fn: fn, argsJson: jsonEncode(withHostCallArgs(args, pluginId: pluginId)), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
     _lastResult = result;
     final value = result['ok'] == true ? result['value'] as Map? : null;
     if (value?['treeUpdated'] == true) {

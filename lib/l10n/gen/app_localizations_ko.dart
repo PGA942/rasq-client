@@ -4834,6 +4834,113 @@ class AppLocalizationsKo extends AppLocalizations {
   String get iconThemeChangeImage => '画像を変更';
 
   @override
+  String get langPackHeader => '언어 팩';
+
+  @override
+  String get langPackCaption =>
+      '문구를 바꾸는 언어 팩(.rasqlang)을 불러올 수 있습니다. 팩에 없는 문구는 공식 문구 그대로입니다.';
+
+  @override
+  String get langPackCaptionDetail =>
+      '언어 팩(.rasqlang)을 불러오면 앱의 문구, RAi의 지시문, 플러그인의 문구를 팩의 문구로 바꿉니다. 팩에 없는 문구나 형식이 맞지 않는 문구(플레이스홀더가 다른 경우 등)는 공식 문구 그대로입니다. 앱에 없는 언어를 추가하는 팩도 있습니다(부족한 문구는 팩이 정한 언어로 표시됩니다). 약관 등의 문서는 바꾸지 않습니다. 파일에서 불러온 팩은 심사를 거치지 않았습니다. 한 번에 하나의 팩만 쓸 수 있습니다(D-592).';
+
+  @override
+  String get langPackOfficial => '공식(앱에 들어 있는 문구)';
+
+  @override
+  String get langPackOfficialSubtitle => '언어 팩을 불러오지 않았습니다';
+
+  @override
+  String get langPackUnreviewed => '미심사';
+
+  @override
+  String langPackSubtitle(String version, String authors) {
+    return '버전 $version・$authors';
+  }
+
+  @override
+  String get langPackImport => '파일에서 불러오기';
+
+  @override
+  String get langPackRemove => '빼고 공식 문구로 되돌리기';
+
+  @override
+  String get langPackPickerLabel => '언어 팩';
+
+  @override
+  String langPackApplied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count개의 문구를 바꾸고 있습니다',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackRejected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count개는 형식이 맞지 않아 공식 문구 그대로입니다',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackUnknown(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count개는 이 앱에 없는 문구라서 쓰지 않습니다',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackNeedsNewerApp(String version) {
+    return '이 팩은 앱 $version 이상용입니다. 부족한 문구는 공식 문구로 표시됩니다.';
+  }
+
+  @override
+  String get langPackShowIssues => '맞지 않은 문구 보기';
+
+  @override
+  String get langPackHideIssues => '닫기';
+
+  @override
+  String langPackLoaded(String name) {
+    return '\"$name\"을(를) 불러왔습니다';
+  }
+
+  @override
+  String get langPackAddedLocale => '언어 팩';
+
+  @override
+  String get langPackErrorTooLarge => '파일이 너무 큽니다(16MB까지)';
+
+  @override
+  String get langPackErrorNotPack => '언어 팩(.rasqlang)이 아닙니다';
+
+  @override
+  String get langPackErrorUnsupportedVersion =>
+      '이 앱보다 새로운 형식의 언어 팩입니다. 앱을 업데이트해 주세요';
+
+  @override
+  String langPackErrorManifest(String field) {
+    return '언어 팩의 $field이(가) 없거나 형식이 다릅니다';
+  }
+
+  @override
+  String get langPackErrorNoLocales =>
+      '쓸 수 있는 언어가 없습니다(앱에 없는 언어는 부족한 문구를 가져올 언어를 적어야 합니다)';
+
+  @override
+  String langPackErrorFailed(String error) {
+    return '불러오지 못했습니다: $error';
+  }
+
+  @override
   String get languageSelfName => '한국어';
 
   @override

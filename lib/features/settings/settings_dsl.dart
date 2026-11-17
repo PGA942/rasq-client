@@ -15,7 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
-import '../../l10n/ui_locale.dart' show uiLocaleTagProvider;
+import '../../l10n/ui_locale.dart' show uiLocaleTagProvider, uiTextsKeyProvider;
 import '../../l10n/asset_strings.dart';
 import '../../l10n/l10n.dart';
 
@@ -65,8 +65,8 @@ class SettingsPageSpec {
 /// SNS プラグイン [pluginId] が提供する設定ページ(短 area → spec)(D-044 / D-482)。壊れたページは読み飛ばす
 /// (V12: 縮退)。wasm のプラグインは `sns.settingsPages` で返すので非同期([SnsPlugin.loadSettingsPages])。
 final snsPluginSettingsPagesProvider = FutureProvider.family<Map<String, SettingsPageSpec>, String>((ref, pluginId) async {
-  // ページの文言はプラグインが表示の言語(`args.locale`)で選ぶ。言語が変われば読み直す (D-484 / 契約 v0.24)。
-  ref.watch(uiLocaleTagProvider);
+  // ページの文言はプラグインが表示の言語(`args.locale`)で選ぶ。言語・言語パックが変われば読み直す (D-484 / 契約 v0.24 / D-592)。
+  ref.watch(uiTextsKeyProvider);
   final plugin = ref.watch(pluginRegistryProvider).plugin(pluginId);
   final out = <String, SettingsPageSpec>{};
   for (final raw in await plugin?.loadSettingsPages() ?? const <String>[]) {
@@ -127,6 +127,7 @@ final settingsPageSpecProvider = FutureProvider.family<SettingsPageSpec, String>
   }
   // 表示の言語 (D-535): 文書は言語ごとのファイル、画面のページの文言の参照は表示の言語の文言に。言語が変われば読み直す。
   final tag = ref.watch(uiLocaleTagProvider);
+  ref.watch(uiTextsKeyProvider); // 言語パック (D-592)
   final raw = await loadSettingsPageJson(area, localeTag: tag);
   return SettingsPageSpec.fromJson((resolveAssetStrings(jsonDecode(raw), appL10nFor(rasqLocaleFromTag(tag))) as Map).cast<String, Object?>());
 });

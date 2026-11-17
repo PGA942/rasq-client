@@ -1,0 +1,141 @@
+{
+  "langPackHeader": "言語パック",
+  "@langPackHeader": {
+    "description": "設定 → 言語 の「言語パック」の見出し"
+  },
+  "langPackCaption": "文言を差し替える言語パック(.rasqlang)を読み込めます。パックに無い文言は公式の文言のままです。",
+  "@langPackCaption": {
+    "description": "言語パックの欄の説明(短い)"
+  },
+  "langPackCaptionDetail": "言語パック(.rasqlang)を読み込むと、アプリの文言・RAi の指示の文・プラグインの文をパックの文に差し替えます。パックに無い文言や、形が合わない文言(プレースホルダの違いなど)は公式の文言のままです。アプリに入っていない言語を足すパックもあります(足りない文言はパックが決めた言語になります)。規約などの文書は差し替えません。ファイルから読み込んだパックは審査を通っていません。同時に使えるパックは 1 つです(D-592)。",
+  "@langPackCaptionDetail": {
+    "description": "言語パックの欄の説明(開発者モードの詳しい説明)"
+  },
+  "langPackOfficial": "公式(アプリに入っている文言)",
+  "@langPackOfficial": {
+    "description": "言語パックを読み込んでいないときの行の題(アプリに入っている公式の文言)"
+  },
+  "langPackOfficialSubtitle": "言語パックを読み込んでいません",
+  "@langPackOfficialSubtitle": {
+    "description": "公式の行の説明"
+  },
+  "langPackUnreviewed": "未審査",
+  "@langPackUnreviewed": {
+    "description": "ファイルから読み込んだ言語パックに付ける印(ストアの審査を通っていない)"
+  },
+  "langPackSubtitle": "版 {version}・{authors}",
+  "@langPackSubtitle": {
+    "description": "読み込んだ言語パックの行の説明。version = 版、authors = 作者(「、」でつないだもの)",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "authors": {
+        "type": "String"
+      }
+    }
+  },
+  "langPackImport": "ファイルから読み込む",
+  "@langPackImport": {
+    "description": "言語パックのファイル(.rasqlang)を選んで読み込むボタン"
+  },
+  "langPackRemove": "外して公式の文言に戻す",
+  "@langPackRemove": {
+    "description": "読み込んだ言語パックを外して公式の文言に戻すボタン"
+  },
+  "langPackPickerLabel": "言語パック",
+  "@langPackPickerLabel": {
+    "description": "ファイルを選ぶ画面の、種類の名前"
+  },
+  "langPackApplied": "{count, plural, other{{count} 件の文言を差し替えています}}",
+  "@langPackApplied": {
+    "description": "読み込んだパックの文の数。count = 使う文の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "langPackRejected": "{count, plural, other{{count} 件は形が合わないので公式の文言のままです}}",
+  "@langPackRejected": {
+    "description": "形が合わず捨てた文の数(プレースホルダの違い・書式の誤り)。count = 数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "langPackUnknown": "{count, plural, other{{count} 件はこのアプリに無い文言なので使いません}}",
+  "@langPackUnknown": {
+    "description": "このアプリに無いキー(古いキーなど)で無視した文の数。count = 数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "langPackNeedsNewerApp": "このパックはアプリ {version} 以降向けです。足りない文言は公式の文言になります。",
+  "@langPackNeedsNewerApp": {
+    "description": "パックがもっと新しいアプリ向けのとき。version = パックが求めるアプリの版",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "langPackShowIssues": "合わなかった文言を見る",
+  "@langPackShowIssues": {
+    "description": "捨てた文の一覧を開くボタン"
+  },
+  "langPackHideIssues": "閉じる",
+  "@langPackHideIssues": {
+    "description": "捨てた文の一覧を閉じるボタン"
+  },
+  "langPackLoaded": "「{name}」を読み込みました",
+  "@langPackLoaded": {
+    "description": "読み込みが済んだときの知らせ。name = パックの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "langPackAddedLocale": "言語パック",
+  "@langPackAddedLocale": {
+    "description": "言語の一覧で、言語パックが足した(アプリに入っていない)言語に付ける説明"
+  },
+  "langPackErrorTooLarge": "ファイルが大きすぎます(16 MB まで)",
+  "@langPackErrorTooLarge": {
+    "description": "ファイルが大きすぎるとき"
+  },
+  "langPackErrorNotPack": "言語パック(.rasqlang)ではありません",
+  "@langPackErrorNotPack": {
+    "description": "選んだファイルが言語パックではないとき"
+  },
+  "langPackErrorUnsupportedVersion": "このアプリより新しい形式の言語パックです。アプリを更新してください",
+  "@langPackErrorUnsupportedVersion": {
+    "description": "言語パックの形式がアプリより新しいとき"
+  },
+  "langPackErrorManifest": "言語パックの {field} が足りないか、形が違います",
+  "@langPackErrorManifest": {
+    "description": "パックの目録(id・名前・版・作者)の欄がおかしいとき。field = 欄の名前(id / name / version / authors。訳さない)",
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "langPackErrorNoLocales": "使える言語がありません(アプリに無い言語は、足りない文言を引く言語を書く必要があります)",
+  "@langPackErrorNoLocales": {
+    "description": "使える言語が 1 つも無いとき"
+  },
+  "langPackErrorFailed": "読み込めませんでした: {error}",
+  "@langPackErrorFailed": {
+    "description": "そのほかの理由で読み込めなかったとき。error = 理由(訳さない)",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
+}

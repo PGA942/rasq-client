@@ -4807,6 +4807,113 @@ class AppLocalizationsJa extends AppLocalizations {
   String get iconThemeChangeImage => '画像を変更';
 
   @override
+  String get langPackHeader => '言語パック';
+
+  @override
+  String get langPackCaption =>
+      '文言を差し替える言語パック(.rasqlang)を読み込めます。パックに無い文言は公式の文言のままです。';
+
+  @override
+  String get langPackCaptionDetail =>
+      '言語パック(.rasqlang)を読み込むと、アプリの文言・RAi の指示の文・プラグインの文をパックの文に差し替えます。パックに無い文言や、形が合わない文言(プレースホルダの違いなど)は公式の文言のままです。アプリに入っていない言語を足すパックもあります(足りない文言はパックが決めた言語になります)。規約などの文書は差し替えません。ファイルから読み込んだパックは審査を通っていません。同時に使えるパックは 1 つです(D-592)。';
+
+  @override
+  String get langPackOfficial => '公式(アプリに入っている文言)';
+
+  @override
+  String get langPackOfficialSubtitle => '言語パックを読み込んでいません';
+
+  @override
+  String get langPackUnreviewed => '未審査';
+
+  @override
+  String langPackSubtitle(String version, String authors) {
+    return '版 $version・$authors';
+  }
+
+  @override
+  String get langPackImport => 'ファイルから読み込む';
+
+  @override
+  String get langPackRemove => '外して公式の文言に戻す';
+
+  @override
+  String get langPackPickerLabel => '言語パック';
+
+  @override
+  String langPackApplied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件の文言を差し替えています',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackRejected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件は形が合わないので公式の文言のままです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackUnknown(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件はこのアプリに無い文言なので使いません',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackNeedsNewerApp(String version) {
+    return 'このパックはアプリ $version 以降向けです。足りない文言は公式の文言になります。';
+  }
+
+  @override
+  String get langPackShowIssues => '合わなかった文言を見る';
+
+  @override
+  String get langPackHideIssues => '閉じる';
+
+  @override
+  String langPackLoaded(String name) {
+    return '「$name」を読み込みました';
+  }
+
+  @override
+  String get langPackAddedLocale => '言語パック';
+
+  @override
+  String get langPackErrorTooLarge => 'ファイルが大きすぎます(16 MB まで)';
+
+  @override
+  String get langPackErrorNotPack => '言語パック(.rasqlang)ではありません';
+
+  @override
+  String get langPackErrorUnsupportedVersion =>
+      'このアプリより新しい形式の言語パックです。アプリを更新してください';
+
+  @override
+  String langPackErrorManifest(String field) {
+    return '言語パックの $field が足りないか、形が違います';
+  }
+
+  @override
+  String get langPackErrorNoLocales =>
+      '使える言語がありません(アプリに無い言語は、足りない文言を引く言語を書く必要があります)';
+
+  @override
+  String langPackErrorFailed(String error) {
+    return '読み込めませんでした: $error';
+  }
+
+  @override
   String get languageSelfName => '日本語';
 
   @override

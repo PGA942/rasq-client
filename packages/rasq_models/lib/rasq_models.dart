@@ -22,4 +22,5 @@ export 'src/clip.dart';
 export 'src/play.dart';
 export 'src/user_list_info.dart';
 export 'src/ui_locale.dart';
-export 'src/l10n.dart' show rasqModelsL10n, RasqModelsLocalizations, lookupRasqModelsLocalizations;
+export 'src/lang_override.dart';
+export 'src/l10n.dart' show rasqModelsL10n, RasqModelsLocalizations, RasqModelsLocalizationsOverlay, lookupRasqModelsLocalizations;
