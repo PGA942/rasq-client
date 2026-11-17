@@ -7242,6 +7242,36 @@ abstract class AppLocalizations {
   /// **'既定の並びに戻す'**
   String get homeBarResetOrder;
 
+  /// 投稿のアクションバーの「4 枚まで」の切り替えボタン(いまは制限なし)の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'添付を 4 枚までにする(いまは全部を横に送る。長押しでメニュー)'**
+  String get homeMediaLimitOffTooltip;
+
+  /// 投稿のアクションバーの「4 枚まで」の切り替えボタン(いまは 4 枚まで)の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'添付を全部見せる(いまは 4 枚まで。長押しでメニュー)'**
+  String get homeMediaLimitOnTooltip;
+
+  /// No description provided for @homeMediaLimitMenuLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'添付を 4 枚までにする'**
+  String get homeMediaLimitMenuLimit;
+
+  /// No description provided for @homeMediaLimitMenuAll.
+  ///
+  /// In ja, this message translates to:
+  /// **'添付を全部横に送る'**
+  String get homeMediaLimitMenuAll;
+
+  /// 「4 枚まで」の切り替えボタンの長押しメニュー。設定 → プラグインボタンのページを開く
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションバーを編集'**
+  String get homeMediaLimitMenuEditBar;
+
   /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
@@ -22370,6 +22400,42 @@ abstract class AppLocalizations {
   /// **'アクションバーを編集'**
   String get settingsActionBarEditButton;
 
+  /// No description provided for @settingsActionBarAppButtonsHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリのボタン'**
+  String get settingsActionBarAppButtonsHeader;
+
+  /// No description provided for @settingsActionBarMediaLimitButtonTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'添付の「4 枚まで」の切り替え'**
+  String get settingsActionBarMediaLimitButtonTitle;
+
+  /// No description provided for @settingsActionBarMediaLimitButtonSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'横に並べる添付が 5 枚以上の投稿のバーに出す'**
+  String get settingsActionBarMediaLimitButtonSubtitle;
+
+  /// No description provided for @settingsActionBarMediaLimitFourTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'横に並べるときも 4 枚まで'**
+  String get settingsActionBarMediaLimitFourTitle;
+
+  /// No description provided for @settingsActionBarMediaLimitFourSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフ(既定)なら全部を横に送る。縦の並びはいつも 4 枚まで'**
+  String get settingsActionBarMediaLimitFourSubtitle;
+
+  /// ボタンの行の左のアイコンの説明。{name} = そのボタンを出しているプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} のページを開く'**
+  String settingsActionBarOpenPluginPage(String name);
+
   /// No description provided for @settingsBackendTitle.
   ///
   /// In ja, this message translates to:
@@ -25648,6 +25714,24 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'トレンドの取得結果を CDN(キャッシュネットワーク)から読む仕組みは、RASQ サーバーの配信基盤と同時に入ります。いまは各 SNS から直接取得します。 キャッシュネットワーク: 未提供。'**
   String get settingsPagesTrendCdnText1Detail;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'添付を横に並べるときも 4 枚まで'**
+  String get settingsPagesAppearanceTimelineMediaLimitFourTitle;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'オフ(既定)なら、横に並べる添付は全部を横に送る'**
+  String get settingsPagesAppearanceTimelineMediaLimitFourSubtitle;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'添付の既定の並びは横(5 枚以上は 4:3 の窓に 2 枚ずつの列を横に送る)。オンにすると 4 枚目に「+N」。縦の並び(作者のアイコンのテーマ)はいつも 4 枚まで、スレッドの展開はいつも全部。投稿のバーの切り替え(長押しでアクションバーの編集へ)と同じ設定です'**
+  String get settingsPagesAppearanceTimelineMediaLimitFourDetail;
 
   /// No description provided for @settingsSectionsPluginsTitle.
   ///

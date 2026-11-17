@@ -4541,6 +4541,20 @@
     }
   },
   "homeBarResetOrder": "既定の並びに戻す",
+  "homeMediaLimitOffTooltip": "添付を 4 枚までにする(いまは全部を横に送る。長押しでメニュー)",
+  "@homeMediaLimitOffTooltip": {
+    "description": "投稿のアクションバーの「4 枚まで」の切り替えボタン(いまは制限なし)の説明"
+  },
+  "homeMediaLimitOnTooltip": "添付を全部見せる(いまは 4 枚まで。長押しでメニュー)",
+  "@homeMediaLimitOnTooltip": {
+    "description": "投稿のアクションバーの「4 枚まで」の切り替えボタン(いまは 4 枚まで)の説明"
+  },
+  "homeMediaLimitMenuLimit": "添付を 4 枚までにする",
+  "homeMediaLimitMenuAll": "添付を全部横に送る",
+  "homeMediaLimitMenuEditBar": "アクションバーを編集",
+  "@homeMediaLimitMenuEditBar": {
+    "description": "「4 枚まで」の切り替えボタンの長押しメニュー。設定 → プラグインボタンのページを開く"
+  },
   "iconThemeEditorTitle": "アイコンにテーマを埋め込む",
   "@iconThemeEditorTitle": {
     "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
@@ -14437,6 +14451,20 @@
   "settingsActionBarThresholdSubtitle": "似たボタンをまとめる度合い",
   "settingsActionBarThresholdDetail": "タグの類似度がこれ以上なら既存ボタンのバンドルに入る",
   "settingsActionBarEditButton": "アクションバーを編集",
+  "settingsActionBarAppButtonsHeader": "アプリのボタン",
+  "settingsActionBarMediaLimitButtonTitle": "添付の「4 枚まで」の切り替え",
+  "settingsActionBarMediaLimitButtonSubtitle": "横に並べる添付が 5 枚以上の投稿のバーに出す",
+  "settingsActionBarMediaLimitFourTitle": "横に並べるときも 4 枚まで",
+  "settingsActionBarMediaLimitFourSubtitle": "オフ(既定)なら全部を横に送る。縦の並びはいつも 4 枚まで",
+  "settingsActionBarOpenPluginPage": "{name} のページを開く",
+  "@settingsActionBarOpenPluginPage": {
+    "description": "ボタンの行の左のアイコンの説明。{name} = そのボタンを出しているプラグインの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "settingsBackendTitle": "RASQ サーバー",
   "settingsBackendErrorUnparseable": "接続先を解釈できません。「http://192.168.3.14:8080」や「https://central.example」の形で入れてください。",
   "settingsBackendSaved": "保存しました",
@@ -16142,6 +16170,18 @@
   "settingsPagesTrendCdnText1Detail": "トレンドの取得結果を CDN(キャッシュネットワーク)から読む仕組みは、RASQ サーバーの配信基盤と同時に入ります。いまは各 SNS から直接取得します。 キャッシュネットワーク: 未提供。",
   "@settingsPagesTrendCdnText1Detail": {
     "description": "設定のページ「キャッシュネットワークの設定」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
+  },
+  "settingsPagesAppearanceTimelineMediaLimitFourTitle": "添付を横に並べるときも 4 枚まで",
+  "@settingsPagesAppearanceTimelineMediaLimitFourTitle": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの名前"
+  },
+  "settingsPagesAppearanceTimelineMediaLimitFourSubtitle": "オフ(既定)なら、横に並べる添付は全部を横に送る",
+  "@settingsPagesAppearanceTimelineMediaLimitFourSubtitle": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの補足"
+  },
+  "settingsPagesAppearanceTimelineMediaLimitFourDetail": "添付の既定の並びは横(5 枚以上は 4:3 の窓に 2 枚ずつの列を横に送る)。オンにすると 4 枚目に「+N」。縦の並び(作者のアイコンのテーマ)はいつも 4 枚まで、スレッドの展開はいつも全部。投稿のバーの切り替え(長押しでアクションバーの編集へ)と同じ設定です",
+  "@settingsPagesAppearanceTimelineMediaLimitFourDetail": {
+    "description": "設定のページ「タイムラインの表示」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"
   },
   "settingsSectionsPluginsTitle": "プラグインの構成",
   "settingsSectionsPluginsProxyTitle": "RASQプラグインプロキシの購読",

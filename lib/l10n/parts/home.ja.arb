@@ -148,5 +148,13 @@
   "homeBarHiddenLabel": "非表示(押すと表示):",
   "homeBarShowHidden": "{label} を表示",
   "@homeBarShowHidden": {"placeholders": {"label": {"type": "String"}}},
-  "homeBarResetOrder": "既定の並びに戻す"
+  "homeBarResetOrder": "既定の並びに戻す",
+  "homeMediaLimitOffTooltip": "添付を 4 枚までにする(いまは全部を横に送る。長押しでメニュー)",
+  "@homeMediaLimitOffTooltip": {"description": "投稿のアクションバーの「4 枚まで」の切り替えボタン(いまは制限なし)の説明"},
+  "homeMediaLimitOnTooltip": "添付を全部見せる(いまは 4 枚まで。長押しでメニュー)",
+  "@homeMediaLimitOnTooltip": {"description": "投稿のアクションバーの「4 枚まで」の切り替えボタン(いまは 4 枚まで)の説明"},
+  "homeMediaLimitMenuLimit": "添付を 4 枚までにする",
+  "homeMediaLimitMenuAll": "添付を全部横に送る",
+  "homeMediaLimitMenuEditBar": "アクションバーを編集",
+  "@homeMediaLimitMenuEditBar": {"description": "「4 枚まで」の切り替えボタンの長押しメニュー。設定 → プラグインボタンのページを開く"}
 }
