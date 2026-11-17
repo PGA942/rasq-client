@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart' show SnsKind;
 import 'package:rasq_overlay/rasq_overlay.dart';
@@ -15,6 +14,7 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart' hide RasqNotice;
 import '../theme/icon_theme/icon_theme_editor_screen.dart' show openIconThemeEditor;
+import 'profile_image_flow.dart';
 import '../theme/icon_theme/icon_theme_reader.dart' show iconThemeFetcherProvider;
 import '../../l10n/l10n.dart';
 import 'rasq_account_page_screen.dart' show RasqSnsTileChip;
@@ -125,10 +125,11 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
     if (_links.isEmpty) _links.add((TextEditingController(), TextEditingController()));
   }
 
-  Future<void> _pick(bool banner) async {
-    final x = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (x == null) return;
-    final v = (bytes: await x.readAsBytes(), contentType: profileImageContentType(x.name, x.mimeType));
+  /// アイコン / ヘッダーの変更 (D-587): 画像を選ぶ → 全画面の加工画面 → 決めたものを使う(どちらかでやめたら何も変えない)。
+  Future<void> _change(bool banner) async {
+    final x = await pickAndEditProfileImage(ref, context);
+    if (x == null || !mounted) return;
+    final v = (bytes: x.bytes, contentType: profileImageContentType(x.name, x.mime));
     setState(() {
       if (banner) {
         _banner = v;
@@ -214,48 +215,41 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
                 child: Row(children: [Text('@${a.handle}', style: RasqTypography.bodySmall), const SizedBox(width: 6), const RasqBrandIcon(size: 14), const SizedBox(width: 2), Text('RASQ', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))]),
               ),
-              Stack(children: [
-                SizedBox(
-                  height: 120,
-                  width: double.infinity,
-                  child: _banner != null
+              // D-587: ヘッダーは押すと画像を選んで全画面の加工画面へ。アイコンは大きく右上(ヘッダーにかかる)、左に「アイコンの変更」
+              // 「アイコンにテーマを埋め込む」。名前・誕生日の欄はその下の段。
+              ProfileEditBanner(
+                keyPrefix: 'rasqProfile',
+                image: _banner != null
                       ? Image.memory(_banner!.bytes, fit: BoxFit.cover)
                       : (a.bannerUrl == null || _removeBanner ? ColoredBox(color: scheme.surfaceContainerHighest) : Image.network(webHtmlElementStrategy: rasqWebImageStrategy, a.bannerUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))),
-                ),
-                Positioned(
-                  right: 8,
-                  bottom: 8,
-                  child: Row(children: [
-                    if (_banner != null || (a.bannerUrl != null && !_removeBanner))
-                      _RoundButton(key: const ValueKey('rasqProfile.banner.remove'), icon: Icons.delete_outline, tooltip: l10n.profileEditBannerRemove, onTap: () => setState(() {
-                            _banner = null;
-                            _removeBanner = true;
-                          })),
-                    const SizedBox(width: 6),
-                    _RoundButton(key: const ValueKey('rasqProfile.banner.theme'), icon: Icons.palette_outlined, tooltip: l10n.iconThemeEmbedTooltip, onTap: () => _embedTheme(a.avatarUrl)),
-                    const SizedBox(width: 6),
-                    _RoundButton(key: const ValueKey('rasqProfile.banner.pick'), icon: Icons.add, tooltip: l10n.profileEditBannerPick, onTap: () => _pick(true)),
-                  ]),
-                ),
-              ]),
+                onChange: () => _change(true),
+                buttons: [
+                  _RoundButton(key: const ValueKey('rasqProfile.banner.theme'), icon: Icons.palette_outlined, tooltip: l10n.iconThemeEmbedTooltip, onTap: () => _embedTheme(a.avatarUrl)),
+                  if (_banner != null || (a.bannerUrl != null && !_removeBanner))
+                    _RoundButton(key: const ValueKey('rasqProfile.banner.remove'), icon: Icons.delete_outline, tooltip: l10n.profileEditBannerRemove, onTap: () => setState(() {
+                          _banner = null;
+                          _removeBanner = true;
+                        })),
+                ],
+              ),
+              ProfileEditAvatarRow(
+                keyPrefix: 'rasqProfile',
+                avatar: _avatar != null
+                        ? ClipOval(child: Image.memory(_avatar!.bytes, width: ProfileEditAvatarRow.avatarSize, height: ProfileEditAvatarRow.avatarSize, fit: BoxFit.cover))
+                        : RasqAvatar(imageUrl: _removeAvatar ? null : a.avatarUrl, size: ProfileEditAvatarRow.avatarSize, fallbackLabel: a.displayName.isEmpty ? a.handle : a.displayName),
+                onChange: () => _change(false),
+                onEmbedTheme: () => _embedTheme(a.avatarUrl),
+                onRemove: _avatar != null || (a.avatarUrl != null && !_removeAvatar)
+                    ? () => setState(() {
+                          _avatar = null;
+                          _removeAvatar = true;
+                        })
+                    : null,
+                removeTooltip: l10n.profileEditAvatarRemove,
+              ),
               Padding(
-                padding: const EdgeInsets.all(RasqSpacing.page),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Stack(clipBehavior: Clip.none, children: [
-                    _avatar != null
-                        ? ClipOval(child: Image.memory(_avatar!.bytes, width: 64, height: 64, fit: BoxFit.cover))
-                        : RasqAvatar(imageUrl: _removeAvatar ? null : a.avatarUrl, size: 64, fallbackLabel: a.displayName.isEmpty ? a.handle : a.displayName),
-                    Positioned(right: -4, bottom: -4, child: _RoundButton(key: const ValueKey('rasqProfile.avatar.pick'), icon: Icons.add, tooltip: l10n.profileEditAvatarPick, onTap: () => _pick(false))),
-                    Positioned(right: -4, top: -4, child: _RoundButton(key: const ValueKey('rasqProfile.avatar.theme'), icon: Icons.palette_outlined, tooltip: l10n.iconThemeEmbedTooltip, onTap: () => _embedTheme(a.avatarUrl))),
-                    if (_avatar != null || (a.avatarUrl != null && !_removeAvatar))
-                      Positioned(left: -4, bottom: -4, child: _RoundButton(key: const ValueKey('rasqProfile.avatar.remove'), icon: Icons.delete_outline, tooltip: l10n.profileEditAvatarRemove, onTap: () => setState(() {
-                            _avatar = null;
-                            _removeAvatar = true;
-                          }))),
-                  ]),
-                  const SizedBox(width: RasqSpacing.md),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.page),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       RasqInput(key: const ValueKey('rasqProfile.name'), controller: _name, hintText: l10n.profileEditNameHint, suffix: IconButton(icon: const Icon(Icons.cancel, size: 18), onPressed: () => _name.clear())),
                       Row(children: [
                         const Icon(Icons.cake_outlined, size: 16),
@@ -267,8 +261,6 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                         Text(a.createdAt == null ? '' : RasqDateFormat.yearMonth(a.createdAt!), style: RasqTypography.bodySmall),
                       ]),
                     ]),
-                  ),
-                ]),
               ),
               _Labeled(l10n.profileEditHandleLabel, RasqInput(key: const ValueKey('rasqProfile.handle'), controller: _handle, hintText: 'handle')),
               _Labeled(l10n.profileEditBioLabel, RasqInput(key: const ValueKey('rasqProfile.bio'), controller: _bio, maxLines: 5, hintText: l10n.profileEditBioHint)),

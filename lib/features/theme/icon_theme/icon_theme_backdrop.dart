@@ -11,11 +11,18 @@ import 'theme_frames.dart';
 /// 流れ続け、クリック / スライドのスロットは押した / なぞった所から出る)。仮組みの「閲覧する」の描き方を写した。
 /// 「動きを減らす」(端末の設定)では、止めた 1 枚だけを描く。
 class IconThemeBackdrop extends StatefulWidget {
-  const IconThemeBackdrop({super.key, required this.spec, this.child});
+  const IconThemeBackdrop({super.key, required this.spec, this.child}) : effectsOnly = false;
+
+  /// エフェクトだけ (D-587): 背景は描かず(背景は着せ替えと同じ層 = [ThemedSurface] が描く)、**中身の上に**テーマフレームと
+  /// パーティクルを重ねる(どちらも触れない。押す / なぞるは中身に届いたまま、パーティクルも出す)。
+  const IconThemeBackdrop.effects({super.key, required this.spec, required Widget this.child}) : effectsOnly = true;
   final RasqThemeSpec spec;
 
   /// 上に重ねる中身(押す / なぞるのは、この中のボタンなどに当たらなかったときだけパーティクルを出す)。
   final Widget? child;
+
+  /// true = 背景を描かず、エフェクトを中身の上に重ねる([IconThemeBackdrop.effects])。
+  final bool effectsOnly;
 
   @override
   State<IconThemeBackdrop> createState() => _IconThemeBackdropState();
@@ -229,7 +236,7 @@ class _IconThemeBackdropState extends State<IconThemeBackdrop> with SingleTicker
         _down = null;
       },
       onPointerCancel: (_) => _down = null,
-      child: Stack(fit: StackFit.expand, children: [
+      child: widget.effectsOnly ? _effectsAbove(spec) : Stack(fit: StackFit.expand, children: [
         ValueListenableBuilder<double>(
           valueListenable: _elapsed,
           builder: (_, el, _) {
@@ -259,6 +266,17 @@ class _IconThemeBackdropState extends State<IconThemeBackdrop> with SingleTicker
       ]),
     );
   }
+
+  /// 中身 → テーマフレーム → パーティクル(上の 2 つは触れない)。中身の大きさは親の制約のまま(passthrough)。
+  Widget _effectsAbove(RasqThemeSpec spec) => Stack(fit: StackFit.passthrough, children: [
+        widget.child!,
+        if (spec.frames.isNotEmpty) Positioned.fill(child: IgnorePointer(child: ThemeFramesLayer(frames: spec.frames, tint: themeColor(spec.basic.accent)))),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(key: const ValueKey('iconTheme.particles'), painter: _ParticlePainter(this)),
+          ),
+        ),
+      ]);
 }
 
 class _ParticlePainter extends CustomPainter {

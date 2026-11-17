@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 
+import '../../app/feature_flags.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/headers.dart';
@@ -13,6 +15,7 @@ import '../settings/settings_dsl.dart';
 import '../store/rasqpkg.dart';
 import '../store/store_providers.dart';
 import 'icon_theme/icon_theme_reader.dart' show iconThemesEnabledProvider, iconThemesSettingKey;
+import 'theme_display.dart';
 import 'theme_packs.dart';
 import '../../l10n/l10n.dart';
 
@@ -66,6 +69,28 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
     } else {
       await ref.read(themePacksProvider.notifier).uninstall(p.id);
     }
+  }
+
+  String _originLabel(BuildContext context, ThemeOrigin o) => switch (o) {
+        ThemeOrigin.icon => context.l10n.themeOriginIcon,
+        ThemeOrigin.atmos => context.l10n.themeOriginAtmos,
+        ThemeOrigin.community => context.l10n.themeOriginCommunity,
+      };
+
+  String _scopeLabel(BuildContext context, ThemeDisplayScope s) => switch (s) {
+        ThemeDisplayScope.followees => context.l10n.themeScopeFollowees,
+        ThemeDisplayScope.all => context.l10n.themeScopeAll,
+        ThemeDisplayScope.off => context.l10n.themeScopeOff,
+      };
+
+  Future<void> _pickScope(BuildContext tileContext, ThemeOrigin o) async {
+    final box = tileContext.findRenderObject() as RenderBox?;
+    final anchor = box == null ? const Rect.fromLTWH(0, 0, 1, 1) : box.localToGlobal(Offset.zero) & box.size;
+    final current = ref.read(themeDisplayScopeProvider(o));
+    final pick = await ref.read(overlayManagerProvider).showDropdown<ThemeDisplayScope>(id: 'theme.display.${o.name}', anchor: anchor, items: [
+      for (final s in ThemeDisplayScope.values) RasqDropdownItem(_scopeLabel(tileContext, s), s, checked: s == current),
+    ]);
+    if (pick != null) await setThemeDisplayScope(ref, o, pick);
   }
 
   @override
@@ -150,6 +175,34 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
           value: ref.watch(iconThemesEnabledProvider),
           onChanged: (v) => ref.read(settingsAreaProvider(themeSettingsArea).notifier).set(iconThemesSettingKey, v),
         ),
+        // ほかの人のテーマ (D-587): 種類ごとに、出す範囲と、着せ替え(上で選んだもの)とどちらを優先するか。値でのミュートの一覧。
+        RasqSectionHeader(title: context.l10n.themeDisplayTitle),
+        for (final o in [ThemeOrigin.icon, if (ref.watch(featureFlagsProvider).atmos) ThemeOrigin.atmos, if (ref.watch(featureFlagsProvider).communityTagThemes) ThemeOrigin.community]) ...[
+          Builder(
+            builder: (tileContext) => RasqListTile(
+              key: ValueKey('theme.display.${o.name}.scope'),
+              title: _originLabel(context, o),
+              subtitle: _scopeLabel(context, ref.watch(themeDisplayScopeProvider(o))),
+              leading: Icon(switch (o) { ThemeOrigin.icon => Icons.account_circle_outlined, ThemeOrigin.atmos => Icons.auto_awesome_outlined, ThemeOrigin.community => Icons.tag }),
+              onTap: () => _pickScope(tileContext, o),
+            ),
+          ),
+          RasqSwitchListTile(
+            key: ValueKey('theme.display.${o.name}.overPlugin'),
+            title: context.l10n.themeDisplayOverPlugin,
+            subtitle: context.l10n.themeDisplayOverPluginSubtitle,
+            value: ref.watch(themeOverPluginProvider(o)),
+            onChanged: (v) => setThemeOverPlugin(ref, o, v),
+          ),
+        ],
+        RasqListTile(
+          key: const ValueKey('theme.muted'),
+          title: context.l10n.themeMutedTitle,
+          subtitle: context.l10n.themeMutedCount(ref.watch(mutedThemesProvider).length),
+          leading: const Icon(Icons.visibility_off_outlined),
+          onTap: () => context.push(Routes.settingsMutedThemes),
+        ),
+        const Divider(height: RasqSpacing.lg),
         RasqListTile(key: const ValueKey('theme.store'), title: context.l10n.themeFindInStore, leading: const Icon(Icons.storefront_outlined), onTap: () => context.push(Routes.store)),
         RasqListTile(
           key: const ValueKey('theme.import'),

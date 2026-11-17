@@ -312,6 +312,9 @@ void main() {
     // 読み込み(展開 + 画像の書き出し)は本物の非同期。決まった時間ではなく、入って選ばれるまで待つ(混んだ CI では 200ms で
     // 終わらず、くるくるが回り続けて pumpAndSettle が時間切れになっていた)。
     // 待ちの上限は 20 秒(5 秒でも CI で足りないことがあった、!172 のパイプライン 1396)。
+    // ほかの人のテーマの設定 (D-587) の行が増えたので、読み込みの行は下にある。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('theme.import')), 200, scrollable: find.descendant(of: find.byType(ThemeSettingsScreen), matching: find.byType(Scrollable)).first);
+    await tester.pumpAndSettle();
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const ValueKey('theme.import')));
       for (var i = 0; i < 400 && !(c.read(themePacksProvider).any((p) => p.sideloaded) && c.read(activeThemeIdProvider) == 'sample.theme-starry'); i++) {

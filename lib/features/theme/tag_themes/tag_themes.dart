@@ -11,6 +11,7 @@ import '../../../text/mfm/mfm_node.dart';
 import '../../../text/mfm/mfm_parser.dart';
 import '../icon_theme/rasq_theme_spec.dart';
 import '../icon_theme/theme_frames.dart';
+import '../theme_display.dart';
 
 /// ハッシュタグに付くテーマ (D-582): **コミュハッシュタグのテーマ**(D-583)と **RASQ Atmos**(D-584)が同じ形を使う。
 ///
@@ -311,11 +312,15 @@ final communityTagThemeProvider = Provider.family<TagThemeEntry?, String>((ref, 
 
 extension AtmosWidgetRef on WidgetRef {
   /// この投稿に付く Atmos(無効 / 無ければ null)。無効なら一覧も読まない(本文も読み直さない)。
+  /// 設定 (D-587) の「出さない」・ミュートした値・「フォローしている人だけ」(この投稿の作者)も見る。名前の横のアイコンと
+  /// アクションのアニメーションは着せ替えと重ならないので、着せ替えとの優先は見ない(スレッドの色と背景は呼び元が見る)。
   TagThemeEntry? watchAtmos(Post post) {
     if (!watch(featureFlagsProvider).atmos) return null;
     final catalog = watch(tagThemeCatalogProvider).value;
     if (catalog == null || !catalog.hasAtmos) return null;
-    return catalog.atmosFor(_hashtagsOf(post));
+    final e = catalog.atmosFor(_hashtagsOf(post));
+    if (e == null) return null;
+    return watchThemeVisible(this, origin: ThemeOrigin.atmos, spec: e.spec, author: (viewer: post.account, userId: post.author.id), surface: false) ? e : null;
   }
 }
 

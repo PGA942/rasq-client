@@ -3,13 +3,13 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
 import '../theme/icon_theme/icon_theme_editor_screen.dart' show openIconThemeEditor;
+import 'profile_image_flow.dart';
 import '../theme/icon_theme/icon_theme_reader.dart' show iconThemeFetcherProvider;
 import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
@@ -60,11 +60,11 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     if (_links.isEmpty) _links.add((TextEditingController(), TextEditingController()));
   }
 
-  Future<void> _pick(bool banner) async {
-    final x = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (x == null) return;
-    final v = (bytes: await x.readAsBytes(), name: x.name, mime: x.mimeType);
-    setState(() => banner ? _banner = v : _avatar = v);
+  /// アイコン / ヘッダーの変更 (D-587): 画像を選ぶ → 全画面の加工画面 → 決めたものを使う(どちらかでやめたら何も変えない)。
+  Future<void> _change(bool banner) async {
+    final x = await pickAndEditProfileImage(ref, context);
+    if (x == null || !mounted) return;
+    setState(() => banner ? _banner = x : _avatar = x);
   }
 
   /// アイコンにテーマを埋め込む (D-581)。選んである画像(無ければいまのアイコン)から。ヘッダーのボタンからも同じ。
@@ -131,31 +131,29 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
             child: Row(children: [Text('@${me.handle}', style: RasqTypography.bodySmall), const SizedBox(width: 4), RasqSnsPill(account: me.account)]),
           ),
-          Stack(children: [
-            SizedBox(
-              height: 120,
-              width: double.infinity,
-              child: _banner != null
+          // D-587: ヘッダーは押すと画像を選んで全画面の加工画面へ。アイコンは大きく右上(ヘッダーにかかる)、左に「アイコンの変更」
+          // 「アイコンにテーマを埋め込む」。名前・誕生日の欄はその下の段。
+          ProfileEditBanner(
+            keyPrefix: 'profileEdit',
+            image: _banner != null
                   ? Image.memory(_banner!.bytes, fit: BoxFit.cover)
                   : (p.bannerUrl == null ? ColoredBox(color: scheme.surfaceContainerHighest) : Image.network(webHtmlElementStrategy: rasqWebImageStrategy, p.bannerUrl.toString(), fit: BoxFit.cover)),
-            ),
-            Positioned(right: 8, bottom: 8, child: Row(children: [
+            onChange: () => _change(true),
+            buttons: [
               _PickButton(key: const ValueKey('profileEdit.banner.theme'), icon: Icons.palette_outlined, tooltip: l10n.iconThemeEmbedTooltip, onTap: () => _embedTheme(p.summary.avatarUrl)),
-              const SizedBox(width: 6),
-              _PickButton(onTap: () => _pick(true)),
-            ])),
-          ]),
+            ],
+          ),
+          ProfileEditAvatarRow(
+            keyPrefix: 'profileEdit',
+            avatar: _avatar != null
+                ? ClipOval(child: Image.memory(_avatar!.bytes, width: ProfileEditAvatarRow.avatarSize, height: ProfileEditAvatarRow.avatarSize, fit: BoxFit.cover))
+                : RasqAvatar(imageUrl: p.summary.avatarUrl, size: ProfileEditAvatarRow.avatarSize, fallbackLabel: p.summary.displayName),
+            onChange: () => _change(false),
+            onEmbedTheme: () => _embedTheme(p.summary.avatarUrl),
+          ),
           Padding(
-            padding: const EdgeInsets.all(RasqSpacing.page),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Stack(children: [
-                _avatar != null ? ClipOval(child: Image.memory(_avatar!.bytes, width: 64, height: 64, fit: BoxFit.cover)) : RasqAvatar(imageUrl: p.summary.avatarUrl, size: 64, fallbackLabel: p.summary.displayName),
-                Positioned(right: -4, bottom: -4, child: _PickButton(onTap: () => _pick(false))),
-                Positioned(right: -4, top: -4, child: _PickButton(key: const ValueKey('profileEdit.avatar.theme'), icon: Icons.palette_outlined, tooltip: l10n.iconThemeEmbedTooltip, onTap: () => _embedTheme(p.summary.avatarUrl))),
-              ]),
-              const SizedBox(width: RasqSpacing.md),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.page),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   RasqInput(controller: _name, hintText: l10n.profileEditNameHint, suffix: IconButton(icon: const Icon(Icons.cancel, size: 18), onPressed: () => _name.clear())),
                   Row(children: [
                     const Icon(Icons.cake_outlined, size: 16),
@@ -167,8 +165,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                     Text(p.createdAt == null ? '' : RasqDateFormat.yearMonth(p.createdAt!), style: RasqTypography.bodySmall),
                   ]),
                 ]),
-              ),
-            ]),
           ),
           _Labeled(l10n.profileEditBioLabel, RasqInput(controller: _bio, maxLines: 5, hintText: l10n.profileEditBioLabel)),
           _Labeled(l10n.profileEditLocationLabel, RasqInput(controller: _location, hintText: l10n.profileEditLocationLabel)),

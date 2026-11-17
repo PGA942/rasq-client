@@ -90,5 +90,11 @@
   "profileEditSnsPostsCollectionsConsentMessage": "預けたアクセストークンを、以下の用途にも使います。\n\n・RASQ リストやクリップを開いた際のフォロー状況の確認\n・リスト内の人の公開・ホーム投稿の取得\n\n投稿やフォロー等の操作には使いません。スイッチを切るとすぐ停止します。",
   "profileEditSnsPostsCollectionsAgree": "同意して使う",
   "profileEditSnsPostsCollectionsFailed": "変えられませんでした: {message}",
-  "@profileEditSnsPostsCollectionsFailed": {"placeholders": {"message": {"type": "String"}}}
+  "@profileEditSnsPostsCollectionsFailed": {"placeholders": {"message": {"type": "String"}}},
+  "profileEditAvatarChange": "アイコンの変更",
+  "@profileEditAvatarChange": {"description": "プロフィールの編集のアイコン / ヘッダー(D-587)"},
+  "profileEditAvatarEmbedTheme": "アイコンにテーマを埋め込む",
+  "@profileEditAvatarEmbedTheme": {"description": "プロフィールの編集のアイコン / ヘッダー(D-587)"},
+  "profileEditBannerChange": "ヘッダーを変更",
+  "@profileEditBannerChange": {"description": "プロフィールの編集のアイコン / ヘッダー(D-587)"}
 }

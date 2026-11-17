@@ -88,6 +88,9 @@ void main() {
     // 直す: 誕生日を消す(空)、場所を変える、リンクを差し替える。ハンドルは変えていないので送らない。
     await tester.enterText(find.descendant(of: find.byKey(const ValueKey('rasqProfile.birthday')), matching: find.byType(TextField)), '');
     await tester.enterText(find.descendant(of: find.byKey(const ValueKey('rasqProfile.location')), matching: find.byType(TextField)), '東京');
+    // アイコンの段が高くなった (D-587) ので、リンクの欄は下にある。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rasqProfile.link.0.label')), 200, scrollable: find.descendant(of: find.byType(RasqProfileEditScreen), matching: find.byType(Scrollable)).first);
+    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('rasqProfile.link.0.label')), 'サイト');
     await tester.enterText(find.byKey(const ValueKey('rasqProfile.link.0.url')), 'https://example.com/');
     await tester.tap(find.byKey(const ValueKey('rasqProfile.save')));

@@ -218,6 +218,9 @@ void main() {
     await tester.pumpAndSettle();
     final toggle = find.byKey(const ValueKey('rasqProfile.showOnSns'));
     await tester.scrollUntilVisible(toggle, 200, scrollable: find.descendant(of: find.byType(RasqProfileEditScreen), matching: find.byType(Scrollable)).first);
+    // アイコンの段が高くなった (D-587) ので、端に半分だけ見えた所で止まることがある。全部見えるところまで。
+    await tester.ensureVisible(toggle);
+    await tester.pumpAndSettle();
     expect(tester.widget<Switch>(find.descendant(of: toggle, matching: find.byType(Switch))).value, isTrue);
     await tester.tap(find.descendant(of: toggle, matching: find.byType(Switch)));
     await tester.pumpAndSettle();

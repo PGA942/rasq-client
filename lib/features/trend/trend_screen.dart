@@ -29,6 +29,7 @@ import '../nodeprog/tl_config_store.dart' show tlViewConfigProvider;
 import '../nodeprog/tl_sections_view.dart';
 import '../theme/tag_themes/atmos.dart';
 import '../theme/tag_themes/tag_themes.dart';
+import '../theme/theme_display.dart';
 
 /// トレンドTL(検索結果): ∨ノート / フォロー中 / ユーザー.
 /// ノート = 「フォロー中の反応」 + 「トレンド」(タグTL)。
@@ -132,12 +133,17 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
           ]),
         );
 
-    return DefaultTabController(
+    // コミュハッシュタグのテーマ (D-583 / D-587): このタグのページ全体に、着せ替えと同じ層で(設定の出す範囲・優先・ミュートを見る。
+    // タグのページには作者がいないので、「フォローしている人だけ」でも出す)。
+    final pageTheme = community != null && watchThemeVisible(ref, origin: ThemeOrigin.community, spec: community.spec) ? community.spec : null;
+    return ThemedSurface(
+      spec: pageTheme,
+      child: DefaultTabController(
       length: tabs.length,
       child: Scaffold(
         // ＋ (D-381): ホームと同じ動き。投稿はこのワードのハッシュタグを入れて開く。
         floatingActionButton: RadialCreateFab(scope: 'trend', heroTag: 'fab.trend', postText: '#${widget.tag.replaceFirst(RegExp(r'^#'), '')} '),
-        body: _withCommunityTheme(community, SafeArea(
+        body: SafeArea(
           bottom: false,
           child: Column(children: [
           // ← でトレンドホームへ戻る。入力欄は編集可能で、そのまま次の検索を
@@ -253,11 +259,10 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
             ]),
           ),
         ]),
-        )),
+        ),
       ),
+    ),
     );
   }
 }
 
-/// コミュハッシュタグのテーマ (D-583) を付けたページ(無ければそのまま)。
-Widget _withCommunityTheme(TagThemeEntry? community, Widget child) => community == null ? child : TagThemeSurface(key: ValueKey('community.page.${community.tag}'), spec: community.spec, child: child);

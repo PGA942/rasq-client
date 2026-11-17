@@ -4545,7 +4545,7 @@
   "@iconThemeEditorTitle": {
     "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
-  "iconThemeEditorIntro": "アイコンの四隅に色のブロックでテーマを書き込みます。SNS で縮められたり圧縮し直されたりしても RASQ で読み戻し、プロフィールのアイコンを拡大したときの背景・文字色・パーティクルになります。",
+  "iconThemeEditorIntro": "アイコンの四隅に色のブロックでテーマを書き込みます。SNS で縮められたり圧縮し直されたりしても RASQ で読み戻し、あなたのユーザーページと、あなたが始めたスレッドの背景・文字色・パーティクルになります。",
   "@iconThemeEditorIntro": {
     "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
@@ -5152,13 +5152,21 @@
   "@iconThemeSettingsRead": {
     "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
-  "iconThemeSettingsReadSubtitle": "アイコンに埋め込まれたテーマで、アイコンの枠・添付の並び・アイコンを拡大したときの背景を変えます(アイコンの画像を取り直します)",
+  "iconThemeSettingsReadSubtitle": "アイコンに埋め込まれたテーマで、アイコンの枠・添付の並び・ユーザーページとスレッドの見た目を変えます(アイコンの画像を取り直します)",
   "@iconThemeSettingsReadSubtitle": {
     "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeSettingsEditorSubtitle": "いまのアイコンや好きな画像に、背景・文字色・パーティクルのテーマを書き込みます",
   "@iconThemeSettingsEditorSubtitle": {
     "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
+  },
+  "iconThemeTargetIcon": "変換先のアイコン",
+  "@iconThemeTargetIcon": {
+    "description": "テーマ編集の画面の固定の欄(D-587)"
+  },
+  "iconThemeChangeImage": "画像を変更",
+  "@iconThemeChangeImage": {
+    "description": "テーマ編集の画面の固定の欄(D-587)"
   },
   "languageSelfName": "日本語",
   "@languageSelfName": {
@@ -11300,6 +11308,18 @@
         "type": "String"
       }
     }
+  },
+  "profileEditAvatarChange": "アイコンの変更",
+  "@profileEditAvatarChange": {
+    "description": "プロフィールの編集のアイコン / ヘッダー(D-587)"
+  },
+  "profileEditAvatarEmbedTheme": "アイコンにテーマを埋め込む",
+  "@profileEditAvatarEmbedTheme": {
+    "description": "プロフィールの編集のアイコン / ヘッダー(D-587)"
+  },
+  "profileEditBannerChange": "ヘッダーを変更",
+  "@profileEditBannerChange": {
+    "description": "プロフィールの編集のアイコン / ヘッダー(D-587)"
   },
   "profileOwnershipWhereMisskey": "自己紹介か、プロフィールの「追加情報」のどれかに貼って、保存してください。",
   "@profileOwnershipWhereMisskey": {
@@ -18784,6 +18804,75 @@
   "themeImportDetail": "rasq build で作った着せ替えパック。コードを含まないので、未審査でもそのまま使えます",
   "@themeImportDetail": {
     "description": "開発者モードの上の行の補足。rasq build はコマンドの名前で訳さない"
+  },
+  "themeMuteThis": "このテーマを表示しない",
+  "@themeMuteThis": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeDisplayTitle": "ほかの人のテーマ",
+  "@themeDisplayTitle": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeOriginIcon": "アイコンに埋め込まれたテーマ",
+  "@themeOriginIcon": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeOriginAtmos": "RASQ Atmos(プロモーション)",
+  "@themeOriginAtmos": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeOriginCommunity": "コミュハッシュタグ",
+  "@themeOriginCommunity": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeScopeFollowees": "フォローしている人だけ",
+  "@themeScopeFollowees": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeScopeAll": "全員",
+  "@themeScopeAll": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeScopeOff": "表示しない",
+  "@themeScopeOff": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeDisplayOverPlugin": "着せ替えより優先する",
+  "@themeDisplayOverPlugin": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeDisplayOverPluginSubtitle": "オフのときは、着せ替えを選んでいる間はこのテーマを出しません",
+  "@themeDisplayOverPluginSubtitle": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeMutedTitle": "ミュートしたテーマ",
+  "@themeMutedTitle": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeMutedCount": "{count, plural, other{{count} 件}}",
+  "@themeMutedCount": {
+    "description": "ほかの人のテーマの出し方(D-587)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "themeMutedEmpty": "ミュートしたテーマはありません",
+  "@themeMutedEmpty": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeMutedEmptyHint": "テーマが付いたページの「…」の「このテーマを表示しない」でミュートできます",
+  "@themeMutedEmptyHint": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeMutedCaption": "同じ値のテーマは、誰のものでも表示しません。",
+  "@themeMutedCaption": {
+    "description": "ほかの人のテーマの出し方(D-587)"
+  },
+  "themeUnmute": "解除",
+  "@themeUnmute": {
+    "description": "ほかの人のテーマの出し方(D-587)"
   },
   "trendTitle": "トレンド",
   "trendTabNotes": "ノート",

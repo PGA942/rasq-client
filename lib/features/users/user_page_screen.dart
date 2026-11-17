@@ -31,6 +31,9 @@ import 'user_list.dart';
 import 'user_providers.dart';
 import 'user_tab_view.dart';
 import '../ads/timeline_ads.dart';
+import '../theme/icon_theme/icon_theme_reader.dart' show iconThemeProvider;
+import '../theme/icon_theme/rasq_theme_spec.dart' show RasqThemeSpec;
+import '../theme/theme_display.dart';
 
 /// ユーザーページ(通常 / 自分 / 制限 / ノーヒット). タブ: ノート / 返信 / 引用 / メディア / クリップ.
 /// 選んでいるタブをもう一度押すと、いちばん上へ / 並べ替え・絞り込みのパネル (D-514、[showUserTabViewPanel])。
@@ -158,10 +161,13 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
     final manager = ref.watch(overlayManagerProvider);
     final title = profile.value?.summary.displayName ?? widget.initial?.displayName ?? (profile.hasError ? '@${widget.initial?.handle ?? ''}' : '');
 
-    return Scaffold(
+    final pageTheme = _pageTheme(profile.value?.summary ?? widget.initial, viewer);
+    return ThemedSurface(
+      spec: pageTheme,
+      child: Scaffold(
       appBar: RasqPageHeader(
         title: title,
-        onMore: () => _userMenu(context, manager, profile.value?.summary ?? widget.initial, profile.value),
+        onMore: () => _userMenu(context, manager, profile.value?.summary ?? widget.initial, profile.value, theme: pageTheme),
       ),
       body: profile.when(
         loading: () => const RasqLoading(),
@@ -237,10 +243,21 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
           );
         },
       ),
+    ),
     );
   }
 
-  Future<void> _userMenu(BuildContext context, OverlayManager manager, UserSummary? u, UserProfile? p) async {
+  /// このページのテーマ (D-587): この人のアイコンに埋め込まれたテーマ(設定の出す範囲・着せ替えとの優先・ミュートを見る)。
+  RasqThemeSpec? _pageTheme(UserSummary? u, AccountId? viewer) {
+    final avatar = u?.avatarUrl;
+    if (u == null || avatar == null) return null;
+    final spec = ref.watch(iconThemeProvider(avatar.toString())).value;
+    if (spec == null) return null;
+    final author = viewer == null ? null : (viewer: viewer, userId: u.id);
+    return watchThemeVisible(ref, origin: ThemeOrigin.icon, spec: spec, author: author) ? spec : null;
+  }
+
+  Future<void> _userMenu(BuildContext context, OverlayManager manager, UserSummary? u, UserProfile? p, {RasqThemeSpec? theme}) async {
     if (u == null) return;
     final l10n = context.l10n;
     final box = context.findRenderObject() as RenderBox?;
@@ -257,7 +274,10 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
       RasqDropdownItem(st.muted ? l10n.usersMenuUnmute : l10n.usersMenuMute, 'mute', accent: true),
       RasqDropdownItem(st.blocked ? l10n.usersMenuUnblock : l10n.usersMenuBlock, 'block', destructive: true),
       RasqDropdownItem(l10n.usersMenuReport, 'report', destructive: true),
+      // テーマを出しているときだけ (D-587): 値でミュート(解除は設定のミュートしたテーマ)。
+      if (theme != null) RasqDropdownItem(l10n.themeMuteThis, 'muteTheme', destructive: true),
     ]);
+    if (pick == 'muteTheme' && theme != null) return muteTheme(ref, theme, ThemeOrigin.icon);
     // SNS の操作ではないもの (D-343 / D-345)。
     if (pick == 'rasqList' && via != null) return showAddToRasqListSheet(ref, u, via: via);
     if (pick == 'server') return showServerInfoFow(ref, u.account.instance);

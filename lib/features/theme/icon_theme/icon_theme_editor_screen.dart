@@ -79,10 +79,10 @@ class _IconThemeEditorScreenState extends ConsumerState<IconThemeEditorScreen> {
   int _shape = 0; // 0 = そのまま / 1 = 角丸 / 2 = 円形
   bool _zones = false;
 
-  // 03
-  int _quality = 75;
-  int _size = 400;
-  Uint8List? _external;
+  // サーバーの再圧縮の見本 (D-587 で段を外した。既定のまま読み戻しを確かめる)。
+  static const _quality = 75;
+  static const _size = 400;
+  static const Uint8List? _external = null;
 
   IconThemeRun? _run;
   IconThemeEncodeInfo? _lastInfo;
@@ -191,39 +191,30 @@ class _IconThemeEditorScreenState extends ConsumerState<IconThemeEditorScreen> {
     return Scaffold(
       key: const ValueKey('iconTheme.editor'),
       appBar: RasqPageHeader(title: l.iconThemeEditorTitle),
-      // 段は 4 つで重くないので、全部組み立てる(読み戻しの結果は、上で替えたものの下にすぐ出る)。
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xl),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(l.iconThemeEditorIntro, style: RasqTypography.bodySmall.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          const SizedBox(height: RasqSpacing.md),
-          _station('01', l.iconThemeStepPick, [
-            Row(children: [
-              _thumb(_sourcePng),
-              const SizedBox(width: RasqSpacing.md),
-              Expanded(
-                child: Wrap(spacing: 8, runSpacing: 8, children: [
-                  FilledButton.icon(
-                    key: const ValueKey('iconTheme.pick'),
-                    icon: const Icon(Icons.image_outlined, size: 18),
-                    label: Text(l.iconThemePickImage),
-                    onPressed: () async {
-                      final b = await ref.read(iconThemeImagePickerProvider)();
-                      if (b != null) await _setSource(b);
-                    },
-                  ),
-                  OutlinedButton(key: const ValueKey('iconTheme.sample'), onPressed: () => _setSource(null), child: Text(l.iconThemeUseSample)),
-                ]),
-              ),
-            ]),
-            if (_sourceError != null) Text(_sourceError!, style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.error)),
-            Text(l.iconThemeStepPickHint, style: _hint(context)),
+      // D-587: 変換先のアイコンと「画像を変更」はいつも見える所に(狭い = 上 / 2 カラムの幅 = 左に固定)。
+      // 「アイコンを選ぶ」(見本の画像)と「アップロード(見本)」の段は出さない(再圧縮の見本は既定の 400px・品質 75 のまま)。
+      body: LayoutBuilder(builder: (context, c) {
+        final wide = c.maxWidth >= _wideMinWidth;
+        final stations = SingleChildScrollView(
+          key: const ValueKey('iconTheme.stations'),
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xl),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(l.iconThemeEditorIntro, style: RasqTypography.bodySmall.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            const SizedBox(height: RasqSpacing.md),
+            _station('01', l.iconThemeStepEncode, _encodeSection(context, run)),
+            _station('02', l.iconThemeStepView, _viewSection(context, run)),
           ]),
-          _station('02', l.iconThemeStepEncode, _encodeSection(context, run)),
-          _station('03', l.iconThemeStepUpload, _uploadSection(context, run)),
-          _station('04', l.iconThemeStepView, _viewSection(context, run)),
-        ]),
-      ),
+        );
+        final pinned = _pinned(context, run, wide: wide);
+        if (wide) {
+          return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            SizedBox(width: _pinnedWidth, child: pinned),
+            const VerticalDivider(width: 1),
+            Expanded(child: stations),
+          ]);
+        }
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [pinned, const Divider(height: 1), Expanded(child: stations)]);
+      }),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.sm),
@@ -234,6 +225,58 @@ class _IconThemeEditorScreenState extends ConsumerState<IconThemeEditorScreen> {
             child: Text(l.iconThemeUseIcon),
           ),
         ),
+      ),
+    );
+  }
+
+  /// 2 カラムにする幅(この画面の幅)と、左の欄の幅。
+  static const _wideMinWidth = 720.0;
+  static const _pinnedWidth = 260.0;
+
+  /// 固定の欄 (D-587): 変換先のアイコン(書き込んだもの。まだ無ければ元の画像)と「画像を変更」。
+  Widget _pinned(BuildContext context, IconThemeRun? run, {required bool wide}) {
+    final l = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final png = run?.png ?? _sourcePng;
+    final change = FilledButton.icon(
+      key: const ValueKey('iconTheme.pick'),
+      icon: const Icon(Icons.image_outlined, size: 18),
+      label: Text(l.iconThemeChangeImage),
+      onPressed: () async {
+        final b = await ref.read(iconThemeImagePickerProvider)();
+        if (b != null) await _setSource(b);
+      },
+    );
+    final label = Text(l.iconThemeTargetIcon, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant));
+    final error = _sourceError == null ? null : Text(_sourceError!, key: const ValueKey('iconTheme.sourceError'), style: RasqTypography.caption.copyWith(color: scheme.error));
+    return Material(
+      key: const ValueKey('iconTheme.pinned'),
+      color: scheme.surfaceContainerLow,
+      child: Padding(
+        padding: const EdgeInsets.all(RasqSpacing.md),
+        child: wide
+            ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                label,
+                const SizedBox(height: RasqSpacing.sm),
+                AspectRatio(aspectRatio: 1, child: _thumb(png, size: _pinnedWidth, key: const ValueKey('iconTheme.target'))),
+                const SizedBox(height: RasqSpacing.md),
+                change,
+                ?error,
+                const SizedBox(height: RasqSpacing.xs),
+                Text(l.iconThemeStepPickHint, style: _hint(context)),
+              ])
+            : Row(children: [
+                _thumb(png, key: const ValueKey('iconTheme.target')),
+                const SizedBox(width: RasqSpacing.md),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                    label,
+                    const SizedBox(height: RasqSpacing.xs),
+                    change,
+                    ?error,
+                  ]),
+                ),
+              ]),
       ),
     );
   }
@@ -417,41 +460,6 @@ class _IconThemeEditorScreenState extends ConsumerState<IconThemeEditorScreen> {
         _slider(l.iconThemeMix, s.mix, 7, (v) => _changed(() => s.mix = v), show: (v) => '$v/7'),
       ]),
     );
-  }
-
-  List<Widget> _uploadSection(BuildContext context, IconThemeRun? run) {
-    final l = context.l10n;
-    return [
-      if (_external == null)
-        Wrap(spacing: 16, runSpacing: 8, children: [
-          _dropdown<int>(l.iconThemeRecompress, _quality, [for (final q in const [85, 75, 60, 40]) (q, l.iconThemeQuality(q))], (v) => _changed(() => _quality = v), key: const ValueKey('iconTheme.quality')),
-          _dropdown<int>(l.iconThemeResize, _size, [for (final s in const [512, 400, 300, 256, 200, 128]) (s, l.iconThemeResizePx(s))], (v) => _changed(() => _size = v), key: const ValueKey('iconTheme.size')),
-        ]),
-      Row(children: [
-        _thumb(run?.served, key: const ValueKey('iconTheme.served')),
-        const SizedBox(width: RasqSpacing.md),
-        Expanded(
-          child: Text(
-            run == null || run.servedSize == 0
-                ? ''
-                : '${l.iconThemeServed(run.servedSize, (run.servedBytes / 1024).toStringAsFixed(1))}\n${_external != null ? l.iconThemeExternalRoute : l.iconThemeDummyRoute(_size, _quality)}',
-            style: RasqTypography.caption,
-          ),
-        ),
-      ]),
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        OutlinedButton.icon(
-          key: const ValueKey('iconTheme.external'),
-          icon: const Icon(Icons.file_open_outlined, size: 18),
-          label: Text(l.iconThemeTryExternal),
-          onPressed: () async {
-            final b = await ref.read(iconThemeImagePickerProvider)();
-            if (b != null) _changed(() => _external = b);
-          },
-        ),
-        if (_external != null) TextButton(key: const ValueKey('iconTheme.dummy'), onPressed: () => _changed(() => _external = null), child: Text(l.iconThemeBackToDummy)),
-      ]),
-    ];
   }
 
   List<Widget> _viewSection(BuildContext context, IconThemeRun? run) {

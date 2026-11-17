@@ -1,7 +1,7 @@
 {
   "@@locale": "en",
   "iconThemeEditorTitle": "Embed a theme in your icon",
-  "iconThemeEditorIntro": "Writes a theme into the four corners of your icon as colour blocks. Even after a social network shrinks or recompresses it, RASQ reads it back and uses it for the background, text colour and particles when someone enlarges your icon.",
+  "iconThemeEditorIntro": "Writes a theme into the four corners of your icon as colour blocks. Even after a social network shrinks or recompresses it, RASQ reads it back and uses it for the background, text colour and particles of your user page and the threads you start.",
   "iconThemeStepPick": "Choose an icon",
   "iconThemeStepPickHint": "Cropped to a centred square and resized to 400px.",
   "iconThemePickImage": "Choose image",
@@ -125,6 +125,8 @@
   "iconThemePluginUrlNote": "The plugin would come from https://{url}. It isn't fetched yet, so the basic theme is shown.",
   "iconThemeEmbedTooltip": "Embed a theme in your icon",
   "iconThemeSettingsRead": "Read icon themes",
-  "iconThemeSettingsReadSubtitle": "Uses themes embedded in icons to change avatar frames, media layout and the background of enlarged icons (downloads the icon image again)",
-  "iconThemeSettingsEditorSubtitle": "Write a background, text colour and particle theme into your current icon or any image"
+  "iconThemeSettingsReadSubtitle": "Uses themes embedded in icons to change avatar frames, media layout and the look of user pages and threads (downloads the icon image again)",
+  "iconThemeSettingsEditorSubtitle": "Write a background, text colour and particle theme into your current icon or any image",
+  "iconThemeTargetIcon": "Icon to write into",
+  "iconThemeChangeImage": "Change image"
 }

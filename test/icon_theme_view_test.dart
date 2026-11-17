@@ -202,31 +202,17 @@ void main() {
       expect(find.byType(ClipRRect), findsWidgets);
     });
 
-    testWidgets('アイコンの拡大: テーマが読めたら、背景・枠・パーティクル・文字色。読めなければ今までどおり黒', (tester) async {
+    testWidgets('アイコンの拡大: テーマは付けない (D-587。テーマはユーザーページとスレッドのページに出す)', (tester) async {
       final spec = RasqThemeSpec.fromIcon(decodeIconThemeBytes(themedJpeg())!, frames: iconThemeFramesFor(theme));
-      Future<void> open(RasqThemeSpec? s) async {
-        await tester.pumpWidget(const SizedBox()); // 前の ProviderScope を捨てる(差し替えを効かせる)
-        await tester.pumpWidget(app(
-          MediaQuery(data: const MediaQueryData(disableAnimations: true), child: ProfileImageViewerScreen(url: Uri.parse('https://e.test/a.png'), title: 'タロ')),
-          overrides: [iconThemeProvider.overrideWith((ref, url) async => s)],
-        ));
-        await tester.pump();
-        await tester.pump();
-      }
-
-      await open(spec);
-      expect(find.byKey(const ValueKey('profileImage.backdrop')), findsOneWidget);
-      expect(find.byKey(const ValueKey('iconTheme.particles')), findsOneWidget);
-      expect(find.byKey(const ValueKey('profileImage.themed')), findsOneWidget);
-      expect(tester.widget<Text>(find.text('タロ')).style?.color, themeColor(theme.text));
-      expect(tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor, Colors.transparent);
-      // 押すとパーティクル(クリックのスロット)が出る。止めた表示では出さないので、例外が出ないことだけ。
-      await tester.tapAt(const Offset(200, 500));
+      await tester.pumpWidget(app(
+        MediaQuery(data: const MediaQueryData(disableAnimations: true), child: ProfileImageViewerScreen(url: Uri.parse('https://e.test/a.png'), title: 'タロ')),
+        overrides: [iconThemeProvider.overrideWith((ref, url) async => spec)],
+      ));
       await tester.pump();
-      expect(tester.takeException(), isNull);
-
-      await open(null);
+      await tester.pump();
       expect(find.byKey(const ValueKey('profileImage.backdrop')), findsNothing);
+      expect(find.byKey(const ValueKey('iconTheme.particles')), findsNothing);
+      expect(find.byKey(const ValueKey('profileImage.themed')), findsNothing);
       expect(tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor, Colors.black);
     });
 
@@ -320,23 +306,6 @@ void main() {
       expect(d.ext?.url, 'plugins.example.social/t/a');
     });
 
-    testWidgets('「実際の SNS から保存した画像で試す」: 選んだ画像をそのまま読み戻す', (tester) async {
-      tester.view.physicalSize = const Size(900, 2400);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      final themed = themedJpeg(t: const IconThemeBasic(bg: [255, 0, 0], text: [0, 0, 0], accent: [0, 0, 255], particle: 2, hint: 0));
-      await tester.pumpWidget(app(const IconThemeEditorScreen(), overrides: [iconThemeImagePickerProvider.overrideWithValue(() async => themed)]));
-      Text pillText(String k) => tester.widget<Text>(find.descendant(of: find.byKey(ValueKey('iconTheme.result.$k')), matching: find.byType(Text)));
-      await settle(tester, () => pillText('basic').data != '—');
-      await tester.ensureVisible(find.byKey(const ValueKey('iconTheme.external')));
-      await tester.tap(find.byKey(const ValueKey('iconTheme.external')));
-      await tester.pump();
-      await settle(tester, () => find.byKey(const ValueKey('iconTheme.dummy')).evaluate().isNotEmpty && (tester.widget<Text>(find.byKey(const ValueKey('iconTheme.dslBack'))).data ?? '').startsWith('[ B'));
-      expect(pillText('match').data, '外の画像なので比べない');
-      expect(pillText('basic').data, '復元できた');
-      expect(tester.widget<Text>(find.byKey(const ValueKey('iconTheme.dslBack'))).data, '[ B f 0 0 T 0 0 0 A 0 0 f P 2 S 8 4 R0 ]');
-      expect(find.byKey(const ValueKey('iconTheme.sampleAvatar.circle')), findsOneWidget);
-    });
   });
 }
 

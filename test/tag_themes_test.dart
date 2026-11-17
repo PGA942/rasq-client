@@ -17,6 +17,7 @@ import 'package:rasq_client/features/theme/icon_theme/rasq_theme_spec.dart';
 import 'package:rasq_client/features/theme/tag_themes/community_tag_screen.dart';
 import 'package:rasq_client/features/theme/tag_themes/tag_themes.dart';
 import 'package:rasq_client/l10n/gen/app_localizations_ja.dart';
+import 'package:rasq_client/features/theme/theme_display.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -24,6 +25,9 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'support/fakes.dart';
 
 /// ハッシュタグのテーマ: 共通の形と一覧 (D-582)・コミュハッシュタグ (D-583)・RASQ Atmos (D-584)。
+/// テーマを付けたページ (D-587: 着せ替えと同じ層の ThemedSurface)。
+Finder themedBy(RasqThemeSource source) => find.byWidgetPredicate((w) => w is ThemedSurface && w.spec?.source == source);
+
 void main() {
   const basic = IconThemeBasic(bgMode: IconThemeBg.gradient, gradient: 2, bg: [17, 34, 68], text: [255, 255, 255], accent: [0, 204, 255], particle: 3);
   Map<String, Object?> theme({List<Map<String, Object?>> triggers = const [], Map<String, Object?>? scope}) => {
@@ -235,32 +239,32 @@ void main() {
       final c = await pumpApp(tester, const RasqFeatureFlags(atmos: true));
       c.read(routerProvider).push('/post/p1');
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('atmos.thread.rasqfes')), findsOneWidget);
+      expect(themedBy(RasqThemeSource.atmos), findsOneWidget);
       expect(find.byKey(const ValueKey('tagTheme.banner.atmos.rasqfes')), findsOneWidget);
       expect(find.text('プロモーション · このスレッドだけのテーマ'), findsOneWidget);
       c.read(routerProvider).pop();
       await tester.pumpAndSettle();
       c.read(routerProvider).push('/post/p2');
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('atmos.thread.rasqfes')), findsNothing, reason: 'ほかのスレッドには付けない');
+      expect(themedBy(RasqThemeSource.atmos), findsNothing, reason: 'ほかのスレッドには付けない');
     });
 
     testWidgets('コミュハッシュタグ: そのタグのページにテーマ。無効なら付けない', (tester) async {
       final c = await pumpApp(tester, const RasqFeatureFlags(communityTagThemes: true));
       c.read(routerProvider).push('/trend/RasqArt');
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('community.page.rasqart')), findsOneWidget);
+      expect(themedBy(RasqThemeSource.communityTag), findsOneWidget);
       expect(find.byKey(const ValueKey('tagTheme.banner.community.rasqart')), findsOneWidget);
       c.read(routerProvider).push('/post/p1');
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('atmos.thread.rasqfes')), findsNothing, reason: 'Atmos は別のフラグ');
+      expect(themedBy(RasqThemeSource.atmos), findsNothing, reason: 'Atmos は別のフラグ');
     });
 
     testWidgets('どちらも無効なら、タグのページにもスレッドにも何も付けない', (tester) async {
       final c = await pumpApp(tester, const RasqFeatureFlags());
       c.read(routerProvider).push('/trend/RasqArt');
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('community.page.rasqart')), findsNothing);
+      expect(themedBy(RasqThemeSource.communityTag), findsNothing);
     });
   });
 

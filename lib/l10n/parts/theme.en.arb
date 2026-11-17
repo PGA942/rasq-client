@@ -26,5 +26,22 @@
   "themeFindInStore": "Find themes in the Store",
   "themeImport": "Load from file (.rspkg / .rasqpkg)",
   "themeImportSubtitle": "Load a theme you made yourself",
-  "themeImportDetail": "A theme pack built with rasq build. It contains no code, so it can be used as is even without review"
+  "themeImportDetail": "A theme pack built with rasq build. It contains no code, so it can be used as is even without review",
+  "themeMuteThis": "Don't show this theme",
+  "themeDisplayTitle": "Other people's themes",
+  "themeOriginIcon": "Themes embedded in icons",
+  "themeOriginAtmos": "RASQ Atmos (promotions)",
+  "themeOriginCommunity": "Community hashtags",
+  "themeScopeFollowees": "Only people you follow",
+  "themeScopeAll": "Everyone",
+  "themeScopeOff": "Don't show",
+  "themeDisplayOverPlugin": "Prefer over the app theme",
+  "themeDisplayOverPluginSubtitle": "When off, this kind of theme is hidden while an app theme is selected",
+  "themeMutedTitle": "Muted themes",
+  "themeMutedCount": "{count, plural, one{{count} theme} other{{count} themes}}",
+  "@themeMutedCount": {"placeholders": {"count": {"type": "int"}}},
+  "themeMutedEmpty": "No muted themes",
+  "themeMutedEmptyHint": "Use \"Don't show this theme\" in the … menu of a themed page",
+  "themeMutedCaption": "A theme with the same values is hidden for everyone who uses it.",
+  "themeUnmute": "Unmute"
 }
