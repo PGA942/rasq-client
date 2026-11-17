@@ -255,7 +255,7 @@ class _TabletLayout extends ConsumerWidget {
             child: Container(
               decoration: BoxDecoration(border: Border(left: BorderSide(color: scheme.outlineVariant))),
               // VC ミニプレイヤーのスタブは撤去 (D-178): AsTell は FOW で動く。
-              child: SafeArea(child: FowStickPadding(manager: ref.watch(overlayManagerProvider), column: 1, child: const ColumnTakeoverHost(column: 1, child: ThirdColumnView()))),
+              child: SafeArea(child: FowStickPadding(manager: ref.watch(overlayManagerProvider), column: 1, child: ColumnTakeoverHost(column: 1, child: ThirdColumnView(leftTab: RasqNavTab.values[shell.currentIndex])))),
             ),
           ),
           if (extra != null && extra.afterColumn != 0) extraPane(extra),
