@@ -9242,6 +9242,170 @@
   "@notificationsRasqEmptyHint": {
     "description": "RASQ のタブが空のときの補足。Swing は機能の名前で訳さない"
   },
+  "notificationsTabMentions": "メンション",
+  "@notificationsTabMentions": {
+    "description": "通知の画面の最初からあるタブ。返信・メンション・引用の通知だけ"
+  },
+  "notificationsTabCustomFallback": "通知のタブ",
+  "@notificationsTabCustomFallback": {
+    "description": "ユーザーが足した通知のタブに名前が無いときの名前"
+  },
+  "notificationsAddTab": "通知のタブを足す",
+  "@notificationsAddTab": {
+    "description": "通知の画面 / カスタマイズの画面のタブ行の「+」のツールチップ"
+  },
+  "notificationsCustomizeTab": "このタブをカスタマイズ",
+  "@notificationsCustomizeTab": {
+    "description": "通知の画面のタブ行のボタンのツールチップ。いま開いているタブの中身をノードで組む画面を開く"
+  },
+  "notificationsTemplateAccount": "アカウントごとのタブ",
+  "@notificationsTemplateAccount": {
+    "description": "通知のタブを足すときの雛形。1 つのアカウントの通知だけのタブ"
+  },
+  "notificationsTemplateKind": "種類ごとのタブ",
+  "@notificationsTemplateKind": {
+    "description": "通知のタブを足すときの雛形。1 つの種類(メンション・リアクションなど)の通知だけのタブ"
+  },
+  "notificationsTemplateEmpty": "空のタブ",
+  "@notificationsTemplateEmpty": {
+    "description": "通知のタブを足すときの雛形。ノードを置いていないタブ"
+  },
+  "notificationsTabNoNodes": "このタブにはノードがありません",
+  "@notificationsTabNoNodes": {
+    "description": "通知のタブの構成にノードが 1 つも無いとき"
+  },
+  "notificationsTabNoNodesHint": "「このタブをカスタマイズ」から、通知のノードを置いてください",
+  "@notificationsTabNoNodesHint": {
+    "description": "通知のタブにノードが無いときの補足"
+  },
+  "notificationsToAccount": "{account} への通知",
+  "@notificationsToAccount": {
+    "description": "通知のタイルの上の小さい行。どのアカウントが受け取った通知か(ほかのアカウントの通知が混ざるときだけ)",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsGroupMentions": "メンション・返信・引用",
+  "@notificationsGroupMentions": {
+    "description": "通知ノードの種類"
+  },
+  "notificationsGroupReactions": "リアクション",
+  "@notificationsGroupReactions": {
+    "description": "通知ノードの種類"
+  },
+  "notificationsGroupReposts": "リノート・リポスト",
+  "@notificationsGroupReposts": {
+    "description": "通知ノードの種類"
+  },
+  "notificationsGroupFollows": "フォロー",
+  "@notificationsGroupFollows": {
+    "description": "通知ノードの種類。フォローされた / 申請 / 承認 / リストへの追加"
+  },
+  "notificationsGroupEvents": "投票・タイマー・ASTell",
+  "@notificationsGroupEvents": {
+    "description": "通知ノードの種類。ASTell は製品名で訳さない"
+  },
+  "notificationsGroupSystem": "システム・その他",
+  "@notificationsGroupSystem": {
+    "description": "通知ノードの種類"
+  },
+  "notificationsNodeTitle": "通知",
+  "@notificationsNodeTitle": {
+    "description": "通知ノードの名前(カスタマイズの画面のタイル)"
+  },
+  "notificationsNodeAllKinds": "すべての種類",
+  "@notificationsNodeAllKinds": {
+    "description": "通知ノードの説明。種類を絞っていないとき"
+  },
+  "notificationsNodeDescription": "{kinds} の通知",
+  "@notificationsNodeDescription": {
+    "description": "通知ノードの説明。kinds = 種類の並び",
+    "placeholders": {
+      "kinds": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsNodeDescriptionFollowing": "{kinds} の通知(フォロー中の人だけ)",
+  "@notificationsNodeDescriptionFollowing": {
+    "description": "通知ノードの説明。フォロー中の人からの通知だけのとき",
+    "placeholders": {
+      "kinds": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsNodeFollowingOnly": "フォロー中の人からの通知だけ",
+  "@notificationsNodeFollowingOnly": {
+    "description": "通知ノードのパラメーターのスイッチ"
+  },
+  "notificationsNodeRasqTitle": "RASQ の通知",
+  "@notificationsNodeRasqTitle": {
+    "description": "ノードの名前。RASQ のメンション / 返信 / 引用 / Swing の招待の一覧。RASQ は製品名で訳さない"
+  },
+  "notificationsNodeRasqDescription": "RASQ のメンション / 返信 / 引用 / Swing の招待(RASQ アカウントにログインしているとき)",
+  "@notificationsNodeRasqDescription": {
+    "description": "RASQ の通知ノードの説明"
+  },
+  "notificationsNodeRemindersDescription": "登録した ASTell の開始通知の予定",
+  "@notificationsNodeRemindersDescription": {
+    "description": "開始通知の予定のノードの説明"
+  },
+  "notificationsPaletteNodeTitle": "通知({account})",
+  "@notificationsPaletteNodeTitle": {
+    "description": "パレットの通知ノードの名前。account = いまのアカウント / 全部のアカウント / アカウントの表記",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsPaletteNodeDescription": "受け取った通知を新しい順に。種類やフォロー中の人だけに絞れます",
+  "@notificationsPaletteNodeDescription": {
+    "description": "パレットの通知ノードの説明"
+  },
+  "notificationsPaletteQueryFilterDescription": "語を含む通知だけ(または含む通知を除く)。人の名前・投稿の本文・リアクションを見ます",
+  "@notificationsPaletteQueryFilterDescription": {
+    "description": "通知のタブのパレットの検索絞り込みの説明"
+  },
+  "notificationsPaletteChronoDescription": "新しい通知を上に",
+  "@notificationsPaletteChronoDescription": {
+    "description": "通知のタブのパレットの時系列順の説明"
+  },
+  "notificationsParamsNode": "受け取った通知を出します",
+  "@notificationsParamsNode": {
+    "description": "通知ノードのパラメーターの見出しの説明"
+  },
+  "notificationsParamsNodeDetail": "通知の画面の表示だけが変わります。端末に届く push 通知は、ここでは変わりません(通知トークンの設定で決めます)",
+  "@notificationsParamsNodeDetail": {
+    "description": "通知ノードのパラメーターの詳しい説明"
+  },
+  "notificationsParamsKinds": "種類",
+  "@notificationsParamsKinds": {
+    "description": "通知ノードのパラメーターの見出し"
+  },
+  "notificationsParamsKindsHint": "どれもオフなら、すべての種類を出します",
+  "@notificationsParamsKindsHint": {
+    "description": "通知ノードの種類の補足"
+  },
+  "notificationsParamsWho": "だれからの通知",
+  "@notificationsParamsWho": {
+    "description": "通知ノードのパラメーターの見出し"
+  },
+  "notificationsConfigBanner": "通知のタブの中身を、ノードで組みます(上から順に)",
+  "@notificationsConfigBanner": {
+    "description": "カスタマイズの画面で通知のタブを開いたときの案内"
+  },
+  "notificationsConfigBannerDetail": "ここで変わるのは通知の画面の表示だけです。端末に届く push 通知の受け取り・出す / 出さないは、ノードでは変えられません(重くならないように、ノードの外で決めています)",
+  "@notificationsConfigBannerDetail": {
+    "description": "カスタマイズの画面の通知のタブの案内の詳しい説明"
+  },
+  "notificationsConfigSourcesHeader": "通知のノード",
+  "@notificationsConfigSourcesHeader": {
+    "description": "カスタマイズの画面で通知のタブを開いたときの、ノードの並びの見出し(TL の「SNSタイムライン」の代わり)"
+  },
   "notifyPushChannelName": "RASQ の通知",
   "@notifyPushChannelName": {
     "description": "Android の通知のチャンネルの名前(端末の設定に出る)。RASQ からのプッシュ通知"
