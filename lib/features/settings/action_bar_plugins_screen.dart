@@ -5,10 +5,13 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../../app/router.dart' show Routes;
 import '../../l10n/l10n.dart';
 import '../home/action_bar_edit_sheet.dart';
+import '../home/media_limit.dart';
 import '../home/plugin_actions.dart';
 import '../plugins/slot_plugins.dart';
+import '../store/rasqpkg.dart' show parseStoreSlotSource;
 import 'settings_dsl.dart';
 
 /// 設定 → SNSプラグイン →「プラグインボタン」(D-210 → D-305、契約 v0.14 §2.11)。
@@ -18,6 +21,9 @@ import 'settings_dsl.dart';
 /// その下に **temp**「面を開いたとき自動でオン」(面が作られた瞬間の初期状態の上書き。状態を持たない post.action は
 /// `auto_hook` 権限のある審査済みプラグインだけ)。
 /// 末尾の「このアカウント」に、従来のアカウントごとの有効 / 無効と束ねる閾値(設定エリア `slots.<accountKey>`、D-176)。
+/// 先頭の「アプリのボタン」に、投稿のバーの「4 枚まで」の切り替えを出すか (D-589、切り替えの長押しからここへ来る)。
+/// 各ボタンの行の左のアイコンで、そのボタンを出しているプラグインのページへ (D-589): ストアから入れたものはインストール済みの
+/// ページ(そこからストアのページへも行ける)、ほか(同梱 / サイドロード)はストアのページ。
 class ActionBarPluginsScreen extends ConsumerWidget {
   const ActionBarPluginsScreen({super.key});
 
@@ -47,6 +53,14 @@ class ActionBarPluginsScreen extends ConsumerWidget {
     Widget hint(String text, [String? detail]) =>
         RasqCaption(text, detail: detail, padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm));
 
+    /// プラグインのページへ (D-589)。
+    Widget pluginLink(PluginAction p, {String keyPrefix = 'actionbar.pluginPage'}) => IconButton(
+          key: ValueKey('$keyPrefix.${p.id}'),
+          icon: const Icon(Icons.extension_outlined),
+          tooltip: l.settingsActionBarOpenPluginPage(p.plugin.manifest.name),
+          onPressed: () => context.push(pluginPageRouteOf(p.plugin)),
+        );
+
     /// ボタン 1 つ: switch の行と、temp を持つものは「面を開いたとき自動でオン」の行。
     List<Widget> rows(PluginAction p, String placement) {
       final on = prefs.switchOn(p.id);
@@ -55,6 +69,7 @@ class ActionBarPluginsScreen extends ConsumerWidget {
       return [
         RasqSwitchListTile(
           key: ValueKey('actionbar.switch.${p.id}'),
+          leading: pluginLink(p),
           title: p.decl.label,
           subtitle: '${p.plugin.manifest.name} · $placement',
           value: on,
@@ -91,6 +106,24 @@ class ActionBarPluginsScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(l.settingsActionBarTitle), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: l.settingsActionBarBackTooltip, onPressed: () => context.pop())),
       body: ListView(children: [
         hint(l.settingsActionBarIntroCaption, l.settingsActionBarIntroDetail),
+        // アプリのボタン (D-589): 投稿のバーの「4 枚まで」の切り替え(横に送る並びで 5 枚以上の投稿だけに出る)。
+        RasqSectionHeader(title: l.settingsActionBarAppButtonsHeader),
+        RasqSwitchListTile(
+          key: const ValueKey('actionbar.app.mediaLimitButton'),
+          leading: Icon(Icons.filter_4_outlined, color: scheme.onSurfaceVariant),
+          title: l.settingsActionBarMediaLimitButtonTitle,
+          subtitle: l.settingsActionBarMediaLimitButtonSubtitle,
+          value: ref.watch(mediaLimitButtonProvider),
+          onChanged: (v) => setMediaLimitButton(ref, v),
+        ),
+        RasqSwitchListTile(
+          key: const ValueKey('actionbar.app.mediaLimitFour'),
+          leading: Icon(Icons.subdirectory_arrow_right, size: 18, color: scheme.onSurfaceVariant),
+          title: l.settingsActionBarMediaLimitFourTitle,
+          subtitle: l.settingsActionBarMediaLimitFourSubtitle,
+          value: ref.watch(mediaLimitFourProvider),
+          onChanged: (v) => setMediaLimitFour(ref, v),
+        ),
         ...section(l.settingsActionBarPostTileHeader, l.settingsActionBarPostTileEmptyDetail, postActions, (p) => bundleOf(p, snsActions, settings.threshold)),
         ...section(l.settingsActionBarViewerHeader, l.settingsActionBarViewerEmptyDetail, ref.watch(viewerPluginActionsProvider), (_) => l.settingsActionBarViewerPlacement),
         ...section(l.settingsActionBarMediaHeader, l.settingsActionBarMediaEmptyDetail, ref.watch(mediaPluginActionsProvider), (p) {
@@ -104,6 +137,7 @@ class ActionBarPluginsScreen extends ConsumerWidget {
         for (final p in postActions)
           RasqSwitchListTile(
             key: ValueKey('actionbar.slot.${p.id}'),
+            leading: pluginLink(p, keyPrefix: 'actionbar.slot.pluginPage'),
             title: p.decl.label,
             subtitle: l.settingsActionBarSlotSubtitle(p.plugin.manifest.name, p.decl.tags.join(' / ')),
             value: settings.isEnabled(p.id),
@@ -132,4 +166,11 @@ class ActionBarPluginsScreen extends ConsumerWidget {
       ]),
     );
   }
+}
+
+/// ボタンを出しているプラグインのページ (D-589): ストアから入れたもの(登録元 `store:<id>@<version>`)はインストール済みのページ、
+/// ほか(同梱 / サイドロード)はストアのページ(載っていなければ、そのページが「見つからない」と言う)。
+String pluginPageRouteOf(SlotPlugin plugin) {
+  final store = parseStoreSlotSource(plugin.source);
+  return store != null ? Routes.storeInstalledPlugin(store.pluginId) : Routes.storePlugin(plugin.id);
 }

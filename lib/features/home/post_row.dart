@@ -44,6 +44,7 @@ import 'action_bar_config.dart';
 import 'account_affinity.dart';
 import 'action_bundle_fow.dart';
 import 'material_icons.dart';
+import 'media_limit.dart';
 import 'post_duplicates.dart';
 import '../../l10n/l10n.dart';
 
@@ -276,6 +277,14 @@ class _PostRowState extends ConsumerState<PostRow> {
     final spans = parsed.spans;
     final nameSpans = parsed.nameSpans;
 
+    // 作者のアイコンに埋め込まれたテーマの予約 3 ビット (D-580): アイコンの枠(角丸 / 丸)と添付の並び(横 / 縦・詰める)。
+    // 読めないうち / 読めないアイコンは既定の並び(横、D-589)。
+    final authorAvatar = post.author.avatarUrl;
+    final hints = authorAvatar == null ? null : ref.watch(iconThemeProvider(authorAvatar.toString())).value?.basic.hints;
+    final arrangement = hints == null ? RasqMediaArrangement.auto : RasqMediaArrangement.of(vertical: hints.verticalMedia, packed: hints.packMedia);
+    // 横に送る並びでは、既定では 4 枚までにしない (D-589)。スレッドの展開では縦に全部。
+    final limitFour = ref.watch(mediaLimitFourProvider);
+
     // content slot
     final Widget content;
     if (collapsible) {
@@ -292,7 +301,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       if (collection != null) body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [body, RasqCollectionPostTile(idOrCode: collection.ref)]);
       if (serverHost != null) body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [body, ServerInfoPostTile(host: serverHost)]);
       final cw = post.contentWarning;
-      content = (cw != null && cw.isNotEmpty) ? RasqContentWarning(cw: cw, initiallyOpen: safety.openCw, child: _CwBody(post: post, body: body, showAllMedia: widget.showAllMedia)) : body;
+      content = (cw != null && cw.isNotEmpty) ? RasqContentWarning(cw: cw, initiallyOpen: safety.openCw, child: _CwBody(post: post, body: body, showAllMedia: widget.showAllMedia, arrangement: arrangement, limitFour: limitFour)) : body;
     }
     // When a CW is present, media/poll/quote live *inside* the CW reveal;
     // otherwise they fill the tile's own slots.
@@ -365,15 +374,12 @@ class _PostRowState extends ConsumerState<PostRow> {
                   },
                 ),
               if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [
+                // 添付の「4 枚まで」の切り替え (D-589): 横に送る並びで 5 枚以上のときだけ。長押しでアクションバーの編集へ。
+                if (!widget.hideMedia && ref.watch(mediaLimitButtonProvider) && mediaLimitApplies(count: mediaItems.length, arrangement: arrangement, showAll: widget.showAllMedia)) const MediaLimitToggleButton(),
                 // 共有の FOW はふつうのフッター付きの FOW (D-521。D-513 ではボタンにつながった形だった)。
                 RasqActionButton.icon(icon: Icons.ios_share, tooltip: context.l10n.homePostShare, onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context))),
               ]),
             ]);
-    // 作者のアイコンに埋め込まれたテーマの予約 3 ビット (D-580): アイコンの枠(角丸 / 丸)と添付の並び(横 / 縦・詰める)。
-    // 読めないうち / 読めないアイコンは今までどおり。
-    final authorAvatar = post.author.avatarUrl;
-    final hints = authorAvatar == null ? null : ref.watch(iconThemeProvider(authorAvatar.toString())).value?.basic.hints;
-    final arrangement = hints == null ? RasqMediaArrangement.auto : RasqMediaArrangement.of(vertical: hints.verticalMedia, packed: hints.packMedia);
     final tile = RasqPostTile(
       author: post.author,
       createdAt: post.createdAt,
@@ -384,7 +390,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       bannerText: widget.bannerText,
       dense: widget.dense,
       content: content,
-      media: !collapsible && !hasCw && !widget.hideMedia && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, revealed: revealed, onReveal: (id) => ref.read(mediaRevealProvider.notifier).reveal(post, id), maxVisible: widget.showAllMedia ? mediaItems.length : 4, arrangement: arrangement, onTapTile: (i) => context.openViewer(post, mediaIndex[i]), onPlayTile: (i) => showVideoFow(ref, mediaItems[i], post: post, column: fowColumnOf(context))) : null,
+      media: !collapsible && !hasCw && !widget.hideMedia && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, revealed: revealed, onReveal: (id) => ref.read(mediaRevealProvider.notifier).reveal(post, id), maxVisible: mediaMaxVisible(count: mediaItems.length, arrangement: arrangement, showAll: widget.showAllMedia, limitFour: limitFour), arrangement: arrangement, overflowAxis: widget.showAllMedia ? Axis.vertical : Axis.horizontal, onTapTile: (i) => context.openViewer(post, mediaIndex[i]), onPlayTile: (i) => showVideoFow(ref, mediaItems[i], post: post, column: fowColumnOf(context))) : null,
       poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
       quote: !collapsible && !hasCw && post.quote != null ? (widget.compactQuote ? InlinePostFrame(post: post.quote!) : quoteTile(context, post.quote!, emojis: emojis, safety: safety)) : null,
       actionBar: widget.actionBarAbove != null ? null : bar,
@@ -761,10 +767,12 @@ class ReplyParentRow extends ConsumerWidget {
 
 /// Body shown under an opened CW: text + media + poll + quote together.
 class _CwBody extends ConsumerWidget {
-  const _CwBody({required this.post, required this.body, this.showAllMedia = false});
+  const _CwBody({required this.post, required this.body, this.showAllMedia = false, this.arrangement = RasqMediaArrangement.auto, this.limitFour = false});
   final Post post;
   final Widget body;
   final bool showAllMedia;
+  final RasqMediaArrangement arrangement;
+  final bool limitFour;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final emojis = ref.watch(emojiCacheProvider);
@@ -773,7 +781,7 @@ class _CwBody extends ConsumerWidget {
     final revealed = watchRevealedMedia(ref, post);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       body,
-      if (mediaItems.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: mediaItems, revealed: revealed, onReveal: (id) => ref.read(mediaRevealProvider.notifier).reveal(post, id), maxVisible: showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i]))],
+      if (mediaItems.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: mediaItems, revealed: revealed, onReveal: (id) => ref.read(mediaRevealProvider.notifier).reveal(post, id), maxVisible: mediaMaxVisible(count: mediaItems.length, arrangement: arrangement, showAll: showAllMedia, limitFour: limitFour), arrangement: arrangement, overflowAxis: showAllMedia ? Axis.vertical : Axis.horizontal, onTapTile: (i) => context.openViewer(post, mediaIndex[i]))],
       if (post.poll != null) ...[const SizedBox(height: RasqSpacing.sm), RasqPollWidget(poll: post.poll!)],
       if (post.quote != null) ...[const SizedBox(height: RasqSpacing.sm), _PostRowState.quoteTile(context, post.quote!, emojis: emojis, safety: safety)],
     ]);

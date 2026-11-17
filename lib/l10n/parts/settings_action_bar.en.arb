@@ -36,5 +36,11 @@
   "settingsActionBarThresholdTitle": "Bundling threshold",
   "settingsActionBarThresholdSubtitle": "How readily similar buttons are grouped",
   "settingsActionBarThresholdDetail": "If tag similarity is at or above this, the button joins an existing button's bundle",
-  "settingsActionBarEditButton": "Edit action bar"
+  "settingsActionBarEditButton": "Edit action bar",
+  "settingsActionBarAppButtonsHeader": "App buttons",
+  "settingsActionBarMediaLimitButtonTitle": "\"Up to 4 attachments\" toggle",
+  "settingsActionBarMediaLimitButtonSubtitle": "Shown on posts with 5 or more attachments laid out horizontally",
+  "settingsActionBarMediaLimitFourTitle": "Up to 4 even when laid out horizontally",
+  "settingsActionBarMediaLimitFourSubtitle": "Off (default) scrolls through all. Vertical layouts always show up to 4",
+  "settingsActionBarOpenPluginPage": "Open the page of {name}"
 }
