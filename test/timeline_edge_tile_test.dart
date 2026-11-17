@@ -160,7 +160,10 @@ void main() {
       expect(tester.widget<Switch>(sw).value, isFalse);
       // 「新しい投稿」の札 (D-506) は既定で入。
       expect(find.text('新しい投稿のお知らせを出す'), findsOneWidget);
-      expect(tester.widget<Switch>(find.descendant(of: find.byType(RasqSwitchListTile), matching: find.byType(Switch)).last).value, isTrue);
+      expect(tester.widget<Switch>(find.descendant(of: find.byType(RasqSwitchListTile), matching: find.byType(Switch)).at(1)).value, isTrue);
+      // 添付を横に並べるときも 4 枚まで (D-589) は既定で切。
+      expect(find.text('添付を横に並べるときも 4 枚まで'), findsOneWidget);
+      expect(tester.widget<Switch>(find.descendant(of: find.byType(RasqSwitchListTile), matching: find.byType(Switch)).last).value, isFalse);
       await tester.tap(sw);
       await tester.pumpAndSettle();
       expect(t.c.read(settingsAreaProvider(timelineDisplayArea)).value?['edgeTiles'], isTrue);

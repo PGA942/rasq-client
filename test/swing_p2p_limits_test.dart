@@ -23,7 +23,8 @@ void main() {
     tearDown(() => SwingP2p.fetchTimeout = keep);
 
     test('終わりの知らせを送らない相手: 期限で接続・購読を閉じ、bye を送る。再試行も同じ', () async {
-      SwingP2p.fetchTimeout = const Duration(milliseconds: 200);
+      // 期限は、接続を作るまでの本物の非同期(署名・一時フォルダ)より十分長く(混んだ CI では 200ms のうちに接続まで行かなかった)。
+      SwingP2p.fetchTimeout = const Duration(milliseconds: 1500);
       final body = Uint8List.fromList(List.generate(5000, (i) => i % 251));
       final sha = sha256Hex(body);
       final signer = SwingSigner(MemorySessionStorage());
@@ -49,7 +50,7 @@ void main() {
       );
       for (var attempt = 1; attempt <= 2; attempt++) {
         final f = p2p.fetch(s);
-        await Future<void>.delayed(const Duration(milliseconds: 20));
+        await until(() => pcs.length == attempt && pcs.last.channels.isNotEmpty);
         final dc = pcs.last.channels.single;
         // 頭と本文の一部だけ送り、終わりの知らせ(done)は送らない。
         dc.onMessage?.call(RTCDataChannelMessage(swingTransferHeader(swingId: s.id, size: body.length, sha256: sha)));
@@ -81,7 +82,7 @@ void main() {
       final pcs = <_FakePc>[];
       final p2p = SwingP2p(api: _FakeApi(from: [(source: 'peer-x', role: 'author')]), store: SwingCopyStore(() async => dir), peerConnection: (c, [k = const {}]) async => _FakePc()..also(pcs.add));
       final f = p2p.fetch(s);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await until(() => pcs.isNotEmpty && pcs.single.channels.isNotEmpty);
       pcs.single.channels.single.onDataChannelState?.call(RTCDataChannelState.RTCDataChannelClosed);
       await expectLater(f.timeout(const Duration(seconds: 2)), throwsA(isA<SwingP2pException>()));
       expect(pcs.single.closed, isTrue);
@@ -111,22 +112,22 @@ void main() {
       }
       // 同じ session の重ね: 断る(先の受け渡しの登録は消さない)。
       p2p.onLiveEvent(offer('s0', from: 'other'));
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await until(() => store.entryCalls >= 1 && api.signals.where((x) => x.kind == 'bye').length >= 3);
       expect(store.entryCalls, 1, reason: '同じ Swing の読み込みは 1 回');
       expect(pcs, isEmpty, reason: 'まだ読み込み中');
       expect({for (final x in api.signals) if (x.kind == 'bye') x.session}, {'s3', 's4', 's0'});
       store.gate.complete();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await until(() => pcs.length >= SwingP2p.maxServing && api.signals.where((x) => x.kind == 'answer').length >= SwingP2p.maxServing);
       expect(pcs, hasLength(SwingP2p.maxServing));
       expect(api.signals.where((x) => x.kind == 'answer').map((x) => x.session).toSet(), {'s0', 's1', 's2'});
 
       // 裏へ回ると全部閉じ、枠が空く。
       p2p.foreground = false;
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await until(() => pcs.every((p) => p.closed));
       expect(pcs.every((p) => p.closed), isTrue);
       p2p.foreground = true;
       p2p.onLiveEvent(offer('s9'));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await until(() => api.signals.any((x) => x.kind == 'answer' && x.session == 's9'));
       expect(api.signals.where((x) => x.kind == 'answer').map((x) => x.session), contains('s9'));
       await p2p.dispose();
     });
@@ -136,12 +137,23 @@ void main() {
       final p2p = SwingP2p(api: api, store: SwingCopyStore(() async => dir), peerConnection: (c, [k = const {}]) async => _FakePc());
       for (var i = 0; i < 5; i++) {
         p2p.onLiveEvent(offer('n$i'));
-        await Future<void>.delayed(const Duration(milliseconds: 20));
+        // 1 つずつ、断り(bye)が届くまで待ってから次へ(同時に抱えて上限で断られたのではないことを見る)。
+        await until(() => api.signals.where((x) => x.kind == 'bye').length == i + 1);
       }
       expect(api.signals.where((x) => x.kind == 'bye'), hasLength(5), reason: '枠を抱えたままにしない(上限で断られているのではない)');
       await p2p.dispose();
     });
   });
+}
+
+/// 状態がそろうまで待つ(上限 5 秒)。決め打ちの時間(20ms / 50ms)では、混んだ CI で本物の非同期(一時フォルダ・署名・
+/// ファイルの読み書き)が間に合わず落ちていた。
+Future<void> until(bool Function() ok, {Duration timeout = const Duration(seconds: 5)}) async {
+  final end = DateTime.now().add(timeout);
+  while (!ok()) {
+    if (DateTime.now().isAfter(end)) fail('待ち切れなかった($timeout)');
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
 }
 
 extension<T> on T {

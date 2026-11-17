@@ -125,5 +125,10 @@
   "homeBarNoHidden": "No hidden buttons",
   "homeBarHiddenLabel": "Hidden (tap to show):",
   "homeBarShowHidden": "Show {label}",
-  "homeBarResetOrder": "Reset to default order"
+  "homeBarResetOrder": "Reset to default order",
+  "homeMediaLimitOffTooltip": "Limit attachments to 4 (now scrolling through all; long-press for menu)",
+  "homeMediaLimitOnTooltip": "Show all attachments (now up to 4; long-press for menu)",
+  "homeMediaLimitMenuLimit": "Show up to 4 attachments",
+  "homeMediaLimitMenuAll": "Scroll through all attachments",
+  "homeMediaLimitMenuEditBar": "Edit action bar"
 }

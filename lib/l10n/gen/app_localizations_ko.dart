@@ -4392,6 +4392,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeBarResetOrder => '기본 순서로 되돌리기';
 
   @override
+  String get homeMediaLimitOffTooltip => '添付を 4 枚までにする(いまは全部を横に送る。長押しでメニュー)';
+
+  @override
+  String get homeMediaLimitOnTooltip => '添付を全部見せる(いまは 4 枚まで。長押しでメニュー)';
+
+  @override
+  String get homeMediaLimitMenuLimit => '添付を 4 枚までにする';
+
+  @override
+  String get homeMediaLimitMenuAll => '添付を全部横に送る';
+
+  @override
+  String get homeMediaLimitMenuEditBar => 'アクションバーを編集';
+
+  @override
   String get iconThemeEditorTitle => 'アイコンにテーマを埋め込む';
 
   @override
@@ -7907,6 +7922,127 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get notificationsRasqEmptyHint =>
       '멘션 / 답글 / 인용 / Swing 초대가 오면 여기에 표시됩니다';
+
+  @override
+  String get notificationsTabMentions => 'メンション';
+
+  @override
+  String get notificationsTabCustomFallback => '通知のタブ';
+
+  @override
+  String get notificationsAddTab => '通知のタブを足す';
+
+  @override
+  String get notificationsCustomizeTab => 'このタブをカスタマイズ';
+
+  @override
+  String get notificationsTemplateAccount => 'アカウントごとのタブ';
+
+  @override
+  String get notificationsTemplateKind => '種類ごとのタブ';
+
+  @override
+  String get notificationsTemplateEmpty => '空のタブ';
+
+  @override
+  String get notificationsTabNoNodes => 'このタブにはノードがありません';
+
+  @override
+  String get notificationsTabNoNodesHint => '「このタブをカスタマイズ」から、通知のノードを置いてください';
+
+  @override
+  String notificationsToAccount(String account) {
+    return '$account への通知';
+  }
+
+  @override
+  String get notificationsGroupMentions => 'メンション・返信・引用';
+
+  @override
+  String get notificationsGroupReactions => 'リアクション';
+
+  @override
+  String get notificationsGroupReposts => 'リノート・リポスト';
+
+  @override
+  String get notificationsGroupFollows => 'フォロー';
+
+  @override
+  String get notificationsGroupEvents => '投票・タイマー・ASTell';
+
+  @override
+  String get notificationsGroupSystem => 'システム・その他';
+
+  @override
+  String get notificationsNodeTitle => '通知';
+
+  @override
+  String get notificationsNodeAllKinds => 'すべての種類';
+
+  @override
+  String notificationsNodeDescription(String kinds) {
+    return '$kinds の通知';
+  }
+
+  @override
+  String notificationsNodeDescriptionFollowing(String kinds) {
+    return '$kinds の通知(フォロー中の人だけ)';
+  }
+
+  @override
+  String get notificationsNodeFollowingOnly => 'フォロー中の人からの通知だけ';
+
+  @override
+  String get notificationsNodeRasqTitle => 'RASQ の通知';
+
+  @override
+  String get notificationsNodeRasqDescription =>
+      'RASQ のメンション / 返信 / 引用 / Swing の招待(RASQ アカウントにログインしているとき)';
+
+  @override
+  String get notificationsNodeRemindersDescription => '登録した ASTell の開始通知の予定';
+
+  @override
+  String notificationsPaletteNodeTitle(String account) {
+    return '通知($account)';
+  }
+
+  @override
+  String get notificationsPaletteNodeDescription =>
+      '受け取った通知を新しい順に。種類やフォロー中の人だけに絞れます';
+
+  @override
+  String get notificationsPaletteQueryFilterDescription =>
+      '語を含む通知だけ(または含む通知を除く)。人の名前・投稿の本文・リアクションを見ます';
+
+  @override
+  String get notificationsPaletteChronoDescription => '新しい通知を上に';
+
+  @override
+  String get notificationsParamsNode => '受け取った通知を出します';
+
+  @override
+  String get notificationsParamsNodeDetail =>
+      '通知の画面の表示だけが変わります。端末に届く push 通知は、ここでは変わりません(通知トークンの設定で決めます)';
+
+  @override
+  String get notificationsParamsKinds => '種類';
+
+  @override
+  String get notificationsParamsKindsHint => 'どれもオフなら、すべての種類を出します';
+
+  @override
+  String get notificationsParamsWho => 'だれからの通知';
+
+  @override
+  String get notificationsConfigBanner => '通知のタブの中身を、ノードで組みます(上から順に)';
+
+  @override
+  String get notificationsConfigBannerDetail =>
+      'ここで変わるのは通知の画面の表示だけです。端末に届く push 通知の受け取り・出す / 出さないは、ノードでは変えられません(重くならないように、ノードの外で決めています)';
+
+  @override
+  String get notificationsConfigSourcesHeader => '通知のノード';
 
   @override
   String get notifyPushChannelName => 'RASQ 알림';
@@ -13524,6 +13660,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsActionBarEditButton => '액션 바 편집';
 
   @override
+  String get settingsActionBarAppButtonsHeader => 'アプリのボタン';
+
+  @override
+  String get settingsActionBarMediaLimitButtonTitle => '添付の「4 枚まで」の切り替え';
+
+  @override
+  String get settingsActionBarMediaLimitButtonSubtitle =>
+      '横に並べる添付が 5 枚以上の投稿のバーに出す';
+
+  @override
+  String get settingsActionBarMediaLimitFourTitle => '横に並べるときも 4 枚まで';
+
+  @override
+  String get settingsActionBarMediaLimitFourSubtitle =>
+      'オフ(既定)なら全部を横に送る。縦の並びはいつも 4 枚まで';
+
+  @override
+  String settingsActionBarOpenPluginPage(String name) {
+    return '$name のページを開く';
+  }
+
+  @override
   String get settingsBackendTitle => 'RASQ 서버';
 
   @override
@@ -15474,6 +15632,18 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get settingsPagesTrendCdnText1Detail =>
       'CDN(캐시 네트워크)에서 트렌드 결과를 읽는 구조는 RASQ 서버의 배포 기반과 함께 도입됩니다. 지금은 각 SNS에서 직접 가져옵니다. 캐시 네트워크: 미제공.';
+
+  @override
+  String get settingsPagesAppearanceTimelineMediaLimitFourTitle =>
+      '添付を横に並べるときも 4 枚まで';
+
+  @override
+  String get settingsPagesAppearanceTimelineMediaLimitFourSubtitle =>
+      'オフ(既定)なら、横に並べる添付は全部を横に送る';
+
+  @override
+  String get settingsPagesAppearanceTimelineMediaLimitFourDetail =>
+      '添付の既定の並びは横(5 枚以上は 4:3 の窓に 2 枚ずつの列を横に送る)。オンにすると 4 枚目に「+N」。縦の並び(作者のアイコンのテーマ)はいつも 4 枚まで、スレッドの展開はいつも全部。投稿のバーの切り替え(長押しでアクションバーの編集へ)と同じ設定です';
 
   @override
   String get settingsSectionsPluginsTitle => '플러그인 구성';

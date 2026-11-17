@@ -3,7 +3,8 @@
   "area": "appearance.timeline",
   "title": "@l10n:settingsPagesAppearanceTimelineTitle",
   "defaults": {
-    "newPostsPill": true
+    "newPostsPill": true,
+    "mediaLimitFour": false
   },
   "root": {
     "t": "Column",
@@ -35,6 +36,19 @@
           "subtitle": "@l10n:settingsPagesAppearanceTimelineNewPostsPillSubtitle",
           "value": "$.settings.newPostsPill",
           "detail": "@l10n:settingsPagesAppearanceTimelineNewPostsPillDetail"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "mediaLimitFour",
+        "p": {
+          "title": "@l10n:settingsPagesAppearanceTimelineMediaLimitFourTitle",
+          "subtitle": "@l10n:settingsPagesAppearanceTimelineMediaLimitFourSubtitle",
+          "value": "$.settings.mediaLimitFour",
+          "detail": "@l10n:settingsPagesAppearanceTimelineMediaLimitFourDetail"
         },
         "on": {
           "change": "settings.set"

@@ -234,5 +234,8 @@
   "settingsPagesTrendCdnValueRow1Title": "Cache network",
   "settingsPagesTrendCdnValueRow1Value": "Coming soon",
   "settingsPagesTrendCdnText1": "Coming soon. For now, data is fetched directly from each SNS.",
-  "settingsPagesTrendCdnText1Detail": "Reading trend results from a CDN (cache network) will arrive together with the RASQ server's delivery platform. For now, data is fetched directly from each SNS. Cache network: not available."
+  "settingsPagesTrendCdnText1Detail": "Reading trend results from a CDN (cache network) will arrive together with the RASQ server's delivery platform. For now, data is fetched directly from each SNS. Cache network: not available.",
+  "settingsPagesAppearanceTimelineMediaLimitFourTitle": "Up to 4 attachments even when laid out horizontally",
+  "settingsPagesAppearanceTimelineMediaLimitFourSubtitle": "Off (default) scrolls through all horizontally laid out attachments",
+  "settingsPagesAppearanceTimelineMediaLimitFourDetail": "Attachments are laid out horizontally by default (5 or more scroll sideways in a 4:3 window, two per column). When on, the 4th shows \"+N\". Vertical layouts (from the author's icon theme) always show up to 4, and expanded threads always show all. Same setting as the toggle on the post bar (long-press it to edit the action bar)"
 }

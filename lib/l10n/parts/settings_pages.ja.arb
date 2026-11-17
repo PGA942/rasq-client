@@ -468,5 +468,11 @@
   "settingsPagesTrendCdnText1": "準備中です。いまは各 SNS から直接取得します。",
   "@settingsPagesTrendCdnText1": {"description": "設定のページ「キャッシュネットワークの設定」の説明の文"},
   "settingsPagesTrendCdnText1Detail": "トレンドの取得結果を CDN(キャッシュネットワーク)から読む仕組みは、RASQ サーバーの配信基盤と同時に入ります。いまは各 SNS から直接取得します。 キャッシュネットワーク: 未提供。",
-  "@settingsPagesTrendCdnText1Detail": {"description": "設定のページ「キャッシュネットワークの設定」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"}
+  "@settingsPagesTrendCdnText1Detail": {"description": "設定のページ「キャッシュネットワークの設定」の説明の文の、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"},
+  "settingsPagesAppearanceTimelineMediaLimitFourTitle": "添付を横に並べるときも 4 枚まで",
+  "@settingsPagesAppearanceTimelineMediaLimitFourTitle": {"description": "設定のページ「タイムラインの表示」のスイッチの名前"},
+  "settingsPagesAppearanceTimelineMediaLimitFourSubtitle": "オフ(既定)なら、横に並べる添付は全部を横に送る",
+  "@settingsPagesAppearanceTimelineMediaLimitFourSubtitle": {"description": "設定のページ「タイムラインの表示」のスイッチの補足"},
+  "settingsPagesAppearanceTimelineMediaLimitFourDetail": "添付の既定の並びは横(5 枚以上は 4:3 の窓に 2 枚ずつの列を横に送る)。オンにすると 4 枚目に「+N」。縦の並び(作者のアイコンのテーマ)はいつも 4 枚まで、スレッドの展開はいつも全部。投稿のバーの切り替え(長押しでアクションバーの編集へ)と同じ設定です",
+  "@settingsPagesAppearanceTimelineMediaLimitFourDetail": {"description": "設定のページ「タイムラインの表示」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない"}
 }

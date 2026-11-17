@@ -4578,6 +4578,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeBarResetOrder => 'Reset to default order';
 
   @override
+  String get homeMediaLimitOffTooltip =>
+      'Limit attachments to 4 (now scrolling through all; long-press for menu)';
+
+  @override
+  String get homeMediaLimitOnTooltip =>
+      'Show all attachments (now up to 4; long-press for menu)';
+
+  @override
+  String get homeMediaLimitMenuLimit => 'Show up to 4 attachments';
+
+  @override
+  String get homeMediaLimitMenuAll => 'Scroll through all attachments';
+
+  @override
+  String get homeMediaLimitMenuEditBar => 'Edit action bar';
+
+  @override
   String get iconThemeEditorTitle => 'Embed a theme in your icon';
 
   @override
@@ -8205,6 +8222,132 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notificationsRasqEmptyHint =>
       'Mentions / replies / quotes / Swing invites will appear here';
+
+  @override
+  String get notificationsTabMentions => 'Mentions';
+
+  @override
+  String get notificationsTabCustomFallback => 'Notification tab';
+
+  @override
+  String get notificationsAddTab => 'Add a notification tab';
+
+  @override
+  String get notificationsCustomizeTab => 'Customize this tab';
+
+  @override
+  String get notificationsTemplateAccount => 'Tab for one account';
+
+  @override
+  String get notificationsTemplateKind => 'Tab for one kind';
+
+  @override
+  String get notificationsTemplateEmpty => 'Empty tab';
+
+  @override
+  String get notificationsTabNoNodes => 'This tab has no nodes';
+
+  @override
+  String get notificationsTabNoNodesHint =>
+      'Use \"Customize this tab\" to place notification nodes';
+
+  @override
+  String notificationsToAccount(String account) {
+    return 'To $account';
+  }
+
+  @override
+  String get notificationsGroupMentions => 'Mentions, replies, quotes';
+
+  @override
+  String get notificationsGroupReactions => 'Reactions';
+
+  @override
+  String get notificationsGroupReposts => 'Renotes / reposts';
+
+  @override
+  String get notificationsGroupFollows => 'Follows';
+
+  @override
+  String get notificationsGroupEvents => 'Polls, timers, ASTell';
+
+  @override
+  String get notificationsGroupSystem => 'System and other';
+
+  @override
+  String get notificationsNodeTitle => 'Notifications';
+
+  @override
+  String get notificationsNodeAllKinds => 'All kinds';
+
+  @override
+  String notificationsNodeDescription(String kinds) {
+    return 'Notifications: $kinds';
+  }
+
+  @override
+  String notificationsNodeDescriptionFollowing(String kinds) {
+    return 'Notifications: $kinds (people you follow only)';
+  }
+
+  @override
+  String get notificationsNodeFollowingOnly => 'Only from people you follow';
+
+  @override
+  String get notificationsNodeRasqTitle => 'RASQ notifications';
+
+  @override
+  String get notificationsNodeRasqDescription =>
+      'RASQ mentions / replies / quotes / Swing invites (when signed in to a RASQ account)';
+
+  @override
+  String get notificationsNodeRemindersDescription =>
+      'ASTell start reminders you registered';
+
+  @override
+  String notificationsPaletteNodeTitle(String account) {
+    return 'Notifications ($account)';
+  }
+
+  @override
+  String get notificationsPaletteNodeDescription =>
+      'Received notifications, newest first. Can be narrowed by kind or to people you follow';
+
+  @override
+  String get notificationsPaletteQueryFilterDescription =>
+      'Only notifications containing the words (or exclude them). Checks names, post text and reactions';
+
+  @override
+  String get notificationsPaletteChronoDescription =>
+      'Newest notifications on top';
+
+  @override
+  String get notificationsParamsNode => 'Shows received notifications';
+
+  @override
+  String get notificationsParamsNodeDetail =>
+      'Only the notification screen changes. Push notifications on the device are not affected here (they are set with the notification token)';
+
+  @override
+  String get notificationsParamsKinds => 'Kinds';
+
+  @override
+  String get notificationsParamsKindsHint =>
+      'If all are off, every kind is shown';
+
+  @override
+  String get notificationsParamsWho => 'From whom';
+
+  @override
+  String get notificationsConfigBanner =>
+      'Build this notification tab with nodes (top to bottom)';
+
+  @override
+  String get notificationsConfigBannerDetail =>
+      'Only the notification screen changes here. Receiving push notifications, and whether to show them, can\'t be changed with nodes (decided outside the nodes so it stays light)';
+
+  @override
+  String get notificationsConfigSourcesHeader => 'Notification nodes';
 
   @override
   String get notifyPushChannelName => 'RASQ notifications';
@@ -14032,6 +14175,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsActionBarEditButton => 'Edit action bar';
 
   @override
+  String get settingsActionBarAppButtonsHeader => 'App buttons';
+
+  @override
+  String get settingsActionBarMediaLimitButtonTitle =>
+      '\"Up to 4 attachments\" toggle';
+
+  @override
+  String get settingsActionBarMediaLimitButtonSubtitle =>
+      'Shown on posts with 5 or more attachments laid out horizontally';
+
+  @override
+  String get settingsActionBarMediaLimitFourTitle =>
+      'Up to 4 even when laid out horizontally';
+
+  @override
+  String get settingsActionBarMediaLimitFourSubtitle =>
+      'Off (default) scrolls through all. Vertical layouts always show up to 4';
+
+  @override
+  String settingsActionBarOpenPluginPage(String name) {
+    return 'Open the page of $name';
+  }
+
+  @override
   String get settingsBackendTitle => 'RASQ server';
 
   @override
@@ -16060,6 +16227,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsPagesTrendCdnText1Detail =>
       'Reading trend results from a CDN (cache network) will arrive together with the RASQ server\'s delivery platform. For now, data is fetched directly from each SNS. Cache network: not available.';
+
+  @override
+  String get settingsPagesAppearanceTimelineMediaLimitFourTitle =>
+      'Up to 4 attachments even when laid out horizontally';
+
+  @override
+  String get settingsPagesAppearanceTimelineMediaLimitFourSubtitle =>
+      'Off (default) scrolls through all horizontally laid out attachments';
+
+  @override
+  String get settingsPagesAppearanceTimelineMediaLimitFourDetail =>
+      'Attachments are laid out horizontally by default (5 or more scroll sideways in a 4:3 window, two per column). When on, the 4th shows \"+N\". Vertical layouts (from the author\'s icon theme) always show up to 4, and expanded threads always show all. Same setting as the toggle on the post bar (long-press it to edit the action bar)';
 
   @override
   String get settingsSectionsPluginsTitle => 'Plugin setup';

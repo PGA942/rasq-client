@@ -7320,6 +7320,36 @@ abstract class AppLocalizations {
   /// **'既定の並びに戻す'**
   String get homeBarResetOrder;
 
+  /// 投稿のアクションバーの「4 枚まで」の切り替えボタン(いまは制限なし)の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'添付を 4 枚までにする(いまは全部を横に送る。長押しでメニュー)'**
+  String get homeMediaLimitOffTooltip;
+
+  /// 投稿のアクションバーの「4 枚まで」の切り替えボタン(いまは 4 枚まで)の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'添付を全部見せる(いまは 4 枚まで。長押しでメニュー)'**
+  String get homeMediaLimitOnTooltip;
+
+  /// No description provided for @homeMediaLimitMenuLimit.
+  ///
+  /// In ja, this message translates to:
+  /// **'添付を 4 枚までにする'**
+  String get homeMediaLimitMenuLimit;
+
+  /// No description provided for @homeMediaLimitMenuAll.
+  ///
+  /// In ja, this message translates to:
+  /// **'添付を全部横に送る'**
+  String get homeMediaLimitMenuAll;
+
+  /// 「4 枚まで」の切り替えボタンの長押しメニュー。設定 → プラグインボタンのページを開く
+  ///
+  /// In ja, this message translates to:
+  /// **'アクションバーを編集'**
+  String get homeMediaLimitMenuEditBar;
+
   /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
@@ -13202,6 +13232,222 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます'**
   String get notificationsRasqEmptyHint;
+
+  /// 通知の画面の最初からあるタブ。返信・メンション・引用の通知だけ
+  ///
+  /// In ja, this message translates to:
+  /// **'メンション'**
+  String get notificationsTabMentions;
+
+  /// ユーザーが足した通知のタブに名前が無いときの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'通知のタブ'**
+  String get notificationsTabCustomFallback;
+
+  /// 通知の画面 / カスタマイズの画面のタブ行の「+」のツールチップ
+  ///
+  /// In ja, this message translates to:
+  /// **'通知のタブを足す'**
+  String get notificationsAddTab;
+
+  /// 通知の画面のタブ行のボタンのツールチップ。いま開いているタブの中身をノードで組む画面を開く
+  ///
+  /// In ja, this message translates to:
+  /// **'このタブをカスタマイズ'**
+  String get notificationsCustomizeTab;
+
+  /// 通知のタブを足すときの雛形。1 つのアカウントの通知だけのタブ
+  ///
+  /// In ja, this message translates to:
+  /// **'アカウントごとのタブ'**
+  String get notificationsTemplateAccount;
+
+  /// 通知のタブを足すときの雛形。1 つの種類(メンション・リアクションなど)の通知だけのタブ
+  ///
+  /// In ja, this message translates to:
+  /// **'種類ごとのタブ'**
+  String get notificationsTemplateKind;
+
+  /// 通知のタブを足すときの雛形。ノードを置いていないタブ
+  ///
+  /// In ja, this message translates to:
+  /// **'空のタブ'**
+  String get notificationsTemplateEmpty;
+
+  /// 通知のタブの構成にノードが 1 つも無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'このタブにはノードがありません'**
+  String get notificationsTabNoNodes;
+
+  /// 通知のタブにノードが無いときの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'「このタブをカスタマイズ」から、通知のノードを置いてください'**
+  String get notificationsTabNoNodesHint;
+
+  /// 通知のタイルの上の小さい行。どのアカウントが受け取った通知か(ほかのアカウントの通知が混ざるときだけ)
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} への通知'**
+  String notificationsToAccount(String account);
+
+  /// 通知ノードの種類
+  ///
+  /// In ja, this message translates to:
+  /// **'メンション・返信・引用'**
+  String get notificationsGroupMentions;
+
+  /// 通知ノードの種類
+  ///
+  /// In ja, this message translates to:
+  /// **'リアクション'**
+  String get notificationsGroupReactions;
+
+  /// 通知ノードの種類
+  ///
+  /// In ja, this message translates to:
+  /// **'リノート・リポスト'**
+  String get notificationsGroupReposts;
+
+  /// 通知ノードの種類。フォローされた / 申請 / 承認 / リストへの追加
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー'**
+  String get notificationsGroupFollows;
+
+  /// 通知ノードの種類。ASTell は製品名で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'投票・タイマー・ASTell'**
+  String get notificationsGroupEvents;
+
+  /// 通知ノードの種類
+  ///
+  /// In ja, this message translates to:
+  /// **'システム・その他'**
+  String get notificationsGroupSystem;
+
+  /// 通知ノードの名前(カスタマイズの画面のタイル)
+  ///
+  /// In ja, this message translates to:
+  /// **'通知'**
+  String get notificationsNodeTitle;
+
+  /// 通知ノードの説明。種類を絞っていないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'すべての種類'**
+  String get notificationsNodeAllKinds;
+
+  /// 通知ノードの説明。kinds = 種類の並び
+  ///
+  /// In ja, this message translates to:
+  /// **'{kinds} の通知'**
+  String notificationsNodeDescription(String kinds);
+
+  /// 通知ノードの説明。フォロー中の人からの通知だけのとき
+  ///
+  /// In ja, this message translates to:
+  /// **'{kinds} の通知(フォロー中の人だけ)'**
+  String notificationsNodeDescriptionFollowing(String kinds);
+
+  /// 通知ノードのパラメーターのスイッチ
+  ///
+  /// In ja, this message translates to:
+  /// **'フォロー中の人からの通知だけ'**
+  String get notificationsNodeFollowingOnly;
+
+  /// ノードの名前。RASQ のメンション / 返信 / 引用 / Swing の招待の一覧。RASQ は製品名で訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ の通知'**
+  String get notificationsNodeRasqTitle;
+
+  /// RASQ の通知ノードの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ のメンション / 返信 / 引用 / Swing の招待(RASQ アカウントにログインしているとき)'**
+  String get notificationsNodeRasqDescription;
+
+  /// 開始通知の予定のノードの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'登録した ASTell の開始通知の予定'**
+  String get notificationsNodeRemindersDescription;
+
+  /// パレットの通知ノードの名前。account = いまのアカウント / 全部のアカウント / アカウントの表記
+  ///
+  /// In ja, this message translates to:
+  /// **'通知({account})'**
+  String notificationsPaletteNodeTitle(String account);
+
+  /// パレットの通知ノードの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'受け取った通知を新しい順に。種類やフォロー中の人だけに絞れます'**
+  String get notificationsPaletteNodeDescription;
+
+  /// 通知のタブのパレットの検索絞り込みの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'語を含む通知だけ(または含む通知を除く)。人の名前・投稿の本文・リアクションを見ます'**
+  String get notificationsPaletteQueryFilterDescription;
+
+  /// 通知のタブのパレットの時系列順の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'新しい通知を上に'**
+  String get notificationsPaletteChronoDescription;
+
+  /// 通知ノードのパラメーターの見出しの説明
+  ///
+  /// In ja, this message translates to:
+  /// **'受け取った通知を出します'**
+  String get notificationsParamsNode;
+
+  /// 通知ノードのパラメーターの詳しい説明
+  ///
+  /// In ja, this message translates to:
+  /// **'通知の画面の表示だけが変わります。端末に届く push 通知は、ここでは変わりません(通知トークンの設定で決めます)'**
+  String get notificationsParamsNodeDetail;
+
+  /// 通知ノードのパラメーターの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'種類'**
+  String get notificationsParamsKinds;
+
+  /// 通知ノードの種類の補足
+  ///
+  /// In ja, this message translates to:
+  /// **'どれもオフなら、すべての種類を出します'**
+  String get notificationsParamsKindsHint;
+
+  /// 通知ノードのパラメーターの見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'だれからの通知'**
+  String get notificationsParamsWho;
+
+  /// カスタマイズの画面で通知のタブを開いたときの案内
+  ///
+  /// In ja, this message translates to:
+  /// **'通知のタブの中身を、ノードで組みます(上から順に)'**
+  String get notificationsConfigBanner;
+
+  /// カスタマイズの画面の通知のタブの案内の詳しい説明
+  ///
+  /// In ja, this message translates to:
+  /// **'ここで変わるのは通知の画面の表示だけです。端末に届く push 通知の受け取り・出す / 出さないは、ノードでは変えられません(重くならないように、ノードの外で決めています)'**
+  String get notificationsConfigBannerDetail;
+
+  /// カスタマイズの画面で通知のタブを開いたときの、ノードの並びの見出し(TL の「SNSタイムライン」の代わり)
+  ///
+  /// In ja, this message translates to:
+  /// **'通知のノード'**
+  String get notificationsConfigSourcesHeader;
 
   /// Android の通知のチャンネルの名前(端末の設定に出る)。RASQ からのプッシュ通知
   ///
@@ -22232,6 +22478,42 @@ abstract class AppLocalizations {
   /// **'アクションバーを編集'**
   String get settingsActionBarEditButton;
 
+  /// No description provided for @settingsActionBarAppButtonsHeader.
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリのボタン'**
+  String get settingsActionBarAppButtonsHeader;
+
+  /// No description provided for @settingsActionBarMediaLimitButtonTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'添付の「4 枚まで」の切り替え'**
+  String get settingsActionBarMediaLimitButtonTitle;
+
+  /// No description provided for @settingsActionBarMediaLimitButtonSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'横に並べる添付が 5 枚以上の投稿のバーに出す'**
+  String get settingsActionBarMediaLimitButtonSubtitle;
+
+  /// No description provided for @settingsActionBarMediaLimitFourTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'横に並べるときも 4 枚まで'**
+  String get settingsActionBarMediaLimitFourTitle;
+
+  /// No description provided for @settingsActionBarMediaLimitFourSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフ(既定)なら全部を横に送る。縦の並びはいつも 4 枚まで'**
+  String get settingsActionBarMediaLimitFourSubtitle;
+
+  /// ボタンの行の左のアイコンの説明。{name} = そのボタンを出しているプラグインの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} のページを開く'**
+  String settingsActionBarOpenPluginPage(String name);
+
   /// No description provided for @settingsBackendTitle.
   ///
   /// In ja, this message translates to:
@@ -25510,6 +25792,24 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'トレンドの取得結果を CDN(キャッシュネットワーク)から読む仕組みは、RASQ サーバーの配信基盤と同時に入ります。いまは各 SNS から直接取得します。 キャッシュネットワーク: 未提供。'**
   String get settingsPagesTrendCdnText1Detail;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'添付を横に並べるときも 4 枚まで'**
+  String get settingsPagesAppearanceTimelineMediaLimitFourTitle;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'オフ(既定)なら、横に並べる添付は全部を横に送る'**
+  String get settingsPagesAppearanceTimelineMediaLimitFourSubtitle;
+
+  /// 設定のページ「タイムラインの表示」のスイッチの、開発者モードのときだけ出る詳しい説明。技術的な識別子(英字の名前・キー)は訳さない
+  ///
+  /// In ja, this message translates to:
+  /// **'添付の既定の並びは横(5 枚以上は 4:3 の窓に 2 枚ずつの列を横に送る)。オンにすると 4 枚目に「+N」。縦の並び(作者のアイコンのテーマ)はいつも 4 枚まで、スレッドの展開はいつも全部。投稿のバーの切り替え(長押しでアクションバーの編集へ)と同じ設定です'**
+  String get settingsPagesAppearanceTimelineMediaLimitFourDetail;
 
   /// No description provided for @settingsSectionsPluginsTitle.
   ///

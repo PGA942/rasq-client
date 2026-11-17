@@ -27,6 +27,9 @@ import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../collections/rasq_list_picker.dart';
 import 'plugin_node_badge.dart' show ownerSummaryOf;
 import 'tl_components.dart';
+import '../../backend/rasq_account.dart' show orgateAccountProvider;
+import '../notifications/notification_nodes.dart';
+import '../notifications/notification_tab_actions.dart';
 
 /// コンポーネント追加パレット (D-122): ノード検索と同じ FOW。
 const tlConfigPaletteFowId = 'fow.tlconfig.palette';
@@ -126,6 +129,10 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   /// 適用)、`tl.dm:<peer>` / `tl.chat:<peer>` = そのページだけの設定。
   bool get _isDmScope => _scope == 'tl.dm' || _scope.startsWith('tl.dm:') || _scope.startsWith('tl.chat:');
 
+  /// 通知のタブ (D-590): 通知の画面の表示だけを組む。パレットは通知のノードと、時系列順 / 検索絞り込みだけ。
+  /// ノードグラフにはコンパイルしない(push 通知はノードの外)。
+  bool get _isNotifScope => isNotifScope(_scope);
+
   /// tlcfg が無いのに graph がある = ノードエディタで手組みされた TL。
   /// このまま保存すると置き換えるので、バナーで明示する。
   bool _handEdited = false;
@@ -201,14 +208,14 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       final hasGraph = (await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), _accountKey, _scope)) != null;
       if (!mounted) return;
       setState(() {
-        _cfg = defaultTlConfig(_scope, bundleAccounts: _accounts);
-        _handEdited = hasGraph;
+        _cfg = _isNotifScope ? defaultNotifConfig(_scope) : defaultTlConfig(_scope, bundleAccounts: _accounts);
+        _handEdited = hasGraph && !_isNotifScope;
         _loaded = true;
       });
     } catch (_) {
       if (mounted) {
         setState(() {
-          _cfg = defaultTlConfig(_scope, bundleAccounts: _accounts);
+          _cfg = _isNotifScope ? defaultNotifConfig(_scope) : defaultTlConfig(_scope, bundleAccounts: _accounts);
           _loaded = true;
         });
       }
@@ -229,7 +236,8 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   Future<void> _persist() async {
     final store = ref.read(settingsAreaProvider(_area).notifier);
     await store.set('tlcfg', jsonEncode(_cfg.toJson()));
-    await store.set('graph', jsonEncode(compileTlConfig(_cfg, scope: _scope).toJson()));
+    // 通知のタブ (D-590) は画面の表示だけ: ノードグラフにはしない。
+    if (!_isNotifScope) await store.set('graph', jsonEncode(compileTlConfig(_cfg, scope: _scope).toJson()));
     if (_scope == 'tl.bundle') await store.set('auto', null); // 編集 = 自動構成の管理から外す (D-114)
     if (mounted) setState(() => _handEdited = false);
   }
@@ -264,6 +272,11 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final l = context.l10n;
     // DM (D-127): 共通(tl.dm)と各ページ(tl.dm:<peer>)は単独タブ。
     if (_isDmScope) return [(_scope, _scope == 'tl.dm' ? l.nodeprogTimelineTabDmCommon : l.nodeprogTimelineTabThisDm, false)];
+    // 通知のタブ (D-590): 通知の画面と同じ並び(RASQ のタブはログイン中だけ)。足したタブは名前を変えられる / 消せる。
+    if (_isNotifScope) {
+      final rasq = ref.watch(orgateAccountProvider).value != null;
+      return [for (final t in ref.watch(notifTabsProvider)) if (t.id != 'rasq' || rasq || t.scope == _scope) (t.scope, t.title(l), !t.builtin)];
+    }
     // トレンドのエディタ (D-107/D-124 → D-431 → D-443): トレンドページ(検索ホーム = トレンドのタイル + Today のセクション)/
     // トレンド TL(ノート)/ フォロー中 / ユーザー。前の「トレンドタイル」と「Today」のタブはトレンドページにまとめた
     // (Today の構成 `trend.today` は保存したものがそのまま Today の TL に効く)。
@@ -299,13 +312,20 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   }
 
   /// タブを並べ替えられるか (D-339): TL のタブが 2 つ以上のとき(DM / トレンドのエディタは固定)。
-  bool _canReorderTabs(List<(String, String, bool)> tabs) => !_isDmScope && !_scope.startsWith('trend') && tabs.length > 1;
+  bool _canReorderTabs(List<(String, String, bool)> tabs) => !_isDmScope && !_scope.startsWith('trend') && tabs.length > 1 && !widget.temporary;
 
   /// タブの並びを保存する (D-339)。ホームのタブもこの順になる。
   Future<void> _reorderTabs(List<(String, String, bool)> tabs, int from, int to) async {
     final list = [...tabs];
     final moved = list.removeAt(from);
     list.insert(to.clamp(0, list.length), moved);
+    // 通知のタブ (D-590): 通知のタブの並び(ここに出していない RASQ のタブは元の位置のまま)。
+    if (_isNotifScope) {
+      final all = ref.read(notifTabsProvider);
+      final order = applyTlTabOrder(all, (t) => t.scope, [for (final t in list) t.$1]);
+      await saveNotifTabs(ProviderScope.containerOf(context, listen: false), order);
+      return;
+    }
     // 既に保存した並びにあって、ここに無いスコープ(他の画面のタブ)は後ろに残す。
     final shown = {for (final t in list) t.$1};
     await saveTlTabOrder(ref, [for (final t in list) t.$1, for (final sc in ref.read(tlTabOrderProvider)) if (!shown.contains(sc)) sc]);
@@ -381,6 +401,20 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
           ),
           if (_canReorderTabs(tabs)) RasqIconButton(icon: Icons.swap_horiz, size: 20, tooltip: context.l10n.nodeprogTimelineReorderTabs, onPressed: _openTabReorder),
           if (_scope.startsWith('tl.') && !_isDmScope) RasqIconButton(icon: Icons.add, size: 20, tooltip: context.l10n.nodeprogEditorAddTabTooltip, onPressed: _addTab),
+          if (_isNotifScope && !widget.temporary)
+            Builder(
+              builder: (bctx) => RasqIconButton(
+                key: const ValueKey('tlconfig.notif.addTab'),
+                icon: Icons.add,
+                size: 20,
+                tooltip: context.l10n.notificationsAddTab,
+                onPressed: () async {
+                  final box = bctx.findRenderObject() as RenderBox;
+                  final scope = await addNotificationTab(ref, context, box.localToGlobal(Offset.zero) & box.size);
+                  if (scope != null && mounted) _switchScope(scope);
+                },
+              ),
+            ),
         ]),
       ),
     );
@@ -411,6 +445,16 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   }
 
   Future<void> _renameTab(String scope) async {
+    if (isNotifScope(scope)) {
+      final tabs = ref.read(notifTabsProvider);
+      final cur = tabs.where((t) => t.scope == scope && !t.builtin).firstOrNull;
+      if (cur == null) return;
+      final name = await _promptText(context.l10n.nodeprogEditorRenameTab, initial: cur.title(context.l10n));
+      if (name == null || name.isEmpty || !mounted) return;
+      await saveNotifTabs(ProviderScope.containerOf(context, listen: false), [for (final t in tabs) t.scope == scope ? t.copyWith(label: name) : t]);
+      if (mounted) setState(() {});
+      return;
+    }
     final id = scope.substring(3);
     final tabs = ref.read(nodeTabsProvider);
     final cur = tabs.where((t) => t.id == id).firstOrNull;
@@ -422,6 +466,15 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   }
 
   Future<void> _deleteTab(String scope) async {
+    if (isNotifScope(scope)) {
+      final tabs = ref.read(notifTabsProvider);
+      if (!tabs.any((t) => t.scope == scope && !t.builtin)) return; // 最初からあるタブは消せない
+      final c = ProviderScope.containerOf(context, listen: false);
+      await saveNotifTabs(c, [for (final t in tabs) if (t.scope != scope) t]);
+      await clearNotifConfig(c, _accountKey, scope);
+      if (mounted) _switchScope(notifScopeOf('all'));
+      return;
+    }
     final id = scope.substring(3);
     final tabs = ref.read(nodeTabsProvider);
     if (!tabs.any((t) => t.id == id)) return; // 他アカウントのタブは消せない (D-108)
@@ -436,20 +489,23 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final manager = ref.read(overlayManagerProvider);
     final box = buttonContext.findRenderObject() as RenderBox;
     final anchor = box.localToGlobal(Offset.zero) & box.size;
-    final ownTab = _scope.startsWith('tl.node:') && ref.read(nodeTabsProvider).any((t) => 'tl.${t.id}' == _scope);
+    final ownTab = _isNotifScope
+        ? ref.read(notifTabsProvider).any((t) => t.scope == _scope && !t.builtin)
+        : _scope.startsWith('tl.node:') && ref.read(nodeTabsProvider).any((t) => 'tl.${t.id}' == _scope);
     final bundleTabs = ref.read(bundleNodeTabsVisibleProvider);
     final l = context.l10n;
     final pick = await manager.showDropdown<String>(id: 'tlconfig.more', anchor: anchor, dense: true, items: [
       RasqDropdownItem(l.nodeprogEditorRenameTab, 'rename', enabled: ownTab),
       RasqDropdownItem(l.nodeprogEditorDeleteTab, 'deleteTab', enabled: ownTab, destructive: true),
       // 共有 (D-384): ユーザーが作ったタブだけ(SNS の既定の TL と関連 TL は対象外)。
-      RasqDropdownItem(l.nodeprogTimelineShareTab, 'share', enabled: ownTab, checked: ownTab && ref.read(nodeTabsProvider).any((t) => 'tl.${t.id}' == _scope && t.shared)),
+      if (!_isNotifScope) RasqDropdownItem(l.nodeprogTimelineShareTab, 'share', enabled: ownTab, checked: ownTab && ref.read(nodeTabsProvider).any((t) => 'tl.${t.id}' == _scope && t.shared)),
       RasqDropdownItem(l.nodeprogTimelineResetConfig, 'reset'),
       // グラフカスタマイズ (D-124): ノードの調節はグラフ形式の編集に。
       // グラフで手を入れた TL はプラグインの自動構成の対象外(簡易側は
       // 置き換え警告バナー)。
-      RasqDropdownItem(l.nodeprogTimelineEditAsGraph, 'nodes'),
-      RasqDropdownItem(l.nodeprogEditorBundleTabsToggle, 'bundleTabs', checked: bundleTabs),
+      // 通知のタブ (D-590) はノードグラフにしない(グラフで組めるのは TL だけ。push 通知は組めない)。
+      if (!_isNotifScope) RasqDropdownItem(l.nodeprogTimelineEditAsGraph, 'nodes'),
+      if (!_isNotifScope) RasqDropdownItem(l.nodeprogEditorBundleTabsToggle, 'bundleTabs', checked: bundleTabs),
     ]);
     if (!mounted) return;
     switch (pick) {
@@ -515,18 +571,19 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
             spec: spec,
             algorithms: algorithms,
             dmOnly: _isDmScope,
+            notifOnly: _isNotifScope,
             scope: _scope,
             // セクションの中にはセクションを入れない (D-442)。
             allowSection: intoSection == null,
             // トレンドタイル (D-431): 重い(ML モデル / GPU)アルゴリズムは灰色にして理由を出す。
             unavailable: _scope == trendTilesScope ? trendTilesUnavailableReason : null,
             // 傾向が一番最後に固定で掛かるスコープ (D-431) では、指向性/刺激性は足さない(傾向 FOW で変える)。
-            hideTendency: tendencyPinnedScopes.contains(_scope),
+            hideTendency: tendencyPinnedScopes.contains(_scope) || _isNotifScope,
             onAddAlgorithm: (a) {
               manager.close(tlConfigPaletteFowId);
               _update(_cfg.copyWith(algorithms: [..._cfg.algorithms, a]));
             },
-            onPickGenres: tendencyPinnedScopes.contains(_scope) ? null : () {
+            onPickGenres: tendencyPinnedScopes.contains(_scope) || _isNotifScope ? null : () {
               manager.close(tlConfigPaletteFowId);
               if (!_cfg.algorithms.any((a) => a.isTendency)) _update(_cfg.copyWith(algorithms: [..._cfg.algorithms, const TlAlgorithmComponent(type: 'tendency')]));
               _tendencyAction('pick');
@@ -586,6 +643,10 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final l = context.l10n;
     final kinds = ref.read(tlTimelinesProvider(s.account));
     final tlLabel = kinds.where((k) => k.id == s.tl).firstOrNull?.label ?? switch (s.tl) { 'social' => l.nodeprogEditorTabSocial, 'local' => l.nodeprogEditorTabLocal, 'global' => l.nodeprogEditorTabGlobal, 'home' => l.nodeprogTimelineSourceHomeLabel, _ => s.tl };
+    // 通知のノード (D-590)。
+    if (s.isNotif) return (Icons.notifications_none, l.notificationsNodeTitle, notifAccountLabel(l, s.account), notifNodeDescription(l, s));
+    if (s.isRasqNotices) return (Icons.hub_outlined, l.notificationsNodeRasqTitle, 'RASQ', l.notificationsNodeRasqDescription);
+    if (s.isAstellReminders) return (Icons.notifications_active_outlined, l.notificationsRemindersHeader, 'RASQ', l.notificationsNodeRemindersDescription);
     if (s.isRasq) return (Icons.hub_outlined, l.nodeprogTimelineSourceRasqTitle, 'RASQ', l.nodeprogTimelineSourceRasqDescription);
     if (s.isRasqSearch) return (Icons.travel_explore, l.nodeprogTimelineSourceRasqSearchTitle, 'RASQ', s.rasqSearchWord.isEmpty ? l.nodeprogTimelineSourceRasqSearchPageQuery : l.nodeprogTimelineSourceRasqSearchWord(s.rasqSearchWord));
     if (s.isRasqList) return (Icons.people_alt_outlined, l.nodeprogTimelineSourceRasqListTitle, 'RASQ', l.nodeprogTimelineSourceRasqListDescription(s.label.isNotEmpty ? s.label : (s.rasqListId.isEmpty ? l.nodeprogTimelineNotSelected : s.rasqListId)));
@@ -822,6 +883,9 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
           ? const RasqLoading()
           : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
               // 説明バナー(ワイヤーフレーム: アルゴリズムは上から順に適用)。
+              if (_isNotifScope)
+                _banner(context.l10n.notificationsConfigBanner, detail: context.l10n.notificationsConfigBannerDetail)
+              else
               _banner(
                 _scope == 'tl.dm'
                     ? context.l10n.nodeprogTimelineBannerDmCommon
@@ -1115,7 +1179,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final c = _cfg.sources[i].children[k];
     final scheme = Theme.of(context).colorScheme;
     final (icon, title, subtitle, description) = _sourceInfo(c);
-    final showsPosts = !c.isBlock || c.isTrendFollowing || (c.isTrendPlugin && c.form == TrendNodeForm.today);
+    final showsPosts = !c.isNotif && !c.isNotifBlock && (!c.isBlock || c.isTrendFollowing || (c.isTrendPlugin && c.form == TrendNodeForm.today));
     final meta = [subtitle, if (showsPosts) c.display.label, context.l10n.nodeprogTimelineLimitItems(c.limit), if (!c.enabled) context.l10n.nodeprogTimelineDisabled].join(context.l10n.nodeprogTimelineMetaSeparator);
     return Row(key: ValueKey('tlconfig.section.$i.child.$k'), children: [
       Expanded(
@@ -1173,7 +1237,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       if (_scope != trendTilesScope && (c.isTrend || c.isTrendTags)) RasqDropdownItem(c.isTrend ? l.nodeprogTimelineMenuKindToTiles : l.nodeprogTimelineMenuKindToTl, 'kind'),
       RasqDropdownItem(l.nodeprogTimelineMenuLimit(c.limit), 'limit'),
       if (c.isTrendPlugin) RasqDropdownItem(l.nodeprogTimelineMenuForm(c.form.label), 'form'),
-      if (!c.isBlock || c.isTrendFollowing || (c.isTrendPlugin && c.form == TrendNodeForm.today)) RasqDropdownItem(l.nodeprogTimelineMenuDisplay(c.display.label), 'display'),
+      if (!c.isNotif && !c.isNotifBlock && (!c.isBlock || c.isTrendFollowing || (c.isTrendPlugin && c.form == TrendNodeForm.today))) RasqDropdownItem(l.nodeprogTimelineMenuDisplay(c.display.label), 'display'),
       RasqDropdownItem(l.nodeprogTimelineMenuTakeOut, 'out'),
       RasqDropdownItem(l.nodeprogEditorMenuDelete, 'delete', destructive: true),
     ]);
@@ -1228,7 +1292,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   List<Widget> _sourceComponents() {
     return [
       RasqSectionHeader(
-        title: context.l10n.nodeprogTimelineSourcesHeader,
+        title: _isNotifScope ? context.l10n.notificationsConfigSourcesHeader : context.l10n.nodeprogTimelineSourcesHeader,
         // 並べ替え (D-442): シートではなく、タイルそのものを動かす。もう一度押すと終える。
         trailing: RasqIconButton(
           key: const ValueKey('tlconfig.sources.reorder'),
@@ -1253,7 +1317,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       if (_reordering)
         RasqCaption(context.l10n.nodeprogTimelineReorderHint, key: const ValueKey('tlconfig.reorder.hint'), padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs)),
       ..._nodeList(),
-      _addTile(context.l10n.nodeprogTimelineAddSource, () => _openPalette(algorithms: false)),
+      _addTile(_isNotifScope ? context.l10n.nodeprogTimelineAddNode : context.l10n.nodeprogTimelineAddSource, () => _openPalette(algorithms: false)),
       // トレンドページ (D-443) は自動更新しない(開く / 引き下げで読む)。
       if (_scope != trendTilesScope) RasqSectionHeader(title: context.l10n.nodeprogTimelineClockHeader),
       if (_scope != trendTilesScope) Builder(builder: (ctx) {
@@ -1361,7 +1425,7 @@ padding: EdgeInsets.all(RasqSpacing.sm), child: Icon(Icons.info_outline, size: 2
 /// アイコン/名前/提供元/説明/詳細行)で、ホバー中もこの表示のまま。
 /// 詳細行は入出力ではなく**ネイティブ対応の SNS プラグイン**。
 class _ComponentPalettePanel extends ConsumerStatefulWidget {
-  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource, this.dmOnly = false, this.onPickGenres, this.unavailable, this.hideTendency = false, this.scope = '', this.allowSection = true, this.onDragStart});
+  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource, this.dmOnly = false, this.notifOnly = false, this.onPickGenres, this.unavailable, this.hideTendency = false, this.scope = '', this.allowSection = true, this.onDragStart});
 
   /// セクションを出すか(セクションの中へ足すときは出さない、D-442)。
   final bool allowSection;
@@ -1388,6 +1452,9 @@ class _ComponentPalettePanel extends ConsumerStatefulWidget {
 
   /// DM スコープ (D-127): 取得元は DM 取得用のタイルだけ表示する。
   final bool dmOnly;
+
+  /// 通知のタブ (D-590): 取得元は通知のノード、アルゴリズムは時系列順 / 検索絞り込みだけ。
+  final bool notifOnly;
   final ValueChanged<TlAlgorithmComponent> onAddAlgorithm;
   final ValueChanged<TlSourceComponent> onAddSource;
 
@@ -1451,6 +1518,24 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
     final allSns = [for (final p in registry.plugins) p.manifest.name];
     final sessionPluginId = ref.watch(currentSnsSessionProvider)?.pluginId;
     final sessionSns = [registry.plugin(sessionPluginId ?? '')?.manifest.name ?? sessionPluginId ?? '—'];
+    if (widget.algorithms && widget.notifOnly) {
+      return [
+        _PaletteItem(
+            icon: Icons.manage_search,
+            title: l.nodeprogTimelinePaletteQueryFilterTitle,
+            subtitle: 'RASQ',
+            description: l.notificationsPaletteQueryFilterDescription,
+            supported: allSns,
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'queryfilter')), type: 'queryfilter'),
+        _PaletteItem(
+            icon: Icons.schedule,
+            title: l.nodeprogTimelinePaletteChronoTitle,
+            subtitle: 'RASQ',
+            description: l.notificationsPaletteChronoDescription,
+            supported: allSns,
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'chrono')), type: 'chrono'),
+      ];
+    }
     if (widget.algorithms) {
       final plugins = ref.watch(customTimelinesProvider).value ?? const [];
       return [
@@ -1514,6 +1599,48 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               supported: sessionSns,
               add: () => widget.onAddAlgorithm(TlAlgorithmComponent(type: 'plugin:${p.id}', pluginLabel: l.nodeprogEditorPluginSortTitle(p.label))),
               type: 'plugin:${p.id}'),
+      ];
+    }
+    // 通知のタブ (D-590): 通知(いまのアカウント / 全部のアカウント / アカウントごと)、RASQ の通知、開始通知の予定、セクション。
+    if (widget.notifOnly) {
+      final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+      _PaletteItem notif(String account) => _PaletteItem(
+          icon: Icons.notifications_none,
+          title: l.notificationsPaletteNodeTitle(notifAccountLabel(l, account)),
+          subtitle: account.isEmpty || account == notifAllAccounts ? 'RASQ' : l.nodeprogTimelinePaletteSnsPluginAuthor,
+          description: l.notificationsPaletteNodeDescription,
+          supported: allSns,
+          add: () => widget.onAddSource(TlSourceComponent(tl: notifNodeKind, account: account)),
+          drag: TlSourceComponent(tl: notifNodeKind, account: account));
+      return [
+        notif(''),
+        if (sessions.length > 1) notif(notifAllAccounts),
+        for (final x in sessions) notif('${x.account}'),
+        _PaletteItem(
+            icon: Icons.hub_outlined,
+            title: l.notificationsNodeRasqTitle,
+            subtitle: 'RASQ',
+            description: l.notificationsNodeRasqDescription,
+            supported: allSns,
+            add: () => widget.onAddSource(const TlSourceComponent(tl: rasqNoticesNodeKind)),
+            drag: const TlSourceComponent(tl: rasqNoticesNodeKind)),
+        _PaletteItem(
+            icon: Icons.notifications_active_outlined,
+            title: l.notificationsRemindersHeader,
+            subtitle: 'RASQ',
+            description: l.notificationsNodeRemindersDescription,
+            supported: allSns,
+            add: () => widget.onAddSource(const TlSourceComponent(tl: astellRemindersNodeKind)),
+            drag: const TlSourceComponent(tl: astellRemindersNodeKind)),
+        if (widget.allowSection)
+          _PaletteItem(
+              icon: Icons.crop_square,
+              title: l.nodeprogTimelineSectionTitle,
+              subtitle: 'RASQ',
+              description: l.nodeprogTimelinePaletteSectionDescription,
+              supported: allSns,
+              add: () => widget.onAddSource(TlSourceComponent(tl: sectionKind, label: l.nodeprogTimelineSectionTitle)),
+              drag: TlSourceComponent(tl: sectionKind, label: l.nodeprogTimelineSectionTitle)),
       ];
     }
     // DM スコープ (D-127): DM 取得用のタイルだけ。
@@ -1899,6 +2026,33 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
       );
     }
     final s = cfg.sources[widget.index];
+    // 通知のノード (D-590): アカウント(いまの / 全部 / アカウントごと)、種類、フォロー中の人だけ。
+    if (s.isNotif) {
+      final spec = s.notifSpec;
+      return (
+        {'account': s.account, 'following': spec.followingOnly, for (final g in NotifKindGroup.values) 'kind_${g.name}': spec.groups.contains(g)},
+        RrlNode(t: 'Column', c: [
+          RrlNode(t: 'Text', p: {'text': l10n.notificationsParamsNode, 'detail': l10n.notificationsParamsNodeDetail}),
+          _section(l10n.nodeprogTimelineParamsAccount),
+          _radio('account', l10n.nodeprogTimelineCurrentAccount, ''),
+          if (widget.accounts.length > 1) _radio('account', l10n.nodeprogTimelineAllAccounts, notifAllAccounts),
+          for (final a in widget.accounts) _radio('account', a, a),
+          _section(l10n.notificationsParamsKinds),
+          RrlNode(t: 'Text', p: {'text': l10n.notificationsParamsKindsHint}),
+          for (final g in NotifKindGroup.values) RrlNode(t: 'SwitchListTile', k: 'kind_${g.name}', p: {'title': g.label(l10n), 'value': '\$.settings.kind_${g.name}'}, on: const {'change': 'settings.set'}),
+          _section(l10n.notificationsParamsWho),
+          RrlNode(t: 'SwitchListTile', k: 'following', p: {'title': l10n.notificationsNodeFollowingOnly, 'value': '\$.settings.following'}, on: const {'change': 'settings.set'}),
+        ]),
+      );
+    }
+    if (s.isRasqNotices || s.isAstellReminders) {
+      return (
+        const {},
+        RrlNode(t: 'Column', c: [
+          RrlNode(t: 'Text', p: {'text': s.isRasqNotices ? l10n.notificationsNodeRasqDescription : l10n.notificationsNodeRemindersDescription}),
+        ]),
+      );
+    }
     // トレンドプラグインのノード (D-470): 形式を選ぶ。
     if (s.isTrendPlugin) {
       return (
@@ -1993,6 +2147,18 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
               : cfg.algorithms[k],
       ];
       widget.onUpdate(cfg.copyWith(algorithms: next));
+    } else if (cfg.sources[widget.index].isNotif) {
+      // 通知のノード (D-590): 種類 / フォロー中は kind id に書く。
+      final cur = cfg.sources[widget.index];
+      final spec = cur.notifSpec;
+      final group = key.startsWith('kind_') ? NotifKindGroup.byName(key.substring(5)) : null;
+      final next = switch (key) {
+        'account' => cur.copyWith(account: '$value'),
+        'following' => cur.copyWith(tl: spec.copyWith(followingOnly: value == true).tl),
+        _ when group != null => cur.copyWith(tl: spec.copyWith(groups: value == true ? {...spec.groups, group} : ({...spec.groups}..remove(group))).tl),
+        _ => cur,
+      };
+      widget.onUpdate(cfg.copyWith(sources: [for (var k = 0; k < cfg.sources.length; k++) k == widget.index ? next : cfg.sources[k]]));
     } else {
       final cur = cfg.sources[widget.index];
       var updated = cur.copyWith(tl: key == 'tl' ? '$value' : null, account: key == 'account' ? '$value' : null, label: key == 'label' ? '$value' : null, form: key == 'form' ? TrendNodeForm.byName(value) : null);

@@ -63,5 +63,12 @@
   "settingsActionBarThresholdTitle": "束ねる閾値",
   "settingsActionBarThresholdSubtitle": "似たボタンをまとめる度合い",
   "settingsActionBarThresholdDetail": "タグの類似度がこれ以上なら既存ボタンのバンドルに入る",
-  "settingsActionBarEditButton": "アクションバーを編集"
+  "settingsActionBarEditButton": "アクションバーを編集",
+  "settingsActionBarAppButtonsHeader": "アプリのボタン",
+  "settingsActionBarMediaLimitButtonTitle": "添付の「4 枚まで」の切り替え",
+  "settingsActionBarMediaLimitButtonSubtitle": "横に並べる添付が 5 枚以上の投稿のバーに出す",
+  "settingsActionBarMediaLimitFourTitle": "横に並べるときも 4 枚まで",
+  "settingsActionBarMediaLimitFourSubtitle": "オフ(既定)なら全部を横に送る。縦の並びはいつも 4 枚まで",
+  "settingsActionBarOpenPluginPage": "{name} のページを開く",
+  "@settingsActionBarOpenPluginPage": {"description": "ボタンの行の左のアイコンの説明。{name} = そのボタンを出しているプラグインの名前", "placeholders": {"name": {"type": "String"}}}
 }

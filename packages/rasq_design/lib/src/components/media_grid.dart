@@ -12,8 +12,8 @@ import '../platform/media_image.dart';
 import '../l10n/design_l10n.dart';
 
 /// MediaGrid — layout auto-adjusts by count (1枚フル幅 / 2枚横並び / 3枚以上グリッド、
-/// [maxVisible] を超える分は最後のタイルに「+N」。スレッド展開など全部見せたい所は
-/// [maxVisible] を枚数以上にすると 2 列の行が続く、D-177),
+/// [maxVisible] を超える分は最後のタイルに「+N」。5 枚以上を見せるときの既定の向きは**横** (D-589): 4:3 の窓に 2 枚ずつの列を
+/// 横に送る。スレッド展開など縦に全部並べたい所は [overflowAxis] を [Axis.vertical] にすると 2 列の行が続く、D-177),
 /// media types may be mixed, and sensitive state is independent per tile.
 ///
 /// Reveal state is ephemeral UI state, so it lives inside the widget
@@ -32,6 +32,7 @@ class RasqMediaGrid extends StatefulWidget {
     this.singleAspectRatio = 16 / 9,
     this.gridAspectRatio = 1,
     this.arrangement = RasqMediaArrangement.auto,
+    this.overflowAxis = Axis.horizontal,
   });
 
   final List<MediaItem> items;
@@ -55,6 +56,10 @@ class RasqMediaGrid extends StatefulWidget {
   /// 並べ方 (D-580)。既定は枚数で決める今の並び。投稿者のアイコンのテーマの予約 3 ビット(並び 横 / 縦・隙間 そのまま / 詰める)で
   /// 替えるときに渡す。
   final RasqMediaArrangement arrangement;
+
+  /// [arrangement] が [RasqMediaArrangement.auto] で 5 枚以上を見せるときの向き (D-589)。既定は横(4:3 の窓に 2 枚ずつの列を
+  /// 横に送る = 横・詰めると同じ)。[Axis.vertical] は D-177 の 2 列の行。
+  final Axis overflowAxis;
 
   @override
   State<RasqMediaGrid> createState() => _RasqMediaGridState();
@@ -109,7 +114,9 @@ class _RasqMediaGridState extends State<RasqMediaGrid> {
             Expanded(child: Row(children: [Expanded(child: tile(2)), gap, Expanded(child: tile(3))])),
           ]),
         ),
-      // 5 枚以上を全部見せる (D-177): 2 列の行を枚数分(奇数なら最後は 1 枚で全幅)。
+      // 5 枚以上 (D-589): 既定は横に送る(横・詰めると同じ列)。
+      _ when widget.overflowAxis == Axis.horizontal => _packedColumns(items, visible, tile, key: const ValueKey('media.auto.horizontal')),
+      // 縦に全部見せる (D-177): 2 列の行を枚数分(奇数なら最後は 1 枚で全幅)。
       _ => Column(children: [
           for (var r = 0; r * 2 < visible; r++) ...[
             if (r > 0) gap,
@@ -144,6 +151,39 @@ enum RasqMediaArrangement {
   /// 予約 3 ビットの「縦」「詰める」から。
   static RasqMediaArrangement of({required bool vertical, required bool packed}) =>
       vertical ? (packed ? verticalPacked : RasqMediaArrangement.vertical) : (packed ? horizontalPacked : horizontal);
+
+  /// 横に送る並びか (D-589)。既定([auto])も横。横に送る並びでは 4 枚までの制限を既定では掛けない(送れば全部見える)。
+  bool get horizontalAxis => this == auto || this == horizontal || this == horizontalPacked;
+}
+
+/// 4:3 の窓に 2 枚ずつの列を横に送る(横・詰める、D-580 / 既定の 5 枚以上、D-589)。2 枚なら 1 枚ずつの 2 列。
+/// 3 列以上あるときは、次の列が少し覗くように列を細くする(送れることが分かるように)。
+Widget _packedColumns(List<MediaItem> items, int visible, Widget Function(int) tile, {required Key key}) {
+  const g = RasqSpacing.mediaGap;
+  final cols = <List<int>>[
+    if (visible == 2) ...[[0], [1]] else
+      for (var a = 0; a < visible; a += 2) [a, if (a + 1 < visible) a + 1],
+  ];
+  return AspectRatio(
+    key: key,
+    aspectRatio: 4 / 3,
+    child: LayoutBuilder(builder: (context, c) {
+      final colW = (c.maxWidth - g) / (cols.length > 2 ? 2.25 : 2);
+      return ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: cols.length,
+        separatorBuilder: (_, _) => const SizedBox(width: g),
+        itemBuilder: (_, k) {
+          final col = cols[k];
+          return SizedBox(
+            width: colW,
+            // 1 枚の列(2 枚のとき・奇数の最後)は列の高さいっぱい。
+            child: col.length == 2 ? Column(children: [Expanded(child: tile(col[0])), const SizedBox(height: g), Expanded(child: tile(col[1]))]) : tile(col[0]),
+          );
+        },
+      );
+    }),
+  );
 }
 
 Widget _arranged(RasqMediaArrangement a, List<MediaItem> items, int visible, Widget Function(int) tile) {
@@ -162,27 +202,7 @@ Widget _arranged(RasqMediaArrangement a, List<MediaItem> items, int visible, Wid
         ),
       );
     case RasqMediaArrangement.horizontalPacked:
-      return AspectRatio(
-        key: const ValueKey('media.arranged.horizontalPacked'),
-        aspectRatio: 4 / 3,
-        child: LayoutBuilder(builder: (context, c) {
-          final colW = (c.maxWidth - g) / 2;
-          final cols = (visible + 1) ~/ 2;
-          return ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: cols,
-            separatorBuilder: (_, _) => const SizedBox(width: g),
-            itemBuilder: (_, col) {
-              final a = col * 2, b = a + 1;
-              return SizedBox(
-                width: colW,
-                // 最後の 1 枚(奇数のとき)は列の高さいっぱい。
-                child: b < visible ? Column(children: [Expanded(child: tile(a)), const SizedBox(height: g), Expanded(child: tile(b))]) : tile(a),
-              );
-            },
-          );
-        }),
-      );
+      return _packedColumns(items, visible, tile, key: const ValueKey('media.arranged.horizontalPacked'));
     case RasqMediaArrangement.vertical:
       return Column(key: const ValueKey('media.arranged.vertical'), children: [
         for (var r = 0; r * 2 < visible; r++) ...[

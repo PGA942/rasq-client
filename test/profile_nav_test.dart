@@ -51,18 +51,20 @@ void main() {
     return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
   }
 
-  testWidgets('スレッド展開: メイン投稿は 6 枚全部、TL は 4 枚 + 「+2」', (tester) async {
+  testWidgets('スレッド展開: メイン投稿は 6 枚全部、TL は既定で横に送る(D-589。+N 無し)', (tester) async {
     await pump(tester, (v) => [Post(id: 'p1', account: v, author: bobUser, createdAt: DateTime(2026, 9, 1), body: '写真 6 枚', media: media(6))]);
-    // TL: 4 枚に畳まれて最後のタイルに +2。
-    expect(find.descendant(of: find.byType(RasqMediaGrid), matching: find.text('+2')), findsOneWidget);
+    // TL: 既定は横に送る(4 枚に畳まない。4 枚までの制限は test/media_limit_test.dart)。
+    expect(find.byKey(const ValueKey('media.auto.horizontal')), findsOneWidget);
+    expect(find.descendant(of: find.byType(RasqMediaGrid), matching: find.text('+2')), findsNothing);
     await tester.tap(find.text('写真 6 枚'));
     await tester.pumpAndSettle();
-    // スレッド: メイン投稿の grid に 6 タイル(画像は読めないので壊れ画像アイコン)、+N 無し。
+    // スレッド: メイン投稿の grid に 6 タイル(画像は読めないので壊れ画像アイコン)、+N 無し。縦の 2 列の行(D-177)。
     expect(find.descendant(of: find.byType(RasqMediaGrid), matching: find.text('+2')), findsNothing);
+    expect(find.descendant(of: find.byType(RasqMediaGrid).first, matching: find.byKey(const ValueKey('media.auto.horizontal'))), findsNothing);
     final grid = find.byType(RasqMediaGrid).first;
     expect(find.descendant(of: grid, matching: find.byIcon(Icons.broken_image_outlined)), findsNWidgets(6));
     // 奇数(5 枚)は最後の行が 1 枚で全幅。
-    await tester.pumpWidget(MaterialApp(home: Scaffold(body: RasqMediaGrid(items: media(5), maxVisible: 5))));
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: RasqMediaGrid(items: media(5), maxVisible: 5, overflowAxis: Axis.vertical))));
     await tester.pumpAndSettle();
     final tiles = find.byIcon(Icons.broken_image_outlined);
     expect(tiles, findsNWidgets(5));
