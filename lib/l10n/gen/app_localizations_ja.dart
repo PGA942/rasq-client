@@ -7823,6 +7823,127 @@ class AppLocalizationsJa extends AppLocalizations {
       'メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます';
 
   @override
+  String get notificationsTabMentions => 'メンション';
+
+  @override
+  String get notificationsTabCustomFallback => '通知のタブ';
+
+  @override
+  String get notificationsAddTab => '通知のタブを足す';
+
+  @override
+  String get notificationsCustomizeTab => 'このタブをカスタマイズ';
+
+  @override
+  String get notificationsTemplateAccount => 'アカウントごとのタブ';
+
+  @override
+  String get notificationsTemplateKind => '種類ごとのタブ';
+
+  @override
+  String get notificationsTemplateEmpty => '空のタブ';
+
+  @override
+  String get notificationsTabNoNodes => 'このタブにはノードがありません';
+
+  @override
+  String get notificationsTabNoNodesHint => '「このタブをカスタマイズ」から、通知のノードを置いてください';
+
+  @override
+  String notificationsToAccount(String account) {
+    return '$account への通知';
+  }
+
+  @override
+  String get notificationsGroupMentions => 'メンション・返信・引用';
+
+  @override
+  String get notificationsGroupReactions => 'リアクション';
+
+  @override
+  String get notificationsGroupReposts => 'リノート・リポスト';
+
+  @override
+  String get notificationsGroupFollows => 'フォロー';
+
+  @override
+  String get notificationsGroupEvents => '投票・タイマー・ASTell';
+
+  @override
+  String get notificationsGroupSystem => 'システム・その他';
+
+  @override
+  String get notificationsNodeTitle => '通知';
+
+  @override
+  String get notificationsNodeAllKinds => 'すべての種類';
+
+  @override
+  String notificationsNodeDescription(String kinds) {
+    return '$kinds の通知';
+  }
+
+  @override
+  String notificationsNodeDescriptionFollowing(String kinds) {
+    return '$kinds の通知(フォロー中の人だけ)';
+  }
+
+  @override
+  String get notificationsNodeFollowingOnly => 'フォロー中の人からの通知だけ';
+
+  @override
+  String get notificationsNodeRasqTitle => 'RASQ の通知';
+
+  @override
+  String get notificationsNodeRasqDescription =>
+      'RASQ のメンション / 返信 / 引用 / Swing の招待(RASQ アカウントにログインしているとき)';
+
+  @override
+  String get notificationsNodeRemindersDescription => '登録した ASTell の開始通知の予定';
+
+  @override
+  String notificationsPaletteNodeTitle(String account) {
+    return '通知($account)';
+  }
+
+  @override
+  String get notificationsPaletteNodeDescription =>
+      '受け取った通知を新しい順に。種類やフォロー中の人だけに絞れます';
+
+  @override
+  String get notificationsPaletteQueryFilterDescription =>
+      '語を含む通知だけ(または含む通知を除く)。人の名前・投稿の本文・リアクションを見ます';
+
+  @override
+  String get notificationsPaletteChronoDescription => '新しい通知を上に';
+
+  @override
+  String get notificationsParamsNode => '受け取った通知を出します';
+
+  @override
+  String get notificationsParamsNodeDetail =>
+      '通知の画面の表示だけが変わります。端末に届く push 通知は、ここでは変わりません(通知トークンの設定で決めます)';
+
+  @override
+  String get notificationsParamsKinds => '種類';
+
+  @override
+  String get notificationsParamsKindsHint => 'どれもオフなら、すべての種類を出します';
+
+  @override
+  String get notificationsParamsWho => 'だれからの通知';
+
+  @override
+  String get notificationsConfigBanner => '通知のタブの中身を、ノードで組みます(上から順に)';
+
+  @override
+  String get notificationsConfigBannerDetail =>
+      'ここで変わるのは通知の画面の表示だけです。端末に届く push 通知の受け取り・出す / 出さないは、ノードでは変えられません(重くならないように、ノードの外で決めています)';
+
+  @override
+  String get notificationsConfigSourcesHeader => '通知のノード';
+
+  @override
   String get notifyPushChannelName => 'RASQ の通知';
 
   @override

@@ -8157,6 +8157,132 @@ class AppLocalizationsEn extends AppLocalizations {
       'Mentions / replies / quotes / Swing invites will appear here';
 
   @override
+  String get notificationsTabMentions => 'Mentions';
+
+  @override
+  String get notificationsTabCustomFallback => 'Notification tab';
+
+  @override
+  String get notificationsAddTab => 'Add a notification tab';
+
+  @override
+  String get notificationsCustomizeTab => 'Customize this tab';
+
+  @override
+  String get notificationsTemplateAccount => 'Tab for one account';
+
+  @override
+  String get notificationsTemplateKind => 'Tab for one kind';
+
+  @override
+  String get notificationsTemplateEmpty => 'Empty tab';
+
+  @override
+  String get notificationsTabNoNodes => 'This tab has no nodes';
+
+  @override
+  String get notificationsTabNoNodesHint =>
+      'Use \"Customize this tab\" to place notification nodes';
+
+  @override
+  String notificationsToAccount(String account) {
+    return 'To $account';
+  }
+
+  @override
+  String get notificationsGroupMentions => 'Mentions, replies, quotes';
+
+  @override
+  String get notificationsGroupReactions => 'Reactions';
+
+  @override
+  String get notificationsGroupReposts => 'Renotes / reposts';
+
+  @override
+  String get notificationsGroupFollows => 'Follows';
+
+  @override
+  String get notificationsGroupEvents => 'Polls, timers, ASTell';
+
+  @override
+  String get notificationsGroupSystem => 'System and other';
+
+  @override
+  String get notificationsNodeTitle => 'Notifications';
+
+  @override
+  String get notificationsNodeAllKinds => 'All kinds';
+
+  @override
+  String notificationsNodeDescription(String kinds) {
+    return 'Notifications: $kinds';
+  }
+
+  @override
+  String notificationsNodeDescriptionFollowing(String kinds) {
+    return 'Notifications: $kinds (people you follow only)';
+  }
+
+  @override
+  String get notificationsNodeFollowingOnly => 'Only from people you follow';
+
+  @override
+  String get notificationsNodeRasqTitle => 'RASQ notifications';
+
+  @override
+  String get notificationsNodeRasqDescription =>
+      'RASQ mentions / replies / quotes / Swing invites (when signed in to a RASQ account)';
+
+  @override
+  String get notificationsNodeRemindersDescription =>
+      'ASTell start reminders you registered';
+
+  @override
+  String notificationsPaletteNodeTitle(String account) {
+    return 'Notifications ($account)';
+  }
+
+  @override
+  String get notificationsPaletteNodeDescription =>
+      'Received notifications, newest first. Can be narrowed by kind or to people you follow';
+
+  @override
+  String get notificationsPaletteQueryFilterDescription =>
+      'Only notifications containing the words (or exclude them). Checks names, post text and reactions';
+
+  @override
+  String get notificationsPaletteChronoDescription =>
+      'Newest notifications on top';
+
+  @override
+  String get notificationsParamsNode => 'Shows received notifications';
+
+  @override
+  String get notificationsParamsNodeDetail =>
+      'Only the notification screen changes. Push notifications on the device are not affected here (they are set with the notification token)';
+
+  @override
+  String get notificationsParamsKinds => 'Kinds';
+
+  @override
+  String get notificationsParamsKindsHint =>
+      'If all are off, every kind is shown';
+
+  @override
+  String get notificationsParamsWho => 'From whom';
+
+  @override
+  String get notificationsConfigBanner =>
+      'Build this notification tab with nodes (top to bottom)';
+
+  @override
+  String get notificationsConfigBannerDetail =>
+      'Only the notification screen changes here. Receiving push notifications, and whether to show them, can\'t be changed with nodes (decided outside the nodes so it stays light)';
+
+  @override
+  String get notificationsConfigSourcesHeader => 'Notification nodes';
+
+  @override
   String get notifyPushChannelName => 'RASQ notifications';
 
   @override
