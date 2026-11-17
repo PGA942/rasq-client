@@ -4262,6 +4262,52 @@
   "@dmLastMessageHidden": {
     "description": "DM 一覧の最新の 1 行: 見守りで見せない本文の代わり"
   },
+  "headerHintFromHeader": "ヘッダーから",
+  "@headerHintFromHeader": {
+    "description": "SNS のヘッダーの手がかりから読んだ RASQ アカウントのチップの補足"
+  },
+  "headerHintUnlinkedTitle": "見ていた SNS アカウントとつながっていません",
+  "@headerHintUnlinkedTitle": {
+    "description": "ヘッダーの手がかりから来たが、そのアカウントをつないでいないときの注意の見出し"
+  },
+  "headerHintUnlinkedText": "{account} のヘッダーにこの RASQ アカウントが書かれていましたが、このアカウントは {account} をつないでいません。ヘッダーにはだれでもハンドルを書けるので、本人のものとは限りません。",
+  "@headerHintUnlinkedText": {
+    "description": "account は @handle@instance",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "headerHintLabel": "RASQ",
+  "@headerHintLabel": {
+    "description": "SNS のプロフィール編集の、ヘッダーの手がかりの欄の見出し"
+  },
+  "headerHintSwitchTitle": "ヘッダーに RASQ アカウントの手がかりを入れる",
+  "headerHintSwitchSubtitle": "上の縁に細い帯で @{handle} を書きます。保存するとき、ヘッダーは 3:1 に切りそろえます",
+  "@headerHintSwitchSubtitle": {
+    "description": "handle は RASQ のハンドル",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "headerHintSwitchDetail": "ほかの人が SNS 上でこのプロフィールを見たとき、アプリがヘッダーを読んで RASQ アカウントへの入口を出します。サーバーに「誰のページを見たか」を問い合わせずに済みます。RASQ のプロフィールで「アカウントを表示」をオンにしていて、この SNS アカウントをつないで出しているときだけ書けます。",
+  "headerHintPresent": "いまのヘッダーには @{handle} の手がかりが入っています",
+  "@headerHintPresent": {
+    "description": "handle は読めた RASQ のハンドル",
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "headerHintApplyCurrent": "いまのヘッダーに入れる",
+  "headerHintErase": "ヘッダーの手がかりを消す",
+  "headerHintWriteFailed": "ヘッダーの手がかりを書けませんでした(画像を読めませんでした)",
+  "headerHintRasqNoteOn": "SNS のヘッダーにも手がかりを入れられます(各 SNS のプロフィール編集でヘッダーを保存し直す)。入れておくと、ほかの人のアプリはサーバーに問い合わせずにこのアカウントへ案内できます。",
+  "headerHintRasqNoteOff": "オフにしても、上げ済みの SNS のヘッダーに入れた手がかりは残ります。消すには、各 SNS のプロフィール編集で「ヘッダーの手がかりを消す」を使ってください。",
   "homeCreateMissingAccount": "(いないアカウント)",
   "@homeCreateMissingAccount": {
     "description": "＋ のボタンに置いた投稿のアカウントが、もうログインしていないとき"

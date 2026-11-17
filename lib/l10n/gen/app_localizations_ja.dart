@@ -3887,6 +3887,54 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dmLastMessageHidden => 'このメッセージは表示できません';
 
   @override
+  String get headerHintFromHeader => 'ヘッダーから';
+
+  @override
+  String get headerHintUnlinkedTitle => '見ていた SNS アカウントとつながっていません';
+
+  @override
+  String headerHintUnlinkedText(String account) {
+    return '$account のヘッダーにこの RASQ アカウントが書かれていましたが、このアカウントは $account をつないでいません。ヘッダーにはだれでもハンドルを書けるので、本人のものとは限りません。';
+  }
+
+  @override
+  String get headerHintLabel => 'RASQ';
+
+  @override
+  String get headerHintSwitchTitle => 'ヘッダーに RASQ アカウントの手がかりを入れる';
+
+  @override
+  String headerHintSwitchSubtitle(String handle) {
+    return '上の縁に細い帯で @$handle を書きます。保存するとき、ヘッダーは 3:1 に切りそろえます';
+  }
+
+  @override
+  String get headerHintSwitchDetail =>
+      'ほかの人が SNS 上でこのプロフィールを見たとき、アプリがヘッダーを読んで RASQ アカウントへの入口を出します。サーバーに「誰のページを見たか」を問い合わせずに済みます。RASQ のプロフィールで「アカウントを表示」をオンにしていて、この SNS アカウントをつないで出しているときだけ書けます。';
+
+  @override
+  String headerHintPresent(String handle) {
+    return 'いまのヘッダーには @$handle の手がかりが入っています';
+  }
+
+  @override
+  String get headerHintApplyCurrent => 'いまのヘッダーに入れる';
+
+  @override
+  String get headerHintErase => 'ヘッダーの手がかりを消す';
+
+  @override
+  String get headerHintWriteFailed => 'ヘッダーの手がかりを書けませんでした(画像を読めませんでした)';
+
+  @override
+  String get headerHintRasqNoteOn =>
+      'SNS のヘッダーにも手がかりを入れられます(各 SNS のプロフィール編集でヘッダーを保存し直す)。入れておくと、ほかの人のアプリはサーバーに問い合わせずにこのアカウントへ案内できます。';
+
+  @override
+  String get headerHintRasqNoteOff =>
+      'オフにしても、上げ済みの SNS のヘッダーに入れた手がかりは残ります。消すには、各 SNS のプロフィール編集で「ヘッダーの手がかりを消す」を使ってください。';
+
+  @override
   String get homeCreateMissingAccount => '(いないアカウント)';
 
   @override

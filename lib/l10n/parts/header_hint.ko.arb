@@ -1,0 +1,16 @@
+{
+  "@@locale": "ko",
+  "headerHintFromHeader": "헤더에서",
+  "headerHintUnlinkedTitle": "보고 있던 SNS 계정과 연결되어 있지 않습니다",
+  "headerHintUnlinkedText": "{account}의 헤더에 이 RASQ 계정이 적혀 있었지만, 이 계정은 {account}을(를) 연결하지 않았습니다. 헤더에는 누구나 핸들을 쓸 수 있으므로 본인의 것이 아닐 수 있습니다.",
+  "headerHintLabel": "RASQ",
+  "headerHintSwitchTitle": "헤더에 RASQ 계정 단서 넣기",
+  "headerHintSwitchSubtitle": "위쪽 가장자리에 가는 띠로 @{handle}을(를) 씁니다. 저장할 때 헤더는 3:1로 잘립니다",
+  "headerHintSwitchDetail": "다른 사람이 SNS에서 이 프로필을 볼 때 앱이 헤더를 읽어 RASQ 계정으로 가는 입구를 표시합니다. 누구의 페이지를 봤는지 서버에 묻지 않습니다. RASQ 프로필에서 '계정 표시'가 켜져 있고 이 SNS 계정을 연결해 표시 중일 때만 쓸 수 있습니다.",
+  "headerHintPresent": "현재 헤더에 @{handle}의 단서가 들어 있습니다",
+  "headerHintApplyCurrent": "현재 헤더에 넣기",
+  "headerHintErase": "헤더 단서 지우기",
+  "headerHintWriteFailed": "헤더 단서를 쓰지 못했습니다(이미지를 읽을 수 없습니다)",
+  "headerHintRasqNoteOn": "SNS 헤더에도 단서를 넣을 수 있습니다(각 SNS의 프로필 편집에서 헤더를 다시 저장). 넣어 두면 다른 사람의 앱이 서버에 묻지 않고 이 계정으로 안내할 수 있습니다.",
+  "headerHintRasqNoteOff": "꺼도 이미 올린 SNS 헤더의 단서는 남습니다. 지우려면 각 SNS의 프로필 편집에서 '헤더 단서 지우기'를 사용하세요."
+}

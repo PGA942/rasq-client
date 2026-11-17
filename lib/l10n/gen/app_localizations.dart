@@ -6486,6 +6486,84 @@ abstract class AppLocalizations {
   /// **'このメッセージは表示できません'**
   String get dmLastMessageHidden;
 
+  /// SNS のヘッダーの手がかりから読んだ RASQ アカウントのチップの補足
+  ///
+  /// In ja, this message translates to:
+  /// **'ヘッダーから'**
+  String get headerHintFromHeader;
+
+  /// ヘッダーの手がかりから来たが、そのアカウントをつないでいないときの注意の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'見ていた SNS アカウントとつながっていません'**
+  String get headerHintUnlinkedTitle;
+
+  /// account は @handle@instance
+  ///
+  /// In ja, this message translates to:
+  /// **'{account} のヘッダーにこの RASQ アカウントが書かれていましたが、このアカウントは {account} をつないでいません。ヘッダーにはだれでもハンドルを書けるので、本人のものとは限りません。'**
+  String headerHintUnlinkedText(String account);
+
+  /// SNS のプロフィール編集の、ヘッダーの手がかりの欄の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ'**
+  String get headerHintLabel;
+
+  /// No description provided for @headerHintSwitchTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ヘッダーに RASQ アカウントの手がかりを入れる'**
+  String get headerHintSwitchTitle;
+
+  /// handle は RASQ のハンドル
+  ///
+  /// In ja, this message translates to:
+  /// **'上の縁に細い帯で @{handle} を書きます。保存するとき、ヘッダーは 3:1 に切りそろえます'**
+  String headerHintSwitchSubtitle(String handle);
+
+  /// No description provided for @headerHintSwitchDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかの人が SNS 上でこのプロフィールを見たとき、アプリがヘッダーを読んで RASQ アカウントへの入口を出します。サーバーに「誰のページを見たか」を問い合わせずに済みます。RASQ のプロフィールで「アカウントを表示」をオンにしていて、この SNS アカウントをつないで出しているときだけ書けます。'**
+  String get headerHintSwitchDetail;
+
+  /// handle は読めた RASQ のハンドル
+  ///
+  /// In ja, this message translates to:
+  /// **'いまのヘッダーには @{handle} の手がかりが入っています'**
+  String headerHintPresent(String handle);
+
+  /// No description provided for @headerHintApplyCurrent.
+  ///
+  /// In ja, this message translates to:
+  /// **'いまのヘッダーに入れる'**
+  String get headerHintApplyCurrent;
+
+  /// No description provided for @headerHintErase.
+  ///
+  /// In ja, this message translates to:
+  /// **'ヘッダーの手がかりを消す'**
+  String get headerHintErase;
+
+  /// No description provided for @headerHintWriteFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ヘッダーの手がかりを書けませんでした(画像を読めませんでした)'**
+  String get headerHintWriteFailed;
+
+  /// No description provided for @headerHintRasqNoteOn.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNS のヘッダーにも手がかりを入れられます(各 SNS のプロフィール編集でヘッダーを保存し直す)。入れておくと、ほかの人のアプリはサーバーに問い合わせずにこのアカウントへ案内できます。'**
+  String get headerHintRasqNoteOn;
+
+  /// No description provided for @headerHintRasqNoteOff.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフにしても、上げ済みの SNS のヘッダーに入れた手がかりは残ります。消すには、各 SNS のプロフィール編集で「ヘッダーの手がかりを消す」を使ってください。'**
+  String get headerHintRasqNoteOff;
+
   /// ＋ のボタンに置いた投稿のアカウントが、もうログインしていないとき
   ///
   /// In ja, this message translates to:

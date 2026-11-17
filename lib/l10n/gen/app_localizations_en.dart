@@ -4090,6 +4090,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dmLastMessageHidden => 'This message can\'t be shown';
 
   @override
+  String get headerHintFromHeader => 'from header';
+
+  @override
+  String get headerHintUnlinkedTitle =>
+      'Not linked to the SNS account you were viewing';
+
+  @override
+  String headerHintUnlinkedText(String account) {
+    return 'The header of $account named this RASQ account, but this account hasn\'t linked $account. Anyone can write a handle into a header, so it may not belong to that person.';
+  }
+
+  @override
+  String get headerHintLabel => 'RASQ';
+
+  @override
+  String get headerHintSwitchTitle => 'Put a RASQ account hint in the header';
+
+  @override
+  String headerHintSwitchSubtitle(String handle) {
+    return 'Writes @$handle as a thin strip along the top edge. The header is cropped to 3:1 when saved';
+  }
+
+  @override
+  String get headerHintSwitchDetail =>
+      'When others view this profile on the SNS, the app reads the header and shows a way to your RASQ account, without asking the server whose page they\'re viewing. Available only when \"Show account\" is on in your RASQ profile and this SNS account is linked and shown.';
+
+  @override
+  String headerHintPresent(String handle) {
+    return 'Your current header contains a hint for @$handle';
+  }
+
+  @override
+  String get headerHintApplyCurrent => 'Add to current header';
+
+  @override
+  String get headerHintErase => 'Remove header hint';
+
+  @override
+  String get headerHintWriteFailed =>
+      'Couldn\'t write the header hint (the image couldn\'t be read)';
+
+  @override
+  String get headerHintRasqNoteOn =>
+      'You can also put a hint in your SNS headers (save the header again in each SNS\'s profile editor). With it, other people\'s apps can lead them to this account without asking the server.';
+
+  @override
+  String get headerHintRasqNoteOff =>
+      'Turning this off doesn\'t remove hints already in uploaded SNS headers. To remove them, use \"Remove header hint\" in each SNS\'s profile editor.';
+
+  @override
   String get homeCreateMissingAccount => '(missing account)';
 
   @override

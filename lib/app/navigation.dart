@@ -90,11 +90,14 @@ extension RasqNavigation on BuildContext {
   }
   /// RASQ アカウントページ (D-425): ユーザーページと同じく、幅の広い画面(≥840dp)では**第3カラム**に開く
   /// (第3カラムのページから開けば、居たページは第2カラムへ移る、D-057)。狭い画面とタブの外は、これまでどおり全画面のルート。
-  void pushRasqAccount(String handle) {
+  /// [fromSns] = SNS のヘッダーの手がかりから来たとき、見ていた SNS アカウント(`kind:instance:handle`、D-591)。
+  /// ページは、その SNS アカウントをつないでいなければ注意を出す。
+  void pushRasqAccount(String handle, {String? fromSns}) {
     if (handle.isEmpty) return;
     final inTab = _inTab;
-    final loc = inTab ? Routes.rasqAccountIn(_tabBase, handle) : Routes.rasqAccount(handle);
-    if (inTab && openPageInPanes(this, id: 'rasq:${handle.toLowerCase()}', title: '@$handle', location: loc, builder: (_) => RasqAccountPageScreen(key: ValueKey('rasqPage.$handle'), handle: handle))) return;
+    var loc = inTab ? Routes.rasqAccountIn(_tabBase, handle) : Routes.rasqAccount(handle);
+    if (fromSns != null) loc = '$loc?from=${Uri.encodeQueryComponent(fromSns)}';
+    if (inTab && openPageInPanes(this, id: 'rasq:${handle.toLowerCase()}', title: '@$handle', location: loc, builder: (_) => RasqAccountPageScreen(key: ValueKey('rasqPage.$handle'), handle: handle, fromSns: fromSns))) return;
     push(loc);
   }
 

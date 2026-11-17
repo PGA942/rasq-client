@@ -344,14 +344,25 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
               // ── SNS のプロフィールにも出す (D-312) ──
               _Labeled(
                 l10n.profileEditShowOnSnsLabel,
-                RasqSwitchListTile(
-                  key: const ValueKey('rasqProfile.showOnSns'),
-                  title: l10n.profileEditShowOnSnsTitle,
-                  subtitle: l10n.profileEditShowOnSnsSubtitle,
-                  detail: l10n.profileEditShowOnSnsDetail,
-                  value: (account ?? a).showLinksOnSnsProfiles,
-                  onChanged: _setShowOnSns,
-                ),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  RasqSwitchListTile(
+                    key: const ValueKey('rasqProfile.showOnSns'),
+                    title: l10n.profileEditShowOnSnsTitle,
+                    subtitle: l10n.profileEditShowOnSnsSubtitle,
+                    detail: l10n.profileEditShowOnSnsDetail,
+                    value: (account ?? a).showLinksOnSnsProfiles,
+                    onChanged: _setShowOnSns,
+                  ),
+                  // SNS のヘッダーの手がかり (D-591): 書くのは各 SNS のプロフィール編集。オフにしても上げたヘッダーには残る。
+                  Padding(
+                    padding: const EdgeInsets.only(top: RasqSpacing.xs),
+                    child: Text(
+                      (account ?? a).showLinksOnSnsProfiles ? l10n.headerHintRasqNoteOn : l10n.headerHintRasqNoteOff,
+                      key: const ValueKey('rasqProfile.showOnSns.headerNote'),
+                      style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
+                ]),
               ),
               // ── Keybase (D-313) ──
               _Labeled(

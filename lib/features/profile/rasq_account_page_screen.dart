@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_design/rasq_design.dart' as design show RasqNotice;
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -33,8 +34,12 @@ import 'rasq_post_tile.dart';
 /// アプリ内のユーザーページ、そうでなければブラウザ)→ タブ **投稿 / メディア / リスト / クリップ(どちらも第二期)/ プラグイン / レビュー** (D-277)。
 /// 自分のページでは「編集」と、RASQ アカウントとしての投稿(第一期は 3 件まで)の作成 / 削除ができる。
 class RasqAccountPageScreen extends ConsumerStatefulWidget {
-  const RasqAccountPageScreen({super.key, required this.handle});
+  const RasqAccountPageScreen({super.key, required this.handle, this.fromSns});
   final String handle;
+
+  /// SNS のヘッダーの手がかりから来たとき、見ていた SNS アカウント(`kind:instance:handle`、D-591)。このアカウントが
+  /// それをつないで(公開ページに出して)いなければ、上に注意を出す(ハンドルはだれでもヘッダーに書けるため)。
+  final String? fromSns;
   @override
   ConsumerState<RasqAccountPageScreen> createState() => _RasqAccountPageScreenState();
 }
@@ -85,6 +90,14 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
           length: 7,
           child: NestedScrollView(
             headerSliverBuilder: (_, _) => [
+              if (widget.fromSns != null && !d.profile.snsAccounts.any((t) => t.key.toLowerCase() == widget.fromSns!.toLowerCase()))
+                SliverToBoxAdapter(
+                  child: design.RasqNotice.warning(
+                    key: const ValueKey('rasqPage.headerHint.unlinked'),
+                    title: l10n.headerHintUnlinkedTitle,
+                    text: l10n.headerHintUnlinkedText(_snsLabel(widget.fromSns!)),
+                  ),
+                ),
               SliverToBoxAdapter(child: _Header(profile: d.profile, onTile: _openTile)),
               SliverPersistentHeader(
                 pinned: true,
@@ -118,6 +131,12 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
       ),
     );
   }
+}
+
+/// `kind:instance:handle` → 画面に出す `@handle@instance`。
+String _snsLabel(String key) {
+  final p = key.split(':');
+  return p.length < 3 ? key : '@${p.sublist(2).join(':')}@${p[1]}';
 }
 
 /// SNS アカウントのタイルのタップ: その SNS にログイン中ならアプリ内のユーザーページ、そうでなければブラウザ。

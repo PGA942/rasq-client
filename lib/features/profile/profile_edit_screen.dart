@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,8 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
 import '../theme/icon_theme/icon_theme_editor_screen.dart' show openIconThemeEditor;
+import 'header_hint/header_hint_reader.dart';
+import 'header_hint/header_hint_target.dart';
 import 'profile_image_flow.dart';
 import '../theme/icon_theme/icon_theme_reader.dart' show iconThemeFetcherProvider;
 import '../../l10n/l10n.dart';
@@ -31,6 +34,13 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final List<(TextEditingController, TextEditingController)> _links = [];
   ({Uint8List bytes, String name, String? mime})? _avatar;
   ({Uint8List bytes, String name, String? mime})? _banner;
+
+  /// 選んだヘッダー(手がかりを書く前)。[_banner] はこれに手がかりを書いたもの(書かないときは同じもの)(D-591)。
+  ({Uint8List bytes, String name, String? mime})? _bannerRaw;
+
+  /// ヘッダーに RASQ アカウントの手がかりを入れるか (D-591)。書けるとき([headerHintTargetProvider])だけ効く。
+  bool _hintOn = true;
+  bool _hintBusy = false;
   UserProfile? _loaded;
   bool _busy = false;
   String? _error;
@@ -64,7 +74,57 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   Future<void> _change(bool banner) async {
     final x = await pickAndEditProfileImage(ref, context);
     if (x == null || !mounted) return;
-    setState(() => banner ? _banner = x : _avatar = x);
+    if (!banner) return setState(() => _avatar = x);
+    setState(() => _banner = _bannerRaw = x);
+    await _applyHint();
+  }
+
+  /// 選んだヘッダーに手がかりを書く / 書かない (D-591)。書けないとき(対象でない / 読めない画像)は、選んだまま。
+  Future<void> _applyHint() async {
+    final raw = _bannerRaw;
+    if (raw == null) return;
+    final account = ref.read(currentUserProvider).account.key;
+    final handle = _hintOn ? await ref.read(headerHintTargetProvider(account).future) : null;
+    if (handle == null) {
+      if (mounted) setState(() => _banner = raw);
+      return;
+    }
+    setState(() => _hintBusy = true);
+    final out = await compute(headerHintWriteImage, HeaderHintWriteJob(source: raw.bytes, handle: handle, accountKey: account));
+    if (!mounted || _bannerRaw != raw) return;
+    setState(() {
+      _hintBusy = false;
+      _banner = out == null ? raw : (bytes: out, name: 'header.jpg', mime: 'image/jpeg');
+      if (out == null) _error = appL10n.headerHintWriteFailed;
+    });
+  }
+
+  /// いまのヘッダーを取り直して、手がかりを入れる([erase] = 消す)(D-591)。保存するまで上げない。
+  Future<void> _rewriteCurrent(Uri current, {bool erase = false}) async {
+    setState(() => _hintBusy = true);
+    final bytes = await ref.read(iconThemeFetcherProvider)(current).catchError((Object _) => null);
+    if (!mounted) return;
+    if (bytes == null) {
+      return setState(() {
+        _hintBusy = false;
+        _error = appL10n.headerHintWriteFailed;
+      });
+    }
+    if (!erase) {
+      setState(() => _bannerRaw = (bytes: bytes, name: 'header', mime: null));
+      return _applyHint();
+    }
+    final out = await compute(headerHintEraseImage, bytes);
+    if (!mounted) return;
+    setState(() {
+      _hintBusy = false;
+      _hintOn = false;
+      if (out == null) {
+        _error = appL10n.headerHintWriteFailed;
+      } else {
+        _banner = _bannerRaw = (bytes: out, name: 'header.jpg', mime: 'image/jpeg');
+      }
+    });
   }
 
   /// アイコンにテーマを埋め込む (D-581)。選んである画像(無ければいまのアイコン)から。ヘッダーのボタンからも同じ。
@@ -75,6 +135,55 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     final png = await openIconThemeEditor(context, initial: initial);
     if (png == null || !mounted) return;
     setState(() => _avatar = (bytes: png, name: 'icon_theme.png', mime: 'image/png'));
+  }
+
+  /// ヘッダーの RASQ アカウントの手がかり (D-591)。書けるとき: 入れるかのスイッチ(と、ヘッダーを替えないときの「いまの
+  /// ヘッダーに入れる」)。書けないとき: いまのヘッダーに自分の手がかりが入っていれば「消す」だけ。どちらでもなければ出さない。
+  Widget _headerHintSection(UserProfile p, String account) {
+    final l10n = context.l10n;
+    final target = ref.watch(headerHintTargetProvider(account)).value;
+    final current = p.bannerUrl;
+    final present = current == null ? null : ref.watch(headerHintProvider(current.toString())).value;
+    final mine = present != null && present.writtenFor(account) ? present : null;
+    final busy = _hintBusy || _busy;
+    if (target == null && mine == null) return const SizedBox.shrink();
+    return _Labeled(
+      l10n.headerHintLabel,
+      Column(key: const ValueKey('profileEdit.headerHint'), crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (target != null)
+          RasqSwitchListTile(
+            key: const ValueKey('profileEdit.headerHint.switch'),
+            title: l10n.headerHintSwitchTitle,
+            subtitle: l10n.headerHintSwitchSubtitle(target),
+            detail: l10n.headerHintSwitchDetail,
+            value: _hintOn,
+            onChanged: busy
+                ? null
+                : (v) {
+                    setState(() => _hintOn = v);
+                    _applyHint();
+                  },
+          ),
+        if (mine != null && _bannerRaw == null) Text(l10n.headerHintPresent(mine.handle), style: RasqTypography.bodySmall),
+        Wrap(spacing: RasqSpacing.sm, children: [
+          if (target != null && _hintOn && _bannerRaw == null && current != null && mine?.handle != target.toLowerCase())
+            TextButton.icon(
+              key: const ValueKey('profileEdit.headerHint.apply'),
+              onPressed: busy ? null : () => _rewriteCurrent(current),
+              icon: const Icon(Icons.auto_fix_high_outlined, size: 16),
+              label: Text(l10n.headerHintApplyCurrent),
+            ),
+          if (mine != null && _bannerRaw == null)
+            TextButton.icon(
+              key: const ValueKey('profileEdit.headerHint.erase'),
+              onPressed: busy ? null : () => _rewriteCurrent(current!, erase: true),
+              icon: const Icon(Icons.layers_clear_outlined, size: 16),
+              label: Text(l10n.headerHintErase),
+            ),
+          if (_hintBusy) const Padding(padding: EdgeInsets.all(8), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))),
+        ]),
+      ]),
+    );
   }
 
   Future<void> _save() async {
@@ -120,7 +229,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     return Scaffold(
       appBar: RasqPageHeader(
         title: l10n.profileEditTitle,
-        actions: [TextButton(onPressed: _busy || _loaded == null ? null : _save, child: Text(l10n.profileEditSave))],
+        actions: [TextButton(onPressed: _busy || _hintBusy || _loaded == null ? null : _save, child: Text(l10n.profileEditSave))],
         onMore: () {},
       ),
       body: profile.when(
@@ -166,6 +275,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                   ]),
                 ]),
           ),
+          _headerHintSection(p, me.account.key),
           _Labeled(l10n.profileEditBioLabel, RasqInput(controller: _bio, maxLines: 5, hintText: l10n.profileEditBioLabel)),
           _Labeled(l10n.profileEditLocationLabel, RasqInput(controller: _location, hintText: l10n.profileEditLocationLabel)),
           _Labeled(

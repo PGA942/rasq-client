@@ -329,7 +329,7 @@ GoRoute get _userRoute => GoRoute(
 
 /// `rasq/:handle` — RASQ アカウントページ (D-425)。ユーザーページと同じく各タブの下にも置き、幅の広い画面で
 /// 第3カラムに開いたページが第2カラムへ移る(タブの中に積む)ときに使う。タブの外からはアプリ直下の `/rasq/:handle`。
-GoRoute get _rasqAccountRoute => GoRoute(path: 'rasq/:handle', builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!));
+GoRoute get _rasqAccountRoute => GoRoute(path: 'rasq/:handle', builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!, fromSns: s.uri.queryParameters['from']));
 
 /// `relational/event` — 関連TL のイベントのページ (D-434)。アカウントページ (D-425) と同じく各タブの下にも置き、
 /// 第3カラムに開いたページが第2カラムへ移るときに使う。タブの外からはアプリ直下の `/relational/event`。
@@ -505,7 +505,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
           GoRoute(path: '/rasq-post/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqPostScreen(postId: s.pathParameters['id']!)),
           GoRoute(path: '/rasq-post/:id/reactions', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqReactionsScreen(postId: s.pathParameters['id']!)),
-          GoRoute(path: '/rasq/:handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!)),
+          GoRoute(path: '/rasq/:handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!, fromSns: s.uri.queryParameters['from'])),
           GoRoute(path: '/rasq-collections/:ref', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqCollectionScreen(idOrCode: s.pathParameters['ref']!)),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
           GoRoute(path: Routes.rai, parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RaiHomeScreen(ask: s.uri.queryParameters['ask'] == '1'), routes: [

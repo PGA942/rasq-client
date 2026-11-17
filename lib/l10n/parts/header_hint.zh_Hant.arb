@@ -1,0 +1,16 @@
+{
+  "@@locale": "zh_Hant",
+  "headerHintFromHeader": "來自橫幅",
+  "headerHintUnlinkedTitle": "未連結你正在查看的 SNS 帳號",
+  "headerHintUnlinkedText": "{account} 的橫幅寫著此 RASQ 帳號，但此帳號並未連結 {account}。任何人都可以在橫幅中寫入帳號名稱，因此不一定是本人。",
+  "headerHintLabel": "RASQ",
+  "headerHintSwitchTitle": "在橫幅中加入 RASQ 帳號線索",
+  "headerHintSwitchSubtitle": "在頂部邊緣以細條寫入 @{handle}。儲存時橫幅會裁切為 3:1",
+  "headerHintSwitchDetail": "他人在 SNS 上查看此個人檔案時，App 會讀取橫幅並顯示通往你的 RASQ 帳號的入口，無需向伺服器詢問查看了誰的頁面。僅當 RASQ 個人檔案中開啟了「顯示帳號」且已連結並顯示此 SNS 帳號時可用。",
+  "headerHintPresent": "目前的橫幅中含有 @{handle} 的線索",
+  "headerHintApplyCurrent": "加入目前的橫幅",
+  "headerHintErase": "清除橫幅線索",
+  "headerHintWriteFailed": "無法寫入橫幅線索（無法讀取圖片）",
+  "headerHintRasqNoteOn": "也可以在 SNS 橫幅中加入線索（在各 SNS 的個人檔案編輯中重新儲存橫幅）。加入後，他人的 App 無需詢問伺服器即可引導至此帳號。",
+  "headerHintRasqNoteOff": "關閉後，已上傳的 SNS 橫幅中的線索仍會保留。要清除，請在各 SNS 的個人檔案編輯中使用「清除橫幅線索」。"
+}
