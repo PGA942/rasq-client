@@ -72,5 +72,8 @@
   "profileEditSnsPostsCollectionsConsentTitle": "Also use the deposited key for RASQ lists",
   "profileEditSnsPostsCollectionsConsentMessage": "The key deposited for showing posts will also be used for another purpose.\n\n• When a RASQ list or clip is opened, this key is used to ask the SNS whether you follow the people in the list (to check whether you can view it).\n• This key is used to fetch the public / home posts of the people in the list.\n• It isn't used for actions like posting or following.\n• Turning this switch off stops using it immediately.",
   "profileEditSnsPostsCollectionsAgree": "Agree and use",
-  "profileEditSnsPostsCollectionsFailed": "Couldn't change: {message}"
+  "profileEditSnsPostsCollectionsFailed": "Couldn't change: {message}",
+  "profileEditAvatarChange": "Change icon",
+  "profileEditAvatarEmbedTheme": "Embed a theme in the icon",
+  "profileEditBannerChange": "Change header"
 }

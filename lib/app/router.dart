@@ -32,6 +32,7 @@ import '../features/settings/column_layout_screen.dart';
 import '../features/settings/language_screen.dart';
 import '../features/compose/quick_emoji_picker.dart';
 import '../features/theme/theme_settings_screen.dart';
+import '../features/theme/muted_themes_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
 import '../features/settings/learning_screen.dart';
 import '../features/settings/emom_threshold_screen.dart';
@@ -222,6 +223,8 @@ abstract final class Routes {
 
   /// アプリの外観 → フォントやカラースキーム = 着せ替え (D-335)。
   static const settingsTheme = '/settings/theme';
+  /// ミュートしたテーマ (D-587)。
+  static const settingsMutedThemes = '/settings/theme-muted';
 
   /// 持ち主の確認 (D-313): つないだ SNS アカウントごと / RASQ アカウントの Keybase。
   static String rasqSnsVerify(String accountKey) => '/settings/rasq-verify/${Uri.encodeComponent(accountKey)}';
@@ -496,6 +499,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'language', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LanguageSettingsScreen()),
             GoRoute(path: 'quick-emoji', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const QuickEmojiSettingsScreen()),
             GoRoute(path: 'theme', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ThemeSettingsScreen()),
+            GoRoute(path: 'theme-muted', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MutedThemesScreen()),
             // プラグインボタン (D-210): 宣言されたボタン / 束ねる閾値。
             GoRoute(path: 'actionbar-plugins', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ActionBarPluginsScreen()),
           ]),

@@ -7251,7 +7251,7 @@ abstract class AppLocalizations {
   /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
-  /// **'アイコンの四隅に色のブロックでテーマを書き込みます。SNS で縮められたり圧縮し直されたりしても RASQ で読み戻し、プロフィールのアイコンを拡大したときの背景・文字色・パーティクルになります。'**
+  /// **'アイコンの四隅に色のブロックでテーマを書き込みます。SNS で縮められたり圧縮し直されたりしても RASQ で読み戻し、あなたのユーザーページと、あなたが始めたスレッドの背景・文字色・パーティクルになります。'**
   String get iconThemeEditorIntro;
 
   /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
@@ -8000,7 +8000,7 @@ abstract class AppLocalizations {
   /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
   ///
   /// In ja, this message translates to:
-  /// **'アイコンに埋め込まれたテーマで、アイコンの枠・添付の並び・アイコンを拡大したときの背景を変えます(アイコンの画像を取り直します)'**
+  /// **'アイコンに埋め込まれたテーマで、アイコンの枠・添付の並び・ユーザーページとスレッドの見た目を変えます(アイコンの画像を取り直します)'**
   String get iconThemeSettingsReadSubtitle;
 
   /// テーマ編集 / アイコンのテーマ(D-577〜D-581)
@@ -8008,6 +8008,18 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'いまのアイコンや好きな画像に、背景・文字色・パーティクルのテーマを書き込みます'**
   String get iconThemeSettingsEditorSubtitle;
+
+  /// テーマ編集の画面の固定の欄(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'変換先のアイコン'**
+  String get iconThemeTargetIcon;
+
+  /// テーマ編集の画面の固定の欄(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'画像を変更'**
+  String get iconThemeChangeImage;
 
   /// この言語の、その言語での名前(設定の「言語」の一覧に出す)。訳すときは、その言語での自分の名前にする(English / 한국어 など)。
   ///
@@ -17545,6 +17557,24 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'変えられませんでした: {message}'**
   String profileEditSnsPostsCollectionsFailed(String message);
+
+  /// プロフィールの編集のアイコン / ヘッダー(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'アイコンの変更'**
+  String get profileEditAvatarChange;
+
+  /// プロフィールの編集のアイコン / ヘッダー(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'アイコンにテーマを埋め込む'**
+  String get profileEditAvatarEmbedTheme;
+
+  /// プロフィールの編集のアイコン / ヘッダー(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'ヘッダーを変更'**
+  String get profileEditBannerChange;
 
   /// 持ち主の確認の文を貼る場所(Misskey の呼び名)
   ///
@@ -31755,6 +31785,102 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'rasq build で作った着せ替えパック。コードを含まないので、未審査でもそのまま使えます'**
   String get themeImportDetail;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'このテーマを表示しない'**
+  String get themeMuteThis;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'ほかの人のテーマ'**
+  String get themeDisplayTitle;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'アイコンに埋め込まれたテーマ'**
+  String get themeOriginIcon;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'RASQ Atmos(プロモーション)'**
+  String get themeOriginAtmos;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'コミュハッシュタグ'**
+  String get themeOriginCommunity;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'フォローしている人だけ'**
+  String get themeScopeFollowees;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'全員'**
+  String get themeScopeAll;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'表示しない'**
+  String get themeScopeOff;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'着せ替えより優先する'**
+  String get themeDisplayOverPlugin;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'オフのときは、着せ替えを選んでいる間はこのテーマを出しません'**
+  String get themeDisplayOverPluginSubtitle;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュートしたテーマ'**
+  String get themeMutedTitle;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 件}}'**
+  String themeMutedCount(int count);
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'ミュートしたテーマはありません'**
+  String get themeMutedEmpty;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'テーマが付いたページの「…」の「このテーマを表示しない」でミュートできます'**
+  String get themeMutedEmptyHint;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'同じ値のテーマは、誰のものでも表示しません。'**
+  String get themeMutedCaption;
+
+  /// ほかの人のテーマの出し方(D-587)
+  ///
+  /// In ja, this message translates to:
+  /// **'解除'**
+  String get themeUnmute;
 
   /// No description provided for @trendTitle.
   ///

@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,8 +5,6 @@ import 'package:rasq_design/rasq_design.dart';
 import '../../l10n/l10n.dart';
 
 import '../home/plugin_actions.dart';
-import '../theme/icon_theme/icon_theme_backdrop.dart' show IconThemeBackdrop, themeColor;
-import '../theme/icon_theme/icon_theme_reader.dart' show iconThemeProvider;
 import '../media/viewer_plugin_overlay.dart';
 
 /// プロフィールのアイコン / バナーの全画面表示 (D-177)。黒背景 + ピンチズーム、
@@ -43,35 +40,9 @@ class _ProfileImageViewerScreenState extends ConsumerState<ProfileImageViewerScr
 
   @override
   Widget build(BuildContext context) {
-    // アイコンに埋め込まれたテーマ (D-580): 読めたら黒の代わりにテーマの背景・パーティクル・枠を敷き、アイコンはテーマの
-    // フレーム(予約ビット: 角丸 / 丸)で、文字はテーマの文字色で。読めない画像はこれまでどおり。
-    final spec = ref.watch(iconThemeProvider(widget.url.toString())).value;
-    final fg = spec == null ? Colors.white : themeColor(spec.basic.text);
-    Widget picture = Image.network(webHtmlElementStrategy: rasqWebImageStrategy, widget.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => Icon(Icons.broken_image_outlined, color: fg, size: 48));
-    if (spec != null) {
-      final rounded = spec.basic.hints?.roundedFrame ?? true;
-      final image = picture;
-      picture = LayoutBuilder(builder: (context, c) {
-        final side = math.min(280.0, c.biggest.shortestSide * 0.62);
-        return Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            key: const ValueKey('profileImage.themed'),
-            width: side,
-            height: side,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(rounded ? side * 0.2 : side / 2), boxShadow: const [BoxShadow(color: Color(0x59000000), blurRadius: 40, offset: Offset(0, 10))]),
-            child: ClipRRect(borderRadius: BorderRadius.circular(rounded ? side * 0.2 : side / 2), child: SizedBox.expand(child: FittedBox(fit: BoxFit.cover, child: image))),
-          ),
-          if (spec.ext?.url case final url?)
-            Padding(
-              padding: const EdgeInsets.only(top: RasqSpacing.md),
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), borderRadius: BorderRadius.circular(8)),
-                child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), child: Text(context.l10n.iconThemePluginUrlNote(url), key: const ValueKey('profileImage.pluginNote'), style: RasqTypography.caption.copyWith(color: Colors.white))),
-              ),
-            ),
-        ]);
-      });
-    }
+    // アイコンの全画面表示にはテーマを付けない (D-587。テーマはその人のユーザーページとスレッドのページに出す)。
+    const fg = Colors.white;
+    final Widget picture = Image.network(webHtmlElementStrategy: rasqWebImageStrategy, widget.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: fg, size: 48));
     final content = Stack(children: [
         GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -122,10 +93,6 @@ class _ProfileImageViewerScreenState extends ConsumerState<ProfileImageViewerScr
             ),
           ),
       ]);
-    return Scaffold(
-      backgroundColor: spec == null ? Colors.black : Colors.transparent,
-      // テーマの背景は全体の下。押す / なぞるとパーティクルが出る(ヘッダーの切り替えもそのまま)。
-      body: spec == null ? content : IconThemeBackdrop(key: const ValueKey('profileImage.backdrop'), spec: spec, child: content),
-    );
+    return Scaffold(backgroundColor: Colors.black, body: content);
   }
 }

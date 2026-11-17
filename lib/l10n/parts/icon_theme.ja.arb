@@ -3,7 +3,7 @@
   "@iconThemeEditorTitle": {
     "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
-  "iconThemeEditorIntro": "アイコンの四隅に色のブロックでテーマを書き込みます。SNS で縮められたり圧縮し直されたりしても RASQ で読み戻し、プロフィールのアイコンを拡大したときの背景・文字色・パーティクルになります。",
+  "iconThemeEditorIntro": "アイコンの四隅に色のブロックでテーマを書き込みます。SNS で縮められたり圧縮し直されたりしても RASQ で読み戻し、あなたのユーザーページと、あなたが始めたスレッドの背景・文字色・パーティクルになります。",
   "@iconThemeEditorIntro": {
     "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
@@ -610,12 +610,16 @@
   "@iconThemeSettingsRead": {
     "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
-  "iconThemeSettingsReadSubtitle": "アイコンに埋め込まれたテーマで、アイコンの枠・添付の並び・アイコンを拡大したときの背景を変えます(アイコンの画像を取り直します)",
+  "iconThemeSettingsReadSubtitle": "アイコンに埋め込まれたテーマで、アイコンの枠・添付の並び・ユーザーページとスレッドの見た目を変えます(アイコンの画像を取り直します)",
   "@iconThemeSettingsReadSubtitle": {
     "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
   },
   "iconThemeSettingsEditorSubtitle": "いまのアイコンや好きな画像に、背景・文字色・パーティクルのテーマを書き込みます",
   "@iconThemeSettingsEditorSubtitle": {
     "description": "テーマ編集 / アイコンのテーマ(D-577〜D-581)"
-  }
+  },
+  "iconThemeTargetIcon": "変換先のアイコン",
+  "@iconThemeTargetIcon": {"description": "テーマ編集の画面の固定の欄(D-587)"},
+  "iconThemeChangeImage": "画像を変更",
+  "@iconThemeChangeImage": {"description": "テーマ編集の画面の固定の欄(D-587)"}
 }

@@ -4532,7 +4532,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get iconThemeEditorIntro =>
-      'Writes a theme into the four corners of your icon as colour blocks. Even after a social network shrinks or recompresses it, RASQ reads it back and uses it for the background, text colour and particles when someone enlarges your icon.';
+      'Writes a theme into the four corners of your icon as colour blocks. Even after a social network shrinks or recompresses it, RASQ reads it back and uses it for the background, text colour and particles of your user page and the threads you start.';
 
   @override
   String get iconThemeStepPick => 'Choose an icon';
@@ -4947,11 +4947,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get iconThemeSettingsReadSubtitle =>
-      'Uses themes embedded in icons to change avatar frames, media layout and the background of enlarged icons (downloads the icon image again)';
+      'Uses themes embedded in icons to change avatar frames, media layout and the look of user pages and threads (downloads the icon image again)';
 
   @override
   String get iconThemeSettingsEditorSubtitle =>
       'Write a background, text colour and particle theme into your current icon or any image';
+
+  @override
+  String get iconThemeTargetIcon => 'Icon to write into';
+
+  @override
+  String get iconThemeChangeImage => 'Change image';
 
   @override
   String get languageSelfName => 'English';
@@ -10896,6 +10902,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String profileEditSnsPostsCollectionsFailed(String message) {
     return 'Couldn\'t change: $message';
   }
+
+  @override
+  String get profileEditAvatarChange => 'Change icon';
+
+  @override
+  String get profileEditAvatarEmbedTheme => 'Embed a theme in the icon';
+
+  @override
+  String get profileEditBannerChange => 'Change header';
 
   @override
   String get profileOwnershipWhereMisskey =>
@@ -20064,6 +20079,65 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get themeImportDetail =>
       'A theme pack built with rasq build. It contains no code, so it can be used as is even without review';
+
+  @override
+  String get themeMuteThis => 'Don\'t show this theme';
+
+  @override
+  String get themeDisplayTitle => 'Other people\'s themes';
+
+  @override
+  String get themeOriginIcon => 'Themes embedded in icons';
+
+  @override
+  String get themeOriginAtmos => 'RASQ Atmos (promotions)';
+
+  @override
+  String get themeOriginCommunity => 'Community hashtags';
+
+  @override
+  String get themeScopeFollowees => 'Only people you follow';
+
+  @override
+  String get themeScopeAll => 'Everyone';
+
+  @override
+  String get themeScopeOff => 'Don\'t show';
+
+  @override
+  String get themeDisplayOverPlugin => 'Prefer over the app theme';
+
+  @override
+  String get themeDisplayOverPluginSubtitle =>
+      'When off, this kind of theme is hidden while an app theme is selected';
+
+  @override
+  String get themeMutedTitle => 'Muted themes';
+
+  @override
+  String themeMutedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count themes',
+      one: '$count theme',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get themeMutedEmpty => 'No muted themes';
+
+  @override
+  String get themeMutedEmptyHint =>
+      'Use \"Don\'t show this theme\" in the … menu of a themed page';
+
+  @override
+  String get themeMutedCaption =>
+      'A theme with the same values is hidden for everyone who uses it.';
+
+  @override
+  String get themeUnmute => 'Unmute';
 
   @override
   String get trendTitle => 'Trends';

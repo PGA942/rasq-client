@@ -137,6 +137,9 @@ void main() {
     final scrollable = find.descendant(of: find.byType(RasqProfileEditScreen), matching: find.byType(Scrollable)).first;
     final open = find.byKey(const ValueKey('rasqProfile.verify.misskey:m.example:taro'));
     await tester.scrollUntilVisible(open, 200, scrollable: scrollable);
+    // アイコンの段が高くなった (D-587) ので、端に半分だけ見えた所で止まることがある。全部見えるところまで。
+    await tester.ensureVisible(open);
+    await tester.pumpAndSettle();
     // 公開のプロフィールを読めない種類には、ボタンを出さない。
     expect(find.byKey(const ValueKey('rasqProfile.verify.mixi2:mixi.social:taro')), findsNothing);
     await tester.tap(open);

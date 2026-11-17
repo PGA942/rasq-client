@@ -7,6 +7,7 @@ import 'package:rrl_renderer/rrl_renderer.dart';
 import '../icon_theme/icon_theme_backdrop.dart';
 import '../icon_theme/rasq_theme_spec.dart';
 import '../icon_theme/theme_frames.dart';
+import '../theme_display.dart';
 import 'tag_themes.dart';
 
 /// RASQ Atmos (D-584) とコミュハッシュタグのテーマ (D-583) の描き方。
@@ -130,26 +131,15 @@ class _AtmosBurstState extends ConsumerState<AtmosBurst> with SingleTickerProvid
   }
 }
 
-/// テーマを付けた面 (D-583 / D-584): 背景(色・フレーム・パーティクル)を薄く敷き、上の中身は読みやすいよう面の色を重ねる。
-/// 強調色はテーマのものにする(ボタン・リンクの色)。中身の文字の色は変えない(投稿が読めなくならないように)。
+/// テーマを付けた面 (D-583 / D-584 → D-587): 着せ替えと同じ層(色の上書き + 一番下の背景)に、エフェクトは中身の上。
+/// 出すかどうかは見ない(申請の画面の見本など)。ページに付けるものは [watchThemeVisible] を見てから [ThemedSurface] で。
 class TagThemeSurface extends StatelessWidget {
-  const TagThemeSurface({super.key, required this.spec, required this.child, this.veil = 0.84});
+  const TagThemeSurface({super.key, required this.spec, required this.child});
   final RasqThemeSpec spec;
   final Widget child;
 
-  /// 背景の上に重ねる面の色の濃さ(0 = 背景そのまま)。
-  final double veil;
-
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final accent = themeColor(spec.basic.accent);
-    return Stack(children: [
-      Positioned.fill(child: IgnorePointer(child: IconThemeBackdrop(spec: spec))),
-      Positioned.fill(child: IgnorePointer(child: ColoredBox(color: theme.colorScheme.surface.withValues(alpha: veil)))),
-      Theme(data: theme.copyWith(colorScheme: theme.colorScheme.copyWith(primary: accent)), child: child),
-    ]);
-  }
+  Widget build(BuildContext context) => ThemedSurface(spec: spec, child: child);
 }
 
 /// テーマの帯: タグの名前と一言を、テーマの背景の上にテーマの文字色で。

@@ -4321,7 +4321,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get iconThemeEditorIntro =>
-      'アイコンの四隅に色のブロックでテーマを書き込みます。SNS で縮められたり圧縮し直されたりしても RASQ で読み戻し、プロフィールのアイコンを拡大したときの背景・文字色・パーティクルになります。';
+      'アイコンの四隅に色のブロックでテーマを書き込みます。SNS で縮められたり圧縮し直されたりしても RASQ で読み戻し、あなたのユーザーページと、あなたが始めたスレッドの背景・文字色・パーティクルになります。';
 
   @override
   String get iconThemeStepPick => 'アイコンを選ぶ';
@@ -4731,11 +4731,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get iconThemeSettingsReadSubtitle =>
-      'アイコンに埋め込まれたテーマで、アイコンの枠・添付の並び・アイコンを拡大したときの背景を変えます(アイコンの画像を取り直します)';
+      'アイコンに埋め込まれたテーマで、アイコンの枠・添付の並び・ユーザーページとスレッドの見た目を変えます(アイコンの画像を取り直します)';
 
   @override
   String get iconThemeSettingsEditorSubtitle =>
       'いまのアイコンや好きな画像に、背景・文字色・パーティクルのテーマを書き込みます';
+
+  @override
+  String get iconThemeTargetIcon => '変換先のアイコン';
+
+  @override
+  String get iconThemeChangeImage => '画像を変更';
 
   @override
   String get languageSelfName => '日本語';
@@ -10454,6 +10460,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String profileEditSnsPostsCollectionsFailed(String message) {
     return '変えられませんでした: $message';
   }
+
+  @override
+  String get profileEditAvatarChange => 'アイコンの変更';
+
+  @override
+  String get profileEditAvatarEmbedTheme => 'アイコンにテーマを埋め込む';
+
+  @override
+  String get profileEditBannerChange => 'ヘッダーを変更';
 
   @override
   String get profileOwnershipWhereMisskey =>
@@ -19232,6 +19247,61 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get themeImportDetail =>
       'rasq build で作った着せ替えパック。コードを含まないので、未審査でもそのまま使えます';
+
+  @override
+  String get themeMuteThis => 'このテーマを表示しない';
+
+  @override
+  String get themeDisplayTitle => 'ほかの人のテーマ';
+
+  @override
+  String get themeOriginIcon => 'アイコンに埋め込まれたテーマ';
+
+  @override
+  String get themeOriginAtmos => 'RASQ Atmos(プロモーション)';
+
+  @override
+  String get themeOriginCommunity => 'コミュハッシュタグ';
+
+  @override
+  String get themeScopeFollowees => 'フォローしている人だけ';
+
+  @override
+  String get themeScopeAll => '全員';
+
+  @override
+  String get themeScopeOff => '表示しない';
+
+  @override
+  String get themeDisplayOverPlugin => '着せ替えより優先する';
+
+  @override
+  String get themeDisplayOverPluginSubtitle => 'オフのときは、着せ替えを選んでいる間はこのテーマを出しません';
+
+  @override
+  String get themeMutedTitle => 'ミュートしたテーマ';
+
+  @override
+  String themeMutedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get themeMutedEmpty => 'ミュートしたテーマはありません';
+
+  @override
+  String get themeMutedEmptyHint => 'テーマが付いたページの「…」の「このテーマを表示しない」でミュートできます';
+
+  @override
+  String get themeMutedCaption => '同じ値のテーマは、誰のものでも表示しません。';
+
+  @override
+  String get themeUnmute => '解除';
 
   @override
   String get trendTitle => 'トレンド';

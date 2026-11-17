@@ -25,7 +25,9 @@ import 'reactions_screen.dart';
 import 'thread_section.dart';
 import 'thread_section_bar.dart';
 import '../ads/timeline_ads.dart';
-import '../theme/icon_theme/rasq_theme_spec.dart' show RasqThemeScope;
+import '../theme/icon_theme/icon_theme_reader.dart' show iconThemeProvider;
+import '../theme/icon_theme/rasq_theme_spec.dart' show RasqThemeScope, RasqThemeSpec;
+import '../theme/theme_display.dart';
 import '../theme/tag_themes/atmos.dart';
 import '../theme/tag_themes/tag_themes.dart';
 
@@ -217,16 +219,49 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         },
         data: (t) => body(t.post, gate.filterPosts(t.ancestors), gate.filterPosts(t.descendants)),
       );
-    return Scaffold(
-      appBar: RasqPageHeader(
-        title: context.l10n.postDetailTitle,
-        leadingAvatar: accountButton == null ? me : null,
-        leading: accountButton,
-        actions: [if (replyTarget != null) PostBookmarkButton(post: replyTarget, session: session)],
-        onMore: () {},
+    final pageTheme = _pageTheme(thread.value, gate.filterPosts);
+    return ThemedSurface(
+      spec: pageTheme?.spec,
+      child: Scaffold(
+        appBar: RasqPageHeader(
+          title: context.l10n.postDetailTitle,
+          leadingAvatar: accountButton == null ? me : null,
+          leading: accountButton,
+          actions: [if (replyTarget != null) PostBookmarkButton(post: replyTarget, session: session)],
+          onMore: pageTheme == null ? () {} : () => _themeMenu(context, manager, pageTheme),
+        ),
+        body: content,
       ),
-      body: content,
     );
+  }
+
+  /// このページのテーマ (D-587): スレッドの根(無ければ開いた投稿)に RASQ Atmos のスレッドのテーマがあればそれ、
+  /// 無ければ根の投稿の作者のアイコンに埋め込まれたテーマ。どちらも設定(出す範囲・着せ替えとの優先・ミュート)を見る。
+  ({ThemeOrigin origin, RasqThemeSpec spec})? _pageTheme(Thread? t, List<Post> Function(List<Post>) filter) {
+    final post = t?.post ?? initial;
+    if (post == null) return null;
+    final ancestors = t == null ? const <Post>[] : filter(t.ancestors);
+    final root = ancestors.isEmpty ? post : ancestors.first;
+    final author = (viewer: root.account, userId: root.author.id);
+    final atmos = [ref.watchAtmos(root), if (ancestors.isNotEmpty) ref.watchAtmos(post)].nonNulls.where((e) => e.thread).firstOrNull;
+    if (atmos != null) {
+      final spec = atmos.spec.copyWith(scope: RasqThemeScope.thread(root.key));
+      if (watchThemeVisible(ref, origin: ThemeOrigin.atmos, spec: spec, author: author)) return (origin: ThemeOrigin.atmos, spec: spec);
+    }
+    final avatar = root.author.avatarUrl;
+    final icon = avatar == null ? null : ref.watch(iconThemeProvider(avatar.toString())).value;
+    if (icon != null && watchThemeVisible(ref, origin: ThemeOrigin.icon, spec: icon, author: author)) return (origin: ThemeOrigin.icon, spec: icon);
+    return null;
+  }
+
+  /// 「…」: テーマを出しているときだけ「このテーマを表示しない」(値でミュート。解除は設定のミュートしたテーマ)。
+  Future<void> _themeMenu(BuildContext context, OverlayManager manager, ({ThemeOrigin origin, RasqThemeSpec spec}) theme) async {
+    final box = context.findRenderObject() as RenderBox?;
+    final anchor = box == null ? const Rect.fromLTWH(0, 80, 1, 1) : Rect.fromLTWH(box.size.width - 48, 56, 40, 40);
+    final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, items: [
+      RasqDropdownItem(context.l10n.themeMuteThis, 'muteTheme', destructive: true),
+    ]);
+    if (pick == 'muteTheme') await muteTheme(ref, theme.spec, theme.origin);
   }
 
   /// 短押し: 並び順 (D-070)。関連順(SigLIP)/リアクション数/キーワード順
@@ -309,8 +344,8 @@ class _ThreadBody extends ConsumerWidget {
       ] else
         _ModeSection(mode: mode, post: post, order: order, actions: actions),
     ]);
-    if (atmos == null) return list;
-    return TagThemeSurface(key: ValueKey('atmos.thread.${atmos.tag}'), spec: atmos.spec.copyWith(scope: RasqThemeScope.thread(post.key)), child: list);
+    // 色と背景はページ全体に付ける(PostDetailScreen の ThemedSurface、D-587)。ここはプロモーションの帯だけ。
+    return list;
   }
 }
 
