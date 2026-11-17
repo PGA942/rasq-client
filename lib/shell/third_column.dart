@@ -14,6 +14,7 @@ import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_dsl.dart';
 import '../l10n/l10n.dart';
+import 'nav.dart';
 import 'pane_swipe_back.dart';
 
 /// 第3カラム (M5b/D-056/D-057): タブレット幅(≥840dp)の右カラム。
@@ -26,6 +27,7 @@ import 'pane_swipe_back.dart';
 ///   移動**(router へ push)し、新しいページが第3カラムに出る
 /// - 第3カラムが空のとき: 検索(既定。KV `thirdColumn.v1` の `empty` で変更可)
 ///   を**検索ホーム幅**で表示し、第2カラムが広がる
+///   (左の通常カラムで同じもの(検索 / 通知)を開いていれば、もう片方。[thirdColumnFillerOf]、D-588)
 ///
 /// M5c 以降、FOW の「掴んで第3カラムへ移動」の移動先にもなる。
 class ThirdColumnEntry {
@@ -223,9 +225,28 @@ class ThirdColumnSettingsButton extends ConsumerWidget {
   }
 }
 
+/// 第3カラムが空のときに実際に出すもの (D-588)。[empty] は設定(`thirdColumn.v1` の `empty`)、[leftTab] は
+/// 左の通常カラム(第2カラム)で開いているタブ。
+///
+/// 左に同じもの(検索 / 通知)が出ているときは、同じ画面を 2 つ並べず**もう片方**に替える(検索 ⇄ 通知)。
+/// 替えた先を見守り ([blockReason]、D-307) で止めていれば、止めた案内ではなく「表示しない」にする(選んだものではないので)。
+/// 替えたことは保存しない — 左が別のタブへ移れば、設定どおりのものに戻る。
+String thirdColumnFillerOf(String empty, RasqNavTab? leftTab, {String? Function(String path)? blockReason}) {
+  final other = switch ((empty, leftTab)) {
+    ('search', RasqNavTab.search) => 'notifications',
+    ('notifications', RasqNavTab.notifications) => 'search',
+    _ => null,
+  };
+  if (other == null) return empty;
+  return blockReason?.call('/$other') == null ? other : 'none';
+}
+
 /// 第3カラムの中身。empty 設定は設定 DSL と同じ KV 規約(`thirdColumn.v1`)。
 class ThirdColumnView extends ConsumerWidget {
-  const ThirdColumnView({super.key});
+  const ThirdColumnView({super.key, this.leftTab});
+
+  /// 左の通常カラムで開いているタブ。空のときの検索 / 通知が左と重なれば、もう片方を出す ([thirdColumnFillerOf])。
+  final RasqNavTab? leftTab;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -281,7 +302,8 @@ class ThirdColumnView extends ConsumerWidget {
       );
     }
 
-    final empty = settingValue(ref, 'thirdColumn', 'empty', 'search') as String? ?? 'search';
+    // 左の通常カラムに同じもの(検索 / 通知)が出ていれば、もう片方にする (D-588)。設定ボタンのチェックは選んだもののまま。
+    final empty = thirdColumnFillerOf(settingValue(ref, 'thirdColumn', 'empty', 'search') as String? ?? 'search', leftTab, blockReason: gate.routeBlockReason);
     // RASQ アカウント / SNS アカウントを切り替えたら、検索 / 通知を作り直す (D-397): 入力中の語やタブの位置も含めて、
     // 前のアカウントのものを残さない(左カラムと同じアカウントで開く)。
     final accountKey = '${ref.watch(currentRasqAccountProvider)?.id}|${ref.watch(currentAccountProvider)?.key}|${ref.watch(bundleViewProvider)}';
