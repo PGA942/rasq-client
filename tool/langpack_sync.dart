@@ -92,6 +92,7 @@ List<String> differences(String root) {
 
 String _git(String root, List<String> args) {
   try {
+    // nosemgrep: rasq-client-subprocess — 開発用の道具(アプリには入らない)。langpack の clone のコミットを lock に書くための git だけ。引数は配列で渡し、シェルは通さない。
     final r = Process.runSync('git', ['-C', root, ...args]);
     return r.exitCode == 0 ? '${r.stdout}'.trim() : '';
   } catch (_) {
