@@ -38,6 +38,16 @@ Uint8List _pack({
       ...extra,
     })));
 
+/// 読み込み / 外すはファイルを本当に読み書きするので、決め打ちの時間ではなく、画面が [finder] を出すまで待つ
+/// (混んだ CI では 100ms で終わらないことがある)。30 秒で諦める。
+Future<void> _waitFor(WidgetTester tester, Finder finder) async {
+  for (var i = 0; i < 600 && finder.evaluate().isEmpty; i++) {
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pump();
+  }
+  await tester.pumpAndSettle();
+}
+
 LangPack _parse(Uint8List bytes) => LangPack.parse(bytes, appLangPackSchema, appVersion: appVersionForLangPacks);
 
 void main() {
@@ -258,11 +268,8 @@ void main() {
       expect(find.byKey(const ValueKey('langpack.official')), findsOneWidget);
       await tester.ensureVisible(find.byKey(const ValueKey('langpack.import')));
       await tester.pumpAndSettle();
-      await tester.runAsync(() async {
-        await tester.tap(find.byKey(const ValueKey('langpack.import')));
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-      });
-      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('langpack.import')));
+      await _waitFor(tester, find.byKey(const ValueKey('langpack.active.com.example.test')));
       expect(find.byKey(const ValueKey('langpack.active.com.example.test')), findsOneWidget);
       expect(find.textContaining('未審査'), findsOneWidget);
       // 画面の文言がパックの文に(delegate の無い画面は appL10n = 上書きの層)。
@@ -278,11 +285,8 @@ void main() {
       expect(File('${dir.path}/${LangPackNotifier.fileName}').existsSync(), isTrue);
       await tester.ensureVisible(find.byKey(const ValueKey('langpack.remove')));
       await tester.pumpAndSettle();
-      await tester.runAsync(() async {
-        await tester.tap(find.byKey(const ValueKey('langpack.remove')));
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-      });
-      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('langpack.remove')));
+      await _waitFor(tester, find.byKey(const ValueKey('langpack.official')));
       expect(find.byKey(const ValueKey('langpack.official')), findsOneWidget);
       expect(find.text('言語パック'), findsWidgets);
       expect(File('${dir.path}/${LangPackNotifier.fileName}').existsSync(), isFalse);
@@ -300,11 +304,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const ValueKey('langpack.import')));
       await tester.pumpAndSettle();
-      await tester.runAsync(() async {
-        await tester.tap(find.byKey(const ValueKey('langpack.import')));
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      });
-      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('langpack.import')));
+      await _waitFor(tester, find.byKey(const ValueKey('langpack.error')));
       expect(find.text('言語パック(.rasqlang)ではありません'), findsOneWidget);
       expect(find.byKey(const ValueKey('langpack.official')), findsOneWidget);
     });
