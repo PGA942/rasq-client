@@ -2,6 +2,7 @@
 // ignore_for_file: type=lint
 
 import 'package:intl/intl.dart' as intl;
+import 'package:rasq_models/rasq_models.dart' show RasqLangOverride;
 
 /// 文言(言語ごとの実装は [lookupSnsMisskeyLocalizations])。
 abstract class SnsMisskeyLocalizations {
@@ -1917,4 +1918,392 @@ SnsMisskeyLocalizations lookupSnsMisskeyLocalizations(String tag) {
     }
   }
   return const SnsMisskeyLocalizationsJa();
+}
+
+/// 言語パック (D-592) の上書きを先に引く [SnsMisskeyLocalizations]。上書きの無いキー・壊れていて捨てたキーは [base](同梱)の文言。
+/// 引く先は `RasqLangOverride.text(localeName, 'sns_misskey', キー, 引数)`。
+class SnsMisskeyLocalizationsOverlay extends SnsMisskeyLocalizations {
+  SnsMisskeyLocalizationsOverlay(this.base, [String? localeName]) : super(localeName ?? base.localeName);
+
+  /// 同梱の文言(上書きが無いときに使う)。
+  final SnsMisskeyLocalizations base;
+
+  /// 言語パックの中の領域の名前。
+  static const domain = 'sns_misskey';
+
+  /// キー → 使えるプレースホルダ(言語パックを読み込むときの検証に使う)。
+  static const placeholders = <String, List<String>>{
+    'misskeyAccountKind': [],
+    'misskeyAccountNote': [],
+    'misskeyAccountTitle': [],
+    'misskeyActionFavorite': [],
+    'misskeyActionReaction': [],
+    'misskeyActionRenote': [],
+    'misskeyActionReply': [],
+    'misskeyApiResponseTooLarge': ['host', 'maxBytes'],
+    'misskeyApiSandboxHint': [],
+    'misskeyApiTimeout': ['host', 'seconds'],
+    'misskeyApiUnreachable': ['host', 'error', 'hint'],
+    'misskeyApiUnreachablePlain': ['host', 'error'],
+    'misskeyAuthHint': [],
+    'misskeyAuthNotYet': [],
+    'misskeyAutoAcceptFollowed': [],
+    'misskeyBirthday': [],
+    'misskeyCw': [],
+    'misskeyDescription': [],
+    'misskeyFollowersVisibility': [],
+    'misskeyFollowingVisibility': [],
+    'misskeyHideOnlineStatus': [],
+    'misskeyInvalidBirthday': [],
+    'misskeyInvalidBool': [],
+    'misskeyInvalidVisibility': [],
+    'misskeyIsBot': [],
+    'misskeyIsCat': [],
+    'misskeyIsCatSubtitle': [],
+    'misskeyIsExplorable': [],
+    'misskeyIsExplorableSubtitle': [],
+    'misskeyIsLocked': [],
+    'misskeyIsLockedSubtitle': [],
+    'misskeyLocation': [],
+    'misskeyName': [],
+    'misskeyNoCrawle': [],
+    'misskeyNoCrawleSubtitle': [],
+    'misskeyNoticeAchievement': [],
+    'misskeyNoticeApp': [],
+    'misskeyNoticeExportCompleted': [],
+    'misskeyNoticeLogin': [],
+    'misskeyNoticeRoleAssigned': [],
+    'misskeyNoticeTest': [],
+    'misskeyNoticeUnknown': ['type'],
+    'misskeyOpenCw': [],
+    'misskeyPermissions': [],
+    'misskeyProfile': [],
+    'misskeyProfileWeb': [],
+    'misskeyProfileWebSubtitle': [],
+    'misskeyPublicReactions': [],
+    'misskeyPublicity': [],
+    'misskeySafetyTitle': [],
+    'misskeyScopeReadAccount': [],
+    'misskeyScopeReadBlocks': [],
+    'misskeyScopeReadChat': [],
+    'misskeyScopeReadDrive': [],
+    'misskeyScopeReadFavorites': [],
+    'misskeyScopeReadFollowing': [],
+    'misskeyScopeReadMessaging': [],
+    'misskeyScopeReadMutes': [],
+    'misskeyScopeReadNotifications': [],
+    'misskeyScopeReadReactions': [],
+    'misskeyScopeWriteBlocks': [],
+    'misskeyScopeWriteChat': [],
+    'misskeyScopeWriteDrive': [],
+    'misskeyScopeWriteFavorites': [],
+    'misskeyScopeWriteFollowing': [],
+    'misskeyScopeWriteMessaging': [],
+    'misskeyScopeWriteMutes': [],
+    'misskeyScopeWriteNotes': [],
+    'misskeyScopeWriteNotifications': [],
+    'misskeyScopeWriteReactions': [],
+    'misskeySecurityNote': [],
+    'misskeySecurityTitle': [],
+    'misskeySensitiveBlur': [],
+    'misskeySensitiveBlurSubtitle': [],
+    'misskeySensitiveHide': [],
+    'misskeySensitiveHideSubtitle': [],
+    'misskeySensitiveMedia': [],
+    'misskeySensitiveShow': [],
+    'misskeySettingsSave': [],
+    'misskeyTimelinePosts': [],
+    'misskeyTimelineTitle': [],
+    'misskeyTokens': [],
+    'misskeyTokensSubtitle': [],
+    'misskeyTwoFactor': [],
+    'misskeyUploadTimeout': [],
+    'misskeyVisibilityFollowers': [],
+    'misskeyVisibilityPrivate': [],
+    'misskeyVisibilityPublic': [],
+    'misskeyWebSettings': [],
+    'misskeyWithRenotes': [],
+    'misskeyWithRenotesSubtitle': [],
+    'misskeyWithReplies': [],
+    'misskeyWithRepliesSubtitle': [],
+  };
+
+  @override
+  String get misskeyAccountKind => RasqLangOverride.text(localeName, domain, 'misskeyAccountKind') ?? base.misskeyAccountKind;
+
+  @override
+  String get misskeyAccountNote => RasqLangOverride.text(localeName, domain, 'misskeyAccountNote') ?? base.misskeyAccountNote;
+
+  @override
+  String get misskeyAccountTitle => RasqLangOverride.text(localeName, domain, 'misskeyAccountTitle') ?? base.misskeyAccountTitle;
+
+  @override
+  String get misskeyActionFavorite => RasqLangOverride.text(localeName, domain, 'misskeyActionFavorite') ?? base.misskeyActionFavorite;
+
+  @override
+  String get misskeyActionReaction => RasqLangOverride.text(localeName, domain, 'misskeyActionReaction') ?? base.misskeyActionReaction;
+
+  @override
+  String get misskeyActionRenote => RasqLangOverride.text(localeName, domain, 'misskeyActionRenote') ?? base.misskeyActionRenote;
+
+  @override
+  String get misskeyActionReply => RasqLangOverride.text(localeName, domain, 'misskeyActionReply') ?? base.misskeyActionReply;
+
+  @override
+  String misskeyApiResponseTooLarge(String host, int maxBytes) => RasqLangOverride.text(localeName, domain, 'misskeyApiResponseTooLarge', {'host': host, 'maxBytes': maxBytes}) ?? base.misskeyApiResponseTooLarge(host, maxBytes);
+
+  @override
+  String get misskeyApiSandboxHint => RasqLangOverride.text(localeName, domain, 'misskeyApiSandboxHint') ?? base.misskeyApiSandboxHint;
+
+  @override
+  String misskeyApiTimeout(String host, int seconds) => RasqLangOverride.text(localeName, domain, 'misskeyApiTimeout', {'host': host, 'seconds': seconds}) ?? base.misskeyApiTimeout(host, seconds);
+
+  @override
+  String misskeyApiUnreachable(String host, String error, String hint) => RasqLangOverride.text(localeName, domain, 'misskeyApiUnreachable', {'host': host, 'error': error, 'hint': hint}) ?? base.misskeyApiUnreachable(host, error, hint);
+
+  @override
+  String misskeyApiUnreachablePlain(String host, String error) => RasqLangOverride.text(localeName, domain, 'misskeyApiUnreachablePlain', {'host': host, 'error': error}) ?? base.misskeyApiUnreachablePlain(host, error);
+
+  @override
+  String get misskeyAuthHint => RasqLangOverride.text(localeName, domain, 'misskeyAuthHint') ?? base.misskeyAuthHint;
+
+  @override
+  String get misskeyAuthNotYet => RasqLangOverride.text(localeName, domain, 'misskeyAuthNotYet') ?? base.misskeyAuthNotYet;
+
+  @override
+  String get misskeyAutoAcceptFollowed => RasqLangOverride.text(localeName, domain, 'misskeyAutoAcceptFollowed') ?? base.misskeyAutoAcceptFollowed;
+
+  @override
+  String get misskeyBirthday => RasqLangOverride.text(localeName, domain, 'misskeyBirthday') ?? base.misskeyBirthday;
+
+  @override
+  String get misskeyCw => RasqLangOverride.text(localeName, domain, 'misskeyCw') ?? base.misskeyCw;
+
+  @override
+  String get misskeyDescription => RasqLangOverride.text(localeName, domain, 'misskeyDescription') ?? base.misskeyDescription;
+
+  @override
+  String get misskeyFollowersVisibility => RasqLangOverride.text(localeName, domain, 'misskeyFollowersVisibility') ?? base.misskeyFollowersVisibility;
+
+  @override
+  String get misskeyFollowingVisibility => RasqLangOverride.text(localeName, domain, 'misskeyFollowingVisibility') ?? base.misskeyFollowingVisibility;
+
+  @override
+  String get misskeyHideOnlineStatus => RasqLangOverride.text(localeName, domain, 'misskeyHideOnlineStatus') ?? base.misskeyHideOnlineStatus;
+
+  @override
+  String get misskeyInvalidBirthday => RasqLangOverride.text(localeName, domain, 'misskeyInvalidBirthday') ?? base.misskeyInvalidBirthday;
+
+  @override
+  String get misskeyInvalidBool => RasqLangOverride.text(localeName, domain, 'misskeyInvalidBool') ?? base.misskeyInvalidBool;
+
+  @override
+  String get misskeyInvalidVisibility => RasqLangOverride.text(localeName, domain, 'misskeyInvalidVisibility') ?? base.misskeyInvalidVisibility;
+
+  @override
+  String get misskeyIsBot => RasqLangOverride.text(localeName, domain, 'misskeyIsBot') ?? base.misskeyIsBot;
+
+  @override
+  String get misskeyIsCat => RasqLangOverride.text(localeName, domain, 'misskeyIsCat') ?? base.misskeyIsCat;
+
+  @override
+  String get misskeyIsCatSubtitle => RasqLangOverride.text(localeName, domain, 'misskeyIsCatSubtitle') ?? base.misskeyIsCatSubtitle;
+
+  @override
+  String get misskeyIsExplorable => RasqLangOverride.text(localeName, domain, 'misskeyIsExplorable') ?? base.misskeyIsExplorable;
+
+  @override
+  String get misskeyIsExplorableSubtitle => RasqLangOverride.text(localeName, domain, 'misskeyIsExplorableSubtitle') ?? base.misskeyIsExplorableSubtitle;
+
+  @override
+  String get misskeyIsLocked => RasqLangOverride.text(localeName, domain, 'misskeyIsLocked') ?? base.misskeyIsLocked;
+
+  @override
+  String get misskeyIsLockedSubtitle => RasqLangOverride.text(localeName, domain, 'misskeyIsLockedSubtitle') ?? base.misskeyIsLockedSubtitle;
+
+  @override
+  String get misskeyLocation => RasqLangOverride.text(localeName, domain, 'misskeyLocation') ?? base.misskeyLocation;
+
+  @override
+  String get misskeyName => RasqLangOverride.text(localeName, domain, 'misskeyName') ?? base.misskeyName;
+
+  @override
+  String get misskeyNoCrawle => RasqLangOverride.text(localeName, domain, 'misskeyNoCrawle') ?? base.misskeyNoCrawle;
+
+  @override
+  String get misskeyNoCrawleSubtitle => RasqLangOverride.text(localeName, domain, 'misskeyNoCrawleSubtitle') ?? base.misskeyNoCrawleSubtitle;
+
+  @override
+  String get misskeyNoticeAchievement => RasqLangOverride.text(localeName, domain, 'misskeyNoticeAchievement') ?? base.misskeyNoticeAchievement;
+
+  @override
+  String get misskeyNoticeApp => RasqLangOverride.text(localeName, domain, 'misskeyNoticeApp') ?? base.misskeyNoticeApp;
+
+  @override
+  String get misskeyNoticeExportCompleted => RasqLangOverride.text(localeName, domain, 'misskeyNoticeExportCompleted') ?? base.misskeyNoticeExportCompleted;
+
+  @override
+  String get misskeyNoticeLogin => RasqLangOverride.text(localeName, domain, 'misskeyNoticeLogin') ?? base.misskeyNoticeLogin;
+
+  @override
+  String get misskeyNoticeRoleAssigned => RasqLangOverride.text(localeName, domain, 'misskeyNoticeRoleAssigned') ?? base.misskeyNoticeRoleAssigned;
+
+  @override
+  String get misskeyNoticeTest => RasqLangOverride.text(localeName, domain, 'misskeyNoticeTest') ?? base.misskeyNoticeTest;
+
+  @override
+  String misskeyNoticeUnknown(String type) => RasqLangOverride.text(localeName, domain, 'misskeyNoticeUnknown', {'type': type}) ?? base.misskeyNoticeUnknown(type);
+
+  @override
+  String get misskeyOpenCw => RasqLangOverride.text(localeName, domain, 'misskeyOpenCw') ?? base.misskeyOpenCw;
+
+  @override
+  String get misskeyPermissions => RasqLangOverride.text(localeName, domain, 'misskeyPermissions') ?? base.misskeyPermissions;
+
+  @override
+  String get misskeyProfile => RasqLangOverride.text(localeName, domain, 'misskeyProfile') ?? base.misskeyProfile;
+
+  @override
+  String get misskeyProfileWeb => RasqLangOverride.text(localeName, domain, 'misskeyProfileWeb') ?? base.misskeyProfileWeb;
+
+  @override
+  String get misskeyProfileWebSubtitle => RasqLangOverride.text(localeName, domain, 'misskeyProfileWebSubtitle') ?? base.misskeyProfileWebSubtitle;
+
+  @override
+  String get misskeyPublicReactions => RasqLangOverride.text(localeName, domain, 'misskeyPublicReactions') ?? base.misskeyPublicReactions;
+
+  @override
+  String get misskeyPublicity => RasqLangOverride.text(localeName, domain, 'misskeyPublicity') ?? base.misskeyPublicity;
+
+  @override
+  String get misskeySafetyTitle => RasqLangOverride.text(localeName, domain, 'misskeySafetyTitle') ?? base.misskeySafetyTitle;
+
+  @override
+  String get misskeyScopeReadAccount => RasqLangOverride.text(localeName, domain, 'misskeyScopeReadAccount') ?? base.misskeyScopeReadAccount;
+
+  @override
+  String get misskeyScopeReadBlocks => RasqLangOverride.text(localeName, domain, 'misskeyScopeReadBlocks') ?? base.misskeyScopeReadBlocks;
+
+  @override
+  String get misskeyScopeReadChat => RasqLangOverride.text(localeName, domain, 'misskeyScopeReadChat') ?? base.misskeyScopeReadChat;
+
+  @override
+  String get misskeyScopeReadDrive => RasqLangOverride.text(localeName, domain, 'misskeyScopeReadDrive') ?? base.misskeyScopeReadDrive;
+
+  @override
+  String get misskeyScopeReadFavorites => RasqLangOverride.text(localeName, domain, 'misskeyScopeReadFavorites') ?? base.misskeyScopeReadFavorites;
+
+  @override
+  String get misskeyScopeReadFollowing => RasqLangOverride.text(localeName, domain, 'misskeyScopeReadFollowing') ?? base.misskeyScopeReadFollowing;
+
+  @override
+  String get misskeyScopeReadMessaging => RasqLangOverride.text(localeName, domain, 'misskeyScopeReadMessaging') ?? base.misskeyScopeReadMessaging;
+
+  @override
+  String get misskeyScopeReadMutes => RasqLangOverride.text(localeName, domain, 'misskeyScopeReadMutes') ?? base.misskeyScopeReadMutes;
+
+  @override
+  String get misskeyScopeReadNotifications => RasqLangOverride.text(localeName, domain, 'misskeyScopeReadNotifications') ?? base.misskeyScopeReadNotifications;
+
+  @override
+  String get misskeyScopeReadReactions => RasqLangOverride.text(localeName, domain, 'misskeyScopeReadReactions') ?? base.misskeyScopeReadReactions;
+
+  @override
+  String get misskeyScopeWriteBlocks => RasqLangOverride.text(localeName, domain, 'misskeyScopeWriteBlocks') ?? base.misskeyScopeWriteBlocks;
+
+  @override
+  String get misskeyScopeWriteChat => RasqLangOverride.text(localeName, domain, 'misskeyScopeWriteChat') ?? base.misskeyScopeWriteChat;
+
+  @override
+  String get misskeyScopeWriteDrive => RasqLangOverride.text(localeName, domain, 'misskeyScopeWriteDrive') ?? base.misskeyScopeWriteDrive;
+
+  @override
+  String get misskeyScopeWriteFavorites => RasqLangOverride.text(localeName, domain, 'misskeyScopeWriteFavorites') ?? base.misskeyScopeWriteFavorites;
+
+  @override
+  String get misskeyScopeWriteFollowing => RasqLangOverride.text(localeName, domain, 'misskeyScopeWriteFollowing') ?? base.misskeyScopeWriteFollowing;
+
+  @override
+  String get misskeyScopeWriteMessaging => RasqLangOverride.text(localeName, domain, 'misskeyScopeWriteMessaging') ?? base.misskeyScopeWriteMessaging;
+
+  @override
+  String get misskeyScopeWriteMutes => RasqLangOverride.text(localeName, domain, 'misskeyScopeWriteMutes') ?? base.misskeyScopeWriteMutes;
+
+  @override
+  String get misskeyScopeWriteNotes => RasqLangOverride.text(localeName, domain, 'misskeyScopeWriteNotes') ?? base.misskeyScopeWriteNotes;
+
+  @override
+  String get misskeyScopeWriteNotifications => RasqLangOverride.text(localeName, domain, 'misskeyScopeWriteNotifications') ?? base.misskeyScopeWriteNotifications;
+
+  @override
+  String get misskeyScopeWriteReactions => RasqLangOverride.text(localeName, domain, 'misskeyScopeWriteReactions') ?? base.misskeyScopeWriteReactions;
+
+  @override
+  String get misskeySecurityNote => RasqLangOverride.text(localeName, domain, 'misskeySecurityNote') ?? base.misskeySecurityNote;
+
+  @override
+  String get misskeySecurityTitle => RasqLangOverride.text(localeName, domain, 'misskeySecurityTitle') ?? base.misskeySecurityTitle;
+
+  @override
+  String get misskeySensitiveBlur => RasqLangOverride.text(localeName, domain, 'misskeySensitiveBlur') ?? base.misskeySensitiveBlur;
+
+  @override
+  String get misskeySensitiveBlurSubtitle => RasqLangOverride.text(localeName, domain, 'misskeySensitiveBlurSubtitle') ?? base.misskeySensitiveBlurSubtitle;
+
+  @override
+  String get misskeySensitiveHide => RasqLangOverride.text(localeName, domain, 'misskeySensitiveHide') ?? base.misskeySensitiveHide;
+
+  @override
+  String get misskeySensitiveHideSubtitle => RasqLangOverride.text(localeName, domain, 'misskeySensitiveHideSubtitle') ?? base.misskeySensitiveHideSubtitle;
+
+  @override
+  String get misskeySensitiveMedia => RasqLangOverride.text(localeName, domain, 'misskeySensitiveMedia') ?? base.misskeySensitiveMedia;
+
+  @override
+  String get misskeySensitiveShow => RasqLangOverride.text(localeName, domain, 'misskeySensitiveShow') ?? base.misskeySensitiveShow;
+
+  @override
+  String get misskeySettingsSave => RasqLangOverride.text(localeName, domain, 'misskeySettingsSave') ?? base.misskeySettingsSave;
+
+  @override
+  String get misskeyTimelinePosts => RasqLangOverride.text(localeName, domain, 'misskeyTimelinePosts') ?? base.misskeyTimelinePosts;
+
+  @override
+  String get misskeyTimelineTitle => RasqLangOverride.text(localeName, domain, 'misskeyTimelineTitle') ?? base.misskeyTimelineTitle;
+
+  @override
+  String get misskeyTokens => RasqLangOverride.text(localeName, domain, 'misskeyTokens') ?? base.misskeyTokens;
+
+  @override
+  String get misskeyTokensSubtitle => RasqLangOverride.text(localeName, domain, 'misskeyTokensSubtitle') ?? base.misskeyTokensSubtitle;
+
+  @override
+  String get misskeyTwoFactor => RasqLangOverride.text(localeName, domain, 'misskeyTwoFactor') ?? base.misskeyTwoFactor;
+
+  @override
+  String get misskeyUploadTimeout => RasqLangOverride.text(localeName, domain, 'misskeyUploadTimeout') ?? base.misskeyUploadTimeout;
+
+  @override
+  String get misskeyVisibilityFollowers => RasqLangOverride.text(localeName, domain, 'misskeyVisibilityFollowers') ?? base.misskeyVisibilityFollowers;
+
+  @override
+  String get misskeyVisibilityPrivate => RasqLangOverride.text(localeName, domain, 'misskeyVisibilityPrivate') ?? base.misskeyVisibilityPrivate;
+
+  @override
+  String get misskeyVisibilityPublic => RasqLangOverride.text(localeName, domain, 'misskeyVisibilityPublic') ?? base.misskeyVisibilityPublic;
+
+  @override
+  String get misskeyWebSettings => RasqLangOverride.text(localeName, domain, 'misskeyWebSettings') ?? base.misskeyWebSettings;
+
+  @override
+  String get misskeyWithRenotes => RasqLangOverride.text(localeName, domain, 'misskeyWithRenotes') ?? base.misskeyWithRenotes;
+
+  @override
+  String get misskeyWithRenotesSubtitle => RasqLangOverride.text(localeName, domain, 'misskeyWithRenotesSubtitle') ?? base.misskeyWithRenotesSubtitle;
+
+  @override
+  String get misskeyWithReplies => RasqLangOverride.text(localeName, domain, 'misskeyWithReplies') ?? base.misskeyWithReplies;
+
+  @override
+  String get misskeyWithRepliesSubtitle => RasqLangOverride.text(localeName, domain, 'misskeyWithRepliesSubtitle') ?? base.misskeyWithRepliesSubtitle;
 }

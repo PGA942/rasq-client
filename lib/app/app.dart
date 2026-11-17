@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../notify/push_fcm.dart' show pushBridgeProvider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart' show RasqLangOverride;
 import 'package:cupertino_ui/cupertino_ui.dart' as cui;
 import 'package:material_ui/material_ui.dart' as mui;
 
@@ -18,6 +19,7 @@ import '../features/settings/settings_dsl.dart';
 import '../features/store/plugin_updates.dart' show pluginAutoUpdateProvider;
 import '../features/theme/theme_packs.dart';
 import '../l10n/l10n.dart';
+import '../l10n/langpack/lang_pack_store.dart';
 import '../l10n/locale_sync.dart';
 import '../l10n/ui_locale.dart';
 import '../notify/central_inbox.dart';
@@ -55,6 +57,8 @@ class RasqApp extends ConsumerWidget {
     ref.listen(orgateAccountProvider, (_, next) => _termsPrompt.onAccount(ref, next.value));
     // 表示の言語 (D-484): 設定 → 端末の言語 → 日本語。RASQ アカウントにログインしていれば ORGATE にも伝える。
     final locale = ref.watch(uiLocaleProvider);
+    ref.watch(langPackProvider);
+    final langRevision = RasqLangOverride.revision;
     ref.watch(localeSyncProvider);
     final developerMode = ref.watch(developerModeProvider);
     final mode = ref.watch(themeModeProvider);
@@ -75,16 +79,19 @@ class RasqApp extends ConsumerWidget {
       title: 'RASQ',
       // 表示の言語 (D-484): アプリの文言(lib/l10n)・部品の文言(rasq_design)・Material / Cupertino / Widgets の訳。
       locale: locale,
-      supportedLocales: AppLocalizations.supportedLocales,
+      // 言語パック (D-592) が足した言語も含む。
+      supportedLocales: supportedUiLocales,
       // スロットプラグインのトースト出口 (D-167)。
       scaffoldMessengerKey: ref.watch(rootMessengerKeyProvider),
       debugShowCheckedModeBanner: false,
       // pro_image_editor (D-173) は material_ui の AppBar/Scaffold を使うので、その MaterialLocalizations も要る。
       // iOS / macOS では閉じるときの確認が cupertino_ui のダイアログ(showAdaptiveDialog)になるので、その
       // CupertinoLocalizations も要る (D-253: 無いと × / 戻るで例外になり、閉じられなかった)。
-      localizationsDelegates: const [
-        ...AppLocalizations.localizationsDelegates,
-        RasqDesignLocalizations.delegate,
+      // 言語パック (D-592): アプリと部品の文言は、パックの文を先に引く層を返す delegate(パックが変われば読み直す)。
+      localizationsDelegates: [
+        AppL10nDelegate(langRevision, extraLocales: langPackAddedLocales),
+        ...AppLocalizations.localizationsDelegates.where((d) => d.type != AppLocalizations),
+        RasqDesignL10nDelegate(langRevision, extraLocales: langPackAddedLocales),
         // material_ui / cupertino_ui の訳も表示の言語で(Default は英語だけで、ja では「対応していない」警告になる)。
         mui.GlobalMaterialLocalizations.delegate,
         cui.GlobalCupertinoLocalizations.delegate,

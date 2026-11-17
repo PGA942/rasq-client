@@ -19,6 +19,11 @@
 // (`output-dir/output-localization-file`。キーごとの getter / メソッド、言語ごとのクラス、`lookup<クラス>(タグ)`)。
 // ICU は gen-l10n と同じ書き方の範囲(`{名前}`、`{n, plural, =0{…} one{…} other{…}}`、`{x, select, a{…} other{…}}`)。
 // plural / select を使う部品は `package:intl` に依る。--check はこの生成物も見る。
+//
+// 言語パック (D-592、docs/I18N.md「言語パック」): 文言のクラスごとに「上書きの層」`<クラス>Overlay` も作る(実行時に読み込んだ
+// 非公式の言語パックの文を `RasqLangOverride` から先に引き、無ければ同梱の文言)。アプリは lib/l10n/app_localizations_overlay.g.dart、
+// rasq_design は lib/l10n/rasq_design_localizations_overlay.g.dart、Flutter に依らない部品は文言のクラスと同じファイル。
+// RAi の指示の文(lib/features/rai/prompts/parts/rai.<言語>.json)からは rai_prompts.g.dart(言語ごとの表)を作る。
 import 'dart:convert';
 import 'dart:io';
 
@@ -134,6 +139,31 @@ List<String> mergeProject(File cfg, {required bool check}) {
       if (!check) out.writeAsStringSync(text);
     }
   }
+  // 言語パックの上書きの層 (D-592): gen-l10n の文言のクラス(アプリ / rasq_design)。
+  if (cfg.uri.pathSegments.last == 'l10n.yaml') {
+    final className = yaml['output-class'] ?? 'AppLocalizations';
+    final genFile = yaml['output-localization-file'] ?? 'app_localizations.dart';
+    final genDir = yaml['output-dir'] ?? '${yaml['arb-dir'] ?? 'lib/l10n'}/gen';
+    final arbRel = yaml['arb-dir'] ?? 'lib/l10n';
+    final importPath = '${_relative(genDir, arbRel)}/$genFile';
+    final domain = cfg.parent.path == '.' ? 'app' : cfg.parent.uri.pathSegments.where((s) => s.isNotEmpty).last;
+    final out = File('$arbDir/${_snake(className)}_overlay.g.dart');
+    final template = {for (final part in templateParts.values) ...part};
+    final text = generateOverlay(className, domain, template, imports: ["import 'package:rasq_models/rasq_models.dart' show RasqLangOverride;", '', "import '$importPath';"], standalone: true);
+    if (!out.existsSync() || out.readAsStringSync() != text) {
+      changed.add(out.path);
+      if (!check) out.writeAsStringSync(text);
+    }
+  }
+  // RAi の指示の文 (D-492 / D-592): 言語ごとの表を作る。
+  if (cfg.uri.pathSegments.last == 'l10n.yaml' && cfg.parent.path == '.' && Directory('lib/features/rai/prompts/parts').existsSync()) {
+    final out = File('lib/features/rai/prompts/rai_prompts.g.dart');
+    final text = generateRaiPrompts(Directory('lib/features/rai/prompts/parts'));
+    if (!out.existsSync() || out.readAsStringSync() != text) {
+      changed.add(out.path);
+      if (!check) out.writeAsStringSync(text);
+    }
+  }
   // Flutter に依らない部品 (D-533): 素の Dart の文言のクラスを作る。
   if (cfg.uri.pathSegments.last == 'l10n_dart.yaml') {
     final outDir = '$root/${yaml['output-dir'] ?? 'lib/l10n/gen'}';
@@ -143,7 +173,10 @@ List<String> mergeProject(File cfg, {required bool check}) {
       for (final locale in byLocale.keys)
         locale: {for (final part in byLocale[locale]!.values) ...part}..removeWhere((k, _) => k.startsWith('@@')),
     };
-    final text = generatePureDart(className, templateLocale, merged);
+    final selfModels = cfg.parent.uri.pathSegments.where((s) => s.isNotEmpty).last == 'rasq_models';
+    final overrideImport = selfModels ? "import '../../src/lang_override.dart' show RasqLangOverride;" : "import 'package:rasq_models/rasq_models.dart' show RasqLangOverride;";
+    final text = generatePureDart(className, templateLocale, merged, extraImport: overrideImport) +
+        generateOverlay(className, cfg.parent.uri.pathSegments.where((s) => s.isNotEmpty).last, merged[templateLocale] ?? const {}, standalone: false);
     if (!outFile.existsSync() || outFile.readAsStringSync() != text) {
       changed.add(outFile.path);
       if (!check) {
@@ -291,7 +324,7 @@ bool _usesChoice(List<_Icu> nodes) => nodes.any((n) => n is _IcuChoice);
 String _localeSuffix(String locale) => locale.split(RegExp('[_-]')).map((p) => p.isEmpty ? '' : p[0].toUpperCase() + p.substring(1).toLowerCase()).join();
 
 /// 素の Dart の文言のクラス(Flutter に依らない部品)。[byLocale] = 言語 → まとめた ARB(`@キー` を含む)。
-String generatePureDart(String className, String templateLocale, Map<String, Map<String, Object?>> byLocale) {
+String generatePureDart(String className, String templateLocale, Map<String, Map<String, Object?>> byLocale, {String? extraImport}) {
   final template = byLocale[templateLocale] ?? const {};
   final keys = [for (final k in template.keys) if (!k.startsWith('@')) k]..sort();
   final params = <String, List<(String, String)>>{};
@@ -329,7 +362,8 @@ String generatePureDart(String className, String templateLocale, Map<String, Map
     ..writeln('// tool/l10n_merge.dart が lib/l10n/parts/*.arb から作る(手で直さない)。Flutter に依らない部品の文言 (D-533、docs/I18N.md)。')
     ..writeln('// ignore_for_file: type=lint')
     ..writeln();
-  if (intlNeeded) b.writeln("import 'package:intl/intl.dart' as intl;\n");
+  if (intlNeeded) b.writeln("import 'package:intl/intl.dart' as intl;${extraImport == null ? '\n' : ''}");
+  if (extraImport != null) b.writeln('$extraImport\n');
   b
     ..writeln('/// 文言(言語ごとの実装は [lookup$className])。')
     ..writeln('abstract class $className {')
@@ -421,5 +455,178 @@ String generateAssetLookup(Map<String, Map<String, Object?>> parts) {
   b
     ..writeln('      _ => null,')
     ..writeln('    };');
+  return b.toString();
+}
+
+
+// ── 言語パックの上書きの層 (D-592) ─────────────────────────────
+
+String _snake(String camel) => camel.replaceAllMapped(RegExp(r'(?<=[a-z0-9])([A-Z])'), (m) => '_${m[1]}').toLowerCase();
+
+/// [from](ディレクトリ)から見た [to] の相対パス(どちらもプロジェクトの根からの相対)。
+String _relative(String to, String from) {
+  final t = to.split('/').where((s) => s.isNotEmpty && s != '.').toList();
+  final f = from.split('/').where((s) => s.isNotEmpty && s != '.').toList();
+  var i = 0;
+  while (i < t.length && i < f.length && t[i] == f[i]) {
+    i++;
+  }
+  return [...List.filled(f.length - i, '..'), ...t.skip(i)].join('/');
+}
+
+String _dartStr(String s) => "'${s.replaceAll(r'\', r'\\').replaceAll("'", r"\'").replaceAll(r'$', r'\$').replaceAll('\n', r'\n').replaceAll('\r', r'\r')}'";
+
+/// `<クラス>Overlay`: [className] の文言を、言語パックの上書き(`RasqLangOverride`、領域 [domain])を先に引いて返す層。
+/// [template] はテンプレートの言語のまとめた ARB(`@キー` を含む)。引数の順と型は gen-l10n / [generatePureDart] と同じ
+/// (`@キー.placeholders` の順、型は String / int / num / double、ほかは Object)。
+String generateOverlay(String className, String domain, Map<String, Object?> template, {List<String> imports = const [], required bool standalone}) {
+  final keys = [for (final k in template.keys) if (!k.startsWith('@')) k]..sort();
+  final b = StringBuffer();
+  if (standalone) {
+    b
+      ..writeln('// tool/l10n_merge.dart が部品(parts)から作る(手で直さない)。言語パックの上書きの層 (D-592、docs/I18N.md「言語パック」)。')
+      ..writeln('// ignore_for_file: type=lint')
+      ..writeln();
+    for (final i in imports) {
+      b.writeln(i);
+    }
+  }
+  b
+    ..writeln()
+    ..writeln('/// 言語パック (D-592) の上書きを先に引く [$className]。上書きの無いキー・壊れていて捨てたキーは [base](同梱)の文言。')
+    ..writeln('/// 引く先は `RasqLangOverride.text(localeName, ${_dartStr(domain)}, キー, 引数)`。')
+    ..writeln('class ${className}Overlay extends $className {')
+    ..writeln('  ${className}Overlay(this.base, [String? localeName]) : super(localeName ?? base.localeName);')
+    ..writeln()
+    ..writeln('  /// 同梱の文言(上書きが無いときに使う)。')
+    ..writeln('  final $className base;')
+    ..writeln()
+    ..writeln('  /// 言語パックの中の領域の名前。')
+    ..writeln('  static const domain = ${_dartStr(domain)};')
+    ..writeln()
+    ..writeln('  /// キー → 使えるプレースホルダ(言語パックを読み込むときの検証に使う)。')
+    ..writeln('  static const placeholders = <String, List<String>>{');
+  final params = <String, List<(String, String)>>{};
+  for (final k in keys) {
+    final ph = (((template['@$k'] as Map?)?['placeholders']) as Map?)?.cast<String, Object?>() ?? const {};
+    params[k] = [
+      for (final e in ph.entries)
+        (e.key, switch ('${(e.value as Map?)?['type'] ?? 'Object'}') { 'String' => 'String', 'int' => 'int', 'num' => 'num', 'double' => 'double', _ => 'Object' }),
+    ];
+    b.writeln("    '$k': [${[for (final (n, _) in params[k]!) "'$n'"].join(', ')}],");
+  }
+  b.writeln('  };');
+  for (final k in keys) {
+    final p = params[k]!;
+    b
+      ..writeln()
+      ..writeln('  @override');
+    if (p.isEmpty) {
+      b.writeln("  String get $k => RasqLangOverride.text(localeName, domain, '$k') ?? base.$k;");
+    } else {
+      final sig = [for (final (n, t) in p) '$t $n'].join(', ');
+      final args = [for (final (n, _) in p) "'$n': $n"].join(', ');
+      final call = [for (final (n, _) in p) n].join(', ');
+      b.writeln("  String $k($sig) => RasqLangOverride.text(localeName, domain, '$k', {$args}) ?? base.$k($call);");
+    }
+  }
+  b.writeln('}');
+  return b.toString();
+}
+
+// ── RAi の指示の文の表 (D-492 / D-592) ─────────────────────────────
+
+/// RAi の指示の文のキー → 差し込める名前。キーは `RaiPrompts` の項目(書式の約束なので、言語に依らず同じ)。
+/// 一覧(List)の引数は、行の並べ方を言語に依らず決めてある(`TableRaiPrompts`)ので、表には並べたあとの文を差し込む。
+const raiPromptParams = <String, List<String>>{
+  'languageName': [],
+  'assistantSystem': [],
+  'planSystem': [],
+  'instructionSystem': [],
+  'situationSystem': [],
+  'planLine': ['plan'],
+  'operationsBlock': ['operations'],
+  'functionsBlock': ['usage'],
+  'restartPlanLine': ['plan'],
+  'restartFetched': ['digest', 'fetched'],
+  'excludedOperations': ['ids'],
+  'eventSummary': ['conversation'],
+  'learnabilitySystem': [],
+  'learnabilityInput': ['bio', 'fields', 'posts'],
+  'referenceContextHeading': [],
+  'instructionNearBlock': ['operations'],
+  'instructionNearBlockEmpty': [],
+  'functionUsage': [],
+  'webSearchUsage': [],
+  'webAnswerQuestion': ['question'],
+};
+
+/// `rai.<言語>.json` → rai_prompts.g.dart(言語ごとの表と、その表を使う `RaiPrompts<言語>`)。
+/// 同梱の表は全部のキーを持つ(指示の文は言語を混ぜない)。差し込みはキーごとに決まった名前だけ。
+String generateRaiPrompts(Directory dir) {
+  final re = RegExp(r'^rai\.([a-zA-Z]{2,3}(?:_\w+)?)\.json$');
+  final tables = <String, Map<String, String>>{};
+  for (final f in dir.listSync().whereType<File>().toList()..sort((a, b) => a.path.compareTo(b.path))) {
+    final name = f.uri.pathSegments.last;
+    final m = re.firstMatch(name);
+    if (m == null) throw FormatException('RAi の表の名前は rai.<言語>.json: $name');
+    final decoded = jsonDecode(f.readAsStringSync());
+    if (decoded is! Map) throw FormatException('$name: 中身が JSON のオブジェクトではありません');
+    final t = <String, String>{};
+    for (final e in decoded.entries) {
+      final allowed = raiPromptParams[e.key];
+      if (allowed == null) throw FormatException('$name: 知らないキー "${e.key}"');
+      if (e.value is! String) throw FormatException('$name: "${e.key}" の値が文字列ではありません');
+      for (final u in RegExp(r'\{(\w+)\}').allMatches(e.value as String)) {
+        if (!allowed.contains(u[1])) throw FormatException('$name: "${e.key}" に使えない差し込み {${u[1]}}');
+      }
+      t[e.key as String] = e.value as String;
+    }
+    final missing = raiPromptParams.keys.where((k) => !t.containsKey(k)).toList();
+    if (missing.isNotEmpty) throw FormatException('$name: キーが足りません: ${missing.join(', ')}');
+    tables[m.group(1)!] = t;
+  }
+  if (!tables.containsKey('ja')) throw FormatException('RAi の表に ja がありません');
+  final locales = ['ja', ...tables.keys.where((l) => l != 'ja').toList()..sort()];
+  final b = StringBuffer()
+    ..writeln('// tool/l10n_merge.dart が lib/features/rai/prompts/parts/rai.<言語>.json から作る(手で直さない)。')
+    ..writeln('// RAi の指示の文の表 (D-492 / D-592、docs/I18N.md「RAi の指示の文」)。正本は langpack の packs/official/rai。')
+    ..writeln('// ignore_for_file: type=lint')
+    ..writeln()
+    ..writeln("import 'rai_prompts.dart';")
+    ..writeln()
+    ..writeln('/// キー → 差し込める名前(言語パックを読み込むときの検証に使う)。')
+    ..writeln('const raiPromptParams = <String, List<String>>{');
+  for (final e in raiPromptParams.entries) {
+    b.writeln("  '${e.key}': [${e.value.map((v) => "'$v'").join(', ')}],");
+  }
+  b
+    ..writeln('};')
+    ..writeln()
+    ..writeln('/// 言語(BCP-47)→ 表。')
+    ..writeln('const raiPromptTables = <String, Map<String, String>>{');
+  for (final l in locales) {
+    b.writeln("  '${l.replaceAll('_', '-')}': _${_camel(l.toLowerCase())},");
+  }
+  b.writeln('};');
+  for (final l in locales) {
+    b
+      ..writeln()
+      ..writeln('const _${_camel(l.toLowerCase())} = <String, String>{');
+    for (final k in raiPromptParams.keys) {
+      b.writeln("  '$k': ${_dartStr(tables[l]![k]!)},");
+    }
+    b.writeln('};');
+  }
+  for (final l in locales) {
+    final cls = 'RaiPrompts${_localeSuffix(l)}';
+    final tag = l.replaceAll('_', '-');
+    b
+      ..writeln()
+      ..writeln('/// `$tag` の表。')
+      ..writeln('class $cls extends TableRaiPrompts {')
+      ..writeln("  const $cls() : super('$tag', _${_camel(l.toLowerCase())});")
+      ..writeln('}');
+  }
   return b.toString();
 }

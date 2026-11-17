@@ -116,7 +116,7 @@ class PluginManifest {
   final ManifestLocales locales;
 
   /// 表示の言語の名前(`locales` → 素の `name`)。
-  String get name => locales.field('name') ?? baseName;
+  String get name => ManifestLocales.packText(id, 'name') ?? locales.field('name') ?? baseName;
 
   /// SemVer string. Per-account versions are resolved by the host.
   final String version;
@@ -124,7 +124,7 @@ class PluginManifest {
   final String? author;
 
   /// 表示の言語の説明。
-  String? get description => locales.field('description') ?? baseDescription;
+  String? get description => ManifestLocales.packText(id, 'description') ?? locales.field('description') ?? baseDescription;
   final List<SnsKind> supportedSns;
 
   /// Operation vocabulary (D-004): `network`, `gpu_ml`, `storage.safe`,
@@ -135,11 +135,11 @@ class PluginManifest {
   final PluginNetwork? network;
 
   /// 宣言したアクション(ラベルは表示の言語、`locales.<tag>.actions.<id>.label`)。
-  List<ActionDescriptor> get actions => locales.isEmpty
+  List<ActionDescriptor> get actions => locales.isEmpty && !RasqLangOverride.active
       ? baseActions
       : [
           for (final a in baseActions)
-            if (locales.actionLabel(a.id) case final label?) ActionDescriptor.fromJson({...a.toJson(), 'label': label}) else a,
+            if (ManifestLocales.packText(id, 'actions.${a.id}.label') ?? locales.actionLabel(a.id) case final label?) ActionDescriptor.fromJson({...a.toJson(), 'label': label}) else a,
         ];
 
   /// Markdown shown on the 利用規約画面 before first login(表示の言語)。

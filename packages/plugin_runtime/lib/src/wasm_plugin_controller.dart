@@ -38,7 +38,7 @@ abstract class WasmPluginViewModel implements Listenable {
 /// v1 calls are synchronous on the calling isolate (PROTOCOL §4.1) — run
 /// heavy plugins off the UI isolate later.
 class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin implements WasmPluginViewModel {
-  WasmPluginController({required Uint8List wasmBytes, RasqHostEnvironment? env, this.fuelPerCall})
+  WasmPluginController({required Uint8List wasmBytes, RasqHostEnvironment? env, this.fuelPerCall, this.pluginId})
       : _bytes = wasmBytes,
         env = env ?? RasqHostEnvironment();
 
@@ -47,6 +47,9 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
 
   /// 1 呼び出しあたりの fuel 予算。null ならランタイム既定(重いほう)。
   final int? fuelPerCall;
+
+  /// プラグインの id(言語パックのそのプラグインの文を `args.localeStrings` で渡すのに使う。D-592)。
+  final String? pluginId;
 
   final _shapes = StreamController<Map<String, Object?>>.broadcast();
 
@@ -123,7 +126,7 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
   /// args にはホストの予約の項目(表示の言語 `locale`、D-484)を足して送る([withHostCallArgs])。
   Map<String, dynamic> invoke(String fn, [Map<String, Object?> args = const {}]) {
     final plugin = _require();
-    final result = (jsonDecode(plugin.call(fn: fn, argsJson: jsonEncode(withHostCallArgs(args)), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
+    final result = (jsonDecode(plugin.call(fn: fn, argsJson: jsonEncode(withHostCallArgs(args, pluginId: pluginId)), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
     _drainShapes();
     _lastResult = result;
     final value = result['ok'] == true ? result['value'] as Map? : null;

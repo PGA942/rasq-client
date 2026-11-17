@@ -1,11 +1,14 @@
+import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/widgets.dart';
 import 'package:intl/date_symbol_data_local.dart' as intl_local;
 import 'package:intl/intl.dart';
-import 'package:rasq_models/rasq_models.dart' show RasqUiLocale;
+import 'package:rasq_models/rasq_models.dart' show RasqLangOverride, RasqUiLocale;
 
 import '../../l10n/gen/rasq_design_localizations.dart';
+import '../../l10n/rasq_design_localizations_overlay.g.dart';
 
 export '../../l10n/gen/rasq_design_localizations.dart';
+export '../../l10n/rasq_design_localizations_overlay.g.dart';
 
 /// BCP-47 の言語タグ(`ja` / `en-US` / `zh-Hant-TW`)→ [Locale]。読めなければ `ja`。
 Locale rasqLocaleFromTag(String tag) {
@@ -23,12 +26,37 @@ Locale rasqLocaleFromTag(String tag) {
   return Locale.fromSubtags(languageCode: p.first.toLowerCase(), scriptCode: script, countryCode: country);
 }
 
-/// [locale] に対応する部品の文言。対応していなければ日本語(テンプレート)。
+/// [locale] に対応する部品の文言。対応していなければ日本語(テンプレート)。言語パック (D-592) が効いていれば、パックの文を
+/// 先に引く層([RasqDesignLocalizationsOverlay])を挟む。
 RasqDesignLocalizations rasqDesignL10nFor(Locale locale) {
+  final base = _bundledDesignL10n(rasqLocaleFromTag(RasqLangOverride.baseTag(locale.toLanguageTag())));
+  return RasqLangOverride.active ? RasqDesignLocalizationsOverlay(base, locale.toString()) : base;
+}
+
+RasqDesignLocalizations _bundledDesignL10n(Locale locale) {
   for (final l in [locale, Locale(locale.languageCode), const Locale(RasqUiLocale.defaultTag)]) {
     if (RasqDesignLocalizations.delegate.isSupported(l)) return lookupRasqDesignLocalizations(l);
   }
   return lookupRasqDesignLocalizations(const Locale(RasqUiLocale.defaultTag));
+}
+
+/// 部品の文言の delegate (D-592)。同梱の [RasqDesignLocalizations.delegate] の代わりに MaterialApp に入れる(言語パックが足した
+/// 言語も受け付け、パックの上書きの層を返す)。[revision] が変われば読み直す。
+class RasqDesignL10nDelegate extends LocalizationsDelegate<RasqDesignLocalizations> {
+  const RasqDesignL10nDelegate(this.revision, {this.extraLocales = const []});
+
+  final int revision;
+  final List<Locale> extraLocales;
+
+  @override
+  bool isSupported(Locale locale) =>
+      RasqDesignLocalizations.delegate.isSupported(locale) || extraLocales.any((l) => l.languageCode == locale.languageCode);
+
+  @override
+  Future<RasqDesignLocalizations> load(Locale locale) => SynchronousFuture(rasqDesignL10nFor(locale));
+
+  @override
+  bool shouldReload(RasqDesignL10nDelegate old) => old.revision != revision;
 }
 
 /// いまの表示の言語([RasqUiLocale])の部品の文言 — `BuildContext` が無いところ(静的な書式・enum の名前)用。

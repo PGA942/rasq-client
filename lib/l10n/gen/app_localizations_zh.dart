@@ -4777,6 +4777,110 @@ class AppLocalizationsZh extends AppLocalizations {
   String get iconThemeChangeImage => '画像を変更';
 
   @override
+  String get langPackHeader => '语言包';
+
+  @override
+  String get langPackCaption => '可以载入替换文字的语言包(.rasqlang)。语言包中没有的文字保持官方文字。';
+
+  @override
+  String get langPackCaptionDetail =>
+      '载入语言包(.rasqlang)后,应用的文字、RAi 的指示文和插件的文字会替换为语言包的文字。语言包中没有的文字或格式不符的文字(占位符不同等)保持官方文字。有些语言包会添加应用中没有的语言(缺少的文字使用语言包指定的语言)。条款等文件不会被替换。从文件载入的语言包未经审核。同时只能使用一个语言包(D-592)。';
+
+  @override
+  String get langPackOfficial => '官方(应用内置的文字)';
+
+  @override
+  String get langPackOfficialSubtitle => '未载入语言包';
+
+  @override
+  String get langPackUnreviewed => '未审核';
+
+  @override
+  String langPackSubtitle(String version, String authors) {
+    return '版本 $version・$authors';
+  }
+
+  @override
+  String get langPackImport => '从文件载入';
+
+  @override
+  String get langPackRemove => '移除并恢复官方文字';
+
+  @override
+  String get langPackPickerLabel => '语言包';
+
+  @override
+  String langPackApplied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '正在替换 $count 条文字',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackRejected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 条格式不符,保持官方文字',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackUnknown(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 条是此应用中没有的文字,不使用',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackNeedsNewerApp(String version) {
+    return '此语言包适用于应用 $version 及以上版本。缺少的文字使用官方文字。';
+  }
+
+  @override
+  String get langPackShowIssues => '查看不符的文字';
+
+  @override
+  String get langPackHideIssues => '关闭';
+
+  @override
+  String langPackLoaded(String name) {
+    return '已载入“$name”';
+  }
+
+  @override
+  String get langPackAddedLocale => '语言包';
+
+  @override
+  String get langPackErrorTooLarge => '文件太大(最多 16 MB)';
+
+  @override
+  String get langPackErrorNotPack => '不是语言包(.rasqlang)';
+
+  @override
+  String get langPackErrorUnsupportedVersion => '该语言包的格式比此应用新。请更新应用';
+
+  @override
+  String langPackErrorManifest(String field) {
+    return '语言包的 $field 缺失或格式不正确';
+  }
+
+  @override
+  String get langPackErrorNoLocales => '没有可用的语言(应用中没有的语言需要写明缺少文字时使用的语言)';
+
+  @override
+  String langPackErrorFailed(String error) {
+    return '无法载入: $error';
+  }
+
+  @override
   String get languageSelfName => '简体中文';
 
   @override
@@ -25499,6 +25603,110 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homeBarResetOrder => '恢復預設排列';
+
+  @override
+  String get langPackHeader => '語言包';
+
+  @override
+  String get langPackCaption => '可以載入替換文字的語言包(.rasqlang)。語言包中沒有的文字維持官方文字。';
+
+  @override
+  String get langPackCaptionDetail =>
+      '載入語言包(.rasqlang)後,應用程式的文字、RAi 的指示文和外掛程式的文字會替換為語言包的文字。語言包中沒有的文字或格式不符的文字(預留位置不同等)維持官方文字。有些語言包會新增應用程式中沒有的語言(缺少的文字使用語言包指定的語言)。條款等文件不會被替換。從檔案載入的語言包未經審核。同時只能使用一個語言包(D-592)。';
+
+  @override
+  String get langPackOfficial => '官方(應用程式內建的文字)';
+
+  @override
+  String get langPackOfficialSubtitle => '未載入語言包';
+
+  @override
+  String get langPackUnreviewed => '未審核';
+
+  @override
+  String langPackSubtitle(String version, String authors) {
+    return '版本 $version・$authors';
+  }
+
+  @override
+  String get langPackImport => '從檔案載入';
+
+  @override
+  String get langPackRemove => '移除並恢復官方文字';
+
+  @override
+  String get langPackPickerLabel => '語言包';
+
+  @override
+  String langPackApplied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '正在替換 $count 則文字',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackRejected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 則格式不符,維持官方文字',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackUnknown(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 則是此應用程式中沒有的文字,不使用',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackNeedsNewerApp(String version) {
+    return '此語言包適用於應用程式 $version 以上版本。缺少的文字使用官方文字。';
+  }
+
+  @override
+  String get langPackShowIssues => '查看不符的文字';
+
+  @override
+  String get langPackHideIssues => '關閉';
+
+  @override
+  String langPackLoaded(String name) {
+    return '已載入「$name」';
+  }
+
+  @override
+  String get langPackAddedLocale => '語言包';
+
+  @override
+  String get langPackErrorTooLarge => '檔案太大(最多 16 MB)';
+
+  @override
+  String get langPackErrorNotPack => '不是語言包(.rasqlang)';
+
+  @override
+  String get langPackErrorUnsupportedVersion => '此語言包的格式比此應用程式新。請更新應用程式';
+
+  @override
+  String langPackErrorManifest(String field) {
+    return '語言包的 $field 缺少或格式不正確';
+  }
+
+  @override
+  String get langPackErrorNoLocales => '沒有可用的語言(應用程式中沒有的語言需要寫明缺少文字時使用的語言)';
+
+  @override
+  String langPackErrorFailed(String error) {
+    return '無法載入: $error';
+  }
 
   @override
   String get languageSelfName => '繁體中文';

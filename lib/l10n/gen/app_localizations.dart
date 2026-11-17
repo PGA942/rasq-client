@@ -8129,6 +8129,150 @@ abstract class AppLocalizations {
   /// **'画像を変更'**
   String get iconThemeChangeImage;
 
+  /// 設定 → 言語 の「言語パック」の見出し
+  ///
+  /// In ja, this message translates to:
+  /// **'言語パック'**
+  String get langPackHeader;
+
+  /// 言語パックの欄の説明(短い)
+  ///
+  /// In ja, this message translates to:
+  /// **'文言を差し替える言語パック(.rasqlang)を読み込めます。パックに無い文言は公式の文言のままです。'**
+  String get langPackCaption;
+
+  /// 言語パックの欄の説明(開発者モードの詳しい説明)
+  ///
+  /// In ja, this message translates to:
+  /// **'言語パック(.rasqlang)を読み込むと、アプリの文言・RAi の指示の文・プラグインの文をパックの文に差し替えます。パックに無い文言や、形が合わない文言(プレースホルダの違いなど)は公式の文言のままです。アプリに入っていない言語を足すパックもあります(足りない文言はパックが決めた言語になります)。規約などの文書は差し替えません。ファイルから読み込んだパックは審査を通っていません。同時に使えるパックは 1 つです(D-592)。'**
+  String get langPackCaptionDetail;
+
+  /// 言語パックを読み込んでいないときの行の題(アプリに入っている公式の文言)
+  ///
+  /// In ja, this message translates to:
+  /// **'公式(アプリに入っている文言)'**
+  String get langPackOfficial;
+
+  /// 公式の行の説明
+  ///
+  /// In ja, this message translates to:
+  /// **'言語パックを読み込んでいません'**
+  String get langPackOfficialSubtitle;
+
+  /// ファイルから読み込んだ言語パックに付ける印(ストアの審査を通っていない)
+  ///
+  /// In ja, this message translates to:
+  /// **'未審査'**
+  String get langPackUnreviewed;
+
+  /// 読み込んだ言語パックの行の説明。version = 版、authors = 作者(「、」でつないだもの)
+  ///
+  /// In ja, this message translates to:
+  /// **'版 {version}・{authors}'**
+  String langPackSubtitle(String version, String authors);
+
+  /// 言語パックのファイル(.rasqlang)を選んで読み込むボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルから読み込む'**
+  String get langPackImport;
+
+  /// 読み込んだ言語パックを外して公式の文言に戻すボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'外して公式の文言に戻す'**
+  String get langPackRemove;
+
+  /// ファイルを選ぶ画面の、種類の名前
+  ///
+  /// In ja, this message translates to:
+  /// **'言語パック'**
+  String get langPackPickerLabel;
+
+  /// 読み込んだパックの文の数。count = 使う文の数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 件の文言を差し替えています}}'**
+  String langPackApplied(int count);
+
+  /// 形が合わず捨てた文の数(プレースホルダの違い・書式の誤り)。count = 数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 件は形が合わないので公式の文言のままです}}'**
+  String langPackRejected(int count);
+
+  /// このアプリに無いキー(古いキーなど)で無視した文の数。count = 数
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 件はこのアプリに無い文言なので使いません}}'**
+  String langPackUnknown(int count);
+
+  /// パックがもっと新しいアプリ向けのとき。version = パックが求めるアプリの版
+  ///
+  /// In ja, this message translates to:
+  /// **'このパックはアプリ {version} 以降向けです。足りない文言は公式の文言になります。'**
+  String langPackNeedsNewerApp(String version);
+
+  /// 捨てた文の一覧を開くボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'合わなかった文言を見る'**
+  String get langPackShowIssues;
+
+  /// 捨てた文の一覧を閉じるボタン
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get langPackHideIssues;
+
+  /// 読み込みが済んだときの知らせ。name = パックの名前
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を読み込みました'**
+  String langPackLoaded(String name);
+
+  /// 言語の一覧で、言語パックが足した(アプリに入っていない)言語に付ける説明
+  ///
+  /// In ja, this message translates to:
+  /// **'言語パック'**
+  String get langPackAddedLocale;
+
+  /// ファイルが大きすぎるとき
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルが大きすぎます(16 MB まで)'**
+  String get langPackErrorTooLarge;
+
+  /// 選んだファイルが言語パックではないとき
+  ///
+  /// In ja, this message translates to:
+  /// **'言語パック(.rasqlang)ではありません'**
+  String get langPackErrorNotPack;
+
+  /// 言語パックの形式がアプリより新しいとき
+  ///
+  /// In ja, this message translates to:
+  /// **'このアプリより新しい形式の言語パックです。アプリを更新してください'**
+  String get langPackErrorUnsupportedVersion;
+
+  /// パックの目録(id・名前・版・作者)の欄がおかしいとき。field = 欄の名前(id / name / version / authors。訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'言語パックの {field} が足りないか、形が違います'**
+  String langPackErrorManifest(String field);
+
+  /// 使える言語が 1 つも無いとき
+  ///
+  /// In ja, this message translates to:
+  /// **'使える言語がありません(アプリに無い言語は、足りない文言を引く言語を書く必要があります)'**
+  String get langPackErrorNoLocales;
+
+  /// そのほかの理由で読み込めなかったとき。error = 理由(訳さない)
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした: {error}'**
+  String langPackErrorFailed(String error);
+
   /// この言語の、その言語での名前(設定の「言語」の一覧に出す)。訳すときは、その言語での自分の名前にする(English / 한국어 など)。
   ///
   /// In ja, this message translates to:

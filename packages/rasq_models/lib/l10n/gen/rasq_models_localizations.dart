@@ -1,6 +1,8 @@
 // tool/l10n_merge.dart が lib/l10n/parts/*.arb から作る(手で直さない)。Flutter に依らない部品の文言 (D-533、docs/I18N.md)。
 // ignore_for_file: type=lint
 
+import '../../src/lang_override.dart' show RasqLangOverride;
+
 /// 文言(言語ごとの実装は [lookupRasqModelsLocalizations])。
 abstract class RasqModelsLocalizations {
   const RasqModelsLocalizations(this.localeName);
@@ -295,4 +297,68 @@ RasqModelsLocalizations lookupRasqModelsLocalizations(String tag) {
     }
   }
   return const RasqModelsLocalizationsJa();
+}
+
+/// 言語パック (D-592) の上書きを先に引く [RasqModelsLocalizations]。上書きの無いキー・壊れていて捨てたキーは [base](同梱)の文言。
+/// 引く先は `RasqLangOverride.text(localeName, 'rasq_models', キー, 引数)`。
+class RasqModelsLocalizationsOverlay extends RasqModelsLocalizations {
+  RasqModelsLocalizationsOverlay(this.base, [String? localeName]) : super(localeName ?? base.localeName);
+
+  /// 同梱の文言(上書きが無いときに使う)。
+  final RasqModelsLocalizations base;
+
+  /// 言語パックの中の領域の名前。
+  static const domain = 'rasq_models';
+
+  /// キー → 使えるプレースホルダ(言語パックを読み込むときの検証に使う)。
+  static const placeholders = <String, List<String>>{
+    'modelsErrorFamilyAffectedSettings': [],
+    'modelsErrorFamilyDataCorruption': [],
+    'modelsErrorFamilyHttp': [],
+    'modelsErrorFamilyPluginTransfer': [],
+    'modelsErrorFamilyRegulation': [],
+    'modelsErrorFamilyReserved': [],
+    'modelsErrorFamilySettings': [],
+    'modelsErrorInternalServerErrorHint': [],
+    'modelsErrorMethodNotAcceptableHint': [],
+    'modelsErrorNoTrendRequirementHint': [],
+    'modelsErrorRelationalTimelineBrokenHint': [],
+    'modelsErrorTimeoutHint': [],
+  };
+
+  @override
+  String get modelsErrorFamilyAffectedSettings => RasqLangOverride.text(localeName, domain, 'modelsErrorFamilyAffectedSettings') ?? base.modelsErrorFamilyAffectedSettings;
+
+  @override
+  String get modelsErrorFamilyDataCorruption => RasqLangOverride.text(localeName, domain, 'modelsErrorFamilyDataCorruption') ?? base.modelsErrorFamilyDataCorruption;
+
+  @override
+  String get modelsErrorFamilyHttp => RasqLangOverride.text(localeName, domain, 'modelsErrorFamilyHttp') ?? base.modelsErrorFamilyHttp;
+
+  @override
+  String get modelsErrorFamilyPluginTransfer => RasqLangOverride.text(localeName, domain, 'modelsErrorFamilyPluginTransfer') ?? base.modelsErrorFamilyPluginTransfer;
+
+  @override
+  String get modelsErrorFamilyRegulation => RasqLangOverride.text(localeName, domain, 'modelsErrorFamilyRegulation') ?? base.modelsErrorFamilyRegulation;
+
+  @override
+  String get modelsErrorFamilyReserved => RasqLangOverride.text(localeName, domain, 'modelsErrorFamilyReserved') ?? base.modelsErrorFamilyReserved;
+
+  @override
+  String get modelsErrorFamilySettings => RasqLangOverride.text(localeName, domain, 'modelsErrorFamilySettings') ?? base.modelsErrorFamilySettings;
+
+  @override
+  String get modelsErrorInternalServerErrorHint => RasqLangOverride.text(localeName, domain, 'modelsErrorInternalServerErrorHint') ?? base.modelsErrorInternalServerErrorHint;
+
+  @override
+  String get modelsErrorMethodNotAcceptableHint => RasqLangOverride.text(localeName, domain, 'modelsErrorMethodNotAcceptableHint') ?? base.modelsErrorMethodNotAcceptableHint;
+
+  @override
+  String get modelsErrorNoTrendRequirementHint => RasqLangOverride.text(localeName, domain, 'modelsErrorNoTrendRequirementHint') ?? base.modelsErrorNoTrendRequirementHint;
+
+  @override
+  String get modelsErrorRelationalTimelineBrokenHint => RasqLangOverride.text(localeName, domain, 'modelsErrorRelationalTimelineBrokenHint') ?? base.modelsErrorRelationalTimelineBrokenHint;
+
+  @override
+  String get modelsErrorTimeoutHint => RasqLangOverride.text(localeName, domain, 'modelsErrorTimeoutHint') ?? base.modelsErrorTimeoutHint;
 }

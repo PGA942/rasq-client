@@ -5027,6 +5027,116 @@ class AppLocalizationsEn extends AppLocalizations {
   String get iconThemeChangeImage => 'Change image';
 
   @override
+  String get langPackHeader => 'Language pack';
+
+  @override
+  String get langPackCaption =>
+      'Load a language pack (.rasqlang) to replace the app\'s wording. Anything the pack doesn\'t cover stays as the official wording.';
+
+  @override
+  String get langPackCaptionDetail =>
+      'Loading a language pack (.rasqlang) replaces the app\'s wording, RAi\'s instructions and plugin text with the pack\'s text. Text the pack doesn\'t have, or text that doesn\'t fit (different placeholders and so on), stays as the official wording. Some packs add languages the app doesn\'t include (missing text falls back to a language the pack chooses). Documents such as the terms are not replaced. Packs loaded from a file have not been reviewed. Only one pack can be used at a time (D-592).';
+
+  @override
+  String get langPackOfficial => 'Official (built into the app)';
+
+  @override
+  String get langPackOfficialSubtitle => 'No language pack loaded';
+
+  @override
+  String get langPackUnreviewed => 'Not reviewed';
+
+  @override
+  String langPackSubtitle(String version, String authors) {
+    return 'Version $version · $authors';
+  }
+
+  @override
+  String get langPackImport => 'Load from file';
+
+  @override
+  String get langPackRemove => 'Remove and go back to the official wording';
+
+  @override
+  String get langPackPickerLabel => 'Language pack';
+
+  @override
+  String langPackApplied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Replacing $count texts',
+      one: 'Replacing $count text',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackRejected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count texts don\'t fit, so the official wording is kept',
+      one: '$count text doesn\'t fit, so the official wording is kept',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackUnknown(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count texts aren\'t in this app and are ignored',
+      one: '$count text isn\'t in this app and is ignored',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String langPackNeedsNewerApp(String version) {
+    return 'This pack is for app $version or later. Missing text uses the official wording.';
+  }
+
+  @override
+  String get langPackShowIssues => 'Show texts that didn\'t fit';
+
+  @override
+  String get langPackHideIssues => 'Close';
+
+  @override
+  String langPackLoaded(String name) {
+    return 'Loaded \"$name\"';
+  }
+
+  @override
+  String get langPackAddedLocale => 'Language pack';
+
+  @override
+  String get langPackErrorTooLarge => 'The file is too large (up to 16 MB)';
+
+  @override
+  String get langPackErrorNotPack => 'This is not a language pack (.rasqlang)';
+
+  @override
+  String get langPackErrorUnsupportedVersion =>
+      'This language pack uses a newer format than this app. Please update the app';
+
+  @override
+  String langPackErrorManifest(String field) {
+    return 'The language pack\'s $field is missing or malformed';
+  }
+
+  @override
+  String get langPackErrorNoLocales =>
+      'No usable languages (a language the app doesn\'t include must name a language to fall back to)';
+
+  @override
+  String langPackErrorFailed(String error) {
+    return 'Couldn\'t load: $error';
+  }
+
+  @override
   String get languageSelfName => 'English';
 
   @override

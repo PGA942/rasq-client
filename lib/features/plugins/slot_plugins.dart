@@ -63,19 +63,19 @@ class SlotManifest {
   /// ほかの言語の文 (D-484 / 契約 v0.24: `locales.<tag>.{name, description, pageTitle, actions.<id>.label}`)。
   final ManifestLocales locales;
 
-  String get name => locales.field('name') ?? baseName;
+  String get name => ManifestLocales.packText(id, 'name') ?? locales.field('name') ?? baseName;
   final String version;
   final String kind;
-  String get description => locales.field('description') ?? baseDescription;
+  String get description => ManifestLocales.packText(id, 'description') ?? locales.field('description') ?? baseDescription;
   final List<String> slots;
   final List<String> permissions;
 
   /// 投稿のアクションボタン (契約 v0.7 §2.9、D-176): `post.action` の宣言(ラベルは表示の言語)。
-  List<SlotActionDecl> get actions => locales.isEmpty
+  List<SlotActionDecl> get actions => locales.isEmpty && !RasqLangOverride.active
       ? baseActions
       : [
           for (final a in baseActions)
-            if (locales.actionLabel(a.id) case final label?) a.withLabel(label) else a,
+            if (ManifestLocales.packText(id, 'actions.${a.id}.label') ?? locales.actionLabel(a.id) case final label?) a.withLabel(label) else a,
         ];
 
   /// `net.fetch` の接続先 (schema v0.12)。null = 宣言なし = どこにも繋げない。
@@ -84,7 +84,7 @@ class SlotManifest {
 
   /// ページ型(カスタムプラグイン、契約 v0.18 §2.13、D-357)の宣言。スロット `page` を持つときだけ。見出しは表示の言語
   /// (`locales.<tag>.pageTitle`)。
-  PluginPageDecl? get page => switch ((basePage, locales.field('pageTitle'))) {
+  PluginPageDecl? get page => switch ((basePage, ManifestLocales.packText(id, 'pageTitle') ?? locales.field('pageTitle'))) {
         (final p?, final title?) => p.withTitle(title),
         (final p, _) => p,
       };
@@ -725,6 +725,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         runtime.dispose(); // 読み込み中にプロバイダーが捨てられた(テストの再構築など)
         return null;
       }
+      // 言語パック (D-592): そのプラグインの文の表を `args.localeStrings` で渡すために id を教える。
+      if (runtime case _AsyncSlotRuntime(:final controller)) controller.pluginId = manifest.id;
       final plugin = SlotPlugin(manifest: manifest, source: source, runtime: runtime, sideloadTrust: sideloadTrust);
       runtime.onAppFn = (fn, args) => _onAppFn(plugin, fn, args);
       _wireFow(plugin);

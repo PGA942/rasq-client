@@ -15,7 +15,8 @@ import 'package:rrl_renderer/rrl_renderer.dart' show SvgLite;
 
 /// このホストが話す契約の版(`page.open` の `contract`)。v0.24 (D-484): 毎回の call の `args.locale`(表示の言語)。
 /// v0.25 (D-500): `sns.createPost` / `sns.sendDm` の答えの `notice` を、送った後にスナックバーで出す。
-const rasqHostContract = '0.25';
+/// v0.26 (D-592): 言語パックにそのプラグインの文があれば、毎回の call に `args.localeStrings` を載せる。
+const rasqHostContract = '0.26';
 
 /// `svgzEncoding` の値。
 const svgzEncoding = 'zstd';
