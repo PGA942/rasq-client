@@ -5,6 +5,9 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
 
 /// Fake SNS plugin/session for widget tests — serves a fixed timeline.
+/// フェイクの人のヘッダー(ユーザー id → URL。D-591 のヘッダーの手がかりのテスト用)。テストの中で入れて、終わったら消す。
+final fakeBanners = <String, Uri>{};
+
 class FakeSnsPlugin extends SnsPlugin {
   FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const [], this.localEmojis, this.reactionActionId = 'reaction', this.bookmark = false, this.trends, this.ads = const []});
 
@@ -197,7 +200,7 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<UserProfile> user(String id) async {
     final u = _posts.map((p) => p.author).firstWhere((a) => a.id == id, orElse: () => throw SnsApiException(ErrorCode.notFound));
-    return UserProfile(summary: u, description: u.bio, followersCount: 12, followingCount: 34, postsCount: 56, location: '地球', fields: const [ProfileField(name: '千芋', value: 'https://amzn.jp/19f253fc')]);
+    return UserProfile(summary: u, description: u.bio, followersCount: 12, followingCount: 34, postsCount: 56, location: '地球', fields: const [ProfileField(name: '千芋', value: 'https://amzn.jp/19f253fc')], bannerUrl: fakeBanners[id]);
   }
 
   /// handle からプロフィールを引く (D-223: RAi の user.get(handle=))。

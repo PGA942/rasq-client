@@ -3860,6 +3860,54 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmLastMessageHidden => '无法显示此消息';
 
   @override
+  String get headerHintFromHeader => '来自页眉';
+
+  @override
+  String get headerHintUnlinkedTitle => '未关联你正在查看的 SNS 账号';
+
+  @override
+  String headerHintUnlinkedText(String account) {
+    return '$account 的页眉写着此 RASQ 账号，但此账号并未关联 $account。任何人都可以在页眉中写入用户名，因此不一定是本人。';
+  }
+
+  @override
+  String get headerHintLabel => 'RASQ';
+
+  @override
+  String get headerHintSwitchTitle => '在页眉中加入 RASQ 账号线索';
+
+  @override
+  String headerHintSwitchSubtitle(String handle) {
+    return '在顶部边缘以细条写入 @$handle。保存时页眉会裁剪为 3:1';
+  }
+
+  @override
+  String get headerHintSwitchDetail =>
+      '他人在 SNS 上查看此个人资料时，应用会读取页眉并显示通往你的 RASQ 账号的入口，无需向服务器询问查看了谁的页面。仅当 RASQ 个人资料中开启了“显示账号”且已关联并显示此 SNS 账号时可用。';
+
+  @override
+  String headerHintPresent(String handle) {
+    return '当前页眉中含有 @$handle 的线索';
+  }
+
+  @override
+  String get headerHintApplyCurrent => '加入当前页眉';
+
+  @override
+  String get headerHintErase => '清除页眉线索';
+
+  @override
+  String get headerHintWriteFailed => '无法写入页眉线索（无法读取图片）';
+
+  @override
+  String get headerHintRasqNoteOn =>
+      '也可以在 SNS 页眉中加入线索（在各 SNS 的个人资料编辑中重新保存页眉）。加入后，他人的应用无需询问服务器即可引导至此账号。';
+
+  @override
+  String get headerHintRasqNoteOff =>
+      '关闭后，已上传的 SNS 页眉中的线索仍会保留。要清除，请在各 SNS 的个人资料编辑中使用“清除页眉线索”。';
+
+  @override
   String get homeCreateMissingAccount => '（不存在的账号）';
 
   @override
@@ -24805,6 +24853,54 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get dmLastMessageHidden => '無法顯示此訊息';
+
+  @override
+  String get headerHintFromHeader => '來自橫幅';
+
+  @override
+  String get headerHintUnlinkedTitle => '未連結你正在查看的 SNS 帳號';
+
+  @override
+  String headerHintUnlinkedText(String account) {
+    return '$account 的橫幅寫著此 RASQ 帳號，但此帳號並未連結 $account。任何人都可以在橫幅中寫入帳號名稱，因此不一定是本人。';
+  }
+
+  @override
+  String get headerHintLabel => 'RASQ';
+
+  @override
+  String get headerHintSwitchTitle => '在橫幅中加入 RASQ 帳號線索';
+
+  @override
+  String headerHintSwitchSubtitle(String handle) {
+    return '在頂部邊緣以細條寫入 @$handle。儲存時橫幅會裁切為 3:1';
+  }
+
+  @override
+  String get headerHintSwitchDetail =>
+      '他人在 SNS 上查看此個人檔案時，App 會讀取橫幅並顯示通往你的 RASQ 帳號的入口，無需向伺服器詢問查看了誰的頁面。僅當 RASQ 個人檔案中開啟了「顯示帳號」且已連結並顯示此 SNS 帳號時可用。';
+
+  @override
+  String headerHintPresent(String handle) {
+    return '目前的橫幅中含有 @$handle 的線索';
+  }
+
+  @override
+  String get headerHintApplyCurrent => '加入目前的橫幅';
+
+  @override
+  String get headerHintErase => '清除橫幅線索';
+
+  @override
+  String get headerHintWriteFailed => '無法寫入橫幅線索（無法讀取圖片）';
+
+  @override
+  String get headerHintRasqNoteOn =>
+      '也可以在 SNS 橫幅中加入線索（在各 SNS 的個人檔案編輯中重新儲存橫幅）。加入後，他人的 App 無需詢問伺服器即可引導至此帳號。';
+
+  @override
+  String get headerHintRasqNoteOff =>
+      '關閉後，已上傳的 SNS 橫幅中的線索仍會保留。要清除，請在各 SNS 的個人檔案編輯中使用「清除橫幅線索」。';
 
   @override
   String get homeCreateMissingAccount => '（不存在的帳號）';
